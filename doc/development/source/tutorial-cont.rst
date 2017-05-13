@@ -3,7 +3,7 @@ Getting Started (Continued)
 ###########################
 
 After learning what an Orange Widget is and how to define them on
-a toy example, we will build an semi-usefull widgets that can
+a toy example, we will build an semi-useful widgets that can
 work together with the existing Orange Widgets.
 
 We will start with a very simple one, that will receive a data set
@@ -13,8 +13,8 @@ DataSampler since this is what widget will be doing, and A since we
 prototype a number of this widgets in our tutorial).
 
 
-A package named Demo
---------------------
+A 'Demo' package
+----------------
 
 First in order to include our new widgets in the Orange Canvas's
 toolbox we will create a dummy `python project
@@ -49,18 +49,15 @@ widget starts out as:
    :start-after: start-snippet-1
    :end-before: end-snippet-1
 
-Widget defines one input and one output channel. For input, this is a *Data*
-channel, accepting objects of the type :class:`Orange.data.Table` and
-specifying that :func:`set_data` method will be used to handle them.
-For now, we will use a single output channel called "Sampled Data",
-which will be of the same type (:class:`Orange.data.Table`).
+The widget defines an input channel "Data" and an output channel called
+"Sampled Data". Both will carry tokens of the type :class:`Orange.data.Table`.
+In the code, we will refer to the signals as `Inputs.data` and `Outputs.sample`.
 
-Notice that the types of the channels are specified by a class;
-you can use any class here, but if your widgets need to talk with
-other widgets in Orange, you will need to check which classes are
-used there. Luckily, and as one of the main design principles,
-there are just a few channel types that current Orange widgets are
-using.
+Channels can carry tokens of arbitrary types. However, the purpose of widgets
+is to talk with other widgets, so as one of the main design principles we try
+to maximize the flexibility of widgets by minimizing the number of different
+channel types. Do not invent new signal types before checking whether you cannot
+reuse the existing.
 
 As our widget won't display anything apart from some info, we will
 place the two labels in the control area and surround it with the box
@@ -72,11 +69,11 @@ will happen, the first line will report on "no data yet", and second
 line will be empty.
 
 
-In order to complete our widget, we now need to define how will it
-handle the input data. This is done in a method called :func:`set_data`
-(remember, we did introduce this name in the specification of the
-input channel)
-
+In order to complete our widget, we now need to define a method that will
+handle the input data. We will call it :func:`set_data`; the name is arbitrary,
+but calling the method `set_<the name of the input>` seems like a good practice.
+To designate it as the method that accepts the signal defined in `Inputs.data`,
+we decorate it with `@Inputs.data`.
 
 .. literalinclude:: orange-demo/orangedemo/OWDataSamplerA.py
    :start-after: start-snippet-2
@@ -85,17 +82,18 @@ input channel)
 The :obj:`dataset` argument is the token sent through the input
 channel which our method needs to handle.
 
-To handle the non-empty token, the widget updates the interface
+To handle a non-empty token, the widget updates the interface
 reporting on number of data items on the input, then does the data
 sampling using Orange's routines for these, and updates the
 interface reporting on the number of sampled instances. Finally, the
-sampled data is sent as a token to the output channel with a name
-"Sampled Data".
+sampled data is sent as a token to the output channel defined as
+`Output.sample`.
 
 Although our widget is now ready to test, for a final touch, let's
 design an icon for our widget. As specified in the widget header, we
-will call it :download:`DataSamplerA.svg <orange-demo/orangedemo/icons/DataSamplerA.svg>` and will
-put it in `icons` subdirectory of `orangedemo` directory.
+will call it
+:download:`DataSamplerA.svg <orange-demo/orangedemo/icons/DataSamplerA.svg>`
+and put it in `icons` subdirectory of `orangedemo` directory.
 
 
 With this we can now go ahead and install the orangedemo package. We

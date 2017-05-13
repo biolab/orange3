@@ -37,19 +37,25 @@ class Input(InputSignal, _Signal):
 
     Parameters
     ----------
-    name (str): signal name
-    type (type): signal type
-    id (str): a unique id of the signal
-    doc (str, optional): signal documentation
-    replaces (list of str): a list with names of signals replaced by this signal
-    multiple (bool, optional): if set, multiple signals can be connected
-        to this output (default: `False`)
-    default (bool, optional): when the widget accepts multiple signals of the
-        same type, one of them can set this flag to act as the default
+    name (str):
+        signal name
+    type (type):
+        signal type
+    id (str):
+        a unique id of the signal
+    doc (str, optional):
+        signal documentation
+    replaces (list of str):
+        a list with names of signals replaced by this signal
+    multiple (bool, optional):
+        if set, multiple signals can be connected to this output
         (default: `False`)
-    explicit (bool, optional): if set, this signal is only used when it is
-        the only option or when explicitly connected in the dialog
-        (default: `False`)
+    default (bool, optional):
+        when the widget accepts multiple signals of the same type, one of them
+        can set this flag to act as the default (default: `False`)
+    explicit (bool, optional):
+        if set, this signal is only used when it is the only option or when
+        explicitly connected in the dialog (default: `False`)
     """
     def __init__(self, name, type, id=None, doc=None, replaces=None, *,
                  multiple=False, default=False, explicit=False):
@@ -85,21 +91,27 @@ class Output(OutputSignal, _Signal):
 
     Parameters
     ----------
-    name (str): signal name
-    type (type): signal type
-    id (str): a unique id of the signal
-    doc (str, optional): signal documentation
-    replaces (list of str): a list with names of signals replaced by this signal
-    default (bool, optional): when the widget outputs multiple signals of the
-        same type, one of them can set this flag to act as the default
-        (default: `False`)
-    explicit (bool, optional): if set, this signal is only used when it is
-        the only option or when explicitly connected in the dialog
-        (default: `False`)
-    dynamic (bool, optional): Specifies that the instances on the output will
-        in general be subtypes of the declared type and that the output can
-        be connected to any input signal which can accept a subtype of the
-        declared output type.
+    name (str):
+        signal name
+    type (type):
+        signal type
+    id (str):
+        a unique id of the signal
+    doc (str, optional):
+        signal documentation
+    replaces (list of str):
+        a list with names of signals replaced by this signal
+    default (bool, optional):
+        when the widget accepts multiple signals of the same type, one of them
+        can set this flag to act as the default (default: `False`)
+    explicit (bool, optional):
+        if set, this signal is only used when it is the only option or when
+        explicitly connected in the dialog (default: `False`)
+    dynamic (bool, optional):
+        Specifies that the instances on the output will in general be subtypes
+        of the declared type and that the output can be connected to any input
+        signal which can accept a subtype of the declared output type
+        (default: `True`)
     """
     def __init__(self, name, type, id=None, doc=None, replaces=None, *,
                  default=False, explicit=False, dynamic=True):

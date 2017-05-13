@@ -7,11 +7,12 @@ from PyQt4.QtGui import QTableWidget, QTableWidgetItem
 import Orange.data
 import Orange.classification
 
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, settings
+from Orange.widgets.widget import OWWidget, Input
 from Orange.evaluation.testing import Results
 
 
-class OWLearningCurveA(widget.OWWidget):
+class OWLearningCurveA(OWWidget):
     name = "Learning Curve (A)"
     description = ("Takes a data set and a set of learners and shows a "
                    "learning curve in a table")
@@ -19,9 +20,10 @@ class OWLearningCurveA(widget.OWWidget):
     priority = 1000
 
 # [start-snippet-1]
-    inputs = [("Data", Orange.data.Table, "set_dataset"),
-              ("Learner", Orange.classification.Learner, "set_learner",
-               widget.Multiple + widget.Default)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+        learner = Input("Learner", Orange.classification.Learner,
+                        multiple=True)
 # [end-snippet-1]
 
     #: cross validation folds
@@ -97,6 +99,7 @@ class OWLearningCurveA(widget.OWWidget):
     ##########################################################################
     # slots: handle input signals
 
+    @Inputs.data
     def set_dataset(self, data):
         """Set the input train dataset."""
         # Clear all results/scores
@@ -114,6 +117,7 @@ class OWLearningCurveA(widget.OWWidget):
 
         self.commitBtn.setEnabled(self.data is not None)
 
+    @Inputs.learner
     def set_learner(self, learner, id):
         """Set the input learner for channel id."""
         if id in self.learners:

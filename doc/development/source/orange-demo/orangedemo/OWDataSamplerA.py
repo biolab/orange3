@@ -3,16 +3,20 @@ import sys
 import numpy
 
 import Orange.data
-from Orange.widgets import widget, gui
+from Orange.widgets.widget import OWWidget, Input, Output
+from Orange.widgets import gui
 
-class OWDataSamplerA(widget.OWWidget):
+class OWDataSamplerA(OWWidget):
     name = "Data Sampler"
     description = "Randomly selects a subset of instances from the data set"
     icon = "icons/DataSamplerA.svg"
     priority = 10
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Sampled Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        sample = Output("Sampled Data", Orange.data.Table)
 
     want_main_area = False
 
@@ -26,6 +30,7 @@ class OWDataSamplerA(widget.OWWidget):
 # [end-snippet-1]
 
 # [start-snippet-2]
+    @Inputs.data
     def set_data(self, dataset):
         if dataset is not None:
             self.infoa.setText('%d instances in input data set' % len(dataset))
@@ -33,18 +38,17 @@ class OWDataSamplerA(widget.OWWidget):
             indices = indices[:int(numpy.ceil(len(dataset) * 0.1))]
             sample = dataset[indices]
             self.infob.setText('%d sampled instances' % len(sample))
-            self.send("Sampled Data", sample)
+            self.Outputs.sample.send(sample)
         else:
             self.infoa.setText('No data on input yet, waiting to get something.')
             self.infob.setText('')
-            self.send("Sampled Data", None)
+            self.Outputs.sample.send("Sampled Data")
 # [end-snippet-2]
 
 # [start-snippet-3]
 def main(argv=sys.argv):
     from PyQt4.QtGui import QApplication
     app = QApplication(list(argv))
-    args = app.argv()
     if len(argv) > 1:
         filename = argv[1]
     else:

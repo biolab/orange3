@@ -167,6 +167,7 @@ that handles the data signal. This is how it looks in the scatter plot
 
 .. code-block:: python
 
+    @Input.data
     def set_data(self, data):
         self.closeContext()
         self.data = data

@@ -53,9 +53,10 @@ a single integer specified by the user.
 
 .. code-block:: python
 
-    from Orange.widgets import widget, gui
+    from Orange.widgets.widget import OWWidget, Output
+    from Orange.widgets import gui
 
-    class IntNumber(widget.OWWidget):
+    class IntNumber(OWWidget):
         # Widget's name as displayed in the canvas
         name = "Integer Number"
         # Short widget description
@@ -65,9 +66,9 @@ a single integer specified by the user.
         # (a path relative to the module where this widget is defined)
         icon = "icons/number.svg"
 
-        # A list of output definitions (here on output named "Number"
-        # of type int)
-        outputs = [("Number", int)]
+        # Widget's outputs; here, a single output named "Number", of type int
+        class Outputs:
+            number = Output("Number", int)
 
 
 By design principle, Orange widgets in an interface are most
@@ -119,26 +120,26 @@ widget functionality:
 
        def number_changed(self):
            # Send the entered number on "Number" output
-           self.send("Number", self.number)
+           self.Outputs.number.send(self.number)
 
 .. seealso::
    :func:`Orange.widgets.gui.lineEdit`,
-   :func:`Orange.widgets.widget.OWWidget.send`
 
-By itself this widget seems uninteresting. We need something more.
-How about displaying a number?
+By itself this widget is useless because no widget accepts its outpus.
+So let us define a widget that displays a number.
 
 .. code-block:: python
 
-   from Orange.widgets import widget, gui
+   from Orange.widgets.widget import OWWidget, Input
+   from Orange.widgets import gui
 
    class Print(widget.OWWidget):
        name = "Print"
        description = "Print out a number"
        icon = "icons/print.svg"
 
-       inputs = [("Number", int, "set_number")]
-       outputs = []
+       class Inputs:
+           number = Input("Number", int)
 
        want_main_area = False
 
@@ -148,6 +149,7 @@ How about displaying a number?
 
            self.label = gui.widgetLabel(self.controlArea, "The number is: ??")
 
+       @Inputs.number
        def set_number(self, number):
            """Set the input number."""
            self.number = number
@@ -155,6 +157,11 @@ How about displaying a number?
                self.label.setText("The number is: ??")
            else:
                self.label.setText("The number is {}".format(self.number))
+
+We define inputs with a class `Inputs`, just like outputs are defined by
+`Outputs`. However, each input must be handled by a class methods. We mark
+the handlers by decorating them; in above case by putting `@Inputs.number`
+before the method's definition.
 
 Notice how in the `set_number` method we check whether the number is `None`.
 `None` is sent to the widget when a connection between the widgets is removed
@@ -167,15 +174,19 @@ One more:
 
 .. code-block:: python
 
-   from Orange.widgets import widget
-   class Adder(widget.OWWidget):
+   from Orange.widgets.widget import OWWidget, Input, Output
+
+   class Adder(OWWidget):
        name = "Add two integers"
        description = "Add two numbers"
        icon = "icons/add.svg"
 
-       inputs = [("A", int, "set_A"),
-                 ("B", int, "set_B")]
-       outputs = [("A + B", int)]
+       class Inputs:
+           a = Input("A", int)
+           b = Input("B", int)
+
+       class Outputs:
+           sum = Output("A + B", int)
 
        want_main_area = False
 
@@ -184,10 +195,12 @@ One more:
            self.a = None
            self.b = None
 
+       @Inputs.a
        def set_A(self, a)
            """Set input 'A'."""
            self.a = a
 
+       @Inputs.b
        def set_B(self, b):
            """Set input 'B'."""
            self.b = b
@@ -195,9 +208,9 @@ One more:
        def handleNewSignals(self):
            """Reimplemeted from OWWidget."""
            if self.a is not None and self.b is not None:
-               self.send("A + B", self.a + self.b)
+               self.Outputs.sum.send(self.a + self.b)
            else:
                # Clear the channel by sending `None`
-               self.send("A + B", None)
+               self.Outputs.sum.send(None)
 
 .. seealso:: :func:`~Orange.widgets.widget.OWWidget.handleNewSignals`
