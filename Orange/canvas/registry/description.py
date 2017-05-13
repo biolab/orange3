@@ -5,7 +5,6 @@ Widget meta description classes
 """
 
 import sys
-import warnings
 
 # Exceptions
 from itertools import chain
@@ -73,20 +72,13 @@ class InputSignal(object):
         A list of names this input replaces.
     """
     def __init__(self, name, type, handler, flags=Single + NonDefault,
-                 id=None, doc=None, replaces=[]):
+                 id=None, doc=None, replaces=()):
         self.name = name
         self.type = type
         self.handler = handler
         self.id = id
         self.doc = doc
         self.replaces = list(replaces)
-
-        if isinstance(flags, str):
-            # flags are stored as strings
-            warnings.warn("Passing 'flags' as string is deprecated, use "
-                          "integer constants instead",
-                          PendingDeprecationWarning)
-            flags = eval(flags)
 
         if not (flags & Single or flags & Multiple):
             flags += Single
@@ -127,19 +119,12 @@ class OutputSignal(object):
         A list of names this output replaces.
     """
     def __init__(self, name, type, flags=Single + NonDefault,
-                 id=None, doc=None, replaces=[]):
+                 id=None, doc=None, replaces=()):
         self.name = name
         self.type = type
         self.id = id
         self.doc = doc
         self.replaces = list(replaces)
-
-        if isinstance(flags, str):
-            # flags are stored as strings
-            warnings.warn("Passing 'flags' as string is deprecated, use "
-                          "integer constants instead",
-                          PendingDeprecationWarning)
-            flags = eval(flags)
 
         if not (flags & Single or flags & Multiple):
             flags += Single
@@ -214,12 +199,11 @@ class WidgetDescription(object):
     def __init__(self, name, id, category=None, version=None,
                  description=None,
                  qualified_name=None, package=None, project_name=None,
-                 inputs=[], outputs=[],
+                 inputs=(), outputs=(),
                  help=None, help_ref=None, url=None, keywords=None,
                  priority=sys.maxsize,
                  icon=None, background=None,
-                 replaces=None,
-                 ):
+                 replaces=None):
 
         if not qualified_name:
             # TODO: Should also check that the name is real.
@@ -285,7 +269,7 @@ class WidgetDescription(object):
 
         default_cat_name = package_name if package_name else ""
 
-        for widget_cls_name, widget_class in module.__dict__.items():
+        for widget_class in module.__dict__.values():
             if not hasattr(widget_class, "get_widget_description"):
                 continue
             description = widget_class.get_widget_description()
@@ -298,8 +282,8 @@ class WidgetDescription(object):
             description.package = module.__package__
             description.category = widget_class.category or default_cat_name
             return description
-        else:
-            raise WidgetSpecificationError
+
+        raise WidgetSpecificationError
 
 class CategoryDescription(object):
     """
@@ -335,8 +319,7 @@ class CategoryDescription(object):
                  project_name=None,
                  url=None, help=None, keywords=None,
                  widgets=None, priority=sys.maxsize,
-                 icon=None, background=None
-                 ):
+                 icon=None, background=None):
 
         self.name = name
         self.version = version
