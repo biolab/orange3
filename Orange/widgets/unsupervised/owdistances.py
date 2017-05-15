@@ -1,5 +1,4 @@
 import bottleneck as bn
-import numpy
 from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 
@@ -62,12 +61,12 @@ class OWDistances(OWWidget):
 
         gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
-        )
+                        )
         self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
                                           box="Distance Metric",
                                           items=[m.name for m in METRICS],
                                           callback=self._invalidate
-        )
+                                         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
                               box=False, checkbox_label="Apply automatically")
         box.layout().insertWidget(0, self.report_button)
