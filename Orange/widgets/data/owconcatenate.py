@@ -8,16 +8,16 @@ Concatenate (append) two or more data sets.
 
 from collections import OrderedDict
 from functools import reduce
-from itertools import chain, repeat
-from operator import itemgetter
 
-import numpy
+import numpy as np
 from AnyQt.QtWidgets import QFormLayout, QApplication
 from AnyQt.QtCore import Qt
 
 import Orange.data
+from Orange.util import flatten
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -141,7 +141,7 @@ class OWConcatenate(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        tables = []
+        tables, domain, source_var = [], None, None
         if self.primary_data is not None:
             tables = [self.primary_data] + list(self.more_data.values())
             domain = self.primary_data.domain
@@ -154,25 +154,24 @@ class OWConcatenate(widget.OWWidget):
                 domain = reduce(domain_intersection,
                                 (table.domain for table in tables))
 
-        tables = [table.transform(domain) for table in tables]
+        if self.append_source_column:
+            source_var = Orange.data.DiscreteVariable(
+                self.source_attr_name,
+                values=["{}".format(i) for i in range(len(tables))]
+            )
+            places = ["class_vars", "attributes", "metas"]
+            domain = add_columns(
+                domain,
+                **{places[self.source_column_role]: (source_var,)})
 
+        tables = [table.transform(domain) for table in tables]
         if tables:
             data = type(tables[0]).concatenate(tables, axis=0)
-            if self.append_source_column:
-                source_var = Orange.data.DiscreteVariable(
-                    self.source_attr_name,
-                    values=["{}".format(i) for i in range(len(tables))]
-                )
-                source_values = list(
-                    chain(*(repeat(i, len(table))
-                            for i, table in enumerate(tables)))
-                )
-                places = ["class_vars", "attributes", "metas"]
-                place = places[self.source_column_role]
+            if source_var:
+                source_ids = np.array(list(flatten(
+                    [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
+                data[:, source_var] = source_ids
 
-                data = append_columns(
-                    data, **{place: [(source_var, source_values)]}
-                )
         else:
             data = None
 
@@ -227,37 +226,6 @@ def domain_intersection(A, B):
     )
 
     return intersection
-
-
-#:: (Table, **{place: [(Variable, values)]}) -> Table
-def append_columns(data, attributes=(), class_vars=(), metas=()):
-    domain = data.domain
-    new_attributes = tuple(map(itemgetter(0), attributes))
-    new_class_vars = tuple(map(itemgetter(0), class_vars))
-    new_metas = tuple(map(itemgetter(0), metas))
-
-    new_domain = Orange.data.Domain(
-        domain.attributes + new_attributes,
-        domain.class_vars + new_class_vars,
-        domain.metas + new_metas
-    )
-
-    def ascolumn(array):
-        array = numpy.asarray(array)
-        if array.ndim < 2:
-            array = array.reshape((-1, 1))
-        return array
-
-    attr_cols = [ascolumn(col) for _, col in attributes]
-    class_cols = [ascolumn(col) for _, col in class_vars]
-    metas = [ascolumn(col) for _, col in metas]
-
-    X = numpy.hstack((data.X,) + tuple(attr_cols))
-    Y = numpy.hstack((data._Y,) + tuple(class_cols))
-    metas = numpy.hstack((data.metas,) + tuple(metas))
-
-    new_data = Orange.data.Table.from_numpy(new_domain, X, Y, metas)
-    return new_data
 
 
 def main():
