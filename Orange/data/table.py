@@ -795,19 +795,13 @@ class Table(MutableSequence, Storage):
             if value is None:
                 value = Unknown
 
-            if not isinstance(value, Real) and \
+            if not isinstance(value, (Real, np.ndarray)) and \
                     (len(attr_cols) or len(class_cols)):
                 raise TypeError(
                     "Ordinary attributes can only have primitive values")
             if len(attr_cols):
-                if len(attr_cols) == 1:
-                    # scipy.sparse matrices only allow primitive indices.
-                    attr_cols = attr_cols[0]
                 self.X[row_idx, attr_cols] = value
             if len(class_cols):
-                if len(class_cols) == 1:
-                    # scipy.sparse matrices only allow primitive indices.
-                    class_cols = class_cols[0]
                 self._Y[row_idx, class_cols] = value
             if len(meta_cols):
                 self.metas[row_idx, meta_cols] = value
