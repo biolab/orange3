@@ -141,6 +141,21 @@ class TestOWTestLearners(WidgetTest):
         self.widget.migrate_settings(settings, 2)
         self.assertEqual(settings['context_settings'], [context_valid])
 
+    def test_memory_error(self):
+        """
+        Handling memory error.
+        GH-2316
+        """
+        data = Table("iris")[::3]
+        self.send_signal("Data", data)
+        self.assertFalse(self.widget.Error.memory_error.is_shown())
+
+        with unittest.mock.patch(
+            "Orange.evaluation.testing.Results.get_augmented_data",
+            side_effect=MemoryError):
+            self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
+            self.assertTrue(self.widget.Error.memory_error.is_shown())
+
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
