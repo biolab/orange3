@@ -357,6 +357,10 @@ class Variable(Reprable, metaclass=VariableMeta):
     def is_string(self):
         return isinstance(self, StringVariable)
 
+    @property
+    def is_time(self):
+        return isinstance(self, TimeVariable)
+
     def repr_val(self, val):
         """
         Return a textual representation of variable's value `val`. Argument
