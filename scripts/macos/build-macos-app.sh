@@ -152,6 +152,7 @@ VERSION=$("${PYTHON}" -m pip show orange3 | grep -E '^Version:' |
 
 m4 -D__VERSION__="${VERSION:?}" "${APPDIR}"/Contents/Info.plist.in \
     > "${APPDIR}"/Contents/Info.plist
+rm "${APPDIR}"/Contents/Info.plist.in
 
 # Sanity check
 (
