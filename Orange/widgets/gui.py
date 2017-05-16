@@ -3115,7 +3115,7 @@ def table(widget, rows=0, columns=0, selectionMode=-1, addToLayout=True):
     if selectionMode != -1:
         w.setSelectionMode(selectionMode)
     w.setHorizontalScrollMode(QtWidgets.QTableWidget.ScrollPerPixel)
-    w.horizontalHeader().setMovable(True)
+    w.horizontalHeader().setSectionsMovable(True)
     return w
 
 
