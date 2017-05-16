@@ -303,6 +303,16 @@ class Domain:
         vars += self.metas if include_metas else ()
         return any(var.is_continuous for var in vars)
 
+    def has_time_attributes(self, include_class=False, include_metas=False):
+        """
+        Return `True` if domain has any time attributes. If
+        `include_class` is set, the check includes the class attribute(s). If
+        `include_metas` is set, the check includes the meta attributes.
+        """
+        vars = self.variables if include_class else self.attributes
+        vars += self.metas if include_metas else ()
+        return any(var.is_time for var in vars)
+
     @property
     def has_continuous_class(self):
         return bool(self.class_var and self.class_var.is_continuous)
@@ -310,6 +320,10 @@ class Domain:
     @property
     def has_discrete_class(self):
         return bool(self.class_var and self.class_var.is_discrete)
+
+    @property
+    def has_time_class(self):
+        return bool(self.class_var and self.class_var.is_time)
 
     def get_conversion(self, source):
         """
