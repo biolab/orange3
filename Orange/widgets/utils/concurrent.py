@@ -545,6 +545,30 @@ class methodinvoke(object):
     >>> app.exec()
     0
     """
+    @staticmethod
+    def from_method(method, arg_types=(), *, conntype=Qt.QueuedConnection):
+        """
+        Create and return a `methodinvoke` instance from a bound method.
+
+        Parameters
+        ----------
+        method : Union[types.MethodType, types.BuiltinMethodType]
+            A bound method of a QObject registered with the Qt meta object
+            system (e.g. decorated by a Slot decorators)
+        arg_types : Tuple[Union[type, str]]
+            A tuple of positional argument types.
+        conntype: Qt.ConnectionType
+            The connection/call type (Qt.QueuedConnection and
+            Qt.BlockingConnection are the most interesting)
+
+        Returns
+        -------
+        invoker : methodinvoke
+        """
+        obj = method.__self__
+        name = method.__name__
+        return methodinvoke(obj, name, arg_types, conntype=conntype)
+
     def __init__(self, obj, method, arg_types=(), *,
                  conntype=Qt.QueuedConnection):
         self.obj = obj
