@@ -87,3 +87,11 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.optimization_error.is_shown())
 
+    def test_distances_without_data_0(self):
+        """
+        Only distances and no data.
+        GH-2335
+        """
+        signal_data = Euclidean(self.data, axis=0)
+        signal_data.row_items = None
+        self.send_signal("Distances", signal_data)

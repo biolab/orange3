@@ -452,7 +452,7 @@ class OWMDS(OWWidget):
             attr = "Attribute names"
             self.labelvar_model[:] = ["No labels", attr]
             self.shapevar_model[:] = ["Same shape", attr]
-            self.colorvar_model[:] = ["Same solor", attr]
+            self.colorvar_model[:] = ["Same color", attr]
 
             self.color_value = attr
             self.shape_value = attr
@@ -751,7 +751,9 @@ class OWMDS(OWWidget):
             return a.ravel()
 
         def attributes(matrix):
-            return matrix.row_items.domain.attributes
+            if matrix.row_items and matrix.row_items.domain:
+                return matrix.row_items.domain.attributes
+            return [x + 1 for x in range(len(matrix))]
 
         def scale(a):
             dmin, dmax = numpy.nanmin(a), numpy.nanmax(a)
