@@ -216,7 +216,7 @@ class Table(MutableSequence, Storage):
         pass
 
     @classmethod
-    def from_domain(cls, domain, n_rows=0, weights=False):
+    def from_domain(cls, domain, n_rows=0, weights=False, sparse=False):
         """
         Construct a new `Table` with the given number of rows for the given
         domain. The optional vector of weights is initialized to 1's.
@@ -233,12 +233,17 @@ class Table(MutableSequence, Storage):
         self = cls()
         self.domain = domain
         self.n_rows = n_rows
-        self.X = np.zeros((n_rows, len(domain.attributes)))
+        if sparse:
+            self.X = sp.csr_matrix((n_rows, len(domain.attributes)))
+        else:
+            self.X = np.zeros((n_rows, len(domain.attributes)))
         self.Y = np.zeros((n_rows, len(domain.class_vars)))
+
         if weights:
             self.W = np.ones(n_rows)
         else:
             self.W = np.empty((n_rows, 0))
+
         self.metas = np.empty((n_rows, len(self.domain.metas)), object)
         cls._init_ids(self)
         self.attributes = {}
@@ -656,32 +661,57 @@ class Table(MutableSequence, Storage):
         old_length = self.X.shape[0]
         if old_length == new_length:
             return
+
+        X_orig, Y_orig, W_orig, metas_orig = None, None, None, None
         if not self._check_all_dense():
-            raise ValueError("Tables with sparse data cannot be resized")
+            # Convert all sparse matrices to DOK for in-place resize
+            # Store original sparse format
+            if sp.issparse(self.X):
+                X_orig = self.X.getformat()
+                self.X = self.X.todok()
+            if sp.issparse(self._Y):
+                Y_orig = self.Y.getformat()
+                self._Y = self._Y.todok()
+            if sp.issparse(self.metas):
+                metas_orig = self.metas.getformat()
+                self.metas = self.metas.todok()
+            if sp.issparse(self.W):
+                W_orig = self.W.getformat()
+                self.W = self.W.todok()
+
+        # Do resize
         try:
-            self.X.resize(new_length, self.X.shape[1])
-            self._Y.resize(new_length, self._Y.shape[1])
-            self.metas.resize(new_length, self.metas.shape[1])
+            self.X.resize((new_length, self.X.shape[1]))
+            self._Y.resize((new_length, self._Y.shape[1]))
+            self.metas.resize((new_length, self.metas.shape[1]))
             if self.W.ndim == 2:
                 self.W.resize((new_length, 0))
             else:
-                self.W.resize(new_length)
-            self.ids.resize(new_length)
+                self.W.resize((new_length,))
+            self.ids.resize((new_length,))
+
         except Exception:
             if self.X.shape[0] == new_length:
-                self.X.resize(old_length, self.X.shape[1])
+                self.X.resize((old_length, self.X.shape[1]))
             if self._Y.shape[0] == new_length:
-                self._Y.resize(old_length, self._Y.shape[1])
+                self._Y.resize((old_length, self._Y.shape[1]))
             if self.metas.shape[0] == new_length:
-                self.metas.resize(old_length, self.metas.shape[1])
+                self.metas.resize((old_length, self.metas.shape[1]))
             if self.W.shape[0] == new_length:
                 if self.W.ndim == 2:
                     self.W.resize((old_length, 0))
                 else:
-                    self.W.resize(old_length)
+                    self.W.resize((old_length,))
             if self.ids.shape[0] == new_length:
-                self.ids.resize(old_length)
+                self.ids.resize((old_length,))
             raise
+
+        finally:
+            # Revert to original sparse matrix format
+            if X_orig: self.X = getattr(self.X, "to%s" % X_orig)()
+            if Y_orig: self._Y = getattr(self._Y, "to%s" % Y_orig)()
+            if W_orig: self.W = getattr(self.W, "to%s" % W_orig)()
+            if metas_orig: self.metas = getattr(self.metas, "to%s" % metas_orig)()
 
     def __getitem__(self, key):
         if isinstance(key, Integral):
@@ -869,7 +899,7 @@ class Table(MutableSequence, Storage):
         self.ensure_copy()  # ensure that numpy arrays are single-segment for resize
         self._resize_all(len(self) + 1)
         if row < len(self):
-            self.X[row + 1:] = self.X[row:-1]
+            self.X[row + 1:] = self.X[row:-1] # TODO: raises warning when sparse
             self._Y[row + 1:] = self._Y[row:-1]
             self.metas[row + 1:] = self.metas[row:-1]
             self.W[row + 1:] = self.W[row:-1]
@@ -899,13 +929,29 @@ class Table(MutableSequence, Storage):
         :type instances: Orange.data.Table or a sequence of instances
         """
         old_length = len(self)
+        self.ensure_copy()  # ensure that numpy arrays are single-segment for resize
         self._resize_all(old_length + len(instances))
         try:
             # shortcut
             if isinstance(instances, Table) and instances.domain == self.domain:
-                self.X[old_length:] = instances.X
-                self._Y[old_length:] = instances._Y
-                self.metas[old_length:] = instances.metas
+                if sp.issparse(self.X) or sp.issparse(instances.X):
+                    self.X = sp.lil_matrix(self.X)
+                    self.X[old_length:] = sp.lil_matrix(instances.X)
+                    self.X = self.X.tocsr()
+                else:
+                    self.X[old_length:] = instances.X
+                if sp.issparse(self._Y) or sp.issparse(instances._Y):
+                    self._Y = sp.lil_matrix(self._Y)
+                    self._Y[old_length:] = sp.lil_matrix(instances._Y)
+                    self._Y = self._Y.tocsr()
+                else:
+                    self._Y[old_length:] = instances._Y
+                if sp.issparse(self.metas) or sp.issparse(instances.metas):
+                    self.metas = sp.lil_matrix(self.metas)
+                    self.metas[old_length:] = sp.lil_matrix(instances.metas)
+                    self.metas = self.metas.tocsr()
+                else:
+                    self.metas[old_length:] = instances.metas
                 if self.W.shape[-1]:
                     if instances.W.shape[-1]:
                         self.W[old_length:] = instances.W
@@ -1013,7 +1059,8 @@ class Table(MutableSequence, Storage):
         if data is None:
             return Storage.Missing
         if data is not None and sp.issparse(data):
-            return Storage.SPARSE_BOOL if (data.data == 1).all() else Storage.SPARSE
+            return Storage.SPARSE_BOOL if hasattr(data, "data") and (data.data == 1).all() \
+                else Storage.SPARSE
         else:
             return Storage.DENSE
 
