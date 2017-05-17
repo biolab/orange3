@@ -165,15 +165,18 @@ class Singleton(object):
         Singleton._instance = None
 
     def getInstance(self):
-        if not isinstance(Singleton._instance, self._class):
+        if not self.isInstancied():
             Singleton._instance = self._class()
         return Singleton._instance
 
     def clearInstance(self):
         """"Delete the instance of the singleton"""
-        if Singleton._instance is not None:
+        if self.isInstancied():
             del Singleton._instance
             Singleton._instance = None
+
+    def isInstancied(self):
+        return isinstance(Singleton._instance, self._class)
 
 
 @Singleton
