@@ -1,3 +1,4 @@
+import unittest
 from os.path import dirname
 
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
@@ -10,6 +11,7 @@ from Orange.widgets.utils.webview import WebviewWidget
 SOME_URL = WebviewWidget.toFileURL(dirname(__file__))
 
 
+@unittest.skip("WebviewWidget duality")
 class WebviewWidgetTest(WidgetTest):
     def test_base(self):
         w = WebviewWidget()
