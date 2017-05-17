@@ -156,6 +156,27 @@ class DockWidget(QDockWidget):
             QShortcut(key, self, _close, _close)
 
 
+class Singleton(object):
+    _instance = None
+    """Simple singleton class"""
+
+    def __init__(self, _class):
+        self._class = _class
+        Singleton._instance = None
+
+    def getInstance(self):
+        if not isinstance(Singleton._instance, self._class):
+            Singleton._instance = self._class()
+        return Singleton._instance
+
+    def clearInstance(self):
+        """"Delete the instance of the singleton"""
+        if Singleton._instance is not None:
+            del Singleton._instance
+            Singleton._instance = None
+
+
+@Singleton
 class CanvasMainWindow(QMainWindow):
     SETTINGS_VERSION = 2
 
