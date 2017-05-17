@@ -1,8 +1,10 @@
+from collections import OrderedDict
+
 from AnyQt.QtGui import (
     QBrush, QPen, QColor, QPainter, QPainterPath, QTransform
 )
 from AnyQt.QtWidgets import (
-    QGraphicsItem, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsTextItem,
+    QGraphicsItem, QGraphicsEllipseItem, QGraphicsTextItem,
     QGraphicsLineItem, QGraphicsScene, QGraphicsView, QStyle, QSizePolicy,
     QFormLayout
 )
@@ -20,16 +22,20 @@ DefDroppletBrush = QBrush(Qt.darkGray)
 
 class GraphNode:
     def __init__(self, *_, **kwargs):
-        self.edges = kwargs.get("edges", set())
+        # Implement edges as an ordered dict to get the nice speed benefits as
+        # well as adding ordering, which we need to make trees deterministic
+        self.__edges = kwargs.get("edges", OrderedDict())
 
     def graph_edges(self):
-        return self.edges
+        """Get a list of the edges that stem from the node."""
+        return self.__edges.keys()
 
     def graph_add_edge(self, edge):
-        self.edges.add(edge)
+        """Add an edge stemming from the node."""
+        self.__edges[edge] = 0
 
     def __iter__(self):
-        for edge in self.edges:
+        for edge in self.__edges.keys():
             yield edge.node2
 
     def graph_nodes(self, atype=1):
@@ -185,7 +191,7 @@ class GraphicsNode(TextTreeNode):
 
     # noinspection PyCallByClass,PyTypeChecker
     def update_edge(self):
-        for edge in self.edges:
+        for edge in self.graph_edges():
             if edge.node1 is self:
                 QTimer.singleShot(0, edge.update_ends)
             elif edge.node2 is self:
@@ -274,16 +280,17 @@ class TreeGraphicsScene(QGraphicsScene):
         self.update()
 
     def _fix_pos(self, node, x, y):
+        """Fix the position of the tree stemming from the given node."""
         def brect(node):
+            """Get the bounding box of the parent rect and all its children."""
             return node.boundingRect() | node.childrenBoundingRect()
 
         if node.branches and node.isOpen:
             for n in node.branches:
-                x, ry = self._fix_pos(n, x,
-                                      y + self._VSPACING + brect(node).height())
+                x, _ = self._fix_pos(n, x, y + self._VSPACING + brect(node).height())
             x = (node.branches[0].pos().x() + node.branches[-1].pos().x()) / 2
             node.setPos(x, y)
-            for e in node.edges:
+            for e in node.graph_edges():
                 e.update_ends()
         else:
             node.setPos(self.gx, y)
@@ -428,7 +435,7 @@ class OWTreeViewer2D(OWWidget):
 
         if self.model:
             self.reportSection("Tree")
-            urlfn, filefn = self.getUniqueImageName(ext=".svg")
+            _, filefn = self.getUniqueImageName(ext=".svg")
             svg = QSvgGenerator()
             svg.setFileName(filefn)
             ssize = self.scene.sceneRect().size()
@@ -454,15 +461,16 @@ class OWTreeViewer2D(OWWidget):
         if self.root_node is None:
             return
 
-        model = self.model
-        root_instances = len(model.instances)
+        tree_adapter = self.root_node.tree_adapter
+        root_instances = tree_adapter.num_samples(self.root_node.node_inst)
         width = 3
         for edge in self.scene.edges():
-            num_inst = len(edge.node2.node_inst.subset)
+            num_inst = tree_adapter.num_samples(edge.node2.node_inst)
             if self.line_width_method == 1:
                 width = 8 * num_inst / root_instances
             elif self.line_width_method == 2:
-                width = 8 * num_inst / len(edge.node1.node_inst.subset)
+                width = 8 * num_inst / tree_adapter.num_samples(
+                    edge.node1.node_inst)
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 

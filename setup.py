@@ -19,7 +19,7 @@ from distutils.command.build_ext import build_ext
 
 NAME = 'Orange3'
 
-VERSION = '3.3.10'
+VERSION = '3.5.0'
 ISRELEASED = False
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -94,7 +94,7 @@ def git_version():
         env['LANGUAGE'] = 'C'
         env['LANG'] = 'C'
         env['LC_ALL'] = 'C'
-        out = subprocess.Popen(cmd, stdout = subprocess.PIPE, env=env).communicate()[0]
+        out = subprocess.Popen(cmd, stdout=subprocess.PIPE, env=env).communicate()[0]
         return out
 
     try:
@@ -168,7 +168,7 @@ PACKAGES = find_packages()
 # hierarchy
 PACKAGE_DATA = {
     "Orange": ["datasets/*.{}".format(ext)
-               for ext in ["tab", "csv", "basket", "info", "dst"]],
+               for ext in ["tab", "csv", "basket", "info", "dst", "metadata"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
     "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
     "Orange.canvas.application.workflows": ["*.ows"],
@@ -176,13 +176,15 @@ PACKAGE_DATA = {
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg",
                        "_highcharts/*"],
-    "Orange.widgets.classify": ["icons/*.svg"],
+    "Orange.widgets.tests": ["datasets/*.tab",
+                             "workflows/*.ows"],
     "Orange.widgets.data": ["icons/*.svg",
                             "icons/paintdata/*.png",
                             "icons/paintdata/*.svg"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
-    "Orange.widgets.visualize": ["icons/*.svg"],
-    "Orange.widgets.regression": ["icons/*.svg"],
+    "Orange.widgets.model": ["icons/*.svg"],
+    "Orange.widgets.visualize": ["icons/*.svg",
+                                 "_owmap/*"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
     "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],

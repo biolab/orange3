@@ -17,7 +17,7 @@ from AnyQt.QtWidgets import (
     QListWidgetItem, QFrame, QGraphicsView, QGraphicsScene, QComboBox,
     QItemDelegate
 )
-from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal
+from AnyQt.QtCore import Qt, QSize, QRectF, pyqtSignal, PYQT_VERSION
 
 from Orange.widgets import gui
 from Orange.widgets.utils import colorbrewer
@@ -53,11 +53,15 @@ class ColorPixmap(QIcon):
 
 
 # a widget for selecting the colors to be used
-class ColorPaletteDlg(QDialog):
+class ColorPaletteDlg(QDialog, gui.OWComponent):
     shemaChanged = pyqtSignal()
 
     def __init__(self, parent, windowTitle="Color Palette"):
         super().__init__(parent, windowTitle=windowTitle)
+
+        if PYQT_VERSION < 0x50000:
+            gui.OWComponent.__init__(self, None)
+
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(4, 4, 4, 4)
 
@@ -540,7 +544,7 @@ class GradientPaletteGenerator:
         assert len(colors) >= 2
         self.bins = np.linspace(0, 1, len(colors))
         self.deriv = self.bins[1] - self.bins[0]
-        self.colors = np.array([self.to_rgb_tuple(c) for c in colors])
+        self.colors = np.array([self.to_rgb_tuple(c) for c in colors], dtype=np.uint8)
 
     def to_rgb_tuple(self, color):
         try:
@@ -645,7 +649,7 @@ class ColorPaletteGenerator:
                 col = QColor()
                 col.setHsv(360 / number_of_colors * i, 255, 255)
                 rgb_colors.append(col.getRgb()[:3])
-        self.rgb_array = np.vstack((rgb_colors, [NAN_GREY]))
+        self.rgb_array = np.vstack((rgb_colors, [NAN_GREY])).astype(np.uint8)
 
     def __getitem__(self, value):
         if isinstance(value, Iterable):

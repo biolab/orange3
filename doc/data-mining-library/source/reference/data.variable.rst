@@ -36,14 +36,15 @@ Some variables are derived from others. For instance, discretizing a continuous
 variable gives a new, discrete variable. The new variable can compute its
 values from the original one.
 
-    >>> from Orange.data import discretization
-    >>> d_iris = discretization.DomainDiscretizer(iris)
+    >>> from Orange.preprocess import DomainDiscretizer
+    >>> discretizer = DomainDiscretizer()
+    >>> d_iris = discretizer(iris)
     >>> d_iris[0]
     DiscreteVariable('D_sepal length')
     >>> d_iris[0].values
     ['<5.2', '[5.2, 5.8)', '[5.8, 6.5)', '>=6.5']
 
-See :obj:`Variable.compute_value` for a detailed example.
+See :obj:`Variable.compute_value` for a detailed explanation.
 
 Constructors
 ------------
@@ -86,7 +87,7 @@ Base class
     .. automethod:: str_val
     .. automethod:: to_val
     .. automethod:: val_from_str_add
-    .. automethod:: compute_value
+    .. autoattribute:: compute_value
 
     Method `compute_value` is usually invoked behind the scenes in
     conversion of domains::
@@ -96,7 +97,8 @@ Base class
 
         >>> iris = Table("iris")
         >>> iris_1 = iris[::2]
-        >>> d_iris_1 = DomainDiscretizer(iris_1)
+        >>> discretizer = DomainDiscretizer()
+        >>> d_iris_1 = discretizer(iris_1)
 
         >>> d_iris_1[0]
         DiscreteVariable('D_sepal length')
@@ -172,8 +174,9 @@ Time variables
 --------------
 Time variables are continuous variables with value 0 on the Unix epoch,
 1 January 1970 00:00:00.0 UTC. Positive numbers are dates beyond this date,
-and negative dates before. Due to limitation of Python ``datetime`` module,
+and negative dates before. Due to limitation of Python :py:mod:`datetime` module,
 only dates in 1 A.D. or later are supported.
 
 .. autoclass:: TimeVariable
+
     .. automethod:: parse

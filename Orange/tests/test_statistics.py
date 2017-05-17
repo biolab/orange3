@@ -1,11 +1,25 @@
 import unittest
+import warnings
 import numpy as np
+import scipy as sp
 from scipy.sparse import csr_matrix
 
-from Orange.statistics.util import bincount, countnans, contingency, stats
+from Orange.statistics.util import bincount, countnans, contingency, stats, \
+    nanmin, nanmax, unique, mean, nanmean
 
 
 class TestUtil(unittest.TestCase):
+    def setUp(self):
+        nan = float('nan')
+        self.data = [
+            np.array([
+                [0., 1., 0., nan, 3., 5.],
+                [0., 0., nan, nan, 5., nan],
+                [0., 0., 0., nan, 7., 6.]]),
+            np.zeros((2, 3)),
+            np.ones((2, 3)),
+        ]
+
     def test_bincount(self):
         hist, n_nans = bincount([0., 1., np.nan, 3])
         self.assertEqual(n_nans, 1)
@@ -51,8 +65,8 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 2, 1],
                                            [0, 1, 1/3, 0, 2, 1],
                                            [0, 1, 1/3, 0, 2, 1],
-                                           [0, 0,   0, 0, 3, 0],
-                                           [0, 0,   0, 0, 3, 0]])
+                                           [0, 0, 0, 0, 3, 0],
+                                           [0, 0, 0, 0, 3, 0]])
 
     def test_stats_weights(self):
         X = np.arange(4).reshape(2, 2).astype(float)
@@ -79,3 +93,68 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 1, 2]])
+
+    def test_nanmin_nanmax(self):
+        for X in self.data:
+            X_sparse = csr_matrix(X)
+            for axis in [None, 0, 1]:
+                np.testing.assert_array_equal(
+                    nanmin(X, axis=axis),
+                    np.nanmin(X, axis=axis))
+
+                np.testing.assert_array_equal(
+                    nanmin(X_sparse, axis=axis),
+                    np.nanmin(X, axis=axis))
+
+                np.testing.assert_array_equal(
+                    nanmax(X, axis=axis),
+                    np.nanmax(X, axis=axis))
+
+                np.testing.assert_array_equal(
+                    nanmax(X_sparse, axis=axis),
+                    np.nanmax(X, axis=axis))
+
+    def test_unique(self):
+        for X in self.data:
+            X_sparse = csr_matrix(X)
+            np.testing.assert_array_equal(
+                unique(X_sparse, return_counts=False),
+                np.unique(X, return_counts=False))
+
+            for a1, a2 in zip(unique(X_sparse, return_counts=True),
+                              np.unique(X, return_counts=True)):
+                np.testing.assert_array_equal(a1, a2)
+
+    def test_unique_explicit_zeros(self):
+        x1 = csr_matrix(np.eye(3))
+        x2 = csr_matrix(np.eye(3))
+
+        # set some of-diagonal to explicit zeros
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore",
+                                    category=sp.sparse.SparseEfficiencyWarning)
+            x2[0, 1] = 0
+            x2[1, 0] = 0
+
+        np.testing.assert_array_equal(
+            unique(x1, return_counts=False),
+            unique(x2, return_counts=False),
+        )
+        np.testing.assert_array_equal(
+            unique(x1, return_counts=True),
+            unique(x2, return_counts=True),
+        )
+
+    def test_mean(self):
+        for X in self.data:
+            X_sparse = csr_matrix(X)
+            np.testing.assert_array_equal(
+                mean(X_sparse),
+                np.mean(X))
+
+    def test_nanmean(self):
+        for X in self.data:
+            X_sparse = csr_matrix(X)
+            np.testing.assert_array_equal(
+                nanmean(X_sparse),
+                np.nanmean(X))

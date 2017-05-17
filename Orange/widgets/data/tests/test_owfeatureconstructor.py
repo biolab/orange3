@@ -2,6 +2,8 @@ import unittest
 import ast
 import sys
 
+import numpy as np
+
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
 from Orange.widgets.tests.base import WidgetTest
@@ -71,6 +73,21 @@ class FeatureConstructorTest(unittest.TestCase):
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              str(data[i * 50, "iris"]) + "_name")
+
+    def test_construct_numeric_names(self):
+        data = Table("iris")
+        data.domain.attributes[0].name = "0.1"
+        data.domain.attributes[1].name = "1"
+        desc = PyListModel(
+            [ContinuousDescriptor(name="S",
+                                  expression="_0_1 + _1",
+                                  number_of_decimals=3)]
+        )
+        nv = construct_variables(desc, data.domain)
+        ndata = Table(Domain(nv, None), data)
+        np.testing.assert_array_equal(ndata.X[:, 0],
+                                      data.X[:, :2].sum(axis=1))
+        ContinuousVariable._clear_all_caches()
 
 
 GLOBAL_CONST = 2
@@ -209,3 +226,17 @@ class OWFeatureConstructorTests(WidgetTest):
     def test_create_variable_with_no_data(self):
         self.widget.addFeature(
             ContinuousDescriptor("X1", "", 3))
+
+    def test_error_invalid_expression(self):
+        data = Table("iris")
+        self.widget.setData(data)
+        self.widget.addFeature(
+            ContinuousDescriptor("X", "0", 3)
+        )
+        self.widget.apply()
+        self.assertFalse(self.widget.Error.invalid_expressions.is_shown())
+        self.widget.addFeature(
+            ContinuousDescriptor("X", "0a", 3)
+        )
+        self.widget.apply()
+        self.assertTrue(self.widget.Error.invalid_expressions.is_shown())

@@ -6,6 +6,168 @@ Change Log
 * ...
 
 
+[3.4.2] - 2017-04-19
+--------------------
+##### Enhancements
+* Nomogram: Support for sparse data ([#2197](../../pull/2197))
+* Add PDF format to image exporters ([#2210](../../pull/2210))
+* Reimplement macOS application (.app) build scripts ([#2217](../../pull/2217))
+* Canvas: Use 'windowFilePath' to display display current filename instead of the title ([#2206](../../pull/2206))
+* OWTestLearners: Cross validation by feature ([#2145](../../pull/2145))
+* Pythagorean tree: Make border scale invariant ([#2141](../../pull/2141))
+
+##### Bugfixes
+* Scatterplot crashes when loaded from old workflow ([#2241](../../pull/2241))
+* Error Report: URL changed ([#2220](../../pull/2220))
+* Scatter Plot: update class density ([#2238](../../pull/2238))
+* KMeans: should not crash when there is less data rows than k ([#2172](../../pull/2172))
+* Edit Domain: Prevent duplicate variable names ([#2146](../../pull/2146))
+* Scatter Plot: left margin (axis y) is now adapting ([#2200](../../pull/2200))
+* Predictions widget: handle similar but different domains ([#2129](../../pull/2129))
+* OWNomogram: Do not paint scene until the widget is not open ([#2202](../../pull/2202))
+* Test & Score: crashing prevented when learner disconnects ([#2194](../../pull/2194))
+* Widget Logistic Regression: can handle unused values ([#2116](../../pull/2116))
+* stats: Open Corpus in OWDataTable after transposing it ([#2177](../../pull/2177))
+* Rank: fixes creating Table with infinite numbers ([#2168](../../pull/2168))
+* Add-ons: Problems with datetime parsing ([#2196](../../pull/2196))
+* OWPredictions: Allow classification when data has no target column ([#2183](../../pull/2183))
+* OWDataSampler: Fix typo boostrap to bootstrap ([#2195](../../pull/2195))
+* All widgets are set to auto* when they are used for the first time ([#2136](../../pull/2136))
+* Preprocess: enums containing function names changed ([#2151](../../pull/2151))
+* Fitter: Fix used_vals and params not being set ([#2138](../../pull/2138))
+* VizRankDialog: Stop computation when parent widget is deleted ([#2118](../../pull/2118))
+* Distributions Report: Visualizations are now fitted ([#2130](../../pull/2130))
+* Fitter: Change params uses default if None ([#2127](../../pull/2127))
+* Fix invalid settings reuse in File widget  ([#2137](../../pull/2137))
+* Scatter Plot - Prevent crash due to missing data ([#2122](../../pull/2122))
+* Sieve Diagram: Using datasets with meta data ([#2098](../../pull/2098))
+
+
+[3.4.1] - 2017-03-16
+--------------------
+##### Enhancements
+* Scatterplot: Implement grouping of selections ([#2070](../../pull/2070))
+
+##### Bugfixes
+* Discover widgets when some dependencies are missing ([#2103](../../pull/2103))
+* Select Rows: "is defined" fails ([#2087](../../pull/2087))
+* report comments and OWFile reporting filename ([#1956](../../pull/1956))
+* owcorrespondence: Handle variables with one value ([#2066](../../pull/2066))
+* OWTreeViewer: Fix trees being displayed differently for same tree object ([#2067](../../pull/2067))
+* Fitter: Properly delegate preprocessors ([#2093](../../pull/2093))
+
+
+[3.4.0] - 2017-03-06
+--------------------
+##### Enhancements
+* OWSGD: Output coefficients ([#1981](../../pull/1981))
+* OWNomogram: Add a new widget ([#1936](../../pull/1936))
+* OWRandomize: Add a new widget ([#1863](../../pull/1863))
+* Map widget ([#1735](../../pull/1735))
+* Table.transpose: Use heuristic to guess data type of attributes of attributes ([#1844](../../pull/1844))
+* Create Class widget ([#1766](../../pull/1766))
+
+##### Bugfixes
+* Heatmap: Fix crash on data with empty columns ([#2057](../../pull/2057))
+* ScatterPlot: Fix crash when coloring by column of unknowns ([#2061](../../pull/2061))
+* owpreprocess: Handle columns with only NaN values ([#2064](../../pull/2064))
+* File: Disallow changing string columns to datetime ([#2050](../../pull/2050))
+* OWKMeans: Auto-commit fix and silhuette optimization ([#2073](../../pull/2073))
+* OWDistributions: Fix binning of meta attributes ([#2068](../../pull/2068))
+* SelectRows: Fix loading of conditions ([#2065](../../pull/2065))
+* OWRandomize: New icon ([#2069](../../pull/2069))
+* ZeroDivisionError owmosaic.py ([#2046](../../pull/2046))
+* OWMosaic:  Fix crash for empty column ([#2006](../../pull/2006))
+* Fitter: Fix infinite recursion in __getattr__ ([#1977](../../pull/1977))
+* OWTreeGraph: Update node text when selecting target class ([#2045](../../pull/2045))
+* Prevent PickleError (owfile.py) ([#2039](../../pull/2039))
+* Fix Chi2 computation for variables with values with no instances ([#2031](../../pull/2031))
+* OWDistanceMatrix: Remove quotes with string labels ([#2034](../../pull/2034))
+* owheatmap: Prevent sliders to set Low >= High ([#2025](../../pull/2025))
+* WebviewWidget: WebEngine Don't Grab Focus on setHtml ([#1983](../../pull/1983))
+* OWFile: Show error msg when file doesn't exists ([#2024](../../pull/2024))
+* Preprocess Widget: Continuize type error ([#1978](../../pull/1978))
+* data/io.py Metadata file not saved anymore when it is empty ([#2002](../../pull/2002))
+* Import from AnyQt instead from PyQt4 ([#2004](../../pull/2004))
+* OWNomogram: Adjust scene rect ([#1982](../../pull/1982))
+* owconcatenate: Fix domain intersection (remove duplicates) ([#1967](../../pull/1967))
+* preprocess: Reset number_of_decimals after scaling ([#1914](../../pull/1914))
+* Treeviewer sklearn tree compatibility ([#1870](../../pull/1870))
+* OWSVR: Update learner when SVR type changes ([#1878](../../pull/1878))
+* Tree widget binarization ([#1837](../../pull/1837))
+
+
+[3.3.12] - 2017-02-14
+--------------------
+##### Bugfixes
+* Highcharts: Fix freezing on Qt5 ([#2015](../../pull/2015))
+* Handle KeyError Mosaic Display (owmosaic.py) ([#2014](../../pull/2014))
+* Loading iris on C locale ([#1998](../../pull/1998))
+* Handle KeyError Sieve Diagram widget (owsieve) when one row ([#2007](../../pull/2007))
+* Test Learners: Fix AUC for selected single target class ([#1996](../../pull/1996))
+* OWDataSampler: Fix 'Fixed proportion of data' option ([#1995](../../pull/1995))
+
+
+[3.3.11] - 2017-02-03
+--------------------
+##### Enhancements
+* Widget testing utilities ([#1939](../../pull/1939))
+
+##### Bugfixes
+* KMeans: Fix crashes when underlying algorithm fails ([#1974](../../pull/1974))
+* owpaintdata: Adjust color model to input dataset ([#1988](../../pull/1988))
+* scatterplot: Fix density image ([#1990](../../pull/1990))
+* owpaintdata: Fix an error when the input dataset contains NaN ([#1972](../../pull/1972))
+* Table: Ensure correct dtype in `_compute_distributions` ([#1969](../../pull/1969))
+* Evaluation Results input validation ([#1954](../../pull/1954))
+* owimpute: Fix editing of individual imputers ([#1966](../../pull/1966))
+* gui: Trigger callback in SpinBoxWFocusOut only if value changed ([#1979](../../pull/1979))
+* Python 3.6 compatibility ([#1963](../../pull/1963))
+* File: Fix crash when last_path is None ([#1961](../../pull/1961))
+* Paint Data: in-place output modification ([#1959](../../pull/1959))
+* DataSampler: Fix crash when stratifying unbalanced datasets ([#1952](../../pull/1952))
+* Table.__repr__: Fix for sparse data with < 5 instances ([#1951](../../pull/1951))
+* Catch errors during learning in learner widgets ([#1949](../../pull/1949))
+* OWMosaic: Fix crash for attribute with no values ([#1941](../../pull/1941))
+* Impute: Fix crash when model-based imputation fails ([#1937](../../pull/1937))
+* OWSieve: Fix crash for attribute with no values ([#1934](../../pull/1934))
+* Tree: Fix crash when two attributes equal number of values ([#1928](../../pull/1928))
+* Store changed variables in File widget ([#1805](../../pull/1805))
+
+
+[3.3.10] - 2017-01-18
+--------------------
+##### Enhancements
+* Input/output signal replacement declarations ([#1810](../../pull/1810))
+
+##### Bugfixes
+* MDS Widget: Handle NaN values for plot point styling ([#1931](../../pull/1931))
+* OWPCA: Fix crash for dataset with no rows or no attributes ([#1915](../../pull/1915))
+* OWMosaic: Discretize metas as well ([#1912](../../pull/1912))
+* owfeaturecontructor: Fix an IndexError accessing exception's args ([#1905](../../pull/1905))
+* owrank: Remove `super()` call from `migrate_settings` ([#1902](../../pull/1902))
+* OWBoxPlot: Fix ordering of boxes ([#1900](../../pull/1900))
+* canvas/readwrite: Fix byte literal serialization ([#1898](../../pull/1898))
+* owpca: Handle the case of 0 total variance in the PCA solution ([#1897](../../pull/1897))
+* Copy data attributes for annotated data set ([#1895](../../pull/1895))
+* colorpalette: Fix AttributeError ([#1889](../../pull/1889))
+* OWDistributions: Reset combos when data is removed ([#1887](../../pull/1887))
+* Concatenate bugfix ([#1886](../../pull/1886))
+* OWPredictions: Fix crash when opening report ([#1884](../../pull/1884))
+* owsilhouetteplot: Fix TypeError when cluster column is an object array ([#1876](../../pull/1876))
+* OWSave: Safer Check if Writer Support Sparse ([#1864](../../pull/1864))
+* OWImageViewer: Fix selection with missing values ([#1861](../../pull/1861))
+* owselectcolumns: Fix auto commit on any change ([#1859](../../pull/1859))
+* Table.transpose: Keep metas array two dimensional when no attributes in domain ([#1855](../../pull/1855))
+* Select Rows filter enum ([#1854](../../pull/1854))
+* Scatter plot: don't crash on report without data ([#1840](../../pull/1840))
+* Crash on ctrl-c/cmd-c in widgets without graphs ([#1827](../../pull/1827))
+* Fix crash in listview if labels are changed before calling __setitem__ ([#1825](../../pull/1825))
+* Scatterplot: Allow labelling by string attributes ([#1812](../../pull/1812))
+* Fix copy to clipboard in "Data Table" widget ([#1808](../../pull/1808))
+* TreeGraph: Compatibility with old schemas ([#1804](../../pull/1804))
+
+
 [3.3.9] - 2016-12-02
 --------------------
 ##### Enhancements
@@ -314,7 +476,13 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.3.9...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.2...HEAD
+[3.4.2]: https://github.com/biolab/orange3/compare/3.4.1...3.4.2
+[3.4.1]: https://github.com/biolab/orange3/compare/3.4.0...3.4.1
+[3.4.0]: https://github.com/biolab/orange3/compare/3.3.12...3.4.0
+[3.3.12]: https://github.com/biolab/orange3/compare/3.3.11...3.3.12
+[3.3.11]: https://github.com/biolab/orange3/compare/3.3.10...3.3.11
+[3.3.10]: https://github.com/biolab/orange3/compare/3.3.9...3.3.10
 [3.3.9]: https://github.com/biolab/orange3/compare/3.3.8...3.3.9
 [3.3.8]: https://github.com/biolab/orange3/compare/3.3.7...3.3.8
 [3.3.7]: https://github.com/biolab/orange3/compare/3.3.6...3.3.7

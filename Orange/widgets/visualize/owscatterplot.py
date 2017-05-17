@@ -1,6 +1,7 @@
 import numpy as np
+import scipy.sparse as sp
 
-from AnyQt.QtCore import QSize, Qt, QTimer
+from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtGui import (
     QPen, QFont, QFontInfo, QPalette, QKeySequence,
 )
@@ -23,7 +24,8 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+                                                 ANNOTATED_DATA_SIGNAL_NAME,
+                                                 get_next_name)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -42,7 +44,7 @@ def font_resize(font, factor, minsize=None, maxsize=None):
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
     captionTitle = "Score Plots"
-    K = 10
+    minK = 10
 
     def check_preconditions(self):
         self.Information.add_message(
@@ -68,9 +70,9 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         valid = graph.get_valid_list(ind12)
         X = graph.jittered_data[ind12, :][:, valid].T
         Y = self.master.data.Y[valid]
-        if X.shape[0] < self.K:
+        if X.shape[0] < self.minK:
             return
-        n_neighbors = min(self.K, len(X) - 1)
+        n_neighbors = min(self.minK, len(X) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
         ind = knn.kneighbors(return_distance=False)
         if self.master.data.domain.has_discrete_class:
@@ -91,7 +93,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         data = Table(dom, X, Y)
         relief = ReliefF if isinstance(dom.class_var, DiscreteVariable) \
             else RReliefF
-        weights = relief(n_iterations=100, k_nearest=self.K)(data)
+        weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         attrs = sorted(zip(weights, mdomain.attributes),
                        key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
@@ -123,6 +125,7 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
+    selection = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
 
@@ -162,7 +165,7 @@ class OWScatterPlot(OWWidget):
         box = gui.vBox(self.controlArea, "Axis Data")
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)
-        gui.comboBox(
+        self.cb_attr_x = gui.comboBox(
             box, self, "attr_x", label="Axis x:", callback=self.update_attr,
             model=self.xy_model, **common_options)
         self.cb_attr_y = gui.comboBox(
@@ -190,36 +193,10 @@ class OWScatterPlot(OWWidget):
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        box = gui.vBox(self.controlArea, "Points")
-        self.color_model = DomainModel(
-            placeholder="(Same color)", valid_types=dmod.PRIMITIVE)
-        self.cb_attr_color = gui.comboBox(
-            box, self, "graph.attr_color", label="Color:",
-            callback=self.update_colors,
-            model=self.color_model, **common_options)
-        self.label_model = DomainModel(
-            placeholder="(No labels)", valid_types=dmod.PRIMITIVE)
-        self.cb_attr_label = gui.comboBox(
-            box, self, "graph.attr_label", label="Label:",
-            callback=self.graph.update_labels,
-            model=self.label_model, **common_options)
-        self.shape_model = DomainModel(
-            placeholder="(Same shape)", valid_types=DiscreteVariable)
-        self.cb_attr_shape = gui.comboBox(
-            box, self, "graph.attr_shape", label="Shape:",
-            callback=self.graph.update_shapes,
-            model=self.shape_model, **common_options)
-        self.size_model = DomainModel(
-            placeholder="(Same size)", valid_types=ContinuousVariable)
-        self.cb_attr_size = gui.comboBox(
-            box, self, "graph.attr_size", label="Size:",
-            callback=self.graph.update_sizes,
-            model=self.size_model, **common_options)
-        self.models = [self.xy_model, self.color_model, self.label_model,
-                       self.shape_model, self.size_model]
-
         g = self.graph.gui
-        g.point_properties_box(self.controlArea, box)
+        g.point_properties_box(self.controlArea)
+        self.models = [self.xy_model] + g.points_models
+
         box = gui.vBox(self.controlArea, "Plot Properties")
         g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
         gui.checkBox(
@@ -228,6 +205,9 @@ class OWScatterPlot(OWWidget):
         self.cb_class_density = gui.checkBox(
             box, self, value='graph.class_density', label='Show class density',
             callback=self.update_density)
+        self.cb_reg_line = gui.checkBox(
+            box, self, value='graph.show_reg_line',
+            label='Show regression line', callback=self.update_regression_line)
         gui.checkBox(
             box, self, 'graph.label_only_selected',
             'Label only selected points', callback=self.graph.update_labels)
@@ -277,6 +257,14 @@ class OWScatterPlot(OWWidget):
         )
         self.addActions([zoom_in, zoom_out, zoom_fit])
 
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
+    def keyReleaseEvent(self, event):
+        super().keyReleaseEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
     # def settingsFromWidgetCallback(self, handler, context):
     #     context.selectionPolygons = []
     #     for curve in self.graph.selectionCurveList:
@@ -293,8 +281,9 @@ class OWScatterPlot(OWWidget):
     #         self.graph.selectionCurveList.append(c)
 
     def reset_graph_data(self, *_):
-        self.graph.rescale_data()
-        self.update_graph()
+        if self.data is not None:
+            self.graph.rescale_data()
+            self.update_graph()
 
     def set_data(self, data):
         self.clear_messages()
@@ -346,8 +335,8 @@ class OWScatterPlot(OWWidget):
             for el in iterable:
                 if isinstance(el, Orange.data.Variable) and el.name == name:
                     return el
-            else:
-                return None
+            return None
+
         # handle restored settings from  < 3.3.9 when attr_* were stored
         # by name
         if isinstance(self.attr_x, str):
@@ -356,16 +345,16 @@ class OWScatterPlot(OWWidget):
             self.attr_y = findvar(self.attr_y, self.xy_model)
         if isinstance(self.graph.attr_label, str):
             self.graph.attr_label = findvar(
-                self.graph.attr_label, self.label_model)
+                self.graph.attr_label, self.graph.gui.label_model)
         if isinstance(self.graph.attr_color, str):
             self.graph.attr_color = findvar(
-                self.graph.attr_color, self.color_model)
+                self.graph.attr_color, self.graph.gui.color_model)
         if isinstance(self.graph.attr_shape, str):
             self.graph.attr_shape = findvar(
-                self.graph.attr_shape, self.shape_model)
+                self.graph.attr_shape, self.graph.gui.shape_model)
         if isinstance(self.graph.attr_size, str):
             self.graph.attr_size = findvar(
-                self.graph.attr_size, self.size_model)
+                self.graph.attr_size, self.graph.gui.size_model)
 
     def add_data(self, time=0.4):
         if self.data and len(self.data) > 2000:
@@ -389,8 +378,8 @@ class OWScatterPlot(OWWidget):
             new_attrs = [a for a in data.domain.attributes + data.domain.metas
                          if a.is_primitive()]
             new_metas = [m for m in data.domain.metas if not m.is_primitive()]
-            data = Table.from_table(Domain(new_attrs, data.domain.class_vars,
-                                           new_metas), data)
+            new_domain = Domain(new_attrs, data.domain.class_vars, new_metas)
+            data = data.transform(new_domain)
         return data
 
     def set_subset_data(self, subset_data):
@@ -406,16 +395,58 @@ class OWScatterPlot(OWWidget):
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.new_data(self.data_metas_X, self.subset_data)
+        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
+                            self.sparse_to_dense(self.subset_data))
         if self.attribute_selection_list and \
                 all(attr in self.graph.domain
-                    for attr in self.attribute_selection_list):
+                        for attr in self.attribute_selection_list):
             self.attr_x = self.attribute_selection_list[0]
             self.attr_y = self.attribute_selection_list[1]
         self.attribute_selection_list = None
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
+        self.apply_selection()
         self.unconditional_commit()
+
+    def prepare_data(self):
+        """
+        Only when dealing with sparse matrices.
+        GH-2152
+        """
+        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
+                            self.sparse_to_dense(self.subset_data),
+                            new=False)
+
+    def sparse_to_dense(self, input_data=None):
+        self.vizrank_button.setEnabled(not (self.data and self.data.is_sparse()))
+        if input_data is None or not input_data.is_sparse():
+            return input_data
+        keys = []
+        attrs = {self.attr_x,
+                 self.attr_y,
+                 self.graph.attr_color,
+                 self.graph.attr_shape,
+                 self.graph.attr_size,
+                 self.graph.attr_label}
+        for i, attr in enumerate(input_data.domain):
+            if attr in attrs:
+                keys.append(i)
+        new_domain = input_data.domain.select_columns(keys)
+        dmx = input_data.transform(new_domain)
+        dmx.X = dmx.X.toarray()
+        # TODO: remove once we make sure Y is always dense.
+        if sp.issparse(dmx.Y):
+            dmx.Y = dmx.Y.toarray()
+        return dmx
+
+    def apply_selection(self):
+        """Apply selection saved in workflow."""
+        if self.data is not None and self.selection is not None:
+            self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
+            self.selection = [x for x in self.selection if x < len(self.data)]
+            self.graph.selection[self.selection] = 1
+            self.graph.update_colors(keep_colors=True)
 
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
@@ -443,18 +474,25 @@ class OWScatterPlot(OWWidget):
         self.update_attr()
 
     def update_attr(self):
+        self.prepare_data()
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
+        self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.send_features()
 
     def update_colors(self):
-        self.graph.update_colors()
+        self.prepare_data()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):
         self.update_graph(reset_view=False)
 
+    def update_regression_line(self):
+        self.update_graph(reset_view=False)
+
     def update_graph(self, reset_view=True, **_):
+        axis = self.graph.plot_widget.getAxis("left")
+        axis.textWidth = 0
         self.graph.zoomStack = []
         if self.graph.data is None:
             return
@@ -463,19 +501,45 @@ class OWScatterPlot(OWWidget):
     def selection_changed(self):
         self.send_data()
 
+    @staticmethod
+    def create_groups_table(data, selection):
+        if data is None:
+            return None
+        names = [var.name for var in data.domain.variables + data.domain.metas]
+        name = get_next_name(names, "Selection group")
+        metas = data.domain.metas + (
+            DiscreteVariable(
+                name,
+                ["Unselected"] + ["G{}".format(i + 1)
+                                  for i in range(np.max(selection))]),
+        )
+        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
+        table = data.transform(domain)
+        table.metas[:, len(data.domain.metas):] = \
+            selection.reshape(len(data), 1)
+        return table
+
     def send_data(self):
         selected = None
         selection = None
         # TODO: Implement selection for sql data
+        graph = self.graph
         if isinstance(self.data, SqlTable):
             selected = self.data
         elif self.data is not None:
-            selection = self.graph.get_selection()
+            selection = graph.get_selection()
             if len(selection) > 0:
                 selected = self.data[selection]
+        if graph.selection is not None and np.max(graph.selection) > 1:
+            annotated = self.create_groups_table(self.data, graph.selection)
+        else:
+            annotated = create_annotated_table(self.data, selection)
         self.send("Selected Data", selected)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.data, selection))
+        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated)
+
+        # Store current selection in a setting that is stored in workflow
+        if self.selection is not None and len(selection):
+            self.selection = list(selection)
 
     def send_features(self):
         features = None
@@ -494,6 +558,8 @@ class OWScatterPlot(OWWidget):
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
 
     def send_report(self):
+        if self.data is None:
+            return
         def name(var):
             return var and var.name
         caption = report.render_items_vert((
@@ -509,13 +575,19 @@ class OWScatterPlot(OWWidget):
         if caption:
             self.report_caption(caption)
 
+    def closeContext(self):
+        if self.current_context is not None:
+            # When dataset changes, forget selection
+            self.selection = None
+        super().closeContext()
+
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
 
 
-def test_main(argv=None):
+def main(argv=None):
     import sys
     if argv is None:
         argv = sys.argv
@@ -545,4 +617,4 @@ def test_main(argv=None):
     return rval
 
 if __name__ == "__main__":
-    test_main()
+    main()

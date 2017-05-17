@@ -111,7 +111,7 @@ disabling. The data processing and token sending part of our widget
 now is
 
 
-.. literalinclude:: OWDataSamplerB.py
+.. literalinclude:: orange-demo/orangedemo/OWDataSamplerB.py
    :start-after: start-snippet-4
    :end-before: end-snippet-4
 

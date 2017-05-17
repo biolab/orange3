@@ -7,8 +7,9 @@ import Orange
 
 
 @contextmanager
-def named_file(content, encoding=None):
-    file = tempfile.NamedTemporaryFile("wt", delete=False, encoding=encoding)
+def named_file(content, encoding=None, suffix=''):
+    file = tempfile.NamedTemporaryFile("wt", delete=False,
+                                       encoding=encoding, suffix=suffix)
     file.write(content)
     name = file.name
     file.close()

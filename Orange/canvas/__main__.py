@@ -21,12 +21,6 @@ from AnyQt.QtGui import QFont, QColor, QDesktopServices
 from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import Qt, QDir, QUrl, QSettings
 
-import AnyQt.importhooks
-
-if AnyQt.USED_API == "pyqt5":
-    # Use a backport shim to fake leftover PyQt4 imports
-    AnyQt.importhooks.install_backport_hook('pyqt4')
-
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
 from Orange.canvas.application.canvasmain import CanvasMainWindow

@@ -23,17 +23,19 @@ Data
    :maxdepth: 1
 
    widgets/data/file
-   widgets/data/sql
+   widgets/data/sqltable
    widgets/data/save
    widgets/data/datainfo
    widgets/data/datatable
    widgets/data/selectcolumns
    widgets/data/selectrows
    widgets/data/datasampler
+   widgets/data/transpose
    widgets/data/discretize
    widgets/data/continuize
+   widgets/data/createclass
+   widgets/data/randomize
    widgets/data/concatenate
-   widgets/data/transpose
    widgets/data/paintdata
    widgets/data/pythonscript
    widgets/data/featureconstructor
@@ -67,42 +69,30 @@ Visualize
    widgets/visualize/cn2ruleviewer
    widgets/visualize/mosaicdisplay
    widgets/visualize/silhouetteplot
+   widgets/visualize/treeviewer
+   widgets/visualize/geomap
+   widgets/visualize/nomogram
 
 
-Classify
---------
-
-.. toctree::
-   :maxdepth: 1
-
-   widgets/classify/naivebayes
-   widgets/classify/logisticregression
-   widgets/classify/classificationtree
-   widgets/classify/classificationtreeviewer
-   widgets/classify/knearestneighbours
-   widgets/classify/loadclassifier
-   widgets/classify/majority
-   widgets/classify/randomforest
-   widgets/classify/saveclassifier
-   widgets/classify/svm
-   widgets/classify/cn2ruleinduction
-   widgets/classify/adaboost
-
-
-Regression
-----------
+Model
+-----
 
 .. toctree::
    :maxdepth: 1
 
-   widgets/regression/linear
-   widgets/regression/mean
-   widgets/regression/nearestneighbors
-   widgets/regression/stochasticgradient
-   widgets/regression/svmregression
-   widgets/regression/regressiontree
-   widgets/regression/regressiontreeviewer
-   widgets/regression/randomforestregression
+   widgets/model/naivebayes
+   widgets/model/logisticregression
+   widgets/model/tree
+   widgets/model/knn
+   widgets/model/loadmodel
+   widgets/model/constant
+   widgets/model/randomforest
+   widgets/model/savemodel
+   widgets/model/svm
+   widgets/model/cn2ruleinduction
+   widgets/model/adaboost
+   widgets/model/stochasticgradient
+   widgets/model/linearregression
 
 
 Unsupervised
@@ -121,8 +111,8 @@ Unsupervised
    widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
-   widgets/unsupervised/manifoldlearning
    widgets/unsupervised/mds
+   widgets/unsupervised/manifoldlearning
    
 
 Evaluation
@@ -136,7 +126,7 @@ Evaluation
    widgets/evaluation/liftcurve
    widgets/evaluation/predictions
    widgets/evaluation/rocanalysis
-   widgets/evaluation/testlearners
+   widgets/evaluation/testandscore
 
 
 .. toctree::

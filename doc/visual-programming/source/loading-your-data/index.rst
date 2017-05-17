@@ -4,10 +4,10 @@ Loading your Data
 Orange comes with its `own data format <http://docs.orange.biolab.si/reference/rst/Orange.data.formats.html#tab-delimited>`_, but can
 also handle native Excel (.xlsx or .xls), comma- or tab-delimited data files. The input data
 set is usually a table, with data instances (samples) in rows and
-data attributes in columns. Attributes can be of different type
-(continuous, discrete, and strings) and kind (input features, meta attributes, and class). Data attribute type and kind can be provided
+data attributes in columns. Attributes can be of different `types`
+(continuous, discrete, time, and strings) and have assigned `roles` (input features, meta attributes, and class). Data attribute type and role can be provided
 in the data table header. They can also be subsequently changed in the :doc:`File<../widgets/data/file>` widget, 
-while data kind can also be modified with :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
+while data role can also be modified with :doc:`Select Columns<../widgets/data/selectcolumns>` widget.
 
 In a Nutshell
 -------------
@@ -16,16 +16,16 @@ In a Nutshell
     widget to load the data and, if needed, define the class and meta attributes.
 -   Attribute names in the column header
     can be preceded with a label followed by a hash. Use c for class
-    and m for meta attribute, i to ignore a column, and C, D, S for
-    continuous, discrete and string attribute types. Examples: C\#mph,
+    and m for meta attribute, i to ignore a column, w for weights column, and C, D, T, S for
+    continuous, discrete, time, and string attribute types. Examples: C\#mph,
     mS\#name, i\#dummy.
 -   An alternative to the hash notation is Orange's native format with three
     header rows: the first with attribute names, the second specifying
-    the type (**continuous**, **discrete** or **string**), and the third
-    proving information on the kind of attribute (**class**, **meta** or **string**).
+    the type (**continuous**, **discrete**, **time**, or **string**), and the third
+    proving information on the attribute role (**class**, **meta**, **weight** or **ignore**).
 
-An Example: Data from Excel
----------------------------
+Example: Data from Excel
+------------------------
 
 Here is an example data set (download it from :download:`sample.xlsx <sample.xlsx>`) as entered in Excel:
 
@@ -47,7 +47,7 @@ To load the data, open the File widget (double click on the icon of the widget),
     :align: center
 
 
-File Widget: Setting the Attribute Type and Kind
+File Widget: Setting the Attribute Type and Role
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The **File** widget sends the data to the **Data Table**. Double click the **Data Table** to see its contents:
@@ -56,20 +56,20 @@ The **File** widget sends the data to the **Data Table**. Double click the **Dat
     :width: 900 px
     :align: center
 
-Orange correctly assumed that a column with gene names is meta information, which is displayed in the **Data Table** in columns shaded with light-brown. It has not guessed that `function`, the first non-meta column in our data file, is a class column. To correct this in Orange, we can adjust attribute kind in the column display of File widget (below). Double-click the `feature` label in the `function` row and select `target` instead. This will set `function` attribute as our target (class) variable.
+Orange correctly assumed that a column with gene names is meta information, which is displayed in the **Data Table** in columns shaded with light-brown. It has not guessed that `function`, the first non-meta column in our data file, is a class column. To correct this in Orange, we can adjust attribute role in the column display of File widget (below). Double-click the `feature` label in the `function` row and select `target` instead. This will set `function` attribute as our target (class) variable.
 
 .. image:: File-set-feature-kind.png
     :align: center
 
-You can also change attribute type from nominal to numeric, from string to datetime, and so on. Naturally, data values have to suit the specified attribute type. Datetime accepts only values in ISO format, e.g. 2016-01-01 16:16:01. Orange would also assume the attribute is numeric if it has several different values, else it would be considered nominal. All other types are considered strings and are as such automatically categorized as meta attributes.
+You can also change attribute type from nominal to numeric, from string to datetime, and so on. Naturally, data values have to suit the specified attribute type. Datetime accepts only values in `ISO 8601`_ format, e.g. 2016-01-01 16:16:01. Orange would also assume the attribute is numeric if it has several different values, else it would be considered nominal. All other types are considered strings and are as such automatically categorized as meta attributes.
 
-Change of attribute kinds and types should be confirmed by clicking the **Apply** button.
+Change of attribute roles and types should be confirmed by clicking the **Apply** button.
 
 
-Select Columns: Setting the Attribute Kind
+Select Columns: Setting the Attribute Role
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Another way to set the data kind is to feed the data to the :doc:`Select Columns<../widgets/data/selectcolumns>` widget:
+Another way to set the data role is to feed the data to the :doc:`Select Columns<../widgets/data/selectcolumns>` widget:
 
 .. image:: select-columns-schema.png
     :align: center
@@ -117,17 +117,19 @@ Header with Attribute Type Information
 
 Consider again the :download:`sample.xlsx <sample.xlsx>` data set. This time 
 we will augment the names of the attributes with prefixes
-that define attribute type (continuous, discrete, string) and kind (class or meta attribute)
-Prefixes are separated from the attribute name with a hash sign ("\#"). Prefixes for the attribute kind are:
+that define attribute type (continuous, discrete, time, string) and role (class or meta attribute)
+Prefixes are separated from the attribute name with a hash sign ("\#"). Prefixes for attribute roles are:
 
 -   c: class attribute
 -   m: meta attribute
 -   i: ignore the attribute
+-   w: instance weights
 
 and for the type:
 
 -   C: Continuous
 -   D: Discrete
+-   T: Time
 -   S: String
 
 This is how the header with augmented attribute names looks like in
@@ -149,7 +151,7 @@ attribute name) are not present in the data set.
 Three-Row Header Format
 -----------------------
 
-Orange's legacy native data format is a tab-delimited text file with three header rows. The first row lists the attribute names, the second row defines their type (continuous, discrete and string, or abbreviated c, d and s), and the third row an optional kind (class, meta, or ignore). Here is an example:
+Orange's legacy native data format is a tab-delimited text file with three header rows. The first row lists the attribute names, the second row defines their type (continuous, discrete, time and string, or abbreviated c, d, t, and s), and the third row an optional role (class, meta, weight, or ignore). Here is an example:
 
 .. image:: excel-with-tab1.png
     :width: 585 px
@@ -171,3 +173,14 @@ If you are using LibreOffice, simply save your files in Excel (.xlsx or .xls) fo
 .. image:: saving-tab-delimited-files.png
     :align: center
 
+Datetime Format
+---------------
+To avoid ambiguity, Orange supports date and/or time formatted in one of `ISO 8601`_ formats.
+E.g., the following values are all valid::
+
+    2016
+    2016-12-27
+    2016-12-27 14:20:51+02:00
+    16:20
+
+.. _ISO 8601: https://en.wikipedia.org/wiki/ISO_8601

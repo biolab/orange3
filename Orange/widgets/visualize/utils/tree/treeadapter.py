@@ -17,6 +17,11 @@ class BaseTreeAdapter(metaclass=ABCMeta):
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
+    def __init__(self, model):
+        self.model = model
+        self.domain = model.domain
+        self.instances = model.instances
+
     @abstractmethod
     def weight(self, node):
         """Get the weight of the given node.
@@ -165,6 +170,10 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    def short_rule(self, node):
+        pass
+
+    @abstractmethod
     def attribute(self, node):
         """Get the attribute that splits the given tree.
 
@@ -223,6 +232,10 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         """
         pass
 
+    @abstractmethod
+    def get_indices(self, nodes):
+        pass
+
     @property
     @abstractmethod
     def max_depth(self):
@@ -262,25 +275,8 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         """
         pass
 
-    @property
-    @abstractmethod
-    def domain(self):
-        """Get the domain of the given tree.
-
-        The domain contains information about the classes what the tree
-        represents.
-
-        Returns
-        -------
-
-        """
-        pass
-
 
 class TreeAdapter(BaseTreeAdapter):
-    def __init__(self, model):
-        self.model = model
-
     def weight(self, node):
         return len(node.subset) / len(node.parent.subset)
 
@@ -308,6 +304,9 @@ class TreeAdapter(BaseTreeAdapter):
     def rules(self, node):
         return self.model.rule(node)
 
+    def short_rule(self, node):
+        return node.description
+
     def attribute(self, node):
         return node.attr
 
@@ -316,11 +315,14 @@ class TreeAdapter(BaseTreeAdapter):
             return reduce(add, map(_leaves, self.children(node)), []) or [node]
         return _leaves(node)
 
-    def get_instances_in_nodes(self, dataset, nodes):
+    def get_instances_in_nodes(self, nodes):
         from Orange import tree
         if isinstance(nodes, tree.Node):
             nodes = [nodes]
         return self.model.get_instances(nodes)
+
+    def get_indices(self, nodes):
+        return self.model.get_indices(nodes)
 
     @property
     def max_depth(self):
@@ -333,7 +335,3 @@ class TreeAdapter(BaseTreeAdapter):
     @property
     def root(self):
         return self.model.root
-
-    @property
-    def domain(self):
-        return self.model.domain

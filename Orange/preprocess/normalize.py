@@ -2,12 +2,13 @@ from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from .transformation import Normalizer as Norm
 from .preprocess import Normalize
+from Orange.util import Reprable
 import warnings
 
 __all__ = ["Normalizer"]
 
 
-class Normalizer:
+class Normalizer(Reprable):
     def __init__(self,
                  zero_based=True,
                  norm_type=Normalize.NormalizeBySD,
@@ -27,7 +28,7 @@ class Normalizer:
             new_class_vars = [self.normalize(dists[i + attr_len], var) for
                               (i, var) in enumerate(data.domain.class_vars)]
         domain = Domain(new_attrs, new_class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
     def normalize(self, dist, var):
         if not var.is_continuous:

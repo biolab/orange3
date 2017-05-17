@@ -3,6 +3,7 @@
 
 import unittest
 import numpy as np
+from collections import defaultdict
 
 from Orange.data import (Table, Domain, StringVariable,
                          DiscreteVariable, ContinuousVariable)
@@ -13,7 +14,8 @@ from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     table_concat,
                                                     varying_between,
                                                     drop_columns,
-                                                    OWVennDiagram)
+                                                    OWVennDiagram,
+                                                    group_table_indices)
 from Orange.tests import test_filename
 
 
@@ -53,7 +55,7 @@ class TestVennDiagram(unittest.TestCase):
 
     def test_varying_between_missing_vals(self):
         data = Table(test_filename("test9.tab"))
-        self.assertEqual(6, len(varying_between(data, [data.domain[0]])))
+        self.assertEqual(6, len(varying_between(data, data.domain[0])))
 
     def test_venn_diagram(self):
         sources = ["SVM Learner", "Naive Bayes", "Random Forest"]
@@ -79,7 +81,7 @@ class TestVennDiagram(unittest.TestCase):
             tables.append(temp_table)
 
         data = table_concat(tables)
-        varying = varying_between(data, [item_id_var])
+        varying = varying_between(data, item_id_var)
         if source_var in varying:
             varying.remove(source_var)
         data = reshape_wide(data, varying, [item_id_var], [source_var])
@@ -154,3 +156,37 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, None, 2)
         self.assertIsNone(self.get_output("Selected Data"))
         self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
+
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal(self.signal_name, self.data[:0], 1)
+        self.send_signal(self.signal_name, self.data[:100], 2)
+        self.send_signal(self.signal_name, self.data[50:], 3)
+
+        for i in range(1, 4):
+            self.send_signal(self.signal_name, None, i)
+
+        self.send_signal(self.signal_name, self.data[:100], 1)
+        self.send_signal(self.signal_name, self.data[:0], 1)
+        self.send_signal(self.signal_name, self.data[50:], 3)
+
+        for i in range(1, 4):
+            self.send_signal(self.signal_name, None, i)
+
+        self.send_signal(self.signal_name, self.data[:100], 1)
+        self.send_signal(self.signal_name, self.data[50:], 2)
+        self.send_signal(self.signal_name, self.data[:0], 3)
+
+
+class GroupTableIndicesTest(unittest.TestCase):
+    def test_group_table_indices(self):
+        table = Table(test_filename("test9.tab"))
+        dd = defaultdict(list)
+        dd["1"] = [0, 1]
+        dd["huh"] = [2]
+        dd["hoy"] = [3]
+        dd["?"] = [4]
+        dd["2"] = [5]
+        dd["oh yeah"] = [6]
+        dd["3"] = [7]
+        self.assertEqual(dd, group_table_indices(table, "g"))

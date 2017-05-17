@@ -407,7 +407,7 @@ class TestDomainInit(unittest.TestCase):
                          DiscreteVariable("b", values="01")],
                         DiscreteVariable("y", values="01"))
         table = Table(domain, [[0, 1], [1, np.NaN]], [0, 1])
-        pre1 = Continuize(Impute(table))
+        pre1 = Continuize()(Impute()(table))
         pre2 = Table(pre1.domain, table)
         np.testing.assert_almost_equal(pre1.X, pre2.X)
 

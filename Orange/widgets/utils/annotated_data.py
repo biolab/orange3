@@ -1,12 +1,12 @@
 import re
 import numpy as np
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Domain, DiscreteVariable
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
 
 
-def _get_next_name(names, name):
+def get_next_name(names, name):
     """
     Returns next 'possible' attribute name. The name should not be duplicated
     and is generated using name parameter, appended by smallest possible index.
@@ -35,11 +35,12 @@ def create_annotated_table(data, selected_indices):
     if data is None:
         return None
     names = [var.name for var in data.domain.variables + data.domain.metas]
-    name = _get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
+    name = get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
     metas = data.domain.metas + (DiscreteVariable(name, ("No", "Yes")),)
     domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
     annotated = np.zeros((len(data), 1))
     if selected_indices is not None:
         annotated[selected_indices] = 1
-    return Table(domain, data.X, data.Y,
-                 metas=np.hstack((data.metas, annotated)))
+    table = data.transform(domain)
+    table[:, name] = annotated
+    return table

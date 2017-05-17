@@ -2,16 +2,15 @@
 # pylint: disable=missing-docstring
 
 import unittest
-import multiprocessing as mp
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.regression import LinearRegressionLearner, MeanLearner
-from Orange.data import Table
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
-                               TestOnTestData, ShuffleSplit, sample, RMSE)
+                               TestOnTestData, ShuffleSplit, sample, RMSE,
+                               CrossValidationFeature)
 from Orange.preprocess import discretize, preprocess
-from Orange.util import OrangeWarning
 
 
 def random_data(nrows, ncols):
@@ -253,22 +252,37 @@ class TestCrossValidation(TestSampling):
         # +2 for class, +1 for fold
         self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2 + 1)
 
-    def test_unpicklable_params(self):
 
-        class NonPicklableLearner(MajorityLearner):
-            pass
+class TestCrossValidationFeature(TestSampling):
 
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [NonPicklableLearner()], k=3, n_jobs=3)
+    def add_meta_fold(self, data, f):
+        fat = DiscreteVariable(name="fold", values=[str(a) for a in range(f)])
+        domain = Domain(data.domain.attributes, data.domain.class_var, metas=[fat])
+        ndata = Table(domain, data)
+        vals = np.tile(range(f), len(data)//f + 1)[:len(data)]
+        vals = vals.reshape((-1, 1))
+        ndata[:, fat] = vals
+        return ndata
 
-    def test_internal_cv(self):
-        # This test just covers; can't catch warnings from subprocesses
-        proc = mp.current_process()
-        was_daemon = proc.daemon
-        proc.daemon = True
-        self.assertWarns(OrangeWarning,
-                         CrossValidation, self.iris, [_ParameterTuningLearner()], k=2, n_jobs=3)
-        proc.daemon = was_daemon
+    def test_call(self):
+        t = self.random_table
+        t = self.add_meta_fold(t, 3)
+        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=t.domain.metas[0])
+        y = t.Y
+        np.testing.assert_equal(res.actual, y[res.row_indices].reshape(len(t)))
+        np.testing.assert_equal(res.predicted[0],
+                                y[res.row_indices].reshape(len(t)))
+        np.testing.assert_equal(np.argmax(res.probabilities[0], axis=1),
+                                y[res.row_indices].reshape(len(t)))
+
+    def test_unknown(self):
+        t = self.random_table
+        t = self.add_meta_fold(t, 3)
+        fat = t.domain.metas[0]
+        t[0][fat] = float("nan")
+        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=fat)
+        self.assertNotIn(0, res.row_indices)
+
 
 class TestLeaveOneOut(TestSampling):
     def test_results(self):

@@ -3,6 +3,7 @@
 import numpy as np
 import sklearn.tree as skl_tree
 
+from Orange.base import TreeModel as TreeModelInterface
 from Orange.tree import Node, DiscreteNode, MappedDiscreteNode, \
     NumericNode, TreeModel
 from Orange.regression import SklLearner, SklModel, Learner
@@ -25,17 +26,23 @@ class TreeLearner(Learner):
 
     If the tree is not binary, it can contain zero-branches.
 
-    Args:
-        binarize: if `True` the inducer will find optimal split into two
-            subsets for values of discrete attributes. If `False` (default),
-            each value gets its branch.
-        min_samples_leaf: the minimal number of data instances in a leaf
-        min_samples_split: the minimal nubmer of data instances that is split
-            into subgroups
-        max_depth: the maximal depth of the tree
+    Parameters
+    ----------
+    binarize
+        if `True` the inducer will find optimal split into two
+        subsets for values of discrete attributes. If `False` (default),
+        each value gets its branch.
+    min_samples_leaf
+        the minimal number of data instances in a leaf
+    min_samples_split
+        the minimal number of data instances that is split
+        into subgroups
+    max_depth
+        the maximal depth of the tree
 
-    Returns:
-        instance of OrangeTreeModel
+    Returns
+    -------
+    instance of OrangeTreeModel
     """
     __returns__ = TreeModel
 
@@ -47,18 +54,20 @@ class TreeLearner(Learner):
             binarize=False, min_samples_leaf=1, min_samples_split=2,
             max_depth=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.binarize = binarize
-        self.min_samples_leaf = min_samples_leaf
-        self.min_samples_split = min_samples_split
-        self.max_depth = max_depth
+        self.params = {}
+        self.binarize = self.params['binarity'] = binarize
+        self.min_samples_leaf = self.params['min_samples_leaf'] = min_samples_leaf
+        self.min_samples_split = self.params['min_samples_split'] = min_samples_split
+        self.max_depth = self.params['max_depth'] = max_depth
 
     def _select_attr(self, data):
         """Select the attribute for the next split.
 
-        Returns:
-            tuple with an instance of Node and a numpy array indicating
-            the branch index for each data instance, or -1 if data instance
-            is dropped
+        Returns
+        -------
+        tuple with an instance of Node and a numpy array indicating
+        the branch index for each data instance, or -1 if data instance
+        is dropped
         """
         # Prevent false warnings by pylint
         attr = attr_no = None
@@ -162,10 +171,8 @@ class TreeLearner(Learner):
         return model
 
 
-class SklTreeRegressor(SklModel):
-    @property
-    def tree(self):
-        return self.skl_model.tree_
+class SklTreeRegressor(SklModel, TreeModelInterface):
+    pass
 
 
 class SklTreeRegressionLearner(SklLearner):

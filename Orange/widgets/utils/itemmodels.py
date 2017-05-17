@@ -210,17 +210,20 @@ class PyTableModel(QAbstractTableModel):
                 cols.pop(col, None)
         del self._headers.get(Qt.Horizontal, [])[column:column + count]
         self.endRemoveColumns()
+        return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         self.beginInsertRows(parent, row, row + count - 1)
         self._table[row:row] = [[''] * self.columnCount() for _ in range(count)]
         self.endInsertRows()
+        return True
 
     def insertColumns(self, column, count, parent=QModelIndex()):
         self.beginInsertColumns(parent, column, column + count - 1)
         for row in self._table:
             row[column:column] = [''] * count
         self.endInsertColumns()
+        return True
 
     def __len__(self):
         return len(self._table)
@@ -292,16 +295,19 @@ class PyTableModel(QAbstractTableModel):
 class PyListModel(QAbstractListModel):
     """ A model for displaying python list like objects in Qt item view classes
     """
-    MIME_TYPES = ["application/x-Orange-PyListModelData"]
+    MIME_TYPE = "application/x-Orange-PyListModelData"
     Separator = object()
 
     def __init__(self, iterable=None, parent=None,
                  flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled,
                  list_item_role=Qt.DisplayRole,
+                 enable_dnd=False,
                  supportedDropActions=Qt.MoveAction):
         super().__init__(parent)
         self._list = []
         self._other_data = []
+        if enable_dnd:
+            flags |= Qt.ItemIsDragEnabled
         self._flags = flags
         self.list_item_role = list_item_role
 
@@ -549,17 +555,18 @@ class PyListModel(QAbstractListModel):
         return self._supportedDropActions
 
     def mimeTypes(self):
-        return self.MIME_TYPES + list(QAbstractListModel.mimeTypes(self))
+        return [self.MIME_TYPE] + list(QAbstractListModel.mimeTypes(self))
 
     def mimeData(self, indexlist):
         if len(indexlist) <= 0:
             return None
 
         items = [self[i.row()] for i in indexlist]
+        itemdata = [self.itemData(i) for i in indexlist]
         mime = QAbstractListModel.mimeData(self, indexlist)
-        data = pickle.dumps(vars)
-        mime.set_data(self.MIME_TYPE, QByteArray(data))
-        mime._items = items
+        mime.setData(self.MIME_TYPE, b'see properties: _items, _itemdata')
+        mime.setProperty('_items', items)
+        mime.setProperty('_itemdata', itemdata)
         return mime
 
     def dropMimeData(self, mime, action, row, column, parent):
@@ -569,14 +576,19 @@ class PyListModel(QAbstractListModel):
         if not mime.hasFormat(self.MIME_TYPE):
             return False
 
-        if hasattr(mime, "_vars"):
-            vars_ = mime._vars
-        else:
-            desc = str(mime.data(self.MIME_TYPE))
-            vars_ = pickle.loads(desc)
+        items = mime.property('_items')
+        itemdata = mime.property('_itemdata')
 
-        return QAbstractListModel.dropMimeData(
-            self, mime, action, row, column, parent)
+        if not items:
+            return False
+
+        if row == -1:
+            row = len(self)
+
+        self[row:row] = items
+        for i, data in enumerate(itemdata):
+            self.setItemData(self.index(row + i), data)
+        return True
 
 
 class PyListModelTooltip(PyListModel):
@@ -666,8 +678,8 @@ class DomainModel(VariableListModel):
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
     def __init__(self, order=SEPARATED, placeholder=None,
-                 valid_types=None, alphabetical=False):
-        super().__init__(placeholder=placeholder)
+                 valid_types=None, alphabetical=False, **kwargs):
+        super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
             order = (order,)
         if placeholder is not None and None not in order:

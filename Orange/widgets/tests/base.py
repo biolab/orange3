@@ -1,25 +1,40 @@
+from contextlib import contextmanager
+import os
+import time
 import unittest
-import sip
+from unittest.mock import Mock
 
 import numpy as np
+import sip
+
+from AnyQt.QtCore import Qt
+from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
 
 from Orange.base import SklModel, Model
 from Orange.canvas.report.owreport import OWReport
-from Orange.classification.base_classification import (LearnerClassification,
-                                                       ModelClassification)
-from Orange.data import Table
+from Orange.classification.base_classification import (
+    LearnerClassification, ModelClassification
+)
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
-from Orange.regression.base_regression import LearnerRegression, ModelRegression
-from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.regression.base_regression import (
+    LearnerRegression, ModelRegression
+)
+from Orange.widgets.utils.annotated_data import (
+    ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
+)
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
+sip.setdestroyonexit(False)
+
 app = None
+
+DEFAULT_TIMEOUT = 5000
 
 
 class DummySignalManager:
@@ -51,9 +66,8 @@ class WidgetTest(GuiTest):
 
     Contains helper methods widget creation and working with signals.
 
-    All widgets should be created by the create_widget method, as it
-    remembers created widgets and properly destroys them in tearDownClass
-    to avoid segmentation faults when QApplication gets destroyed.
+    All widgets should be created by the create_widget method, as this
+    will ensure they are created correctly.
     """
 
     #: list[OwWidget]
@@ -63,9 +77,8 @@ class WidgetTest(GuiTest):
     def setUpClass(cls):
         """Prepare environment for test execution
 
-        Prepare a list for tracking created widgets and construct a
-        dummy signal manager. Monkey patch OWReport.get_instance to
-        return a manually_created instance.
+        Construct a dummy signal manager and monkey patch
+        OWReport.get_instance to return a manually created instance.
         """
         super().setUpClass()
 
@@ -77,26 +90,18 @@ class WidgetTest(GuiTest):
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
 
-    @classmethod
-    def tearDownClass(cls):
-        """Cleanup after tests
-
-        Process any pending events and properly destroy created widgets by
-        calling their onDeleteWidget method which does the widget-specific
-        cleanup.
-
-        NOTE: sip.delete is mandatory. In some cases, widgets are deleted by
-        python while some references in QApplication remain
-        (QApplication::topLevelWidgets()), causing a segmentation fault when
-        QApplication is destroyed.
-        """
-        app.processEvents()
-        for w in cls.widgets:
-            w.onDeleteWidget()
-            sip.delete(w)
+    def tearDown(self):
+        """Process any pending events before the next test is executed."""
+        self.process_events()
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
-        """Create a widget instance.
+        """Create a widget instance using mock signal_manager.
+
+        When used with default parameters, it also overrides settings stored
+        on disk with default defined in class.
+
+        After widget is created, QApplication.process_events is called to
+        allow any singleShot timers defined in __init__ to execute.
 
         Parameters
         ----------
@@ -142,13 +147,40 @@ class WidgetTest(GuiTest):
             # Reset context settings
             settings_handler.global_contexts = []
 
-    @staticmethod
-    def process_events():
-        """Process Qt events.
+    def process_events(self, until: callable=None, timeout=DEFAULT_TIMEOUT):
+        """Process Qt events, optionally until `until` returns
+        something True-ish.
 
         Needs to be called manually as QApplication.exec is never called.
+
+        Parameters
+        ----------
+        until: callable or None
+            If callable, the events are processed until the function returns
+            something True-ish.
+        timeout: int
+            If until condition is not satisfied within timeout milliseconds,
+            a TimeoutError is raised.
+
+        Returns
+        -------
+        If until is not None, the True-ish result of its call.
         """
-        app.processEvents()
+        if until is None:
+            until = lambda: True
+
+        started = time.clock()
+        while True:
+            app.processEvents()
+            try:
+                result = until()
+                if result:
+                    return result
+            except Exception:  # until can fail with anything; pylint: disable=broad-except
+                pass
+            if (time.clock() - started) * 1000 > timeout:
+                raise TimeoutError()
+            time.sleep(.05)
 
     def show(self, widget=None):
         """Show widget in interactive mode.
@@ -159,7 +191,7 @@ class WidgetTest(GuiTest):
         widget.show()
         app.exec()
 
-    def send_signal(self, input_name, value, *args, widget=None):
+    def send_signal(self, input_name, value, *args, widget=None, wait=-1):
         """ Send signal to widget by calling appropriate triggers.
 
         Parameters
@@ -170,6 +202,8 @@ class WidgetTest(GuiTest):
             channel id, used for inputs with flag Multiple
         widget : Optional[OWWidget]
             widget to send signal to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
         """
         if widget is None:
             widget = self.widget
@@ -177,7 +211,13 @@ class WidgetTest(GuiTest):
             if input_signal.name == input_name:
                 getattr(widget, input_signal.handler)(value, *args)
                 break
+        else:
+            raise ValueError("'{}' is not an input name for widget {}"
+                             .format(input_name, type(widget).__name__))
         widget.handleNewSignals()
+        if wait >= 0 and widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
 
     def get_output(self, output_name, widget=None):
         """Return the last output that has been sent from the widget.
@@ -195,6 +235,31 @@ class WidgetTest(GuiTest):
         if widget is None:
             widget = self.widget
         return self.signal_manager.outputs.get((widget, output_name), None)
+
+    @contextmanager
+    def modifiers(self, modifiers):
+        """
+        Context that simulates pressed modifiers
+
+        Since QTest.keypress requries pressing some key, we simulate
+        pressing "BassBoost" that looks exotic enough to not meddle with
+        anything.
+        """
+        old_modifiers = QApplication.keyboardModifiers()
+        try:
+            QTest.keyPress(self.widget, Qt.Key_BassBoost, modifiers)
+            yield
+        finally:
+            QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
+
+
+class TestWidgetTest(WidgetTest):
+    """Meta tests for widget test helpers"""
+
+    def test_process_events_handles_timeouts(self):
+        with self.assertRaises(TimeoutError):
+            self.process_events(until=lambda: False, timeout=0)
+
 
 
 class BaseParameterMapping:
@@ -219,12 +284,20 @@ class BaseParameterMapping:
         It sets component's value.
     """
 
-    def __init__(self, name, gui_element, values, getter, setter):
+    def __init__(self, name, gui_element, values, getter, setter,
+                 problem_type="both"):
         self.name = name
         self.gui_element = gui_element
         self.values = values
         self.get_value = getter
         self.set_value = setter
+        self.problem_type = problem_type
+
+    def __str__(self):
+        if self.problem_type == "both":
+            return self.name
+        else:
+            return "%s (%s)" % (self.name, self.problem_type)
 
 
 class DefaultParameterMapping(BaseParameterMapping):
@@ -272,11 +345,13 @@ class ParameterMapping(BaseParameterMapping):
     """
 
     def __init__(self, name, gui_element, values=None,
-                 getter=None, setter=None):
-        super().__init__(name, gui_element,
-                         values or self._default_values(gui_element),
-                         getter or self._default_get_value(gui_element, values),
-                         setter or self._default_set_value(gui_element, values))
+                 getter=None, setter=None, **kwargs):
+        super().__init__(
+            name, gui_element,
+            values or self._default_values(gui_element),
+            getter or self._default_get_value(gui_element, values),
+            setter or self._default_set_value(gui_element, values),
+            **kwargs)
 
     @staticmethod
     def get_gui_element(widget, attribute):
@@ -331,27 +406,27 @@ class WidgetLearnerTestMixin:
     widget = None  # type: OWBaseLearner
 
     def init(self):
-        self.iris = iris = Table("iris")
-        self.housing = housing = Table("housing")
+        cls_ds = Table(datasets.path("testing_dataset_cls"))
+        reg_ds = Table(datasets.path("testing_dataset_reg"))
 
         if issubclass(self.widget.LEARNER, Fitter):
-            self.data = iris
-            self.valid_datasets = (iris, housing)
+            self.data = cls_ds
+            self.valid_datasets = (cls_ds, reg_ds)
             self.inadequate_dataset = ()
             self.learner_class = Fitter
             self.model_class = Model
             self.model_name = 'Model'
         elif issubclass(self.widget.LEARNER, LearnerClassification):
-            self.data = iris
-            self.valid_datasets = (iris,)
-            self.inadequate_dataset = (housing,)
+            self.data = cls_ds
+            self.valid_datasets = (cls_ds,)
+            self.inadequate_dataset = (reg_ds,)
             self.learner_class = LearnerClassification
             self.model_class = ModelClassification
             self.model_name = 'Classifier'
         else:
-            self.data = housing
-            self.valid_datasets = (housing,)
-            self.inadequate_dataset = (iris,)
+            self.data = reg_ds
+            self.valid_datasets = (reg_ds,)
+            self.inadequate_dataset = (cls_ds,)
             self.learner_class = LearnerRegression
             self.model_class = ModelRegression
             self.model_name = 'Predictor'
@@ -458,50 +533,101 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.assertEqual(self.get_output(self.model_name).name, new_name)
 
+    def _get_param_value(self, learner, param):
+        if isinstance(learner, Fitter):
+            # Both is just a was to indicate to the tests, fitters don't
+            # actually support this
+            if param.problem_type == "both":
+                problem_type = learner.CLASSIFICATION
+            else:
+                problem_type = param.problem_type
+            return learner.get_params(problem_type).get(param.name)
+        else:
+            return learner.params.get(param.name)
+
     def test_parameters_default(self):
         """Check if learner's parameters are set to default (widget's) values
         """
-        self.widget.apply_button.button.click()
-        if hasattr(self.widget.learner, "params"):
-            learner_params = self.widget.learner.params
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+            self.widget.apply_button.button.click()
             for parameter in self.parameters:
-                self.assertEqual(learner_params.get(parameter.name),
-                                 parameter.get_value())
+                # Skip if the param isn't used for the given data type
+                if self._should_check_parameter(parameter, dataset):
+                    self.assertEqual(
+                        self._get_param_value(self.widget.learner, parameter),
+                        parameter.get_value())
 
     def test_parameters(self):
         """Check learner and model for various values of all parameters"""
+        # Test params on every valid dataset, since some attributes may apply
+        # to only certain problem types
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
 
-        def get_value(learner, name):
-            # Handle SKL and skl-like learners, and non-SKL learners
-            if hasattr(learner, "params"):
-                return learner.params.get(name)
-            else:
-                return getattr(learner, name)
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check_parameter(parameter, dataset):
+                    continue
 
-        for parameter in self.parameters:
-            assert isinstance(parameter, BaseParameterMapping)
-            for value in parameter.values:
-                self.send_signal("Data", self.data)
-                parameter.set_value(value)
-                self.widget.apply_button.button.click()
-                param = get_value(self.widget.learner, parameter.name)
-                self.assertEqual(param, parameter.get_value(),
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                param = get_value(self.get_output("Learner"), parameter.name)
-                self.assertEqual(param, value,
-                                 "Mismatching setting for parameter '{}'".
-                                 format(parameter.name))
-                if issubclass(self.widget.LEARNER, SklModel):
-                    model = self.get_output(self.model_name)
-                    if model is not None:
-                        self.assertEqual(get_value(model, parameter.name), value)
-                        self.assertFalse(self.widget.Error.active)
-                    else:
-                        self.assertTrue(self.widget.Error.active)
+                assert isinstance(parameter, BaseParameterMapping)
+
+                for value in parameter.values:
+                    parameter.set_value(value)
+                    self.widget.apply_button.button.click()
+                    param = self._get_param_value(self.widget.learner, parameter)
+                    self.assertEqual(
+                        param, parameter.get_value(),
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+                    param = self._get_param_value(self.get_output("Learner"), parameter)
+                    self.assertEqual(
+                        param, value,
+                        "Mismatching setting for parameter '%s'" % parameter)
+
+                    if issubclass(self.widget.LEARNER, SklModel):
+                        model = self.get_output(self.model_name)
+                        if model is not None:
+                            self.assertEqual(self._get_param_value(model, parameter), value)
+                            self.assertFalse(self.widget.Error.active)
+                        else:
+                            self.assertTrue(self.widget.Error.active)
+
+    def test_params_trigger_settings_changed(self):
+        """Check that the learner gets updated whenever a param is changed."""
+        for dataset in self.valid_datasets:
+            self.send_signal("Data", dataset)
+
+            for parameter in self.parameters:
+                # Skip if the param isn't used for the given data type
+                if not self._should_check_parameter(parameter, dataset):
+                    continue
+
+                assert isinstance(parameter, BaseParameterMapping)
+                # Set the mock here so we can include the param name in the
+                # error message, so if any test fails, we see where
+                # We mock `apply` and not `settings_changed` since that's
+                # sometimes connected with Qt signals, which are not directly
+                # called
+                self.widget.apply = Mock(name="apply(%s)" % parameter)
+                # Since the settings only get updated when the value actually
+                # changes, find a value that isn't the same as the current
+                # value and try with that
+                new_value = [x for x in parameter.values
+                             if x != parameter.get_value()][0]
+                parameter.set_value(new_value)
+                self.widget.apply.assert_called_once_with()
+
+    @staticmethod
+    def _should_check_parameter(parameter, data):
+        """Should the param be passed into the learner given the data"""
+        return ((parameter.problem_type == "classification" and
+                 data.domain.has_discrete_class) or
+                (parameter.problem_type == "regression" and
+                 data.domain.has_continuous_class) or
+                (parameter.problem_type == "both"))
 
 
 class WidgetOutputsTestMixin:
@@ -525,14 +651,12 @@ class WidgetOutputsTestMixin:
         self.data = Table("iris")
         self.same_input_output_domain = True
 
-    def test_outputs(self):
+    def test_outputs(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.signal_name, self.signal_data)
 
-        # only needed in TestOWMDS
-        if type(self).__name__ == "TestOWMDS":
-            from AnyQt.QtCore import QEvent
-            self.widget.customEvent(QEvent(QEvent.User))
-            self.widget.commit()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
 
         # check selected data output
         self.assertIsNone(self.get_output("Selected Data"))
@@ -553,10 +677,12 @@ class WidgetOutputsTestMixin:
                          self.same_input_output_domain)
         np.testing.assert_array_equal(selected.X[:, :n_attr],
                                       self.data.X[selected_indices])
+        self.assertEqual(selected.attributes, self.data.attributes)
 
         # check annotated data output
         annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
+        self.assertEqual(annotated.attributes, self.data.attributes)
 
         # compare selected and annotated data domains
         self._compare_selected_annotated_domains(selected, annotated)
@@ -573,3 +699,78 @@ class WidgetOutputsTestMixin:
         selected_vars = selected.domain.variables + selected.domain.metas
         annotated_vars = annotated.domain.variables + annotated.domain.metas
         self.assertLess(set(selected_vars), set(annotated_vars))
+
+
+class datasets:
+    @staticmethod
+    def path(filename):
+        dirname = os.path.join(os.path.dirname(__file__), "datasets")
+        return os.path.join(dirname, filename)
+
+    @classmethod
+    def missing_data_1(cls):
+        """
+        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        and rows contain at least one NaN value.
+
+        One discrete class D with NaN values
+        Mixed continuous/discrete/string metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_1.tab"))
+
+    @classmethod
+    def missing_data_2(cls):
+        """
+        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        and rows contain at least one NaN value and X1, X2 are constant.
+
+        One discrete constant class D with NaN values.
+        Mixed continuous/discrete/string class metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_2.tab"))
+
+    @classmethod
+    def missing_data_3(cls):
+        """
+        Data set with 3 discrete features D{1,2,3} where all the columns and
+        rows contain at least one NaN value
+
+        One discrete class D with NaN values
+        Mixes continuous/discrete/string metas ({X,D,S}M)
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return Table(cls.path("missing_data_3.tab"))
+
+    @classmethod
+    def data_one_column_nans(cls):
+        """
+        Data set with two continuous features and one discrete. One continuous
+        columns has missing values (NaN).
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"),
+                 ContinuousVariable("b"),
+                 DiscreteVariable("c", values=["y", "n"])]
+            ),
+            list(zip(
+                [42.48, 16.84, 15.23, 23.8],
+                ["", "", "", ""],
+                "ynyn"
+            )))
+        return table

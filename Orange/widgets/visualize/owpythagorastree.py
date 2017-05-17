@@ -1,59 +1,38 @@
-"""Pythagorean tree viewer for visualizing trees.
-
-The widget currently supports 3 different kinds of trees that may come in handy
-though only 2 are implemented - (GENERAL, CLASSIFICATION, REGRESSION) with
-(CLASSIFICATION and REGRESSION implemented.
-
-These modes are necessary since it is impossible to have one tree viewer for
-both classification and regression type trees, since they need specialized
-tootips and colors.
-
-The general tree exists for the purpose of easy extension, since a new `Tree`
-type has been introduced to Orange, which this widget accepts (both the
-classification and regression tree extend that base Tree class). In case the
-widget is ever required to support more general trees, the enum type is there
-to be used, and the methods need to be implemented, then it should work for any
-kind of trees.
-
-"""
-import sys
+"""Pythagorean tree viewer for visualizing trees."""
 from math import sqrt, log
 
 import numpy as np
-
 from AnyQt.QtCore import Qt
-from AnyQt.QtWidgets import QLabel, QSizePolicy
 from AnyQt.QtGui import QColor, QPainter
+from AnyQt.QtWidgets import QLabel, QSizePolicy
 
-from Orange.tree import TreeModel
-from Orange.widgets.visualize.utils.scene import \
-    UpdateItemsOnSelectGraphicsScene
-from Orange.widgets.visualize.utils.tree.rules import Rule
-from Orange.widgets.visualize.utils.view import (
-    PannableGraphicsView,
-    ZoomableGraphicsView,
-    PreventDefaultWheelEvent
-)
-
+from Orange.base import TreeModel, SklModel
 from Orange.data.table import Table
 from Orange.widgets import gui, settings, widget
-from Orange.widgets.utils import to_html
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table,
     ANNOTATED_DATA_SIGNAL_NAME
 )
-from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
-    SquareGraphicsItem
+    SquareGraphicsItem,
+    ContinuousTreeNode,
 )
 from Orange.widgets.visualize.utils.owlegend import (
     AnchorableGraphicsView,
     Anchorable,
     OWDiscreteLegend,
-    OWContinuousLegend
+    OWContinuousLegend,
 )
+from Orange.widgets.visualize.utils.scene import \
+    UpdateItemsOnSelectGraphicsScene
+from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
 from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.widgets.visualize.utils.view import (
+    PannableGraphicsView,
+    ZoomableGraphicsView,
+    PreventDefaultWheelEvent,
+)
 from Orange.widgets.widget import OWWidget
 
 
@@ -79,8 +58,6 @@ class OWPythagorasTree(OWWidget):
     tooltips_enabled = settings.Setting(True)
     show_legend = settings.Setting(False)
 
-    GENERAL, CLASSIFICATION, REGRESSION = range(3)
-
     LEGEND_OPTIONS = {
         'corner': Anchorable.BOTTOM_RIGHT,
         'offset': (10, 10),
@@ -89,7 +66,6 @@ class OWPythagorasTree(OWWidget):
     def __init__(self):
         super().__init__()
         # Instance variables
-        self.tree_type = self.GENERAL
         self.model = None
         self.instances = None
         self.clf_dataset = None
@@ -103,15 +79,7 @@ class OWPythagorasTree(OWWidget):
         self.SIZE_CALCULATION = [
             ('Normal', lambda x: x),
             ('Square root', lambda x: sqrt(x)),
-            # The +1 is there so that we don't get division by 0 exceptions
             ('Logarithmic', lambda x: log(x * self.size_log_scale + 1)),
-        ]
-
-        # Color modes for regression trees
-        self.REGRESSION_COLOR_CALC = [
-            ('None', lambda _, __: QColor(255, 255, 255)),
-            ('Class mean', self._color_class_mean),
-            ('Standard deviation', self._color_stddev),
         ]
 
         # CONTROL AREA
@@ -154,9 +122,6 @@ class OWPythagorasTree(OWWidget):
             QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # MAIN AREA
-        # The QGraphicsScene doesn't actually require a parent, but not linking
-        # the widget to the scene causes errors and a segfault on close due to
-        # the way Qt deallocates memory and deletes objects.
         self.scene = TreeGraphicsScene(self)
         self.scene.selectionChanged.connect(self.commit)
         self.view = TreeGraphicsView(self.scene, padding=(150, 150))
@@ -177,65 +142,49 @@ class OWPythagorasTree(OWWidget):
         self.model = model
 
         if model is not None:
-            # We need to know what kind of tree we have in order to properly
-            # show colors and tooltips
-            if model.domain.class_var.is_discrete:
-                self.tree_type = self.CLASSIFICATION
-            elif model.domain.class_var.is_continuous:
-                self.tree_type = self.REGRESSION
-            else:
-                self.tree_type = self.GENERAL
-
             self.instances = model.instances
             # this bit is important for the regression classifier
             if self.instances is not None and \
                     self.instances.domain != model.domain:
-                self.clf_dataset = Table.from_table(
-                    self.model.domain, self.instances)
+                self.clf_dataset = self.instances.transform(self.model.domain)
             else:
                 self.clf_dataset = self.instances
 
             self.tree_adapter = self._get_tree_adapter(self.model)
-            self.color_palette = self._tree_specific('_get_color_palette')()
-
             self.ptree.clear()
+
             self.ptree.set_tree(
                 self.tree_adapter,
-                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1])
-            self.ptree.set_tooltip_func(self._tree_specific('_get_tooltip'))
-            self.ptree.set_node_color_func(
-                self._tree_specific('_get_node_color')
+                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1],
+                target_class_index=self.target_class_index,
             )
 
-            self._tree_specific('_update_legend_colors')()
-            self._update_legend_visibility()
-
-            self._update_info_box()
             self._update_depth_slider()
-
-            self._tree_specific('_update_target_class_combo')()
+            self.color_palette = self.ptree.root.color_palette
+            self._update_legend_colors()
+            self._update_legend_visibility()
+            self._update_info_box()
+            self._update_target_class_combo()
 
             self._update_main_area()
 
-            # Get meta variables describing pythagoras tree if given from
-            # forest.
-            if hasattr(model, 'meta_size_calc_idx'):
-                self.size_calc_idx = model.meta_size_calc_idx
-            if hasattr(model, 'meta_size_log_scale'):
-                self.size_log_scale = model.meta_size_log_scale
-            # Updating the size calc redraws the whole tree
-            if hasattr(model, 'meta_size_calc_idx') or \
-                    hasattr(model, 'meta_size_log_scale'):
-                self.update_size_calc()
             # The target class can also be passed from the meta properties
+            # This must be set after `_update_target_class_combo`
             if hasattr(model, 'meta_target_class_index'):
                 self.target_class_index = model.meta_target_class_index
                 self.update_colors()
-            # TODO this messes up the viewport in pythagoras tree viewer
-            # it seems the viewport doesn't reset its size if this is applied
+
+            # Get meta variables describing what the settings should look like
+            # if the tree is passed from the Pythagorean forest widget.
+            if hasattr(model, 'meta_size_calc_idx'):
+                self.size_calc_idx = model.meta_size_calc_idx
+                self.update_size_calc()
+
+            # TODO There is still something wrong with this
             # if hasattr(model, 'meta_depth_limit'):
             #     self.depth_limit = model.meta_depth_limit
             #     self.update_depth()
+
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.instances, None))
 
@@ -256,15 +205,14 @@ class OWPythagorasTree(OWWidget):
         self._clear_depth_slider()
         self._update_log_scale_slider()
 
-    # CONTROL AREA CALLBACKS
     def update_depth(self):
         """This method should be called when the depth changes"""
         self.ptree.set_depth_limit(self.depth_limit)
 
     def update_colors(self):
         """When the target class / node coloring needs to be updated."""
-        self.ptree.target_class_has_changed()
-        self._tree_specific('_update_legend_colors')()
+        self.ptree.target_class_changed(self.target_class_index)
+        self._update_legend_colors()
 
     def update_size_calc(self):
         """When the tree size calculation is updated."""
@@ -272,31 +220,24 @@ class OWPythagorasTree(OWWidget):
         self.invalidate_tree()
 
     def invalidate_tree(self):
-        """When the tree needs to be recalculated. E.g. change of size calc."""
+        """When the tree needs to be completely recalculated."""
         if self.model is not None:
-            self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.set_tree(
                 self.tree_adapter,
-                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1]
+                weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1],
+                target_class_index=self.target_class_index,
             )
             self.ptree.set_depth_limit(self.depth_limit)
             self._update_main_area()
 
     def update_tooltip_enabled(self):
         """When the tooltip visibility is changed and need to be updated."""
-        if self.tooltips_enabled:
-            self.ptree.set_tooltip_func(
-                self._tree_specific('_get_tooltip')
-            )
-        else:
-            self.ptree.set_tooltip_func(lambda _: None)
-        self.ptree.tooltip_has_changed()
+        self.ptree.tooltip_changed(self.tooltips_enabled)
 
     def update_show_legend(self):
         """When the legend visibility needs to be updated."""
         self._update_legend_visibility()
 
-    # MODEL CHANGED CONTROL ELEMENTS UPDATE METHODS
     def _update_info_box(self):
         self.info.setText('Nodes: {}\nDepth: {}'.format(
             self.tree_adapter.num_nodes,
@@ -317,7 +258,6 @@ class OWPythagorasTree(OWWidget):
         self.log_scale_box.parent().setEnabled(
             self.SIZE_CALCULATION[self.size_calc_idx][0] == 'Logarithmic')
 
-    # MODEL REMOVED CONTROL ELEMENTS CLEAR METHODS
     def _clear_info_box(self):
         self.info.setText('No tree on input')
 
@@ -330,7 +270,6 @@ class OWPythagorasTree(OWWidget):
         self.target_class_index = 0
         self.target_class_combo.setCurrentIndex(self.target_class_index)
 
-    # HELPFUL METHODS
     def _set_max_depth(self):
         """Set the depth to the max depth and update appropriate actors."""
         self.depth_limit = self.tree_adapter.max_depth
@@ -345,6 +284,8 @@ class OWPythagorasTree(OWWidget):
         self.view.update_anchored_items()
 
     def _get_tree_adapter(self, model):
+        if isinstance(model, SklModel):
+            return SklTreeAdapter(model)
         return TreeAdapter(model)
 
     def onDeleteWidget(self):
@@ -360,10 +301,9 @@ class OWPythagorasTree(OWWidget):
             return
         nodes = [i.tree_node.label for i in self.scene.selectedItems()
                  if isinstance(i, SquareGraphicsItem)]
-        data = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, nodes)
+        data = self.tree_adapter.get_instances_in_nodes(nodes)
         self.send('Selected Data', data)
-        selected_indices = self.model.get_indices(nodes)
+        selected_indices = self.tree_adapter.get_indices(nodes)
         self.send(ANNOTATED_DATA_SIGNAL_NAME,
                   create_annotated_table(self.instances, selected_indices))
 
@@ -371,49 +311,32 @@ class OWPythagorasTree(OWWidget):
         """Send report."""
         self.report_plot()
 
-    def _tree_specific(self, method):
-        """A best effort method getter that somewhat separates logic specific
-        to classification and regression trees.
-        This relies on conventional naming of specific methods, e.g.
-        a method name _get_tooltip would need to be defined like so:
-        _classification_get_tooltip and _regression_get_tooltip, since they are
-        both specific.
-
-        Parameters
-        ----------
-        method : str
-            Method name that we would like to call.
-
-        Returns
-        -------
-        callable or None
-
-        """
-        if self.tree_type == self.GENERAL:
-            return getattr(self, '_general' + method)
-        elif self.tree_type == self.CLASSIFICATION:
-            return getattr(self, '_classification' + method)
-        elif self.tree_type == self.REGRESSION:
-            return getattr(self, '_regression' + method)
-        else:
-            return None
-
-    # CLASSIFICATION TREE SPECIFIC METHODS
-    def _classification_update_target_class_combo(self):
+    def _update_target_class_combo(self):
         self._clear_target_class_combo()
-        list(filter(
-            lambda x: isinstance(x, QLabel),
-            self.target_class_combo.parent().children()
-        ))[0].setText('Target class')
-        self.target_class_combo.addItem('None')
-        values = [c.title() for c in
-                  self.tree_adapter.domain.class_vars[0].values]
-        self.target_class_combo.addItems(values)
+        label = [x for x in self.target_class_combo.parent().children()
+                 if isinstance(x, QLabel)][0]
 
-    def _classification_update_legend_colors(self):
+        if self.instances.domain.has_discrete_class:
+            label_text = 'Target class'
+            values = [c.title() for c in self.instances.domain.class_vars[0].values]
+            values.insert(0, 'None')
+        else:
+            label_text = 'Node color'
+            values = list(ContinuousTreeNode.COLOR_METHODS.keys())
+        label.setText(label_text)
+        self.target_class_combo.addItems(values)
+        self.target_class_combo.setCurrentIndex(self.target_class_index)
+
+    def _update_legend_colors(self):
         if self.legend is not None:
             self.scene.removeItem(self.legend)
 
+        if self.instances.domain.has_discrete_class:
+            self._classification_update_legend_colors()
+        else:
+            self._regression_update_legend_colors()
+
+    def _classification_update_legend_colors(self):
         if self.target_class_index == 0:
             self.legend = OWDiscreteLegend(domain=self.model.domain,
                                            **self.LEGEND_OPTIONS)
@@ -428,81 +351,7 @@ class OWPythagorasTree(OWWidget):
         self.legend.setVisible(self.show_legend)
         self.scene.addItem(self.legend)
 
-    def _classification_get_color_palette(self):
-        return [QColor(*c) for c in self.model.domain.class_var.colors]
-
-    def _classification_get_node_color(self, adapter, tree_node):
-        # this is taken almost directly from the existing classification tree
-        # viewer
-        colors = self.color_palette
-        distribution = adapter.get_distribution(tree_node.label)[0]
-        total = np.sum(distribution)
-
-        if self.target_class_index:
-            p = distribution[self.target_class_index - 1] / total
-            color = colors[self.target_class_index - 1].lighter(200 - 100 * p)
-        else:
-            modus = np.argmax(distribution)
-            p = distribution[modus] / (total or 1)
-            color = colors[int(modus)].lighter(400 - 300 * p)
-        return color
-
-    def _rules_for_tooltip(self, node):
-        rules = self.tree_adapter.rules(node.label)
-        if len(rules):
-            if isinstance(rules[0], Rule):
-                sorted_rules = sorted(rules[:-1], key=lambda rule: rule.attr_name)
-                return '<br>'.join(str(rule) for rule in sorted_rules) + \
-                       '<br><b>%s</b>' % rules[-1]
-            else:
-                return '<br>'.join(to_html(rule) for rule in rules)
-        else:
-            return ''
-
-    def _classification_get_tooltip(self, node):
-        distribution = self.tree_adapter.get_distribution(node.label)[0]
-        total = int(np.sum(distribution))
-        if self.target_class_index:
-            samples = distribution[self.target_class_index - 1]
-            text = ''
-        else:
-            modus = np.argmax(distribution)
-            samples = distribution[modus]
-            text = self.tree_adapter.domain.class_vars[0].values[modus] + \
-                '<br>'
-        ratio = samples / np.sum(distribution)
-
-        rules_str = self._rules_for_tooltip(node)
-        splitting_attr = self.tree_adapter.attribute(node.label)
-
-        return '<p>' \
-            + text \
-            + '{}/{} samples ({:2.3f}%)'.format(
-                int(samples), total, ratio * 100) \
-            + '<hr>' \
-            + ('Split by ' + splitting_attr.name
-               if not self.tree_adapter.is_leaf(node.label) else '') \
-            + ('<br><br>'
-               if rules_str and not self.tree_adapter.is_leaf(node.label)
-               else '') \
-            + rules_str \
-            + '</p>'
-
-    # REGRESSION TREE SPECIFIC METHODS
-    def _regression_update_target_class_combo(self):
-        self._clear_target_class_combo()
-        list(filter(
-            lambda x: isinstance(x, QLabel),
-            self.target_class_combo.parent().children()
-        ))[0].setText('Node color')
-        self.target_class_combo.addItems(
-            list(zip(*self.REGRESSION_COLOR_CALC))[0])
-        self.target_class_combo.setCurrentIndex(self.target_class_index)
-
     def _regression_update_legend_colors(self):
-        if self.legend is not None:
-            self.scene.removeItem(self.legend)
-
         def _get_colors_domain(domain):
             class_var = domain.class_var
             start, end, pass_through_black = class_var.colors
@@ -513,82 +362,26 @@ class OWPythagorasTree(OWWidget):
                 lst_colors = [QColor(*c) for c in [start, end]]
             return lst_colors
 
-        # Currently, the first index just draws the outline without any color
-        if self.target_class_index == 0:
-            self.legend = None
-            return
         # The colors are the class mean
-        elif self.target_class_index == 1:
+        if self.target_class_index == 1:
             values = (np.min(self.clf_dataset.Y), np.max(self.clf_dataset.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)
-
-            self.legend = OWContinuousLegend(items=list(zip(values, colors)),
-                                             **self.LEGEND_OPTIONS)
+            items = list(zip(values, colors))
         # Colors are the stddev
         elif self.target_class_index == 2:
             values = (0, np.std(self.clf_dataset.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)
+            items = list(zip(values, colors))
+        else:
+            items = None
 
-            self.legend = OWContinuousLegend(items=list(zip(values, colors)),
-                                             **self.LEGEND_OPTIONS)
-
+        self.legend = OWContinuousLegend(items=items, **self.LEGEND_OPTIONS)
         self.legend.setVisible(self.show_legend)
         self.scene.addItem(self.legend)
-
-    def _regression_get_color_palette(self):
-        return ContinuousPaletteGenerator(
-            *self.tree_adapter.domain.class_var.colors)
-
-    def _regression_get_node_color(self, adapter, tree_node):
-        return self.REGRESSION_COLOR_CALC[self.target_class_index][1](
-            adapter, tree_node
-        )
-
-    def _color_class_mean(self, adapter, tree_node):
-        # calculate node colors relative to the mean of the node samples
-        min_mean = np.min(self.clf_dataset.Y)
-        max_mean = np.max(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset,
-                                                   tree_node.label)
-        mean = np.mean(instances.Y)
-
-        return self.color_palette[(mean - min_mean) / (max_mean - min_mean)]
-
-    def _color_stddev(self, adapter, tree_node):
-        # calculate node colors relative to the standard deviation in the node
-        # samples
-        min_mean, max_mean = 0, np.std(self.clf_dataset.Y)
-        instances = adapter.get_instances_in_nodes(self.clf_dataset,
-                                                   tree_node.label)
-        std = np.std(instances.Y)
-
-        return self.color_palette[(std - min_mean) / (max_mean - min_mean)]
-
-    def _regression_get_tooltip(self, node):
-        num_samples = self.tree_adapter.num_samples(node.label)
-
-        instances = self.tree_adapter.get_instances_in_nodes(
-            self.clf_dataset, node.label)
-        mean = np.mean(instances.Y)
-        std = np.std(instances.Y)
-
-        rules_str = self._rules_for_tooltip(node)
-        splitting_attr = self.tree_adapter.attribute(node.label)
-
-        return '<p>Mean: {:2.3f}'.format(mean) \
-            + '<br>Standard deviation: {:2.3f}'.format(std) \
-            + '<br>{} samples'.format(num_samples) \
-            + '<hr>' \
-            + ('Split by ' + splitting_attr.name
-               if not self.tree_adapter.is_leaf(node.label) else '') \
-            + ('<br><br>' if rules_str and not self.tree_adapter.is_leaf(
-               node.label) else '') \
-            + rules_str \
-            + '</p>'
 
 
 class TreeGraphicsView(
@@ -607,29 +400,18 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     pass
 
 
-def main(argv=sys.argv):
+def main():
+    from Orange.modelling import TreeLearner
     from AnyQt.QtWidgets import QApplication
-    import Orange
+    import sys
 
-    app = QApplication(list(argv))
-    argv = app.arguments()
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = 'iris'
+    app = QApplication(sys.argv)
 
     ow = OWPythagorasTree()
-    data = Orange.data.Table(filename)
+    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
 
-    if data.domain.has_discrete_class:
-        from Orange.classification.tree import TreeLearner
-    else:
-        from Orange.regression.tree import TreeLearner
     model = TreeLearner(max_depth=1000)(data)
-
     model.instances = data
-
     ow.set_tree(model)
 
     ow.show()
@@ -637,7 +419,6 @@ def main(argv=sys.argv):
     ow.handleNewSignals()
     app.exec_()
 
-    sys.exit(0)
 
 if __name__ == '__main__':
     main()

@@ -7,6 +7,7 @@ from Orange.modelling import Fitter
 from Orange.preprocess.preprocess import Preprocess
 from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
+from Orange.widgets import widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
@@ -51,10 +52,11 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
 
     @classmethod
     def update_channel(cls, channel, items):
-        item_names = set(item[0] for item in channel)
+        item_names = set(item[0] if isinstance(item, tuple) else item.name
+                         for item in channel)
 
         for item in items:
-            if not item[0] in item_names:
+            if item[0] not in item_names:
                 channel.append(item)
 
         return channel
@@ -79,17 +81,20 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
     @classmethod
     def default_outputs(cls, attrib):
         learner_class = attrib['LEARNER']
+        replaces = []
         if issubclass(learner_class, LearnerClassification):
             model_name = 'Classifier'
         elif issubclass(learner_class, LearnerRegression):
             model_name = 'Predictor'
         else:
             model_name = 'Model'
+            replaces = ['Classifier', 'Predictor']
 
         attrib['OUTPUT_MODEL_NAME'] = model_name
 
-        return [("Learner", learner_class),
-                (model_name, learner_class.__returns__)]
+        return [widget.OutputSignal("Learner", learner_class),
+                widget.OutputSignal(model_name, learner_class.__returns__,
+                                    replaces=replaces)]
 
     @classmethod
     def add_extra_attributes(cls, name, attrib):
@@ -118,6 +123,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
 
     class Error(OWWidget.Error):
         data_error = Msg("{}")
+        fitting_failed = Msg("Fitting failed.\n{}")
 
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
@@ -138,7 +144,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         """Creates a learner with current configuration.
 
         Returns:
-            Leaner: an instance of Orange.base.learner subclass.
+            Learner: an instance of Orange.base.learner subclass.
         """
         return self.LEARNER(preprocessors=self.preprocessors)
 
@@ -167,29 +173,36 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.update_model()
 
     def apply(self):
-        """Applies leaner and sends new model."""
+        """Applies learner and sends new model."""
         self.update_learner()
         self.update_model()
 
     def update_learner(self):
         self.learner = self.create_learner()
-        if issubclass(self.LEARNER, Fitter):
+        if self.learner and issubclass(self.LEARNER, Fitter):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.learner_name
-        self.learner.use_default_preprocessors = True
         self.send("Learner", self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
 
+    def show_fitting_failed(self, exc):
+        """Show error when fitting fails.
+            Derived widgets can override this to show more specific messages."""
+        self.Error.fitting_failed(str(exc), shown=exc is not None)
+
     def update_model(self):
+        self.show_fitting_failed(None)
+        self.model = None
         if self.check_data():
-            self.model = self.learner(self.data)
-            self.model.name = self.learner_name
-            self.model.instances = self.data
-            self.valid_data = True
-        else:
-            self.model = None
+            try:
+                self.model = self.learner(self.data)
+            except BaseException as exc:
+                self.show_fitting_failed(exc)
+            else:
+                self.model.name = self.learner_name
+                self.model.instances = self.data
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def check_data(self):
@@ -198,6 +211,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.Error.data_error.clear()
             if not self.learner.check_learner_adequacy(self.data.domain):
                 self.Error.data_error(self.learner.learner_adequacy_err_msg)
+            elif not len(self.data):
+                self.Error.data_error("Data set is empty.")
             elif len(np.unique(self.data.Y)) < 2:
                 self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:

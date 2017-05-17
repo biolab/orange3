@@ -1,3 +1,5 @@
+import numbers
+
 from AnyQt.QtWidgets import QFormLayout, QLineEdit
 from AnyQt.QtGui import QColor
 from AnyQt.QtCore import Qt, QTimer
@@ -16,6 +18,10 @@ try:
     remotely = True
 except ImportError:
     remotely = False
+
+
+# Maximum number of PCA components that we can set in the widget
+MAX_COMPONENTS = 100
 
 
 class OWPCA(widget.OWWidget):
@@ -41,6 +47,16 @@ class OWPCA(widget.OWWidget):
 
     graph_name = "plot.plotItem"
 
+    class Warning(widget.OWWidget.Warning):
+        trivial_components = widget.Msg(
+            "All components of the PCA are trivial (explain 0 variance). "
+            "Input data is constant (or near constant).")
+
+    class Error(widget.OWWidget.Error):
+        no_features = widget.Msg("At least 1 feature is required")
+        no_instances = widget.Msg("At least 1 data instance is required")
+        sparse_data = widget.Msg("Sparse data is not supported")
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -50,7 +66,8 @@ class OWPCA(widget.OWWidget):
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
-        self._pca_projector = PCA()
+        # max_components limit allows scikit-learn to select a faster method for big data
+        self._pca_projector = PCA(max_components=MAX_COMPONENTS)
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
@@ -60,7 +77,7 @@ class OWPCA(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.components_spin = gui.spin(
-            box, self, "ncomponents", 0, 1000,
+            box, self, "ncomponents", 1, MAX_COMPONENTS,
             callback=self._update_selection_component_spin,
             keyboardTracking=False
         )
@@ -109,7 +126,7 @@ class OWPCA(widget.OWWidget):
         gui.checkBox(self.options_box, self, "normalize", "Normalize data",
                      callback=self._update_normalize)
         self.maxp_spin = gui.spin(
-            self.options_box, self, "maxp", 1, 100,
+            self.options_box, self, "maxp", 1, MAX_COMPONENTS,
             label="Show only first", callback=self._setup_plot,
             keyboardTracking=False
         )
@@ -158,7 +175,11 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
+        self.clear_messages()
+        self.clear()
+        self.start_button.setEnabled(False)
         self.information()
+        self.data = None
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
@@ -167,31 +188,47 @@ class OWPCA(widget.OWWidget):
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
+            else:       # data was big and remote available
+                self.sampling_box.setVisible(True)
+                self.start_button.setText("Start remote computation")
+                self.start_button.setEnabled(True)
+        if not isinstance(data, SqlTable):
+            self.sampling_box.setVisible(False)
+        if isinstance(data, Table):
+            if data.is_sparse():
+                self.Error.sparse_data()
+                self.clear_outputs()
+                return
+            if len(data.domain.attributes) == 0:
+                self.Error.no_features()
+                self.clear_outputs()
+                return
+            if len(data) == 0:
+                self.Error.no_instances()
+                self.clear_outputs()
+                return
         self.data = data
         self.fit()
 
     def fit(self):
         self.clear()
-        self.start_button.setEnabled(False)
+        self.Warning.trivial_components.clear()
         if self.data is None:
             return
         data = self.data
-        self._transformed = None
-        if isinstance(data, SqlTable): # data was big and remote available
-            self.sampling_box.setVisible(True)
-            self.start_button.setText("Start remote computation")
-            self.start_button.setEnabled(True)
-        else:
-            self.sampling_box.setVisible(False)
+        if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
-            self.components_spin.setRange(0, len(cumulative))
 
-            self._pca = pca
-            self._variance_ratio = variance_ratio
-            self._cumulative = cumulative
-            self._setup_plot()
+            if numpy.isfinite(cumulative[-1]):
+                self.components_spin.setRange(0, len(cumulative))
+                self._pca = pca
+                self._variance_ratio = variance_ratio
+                self._cumulative = cumulative
+                self._setup_plot()
+            else:
+                self.Warning.trivial_components()
 
             self.unconditional_commit()
 
@@ -204,6 +241,11 @@ class OWPCA(widget.OWWidget):
         self.plot_horlabels = []
         self.plot_horlines = []
         self.plot.clear()
+
+    def clear_outputs(self):
+        self.send("Transformed data", None)
+        self.send("Components", None)
+        self.send("PCA", self._pca_projector)
 
     def get_model(self):
         if self.rpca is None:
@@ -222,6 +264,9 @@ class OWPCA(widget.OWWidget):
 
     def _setup_plot(self):
         self.plot.clear()
+        if self._pca is None:
+            return
+
         explained_ratio = self._variance_ratio
         explained = self._cumulative
         p = min(len(self._variance_ratio), self.maxp)
@@ -279,7 +324,9 @@ class OWPCA(widget.OWWidget):
         self._set_horline_pos()
 
         if self._pca is not None:
-            self.variance_covered = self._cumulative[components - 1] * 100
+            var = self._cumulative[components - 1]
+            if numpy.isfinite(var):
+                self.variance_covered = int(var * 100)
 
         if current != self._nselected_components():
             self._invalidate_selection()
@@ -295,7 +342,10 @@ class OWPCA(widget.OWWidget):
             cut = len(self._variance_ratio)
         else:
             cut = self.ncomponents
-        self.variance_covered = self._cumulative[cut - 1] * 100
+
+        var = self._cumulative[cut - 1]
+        if numpy.isfinite(var):
+            self.variance_covered = int(var * 100)
 
         if numpy.floor(self._line.value()) + 1 != cut:
             self._line.setValue(cut - 1)
@@ -339,7 +389,8 @@ class OWPCA(widget.OWWidget):
         var_max = self._cumulative[max_comp - 1]
         if var_max != numpy.floor(self.variance_covered / 100.0):
             cut = max_comp
-            self.variance_covered = var_max * 100
+            assert numpy.isfinite(var_max)
+            self.variance_covered = int(var_max * 100)
         else:
             self.ncomponents = cut = numpy.searchsorted(
                 self._cumulative, self.variance_covered / 100.0) + 1
@@ -358,7 +409,7 @@ class OWPCA(widget.OWWidget):
         transformed = components = None
         if self._pca is not None:
             if self._transformed is None:
-                # Compute the full transform (all components) only once.
+                # Compute the full transform (MAX_COMPONENTS components) only once.
                 self._transformed = self._pca(self.data)
             transformed = self._transformed
 
@@ -390,6 +441,22 @@ class OWPCA(widget.OWWidget):
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
         ))
         self.report_plot()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if "variance_covered" in settings:
+            # Due to the error in gh-1896 the variance_covered was persisted
+            # as a NaN value, causing a TypeError in the widgets `__init__`.
+            vc = settings["variance_covered"]
+            if isinstance(vc, numbers.Real):
+                if numpy.isfinite(vc):
+                    vc = int(vc)
+                else:
+                    vc = 100
+                settings["variance_covered"] = vc
+        if settings["ncomponents"] > MAX_COMPONENTS:
+            settings["ncomponents"] = MAX_COMPONENTS
+
 
 def main():
     import gc

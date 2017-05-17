@@ -58,29 +58,36 @@ class MDS(SklProjector):
         self.init_data = init_data
 
     def __call__(self, data):
+        params = self.params.copy()
+        dissimilarity = params['dissimilarity']
         distances = SklDistance, SpearmanDistance, PearsonDistance
         if isinstance(self._metric, distances):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
-            self.params['dissimilarity'] = 'precomputed'
+            dissimilarity = 'precomputed'
         elif self._metric is 'precomputed':
             dist_matrix, Y, domain = data, None, None
             X = dist_matrix
+            dissimilarity = 'precomputed'
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
             if self.init_type == "PCA":
                 dist_matrix = Euclidean(X)
-        if self.init_type == "PCA" and self.init_data is None:
-            self.init_data = torgerson(dist_matrix, self.params['n_components'])
-        clf = self.fit(X, Y=Y)
-        clf.domain = domain
-        return clf
 
-    def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
-        return proj.fit(X, init=self.init_data, y=Y)
+        if self.init_type == "PCA" and self.init_data is None:
+            init_data = torgerson(dist_matrix, params['n_components'])
+        elif self.init_data is not None:
+            init_data = self.init_data
+        else:
+            init_data = None
+
+        params["dissimilarity"] = dissimilarity
+        mds = self.__wraps__(**params)
+        mds.fit(X, y=Y, init=init_data)
+        mds.domain = domain
+        return mds
 
 
 class Isomap(SklProjector):
@@ -89,7 +96,8 @@ class Isomap(SklProjector):
 
     def __init__(self, n_neighbors=5, n_components=2, eigen_solver='auto',
                  tol=0, max_iter=None, path_method='auto',
-                 neighbors_algorithm='auto', preprocessors=None):
+                 neighbors_algorithm='auto', n_jobs=1,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -102,7 +110,8 @@ class LocallyLinearEmbedding(SklProjector):
                  eigen_solver='auto', tol=1e-06, max_iter=100,
                  method='standard', hessian_tol=0.0001,
                  modified_tol=1e-12, neighbors_algorithm='auto',
-                 random_state=None, preprocessors=None):
+                 random_state=None, n_jobs=1,
+                 preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
@@ -112,7 +121,7 @@ class SpectralEmbedding(SklProjector):
     name = 'Spectral Embedding'
 
     def __init__(self, n_components=2, affinity='nearest_neighbors', gamma=None,
-                 random_state=None, eigen_solver=None, n_neighbors=None,
+                 random_state=None, eigen_solver=None, n_neighbors=None, n_jobs=1,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
@@ -125,21 +134,25 @@ class TSNE(SklProjector):
     def __init__(self, n_components=2, perplexity=30.0, early_exaggeration=4.0,
                  learning_rate=1000.0, n_iter=1000, n_iter_without_progress=30,
                  min_grad_norm=1e-07, metric='euclidean', init='random',
-                 random_state=None, method='barnes_hut', angle=0.5,
+                 random_state=None, method='barnes_hut', angle=0.5, n_jobs=1,
                  preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
     def __call__(self, data):
-        if self.params['metric'] is 'precomputed':
+        params = self.params.copy()
+        metric = params["metric"]
+        if metric == 'precomputed':
             X, Y, domain = data, None, None
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
             distances = SklDistance, SpearmanDistance, PearsonDistance
-            if isinstance(self.params['metric'], distances):
-                X = self.params['metric'](X)
-                self.params['metric'] = 'precomputed'
-        clf = self.fit(X, Y=Y)
-        clf.domain = domain
-        return clf
+            if isinstance(metric, distances):
+                X = metric(X)
+                params['metric'] = 'precomputed'
+
+        tsne = self.__wraps__(**params)
+        tsne.fit(X, y=Y)
+        tsne.domain = domain
+        return tsne

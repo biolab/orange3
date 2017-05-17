@@ -26,13 +26,13 @@ def single_cache(func):
 def memoize_method(*lru_args, **lru_kwargs):
     """Memoize methods without keeping reference to `self`.
 
+    Using ordinary lru_cache on methods keeps a reference to the object in the cache,
+    creating a cycle that keeps the object from getting garbage collected.
+
     Parameters
     ----------
     lru_args
     lru_kwargs
-
-    Returns
-    -------
 
     See Also
     --------
@@ -41,20 +41,16 @@ def memoize_method(*lru_args, **lru_kwargs):
     """
     def _decorator(func):
 
+        @lru_cache(*lru_args, **lru_kwargs)
+        def _cached_method(self_weak, *args, **kwargs):
+            return func(self_weak(), *args, **kwargs)
+
         @wraps(func)
         def _wrapped_func(self, *args, **kwargs):
-            self_weak = weakref.ref(self)
-            # We're storing the wrapped method inside the instance. If we had
-            # a strong reference to self the instance would never die.
+            return _cached_method(weakref.ref(self), *args, **kwargs)
 
-            @wraps(func)
-            @lru_cache(*lru_args, **lru_kwargs)
-            def _cached_method(*args, **kwargs):
-                return func(self_weak(), *args, **kwargs)
-
-            setattr(self, func.__name__, _cached_method)
-            return _cached_method(*args, **kwargs)
-
+        _wrapped_func.cache_clear = _cached_method.cache_clear
+        _wrapped_func.cache_info = _cached_method.cache_info
         return _wrapped_func
 
     return _decorator

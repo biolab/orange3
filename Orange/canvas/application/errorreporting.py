@@ -1,4 +1,5 @@
 import os
+import pip
 import sys
 import time
 import logging
@@ -12,7 +13,7 @@ from pprint import pformat
 from tempfile import mkstemp
 from collections import OrderedDict
 from urllib.parse import urljoin, urlencode
-from urllib.request import pathname2url, urlopen
+from urllib.request import pathname2url, urlopen, build_opener
 from unittest.mock import patch
 
 from AnyQt.QtCore import pyqtSlot, QSettings, Qt
@@ -32,7 +33,7 @@ except ImportError:
     VERSION_STR = '???'
 
 
-REPORT_POST_URL = 'http://orange.biolab.si/error_report/v1/'
+REPORT_POST_URL = 'https://qa.orange.biolab.si/error_report/v1/'
 
 log = logging.getLogger()
 
@@ -47,6 +48,7 @@ class ErrorReporting(QDialog):
         WIDGET_MODULE = 'Widget Module'
         VERSION = 'Version'
         ENVIRONMENT = 'Environment'
+        INSTALLED_PACKAGES = 'Installed Packages'
         MACHINE_ID = 'Machine ID'
         WIDGET_SCHEME = 'Widget Scheme'
         STACK_TRACE = 'Stack Trace'
@@ -98,7 +100,7 @@ class ErrorReporting(QDialog):
             for k, v in data.items():
                 if k.startswith('_'):
                     continue
-                _v, v = v, escape(v)
+                _v, v = v, escape(str(v))
                 if k == F.WIDGET_SCHEME:
                     if not add_scheme:
                         continue
@@ -131,13 +133,18 @@ class ErrorReporting(QDialog):
 
         if QSettings().value('error-reporting/add-scheme', True, type=bool):
             data[F.WIDGET_SCHEME] = data['_' + F.WIDGET_SCHEME]
+        else:
+            data.pop(F.WIDGET_SCHEME, None)
         del data['_' + F.WIDGET_SCHEME]
 
         def _post_report(data):
             MAX_RETRIES = 2
             for _retry in range(MAX_RETRIES):
                 try:
-                    urlopen(REPORT_POST_URL,
+                    opener = build_opener()
+                    u = opener.open(REPORT_POST_URL)
+                    url = u.geturl()
+                    urlopen(url,
                             timeout=10,
                             data=urlencode(data).encode('utf8'))
                 except Exception as e:
@@ -183,6 +190,11 @@ class ErrorReporting(QDialog):
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
 
+        packages = ', '.join(sorted("%s==%s" % (i.project_name, i.version)
+                                    for i in pip.get_installed_distributions()))
+
+        machine_id = QSettings().value('error-reporting/machine-id', '', type=str)
+
         # If this exact error was already reported in this session,
         # just warn about it
         if (err_module, widget_module) in cls._cache:
@@ -219,7 +231,8 @@ class ErrorReporting(QDialog):
         data[F.ENVIRONMENT] = 'Python {} on {} {} {} {}'.format(
             platform.python_version(), platform.system(), platform.release(),
             platform.version(), platform.machine())
-        data[F.MACHINE_ID] = str(uuid.getnode())
+        data[F.INSTALLED_PACKAGES] = packages
+        data[F.MACHINE_ID] = machine_id or str(uuid.getnode())
         data[F.STACK_TRACE] = stacktrace
         if err_locals:
             data[F.LOCALS] = err_locals

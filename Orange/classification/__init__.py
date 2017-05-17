@@ -1,3 +1,6 @@
+# Pull members from modules to Orange.classification namespace
+# pylint: disable=wildcard-import
+
 from .base_classification import (ModelClassification as Model,
                                   LearnerClassification as Learner,
                                   SklModelClassification as SklModel,
@@ -14,3 +17,5 @@ from .simple_tree import *
 from .simple_random_forest import *
 from .elliptic_envelope import *
 from .rules import *
+from .sgd import *
+from .neural_network import *

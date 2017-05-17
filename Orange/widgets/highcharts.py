@@ -13,7 +13,7 @@ import numpy as np
 
 from AnyQt.QtCore import QObject, pyqtSlot
 
-from Orange.widgets.gui import WebviewWidget
+from Orange.widgets.utils.webview import WebviewWidget
 
 
 def _Autotree():
@@ -59,8 +59,10 @@ class Highchart(WebviewWidget):
     bridge: QObject
         Exposed as ``window.pybridge`` in JavaScript.
     options: dict
-        Default options for this chart. See Highcharts docs. Some
-        options are already set in the default theme.
+        Default options for this chart. If any option's value is a string
+        that starts with an empty block comment ('/**/'), the expression
+        following is evaluated in JS. See Highcharts docs. Some options are
+        already set in the default theme.
     highchart: str
         One of `Chart`, `StockChart`, or `Map` Highcharts JS types.
     enable_zoom: bool
@@ -121,18 +123,52 @@ class Highchart(WebviewWidget):
         if enable_select and not selection_callback:
             raise ValueError('enable_select requires selection_callback')
 
+        if enable_select:
+            # We need to make sure the _Bridge object below with the selection
+            # callback is exposed in JS via QWebChannel.registerObject() and
+            # not through WebviewWidget.exposeObject() as the latter mechanism
+            # doesn't transmit QObjects correctly.
+            class _Bridge(QObject):
+                @pyqtSlot('QVariantList')
+                def _highcharts_on_selected_points(self, points):
+                    selection_callback([np.sort(selected).astype(int)
+                                        for selected in points])
+            if bridge is None:
+                bridge = _Bridge()
+            else:
+                # Thus, we patch existing user-passed bridge with our
+                # selection callback method
+                attrs = bridge.__dict__.copy()
+                attrs['_highcharts_on_selected_points'] = _Bridge._highcharts_on_selected_points
+                assert isinstance(bridge, QObject), 'bridge needs to be a QObject'
+                _Bridge = type(bridge.__class__.__name__,
+                               bridge.__class__.__mro__,
+                               attrs)
+                bridge = _Bridge()
+
         super().__init__(parent, bridge, debug=debug)
 
         self.highchart = highchart
         self.enable_zoom = enable_zoom
         enable_point_select = '+' in enable_select
         enable_rect_select = enable_select.replace('+', '')
+
+        self._update_options_dict(options, enable_zoom, enable_select,
+                                  enable_point_select, enable_rect_select,
+                                  kwargs)
+
+        with open(self._HIGHCHARTS_HTML) as html:
+            self.setHtml(html.read() % dict(javascript=javascript,
+                                            options=json(options)),
+                         self.toFileURL(dirname(self._HIGHCHARTS_HTML)) + '/')
+
+    def _update_options_dict(self, options, enable_zoom, enable_select,
+                             enable_point_select, enable_rect_select, kwargs):
         if enable_zoom:
             _merge_dicts(options, _kwargs_options(dict(
                 mapNavigation_enableMouseWheelZoom=True,
                 mapNavigation_enableButtons=False)))
         if enable_select:
-            self._selection_callback = selection_callback
             _merge_dicts(options, _kwargs_options(dict(
                 chart_events_click='/**/unselectAllPoints/**/')))
         if enable_point_select:
@@ -145,11 +181,6 @@ class Highchart(WebviewWidget):
                 chart_events_selection='/**/rectSelectPoints/**/')))
         if kwargs:
             _merge_dicts(options, _kwargs_options(kwargs))
-
-        with open(self._HIGHCHARTS_HTML) as html:
-            self.setHtml(html.read() % dict(javascript=javascript,
-                                            options=json(options)),
-                         self.toFileURL(dirname(self._HIGHCHARTS_HTML)) + '/')
 
     def contextMenuEvent(self, event):
         """ Zoom out on right click. Also disable context menu."""
@@ -211,24 +242,10 @@ class Highchart(WebviewWidget):
             }; 0;
         ''')
 
-    @pyqtSlot('QVariantList')
-    def _on_selected_points(self, points):
-        self._selection_callback([np.sort(selected).astype(int)
-                                  for selected in points])
-
-    def svg(self):
-        """
-        Returns div that is container of a chart.
-        This method overrides svg method from WebView because
-        SVG itself does not contain chart labels (title, axis labels, ...)
-        """
-        html = self.html()
-        return html[html.index('<div id="container"'):html.rindex('</div>') + 6]
-
 
 def main():
     """ A simple test. """
-    from AnyQt.QtGui import QApplication
+    from AnyQt.QtWidgets import QApplication
     app = QApplication([])
 
     def _on_selected_points(points):
@@ -247,4 +264,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

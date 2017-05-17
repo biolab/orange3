@@ -15,6 +15,16 @@ discretization, continuization, imputation and transformation.
 Impute
 ======
 
+Imputation replaces missing values with new values (or omits such features).
+
+.. literalinclude:: code/imputation-default.py
+
+There are several imputation methods one can use.
+
+.. literalinclude:: code/imputation-average.py
+
+
+.. autoclass::Orange.preprocess.Impute
 
 .. index:: discretize data
    single: feature; discretize
@@ -273,13 +283,6 @@ Continuization
     Domain continuizers can be given either a data set or a domain, and return
     a new domain. When given only the domain, use the most frequent value as
     the base value.
-
-    The class can also behave like a function: if the constructor is given the
-    data or a domain, the constructed continuizer is immediately applied and
-    the constructor returns a transformed domain instead of the continuizer
-    instance::
-
-        domain1 = Orange.preprocess.DomainContinuizer(titanic)
 
     By default, the class does not change continuous and class attributes,
     discrete attributes are replaced with N attributes (``Indicators``) with

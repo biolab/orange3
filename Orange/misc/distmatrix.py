@@ -128,7 +128,7 @@ class DistMatrix(np.ndarray):
 
         If the file has column labels, they follow in the second line.
         Row labels appear at the beginning of each row.
-        Labels are arbitrary strings that connot contain newlines and
+        Labels are arbitrary strings that cannot contain newlines and
         tabulators. Labels are stored as instances of `Table` with a single
         meta attribute named "label".
 
@@ -221,7 +221,7 @@ class DistMatrix(np.ndarray):
         """
         Returns `True` if row labels can be automatically determined from data
 
-        For this, the `row_items` must be an instance of ``Orange.data.Table`
+        For this, the `row_items` must be an instance of `Orange.data.Table`
         whose domain contains a single meta attribute, which has to be a string.
         The domain may contain other variables, but not meta attributes.
         """
@@ -232,7 +232,7 @@ class DistMatrix(np.ndarray):
         Returns `True` if column labels can be automatically determined from
         data
 
-        For this, the `col_items` must be an instance of ``Orange.data.Table`
+        For this, the `col_items` must be an instance of `Orange.data.Table`
         whose domain contains a single meta attribute, which has to be a string.
         The domain may contain other variables, but not meta attributes.
         """

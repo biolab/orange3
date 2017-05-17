@@ -58,5 +58,6 @@ represented by whole numbers.
     data.value
     data.instance
     data.filters
+    data.io
 
 .. index:: Data

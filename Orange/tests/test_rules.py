@@ -36,12 +36,9 @@ class TestRuleInduction(unittest.TestCase):
         raised).
         """
         base_rule_learner = _RuleLearner()
-        self.assertRaises(NotImplementedError, base_rule_learner.fit,
-                          self.iris.X, self.iris.Y)
 
         # test the number of default preprocessors
-        self.assertEqual(len(list(base_rule_learner.active_preprocessors)), 2)
-
+        self.assertEqual(len(list(base_rule_learner.active_preprocessors)), 3)
         # preprocessor types
         preprocessor_types = [type(x) for x in base_rule_learner.active_preprocessors]
         self.assertIn(RemoveNaNClasses, preprocessor_types)

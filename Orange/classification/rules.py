@@ -18,7 +18,7 @@ from scipy.stats import chi2
 from Orange.data import Table, _contingency
 from Orange.classification import Learner, Model
 from Orange.preprocess.discretize import EntropyMDL
-from Orange.preprocess import RemoveNaNClasses, Impute, Average
+from Orange.preprocess import RemoveNaNColumns, RemoveNaNClasses, Impute
 
 __all__ = ["CN2Learner", "CN2UnorderedLearner", "CN2SDLearner",
            "CN2SDUnorderedLearner"]
@@ -149,7 +149,8 @@ def hash_dist(x):
     hash : int
         Hash function result.
     """
-    return int(sha1(bytes(x)).hexdigest(), base=16) & 0xffffffff
+    return int(sha1(np.ascontiguousarray(x).data)
+               .hexdigest(), base=16) & 0xffffffff
 
 
 class Evaluator:
@@ -287,30 +288,29 @@ class LRSValidator(Validator):
         self.default_alpha = default_alpha
 
     def validate_rule(self, rule, _default=False):
-        if _default:
-            p_dist = rule.initial_class_dist
-            alpha = self.default_alpha
-        elif rule.parent_rule is not None:
-            p_dist = rule.parent_rule.curr_class_dist
-            alpha = self.parent_alpha
-        else:
-            return True
-
-        if alpha >= 1.0:
-            return True
-
         tc = rule.target_class
         dist = rule.curr_class_dist
 
+        if self.default_alpha < 1.0:
+            sig = self.test_sig(dist, rule.initial_class_dist, tc, self.default_alpha)
+            if not sig:
+                return False
+        if self.parent_alpha < 1.0 and rule.parent_rule is not None:
+            expdist = rule.parent_rule.curr_class_dist
+            alpha = self.parent_alpha
+            return self.test_sig(dist, expdist, tc, alpha)
+        return True
+
+    def test_sig(self, obsdist, expdist, tc, alpha):
         if tc is not None:
-            x = np.array([dist[tc], dist.sum() - dist[tc]], dtype=float)
-            y = np.array([p_dist[tc], p_dist.sum() - p_dist[tc]], dtype=float)
+            x = np.array([obsdist[tc], obsdist.sum() - obsdist[tc]], dtype=float)
+            y = np.array([expdist[tc], expdist.sum() - expdist[tc]], dtype=float)
         else:
-            x = dist.astype(float)
-            y = p_dist.astype(float)
+            x = obsdist.astype(float)
+            y = expdist.astype(float)
 
         lrs = likelihood_ratio_statistic(x, y)
-        df = len(x) - 1
+        df = len(obsdist) - 1
         return lrs > 0 and chi2.sf(lrs, df) <= alpha
 
 
@@ -433,9 +433,10 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, constrain_continuous=True):
+    def __init__(self, constrain_continuous=True, evaluate=True):
         self.constrain_continuous = constrain_continuous
         self.storage = None
+        self.evaluate = evaluate
 
     def initialise_rule(self, X, Y, W, target_class, base_rules, domain,
                         initial_class_dist, prior_class_dist,
@@ -452,7 +453,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
         default_rule.filter_and_store(X, Y, W, target_class)
         if not base_rules and default_rule.is_valid():
-            default_rule.do_evaluate()
+            if self.evaluate:
+                default_rule.do_evaluate()
             rules.append(default_rule)
 
         for base_rule in base_rules:
@@ -467,7 +469,8 @@ class TopDownSearchStrategy(SearchStrategy):
 
             temp_rule.filter_and_store(X, Y, W, target_class)
             if temp_rule.is_valid():
-                temp_rule.do_evaluate()
+                if self.evaluate:
+                    temp_rule.do_evaluate()
                 rules.append(temp_rule)
 
         # optimisation: store covered examples when a selector is found
@@ -514,7 +517,8 @@ class TopDownSearchStrategy(SearchStrategy):
             # the same size throughout the rule_finder iteration
             new_rule.filter_and_store(X, Y, W, target_class, predef_covered=pdc)
             if new_rule.is_valid():
-                new_rule.do_evaluate()
+                if self.evaluate:
+                    new_rule.do_evaluate()
                 new_rules.append(new_rule)
 
         return new_rules
@@ -897,7 +901,7 @@ class _RuleLearner(Learner):
     .. [1] "Separate-and-Conquer Rule Learning", Johannes Fürnkranz,
            Artificial Intelligence Review 13, 3-54, 1999
     """
-    preprocessors = [RemoveNaNClasses(), Impute(Average())]
+    preprocessors = [RemoveNaNColumns(), RemoveNaNClasses(), Impute()]
 
     def __init__(self, preprocessors=None, base_rules=None):
         """
@@ -929,9 +933,6 @@ class _RuleLearner(Learner):
         self.data_stopping = self.positive_remaining_data_stopping
         self.cover_and_remove = self.exclusive_cover_and_remove
         self.rule_stopping = self.lrs_significance_rule_stopping
-
-    def fit(self, X, Y, W=None):
-        raise NotImplementedError
 
     # base_rules and domain not accessed using self to avoid
     # possible crashes and to enable quick use of the algorithm
@@ -1260,8 +1261,6 @@ class CN2Learner(_RuleLearner):
     .. [1] "The CN2 Induction Algorithm", Peter Clark and Tim Niblett,
            Machine Learning Journal, 3 (4), pp261-283, (1989)
     """
-    name = 'CN2 inducer'
-
     def __init__(self, preprocessors=None, base_rules=None):
         super().__init__(preprocessors, base_rules)
         self.rule_finder.quality_evaluator = EntropyEvaluator()

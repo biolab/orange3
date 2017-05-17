@@ -18,11 +18,15 @@ def one_hot(values, dtype=float):
     result
         2d array with ones in respective indicator columns.
     """
+    if not len(values):
+       return np.zeros((0, 0), dtype=dtype)
     return np.eye(int(np.max(values) + 1), dtype=dtype)[np.asanyarray(values, dtype=int)]
 
 
 def scale(values, min=0, max=1):
     """Return values scaled to [min, max]"""
+    if not len(values):
+        return np.array([])
     minval = np.float_(bn.nanmin(values))
     ptp = bn.nanmax(values) - minval
     if ptp == 0:
@@ -40,10 +44,13 @@ class SharedComputeValue:
         A callable that performs computation that is shared between
         multiple variables. Variables sharing computation need to set
         the same instance.
+    variable: Orange.data.Variable
+        The original variable on which this compute value is set.
     """
 
-    def __init__(self, compute_shared):
+    def __init__(self, compute_shared, variable=None):
         self.compute_shared = compute_shared
+        self.variable = variable
 
     def __call__(self, data, shared_data=None):
         """Fallback if common parts are not passed."""

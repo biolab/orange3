@@ -1,26 +1,9 @@
-from Orange.base import Learner, Model
+import numpy as np
+
+from Orange.base import Learner, Model, SklLearner
 
 
-class FitterMeta(type):
-    """Ensure that each subclass of the `Fitter` class overrides the `__fits__`
-    attribute with a valid value."""
-    def __new__(mcs, name, bases, kwargs):
-        # Check that a fitter implementation defines a valid `__fits__`
-        if kwargs.get('name', False):
-            fits = kwargs.get('__fits__')
-            if not isinstance(fits, dict):
-                raise AssertionError(
-                    'The `__fits__` property must be an instance of `dict`.')
-            elif not fits.get('classification', None) \
-                    or not fits.get('regression', None):
-                raise AssertionError(
-                    'The `__fits__` property does not define a classification '
-                    'or regression learner. Use a simple learner if you do '
-                    'not need the functionality provided by Fitter.')
-        return super().__new__(mcs, name, bases, kwargs)
-
-
-class Fitter(Learner, metaclass=FitterMeta):
+class Fitter(Learner):
     """Handle multiple types of target variable with one learner.
 
     Subclasses of this class serve as a sort of dispatcher. When subclassing,
@@ -34,7 +17,7 @@ class Fitter(Learner, metaclass=FitterMeta):
     learners.
 
     """
-    __fits__ = None
+    __fits__ = {}
     __returns__ = Model
 
     # Constants to indicate what kind of problem we're dealing with
@@ -45,37 +28,92 @@ class Fitter(Learner, metaclass=FitterMeta):
         self.kwargs = kwargs
         # Make sure to pass preprocessor params to individual learners
         self.kwargs['preprocessors'] = preprocessors
-        self.problem_type = None
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
-    def __call__(self, data):
-        # Set the appropriate problem type from the data
-        self.problem_type = self.CLASSIFICATION if \
-            data.domain.has_discrete_class else self.REGRESSION
-        return self.get_learner(self.problem_type)(data)
+    def _fit_model(self, data):
+        if data.domain.has_discrete_class:
+            learner = self.get_learner(self.CLASSIFICATION)
+        else:
+            learner = self.get_learner(self.REGRESSION)
+
+        if type(self).fit is Learner.fit:
+            return learner.fit_storage(data)
+        else:
+            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+            return learner.fit(X, Y, W)
+
+    def preprocess(self, data):
+        if data.domain.has_discrete_class:
+            return self.get_learner(self.CLASSIFICATION).preprocess(data)
+        else:
+            return self.get_learner(self.REGRESSION).preprocess(data)
 
     def get_learner(self, problem_type):
-        """Get the learner for a given problem type."""
+        """Get the learner for a given problem type.
+
+        Returns
+        -------
+        Learner
+            The appropriate learner for the given problem type.
+
+        """
         # Prevent trying to access the learner when problem type is None
         if problem_type not in self.__fits__:
-            raise AttributeError(
-                'There is no learner defined that handles that type of data')
+            raise TypeError("No learner to handle '{}'".format(problem_type))
         if self.__learners[problem_type] is None:
-            learner = self.__fits__[problem_type](**self.__get_kwargs(
-                self.kwargs, problem_type))
+            learner = self.__fits__[problem_type](**self.__kwargs(problem_type))
             learner.use_default_preprocessors = self.use_default_preprocessors
             self.__learners[problem_type] = learner
         return self.__learners[problem_type]
 
-    def __get_kwargs(self, kwargs, problem_type):
-        params = self._get_learner_kwargs(self.__fits__[problem_type])
-        return {k: kwargs[k] for k in params & set(kwargs.keys())}
+    def __kwargs(self, problem_type):
+        learner_kwargs = set(
+            self.__fits__[problem_type].__init__.__code__.co_varnames[1:])
+        changed_kwargs = self._change_kwargs(self.kwargs, problem_type)
+        # Make sure to remove any params that are set to None and use defaults
+        filtered_kwargs = {k: v for k, v in changed_kwargs.items() if v is not None}
+        return {k: v for k, v in filtered_kwargs.items() if k in learner_kwargs}
 
-    @staticmethod
-    def _get_learner_kwargs(learner):
-        """Get a `set` of kwarg names that belong to the given learner."""
-        # Get function params except `self`
-        return set(learner.__init__.__code__.co_varnames[1:])
+    def _change_kwargs(self, kwargs, problem_type):
+        """Handle the kwargs to be passed to the learner before they are used.
 
-    def __getattr__(self, item):
-        return getattr(self.get_learner(self.problem_type), item)
+        In some cases we need to manipulate the kwargs that will be passed to
+        the learner, e.g. SGD takes a `loss` parameter in both the regression
+        and classification learners, but the learner widget cannot
+        differentiate between these two, so it passes classification and
+        regression loss parameters individually. The appropriate one must be
+        renamed into `loss` before passed to the actual learner instance. This
+        is done here.
+
+        """
+        return kwargs
+
+    @property
+    def supports_weights(self):
+        """The fitter supports weights if both the classification and
+        regression learners support weights."""
+        return (
+            getattr(self.get_learner(self.CLASSIFICATION), 'supports_weights', False) and
+            getattr(self.get_learner(self.REGRESSION), 'supports_weights', False)
+        )
+
+    @property
+    def params(self):
+        raise TypeError(
+            'A fitter does not have its own params. If you need to access '
+            'learner params, please use the `get_params` method.')
+
+    def get_params(self, problem_type):
+        """Access the specific learner params of a given learner."""
+        return self.get_learner(problem_type).params
+
+
+class SklFitter(Fitter):
+    def _fit_model(self, data):
+        model = super()._fit_model(data)
+        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
+        if data.domain.has_discrete_class:
+            model.params = self.get_params(self.CLASSIFICATION)
+        else:
+            model.params = self.get_params(self.REGRESSION)
+        return model

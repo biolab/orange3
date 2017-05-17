@@ -81,16 +81,6 @@ For data sets that include continuous attributes,
 .. _`Naive Bayes`: http://en.wikipedia.org/wiki/Naive_Bayes_classifier
 .. _`scikit-learn`: http://scikit-learn.org
 
-
-.. index:: multilayer perceptron
-   pair: classification; multilayer perceptron
-
-Multilayer perceptron (feed-forward neural network)
----------------------------------------------------
-.. autoclass:: MLPLearner
-   :members:
-
-
 .. index:: SVM
    pair: classification; SVM
 
@@ -175,6 +165,15 @@ Elliptic Envelope
 -----------------
 
 .. autoclass:: EllipticEnvelopeLearner
+   :members:
+
+
+.. index:: neural network
+   pair: classification; neural network
+
+Neural Network
+--------------
+.. autoclass:: NNClassificationLearner
    :members:
 
 

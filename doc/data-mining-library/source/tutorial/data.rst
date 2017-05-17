@@ -11,11 +11,13 @@ Data Input
 ..  index:: 
     single: data; input
 
-Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file type, like CSV and Excel. Native format starts with a header row with feature (column) names. Second header row gives the attribute type, which can be continuous, discrete, string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta). Here are the first few lines from a data set :download:`lenses.tab <code/lenses.tab>`::
+Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file type, like CSV and Excel. Native format starts with a header row with feature (column) names. Second header row gives the attribute type, which can be continuous, discrete, time, or string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta).
+More detailed specification is available in :doc:`../reference/data.io`.
+Here are the first few lines from a data set :download:`lenses.tab <code/lenses.tab>`::
 
     age       prescription  astigmatic    tear_rate     lenses
     discrete  discrete      discrete      discrete      discrete 
-                                                       class
+                                                        class
     young     myope         no            reduced       none
     young     myope         no            normal        soft
     young     myope         yes           reduced       none
@@ -27,7 +29,7 @@ Values are tab-limited. This data set has four attributes (age of the patient, s
 
     age       prescription  astigmatic    tear_rate     lenses
     d         d             d             d             d 
-                                                       c
+                                                        c
 
 The rest of the table gives the data. Note that there are 5 instances in our table above. For the full data set, check out or download :download:`lenses.tab <code/lenses.tab>`) to a target directory. You can also skip this step as Orange comes preloaded with several demo data sets, lenses being one of them. Now, open a python shell, import Orange and load the data:
 

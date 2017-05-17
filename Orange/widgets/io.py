@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from AnyQt import QtGui, QtCore, QtSvg
 from AnyQt.QtCore import QMimeData
 from AnyQt.QtWidgets import (
@@ -5,6 +8,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.data.io import FileFormat
+from Orange.widgets.utils.webview import WebviewWidget
 
 
 class ImgFormat(FileFormat):
@@ -58,8 +62,8 @@ class ImgFormat(FileFormat):
                 scene.render(painter, target, rect)
             except TypeError:
                 scene.render(painter)  # QWidget.render() takes different params
-            cls._save_buffer(buffer, filename)
             painter.end()
+            cls._save_buffer(buffer, filename)
 
     @classmethod
     def write(cls, filename, scene):
@@ -138,6 +142,9 @@ class SvgFormat(ImgFormat):
 
     @staticmethod
     def _save_buffer(buffer, filename):
+        dev = buffer.outputDevice()
+        if dev is not None:
+            dev.flush()
         pass
 
     @staticmethod
@@ -148,3 +155,53 @@ class SvgFormat(ImgFormat):
     @staticmethod
     def _export(exporter, filename):
         exporter.export(filename)
+
+    @classmethod
+    def write_image(cls, filename, scene):
+        # WebviewWidget exposes its SVG contents more directly;
+        # no need to go via QPainter if we can avoid it
+        if isinstance(scene, WebviewWidget):
+            try:
+                svg = scene.svg()
+                with open(filename, 'w') as f:
+                    f.write(svg)
+                return
+            except (ValueError, IOError):
+                pass
+
+        super().write_image(filename, scene)
+
+
+if hasattr(QtGui, "QPdfWriter"):
+    class PdfFormat(ImgFormat):
+        EXTENSIONS = ('.pdf', )
+        DESCRIPTION = 'Portable Document Format'
+        PRIORITY = 110
+
+        @classmethod
+        def write_image(cls, filename, scene):
+            # export via svg to temp file then print that
+            # NOTE: can't use NamedTemporaryFile with delete = True
+            # (see https://bugs.python.org/issue14243)
+            fd, tmpname = tempfile.mkstemp(suffix=".svg")
+            os.close(fd)
+            try:
+                SvgFormat.write_image(tmpname, scene)
+                with open(tmpname, "rb") as f:
+                    svgcontents = f.read()
+            finally:
+                os.unlink(tmpname)
+
+            svgrend = QtSvg.QSvgRenderer(QtCore.QByteArray(svgcontents))
+            vbox = svgrend.viewBox()
+            if not vbox.isValid():
+                size = svgrend.defaultSize()
+            else:
+                size = vbox.size()
+            writer = QtGui.QPdfWriter(filename)
+            writer.setPageSizeMM(QtCore.QSizeF(size) * 0.282)
+            painter = QtGui.QPainter(writer)
+            svgrend.render(painter)
+            painter.end()
+            del svgrend
+            del painter

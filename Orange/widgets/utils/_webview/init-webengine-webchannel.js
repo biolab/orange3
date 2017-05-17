@@ -10,16 +10,9 @@ function __unpack_js_object(obj) {
 }
 
 
-function __unpack_start_js_objects(objs) {
-    for (var i=0; i < objs.length; ++i) {
-        __unpack_js_object(objs[i])
-    }
-}
-
-
 new QWebChannel(qt.webChannelTransport, function(channel) {
     window.__channel = channel;
-    window.__self = channel.objects.__self;
+    var __bridge = channel.objects.__bridge;
 
     var timer = setInterval(function() {
         if (!window.__load_finished)
@@ -41,7 +34,7 @@ new QWebChannel(qt.webChannelTransport, function(channel) {
         }
 
         try {
-            __self._load_really_finished();
+            __bridge.load_really_finished();
         } catch (err) {
             log.error('Not using WebviewWidget. No problem. Enjoy!')
         }

@@ -30,69 +30,16 @@ import pyqtgraph as pg
 from Orange.data import Table, Variable
 from Orange.data.sql.table import SqlTable
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils import colorpalette
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 )
-from .owscatterplotgraph import LegendItem, legend_anchor_pos
+from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.plot import OWPlotGUI
+from Orange.widgets.visualize.owscatterplotgraph import LegendItem, \
+    legend_anchor_pos
 from Orange.widgets.utils import classdensity
 from Orange.canvas import report
-
-
-class DnDVariableListModel(itemmodels.VariableListModel):
-
-    MimeType = "application/x-orange-variable-list"
-
-    def supportedDropActions(self):
-        return Qt.MoveAction
-
-    def supportedDragActions(self):
-        return Qt.MoveAction
-
-    def mimeTypes(self):
-        return [DnDVariableListModel.MimeType]
-
-    def mimeData(self, indexlist):
-        variables = []
-        itemdata = []
-        for index in indexlist:
-            variables.append(self[index.row()])
-            itemdata.append(self.itemData(index))
-
-        mime = QMimeData()
-        mime.setData(self.MimeType, b"see properties")
-        mime.setProperty("variables", variables)
-        mime.setProperty("itemdata", itemdata)
-        return mime
-
-    def dropMimeData(self, mime, action, row, column, parent):
-        if action == Qt.IgnoreAction:
-            return True
-        elif not mime.hasFormat(self.MimeType):
-            return False
-
-        variables = mime.property("variables")
-        itemdata = mime.property("itemdata")
-
-        if variables is None:
-            return False
-
-        if row == -1:
-            row = len(self)
-
-        # Insert variables at row and restore other item data
-        self[row:row] = variables
-        for i, data in enumerate(itemdata):
-            self.setItemData(self.index(row + i), data)
-        return True
-
-    def flags(self, index):
-        flags = super().flags(index)
-        if index.isValid():
-            flags |= Qt.ItemIsDragEnabled
-        else:
-            flags |= Qt.ItemIsDropEnabled
-        return flags
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -244,16 +191,18 @@ class OWLinearProjection(widget.OWWidget):
     outputs = [("Selected Data", Table, widget.Default),
                (ANNOTATED_DATA_SIGNAL_NAME, Table)]
 
+    settings_version = 2
     settingsHandler = settings.DomainContextHandler()
 
     variable_state = settings.ContextSetting({})
 
-    color_index = settings.ContextSetting(0)
-    shape_index = settings.ContextSetting(0)
-    size_index = settings.ContextSetting(0)
+    attr_color = settings.ContextSetting(None, exclude_metas=False)
+    attr_label = settings.ContextSetting(None, exclude_metas=False)
+    attr_shape = settings.ContextSetting(None, exclude_metas=False)
+    attr_size = settings.ContextSetting(None, exclude_metas=False)
 
-    point_size = settings.Setting(10)
-    alpha_value = settings.Setting(255)
+    point_width = settings.Setting(10)
+    alpha_value = settings.Setting(128)
     jitter_value = settings.Setting(0)
 
     class_density = settings.Setting(False)
@@ -304,8 +253,8 @@ class OWLinearProjection(widget.OWWidget):
         )
         view.addAction(movedown)
 
-        self.varmodel_selected = model = DnDVariableListModel(
-            parent=self)
+        self.varmodel_selected = model = VariableListModel(
+            parent=self, enable_dnd=True)
 
         model.rowsInserted.connect(self._invalidate_plot)
         model.rowsRemoved.connect(self._invalidate_plot)
@@ -335,83 +284,10 @@ class OWLinearProjection(widget.OWWidget):
         )
         view.addAction(moveup)
 
-        self.varmodel_other = model = DnDVariableListModel(parent=self)
+        self.varmodel_other = model = VariableListModel(parent=self, enable_dnd=True)
         view.setModel(model)
 
         box1.layout().addWidget(view)
-
-        box = gui.vBox(self.controlArea, box=True)
-        box.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Maximum)
-
-        self.colorvar_model = itemmodels.VariableListModel(parent=self)
-        self.shapevar_model = itemmodels.VariableListModel(parent=self)
-        self.sizevar_model = itemmodels.VariableListModel(parent=self)
-
-        form = QFormLayout(
-            formAlignment=Qt.AlignLeft,
-            labelAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            spacing=8
-        )
-        box.layout().addLayout(form)
-
-        cb = gui.comboBox(box, self, "color_index",
-                          callback=self._on_color_change,
-                          contentsLength=10)
-        cb.setModel(self.colorvar_model)
-        form.addRow("Color:", cb)
-
-        box = gui.vBox(None)
-        hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
-        gui.widgetLabel(hbox, "Opacity: ")
-        alpha_slider = QSlider(
-            Qt.Horizontal, minimum=10, maximum=255, pageStep=25,
-            tickPosition=QSlider.TicksBelow, value=self.alpha_value)
-        alpha_slider.valueChanged.connect(self._set_alpha)
-        hbox.layout().addWidget(alpha_slider)
-
-        self.cb_class_density = gui.checkBox(
-            gui.indentedBox(box), self, "class_density",
-            label="Show class density", callback=self._update_density)
-        gui.separator(box)
-        form.addRow(box)
-
-        cb = gui.comboBox(box, self, "shape_index",
-                          callback=self._on_shape_change,
-                          contentsLength=10)
-
-        cb.setModel(self.shapevar_model)
-        form.addRow("Shape:", cb)
-
-        cb = gui.comboBox(box, self, "size_index",
-                          callback=self._on_size_change,
-                          contentsLength=10)
-
-        cb.setModel(self.sizevar_model)
-        form.addRow("Size:", cb)
-
-        size_slider = QSlider(
-            Qt.Horizontal, minimum=3, maximum=30, value=self.point_size,
-            pageStep=3,
-            tickPosition=QSlider.TicksBelow)
-        size_slider.valueChanged.connect(self._set_size)
-        form.addRow("", size_slider)
-
-        cb = self.jitter_combo = gui.comboBox(
-            box, self, "jitter_value",
-            items=["None", "0.01 %", "0.1 %", "0.5 %", "1 %", "2 %"],
-            callback=self._invalidate_plot)
-        form.addRow("Jittering:", cb)
-
-        toolbox = gui.vBox(self.controlArea, "Zoom/Select")
-        toollayout = QHBoxLayout()
-        toolbox.layout().addLayout(toollayout)
-
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
-                        auto_label="Send Automatically")
-
-        self.controlArea.setSizePolicy(
-            QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # Main area plot
         self.view = pg.GraphicsView(background="w")
@@ -421,8 +297,41 @@ class OWLinearProjection(widget.OWWidget):
         self.viewbox.setAspectLocked(True)
         self.viewbox.grabGesture(Qt.PinchGesture)
         self.view.setCentralItem(self.viewbox)
-
         self.mainArea.layout().addWidget(self.view)
+        self.replot = None
+
+        g = OWPlotGUI(self)
+        g.point_properties_box(self.controlArea)
+        self.controls.attr_label.parent().setVisible(False)
+        self.models = g.points_models
+
+        box = gui.widgetBox(self.controlArea, "Plot")
+        form = QFormLayout(
+            formAlignment=Qt.AlignLeft,
+            labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
+            spacing=8
+        )
+        box.layout().addLayout(form)
+
+        self.jitter_combo = gui.comboBox(
+            box, self, "jitter_value",
+            items=["None", "0.01 %", "0.1 %", "0.5 %", "1 %", "2 %"],
+            callback=self._invalidate_plot)
+        form.addRow("Jittering:", self.jitter_combo)
+
+        self.cb_class_density = gui.checkBox(
+            box, self, "class_density", "", callback=self._update_density)
+        form.addRow("Class density", self.cb_class_density)
+
+        toolbox = gui.vBox(self.controlArea, "Zoom/Select")
+        toollayout = QHBoxLayout()
+        toolbox.layout().addLayout(toollayout)
+
+        self.controlArea.layout().addStretch(1)
+
+        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
+                        auto_label="Send Automatically")
 
         self.selection = PlotSelectionTool(self)
         self.selection.setViewBox(self.viewbox)
@@ -511,18 +420,8 @@ class OWLinearProjection(widget.OWWidget):
         self.data = None
         self._subset_mask = None
         self._selection_mask = None
-
         self.varmodel_selected[:] = []
         self.varmodel_other[:] = []
-
-        self.colorvar_model[:] = []
-        self.sizevar_model[:] = []
-        self.shapevar_model[:] = []
-
-        self.color_index = 0
-        self.size_index = 0
-        self.shape_index = 0
-
         self.clear_plot()
 
     def clear_item(self):
@@ -562,6 +461,15 @@ class OWLinearProjection(widget.OWWidget):
             QApplication.postEvent(self, QEvent(self.ReplotRequest),
                                    Qt.LowEventPriority - 10)
 
+    def init_attr_values(self):
+        domain = self.data and len(self.data) and self.data.domain or None
+        for model in self.models:
+            model.set_domain(domain)
+        self.attr_color = domain and self.data.domain.class_var or None
+        self.attr_shape = None
+        self.attr_size = None
+        self.attr_label = None
+
     def set_data(self, data):
         """
         Set the input dataset.
@@ -581,7 +489,8 @@ class OWLinearProjection(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
         self.data = data
-        if data is not None:
+        self.init_attr_values()
+        if data is not None and len(data):
             self._initialize(data)
             # get the default encoded state, replacing the position with Inf
             state = self._encode_var_state(
@@ -609,17 +518,6 @@ class OWLinearProjection(widget.OWWidget):
             )
             self.varmodel_selected[:] = selected
             self.varmodel_other[:] = other
-
-            def clip_index(value, maxv):
-                return max(0, min(value, maxv))
-
-            self.color_index = clip_index(
-                self.color_index, len(self.colorvar_model) - 1)
-            self.shape_index = clip_index(
-                self.shape_index, len(self.shapevar_model) - 1)
-            self.size_index = clip_index(
-                self.size_index, len(self.sizevar_model) - 1)
-
             self._invalidate_plot()
 
     def set_subset_data(self, subset):
@@ -675,56 +573,14 @@ class OWLinearProjection(widget.OWWidget):
         return [[var for _, var in sorted(newlist, key=itemgetter(0))]
                 for newlist in newlists]
 
-    def color_var(self):
-        """
-        Current selected color variable or None (if not selected).
-        """
-        if 1 <= self.color_index < len(self.colorvar_model):
-            return self.colorvar_model[self.color_index]
-        else:
-            return None
-
-    def size_var(self):
-        """
-        Current selected size variable or None (if not selected).
-        """
-        if 1 <= self.size_index < len(self.sizevar_model):
-            return self.sizevar_model[self.size_index]
-        else:
-            return None
-
-    def shape_var(self):
-        """
-        Current selected shape variable or None (if not selected).
-        """
-        if 1 <= self.shape_index < len(self.shapevar_model):
-            return self.shapevar_model[self.shape_index]
-        else:
-            return None
-
     def _initialize(self, data):
         # Initialize the GUI controls from data's domain.
-        all_vars = list(data.domain.variables)
         cont_vars = [var for var in data.domain.variables
                      if var.is_continuous]
-        disc_vars = [var for var in data.domain.variables
-                     if var.is_discrete]
-        shape_vars = [var for var in disc_vars
-                      if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
-
         self.warning("Plotting requires continuous features.",
                      shown=not len(cont_vars))
-
-        self.all_vars = data.domain.variables
         self.varmodel_selected[:] = cont_vars[:3]
         self.varmodel_other[:] = cont_vars[3:]
-
-        self.colorvar_model[:] = ["Same color"] + all_vars
-        self.sizevar_model[:] = ["Same size"] + cont_vars
-        self.shapevar_model[:] = ["Same shape"] + shape_vars
-
-        if data.domain.has_discrete_class:
-            self.color_index = all_vars.index(data.domain.class_var) + 1
 
     def __activate_selection(self):
         view = self.other_view
@@ -750,10 +606,12 @@ class OWLinearProjection(widget.OWWidget):
 
         self.varmodel_other.extend(variables)
 
-    def _get_data(self, var):
-        """Return the column data for variable `var`."""
+    def _get_data(self, var, dtype):
+        """
+        Return the column data and mask for variable `var`
+        """
         X, _ = self.data.get_column_view(var)
-        return X.ravel()
+        return column_data(self.data, var, dtype)
 
     def _setup_plot(self, reset_view=True):
         self.__replot_requested = False
@@ -763,7 +621,7 @@ class OWLinearProjection(widget.OWWidget):
         if not variables:
             return
 
-        coords = [self._get_data(var) for var in variables]
+        coords = [self._get_data(var, dtype=float)[0] for var in variables]
         coords = numpy.vstack(coords)
         p, N = coords.shape
         assert N == len(self.data), p == len(variables)
@@ -776,8 +634,9 @@ class OWLinearProjection(widget.OWWidget):
         coords = coords[:, mask]
 
         X, Y = numpy.dot(axes, coords)
-        X = plotutils.normalized(X)
-        Y = plotutils.normalized(Y)
+        if X.size and Y.size:
+            X = plotutils.normalized(X)
+            Y = plotutils.normalized(Y)
 
         pen_data, brush_data = self._color_data(mask)
         size_data = self._size_data(mask)
@@ -816,9 +675,8 @@ class OWLinearProjection(widget.OWWidget):
             self.viewbox.setRange(QRectF(-1.05, -1.05, 2.1, 2.1))
         self._update_legend()
 
-        color_var = self.color_var()
         if self.class_density and \
-                color_var is not None and color_var.is_discrete:
+                self.attr_color is not None and self.attr_color.is_discrete:
             [min_x, max_x], [min_y, max_y] = self.viewbox.viewRange()
             rgb_data = [brush.color().getRgb()[:3] for brush in brush_data]
             self._density_img = classdensity.class_density_image(
@@ -826,16 +684,15 @@ class OWLinearProjection(widget.OWWidget):
             self.viewbox.addItem(self._density_img)
 
     def _color_data(self, mask=None):
-        color_var = self.color_var()
-        if color_var is not None:
-            color_data = self._get_data(color_var)
-            if color_var.is_continuous:
+        if self.attr_color is not None:
+            color_data, _ = self._get_data(self.attr_color, dtype=float)
+            if self.attr_color.is_continuous:
                 color_data = plotutils.continuous_colors(
-                    color_data, None, *color_var.colors)
+                    color_data, None, *self.attr_color.colors)
             else:
                 color_data = plotutils.discrete_colors(
-                    color_data, len(color_var.values),
-                    color_index=color_var.colors
+                    color_data, len(self.attr_color.values),
+                    color_index=self.attr_color.colors
                 )
             if mask is not None:
                 color_data = color_data[mask]
@@ -904,8 +761,7 @@ class OWLinearProjection(widget.OWWidget):
         else:
             self._item.setBrush(brush[self._item._mask])
 
-        color_var = self.color_var()
-        if color_var is not None and color_var.is_discrete:
+        if self.attr_color is not None and self.attr_color.is_discrete:
             self.cb_class_density.setEnabled(True)
             if self.class_density:
                 self._setup_plot(reset_view=False)
@@ -916,19 +772,17 @@ class OWLinearProjection(widget.OWWidget):
         self._update_legend()
 
     def _shape_data(self, mask):
-        shape_var = self.shape_var()
-        if shape_var is None:
+        if self.attr_shape is None:
             shape_data = numpy.array(["o"] * len(self.data))
         else:
-            assert shape_var.is_discrete
-            max_symbol = len(ScatterPlotItem.Symbols) - 1
-            shape = self._get_data(shape_var)
-            shape_mask = numpy.isnan(shape)
-            shape %= max_symbol - 1
-            shape[shape_mask] = max_symbol
-
+            assert self.attr_shape.is_discrete
             symbols = numpy.array(list(ScatterPlotItem.Symbols))
-            shape_data = symbols[numpy.asarray(shape, dtype=int)]
+            max_symbol = symbols.size - 1
+            shapeidx, shape_mask = column_data(self.data, self.attr_shape,
+                                               dtype=int)
+            shapeidx[shape_mask] = max_symbol
+            shapeidx[~shape_mask] %= max_symbol -1
+            shape_data = symbols[shapeidx]
         if mask is None:
             return shape_data
         else:
@@ -942,17 +796,24 @@ class OWLinearProjection(widget.OWWidget):
         self._update_legend()
 
     def _size_data(self, mask=None):
-        size_var = self.size_var()
-        if size_var is None:
-            size_data = numpy.full((len(self.data),), self.point_size,
+        if self.attr_size is None:
+            size_data = numpy.full((len(self.data),), self.point_width,
                                    dtype=float)
         else:
-            size_data = plotutils.normalized(self._get_data(size_var))
-            size_data -= numpy.nanmin(size_data)
-            size_mask = numpy.isnan(size_data)
+            nan_size = OWLinearProjection.MinPointSize - 2
+            size_data, size_mask = self._get_data(self.attr_size, dtype=float)
+            size_data_valid = size_data[~size_mask]
+            if size_data_valid.size:
+                smin, smax = numpy.min(size_data_valid), numpy.max(size_data_valid)
+                sspan = smax - smin
+            else:
+                sspan = smin = 0
+            size_data[~size_mask] -= smin
+            if sspan > 0:
+                size_data[~size_mask] /= sspan
             size_data = \
-                size_data * self.point_size + OWLinearProjection.MinPointSize
-            size_data[size_mask] = OWLinearProjection.MinPointSize - 2
+                size_data * self.point_width + OWLinearProjection.MinPointSize
+            size_data[size_mask] = nan_size
         if mask is None:
             return size_data
         else:
@@ -962,6 +823,10 @@ class OWLinearProjection(widget.OWWidget):
         if self.data is None:
             return
         self.set_size(self._size_data(mask=None))
+
+    update_point_size = update_sizes = _on_size_change
+    update_alpha_value = update_colors = _on_color_change
+    update_shapes = _on_shape_change
 
     def _update_density(self):
         self._setup_plot(reset_view=False)
@@ -977,7 +842,7 @@ class OWLinearProjection(widget.OWWidget):
 
         legend.clear()
 
-        color_var, shape_var = self.color_var(), self.shape_var()
+        color_var, shape_var = self.attr_color, self.attr_shape
         if color_var is not None and not color_var.is_discrete:
             color_var = None
         assert shape_var is None or shape_var.is_discrete
@@ -1082,18 +947,33 @@ class OWLinearProjection(widget.OWWidget):
     def send_report(self):
         self.report_plot(name="", plot=self.viewbox.getViewBox())
         caption = report.render_items_vert((
-            ("Colors",
-             self.color_index > 0 and self.colorvar_model[self.color_index]),
-            ("Shape",
-             self.shape_index > 0 and self.shapevar_model[self.shape_index]),
-            ("Size",
-             self.size_index > 0 and self.sizevar_model[self.size_index])
+            ("Colors", self.attr_color),
+            ("Shape", self.attr_shape),
+            ("Size", self.attr_size)
         ))
         jitter_caption = report.render_items_vert(
             (("Jittering",
               self.jitter_value > 0 and self.jitter_combo.currentText()),))
         caption = ";<br/>".join(x for x in (caption, jitter_caption) if x)
         self.report_caption(caption)
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_["point_width"] = settings_["point_size"]
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            domain = context.ordered_domain
+            c_domain = [t for t in context.ordered_domain if t[1] == 2]
+            d_domain = [t for t in context.ordered_domain if t[1] == 1]
+            for d, old_val, new_val in ((domain, "color_index", "attr_color"),
+                                        (d_domain, "shape_index", "attr_shape"),
+                                        (c_domain, "size_index", "attr_size")):
+                index = context.values[old_val][0] - 1
+                context.values[new_val] = (d[index][0], d[index][1] + 100) \
+                    if 0 <= index < len(d) else None
 
 
 class PlotTool(QObject):
@@ -1596,8 +1476,25 @@ class PlotPinchZoomTool(PlotTool):
             return False
 
 
+def column_data(table, var, dtype):
+    dtype = numpy.dtype(dtype)
+    col, copy = table.get_column_view(var)
+    if var.is_primitive() and not isinstance(col.dtype.type, numpy.inexact):
+        # from mixes metas domain
+        col = col.astype(float)
+        copy = True
+    mask = numpy.isnan(col)
+    if dtype != col.dtype:
+        col = col.astype(dtype)
+        copy = True
+
+    if not copy:
+        col = col.copy()
+    return col, mask
+
+
 class plotutils:
-    @ staticmethod
+    @staticmethod
     def continuous_colors(data, palette=None,
                           low=(220, 220, 220), high=(0,0,0),
                           through_black=False):
@@ -1607,14 +1504,7 @@ class plotutils:
         amin, amax = numpy.nanmin(data), numpy.nanmax(data)
         span = amax - amin
         data = (data - amin) / (span or 1)
-
-        mask = numpy.isnan(data)
-        # Unknown values as gray
-        # TODO: This should already be a part of palette
-        colors = numpy.empty((len(data), 3))
-        colors[mask] = (128, 128, 128)
-        colors[~mask] = [palette.getRGB(v) for v in data[~mask]]
-        return colors
+        return palette.getRGB(data)
 
     @staticmethod
     def discrete_colors(data, nvalues, palette=None, color_index=None):
@@ -1632,7 +1522,11 @@ class plotutils:
 
     @staticmethod
     def normalized(a):
+        if not a.size:
+            return a.copy()
         amin, amax = numpy.nanmin(a), numpy.nanmax(a)
+        if numpy.isnan(amin):
+            return a.copy()
         span = amax - amin
         mean = numpy.nanmean(a)
         return (a - mean) / (span or 1)

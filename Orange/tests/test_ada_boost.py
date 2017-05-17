@@ -6,7 +6,10 @@ import numpy as np
 from Orange.data import Table
 from Orange.classification import SklTreeLearner
 from Orange.regression import SklTreeRegressionLearner
-from Orange.ensembles import SklAdaBoostLearner, SklAdaBoostRegressionLearner
+from Orange.ensembles import (
+    SklAdaBoostClassificationLearner,
+    SklAdaBoostRegressionLearner,
+)
 from Orange.evaluation import CrossValidation, CA, RMSE
 
 
@@ -17,7 +20,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         cls.housing = Table("housing")
 
     def test_adaboost(self):
-        learn = SklAdaBoostLearner()
+        learn = SklAdaBoostClassificationLearner()
         results = CrossValidation(self.iris, [learn], k=3)
         ca = CA(results)
         self.assertGreater(ca, 0.9)
@@ -27,32 +30,32 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         np.random.seed(0)
         stump_estimator = SklTreeLearner(max_depth=1)
         tree_estimator = SklTreeLearner()
-        stump = SklAdaBoostLearner(base_estimator=stump_estimator)
-        tree = SklAdaBoostLearner(base_estimator=tree_estimator)
+        stump = SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
+        tree = SklAdaBoostClassificationLearner(base_estimator=tree_estimator)
         results = CrossValidation(self.iris, [stump, tree], k=4)
         ca = CA(results)
         self.assertLess(ca[0], ca[1])
 
     def test_predict_single_instance(self):
-        learn = SklAdaBoostLearner()
+        learn = SklAdaBoostClassificationLearner()
         m = learn(self.iris)
         ins = self.iris[0]
         m(ins)
         _, _ = m(ins, m.ValueProbs)
 
     def test_predict_table(self):
-        learn = SklAdaBoostLearner()
+        learn = SklAdaBoostClassificationLearner()
         m = learn(self.iris)
         m(self.iris)
         _, _ = m(self.iris, m.ValueProbs)
 
     def test_predict_numpy(self):
-        learn = SklAdaBoostLearner()
+        learn = SklAdaBoostClassificationLearner()
         m = learn(self.iris)
         _, _ = m(self.iris.X, m.ValueProbs)
 
     def test_adaboost_adequacy(self):
-        learner = SklAdaBoostLearner()
+        learner = SklAdaBoostClassificationLearner()
         self.assertRaises(ValueError, learner, self.housing)
 
     def test_adaboost_reg(self):

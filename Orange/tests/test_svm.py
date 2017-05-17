@@ -43,6 +43,15 @@ class TestSVMLearner(unittest.TestCase):
         res = CrossValidation(data, [learn], k=2)
         self.assertLess(RMSE(res)[0], 0.15)
 
+    def test_LinearSVR(self):
+        nrows, ncols = 200, 5
+        X = np.random.rand(nrows, ncols)
+        y = X.dot(np.random.rand(ncols))
+        data = Table(X, y)
+        learn = SVRLearner()
+        res = CrossValidation(data, [learn], k=2)
+        self.assertLess(RMSE(res)[0], 0.15)
+
     def test_NuSVR(self):
         nrows, ncols = 200, 5
         X = np.random.rand(nrows, ncols)

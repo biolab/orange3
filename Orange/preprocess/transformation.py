@@ -1,9 +1,11 @@
+import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import Instance, Table, Domain
+from Orange.util import Reprable
 
 
-class Transformation:
+class Transformation(Reprable):
     """
     Base class for simple transformations of individual variables. Derived
     classes are used in continuization, imputation, discretization...
@@ -137,5 +139,9 @@ class Lookup(Transformation):
         super().__init__(variable)
         self.lookup_table = lookup_table
 
-    def transform(self, c):
-        return self.lookup_table[c]
+    def transform(self, column):
+        mask = np.isnan(column)
+        column = column.astype(int)
+        column[mask] = 0
+        values = self.lookup_table[column]
+        return np.where(mask, np.nan, values)

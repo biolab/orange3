@@ -4,6 +4,7 @@ import random
 
 import numpy as np
 
+import Orange.data
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.visualize.owsilhouetteplot import OWSilhouettePlot
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -22,6 +23,10 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget = self.create_widget(OWSilhouettePlot,
                                          stored_settings={"auto_commit": True})
         self.widget = self.widget  # type: OWSilhouettePlot
+
+    def test_no_data(self):
+        """Check that the widget doesn't crash on empty data"""
+        self.send_signal("Data", self.data[:0])
 
     def test_outputs_add_scores(self):
         # check output when appending scores
@@ -72,3 +77,14 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(np.all(np.isfinite(scores_1)))
         # the scores must match
         np.testing.assert_almost_equal(scores_1, scores[valid], decimal=12)
+
+    def test_meta_object_dtype(self):
+        # gh-1875: Test on mixed string/discrete metas
+        data = self.data[::5]
+        domain = Orange.data.Domain(
+            data.domain.attributes, [],
+            [data.domain["iris"],
+             Orange.data.StringVariable("S")]
+        )
+        data = data.from_table(domain, data)
+        self.send_signal("Data", data)

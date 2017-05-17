@@ -6,13 +6,13 @@ from collections import MutableSequence, Iterable, Sequence, Sized
 from itertools import chain
 from numbers import Real, Integral
 from functools import reduce
-from warnings import warn
-from threading import Lock
+from threading import Lock, RLock
 
 import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 
+import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
@@ -38,6 +38,7 @@ dataset_dirs = ['', get_sample_datasets_dir()]
 chaining of domain conversions also works with caching even with descendants
 of Table."""
 _conversion_cache = None
+_conversion_cache_lock = RLock()
 
 
 class RowInstance(Instance):
@@ -194,7 +195,7 @@ class Table(MutableSequence, Storage):
             if args[0].startswith('https://') or args[0].startswith('http://'):
                 return cls.from_url(args[0], **kwargs)
             else:
-                return cls.from_file(args[0], **kwargs)
+                return cls.from_file(args[0])
         elif isinstance(args[0], Table):
             return cls.from_table(args[0].domain, args[0])
         elif isinstance(args[0], Domain):
@@ -299,6 +300,7 @@ class Table(MutableSequence, Storage):
                 if is_sparse == sp.issparse(x):
                     return x
                 elif is_sparse:
+                    x = np.asarray(x)
                     return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
                 else:
                     return np.ravel(x.toarray())
@@ -336,60 +338,86 @@ class Table(MutableSequence, Storage):
 
             return a
 
-        new_cache = _conversion_cache is None
-        try:
-            if new_cache:
-                _conversion_cache = {}
-            else:
-                cached = _conversion_cache.get((id(domain), id(source)))
-                if cached:
-                    return cached
-            if domain == source.domain:
-                return cls.from_table_rows(source, row_indices)
+        with _conversion_cache_lock:
+            new_cache = _conversion_cache is None
+            try:
+                if new_cache:
+                    _conversion_cache = {}
+                else:
+                    cached = _conversion_cache.get((id(domain), id(source)))
+                    if cached:
+                        return cached
+                if domain == source.domain:
+                    return cls.from_table_rows(source, row_indices)
 
-            if isinstance(row_indices, slice):
-                start, stop, stride = row_indices.indices(source.X.shape[0])
-                n_rows = (stop - start) // stride
-                if n_rows < 0:
-                    n_rows = 0
-            elif row_indices is ...:
-                n_rows = len(source)
-            else:
-                n_rows = len(row_indices)
+                if isinstance(row_indices, slice):
+                    start, stop, stride = row_indices.indices(source.X.shape[0])
+                    n_rows = (stop - start) // stride
+                    if n_rows < 0:
+                        n_rows = 0
+                elif row_indices is ...:
+                    n_rows = len(source)
+                else:
+                    n_rows = len(row_indices)
 
-            self = cls()
-            self.domain = domain
-            conversion = domain.get_conversion(source.domain)
-            self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                 is_sparse=sp.issparse(source.X))
-            if self.X.ndim == 1:
-                self.X = self.X.reshape(-1, len(self.domain.attributes))
-            self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                 is_sparse=sp.issparse(source.Y))
+                self = cls()
+                self.domain = domain
+                conversion = domain.get_conversion(source.domain)
+                self.X = get_columns(row_indices, conversion.attributes, n_rows,
+                                     is_sparse=sp.issparse(source.X))
+                if self.X.ndim == 1:
+                    self.X = self.X.reshape(-1, len(self.domain.attributes))
+                self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
+                                     is_sparse=sp.issparse(source.Y))
 
-            dtype = np.float64
-            if any(isinstance(var, StringVariable) for var in domain.metas):
-                dtype = np.object
-            self.metas = get_columns(row_indices, conversion.metas,
-                                     n_rows, dtype,
-                                     is_sparse=sp.issparse(source.metas))
-            if self.metas.ndim == 1:
-                self.metas = self.metas.reshape(-1, len(self.domain.metas))
-            if source.has_weights():
-                self.W = np.array(source.W[row_indices])
-            else:
-                self.W = np.empty((n_rows, 0))
-            self.name = getattr(source, 'name', '')
-            if hasattr(source, 'ids'):
-                self.ids = np.array(source.ids[row_indices])
-            else:
-                cls._init_ids(self)
-            self.attributes = getattr(source, 'attributes', {})
-            _conversion_cache[(id(domain), id(source))] = self
-            return self
-        finally:
-            if new_cache:
-                _conversion_cache = None
+                dtype = np.float64
+                if any(isinstance(var, StringVariable) for var in domain.metas):
+                    dtype = np.object
+                self.metas = get_columns(row_indices, conversion.metas,
+                                         n_rows, dtype,
+                                         is_sparse=sp.issparse(source.metas))
+                if self.metas.ndim == 1:
+                    self.metas = self.metas.reshape(-1, len(self.domain.metas))
+                if source.has_weights():
+                    self.W = np.array(source.W[row_indices])
+                else:
+                    self.W = np.empty((n_rows, 0))
+                self.name = getattr(source, 'name', '')
+                if hasattr(source, 'ids'):
+                    self.ids = np.array(source.ids[row_indices])
+                else:
+                    cls._init_ids(self)
+                self.attributes = getattr(source, 'attributes', {})
+                _conversion_cache[(id(domain), id(source))] = self
+                return self
+            finally:
+                if new_cache:
+                    _conversion_cache = None
+
+    def transform(self, domain):
+        """
+        Construct a table with a different domain.
+
+        The new table keeps the row ids and other information. If the table
+        is a subclass of :obj:`Table`, the resulting table will be of the same
+        type.
+
+        In a typical scenario, an existing table is augmented with a new
+        column by ::
+
+            domain = Domain(old_domain.attributes + [new_attribute],
+                            old_domain.class_vars,
+                            old_domain.metas)
+            table = data.transform(domain)
+            table[:, new_attribute] = new_column
+
+        Args:
+            domain (Domain): new domain
+
+        Returns:
+            A new table
+        """
+        return type(self).from_table(domain, self)
 
     @classmethod
     def from_table_rows(cls, source, row_indices):
@@ -543,12 +571,14 @@ class Table(MutableSequence, Storage):
         writer.write_file(filename, self)
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, sheet=None):
         """
         Read a data table from a file. The path can be absolute or relative.
 
         :param filename: File name
         :type filename: str
+        :param sheet: Sheet in a file (optional)
+        :type sheet: str
         :return: a new data table
         :rtype: Orange.data.Table
         """
@@ -556,6 +586,7 @@ class Table(MutableSequence, Storage):
 
         absolute_filename = FileFormat.locate(filename, dataset_dirs)
         reader = FileFormat.get_reader(absolute_filename)
+        reader.select_sheet(sheet)
         data = reader.read()
 
         # Readers return plain table. Make sure to cast it to appropriate
@@ -697,9 +728,6 @@ class Table(MutableSequence, Storage):
         return self.from_table(domain, self, row_idx)
 
     def __setitem__(self, key, value):
-        if not self._check_all_dense():
-            raise ValueError(
-                "Assignment to rows of sparse data is not supported")
         if not isinstance(key, tuple):
             if isinstance(value, Real):
                 self.X[key, :] = value
@@ -801,8 +829,11 @@ class Table(MutableSequence, Storage):
         return "[" + ",\n ".join(str(ex) for ex in self)
 
     def __repr__(self):
-        s = "[" + ",\n ".join(repr(ex) for ex in self[:5])
-        if len(self) > 5:
+        head = 5
+        if self.is_sparse():
+            head = min(self.X.shape[0], head)
+        s = "[" + ",\n ".join(repr(ex) for ex in self[:head])
+        if len(self) > head:
             s += ",\n ..."
         s += "\n]"
         return s
@@ -944,6 +975,12 @@ class Table(MutableSequence, Storage):
                 (self._Y.base is None) and
                 (self.metas.base is None) and
                 (self.W.base is None))
+
+    def is_sparse(self):
+        """
+        Return `True` if the table stores data in sparse format
+        """
+        return any(sp.issparse(i) for i in [self.X, self.Y, self.metas])
 
     def ensure_copy(self):
         """
@@ -1120,10 +1157,26 @@ class Table(MutableSequence, Storage):
             sel = np.logical_not(sel)
         return self.from_table_rows(self, sel)
 
-    def _filter_values_indicators(self, filter):
-        from Orange.data import filter as data_filter
+    def _filter_values(self, filter):
+        selection = self._values_filter_to_indicator(filter)
+        return self.from_table(self.domain, self, selection)
 
-        if isinstance(filter, data_filter.Values):
+    def _values_filter_to_indicator(self, filter):
+        """Return selection of rows matching the filter conditions
+
+        Handles conjunction/disjunction and negate modifiers
+
+        Parameters
+        ----------
+        filter: Values object containing the conditions
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import Values
+
+        if isinstance(filter, Values):
             conditions = filter.conditions
             conjunction = filter.conjunction
         else:
@@ -1135,109 +1188,157 @@ class Table(MutableSequence, Storage):
             sel = np.zeros(len(self), dtype=bool)
 
         for f in conditions:
-            if isinstance(f, data_filter.Values):
-                if conjunction:
-                    sel *= self._filter_values_indicators(f)
-                else:
-                    sel += self._filter_values_indicators(f)
-                continue
-            col = self.get_column_view(f.column)[0]
-            if isinstance(f, data_filter.FilterDiscrete) and f.values is None \
-                    or isinstance(f, data_filter.FilterContinuous) and \
-                                    f.oper == f.IsDefined:
-                col = col.astype(float)
-                if conjunction:
-                    sel *= ~np.isnan(col)
-                else:
-                    sel += ~np.isnan(col)
-            elif isinstance(f, data_filter.FilterString) and \
-                            f.oper == f.IsDefined:
-                if conjunction:
-                    sel *= col.astype(bool)
-                else:
-                    sel += col.astype(bool)
-            elif isinstance(f, data_filter.FilterDiscrete):
-                if conjunction:
-                    s2 = np.zeros(len(self), dtype=bool)
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        s2 += (col == val)
-                    sel *= s2
-                else:
-                    for val in f.values:
-                        if not isinstance(val, Real):
-                            val = self.domain[f.column].to_val(val)
-                        sel += (col == val)
-            elif isinstance(f, data_filter.FilterStringList):
-                if not f.case_sensitive:
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    vals = [val.lower() for val in f.values]
-                else:
-                    vals = f.values
-                if conjunction:
-                    sel *= reduce(operator.add,
-                                  (col == val for val in vals))
-                else:
-                    sel = reduce(operator.add,
-                                 (col == val for val in vals), sel)
-            elif isinstance(f, data_filter.FilterRegex):
-                sel = np.vectorize(f)(col)
-            elif isinstance(f, (data_filter.FilterContinuous,
-                                data_filter.FilterString)):
-                if (isinstance(f, data_filter.FilterString) and
-                        not f.case_sensitive):
-                    # noinspection PyTypeChecker
-                    col = np.char.lower(np.array(col, dtype=str))
-                    fmin = f.min.lower()
-                    if f.oper in [f.Between, f.Outside]:
-                        fmax = f.max.lower()
-                else:
-                    fmin, fmax = f.min, f.max
-                if f.oper == f.Equal:
-                    col = (col == fmin)
-                elif f.oper == f.NotEqual:
-                    col = (col != fmin)
-                elif f.oper == f.Less:
-                    col = (col < fmin)
-                elif f.oper == f.LessEqual:
-                    col = (col <= fmin)
-                elif f.oper == f.Greater:
-                    col = (col > fmin)
-                elif f.oper == f.GreaterEqual:
-                    col = (col >= fmin)
-                elif f.oper == f.Between:
-                    col = (col >= fmin) * (col <= fmax)
-                elif f.oper == f.Outside:
-                    col = (col < fmin) + (col > fmax)
-                elif not isinstance(f, data_filter.FilterString):
-                    raise TypeError("Invalid operator")
-                elif f.oper == f.Contains:
-                    col = np.fromiter((fmin in e for e in col),
-                                      dtype=bool)
-                elif f.oper == f.StartsWith:
-                    col = np.fromiter((e.startswith(fmin) for e in col),
-                                      dtype=bool)
-                elif f.oper == f.EndsWith:
-                    col = np.fromiter((e.endswith(fmin) for e in col),
-                                      dtype=bool)
-                else:
-                    raise TypeError("Invalid operator")
-                if conjunction:
-                    sel *= col
-                else:
-                    sel += col
+            selection = self._filter_to_indicator(f)
+
+            if conjunction:
+                sel *= selection
             else:
-                raise TypeError("Invalid filter")
+                sel += selection
 
         if filter.negate:
             sel = ~sel
         return sel
 
-    def _filter_values(self, filter):
-        sel = self._filter_values_indicators(filter)
-        return self.from_table(self.domain, self, sel)
+    def _filter_to_indicator(self, filter):
+        """Return selection of rows that match the condition.
+
+        Parameters
+        ----------
+        filter: ValueFilter describing the condition
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        from Orange.data.filter import (
+            FilterContinuous, FilterDiscrete, FilterRegex, FilterString,
+            FilterStringList, Values
+        )
+        if isinstance(filter, Values):
+            return self._values_filter_to_indicator(filter)
+
+        col = self.get_column_view(filter.column)[0]
+
+        if isinstance(filter, FilterDiscrete):
+            return self._discrete_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterContinuous):
+            return self._continuous_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterString):
+            return self._string_filter_to_indicator(filter, col)
+
+        if isinstance(filter, FilterStringList):
+            if not filter.case_sensitive:
+                col = np.char.lower(np.array(col, dtype=str))
+                vals = [val.lower() for val in filter.values]
+            else:
+                vals = filter.values
+            return reduce(operator.add, (col == val for val in vals))
+
+        if isinstance(filter, FilterRegex):
+            return np.vectorize(filter)(col)
+
+        raise TypeError("Invalid filter")
+
+    def _discrete_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given discrete filter.
+
+        Parameters
+        ----------
+        filter: FilterDiscrete
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.values is None:  # <- is defined filter
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        sel = np.zeros(len(self), dtype=bool)
+        for val in filter.values:
+            if not isinstance(val, Real):
+                val = self.domain[filter.column].to_val(val)
+            sel += (col == val)
+        return sel
+
+    def _continuous_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given continuous filter.
+
+        Parameters
+        ----------
+        filter: FilterContinuous
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            col = col.astype(float)
+            return ~np.isnan(col)
+
+        return self._range_filter_to_indicator(filter, col, filter.min, filter.max)
+
+    def _string_filter_to_indicator(self, filter, col):
+        """Return selection of rows matched by the given string filter.
+
+        Parameters
+        ----------
+        filter: FilterString
+        col: np.ndarray
+
+        Returns
+        -------
+        A 1d bool array. len(result) == len(self)
+        """
+        if filter.oper == filter.IsDefined:
+            return col.astype(bool)
+
+        col = col.astype(str)
+        fmin = filter.min or ""
+        fmax = filter.max or ""
+
+        if not filter.case_sensitive:
+            # convert all to lower case
+            col = np.char.lower(col)
+            fmin = fmin.lower()
+            fmax = fmax.lower()
+
+        if filter.oper == filter.Contains:
+            return np.fromiter((fmin in e for e in col),
+                               dtype=bool)
+        if filter.oper == filter.StartsWith:
+            return np.fromiter((e.startswith(fmin) for e in col),
+                               dtype=bool)
+        if filter.oper == filter.EndsWith:
+            return np.fromiter((e.endswith(fmin) for e in col),
+                               dtype=bool)
+
+        return self._range_filter_to_indicator(filter, col, fmin, fmax)
+
+    @staticmethod
+    def _range_filter_to_indicator(filter, col, fmin, fmax):
+        if filter.oper == filter.Equal:
+            return col == fmin
+        if filter.oper == filter.NotEqual:
+            return col != fmin
+        if filter.oper == filter.Less:
+            return col < fmin
+        if filter.oper == filter.LessEqual:
+            return col <= fmin
+        if filter.oper == filter.Greater:
+            return col > fmin
+        if filter.oper == filter.GreaterEqual:
+            return col >= fmin
+        if filter.oper == filter.Between:
+            return (col >= fmin) * (col <= fmax)
+        if filter.oper == filter.Outside:
+            return (col < fmin) + (col > fmax)
+
+        raise TypeError("Invalid operator")
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
@@ -1272,37 +1373,25 @@ class Table(MutableSequence, Storage):
         return stats
 
     def _compute_distributions(self, columns=None):
-        def _get_matrix(M, cachedM, col):
-            nonlocal single_column
-            W = self.W if self.has_weights() else None
-            if not sp.issparse(M):
-                return M[:, col], W, None
-            if cachedM is None:
-                if single_column:
-                    warn("computing distributions on sparse data "
-                         "for a single column is inefficient")
-                cachedM = sp.csc_matrix(self.X)
-            return cachedM[:, col], W, cachedM
-
         if columns is None:
             columns = range(len(self.domain.variables))
-            single_column = False
         else:
             columns = [self.domain.index(var) for var in columns]
-            single_column = len(columns) == 1 and len(self.domain) > 1
         distributions = []
-        Xcsc = Ycsc = None
+        if sp.issparse(self.X):
+            self.X = self.X.tocsc()
+        W = self.W.ravel() if self.has_weights() else None
         for col in columns:
             var = self.domain[col]
             if 0 <= col < self.X.shape[1]:
-                m, W, Xcsc = _get_matrix(self.X, Xcsc, col)
+                m = self.X[:, col]
             elif col < 0:
-                m, W, Xcsc = _get_matrix(self.metas, Xcsc, col * (-1) - 1)
+                m = self.metas[:, col * (-1) - 1]
+                if np.issubdtype(m.dtype, np.dtype(object)):
+                    m = m.astype(float)
             else:
-                m, W, Ycsc = _get_matrix(self._Y, Ycsc, col - self.X.shape[1])
+                m = self._Y[:, col - self.X.shape[1]]
             if var.is_discrete:
-                if W is not None:
-                    W = W.ravel()
                 dist, unknowns = bincount(m, len(var.values) - 1, W)
             elif not m.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
@@ -1312,10 +1401,10 @@ class Table(MutableSequence, Storage):
                     if sp.issparse(m):
                         arg_sort = np.argsort(m.data)
                         ranks = m.indices[arg_sort]
-                        vals = np.vstack((m.data[arg_sort], W[ranks].flatten()))
+                        vals = np.vstack((m.data[arg_sort], W[ranks]))
                     else:
                         ranks = np.argsort(m)
-                        vals = np.vstack((m[ranks], W[ranks].flatten()))
+                        vals = np.vstack((m[ranks], W[ranks]))
                 else:
                     unknowns = countnans(m.astype(float))
                     if sp.issparse(m):
@@ -1333,10 +1422,8 @@ class Table(MutableSequence, Storage):
 
         if col_vars is None:
             col_vars = range(len(self.domain.variables))
-            single_column = False
         else:
             col_vars = [self.domain.index(var) for var in col_vars]
-            single_column = len(col_vars) == 1 and len(self.domain) > 1
         if row_var is None:
             row_var = self.domain.class_var
             if row_var is None:
@@ -1446,6 +1533,7 @@ class Table(MutableSequence, Storage):
             feature names are mapped
         :return: Table - transposed table
         """
+
         self = cls()
         n_cols, self.n_rows = table.X.shape
         old_domain = table.attributes.get("old_domain")
@@ -1506,7 +1594,8 @@ class Table(MutableSequence, Storage):
         # metas
         # - feature names and attributes of attributes to metas
         self.metas, metas = np.empty((self.n_rows, 0), dtype=object), []
-        if meta_attr_name not in [m.name for m in table.domain.metas]:
+        if meta_attr_name not in [m.name for m in table.domain.metas] and \
+                table.domain.attributes:
             self.metas = np.array([[a.name] for a in table.domain.attributes],
                                   dtype=object)
             metas.append(StringVariable(meta_attr_name))
@@ -1514,10 +1603,22 @@ class Table(MutableSequence, Storage):
         names = chain.from_iterable(list(attr.attributes)
                                     for attr in table.domain.attributes)
         names = sorted(set(names) - {var.name for var in class_vars})
+
+        def guessed_var(i, var_name):
+            orig_vals = M[:, i]
+            val_map, vals, var_type = Orange.data.io.guess_data_type(orig_vals)
+            values, variable = Orange.data.io.sanitize_variable(
+                val_map, vals, orig_vals, var_type,
+                {}, _metas, None, var_name)
+            M[:, i] = values
+            return variable
+
         _metas = [StringVariable(n) for n in names]
         if old_domain:
             _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
         M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
+        if not old_domain:
+            _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
         if _metas:
             self.metas = np.hstack((self.metas, M))
             metas.extend(_metas)

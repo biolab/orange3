@@ -87,7 +87,7 @@ class Remove(Preprocess):
         meta_vars, self.meta_results = self.get_vars_and_results(metas_state)
 
         domain = Domain(att_vars, cls_vars, meta_vars)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
     def get_vars_and_results(self, state):
         removed, reduced, sorted = 0, 0, 0

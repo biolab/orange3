@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 import numpy as np
 
-from Orange.base import Model
+from Orange.base import Model, TreeModel as TreeModelInterface
 
 
 class Node:
@@ -128,7 +128,7 @@ class NumericNode(Node):
             "{} {}".format("≤>"[child_idx], attr.str_val(threshold))
 
 
-class TreeModel(Model):
+class TreeModel(TreeModelInterface):
     """
     Tree classifier with proper handling of nominal attributes and binarization
     and the interface API for visualization.

@@ -1,4 +1,5 @@
 import os
+import logging
 
 import pkg_resources
 import pickle
@@ -21,6 +22,7 @@ from Orange.widgets.utils.webview import WebviewWidget
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.gui.utils import message_critical
 
+log = logging.getLogger(__name__)
 
 class Column(IntEnum):
     item = 0
@@ -171,6 +173,7 @@ class OWReport(OWWidget):
             def _add_comment(myself, item_id, value):
                 item = self.table_model.get_item_by_id(item_id)
                 item.comment = value
+                self.report_changed = True
 
         self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
         self.mainArea.layout().addWidget(self.report_view)
@@ -239,39 +242,28 @@ class OWReport(OWWidget):
             item = self.table_model.item(i)
             html += "<div id='{}' class='normal' " \
                     "onClick='pybridge._select_item(this.id)'>{}<div " \
-                    "class='textwrapper'><textarea required='required' " \
+                    "class='textwrapper'><textarea " \
                     "placeholder='Write a comment...'" \
-                    "onInput='pybridge._add_comment(this.parentNode." \
-                    "parentNode.id, this.value)'>{}</textarea></div>" \
+                    "onInput='this.innerHTML = this.value;" \
+                    "pybridge._add_comment(this.parentNode.parentNode.id, this.value);'" \
+                    ">{}</textarea></div>" \
                     "</div>".format(item.id, item.html, item.comment)
         html += "</body></html>"
         self.report_view.setHtml(html)
 
     def _scroll_to_item(self, item):
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "document.getElementById('{}').scrollIntoView();".format(item.id)
         )
 
     def _change_selected_item(self, item):
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "var sel_el = document.getElementsByClassName('selected')[0]; "
             "if (sel_el.id != {}) "
             "   sel_el.className = 'normal';".format(item.id))
-        self.report_view.runJavaScript(
+        self.report_view.evalJS(
             "document.getElementById('{}').className = 'selected';"
             .format(item.id))
-        self.report_changed = True
-
-
-    @pyqtSlot(str)
-    def _select_item(self, item_id):
-        item = self.table_model.get_item_by_id(item_id)
-        self.table.selectRow(self.table_model.indexFromItem(item).row())
-        self._change_selected_item(item)
-
-    def _add_comment(self, item_id, value):
-        item = self.table_model.get_item_by_id(item_id)
-        item.comment = value
         self.report_changed = True
 
     def make_report(self, widget):
@@ -320,8 +312,11 @@ class OWReport(OWWidget):
             self.save(filename)
         else:
             def save_html(contents):
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(contents)
+                try:
+                    with open(filename, "w", encoding="utf-8") as f:
+                        f.write(contents)
+                except PermissionError:
+                    self.permission_error(filename)
 
             save_html(self.report_view.html())
         self.report_changed = False
@@ -347,14 +342,15 @@ class OWReport(OWWidget):
 
         try:
             report = self.load(filename)
-        except (IOError, AttributeError) as e:
+        except (IOError, AttributeError, pickle.UnpicklingError) as e:
             message_critical(
                  self.tr("Could not load an Orange Report file"),
                  title=self.tr("Error"),
-                 informative_text=self.tr("An unexpected error occurred "
-                                          "while loading '%s'.") % filename,
+                 informative_text=self.tr("Error occurred "
+                                          "while loading '{}'.").format(filename),
                  exc_info=True,
                  parent=self)
+            log.error(str(e), exc_info=True)
             return
         self.set_instance(report)
         self = report
@@ -373,8 +369,11 @@ class OWReport(OWWidget):
                       attributes=attributes,
                       items=items)
 
-        with open(filename, 'wb') as f:
-            pickle.dump(report, f)
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump(report, f)
+        except PermissionError:
+            self.permission_error(filename)
 
     @classmethod
     def load(cls, filename):
@@ -393,6 +392,16 @@ class OWReport(OWWidget):
             )
         return self
 
+    def permission_error(self, filename):
+        message_critical(
+            self.tr("Permission error when trying to write report."),
+            title=self.tr("Error"),
+            informative_text=self.tr("Permission error occurred "
+                                     "while saving '{}'.").format(filename),
+            exc_info=True,
+            parent=self)
+        log.error("PermissionError when trying to write report.", exc_info=True)
+
     def is_empty(self):
         return not self.table_model.rowCount()
 
@@ -410,8 +419,6 @@ class OWReport(OWWidget):
         if not hasattr(app_inst, "_report_window"):
             report = OWReport()
             app_inst._report_window = report
-            app_inst.sendPostedEvents(report, 0)
-            app_inst.aboutToQuit.connect(report.deleteLater)
         return app_inst._report_window
 
     @staticmethod
@@ -427,7 +434,7 @@ if __name__ == "__main__":
     from Orange.widgets.data.owfile import OWFile
     from Orange.widgets.data.owtable import OWDataTable
     from Orange.widgets.data.owdiscretize import OWDiscretize
-    from Orange.widgets.classify.owrandomforest import OWRandomForest
+    from Orange.widgets.model.owrandomforest import OWRandomForest
 
     iris = Table("iris")
     app = QApplication(sys.argv)

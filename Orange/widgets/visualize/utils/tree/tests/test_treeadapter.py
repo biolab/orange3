@@ -61,10 +61,10 @@ class TestTreeAdapter(unittest.TestCase):
             adapt.leaves(self.root),
             self.left.children + [self.right.children[0]])
         np.testing.assert_almost_equal(
-            adapt.get_instances_in_nodes(self.data, self.root).X,
+            adapt.get_instances_in_nodes(self.root).X,
             self.data.X)
         np.testing.assert_almost_equal(
-            adapt.get_instances_in_nodes(self.data, [self.left, self.right]).X,
+            adapt.get_instances_in_nodes([self.left, self.right]).X,
             np.array([[8,  9, 10],
                       [12, 13, 14],
                       [16, 17, 18],

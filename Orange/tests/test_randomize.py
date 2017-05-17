@@ -54,6 +54,22 @@ class TestRandomizer(unittest.TestCase):
         self.assertTrue((np.sort(data.metas, axis=0) == np.sort(
             data_rand.metas, axis=0)).all())
 
+    def test_randomize_all(self):
+        data = self.zoo
+        rand_type = Randomize.RandomizeClasses | Randomize.RandomizeAttributes \
+                    | Randomize.RandomizeMetas
+        randomizer = Randomize(rand_type=rand_type)
+        data_rand = randomizer(data)
+        self.assertTrue((data.Y != data_rand.Y).any())
+        self.assertTrue((np.sort(data.Y, axis=0) == np.sort(
+            data_rand.Y, axis=0)).all())
+        self.assertTrue((data.X != data_rand.X).any())
+        self.assertTrue((np.sort(data.X, axis=0) == np.sort(
+            data_rand.X, axis=0)).all())
+        self.assertTrue((data.metas != data_rand.metas).any())
+        self.assertTrue((np.sort(data.metas, axis=0) == np.sort(
+            data_rand.metas, axis=0)).all())
+
     def test_randomize_keep_original_data(self):
         data_orig = self.zoo
         data = Table("zoo")

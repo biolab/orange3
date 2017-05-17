@@ -7,4 +7,3 @@ __all__ = ["KNNLearner"]
 
 class KNNLearner(KNNBase, SklLearner):
     __wraps__ = skl_neighbors.KNeighborsClassifier
-    name = 'knn'

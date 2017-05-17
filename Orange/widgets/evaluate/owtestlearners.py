@@ -1,17 +1,32 @@
 import sys
 import abc
-import functools
+import enum
+import logging
+import traceback
+import copy
+from functools import partial, reduce
+
+import concurrent.futures
+from concurrent.futures import Future
 
 from collections import OrderedDict, namedtuple
+
+try:
+    # only used in type hinting
+    # pylint: disable=unused-import
+    from typing import Any, Optional, List, Tuple, Dict, Callable
+except ImportError:
+    pass
 
 import numpy as np
 
 from AnyQt import QtGui
-from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate
+from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtCore import Qt, QSize, QThread, QMetaObject, Q_ARG
+from AnyQt.QtCore import pyqtSlot as Slot
 
-from Orange.data import Table
+from Orange.data import Table, DiscreteVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
 import Orange.classification
@@ -22,7 +37,12 @@ from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess import RemoveNaNClasses
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.utils.concurrent import ThreadExecutor
+
+log = logging.getLogger(__name__)
+
 
 Input = namedtuple(
     "Input",
@@ -123,6 +143,20 @@ def raise_(exc):
 Try.register = lambda cls: raise_(TypeError())
 
 
+class State(enum.Enum):
+    """
+    OWTestLearner's runtime state.
+    """
+    #: No or insufficient input (i.e. no data or no learners)
+    Waiting = "Waiting"
+    #: Executing/running the evaluations
+    Running = "Running"
+    #: Finished running evaluations (success or error)
+    Done = "Done"
+    #: Evaluation cancelled
+    Cancelled = "Cancelled"
+
+
 class OWTestLearners(OWWidget):
     name = "Test & Score"
     description = "Cross-validation accuracy estimation."
@@ -137,10 +171,12 @@ class OWTestLearners(OWWidget):
     outputs = [("Predictions", Table),
                ("Evaluation Results", Results)]
 
-    settingsHandler = settings.ClassValuesContextHandler()
+    settings_version = 3
+    settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
 
     #: Resampling/testing types
-    KFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest = 0, 1, 2, 3, 4
+    KFold, FeatureFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest \
+        = 0, 1, 2, 3, 4, 5
     #: Numbers of folds
     NFolds = [2, 3, 5, 10, 20]
     #: Number of repetitions
@@ -160,22 +196,32 @@ class OWTestLearners(OWWidget):
     sample_size = settings.Setting(9)
     #: Stratified sampling for Random Sampling
     shuffle_stratified = settings.Setting(True)
+    # CV where nr. of feature values determines nr. of folds
+    fold_feature = settings.ContextSetting(None)
+    fold_feature_selected = settings.ContextSetting(False)
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
+    shown_scores = \
+        settings.Setting({"AUC", "CA", "F1", "Precision", "Recall",
+                          "MSE", "RMSE", "MAE", "R2"})
+
     class Error(OWWidget.Error):
-        class_required = Msg("Train data input requires a class variable")
-        class_required_test = Msg("Test data input requires a class variable")
+        train_data_empty = Msg("Train data set is empty.")
+        test_data_empty = Msg("Test data set is empty.")
+        class_required = Msg("Train data input requires a target variable.")
+        too_many_classes = Msg("Too many target variables.")
+        class_required_test = Msg("Test data input requires a target variable.")
         too_many_folds = Msg("Number of folds exceeds the data size")
         class_inconsistent = Msg("Test and train data sets "
-                                 "have different classes")
+                                 "have different target variables.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
-            Msg("Instances with unknown target values were removed from{}data")
-        test_data_missing = Msg("Missing separate test data input")
-        scores_not_computed = Msg("Some scores could not be computed")
+            Msg("Instances with unknown target values were removed from{}data.")
+        test_data_missing = Msg("Missing separate test data input.")
+        scores_not_computed = Msg("Some scores could not be computed.")
         test_data_unused = Msg("Test data is present but unused. "
                                "Select 'Test on test data' to use it.")
 
@@ -191,9 +237,15 @@ class OWTestLearners(OWWidget):
         self.preprocessor = None
         self.train_data_missing_vals = False
         self.test_data_missing_vals = False
-
         #: An Ordered dictionary with current inputs and their testing results.
-        self.learners = OrderedDict()
+        self.learners = OrderedDict()  # type: Dict[Any, Input]
+
+        self.__state = State.Waiting
+        # Do we need to [re]test any learners, set by _invalidate and
+        # cleared by __update
+        self.__needupdate = False
+        self.__task = None  # type: Optional[Task]
+        self.__executor = ThreadExecutor()
 
         sbox = gui.vBox(self.controlArea, "Sampling")
         rbox = gui.radioButtons(
@@ -208,6 +260,13 @@ class OWTestLearners(OWWidget):
         gui.checkBox(
             ibox, self, "cv_stratified", "Stratified",
             callback=self.kfold_changed)
+        gui.appendRadioButton(rbox, "Cross validation by feature")
+        ibox = gui.indentedBox(rbox)
+        self.feature_model = DomainModel(
+            order=DomainModel.METAS, valid_types=DiscreteVariable)
+        self.features_combo = gui.comboBox(
+            ibox, self, "fold_feature", model=self.feature_model,
+            orientation=Qt.Horizontal, callback=self.fold_feature_changed)
 
         gui.appendRadioButton(rbox, "Random sampling")
         ibox = gui.indentedBox(rbox)
@@ -245,6 +304,8 @@ class OWTestLearners(OWWidget):
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setDefaultAlignment(Qt.AlignCenter)
         header.setStretchLastSection(False)
+        header.setContextMenuPolicy(Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.show_column_chooser)
 
         self.result_model = QStandardItemModel(self)
         self.result_model.setHorizontalHeaderLabels(["Method"])
@@ -257,12 +318,32 @@ class OWTestLearners(OWWidget):
     def sizeHint(self):
         return QSize(780, 1)
 
+    def _update_controls(self):
+        self.fold_feature = None
+        self.feature_model.set_domain(None)
+        if self.data:
+            self.feature_model.set_domain(self.data.domain)
+            if self.fold_feature is None and self.feature_model:
+                self.fold_feature = self.feature_model[0]
+        enabled = bool(self.feature_model)
+        self.controls.resampling.buttons[
+            OWTestLearners.FeatureFold].setEnabled(enabled)
+        self.features_combo.setEnabled(enabled)
+        if self.resampling == OWTestLearners.FeatureFold and not enabled:
+            self.resampling = OWTestLearners.KFold
+
     def set_learner(self, learner, key):
         """
         Set the input `learner` for `key`.
+
+        Parameters
+        ----------
+        learner : Optional[Orange.base.Learner]
+        key : Any
         """
         if key in self.learners and learner is None:
             # Removed
+            self._invalidate([key])
             del self.learners[key]
         else:
             self.learners[key] = Input(learner, None, None)
@@ -271,13 +352,25 @@ class OWTestLearners(OWWidget):
     def set_train_data(self, data):
         """
         Set the input training dataset.
+
+        Parameters
+        ----------
+        data : Optional[Orange.data.Table]
         """
         self.Information.data_sampled.clear()
-        if data and not data.domain.class_var:
+        self.Error.train_data_empty.clear()
+        if data is not None and not len(data):
+            self.Error.train_data_empty()
+            data = None
+        if data and not data.domain.class_vars:
             self.Error.class_required()
+            data = None
+        elif data and len(data.domain.class_vars) > 1:
+            self.Error.too_many_classes()
             data = None
         else:
             self.Error.class_required.clear()
+            self.Error.too_many_classes.clear()
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
@@ -299,18 +392,30 @@ class OWTestLearners(OWWidget):
 
         self.data = data
         self.closeContext()
+        self._update_controls()
         if data is not None:
             self._update_class_selection()
-            self.openContext(data.domain.class_var)
+            self.openContext(data.domain)
+            if self.fold_feature_selected and bool(self.feature_model):
+                self.resampling = OWTestLearners.FeatureFold
         self._invalidate()
 
     def set_test_data(self, data):
+        # type: (Orange.data.Table) -> None
         """
         Set the input separate testing dataset.
+
+        Parameters
+        ----------
+        data : Optional[Orange.data.Table]
         """
         self.Information.test_data_sampled.clear()
+        self.Error.test_data_empty.clear()
+        if data is not None and not len(data):
+            self.Error.test_data_empty()
+            data = None
         if data and not data.domain.class_var:
-            self.Error.class_required()
+            self.Error.class_required_test()
             data = None
         else:
             self.Error.class_required_test.clear()
@@ -329,7 +434,7 @@ class OWTestLearners(OWWidget):
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
             if data:
-                data = RemoveNaNClasses(data)
+                data = RemoveNaNClasses()(data)
         else:
             self.Warning.missing_data.clear()
 
@@ -353,10 +458,17 @@ class OWTestLearners(OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self.commit()
+        self._update_header()
+        self._update_stats_model()
+        if self.__needupdate:
+            self.__update()
 
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
+        self._param_changed()
+
+    def fold_feature_changed(self):
+        self.resampling = OWTestLearners.FeatureFold
         self._param_changed()
 
     def shuffle_split_changed(self):
@@ -365,113 +477,7 @@ class OWTestLearners(OWWidget):
 
     def _param_changed(self):
         self._invalidate()
-
-    def _update_results(self):
-        """
-        Run/evaluate the learners.
-        """
-        self.Warning.test_data_unused.clear()
-        self.Warning.test_data_missing.clear()
-        self.warning()
-        self.Error.class_inconsistent.clear()
-        self.Error.too_many_folds.clear()
-        self.error()
-        if self.data is None:
-            return
-
-        class_var = self.data.domain.class_var
-
-        if self.resampling == OWTestLearners.TestOnTest:
-            if self.test_data is None:
-                self.Warning.test_data_missing()
-                return
-            elif self.test_data.domain.class_var != class_var:
-                self.Error.class_inconsistent()
-                return
-
-        # items in need of an update
-        items = [(key, slot) for key, slot in self.learners.items()
-                 if slot.results is None]
-        learners = [slot.learner for _, slot in items]
-        if len(items) == 0:
-            return
-
-        if self.test_data is not None and \
-                self.resampling != OWTestLearners.TestOnTest:
-            self.Warning.test_data_unused()
-
-        rstate = 42
-        def update_progress(finished):
-            self.progressBarSet(100 * finished)
-        common_args = dict(
-            store_data=True,
-            preprocessor=self.preprocessor,
-            callback=update_progress,
-            n_jobs=-1,
-        )
-        self.setStatusMessage("Running")
-
-        with self.progressBar():
-            try:
-                folds = self.NFolds[self.n_folds]
-                if self.resampling == OWTestLearners.KFold:
-                    if len(self.data) < folds:
-                        self.Error.too_many_folds()
-                        return
-                    warnings = []
-                    results = Orange.evaluation.CrossValidation(
-                        self.data, learners, k=folds,
-                        random_state=rstate, warnings=warnings, **common_args)
-                    if warnings:
-                        self.warning(warnings[0])
-                elif self.resampling == OWTestLearners.LeaveOneOut:
-                    results = Orange.evaluation.LeaveOneOut(
-                        self.data, learners, **common_args)
-                elif self.resampling == OWTestLearners.ShuffleSplit:
-                    train_size = self.SampleSizes[self.sample_size] / 100
-                    results = Orange.evaluation.ShuffleSplit(
-                        self.data, learners,
-                        n_resamples=self.NRepeats[self.n_repeats],
-                        train_size=train_size, test_size=None,
-                        stratified=self.shuffle_stratified,
-                        random_state=rstate, **common_args)
-                elif self.resampling == OWTestLearners.TestOnTrain:
-                    results = Orange.evaluation.TestOnTrainingData(
-                        self.data, learners, **common_args)
-                elif self.resampling == OWTestLearners.TestOnTest:
-                    results = Orange.evaluation.TestOnTestData(
-                        self.data, self.test_data, learners, **common_args)
-                else:
-                    assert False
-            except (RuntimeError, ValueError) as e:
-                self.error(str(e))
-                self.setStatusMessage("")
-                return
-            else:
-                self.error()
-
-        learner_key = {slot.learner: key for key, slot in self.learners.items()}
-        for learner, result in zip(learners, results.split_by_model()):
-            stats = None
-            if class_var.is_discrete:
-                scorers = classification_stats.scores
-            elif class_var.is_continuous:
-                scorers = regression_stats.scores
-            else:
-                scorers = None
-            if scorers:
-                ex = result.failed[0]
-                if ex:
-                    stats = [Try.Fail(ex)] * len(scorers)
-                    result = Try.Fail(ex)
-                else:
-                    stats = [Try(lambda: score(result)) for score in scorers]
-                    result = Try.Success(result)
-            key = learner_key[learner]
-            self.learners[key] = \
-                self.learners[key]._replace(results=result, stats=stats)
-
-        self.setStatusMessage("")
+        self.__update()
 
     def _update_header(self):
         # Set the correct horizontal header labels on the results_model.
@@ -488,6 +494,16 @@ class OWTestLearners(OWWidget):
             self.result_model.takeColumn(i)
 
         self.result_model.setHorizontalHeaderLabels(headers)
+        self._update_shown_columns()
+
+    def _update_shown_columns(self):
+        # pylint doesn't know that self.shown_scores is a set, not a Setting
+        # pylint: disable=unsupported-membership-test
+        model = self.result_model
+        header = self.view.horizontalHeader()
+        for section in range(1, model.columnCount()):
+            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
+            header.setSectionHidden(section, col_name not in self.shown_scores)
 
     def _update_stats_model(self):
         # Update the results_model with up to date scores.
@@ -577,6 +593,8 @@ class OWTestLearners(OWWidget):
         self._update_stats_model()
 
     def _invalidate(self, which=None):
+        self.fold_feature_selected = \
+            self.resampling == OWTestLearners.FeatureFold
         # Invalidate learner results for `which` input keys
         # (if None then all learner results are invalidated)
         if which is None:
@@ -598,15 +616,33 @@ class OWTestLearners(OWWidget):
                         item.setData(None, Qt.DisplayRole)
                         item.setData(None, Qt.ToolTipRole)
 
-        self.commit()
+        self.__needupdate = True
+
+    def show_column_chooser(self, pos):
+        # pylint doesn't know that self.shown_scores is a set, not a Setting
+        # pylint: disable=unsupported-membership-test
+        def update(col_name, checked):
+            if checked:
+                self.shown_scores.add(col_name)
+            else:
+                self.shown_scores.remove(col_name)
+            self._update_shown_columns()
+
+        menu = QMenu()
+        model = self.result_model
+        header = self.view.horizontalHeader()
+        for section in range(1, model.columnCount()):
+            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
+            action = menu.addAction(col_name)
+            action.setCheckable(True)
+            action.setChecked(col_name in self.shown_scores)
+            action.triggered.connect(partial(update, col_name))
+        menu.exec(header.mapToGlobal(pos))
 
     def commit(self):
-        """Recompute and output the results"""
-        self._update_header()
-        # Update the view to display the model names
-        self._update_stats_model()
-        self._update_results()
-        self._update_stats_model()
+        """
+        Commit the results to output.
+        """
         valid = [slot for slot in self.learners.values()
                  if slot.results is not None and slot.results.success]
         if valid:
@@ -651,6 +687,252 @@ class OWTestLearners(OWWidget):
             self.report_items("Settings", items)
         self.report_table("Scores", self.view)
 
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            if settings_["resampling"] > 0:
+                settings_["resampling"] += 1
+        if version < 3:
+            # Older version used an incompatible context handler
+            settings_["context_settings"] = [
+                c for c in settings_.get("context_settings", ())
+                if not hasattr(c, 'classes')]
+
+    @Slot(float)
+    def setProgressValue(self, value):
+        self.progressBarSet(value, processEvents=False)
+
+    def __update(self):
+        self.__needupdate = False
+
+        assert self.__task is None or self.__state == State.Running
+        if self.__state == State.Running:
+            self.cancel()
+
+        self.Warning.test_data_unused.clear()
+        self.Warning.test_data_missing.clear()
+        self.warning()
+        self.Error.class_inconsistent.clear()
+        self.Error.too_many_folds.clear()
+        self.error()
+
+        # check preconditions and return early
+        if self.data is None:
+            self.__state = State.Waiting
+            self.commit()
+            return
+        if not self.learners:
+            self.__state = State.Waiting
+            self.commit()
+            return
+        if self.resampling == OWTestLearners.KFold and \
+                len(self.data) < self.NFolds[self.n_folds]:
+            self.Error.too_many_folds()
+            self.__state = State.Waiting
+            self.commit()
+            return
+
+        elif self.resampling == OWTestLearners.TestOnTest:
+            if self.test_data is None:
+                if not self.Error.test_data_empty.is_shown():
+                    self.Warning.test_data_missing()
+                self.__state = State.Waiting
+                self.commit()
+                return
+            elif self.test_data.domain.class_var != self.data.domain.class_var:
+                self.Error.class_inconsistent()
+                self.__state = State.Waiting
+                self.commit()
+                return
+
+        elif self.test_data is not None:
+            self.Warning.test_data_unused()
+
+        rstate = 42
+        common_args = dict(
+            store_data=True,
+            preprocessor=self.preprocessor,
+        )
+        # items in need of an update
+        items = [(key, slot) for key, slot in self.learners.items()
+                 if slot.results is None]
+        learners = [slot.learner for _, slot in items]
+
+        # deepcopy all learners as they are not thread safe (by virtue of
+        # the base API). These will be the effective learner objects tested
+        # but will be replaced with the originals on return (see restore
+        # learners bellow)
+        learners_c = [copy.deepcopy(learner) for learner in learners]
+
+        if self.resampling == OWTestLearners.KFold:
+            folds = self.NFolds[self.n_folds]
+            test_f = partial(
+                Orange.evaluation.CrossValidation,
+                self.data, learners_c, k=folds,
+                random_state=rstate, **common_args)
+        elif self.resampling == OWTestLearners.FeatureFold:
+            test_f = partial(
+                Orange.evaluation.CrossValidationFeature,
+                self.data, learners_c, self.fold_feature,
+                **common_args
+            )
+        elif self.resampling == OWTestLearners.LeaveOneOut:
+            test_f = partial(
+                Orange.evaluation.LeaveOneOut,
+                self.data, learners_c, **common_args
+            )
+        elif self.resampling == OWTestLearners.ShuffleSplit:
+            train_size = self.SampleSizes[self.sample_size] / 100
+            test_f = partial(
+                Orange.evaluation.ShuffleSplit,
+                self.data, learners_c,
+                n_resamples=self.NRepeats[self.n_repeats],
+                train_size=train_size, test_size=None,
+                stratified=self.shuffle_stratified,
+                random_state=rstate, **common_args
+            )
+        elif self.resampling == OWTestLearners.TestOnTrain:
+            test_f = partial(
+                Orange.evaluation.TestOnTrainingData,
+                self.data, learners_c, **common_args
+            )
+        elif self.resampling == OWTestLearners.TestOnTest:
+            test_f = partial(
+                Orange.evaluation.TestOnTestData,
+                self.data, self.test_data, learners_c, **common_args
+            )
+        else:
+            assert False, "self.resampling %s" % self.resampling
+
+        def replace_learners(evalfunc, *args, **kwargs):
+            res = evalfunc(*args, **kwargs)
+            assert all(lc is lo for lc, lo in zip(learners_c, res.learners))
+            res.learners[:] = learners
+            return res
+
+        test_f = partial(replace_learners, test_f)
+
+        self.__submit(test_f)
+
+    def __submit(self, testfunc):
+        # type: (Callable[[Callable[float]], Results]) -> None
+        """
+        Submit a testing function for evaluation
+
+        MUST not be called if an evaluation is already pending/running.
+        Cancel the existing task first.
+
+        Parameters
+        ----------
+        testfunc : Callable[[Callable[float]], Results])
+            Must be a callable taking a single `callback` argument and
+            returning a Results instance
+        """
+        assert self.__state != State.Running
+        # Setup the task
+        task = Task()
+
+        def progress_callback(finished):
+            if task.cancelled:
+                raise UserInterrupt()
+            QMetaObject.invokeMethod(
+                self, "setProgressValue", Qt.QueuedConnection,
+                Q_ARG(float, 100 * finished)
+            )
+
+        def ondone(_):
+            QMetaObject.invokeMethod(
+                self, "__task_complete", Qt.QueuedConnection,
+                Q_ARG(object, task))
+
+        testfunc = partial(testfunc, callback=progress_callback)
+        task.future = self.__executor.submit(testfunc)
+        task.future.add_done_callback(ondone)
+
+        self.progressBarInit(processEvents=None)
+        self.setBlocking(True)
+        self.setStatusMessage("Running")
+
+        self.__state = State.Running
+        self.__task = task
+
+    @Slot(object)
+    def __task_complete(self, task):
+        # handle a completed task
+        assert self.thread() is QThread.currentThread()
+        if self.__task is not task:
+            assert task.cancelled
+            log.debug("Reaping cancelled task: %r", "<>")
+            return
+
+        self.setBlocking(False)
+        self.progressBarFinished(processEvents=None)
+        self.setStatusMessage("")
+        result = task.future
+        assert result.done()
+        self.__task = None
+        try:
+            results = result.result()    # type: Results
+            learners = results.learners  # type: List[Learner]
+        except Exception as er:
+            log.exception("testing error (in __task_complete):",
+                          exc_info=True)
+            self.error("\n".join(traceback.format_exception_only(type(er), er)))
+            self.__state = State.Done
+            return
+
+        self.__state = State.Done
+
+        learner_key = {slot.learner: key for key, slot in
+                       self.learners.items()}
+        assert all(learner in learner_key for learner in learners)
+
+        # Update the results for individual learners
+        class_var = results.domain.class_var
+        for learner, result in zip(learners, results.split_by_model()):
+            stats = None
+            if class_var.is_primitive():
+                scorers = classification_stats.scores if class_var.is_discrete \
+                    else regression_stats.scores
+                ex = result.failed[0]
+                if ex:
+                    stats = [Try.Fail(ex)] * len(scorers)
+                    result = Try.Fail(ex)
+                else:
+                    stats = [Try(lambda: score(result)) for score in
+                             scorers]
+                    result = Try.Success(result)
+            key = learner_key.get(learner)
+            self.learners[key] = \
+                self.learners[key]._replace(results=result, stats=stats)
+
+        self._update_header()
+        self._update_stats_model()
+
+        self.commit()
+
+    def cancel(self):
+        """
+        Cancel the current/pending evaluation (if any).
+        """
+        if self.__task is not None:
+            assert self.__state == State.Running
+            self.__state = State.Cancelled
+            task, self.__task = self.__task, None
+            task.cancel()
+            assert task.future.done()
+
+    def onDeleteWidget(self):
+        self.cancel()
+        super().onDeleteWidget()
+
+
+class UserInterrupt(BaseException):
+    """
+    A BaseException subclass used for cooperative task/thread cancellation
+    """
+    pass
+
 
 def learner_name(learner):
     """Return the value of `learner.name` if it exists, or the learner's type
@@ -688,21 +970,78 @@ def results_add_by_model(x, y):
 
 
 def results_merge(results):
-    return functools.reduce(results_add_by_model, results,
-                            Orange.evaluation.Results())
+    return reduce(results_add_by_model, results, Orange.evaluation.Results())
 
 
 def results_one_vs_rest(results, pos_index):
+    from Orange.preprocess.transformation import Indicator
     actual = results.actual == pos_index
     predicted = results.predicted == pos_index
-    return Orange.evaluation.Results(
-        nmethods=1, domain=results.domain,
-        actual=actual, predicted=predicted)
+    if results.probabilities is not None:
+        c = results.probabilities.shape[2]
+        assert c >= 2
+        neg_indices = [i for i in range(c) if i != pos_index]
+        pos_prob = results.probabilities[:, :, [pos_index]]
+        neg_prob = np.sum(results.probabilities[:, :, neg_indices],
+                          axis=2, keepdims=True)
+        probabilities = np.dstack((neg_prob, pos_prob))
+    else:
+        probabilities = None
+
+    res = Orange.evaluation.Results()
+    res.actual = actual
+    res.predicted = predicted
+    res.folds = results.folds
+    res.row_indices = results.row_indices
+    res.probabilities = probabilities
+
+    value = results.domain.class_var.values[pos_index]
+    class_var = Orange.data.DiscreteVariable(
+        "I({}=={})".format(results.domain.class_var.name, value),
+        values=["False", "True"],
+        compute_value=Indicator(results.domain.class_var, pos_index)
+    )
+    domain = Orange.data.Domain(
+        results.domain.attributes,
+        [class_var],
+        results.domain.metas
+    )
+    res.data = None
+    res.domain = domain
+    return res
+
+
+class Task:
+    """
+    A simple task state.
+    """
+    #: A future holding the results. This field is set by the client.
+    future = ...        # type: Future
+    #: True if the task was cancelled
+    cancelled = False   # type: bool
+    #: A function to call. Filled by the client.
+    func = ...          # type: Callable[Callable[float], Results]
+
+    def cancel(self):
+        """
+        Cancel the task.
+
+        Set the `cancelled` field to True and block until the future is done.
+        """
+        log.debug("cancel task")
+        self.cancelled = True
+        cancelled = self.future.cancel()
+        if cancelled:
+            log.debug("Task cancelled before starting")
+        else:
+            log.debug("Attempting cooperative cancellation for task")
+        concurrent.futures.wait([self.future])
 
 
 def main(argv=None):
     """Show and test the widget"""
     from AnyQt.QtWidgets import QApplication
+    logging.basicConfig(level=logging.DEBUG)
     if argv is None:
         argv = sys.argv
     argv = list(argv)
@@ -742,6 +1081,7 @@ def main(argv=None):
     for i in range(len(learners)):
         w.set_learner(None, i)
     w.handleNewSignals()
+    w.saveSettings()
     return rval
 
 if __name__ == "__main__":

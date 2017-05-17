@@ -1,5 +1,8 @@
 import inspect
+import itertools
 from collections import Iterable
+import re
+import threading
 
 import numpy as np
 import scipy
@@ -8,12 +11,29 @@ from Orange.data import Table, Storage, Instance, Value
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import (RemoveNaNClasses, Continuize,
-                               RemoveNaNColumns, SklImpute)
+                               RemoveNaNColumns, SklImpute, Normalize)
+from Orange.util import Reprable
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
 
 
-class Learner:
+class _ReprableWithPreprocessors(Reprable):
+    def _reprable_omit_param(self, name, default, value):
+        if name == "preprocessors":
+            default_cls = type(self).preprocessors
+            if value is default or value is default_cls:
+                return True
+            else:
+                try:
+                    return all(p1 is p2 for p1, p2 in
+                               itertools.zip_longest(value, default_cls))
+                except (ValueError, TypeError):
+                    return False
+        else:
+            return super()._reprable_omit_param(name, default, value)
+
+
+class Learner(_ReprableWithPreprocessors):
     """The base learner class.
 
     Preprocessors can behave in a number of different ways, all of which are
@@ -51,11 +71,12 @@ class Learner:
         This property is needed mainly because of the `Fitter` class, which can
         not know in advance, which preprocessors it will need to use. Therefore
         this resolves the active preprocessors using a lazy approach.
+    params : dict
+        The params that the learner is constructed with.
 
     """
     supports_multiclass = False
     supports_weights = False
-    name = 'learner'
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
@@ -67,6 +88,7 @@ class Learner:
             self.preprocessors = tuple(preprocessors)
         elif preprocessors:
             self.preprocessors = (preprocessors,)
+        self.__tls = threading.local()
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -86,6 +108,7 @@ class Learner:
 
         if isinstance(data, Instance):
             data = Table(data.domain, [data])
+        origdata = data
         data = self.preprocess(data)
 
         if len(data.domain.class_vars) > 1 and not self.supports_multiclass:
@@ -93,17 +116,20 @@ class Learner:
                             self.__class__.__name__)
 
         self.domain = data.domain
-
-        if type(self).fit is Learner.fit:
-            model = self.fit_storage(data)
-        else:
-            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
-            model = self.fit(X, Y, W)
+        model = self._fit_model(data)
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
         model.original_domain = origdomain
+        model.original_data = origdata
         return model
+
+    def _fit_model(self, data):
+        if type(self).fit is Learner.fit:
+            return self.fit_storage(data)
+        else:
+            X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
+            return self.fit(X, Y, W)
 
     def preprocess(self, data):
         """Apply the `preprocessors` to the data"""
@@ -118,14 +144,62 @@ class Learner:
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    def __repr__(self):
-        return self.name
-
     def check_learner_adequacy(self, domain):
         return True
 
+    @property
+    def name(self):
+        """Return a short name derived from Learner type name"""
+        try:
+            return self.__name
+        except AttributeError:
+            name = self.__class__.__name__
+            if name.endswith('Learner'):
+                name = name[:-len('Learner')]
+            if name.endswith('Fitter'):
+                name = name[:-len('Fitter')]
+            if isinstance(self, SklLearner) and name.startswith('Skl'):
+                name = name[len('Skl'):]
+            name = name or 'learner'
+            # From http://stackoverflow.com/a/1176023/1090455 <3
+            self.name = re.sub(r'([a-z0-9])([A-Z])', r'\1 \2',
+                               re.sub(r'(.)([A-Z][a-z]+)', r'\1 \2', name)).lower()
+            return self.name
 
-class Model:
+    @name.setter
+    def name(self, value):
+        self.__name = value
+
+    # Learners implemented using `fit` access the `domain` through the
+    # instance attribute. This makes (or it would) make it impossible to
+    # be implemented in a thread-safe manner. So the domain is made a
+    # property descriptor utilizing thread local storage behind the scenes.
+    @property
+    def domain(self):
+        return self.__tls.domain
+
+    @domain.setter
+    def domain(self, domain):
+        self.__tls.domain = domain
+
+    @domain.deleter
+    def domain(self):
+        del self.__tls.domain
+
+    def __getstate__(self):
+        state = dict(self.__dict__)
+        del state["_Learner__tls"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__tls = threading.local()
+
+    def __str__(self):
+        return self.name
+
+
+class Model(Reprable):
     supports_multiclass = False
     supports_weights = False
     Value = 0
@@ -135,7 +209,7 @@ class Model:
     def __init__(self, domain=None):
         if isinstance(self, Learner):
             domain = None
-        elif not domain:
+        elif domain is None:
             raise ValueError("unspecified domain")
         self.domain = domain
 
@@ -174,13 +248,13 @@ class Model:
             prediction = self.predict_storage(data)
         elif isinstance(data, Table):
             if data.domain != self.domain:
-                data = data.from_table(self.domain, data)
+                data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):
                 data = [data]
             data = Table(self.original_domain, data)
-            data = Table(self.domain, data)
+            data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         else:
             raise TypeError("Unrecognized argument (instance of '{}')"
@@ -225,8 +299,13 @@ class Model:
         else:  # ret == Model.ValueProbs
             return value, probs
 
-    def __repr__(self):
-        return self.name
+    def __getstate__(self):
+        """Skip (possibly large) data when pickling models"""
+        state = self.__dict__
+        if 'original_data' in state:
+            state = state.copy()
+            state['original_data'] = None
+        return state
 
 
 class SklModel(Model, metaclass=WrapperMeta):
@@ -243,7 +322,8 @@ class SklModel(Model, metaclass=WrapperMeta):
         return value
 
     def __repr__(self):
-        return '{} {}'.format(self.name, self.params)
+        # Params represented as a comment because not passed into constructor
+        return super().__repr__() + '  # params=' + repr(self.params)
 
 
 class SklLearner(Learner, metaclass=WrapperMeta):
@@ -259,11 +339,11 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     __returns__ = SklModel
     _params = {}
 
-    name = 'skl learner'
-    preprocessors = [RemoveNaNClasses(),
-                     Continuize(),
-                     RemoveNaNColumns(),
-                     SklImpute()]
+    preprocessors = default_preprocessors = [
+        RemoveNaNClasses(),
+        Continuize(),
+        RemoveNaNColumns(),
+        SklImpute()]
 
     @property
     def params(self):
@@ -308,22 +388,30 @@ class SklLearner(Learner, metaclass=WrapperMeta):
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
 
-    def __str__(self):
-        return '{} {}'.format(self.name, self.params)
-
-    def __repr__(self):
-        return '{}({})'.format(type(self).__name__,
-                               ", ".join("{}={}".format(k, v)
-                                         for k, v in self.params.items()))
-
     @property
     def supports_weights(self):
         """Indicates whether this learner supports weighted instances.
         """
         return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
 
+    def __getattr__(self, item):
+        try:
+            return self.params[item]
+        except (KeyError, AttributeError):
+            raise AttributeError(item) from None
 
-class RandomForest:
+    # TODO: Disallow (or mirror) __setattr__ for keys in params?
+
+    def __dir__(self):
+        dd = super().__dir__()
+        return list(sorted(set(dd) | set(self.params.keys())))
+
+
+class TreeModel(Model):
+    pass
+
+
+class RandomForestModel(Model):
     """Interface for random forest models
     """
 
@@ -351,3 +439,20 @@ class KNNBase:
                         self.params.get("metric") == "mahalanobis":
             self.params["metric_params"] = {"V": np.cov(X.T)}
         return super().fit(X, Y, W)
+
+
+class NNBase:
+    """Base class for neural network (classification and regression) learners
+    """
+    preprocessors = SklLearner.preprocessors + [Normalize()]
+
+    def __init__(self, hidden_layer_sizes=(100,), activation='relu',
+                 solver='adam', alpha=0.0001, batch_size='auto',
+                 learning_rate='constant', learning_rate_init=0.001,
+                 power_t=0.5, max_iter=200, shuffle=True, random_state=None,
+                 tol=0.0001, verbose=False, warm_start=False, momentum=0.9,
+                 nesterovs_momentum=True, early_stopping=False,
+                 validation_fraction=0.1, beta_1=0.9, beta_2=0.999,
+                 epsilon=1e-08, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.params = vars()

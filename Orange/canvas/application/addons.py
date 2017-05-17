@@ -1,6 +1,7 @@
 import sys
 import sysconfig
 import os
+import logging
 import re
 import errno
 import shlex
@@ -14,7 +15,6 @@ from glob import iglob
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
-from email.parser import HeaderParser
 import urllib.request
 import xmlrpc.client
 
@@ -42,11 +42,12 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-from ..config import ADDON_KEYWORD
 from ..gui.utils import message_warning, message_information, \
                         message_critical as message_error, \
                         OSX_NSURL_toLocalFile
 from ..help.manager import get_dist_meta, trim, parse_meta
+
+log = logging.getLogger(__name__)
 
 OFFICIAL_ADDONS = [
     # "Orange-Bioinformatics",
@@ -74,7 +75,7 @@ ReleaseUrl = namedtuple(
      "size",
      "python_version",
      "package_type"
-     ]
+    ]
 )
 
 Available = namedtuple(
@@ -183,13 +184,22 @@ def get_meta_from_archive(path):
                 for key in ('Name', 'Version', 'Description', 'Summary')]
 
 
+def cleanup(name, sep="-"):
+    """Used for sanitizing addon names. The function removes Orange/Orange3
+    from the name and adds spaces before upper letters of the leftover to
+    separate its words."""
+    prefix, separator, postfix = name.partition(sep)
+    name = postfix if separator == sep else prefix
+    return " ".join(re.findall("[A-Z][a-z]*", name[0].upper() + name[1:]))
+
+
 class AddonManagerWidget(QWidget):
 
     statechanged = Signal()
 
     def __init__(self, parent=None, **kwargs):
         super(AddonManagerWidget, self).__init__(parent, **kwargs)
-
+        self.__items = []
         self.setLayout(QVBoxLayout())
 
         self.__header = QLabel(
@@ -277,7 +287,7 @@ class AddonManagerWidget(QWidget):
             else:
                 item1.setCheckState(Qt.Unchecked)
 
-            item2 = QStandardItem(name)
+            item2 = QStandardItem(cleanup(name))
 
             item2.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
             item2.setToolTip(summary)
@@ -396,9 +406,9 @@ class AddonManagerWidget(QWidget):
                     writer_name="html",
                     settings_overrides={
                         "output-encoding": "utf-8",
-#                         "embed-stylesheet": False,
-#                         "stylesheet": [],
-#                         "stylesheet_path": []
+                        # "embed-stylesheet": False,
+                        # "stylesheet": [],
+                        # "stylesheet_path": []
                     }
                 ).decode("utf-8")
 
@@ -485,13 +495,14 @@ class AddonManagerDialog(QDialog):
 
         try:
             packages = f.result()
-        except (IOError, OSError) as err:
+        except (IOError, OSError, ValueError) as err:
             message_warning(
                 "Could not retrieve package list",
                 title="Error",
                 informative_text=str(err),
                 parent=self
             )
+            log.error(str(err), exc_info=True)
             packages = []
         except Exception:
             raise
@@ -564,7 +575,7 @@ class AddonManagerDialog(QDialog):
     def dragEnterEvent(self, event):
         urls = event.mimeData().urls()
         if any((OSX_NSURL_toLocalFile(url) or url.toLocalFile())
-                .endswith(self.ADDON_EXTENSIONS) for url in urls):
+               .endswith(self.ADDON_EXTENSIONS) for url in urls):
             event.acceptProposedAction()
 
     def dropEvent(self, event):
@@ -651,7 +662,7 @@ def list_pypi_addons():
 
     pypi = xmlrpc.client.ServerProxy(
         "https://pypi.python.org/pypi/",
-        transport=xmlrpc.client.SafeTransport()
+        transport=SafeUrllibTransport()
     )
     addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
 
@@ -673,26 +684,19 @@ def list_pypi_addons():
 
         name = addon["name"]
         multicall.release_data(name, version_)
-        multicall.release_urls(name, version_)
 
     results = list(multicall())
-    release_data = results[::2]
-    release_urls = results[1::2]
     packages = []
 
-    for release, urls in zip(release_data, release_urls):
-        if release and urls:
+    for release in results:
+        if release:
             # ignore releases without actual source/wheel/egg files,
             # or with empty metadata (deleted from PyPi?).
-            urls = [ReleaseUrl(url["filename"], url["url"],
-                               url["size"], url["python_version"],
-                               url["packagetype"])
-                    for url in urls]
             packages.append(
                 Installable(release["name"], release["version"],
                             release["summary"], release["description"],
                             release["package_url"],
-                            urls)
+                            release["package_url"])
             )
     return packages
 
@@ -768,7 +772,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -783,7 +791,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -794,7 +806,11 @@ class Installer(QObject):
             cmd = (["-m", "pip", "install"] +
                    (["--user"] if self.__user_install else []) +
                    [inst_name])
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if retcode != 0:
@@ -806,7 +822,11 @@ class Installer(QObject):
             self.setStatusMessage("Uninstalling {}".format(dist.project_name))
 
             cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
-            process = python_process(cmd, bufsize=-1, universal_newlines=True, env=_env_with_proxies())
+            process = python_process(cmd,
+                                     bufsize=-1,
+                                     universal_newlines=True,
+                                     env=_env_with_proxies()
+                                    )
             retcode, output = self.__subprocessrun(process)
 
             if self.__user_install:

@@ -1,4 +1,5 @@
 import math
+from itertools import chain
 
 import numpy as np
 from scipy.stats.distributions import chi2
@@ -29,6 +30,12 @@ class ChiSqStats:
     pair of attributes. The class is also used for ranking.
     """
     def __init__(self, data, attr1, attr2):
+        attr1 = data.domain[attr1]
+        attr2 = data.domain[attr2]
+        if attr1.is_discrete and not attr1.values or \
+                attr2.is_discrete and not attr2.values:
+            self.p = np.nan
+            return
         self.observed = get_contingency(data, attr1, attr2)
         self.n = np.sum(self.observed)
         self.probs_x = self.observed.sum(axis=0) / self.n
@@ -36,6 +43,7 @@ class ChiSqStats:
         self.expected = np.outer(self.probs_y, self.probs_x) * self.n
         self.residuals = \
             (self.observed - self.expected) / np.sqrt(self.expected)
+        self.residuals = np.nan_to_num(self.residuals)
         self.chisqs = self.residuals ** 2
         self.chisq = float(np.sum(self.chisqs))
         self.p = chi2.sf(
@@ -160,13 +168,6 @@ class OWSieveDiagram(OWWidget):
             self.domain_model.set_domain(None)
         else:
             self.domain_model.set_domain(data.domain)
-            if any(attr.is_continuous for attr in data.domain):
-                discretizer = Discretize(
-                    method=EqualFreq(n=4),
-                    discretize_classes=True, discretize_metas=True)
-                self.discrete_data = discretizer(data)
-            else:
-                self.discrete_data = self.data
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]
         if self.attrs:
             self.attr_x = self.attrs[0]
@@ -176,6 +177,8 @@ class OWSieveDiagram(OWWidget):
             self.areas = []
             self.selection = set()
         self.openContext(self.data)
+        if self.data:
+            self.discrete_data = self.sparse_to_dense(data, True)
         self.resolve_shown_attributes()
         self.update_graph()
         self.update_selection()
@@ -183,7 +186,7 @@ class OWSieveDiagram(OWWidget):
         self.vizrank.initialize()
         self.vizrank_button.setEnabled(
             self.data is not None and len(self.data) > 1 and
-            len(self.data.domain.attributes) > 1)
+            len(self.data.domain.attributes) > 1 and not self.data.is_sparse())
 
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y
@@ -192,8 +195,32 @@ class OWSieveDiagram(OWWidget):
     def update_attr(self):
         """Update the graph and selection."""
         self.selection = set()
+        self.discrete_data = self.sparse_to_dense(self.data)
         self.update_graph()
         self.update_selection()
+
+    def sparse_to_dense(self, data, init=False):
+        """
+        Extracts two selected columns from sparse matrix.
+        GH-2260
+        """
+        def discretizer(data):
+            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
+                discretize = Discretize(
+                    method=EqualFreq(n=4), remove_const=False,
+                    discretize_classes=True, discretize_metas=True)
+                return discretize(data)
+            return data
+
+        if not data.is_sparse() and not init:
+            return self.discrete_data
+        if data.is_sparse():
+            attrs = {self.attr_x,
+                     self.attr_y}
+            new_domain = data.domain.select_columns(attrs)
+            data = Table.from_table(new_domain, data)
+            data.X = data.X.toarray()
+        return discretizer(data)
 
     def set_input_features(self, attr_list):
         """
@@ -403,15 +430,25 @@ class OWSieveDiagram(OWWidget):
         view = self.canvasView
 
         chi = ChiSqStats(self.discrete_data, disc_x, disc_y)
-        n = chi.n
         max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = width(attr_x.name) + max_ylabel_w
         y_off = 15
-        square_size = min(view.width() - x_off - 35, view.height() - y_off - 50)
+        square_size = min(view.width() - x_off - 35, view.height() - y_off - 80)
         square_size = max(square_size, 10)
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
-
+        if not disc_x.values or not disc_y.values:
+            text_ = "Features {} and {} have no values".format(disc_x, disc_y) \
+                if not disc_x.values and \
+                   not disc_y.values and \
+                          disc_x != disc_y \
+                else \
+                    "Feature {} has no values".format(
+                        disc_x if not disc_x.values else disc_y)
+            text(text_, view.width() / 2 + 70, view.height() / 2,
+                 Qt.AlignRight | Qt.AlignVCenter)
+            return
+        n = chi.n
         curr_x = x_off
         max_xlabel_h = 0
         self.areas = []
@@ -452,6 +489,7 @@ class OWSieveDiagram(OWWidget):
              Qt.AlignLeft | Qt.AlignVCenter, bold=True, vertical=True)
         text(attr_x.name, x_off + square_size / 2, bottom,
              Qt.AlignHCenter | Qt.AlignTop, bold=True)
+        bottom += 30
         xl = text("χ²={:.2f}, p={:.3f}".format(chi.chisq, chi.p),
                   0, bottom)
         # Assume similar height for both lines

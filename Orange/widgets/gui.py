@@ -502,15 +502,23 @@ class SpinBoxWFocusOut(QtWidgets.QSpinBox):
         super().__init__(parent)
         self.setRange(minv, maxv)
         self.setSingleStep(step)
+        self.changed = False
+
+    def onValueChanged(self):
+        """
+        Sets the flag to determine whether the value has been changed.
+        """
+        self.changed = True
 
     def onEnter(self):
         """
         Commits the change by calling the appropriate callbacks.
         """
-        if self.cback:
+        if self.cback and self.changed:
             self.cback(int(str(self.text())))
-        if self.cfunc:
+        if self.cfunc and self.changed:
             self.cfunc()
+        self.changed = False
 
 
 class DoubleSpinBoxWFocusOut(QtWidgets.QDoubleSpinBox):
@@ -522,12 +530,20 @@ class DoubleSpinBoxWFocusOut(QtWidgets.QDoubleSpinBox):
         self.setDecimals(math.ceil(-math.log10(step)))
         self.setRange(minv, maxv)
         self.setSingleStep(step)
+        self.changed = False
+
+    def onValueChanged(self):
+        """
+        Sets the flag to determine whether the value has been changed.
+        """
+        self.changed = True
 
     def onEnter(self):
-        if self.cback:
+        if self.cback and self.changed:
             self.cback(float(str(self.text()).replace(",", ".")))
-        if self.cfunc:
+        if self.cfunc and self.changed:
             self.cfunc()
+        self.changed = False
 
 
 def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
@@ -650,6 +666,7 @@ def spin(widget, master, value, minv, maxv, step=1, box=None, label=None,
         cbox.disables = [sbox]
         cbox.makeConsistent()
     if callback and callbackOnReturn:
+        sbox.valueChanged.connect(sbox.onValueChanged)
         sbox.editingFinished.connect(sbox.onEnter)
         if hasattr(sbox, "upButton"):
             sbox.upButton().clicked.connect(
@@ -1040,7 +1057,8 @@ class ListViewWithSizeHint(QListView):
         self.preferred_size = preferred_size
 
     def sizeHint(self):
-        return self.preferred_size or super().sizeHint()
+        return self.preferred_size if self.preferred_size is not None \
+            else super().sizeHint()
 
 
 def listView(widget, master, value=None, model=None, box=None, callback=None,
@@ -2049,7 +2067,10 @@ class ControlledList(list):
 
     def __setitem__(self, index, item):
         def unselect(i):
-            item = self.listBox.item(i)
+            try:
+                item = self.listBox.item(i)
+            except RuntimeError:  # Underlying C/C++ object has been deleted
+                item = None
             if item is None:
                 # Labels changed before clearing the selection: clear everything
                 self.listBox.selectionModel().clear()
@@ -2599,7 +2620,7 @@ SortOrderRole = next(OrangeUserRole)  # Used for sorting
 
 class TableBarItem(QItemDelegate):
     BarRole = next(OrangeUserRole)
-    ColorRole = next(OrangeUserRole)
+    BarColorRole = next(OrangeUserRole)
 
     def __init__(self, parent=None, color=QtGui.QColor(255, 170, 127),
                  color_schema=None):
@@ -2624,14 +2645,18 @@ class TableBarItem(QItemDelegate):
             if math.isnan(ratio):
                 ratio = None
 
-        color = self.color
-        if self.color_schema is not None and ratio is not None:
-            class_ = index.data(TableClassValueRole)
-            if isinstance(class_, Orange.data.Value) and \
-                    class_.variable.is_discrete and \
-                    not math.isnan(class_):
-                color = self.color_schema[int(class_)]
-
+        color = None
+        if ratio is not None:
+            if self.color_schema is not None:
+                class_ = index.data(TableClassValueRole)
+                if isinstance(class_, Orange.data.Value) and \
+                        class_.variable.is_discrete and \
+                        not math.isnan(class_):
+                    color = self.color_schema[int(class_)]
+            else:
+                color = index.data(self.BarColorRole)
+        if color is None:
+            color = self.color
         rect = option.rect
         if ratio is not None:
             pw = 5

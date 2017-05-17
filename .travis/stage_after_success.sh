@@ -8,5 +8,9 @@ if [ "$BUILD_DOCS" ] &&
         return 0
 fi
 
-codecov
+if [ "$UPLOAD_COVERAGE" ]; then
+    cp $TRAVIS_BUILD_DIR/codecov.yml .
+    codecov
+fi
+
 cd $TRAVIS_BUILD_DIR

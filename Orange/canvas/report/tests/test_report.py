@@ -1,7 +1,9 @@
+import unittest
 from importlib import import_module
 import os
 import warnings
 
+import AnyQt
 from AnyQt.QtGui import QFont, QBrush
 from AnyQt.QtCore import Qt
 
@@ -41,7 +43,7 @@ def get_owwidgets(top_module_name):
                 module_name = top_module_name + '.' + os.path.join(root, file).replace(os.path.sep, '.')[:-len('.py')]
                 try:
                     module = import_module(module_name, top_module_name[:top_module_name.index('.')])
-                except ImportError:
+                except (ImportError, RuntimeError):
                     warnings.warn('Failed to import module: ' + module_name)
                     continue
                 for name, value in module.__dict__.items():
@@ -56,8 +58,7 @@ def get_owwidgets(top_module_name):
 
 DATA_WIDGETS = get_owwidgets('Orange.widgets.data')
 VISUALIZATION_WIDGETS = get_owwidgets('Orange.widgets.visualize')
-CLASSIFICATION_WIDGETS = get_owwidgets('Orange.widgets.classify')
-REGRESSION_WIDGETS = get_owwidgets('Orange.widgets.regression')
+MODEL_WIDGETS = get_owwidgets('Orange.widgets.model')
 
 
 class TestReport(WidgetTest):
@@ -113,12 +114,27 @@ class TestReport(WidgetTest):
             'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
             '</tr></table>')
 
+    def test_save_report(self):
+        """
+        Permission Error may occur when trying to save report.
+        GH-2147
+        """
+        rep = OWReport.get_instance()
+        patch_target_1 = "Orange.canvas.report.owreport.open"
+        patch_target_2 = "AnyQt.QtWidgets.QFileDialog.getSaveFileName"
+        patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
+        filenames = ["f.report", "f.html"]
+        for filename in filenames:
+            with unittest.patch(patch_target_1, create=True, side_effect=PermissionError),\
+                    unittest.patch(patch_target_2, return_value=(filename, 0)),\
+                    unittest.patch(patch_target_3, return_value=True):
+                rep.save_report()
+
 
 class TestReportWidgets(WidgetTest):
-    clas_widgets = CLASSIFICATION_WIDGETS
+    model_widgets = MODEL_WIDGETS
     data_widgets = DATA_WIDGETS
     eval_widgets = [OWCalibrationPlot, OWLiftCurve, OWROCAnalysis]
-    regr_widgets = REGRESSION_WIDGETS
     unsu_widgets = [OWCorrespondenceAnalysis, OWDistances, OWKMeans,
                     OWMDS, OWPCA]
     dist_widgets = [OWDistanceMap, OWHierarchicalClustering]
@@ -135,10 +151,10 @@ class TestReportWidgets(WidgetTest):
             rep.make_report(w)
             # rep.show()
 
-    def test_report_widgets_classify(self):
+    def test_report_widgets_model(self):
         rep = OWReport.get_instance()
         data = Table("titanic")
-        widgets = self.clas_widgets
+        widgets = self.model_widgets
 
         w = self.create_widget(OWTreeGraph)
         clf = TreeLearner(max_depth=3)(data)
@@ -176,20 +192,6 @@ class TestReportWidgets(WidgetTest):
 
         self._create_report(widgets, rep, results)
 
-    def test_report_widgets_regression(self):
-        rep = OWReport.get_instance()
-        data = Table("housing")
-        widgets = self.regr_widgets
-
-        w = self.create_widget(OWTreeGraph)
-        mod = RegressionTreeLearner(max_depth=3)(data)
-        mod.instances = data
-        w.ctree(mod)
-        w.create_report_html()
-        rep.make_report(w)
-
-        self._create_report(widgets, rep, data)
-
     def test_report_widgets_unsupervised(self):
         rep = OWReport.get_instance()
         data = Table("zoo")
@@ -209,9 +211,10 @@ class TestReportWidgets(WidgetTest):
         widgets = self.visu_widgets
         self._create_report(widgets, rep, data)
 
+    @unittest.skipIf(AnyQt.USED_API == "pyqt5", "Segfaults on PyQt5")
     def test_report_widgets_all(self):
         rep = OWReport.get_instance()
-        widgets = self.clas_widgets + self.data_widgets + self.eval_widgets + \
-                  self.regr_widgets + self.unsu_widgets + self.dist_widgets + \
-                  self.visu_widgets + self.spec_widgets
+        widgets = self.model_widgets + self.data_widgets + self.eval_widgets + \
+                  self.unsu_widgets + self.dist_widgets + self.visu_widgets + \
+                  self.spec_widgets
         self._create_report(widgets, rep, None)

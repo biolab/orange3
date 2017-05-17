@@ -37,12 +37,23 @@ class PCA(SklProjector, _FeatureScorerMixin):
 
     def __init__(self, n_components=None, copy=True, whiten=False,
                  svd_solver='auto', tol=0.0, iterated_power='auto',
-                 random_state=None, preprocessors=None):
+                 random_state=None, preprocessors=None, max_components=None):
         super().__init__(preprocessors=preprocessors)
+        if n_components is not None and max_components is not None:
+            raise ValueError("n_components and max_components can not both be defined.")
+        # max_components limits the number of PCA components if the minimum
+        # shape of the X matrix (after preprocessing) is higher than
+        # max_components, so that sklearn does not always compute the full
+        # transform, which is faster and uses less memory for big data.
+        self.max_components = max_components
         self.params = vars()
 
     def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
+        params = self.params.copy()
+        if params["n_components"] is None and self.max_components is not None:
+            # shape of X after preprocessing
+            params["n_components"] = min(min(X.shape), self.max_components)
+        proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain)
 
@@ -74,7 +85,7 @@ class _LinearCombination:
             return ' + '.join('{} * {}'.format(w, a.to_sql())
                               for a, w in zip(self.attrs, self.weights))
         return ' + '.join('{} * ({} - {})'.format(w, a.to_sql(), m, w)
-            for a, m, w in zip(self.attrs, self.mean, self.weights))
+                          for a, m, w in zip(self.attrs, self.mean, self.weights))
 
 
 class _PCATransformDomain:
@@ -85,7 +96,7 @@ class _PCATransformDomain:
 
     def __call__(self, data):
         if data.domain != self.pca.pre_domain:
-            data = data.from_table(self.pca.pre_domain, data)
+            data = data.transform(self.pca.pre_domain)
         return self.pca.transform(data.X)
 
 
@@ -97,7 +108,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
         def pca_variable(i):
             v = Orange.data.ContinuousVariable(
                 'PC%d' % (i + 1),
-                compute_value= Projector(self, i, pca_transform))
+                compute_value=Projector(self, i, pca_transform))
             v.to_sql = _LinearCombination(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
@@ -108,7 +119,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
         self.n_components = self.components_.shape[0]
         self.domain = Orange.data.Domain(
             [pca_variable(i) for i in range(self.n_components)],
-             domain.class_vars, domain.metas)
+            domain.class_vars, domain.metas)
 
 
 class IncrementalPCA(SklProjector):

@@ -3,7 +3,7 @@ Transpose
 
 .. figure:: icons/transpose.png
 
-Maps data instances into features.
+Transposes a data table.
 
 Signals
 -------
@@ -12,15 +12,27 @@ Signals
 
 -  **Data**
 
-   Data set.
+   A data set.
 
 **Outputs**:
 
 -  **Data**
 
-   Transposed data set.
+   Transposed data set
 
 Description
 -----------
 
-A simple widget that maps data instances into features and vice versa.
+**Transpose** widget transposes data table.
+
+.. figure:: images/transpose-stamped.png
+
+
+Example
+-------
+
+This is a simple workflow showing how to use **Transpose**. Connect the widget to
+:doc:`File <file>` widget. The output of **Transpose** is a transposed data table
+with rows as columns and columns as rows. You can observe the result in a :doc:`Data Table <datatable>`.
+
+.. figure:: images/transpose-example.png

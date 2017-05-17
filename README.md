@@ -1,6 +1,8 @@
 Orange
 ======
 
+[![Join the chat at https://gitter.im/biolab/orange3](https://badges.gitter.im/biolab/orange3.svg)](https://gitter.im/biolab/orange3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
 [![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
 
@@ -23,15 +25,16 @@ This version of Orange requires Python 3.4 or newer. To build it and install
 it in a development environment, run:
 
     # Install some build requirements via your system's package manager
-    sudo apt-get install virtualenv git python3-dev g++ gfortran \
-                         libblas-dev liblapack-dev libatlas-base-dev
+    sudo apt-get install virtualenv git build-essential
 
     # Also install Qt dependencies for the GUI
     sudo apt-get install python3-pyqt4
+    # or if python version is >= 3.5
+    #  pip install pyqt5 
 
-    # Create a separate Python environment for Orange and its dependencies,
-    # and make it the active one
+    # Create a separate Python environment for Orange and its dependencies ...
     virtualenv --python=python3 --system-site-packages orange3venv
+    # ... and make it the active one
     source orange3venv/bin/activate
 
     # Clone the repository and move into it
@@ -39,8 +42,6 @@ it in a development environment, run:
     cd orange3
 
     # Install the minimum required dependencies first
-    pip install numpy
-    pip install scipy
     pip install -r requirements-core.txt  # For Orange Python library
     pip install -r requirements-gui.txt   # For Orange GUI
 
@@ -91,10 +92,28 @@ installed, run:
 
 Append `--help` for a list of program options.
 
+If you're running Orange with PyQt5 or if you have multiple PyQt versions
+available, set the environmental variable `QT_API` to the PyQt version to use,
+e.g.:
 
-Windows dev setup
------------------
+    export QT_API=pyqt5
+    orange-canvas
 
-Windows + GCC:
 
-    python setup.py build_ext --inplace --compile=mingw32
+Compiling on Windows
+--------------------
+
+Get appropriate wheels for missing libraries. You will need [numpy+mkl] and [scipy].
+
+[numpy+mkl]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
+[scipy]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy
+
+Install them with
+
+    pip install some-wheel.whl
+
+Install [Visual Studio compiler]. Then go to Orange3 folder and run:
+
+[Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
+
+    python setup.py build_ext -i --compiler=msvc install

@@ -10,10 +10,15 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, Msg
 
+# A placeholder. This metric is handled specially in commit method.
+__Mahalanobis = distance.MahalanobisDistance()
+__Mahalanobis.fit = None
+
+
 METRICS = [
     distance.Euclidean,
     distance.Manhattan,
-    distance.Mahalanobis,
+    __Mahalanobis,
     distance.Cosine,
     distance.Jaccard,
     distance.SpearmanR,
@@ -33,7 +38,7 @@ class OWDistances(OWWidget):
 
     axis = settings.Setting(0)
     metric_idx = settings.Setting(0)
-    autocommit = settings.Setting(False)
+    autocommit = settings.Setting(True)
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -41,8 +46,8 @@ class OWDistances(OWWidget):
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No continuous features")
         dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
-        empty_data = Msg("Empty data (shape = {})")
-        too_few_observations = Msg("Too few observations for the number of dimensions")
+        empty_data = Msg("Empty data set")
+        mahalanobis_error = Msg("{}")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring discrete features")
@@ -127,21 +132,17 @@ class OWDistances(OWWidget):
             data = distance._preprocess(data)
 
         if not data.X.size:
-            self.Error.empty_data(data.X.shape)
+            self.Error.empty_data()
             return
-
-        if isinstance(metric, distance.MahalanobisDistance):
-            n, m = data.X.shape
-            if self.axis == 1:
-                n, m = m, n
-            if n <= m:
-                self.Error.too_few_observations()
-                return
 
         if isinstance(metric, distance.MahalanobisDistance):
             # Mahalanobis distance has to be trained before it can be used
             # to compute distances
-            metric.fit(data, axis=1 - self.axis)
+            try:
+                metric = distance.MahalanobisDistance(data, axis=1 - self.axis)
+            except (ValueError, MemoryError) as e:
+                self.Error.mahalanobis_error(e)
+                return
 
         return metric(data, data, 1 - self.axis, impute=True)
 

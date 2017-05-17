@@ -34,6 +34,8 @@ _Signal = namedtuple(
 
 is_enabled = attrgetter("enabled")
 
+MAX_CONCURRENT = 1
+
 
 class SignalManager(QObject):
     """
@@ -467,9 +469,12 @@ class SignalManager(QObject):
             self.__reschedule = True
             return
 
-        log.info("'UpdateRequest' event, queued signals: %i",
-                 len(self._input_queue))
-        if self._input_queue:
+        nbusy = len(self.blocking_nodes())
+        log.info("'UpdateRequest' event, queued signals: %i, nbusy: %i "
+                 "(MAX_CONCURRENT: %i)",
+                 len(self._input_queue), nbusy, MAX_CONCURRENT)
+
+        if self._input_queue and nbusy < MAX_CONCURRENT:
             self.process_queued()
 
         if self.__reschedule and self.__state == SignalManager.Running:
@@ -477,7 +482,8 @@ class SignalManager(QObject):
             log.debug("Rescheduling signal update")
             self.__update_timer.start()
 
-        if self.node_update_front():
+        nbusy = len(self.blocking_nodes())
+        if self.node_update_front() and nbusy < MAX_CONCURRENT:
             log.debug("More nodes are eligible for an update. "
                       "Scheduling another update.")
             self._update()

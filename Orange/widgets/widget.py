@@ -7,8 +7,7 @@ from AnyQt.QtWidgets import (
     QShortcut, QSplitter, QSplitterHandle, QPushButton
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
-)
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
@@ -130,7 +129,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #: responsible for displaying messages within the widget in an
     #: appropriate manner.
     want_message_bar = True
-    #: Widget painted by `Save graph" button
+    #: Widget painted by `Save graph` button
     graph_name = None
     graph_writers = FileFormat.img_writers
 
@@ -171,6 +170,10 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #:
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
+
+    contextAboutToBeOpened = Signal(object)
+    contextOpened = Signal()
+    contextClosed = Signal()
 
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
@@ -339,10 +342,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         saveplot.save_plot(graph_obj, self.graph_writers)
 
     def copy_to_clipboard(self):
-        graph_obj = getdeepattr(self, self.graph_name, None)
-        if graph_obj is None:
-            return
-        ClipboardFormat.write_image(None, graph_obj)
+        if self.graph_name:
+            graph_obj = getdeepattr(self, self.graph_name, None)
+            if graph_obj is None:
+                return
+            ClipboardFormat.write_image(None, graph_obj)
 
     def __restoreWidgetGeometry(self):
 
@@ -383,6 +387,16 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                     y = max(0, space.height() / 2 - height / 2)
 
                     self.move(x, y)
+
+        # Mark as explicitly moved/resized if not already. QDialog would
+        # otherwise adjust position/size on subsequent hide/show
+        # (move/resize events coming from the window manager do not set
+        # these flags).
+        if not self.testAttribute(Qt.WA_Moved):
+            self.setAttribute(Qt.WA_Moved)
+        if not self.testAttribute(Qt.WA_Resized):
+            self.setAttribute(Qt.WA_Resized)
+
         return restored
 
     def __updateSavedGeometry(self):
@@ -432,7 +446,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         """
         QDialog.showEvent(self, event)
         if self.save_position and not self.__was_restored:
-            # Restore saved geometry on show
+            # Restore saved geometry on (first) show
             self.__restoreWidgetGeometry()
             self.__was_restored = True
         self.__quicktipOnce()
@@ -488,7 +502,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         `DomainContextHandler` expects `Orange.data.Table` or
         `Orange.data.Domain`.
         """
+        self.contextAboutToBeOpened.emit(a)
         self.settingsHandler.open_context(self, *a)
+        self.contextOpened.emit()
 
     def closeContext(self):
         """Save the current settings and close the current context.
@@ -498,6 +514,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         data.
         """
         self.settingsHandler.close_context(self)
+        self.contextClosed.emit()
 
     def retrieveSpecificSettings(self):
         """

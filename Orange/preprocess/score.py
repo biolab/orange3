@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from itertools import chain
 
@@ -8,7 +9,8 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
-
+from Orange.preprocess.util import _RefuseDataInConstructor
+from Orange.util import Reprable
 
 __all__ = ["Chi2",
            "ANOVA",
@@ -21,7 +23,7 @@ __all__ = ["Chi2",
            "FCBF"]
 
 
-class Scorer:
+class Scorer(_RefuseDataInConstructor, Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None
@@ -29,32 +31,51 @@ class Scorer:
         RemoveNaNClasses()
     ]
 
-    def __new__(cls, *args, **kwargs):
-        self = super().__new__(cls)
-        self.preprocessors = list(self.preprocessors)
-        if args:
-            self.__init__(**kwargs)
-            return self(*args)
-        else:
-            return self
+    @property
+    def friendly_name(self):
+        """Return type name with camel-case separated into words.
+        Derived classes can provide a better property or a class attribute.
+        """
+        return re.sub("([a-z])([A-Z])",
+                      lambda mo: mo.group(1) + " " + mo.group(2).lower(),
+                      type(self).__name__)
+
+    @staticmethod
+    def _friendly_vartype_name(vartype):
+        if vartype == DiscreteVariable:
+            return "categorical"
+        if vartype == ContinuousVariable:
+            return "numeric"
+        # Fallbacks
+        name = vartype.__name__
+        if name.endswith("Variable"):
+            return name.lower()[:-8]
+        return name
 
     def __call__(self, data, feature=None):
         if not data.domain.class_var:
-            raise ValueError("Data with class labels required.")
+            raise ValueError(
+                "{} requires data with a target variable."
+                .format(self.friendly_name))
         if not isinstance(data.domain.class_var, self.class_type):
-            raise ValueError("Scoring method %s requires a class variable of type %s." %
-                             (type(self).__name__, self.class_type.__name__))
+            raise ValueError(
+                "{} requires a {} target variable."
+                .format(self.friendly_name,
+                        self._friendly_vartype_name(self.class_type)))
 
         if feature is not None:
             f = data.domain[feature]
-            data = data.from_table(Domain([f], data.domain.class_vars), data)
+            data = data.transform(Domain([f], data.domain.class_vars))
 
         for pp in self.preprocessors:
             data = pp(data)
 
-        if any(not isinstance(a, self.feature_type)
-               for a in data.domain.attributes):
-            raise ValueError('Only %ss are supported' % self.feature_type)
+        for var in data.domain.attributes:
+            if not isinstance(var, self.feature_type):
+                raise ValueError(
+                    "{} cannot score {} variables."
+                    .format(self.friendly_name,
+                            self._friendly_vartype_name(type(var))))
 
         return self.score_data(data, feature)
 
@@ -307,6 +328,7 @@ class ReliefF(Scorer):
     feature_type = Variable
     class_type = DiscreteVariable
     supports_sparse_data = False
+    friendly_name = "ReliefF"
 
     def __init__(self, n_iterations=50, k_nearest=10):
         self.n_iterations = n_iterations
@@ -334,6 +356,7 @@ class RReliefF(Scorer):
     feature_type = Variable
     class_type = ContinuousVariable
     supports_sparse_data = False
+    friendly_name = "RReliefF"
 
     def __init__(self, n_iterations=50, k_nearest=50):
         self.n_iterations = n_iterations

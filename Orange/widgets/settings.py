@@ -32,6 +32,7 @@ so they can be used alter. It should be called before widget starts modifying
 import copy
 import itertools
 import os
+import logging
 import pickle
 import time
 import warnings
@@ -39,6 +40,8 @@ import warnings
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
 from Orange.widgets.utils import vartype
+
+log = logging.getLogger(__name__)
 
 __all__ = ["Setting", "SettingsHandler",
            "ContextSetting", "ContextHandler",
@@ -142,13 +145,14 @@ class SettingProvider:
         self._initialize_providers(instance, data)
 
     def _initialize_settings(self, instance, data):
+        if data is None:
+            data = {}
         for name, setting in self.settings.items():
-            if data and name in data:
-                setattr(instance, name, data[name])
-            elif isinstance(setting.default, _IMMUTABLES):
-                setattr(instance, name, setting.default)
+            value = data.get(name, setting.default)
+            if isinstance(value, _IMMUTABLES):
+                setattr(instance, name, value)
             else:
-                setattr(instance, name, copy.copy(setting.default))
+                setattr(instance, name, copy.copy(value))
 
     def _initialize_providers(self, instance, data):
         if not data:
@@ -396,15 +400,20 @@ class SettingsHandler:
         should overload the latter."""
         filename = self._get_settings_filename()
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-
-        settings_file = open(filename, "wb")
         try:
-            self.write_defaults_file(settings_file)
-        except (EOFError, IOError, pickle.PicklingError):
-            settings_file.close()
-            os.remove(filename)
-        else:
-            settings_file.close()
+            settings_file = open(filename, "wb")
+            try:
+                self.write_defaults_file(settings_file)
+            except (EOFError, IOError, pickle.PicklingError) as ex:
+                log.error("Could not write default settings for %s (%s).",
+                          self.widget_class, type(ex).__name__)
+                settings_file.close()
+                os.remove(filename)
+            else:
+                settings_file.close()
+        except PermissionError as ex:
+            log.error("Could not write default settings for %s (%s).",
+                      self.widget_class, type(ex).__name__)
 
     def write_defaults_file(self, settings_file):
         """Write defaults for this widget class to a file
@@ -967,7 +976,13 @@ class DomainContextHandler(ContextHandler):
                 setattr(instance, setting.selected, data[setting.selected])
 
             if isinstance(value, list):
-                excluded |= set(value)
+                try:
+                    excluded |= set(value)
+                except Exception:
+                    # Some values in the list were not hashable so they will
+                    # be included in the reservoir. Since no one uses
+                    # reservoirs anyway, pretend nothing happened.
+                    pass
             else:
                 if setting.not_attribute:
                     excluded.add(value)
@@ -981,9 +996,8 @@ class DomainContextHandler(ContextHandler):
             setattr(widget, self.reservoir, ll)
 
     def encode_setting(self, context, setting, value):
-        value = copy.copy(value)
         if isinstance(value, list):
-            return value
+            return copy.copy(value)
         elif isinstance(setting, ContextSetting):
             if isinstance(value, str):
                 if not setting.exclude_attributes and value in context.attributes:
@@ -992,7 +1006,7 @@ class DomainContextHandler(ContextHandler):
                     return value, context.metas[value]
             elif isinstance(value, Variable):
                 return value.name, 100 + vartype(value)
-        return value, -2
+        return copy.copy(value), -2
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
@@ -1144,7 +1158,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
 
         if self.match_values == self.MATCH_VALUES_ALL:
             def _encode(attrs):
-                return tuple((v.name, v.values if v.is_discrete else vartype(v))
+                return tuple((v.name, list(v.values) if v.is_discrete else vartype(v))
                              for v in attrs)
         else:
             def _encode(attrs):

@@ -114,7 +114,10 @@ spec = \
      ("logging/dockable", bool, True, "Allow log window to be docked"),
 
      ("help/open-in-external-browser", bool, False,
-      "Open help in an external browser")
+      "Open help in an external browser"),
+
+     ("error-reporting/machine-id", str, '',
+     "Report custom name instead of machine ID"),
      ]
 
 spec = [config_slot(*t) for t in spec]

@@ -4,25 +4,27 @@ into Qt. WebviewWidget provides a somewhat uniform interface (_WebViewBase)
 around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
+import os
+import time
+import threading
 import warnings
-from random import random
-from collections.abc import Mapping, Set, Sequence, Iterable
-from numbers import Integral, Real
+from collections.abc import Iterable, Mapping, Set, Sequence
 from itertools import count
-
+from numbers import Integral, Real
+from os.path import abspath, dirname, join
+from random import random
 from urllib.parse import urljoin
 from urllib.request import pathname2url
-from os.path import join, dirname, abspath
 
 import numpy as np
+import sip
 
-from AnyQt.QtCore import QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
+from Orange.util import inherit_docstrings, OrangeDeprecationWarning
+
+from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
     pyqtProperty, pyqtSlot, pyqtSignal
 from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QSizePolicy, QWidget, qApp
-
-from Orange.util import inherit_docstrings
-
 
 try:
     from AnyQt.QtWebKitWidgets import QWebView
@@ -40,6 +42,26 @@ except ImportError:
 
 _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')
+
+_ORANGE_DEBUG = os.environ.get('ORANGE_DEBUG')
+
+
+class _QWidgetJavaScriptWrapper(QObject):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.__parent = parent
+
+    @pyqtSlot()
+    def load_really_finished(self):
+        self.__parent._load_really_finished()
+
+    @pyqtSlot()
+    def hideWindow(self):
+        w = self.__parent
+        while isinstance(w, QWidget):
+            if w.windowFlags() & (Qt.Window | Qt.Dialog):
+                return w.hide()
+            w = w.parent() if callable(w.parent) else w.parent
 
 
 if HAVE_WEBENGINE:
@@ -65,13 +87,13 @@ if HAVE_WEBENGINE:
         _EXPOSED_OBJ_PREFIX = '__ORANGE_'
 
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
+            debug = debug or _ORANGE_DEBUG
             if debug:
-                import os
                 port = os.environ.setdefault('QTWEBENGINE_REMOTE_DEBUGGING', '12088')
                 warnings.warn(
                     'To debug QWebEngineView, set environment variable '
                     'QTWEBENGINE_REMOTE_DEBUGGING={port} and then visit '
-                    'http://localhost:{port}/ in a Chromium-based browser. '
+                    'http://127.0.0.1:{port}/ in a Chromium-based browser. '
                     'See https://doc.qt.io/qt-5/qtwebengine-debugging.html '
                     'This has also been done for you.'.format(port=port))
             super().__init__(parent,
@@ -92,7 +114,7 @@ if HAVE_WEBENGINE:
                 with open(_WEBENGINE_INIT_WEBCHANNEL, encoding="utf-8") as f:
                     init_webchannel_src = f.read()
                 self._onloadJS(source + init_webchannel_src %
-                                   dict(exposeObject_prefix=self._EXPOSED_OBJ_PREFIX),
+                               dict(exposeObject_prefix=self._EXPOSED_OBJ_PREFIX),
                                name='webchannel_init',
                                injection_point=QWebEngineScript.DocumentCreation)
             else:
@@ -106,8 +128,15 @@ if HAVE_WEBENGINE:
 
             channel = QWebChannel(self)
             if bridge is not None:
+                if isinstance(bridge, QWidget):
+                    warnings.warn(
+                        "Don't expose QWidgets in WebView. Construct minimal "
+                        "QObjects instead.", OrangeDeprecationWarning,
+                        stacklevel=2)
                 channel.registerObject("pybridge", bridge)
-            channel.registerObject('__self', self)  # Subclasses rely in this
+
+            channel.registerObject('__bridge', _QWidgetJavaScriptWrapper(self))
+
             self.page().setWebChannel(channel)
 
         def _onloadJS(self, code, name='', injection_point=QWebEngineScript.DocumentReady):
@@ -117,6 +146,7 @@ if HAVE_WEBENGINE:
             script.setInjectionPoint(injection_point)
             script.setWorldId(script.MainWorld)
             script.setRunsOnSubFrames(False)
+            self.page().scripts().insert(script)
             self.loadStarted.connect(
                 lambda: self.page().scripts().insert(script))
 
@@ -168,7 +198,14 @@ if HAVE_WEBKIT:
 
             self.bridge = bridge
             self.frame = None
+            debug = debug or _ORANGE_DEBUG
             self.debug = debug
+
+            if isinstance(bridge, QWidget):
+                warnings.warn(
+                    "Don't expose QWidgets in WebView. Construct minimal "
+                    "QObjects instead.", OrangeDeprecationWarning,
+                    stacklevel=2)
 
             def _onload(_ok):
                 if _ok:
@@ -204,6 +241,9 @@ if HAVE_WEBKIT:
 
 def _to_primitive_types(d):
     # pylint: disable=too-many-return-statements
+    if isinstance(d, QWidget):
+        warnings.warn("Don't expose QWidgets in WebView. Construct minimal "
+                      "QObjects instead.", OrangeDeprecationWarning, stacklevel=3)
     if isinstance(d, Integral):
         return int(d)
     if isinstance(d, Real):
@@ -307,7 +347,6 @@ class _WebViewBase:
         exposeObject() method are indeed exposed in JS, and the code `code`
         has finished evaluating.
         """
-
         def _later():
             if not self.__is_init and self.__js_queue:
                 return QTimer.singleShot(1, _later)
@@ -317,6 +356,10 @@ class _WebViewBase:
                 self.__js_queue.clear()
                 self._evalJS(code)
 
+        # WebView returns the result of the last evaluated expression.
+        # This result may be too complex an object to safely receive on this
+        # end, so instead, just make it return 0.
+        code += ';0;'
         self.__js_queue.append(code)
         QTimer.singleShot(1, _later)
 
@@ -359,7 +402,7 @@ if HAVE_WEBKIT:
             self._obj = dict(obj=obj)
 
         @pyqtProperty('QVariantMap')
-        def pop_object(self, constant=True):
+        def pop_object(self):
             return self._obj
 
     @inherit_docstrings
@@ -369,8 +412,12 @@ if HAVE_WEBKIT:
             _WebViewBase.__init__(self)
 
             def load_finished():
-                self.frame.addToJavaScriptWindowObject('__self', self)
-                self._evalJS('setTimeout(function(){ __self._load_really_finished(); }, 100);')
+                if not sip.isdeleted(self):
+                    self.frame.addToJavaScriptWindowObject(
+                        '__bridge', _QWidgetJavaScriptWrapper(self))
+                    self._evalJS('setTimeout(function(){'
+                                 '__bridge.load_really_finished(); }, 100);')
+
             self.loadFinished.connect(load_finished)
 
         @pyqtSlot()
@@ -399,6 +446,51 @@ if HAVE_WEBKIT:
 
 
 elif HAVE_WEBENGINE:
+    class IdStore:
+        """Generates and stores unique ids.
+
+        Used in WebviewWidget._evalJS below to match scheduled js executions
+        and returned results. WebEngine operations are async, so locking is
+        used to guard against problems that could occur if multiple executions
+        ended at exactly the same time.
+        """
+
+        def __init__(self):
+            self.id = 0
+            self.lock = threading.Lock()
+            self.ids = set()
+
+        def create(self):
+            with self.lock:
+                self.id += 1
+                return self.id
+
+        def store(self, id):
+            with self.lock:
+                self.ids.add(id)
+
+        def __contains__(self, id):
+            return id in self.ids
+
+        def remove(self, id):
+            with self.lock:
+                self.ids.remove(id)
+
+
+    def wait(until: callable, timeout=5000):
+        """Process events until condition is satisfied
+
+        Parameters
+        ----------
+        until: callable that returns True when condition is satisfied
+        timeout: number of milliseconds to wait until TimeoutError is raised
+        """
+        started = time.clock()
+        while not until():
+            qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            if (time.clock() - started) * 1000 > timeout:
+                raise TimeoutError()
+
 
     class _JSObjectChannel(QObject):
         """ This class hopefully prevent options data from being
@@ -416,11 +508,15 @@ elif HAVE_WEBENGINE:
             self._objects = {}
 
         def send_object(self, name, obj):
+            if isinstance(obj, QObject):
+                raise ValueError(
+                    "QWebChannel doesn't transmit QObject instances. If you "
+                    "need a QObject available in JavaScript, pass it as a "
+                    "bridge in WebviewWidget constructor.")
             id = next(self._id_gen)
             value = self._objects[id] = dict(id=id, name=name, obj=obj)
             # Wait till JS is connected to receive objects
-            while not self.receivers(self.objectChanged):
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=lambda: self.receivers(self.objectChanged))
             self.objectChanged.emit(value)
 
         @pyqtSlot(int)
@@ -437,7 +533,6 @@ elif HAVE_WEBENGINE:
     @inherit_docstrings
     class WebviewWidget(_WebViewBase, WebEngineView):
         _html = _NOTSET
-        _result = _NOTSET
 
         def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
             WebEngineView.__init__(self, parent, bridge, debug=debug, **kwargs)
@@ -452,27 +547,41 @@ elif HAVE_WEBENGINE:
             self._jsobject_channel = jsobj = _JSObjectChannel(self)
             self.page().webChannel().registerObject(
                 '__js_object_channel', jsobj)
+            self._results = IdStore()
 
         def _evalJS(self, code):
-            while not self._jsobject_channel.is_all_exposed():
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-            self.runJavaScript(code,
-                               lambda result: setattr(self, '_result', result))
-            while self._result is _NOTSET:
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-            result, self._result = self._result, _NOTSET
-            return result
+            wait(until=self._jsobject_channel.is_all_exposed)
+            if sip.isdeleted(self):
+                return
+            result = self._results.create()
+            self.runJavaScript(code, lambda x: self._results.store(result))
+            wait(until=lambda: result in self._results)
+            self._results.remove(result)
 
         def onloadJS(self, code):
             self._onloadJS(code, injection_point=QWebEngineScript.Deferred)
 
         def html(self):
             self.page().toHtml(lambda html: setattr(self, '_html', html))
-            while self._html is _NOTSET:
-                qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+            wait(until=lambda: self._html is not _NOTSET or sip.isdeleted(self))
             html, self._html = self._html, _NOTSET
             return html
 
         def exposeObject(self, name, obj):
             obj = _to_primitive_types(obj)
             self._jsobject_channel.send_object(name, obj)
+
+        def setHtml(self, html, base_url=''):
+            # TODO: remove once anaconda will provide PyQt without this bug.
+            #
+            # At least on some installations of PyQt 5.6.0 with anaconda
+            # WebViewWidget grabs focus on setHTML which can be quite annoying.
+            # For example, if you have a line edit as filter and show results
+            # in WebWiew, then WebView grabs focus after every typed character.
+            #
+            # http://stackoverflow.com/questions/36609489
+            # https://bugreports.qt.io/browse/QTBUG-52999
+            initial_state = self.isEnabled()
+            self.setEnabled(False)
+            super().setHtml(html, base_url)
+            self.setEnabled(initial_state)

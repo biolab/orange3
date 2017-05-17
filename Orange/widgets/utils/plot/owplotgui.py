@@ -26,7 +26,10 @@ This module contains functions and classes for creating GUI elements commonly us
 '''
 
 import os
+
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
+from Orange.widgets.utils.itemmodels import DomainModel
 
 from .owconstants import *
 
@@ -256,6 +259,15 @@ class OWPlotGUI:
     '''
     def __init__(self, plot):
         self._plot = plot
+        self.color_model = DomainModel(placeholder="(Same color)",
+                                       valid_types=DomainModel.PRIMITIVE)
+        self.shape_model = DomainModel(placeholder="(Same shape)",
+                                       valid_types=DiscreteVariable)
+        self.size_model = DomainModel(placeholder="(Same size)",
+                                      valid_types=ContinuousVariable)
+        self.label_model = DomainModel(placeholder="(No labels)")
+        self.points_models = [self.color_model, self.shape_model,
+                              self.size_model, self.label_model]
 
     Spacing = 0
 
@@ -264,6 +276,10 @@ class OWPlotGUI:
     ShowGridLines = 4
     PointSize = 5
     AlphaValue = 6
+    Color = 7
+    Shape = 8
+    Size = 9
+    Label = 10
 
     Zoom = 11
     Pan = 12
@@ -329,6 +345,7 @@ class OWPlotGUI:
         AntialiasLines : ('Antialias lines', 'antialias_lines', 'update_antialiasing'),
         AutoAdjustPerformance : ('Disable effects for large data sets', 'auto_adjust_performance', 'update_performance')
     }
+
     '''
         The list of built-in buttons. It is a map of
         id : (name, attr_name, attr_value, callback, icon_name)
@@ -392,15 +409,45 @@ class OWPlotGUI:
         '''
         self._slider(widget, 'alpha_value', "Opacity: ", 0, 255, 10, 'update_alpha_value')
 
+    def _combo(self, widget, value, label, cb_name, items=(), model=None):
+        gui.comboBox(widget, self._plot, value, label=label, items=items,
+                     model=model, callback=self._get_callback(cb_name),
+                     labelWidth=50, orientation=Qt.Horizontal, valueType=str,
+                     sendSelectedValue=True, contentsLength=12)
+
+    def color_value_combo(self, widget):
+        """Creates a combo box that controls point color"""
+        self._combo(widget, "attr_color", "Color: ", "update_colors",
+                    model=self.color_model)
+
+    def shape_value_combo(self, widget):
+        """Creates a combo box that controls point shape"""
+        self._combo(widget, "attr_shape", "Shape: ", "update_shapes",
+                    model=self.shape_model)
+
+    def size_value_combo(self, widget):
+        """Creates a combo box that controls point size"""
+        self._combo(widget, "attr_size", "Size: ", "update_sizes",
+                    model=self.size_model)
+
+    def label_value_combo(self, widget):
+        """Creates a combo box that controls point label"""
+        self._combo(widget, "attr_label", "Label: ", "update_labels",
+                    model=self.label_model)
+
     def point_properties_box(self, widget, box=None):
         '''
             Creates a box with controls for common point properties.
             Currently, these properties are point size and transparency.
         '''
         return self.create_box([
+            self.Color,
+            self.Shape,
+            self.Size,
+            self.Label,
             self.PointSize,
             self.AlphaValue
-            ], widget, box, "Point properties")
+            ], widget, box, "Points")
 
     def plot_settings_box(self, widget, box=None):
         '''
@@ -413,11 +460,15 @@ class OWPlotGUI:
             ], widget, box, "Plot settings")
 
     _functions = {
-        ShowLegend : show_legend_check_box,
-        ShowFilledSymbols : filled_symbols_check_box,
-        ShowGridLines : grid_lines_check_box,
-        PointSize : point_size_slider,
-        AlphaValue : alpha_value_slider,
+        ShowLegend: show_legend_check_box,
+        ShowFilledSymbols: filled_symbols_check_box,
+        ShowGridLines: grid_lines_check_box,
+        PointSize: point_size_slider,
+        AlphaValue: alpha_value_slider,
+        Color: color_value_combo,
+        Shape: shape_value_combo,
+        Size: size_value_combo,
+        Label: label_value_combo,
         }
 
     def add_widget(self, id, widget):

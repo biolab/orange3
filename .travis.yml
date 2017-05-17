@@ -15,8 +15,13 @@ matrix:
           env: BUILD_DOCS=true
           python: '3.4'
           script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-    allow_failures:
-        - *pylint
+        - &pyqt5
+          python: '3.5'
+          env:
+            - PYQT5=true
+            - UPLOAD_COVERAGE=true
+          dist: trusty
+          addons: { apt: { packages: [] } }
     fast_finish: true
 
 cache:
@@ -34,10 +39,8 @@ addons:
         packages:
             - libblas-dev
             - liblapack-dev
-            - postgresql-server-dev-9.1
             - libqt4-dev
             - gfortran
-            - xvfb
 
 before_install:
     - set -e  # fail on any error

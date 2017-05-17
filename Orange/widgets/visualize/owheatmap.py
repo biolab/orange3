@@ -19,8 +19,10 @@ from AnyQt.QtGui import (
     QTransform, QIcon, QBrush,
     QStandardItemModel, QStandardItem,
 )
-from AnyQt.QtCore import Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import (
+    Qt, QSize, QPointF, QSizeF, QRectF, QObject, QEvent,
+    pyqtSignal as Signal,
+)
 import pyqtgraph as pg
 
 from Orange.data import Domain, Table, DiscreteVariable, StringVariable
@@ -32,7 +34,6 @@ from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.io import FileFormat
 
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
@@ -57,7 +58,7 @@ def split_domain(domain, split_label):
         domains.append((value, group_domain))
 
     if domains:
-        assert(all(len(dom) == len(domains[0][1]) for _, dom in domains))
+        assert all(len(dom) == len(domains[0][1]) for _, dom in domains)
 
     return sorted(domains, key=lambda t: attr_values.index(t[0]))
 
@@ -67,7 +68,7 @@ def vstack_by_subdomain(data, sub_domains):
     newtable = Table(domain)
 
     for sub_dom in sub_domains:
-        sub_data = data.from_table(sub_dom, data)
+        sub_data = data.transform(sub_dom)
         # TODO: improve O(N ** 2)
         newtable.extend(sub_data)
 
@@ -334,7 +335,7 @@ ColumnPart = namedtuple(
      "domain",   #: list of Variable
      "cluster",  #: hierarchical.Tree option
      "cluster_ordered",  #: hierarchical.Tree option
-     ]
+    ]
 )
 
 
@@ -368,7 +369,7 @@ Parts = namedtuple(
     ["rows",     #: A list of RowPart descriptors
      "columns",  #: A list of ColumnPart descriptors
      "span",     #: (min, max) global data range
-     ]
+    ]
 )
 
 Parts.levels = property(lambda self: self.span)
@@ -394,25 +395,7 @@ class OWHeatMap(widget.OWWidget):
 
     settingsHandler = settings.DomainContextHandler()
 
-    NoSorting, Clustering, OrderedClustering, SortBarycenter = 0, 1, 2, 3
     NoPosition, PositionTop, PositionBottom = 0, 1, 2
-
-    RowOrdering = [
-        (NoSorting, "No sorting"),
-        (SortBarycenter, "Sort by mass center"),
-        (Clustering, "Clustering"),
-        (OrderedClustering, "Clustering with leaf ordering")
-    ]
-    ColumnOrdering = [
-        (NoSorting, "No sorting"),
-        (Clustering, "Clustering"),
-        (OrderedClustering, "Clustering with leaf ordering")
-    ]
-    # Disable clustering for inputs bigger than this
-    if hierarchical._HAS_NN_CHAIN:
-        _MaxClustering = 25000
-    else:
-        _MaxClustering = 3000
 
     # Disable cluster leaf ordering for inputs bigger than this
     _MaxOrderedClustering = 1000
@@ -420,32 +403,6 @@ class OWHeatMap(widget.OWWidget):
     gamma = settings.Setting(0)
     threshold_low = settings.Setting(0.0)
     threshold_high = settings.Setting(1.0)
-    # Type of sorting to apply on rows
-    sort_rows_idx = settings.Setting(0)
-    # Type of sorting to apply on columns
-    sort_columns_idx = settings.Setting(0)
-
-    @property
-    def sort_rows(self):
-        """The current selected row ordering method."""
-        return self.RowOrdering[self.sort_rows_idx][0]
-
-    @sort_rows.setter
-    def sort_rows(self, value):
-        i = [i for i, (s, _) in enumerate(self.RowOrdering)
-             if s == value]
-        self.sort_rows_idx = i.pop() if i else 0
-
-    @property
-    def sort_columns(self):
-        """The current selected column ordering method."""
-        return self.ColumnOrdering[self.sort_columns_idx][0]
-
-    @sort_columns.setter
-    def sort_columns(self, value):
-        i = [i for i, (s, _) in enumerate(self.ColumnOrdering)
-             if s == value]
-        self.sort_columns_idx = i.pop() if i else 0
 
     merge_kmeans = settings.Setting(False)
     merge_kmeans_k = settings.Setting(50)
@@ -459,6 +416,9 @@ class OWHeatMap(widget.OWWidget):
     # Stored color palette settings
     color_settings = settings.Setting(None)
     user_palettes = settings.Setting([])
+
+    col_clustering = settings.Setting(False)
+    row_clustering = settings.Setting(False)
 
     palette_index = settings.Setting(_default_palette_index)
     column_label_pos = settings.Setting(PositionTop)
@@ -476,6 +436,10 @@ class OWHeatMap(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         no_continuous = Msg("No continuous feature columns")
+        not_enough_features = Msg("Not enough features for column clustering")
+        not_enough_instances = Msg("Not enough instances for clustering")
+        not_enough_instances_k_means = Msg(
+            "Not enough instances for k-means merging")
         not_enough_memory = Msg("Not enough memory to show this data")
 
     def __init__(self):
@@ -533,11 +497,11 @@ class OWHeatMap(widget.OWWidget):
         lowslider = gui.hSlider(
             colorbox, self, "threshold_low", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
-            createLabel=False, callback=self.update_color_schema)
+            createLabel=False, callback=self.update_lowslider)
         highslider = gui.hSlider(
             colorbox, self, "threshold_high", minValue=0.0, maxValue=1.0,
             step=0.05, ticks=True, intOnly=False,
-            createLabel=False, callback=self.update_color_schema)
+            createLabel=False, callback=self.update_highslider)
         gammaslider = gui.hSlider(
             colorbox, self, "gamma", minValue=0.0, maxValue=20.0,
             step=1.0, ticks=True, intOnly=False,
@@ -558,18 +522,13 @@ class OWHeatMap(widget.OWWidget):
                  label="Clusters:", keyboardTracking=False,
                  callbackOnReturn=True, callback=self.update_merge)
 
-        sortbox = gui.vBox(self.controlArea, "Sorting")
-        # For columns
-        self.colsortcb = gui.comboBox(
-            sortbox, self, "sort_columns_idx",
-            items=[name for _, name in self.ColumnOrdering],
-            label='Columns', callback=self.update_sorting_attributes)
-
-        # For rows
-        self.rowsortcb = gui.comboBox(
-            sortbox, self, "sort_rows_idx",
-            items=[name for _, name in self.RowOrdering],
-            label='Rows', callback=self.update_sorting_examples)
+        cluster_box = gui.vBox(self.controlArea, "Cluster")
+        self.col_check = gui.checkBox(
+            cluster_box, self, "col_clustering", "Columns",
+            callback=self.update_clustering_examples)
+        self.row_check = gui.checkBox(
+            cluster_box, self, "row_clustering", "Rows",
+            callback=self.update_clustering_examples)
 
         box = gui.vBox(self.controlArea, 'Annotation && Legends')
 
@@ -598,7 +557,12 @@ class OWHeatMap(widget.OWWidget):
                      callback=self.__aspect_mode_changed)
 
         gui.rubber(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection", "Send Automatically")
+        gui.auto_commit(self.controlArea,
+                        self,
+                        "auto_commit",
+                        "Send Selection",
+                        "Send Automatically"
+                       )
 
         # Scene with heatmap
         self.heatmap_scene = self.scene = HeatmapScene(parent=self)
@@ -692,6 +656,9 @@ class OWHeatMap(widget.OWWidget):
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
 
+        if data is not None and not len(data):
+            data = None
+
         if data is not None and sp.issparse(data.X):
             try:
                 data = data.copy()
@@ -703,15 +670,21 @@ class OWHeatMap(widget.OWWidget):
                 self.Information.sparse_densified()
 
         input_data = data
+
+        # Data contains no attributes or meta attributes only
+        if data is not None and len(data.domain.attributes) == 0:
+            self.Error.no_continuous()
+            input_data = data = None
+
+        # Data contains some discrete attributes which must be filtered
         if data is not None and \
                 any(var.is_discrete for var in data.domain.attributes):
             ndisc = sum(var.is_discrete for var in data.domain.attributes)
-            data = data.from_table(
+            data = data.transform(
                 Domain([var for var in data.domain.attributes
                         if var.is_continuous],
                        data.domain.class_vars,
-                       data.domain.metas),
-                data)
+                       data.domain.metas))
             if not data.domain.attributes:
                 self.Error.no_continuous()
                 input_data = data = None
@@ -734,16 +707,24 @@ class OWHeatMap(widget.OWWidget):
             self.openContext(self.data)
             if self.annotation_index >= len(self.annotation_vars):
                 self.annotation_index = 0
-
         self.update_heatmaps()
 
     def update_heatmaps(self):
         if self.data is not None:
             self.clear_scene()
-            self.construct_heatmaps(self.data)
-            self.construct_heatmaps_scene(
-                self.heatmapparts, self.effective_data)
-            self.selected_rows = []
+            self.clear_messages()
+            if self.col_clustering and len(self.data.domain.attributes) < 2:
+                self.Error.not_enough_features()
+            elif (self.col_clustering or self.row_clustering) and \
+                    len(self.data) < 2:
+                self.Error.not_enough_instances()
+            elif self.merge_kmeans and len(self.data) < 3:
+                self.Error.not_enough_instances_k_means()
+            else:
+                self.construct_heatmaps(self.data)
+                self.construct_heatmaps_scene(
+                    self.heatmapparts, self.effective_data)
+                self.selected_rows = []
         else:
             self.clear()
         self.commit()
@@ -789,7 +770,7 @@ class OWHeatMap(widget.OWWidget):
         minv, maxv = np.nanmin(data.X), np.nanmax(data.X)
         return Parts(row_groups, col_groups, span=(minv, maxv))
 
-    def cluster_rows(self, data, parts, ordered=False):
+    def cluster_rows(self, data, parts):
         row_groups = []
         for row in parts.rows:
             if row.cluster is not None:
@@ -802,7 +783,7 @@ class OWHeatMap(widget.OWWidget):
                 cluster_ord = None
 
             if not row.is_empty:
-                need_dist = cluster is None or (ordered and cluster_ord is None)
+                need_dist = cluster is None or cluster_ord is None
                 if need_dist:
                     subset = data[row.indices]
                     subset = Orange.distance._preprocess(subset)
@@ -811,7 +792,7 @@ class OWHeatMap(widget.OWWidget):
                 if cluster is None:
                     cluster = hierarchical.dist_matrix_clustering(matrix)
 
-                if ordered and cluster_ord is None:
+                if cluster_ord is None:
                     with self.progressBar():
                         cluster_ord = hierarchical.optimal_leaf_ordering(
                             cluster, matrix,
@@ -821,7 +802,7 @@ class OWHeatMap(widget.OWWidget):
 
         return parts._replace(columns=parts.columns, rows=row_groups)
 
-    def cluster_columns(self, data, parts, ordered=False):
+    def cluster_columns(self, data, parts):
         if len(parts.columns) > 1:
             data = vstack_by_subdomain(data, [col.domain for col in parts.columns])
         assert all(var.is_continuous for var in data.domain.attributes)
@@ -835,7 +816,7 @@ class OWHeatMap(widget.OWWidget):
             cluster_ord = col0.cluster_ord
         else:
             cluster_ord = None
-        need_dist = cluster is None or (ordered and cluster_ord is None)
+        need_dist = cluster is None or cluster_ord is None
 
         if need_dist:
             data = Orange.distance._preprocess(data)
@@ -843,14 +824,14 @@ class OWHeatMap(widget.OWWidget):
 
         if cluster is None:
             cluster = hierarchical.dist_matrix_clustering(matrix)
-        if ordered and cluster_ord is None:
+        if cluster_ord is None:
             with self.progressBar():
                 cluster_ord = hierarchical.optimal_leaf_ordering(
                     cluster, matrix, progress_callback=self.progressBarSet)
 
         col_groups = [col._replace(cluster=cluster, cluster_ordered=cluster_ord)
                       for col in parts.columns]
-        return parts._replace(columns=col_groups,  rows=parts.rows)
+        return parts._replace(columns=col_groups, rows=parts.rows)
 
     def construct_heatmaps(self, data, split_label=None):
         if split_label is not None:
@@ -867,16 +848,15 @@ class OWHeatMap(widget.OWWidget):
         group_label = split_label
         if self.merge_kmeans:
             if self.kmeans_model is None:
-                effective_data = self.input_data.from_table(
+                effective_data = self.input_data.transform(
                     Orange.data.Domain(
                         [var for var in self.input_data.domain.attributes
                          if var.is_continuous],
                         self.input_data.domain.class_vars,
-                        self.input_data.domain.metas),
-                    self.input_data
-                )
+                        self.input_data.domain.metas))
                 nclust = min(self.merge_kmeans_k, len(effective_data) - 1)
                 self.kmeans_model = kmeans_compress(effective_data, k=nclust)
+                effective_data.domain = self.kmeans_model.pre_domain
                 self.merge_indices = [np.flatnonzero(self.kmeans_model.labels_ == ind)
                                       for ind in range(nclust)]
                 effective_data = Orange.data.Table(
@@ -908,23 +888,14 @@ class OWHeatMap(widget.OWWidget):
             parts = parts._replace(
                 columns=self.__columns_cache[group_label].columns)
 
-        if self.sort_rows == OWHeatMap.SortBarycenter:
-            rows = [row._replace(
-                        sortindices=np.argsort(
-                            barycenter(effective_data.X[row.indices], axis=1)))
-                    for row in parts.rows]
-            parts = parts._replace(rows=rows)
-        elif self.sort_rows != OWHeatMap.NoSorting:
-            assert len(effective_data) <= OWHeatMap._MaxClustering
-            parts = self.cluster_rows(
-                effective_data, parts,
-                ordered=self.sort_rows == OWHeatMap.OrderedClustering)
+        if self.row_clustering:
+            assert len(effective_data) <= OWHeatMap._MaxOrderedClustering
+            parts = self.cluster_rows(effective_data, parts)
 
-        if self.sort_columns != OWHeatMap.NoSorting:
-            assert len(effective_data.domain.attributes) <= OWHeatMap._MaxClustering
-            parts = self.cluster_columns(
-                effective_data, parts,
-                ordered=self.sort_columns == OWHeatMap.OrderedClustering)
+        if self.col_clustering:
+            assert len(effective_data.domain.attributes) <= \
+                   OWHeatMap._MaxOrderedClustering
+            parts = self.cluster_columns(effective_data, parts)
 
         # Cache the updated parts
         self.__rows_cache[rows_cache_key] = parts
@@ -934,34 +905,14 @@ class OWHeatMap(widget.OWWidget):
 
     def construct_heatmaps_scene(self, parts, data):
         def select_row(item):
-            if self.sort_rows == OWHeatMap.NoSorting:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=None)
-            elif self.sort_rows == OWHeatMap.SortBarycenter:
-                indices = item.indices
-                if isinstance(item.indices, slice):
-                    indices = np.arange(indices.start, indices.stop)
-                assert item.sortindices is not None
-                indices = indices[item.sortindices]
-                return namespace(title=item.title, indices=indices,
-                                 cluster=None)
-            elif self.sort_rows == OWHeatMap.Clustering:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=item.cluster)
-            elif self.sort_rows == OWHeatMap.OrderedClustering:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=item.cluster_ord)
+            return namespace(
+                title=item.title, indices=item.indices,
+                cluster=item.cluster_ord if self.row_clustering else None)
 
         def select_col(item):
-            if self.sort_columns == OWHeatMap.NoSorting:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=None, domain=item.domain)
-            elif self.sort_columns == OWHeatMap.Clustering:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=item.cluster, domain=item.domain)
-            elif self.sort_columns == OWHeatMap.OrderedClustering:
-                return namespace(title=item.title, indices=item.indices,
-                                 cluster=item.cluster_ord, domain=item.domain)
+            return namespace(
+                title=item.title, indices=item.indices, domain=item.domain,
+                cluster=item.cluster_ord if self.col_clustering else None)
 
         rows = [select_row(rowitem) for rowitem in parts.rows]
         cols = [select_col(colitem) for colitem in parts.columns]
@@ -1026,7 +977,7 @@ class OWHeatMap(widget.OWWidget):
                     QSizePolicy.Expanding, QSizePolicy.Ignored)
                 dendrogram.itemClicked.connect(
                     lambda item, partindex=i:
-                        self.__select_by_cluster(item, partindex)
+                    self.__select_by_cluster(item, partindex)
                 )
 
                 grid.addItem(dendrogram, Row0 + i * 2 + 1, DendrogramColumn)
@@ -1291,35 +1242,21 @@ class OWHeatMap(widget.OWWidget):
         else:
             N = M = 0
 
-        rc_enabled = N <= OWHeatMap._MaxClustering
         rco_enabled = N <= OWHeatMap._MaxOrderedClustering
-
-        cc_enabled = M <= OWHeatMap._MaxClustering
         cco_enabled = M <= OWHeatMap._MaxOrderedClustering
-        sort_rows, sort_cols = self.sort_rows, self.sort_columns
 
         row_clust_msg = ""
         col_clust_msg = ""
 
-        if not rco_enabled and sort_rows == OWHeatMap.OrderedClustering:
-            sort_rows = OWHeatMap.Clustering
-            row_clust_msg = "Row cluster ordering was disabled due to the " \
+        if not rco_enabled and self.row_clustering:
+            self.row_clustering = False
+            row_clust_msg = "Row clustering was disabled due to the " \
                             "input matrix being to big"
 
-        if not rc_enabled and sort_rows == OWHeatMap.Clustering:
-            sort_rows = OWHeatMap.SortBarycenter
-            row_clust_msg = "Row clustering was was disabled due to the " \
-                            "input matrix being to big"
-
-        if not cco_enabled and sort_cols == OWHeatMap.OrderedClustering:
-            sort_cols = OWHeatMap.Clustering
-            col_clust_msg = "Column cluster ordering was disabled due to " \
+        if not cco_enabled and self.col_clustering:
+            self.col_clustering = False
+            col_clust_msg = "Column clustering was disabled due to " \
                             "the input matrix being to big"
-
-        if not cc_enabled and sort_cols == OWHeatMap.Clustering:
-            sort_cols = OWHeatMap.NoSorting
-            col_clust_msg = "Column clustering was disabled due to the " \
-                            "input matrix being to big"
 
         self.Information.row_clust.clear()
         self.Information.col_clust.clear()
@@ -1328,25 +1265,9 @@ class OWHeatMap(widget.OWWidget):
         if col_clust_msg:
             self.Information.col_clust(col_clust_msg)
 
-        self.sort_rows = sort_rows
-        self.sort_columns = sort_cols
-
-        # Disable/enable the combobox items for the clustering methods
-        for i in range(self.rowsortcb.count()):
-            item = self.rowsortcb.model().item(i)
-            sorting = self.RowOrdering[i][0]
-            if sorting == OWHeatMap.Clustering:
-                enable(item, rc_enabled)
-            if sorting == OWHeatMap.OrderedClustering:
-                enable(item, rco_enabled)
-
-        for i in range(self.colsortcb.count()):
-            item = self.colsortcb.model().item(i)
-            sorting = self.ColumnOrdering[i][0]
-            if sorting == OWHeatMap.Clustering:
-                enable(item, cc_enabled)
-            if sorting == OWHeatMap.OrderedClustering:
-                enable(item, cco_enabled)
+        # Disable/enable the checkboxes for the clustering methods
+        self.row_check.setEnabled(rco_enabled)
+        self.col_check.setEnabled(cco_enabled)
 
     def heatmap_widgets(self):
         """Iterate over heatmap widgets.
@@ -1393,6 +1314,18 @@ class OWHeatMap(widget.OWWidget):
             layout.setSpacing(self.SpaceX)
             self.__fixup_grid_layout()
 
+    def update_lowslider(self):
+        low, high = self.controls.threshold_low, self.controls.threshold_high
+        if low.value() >= high.value():
+            low.setSliderPosition(high.value() - 1)
+        self.update_color_schema()
+
+    def update_highslider(self):
+        low, high = self.controls.threshold_low, self.controls.threshold_high
+        if low.value() >= high.value():
+            high.setSliderPosition(low.value() + 1)
+        self.update_color_schema()
+
     def update_color_schema(self):
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
@@ -1402,12 +1335,10 @@ class OWHeatMap(widget.OWWidget):
             legend.set_color_table(palette)
 
     def update_sorting_examples(self):
-        if self.effective_data is not None:
-            self.update_heatmaps()
+        self.update_heatmaps()
 
-    def update_sorting_attributes(self):
-        if self.effective_data is not None:
-            self.update_heatmaps()
+    def update_clustering_examples(self):
+        self.update_heatmaps()
 
     def update_legend(self):
         for item in self.heatmap_scene.items():
@@ -1517,7 +1448,6 @@ class OWHeatMap(widget.OWWidget):
         data = None
         indices = None
         if self.merge_kmeans:
-            assert self.merge_indices is not None
             merge_indices = self.merge_indices
         else:
             merge_indices = None
@@ -1543,8 +1473,8 @@ class OWHeatMap(widget.OWWidget):
 
     def send_report(self):
         self.report_items((
-            ("Columns:", self.ColumnOrdering[self.sort_columns_idx][1].lower()),
-            ("Rows:", self.RowOrdering[self.sort_rows_idx][1].lower()),
+            ("Columns:", "Clustering" if self.col_clustering else "No sorting"),
+            ("Rows:", "Clustering" if self.row_clustering else "No sorting"),
             ("Row annotation",
              self.annotation_index > 0 and
              self.annotation_vars[self.annotation_index])
@@ -1804,8 +1734,8 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
         """Return the cell row, column from `pos` in local coordinates.
         """
         if self.__pixmap.isNull() or not (
-                    self.heatmap_item.geometry().contains(pos) or
-                    self.averages_item.geometry().contains(pos)):
+                self.heatmap_item.geometry().contains(pos) or
+                self.averages_item.geometry().contains(pos)):
             return (-1, -1)
 
         if self.heatmap_item.geometry().contains(pos):

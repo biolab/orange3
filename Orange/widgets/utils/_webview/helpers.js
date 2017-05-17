@@ -40,3 +40,12 @@ function fixupPythonObject(obj) {
             fixupPythonObject(val);
     }
 }
+
+
+window.addEventListener("keyup", function(ev) {
+    var ESCAPE_KEY = 27;
+    // Cmd+W on OS X seems to work OK without this
+    if (ev.keyCode == ESCAPE_KEY ||
+        ev.code == 'Escape' || ev.key == 'Escape')
+        window.__bridge.hideWindow();
+});

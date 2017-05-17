@@ -3,9 +3,10 @@ from scipy.sparse import issparse
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
-from .transformation import Transformation, Lookup
+from Orange.util import Reprable
+from .transformation import Transformation, Lookup as BaseLookup
 
-__all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", 'DropInstances',
+__all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]
 
 
@@ -25,13 +26,14 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        if issparse(c):     # sparse does not have unknown values
+        if issparse(c):
+            c.data = numpy.where(numpy.isnan(c.data), self.value, c.data)
             return c
         else:
             return numpy.where(numpy.isnan(c), self.value, c)
 
 
-class BaseImputeMethod:
+class BaseImputeMethod(Reprable):
     name = ""
     short_name = ""
     description = ""
@@ -106,7 +108,7 @@ class Average(BaseImputeMethod):
         return a
 
 
-class ImputeSql:
+class ImputeSql(Reprable):
     def __init__(self, var, default):
         self.var = var
         self.default = default
@@ -134,7 +136,7 @@ class Default(BaseImputeMethod):
         return Default(self.default)
 
 
-class ReplaceUnknownsModel:
+class ReplaceUnknownsModel(Reprable):
     """
     Replace unknown values with predicted values using a `Orange.base.Model`
 
@@ -186,7 +188,7 @@ class Model(BaseImputeMethod):
         domain = domain_with_class_var(data.domain, variable)
 
         if self.learner.check_learner_adequacy(domain):
-            data = data.from_table(domain, data)
+            data = data.transform(domain)
             model = self.learner(data)
             assert model.domain.class_var == variable
             return variable.copy(
@@ -225,7 +227,7 @@ class IsDefined(Transformation):
         return ~numpy.isnan(c)
 
 
-class Lookup(Lookup):
+class Lookup(BaseLookup):
     def __init__(self, variable, lookup_table, unknown=None):
         super().__init__(variable, lookup_table)
         self.unknown = unknown

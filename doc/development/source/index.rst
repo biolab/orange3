@@ -12,3 +12,4 @@ Widget Development
     widget
     gui
     highcharts
+    testing

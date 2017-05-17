@@ -17,7 +17,7 @@ from AnyQt.QtGui import (
     QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
     QFont, QFontMetrics, QPolygonF, QKeySequence
 )
-from AnyQt.QtCore import Qt,  QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import Qt, QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import pyqtgraph as pg
@@ -34,7 +34,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.io import FileFormat
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -75,7 +74,7 @@ Point = namedtuple("Point", ["x", "y"])
 Element = namedtuple("Element", ["anchor", "path"])
 
 
-def Path_toQtPath(geom):
+def path_toQtPath(geom):
     p = QPainterPath()
     anchor, points = geom
     if len(points) > 1:
@@ -579,7 +578,7 @@ class DendrogramWidget(QGraphicsWidget):
             item = self._items[node]
             item.element = geom
 
-            item.setPath(Path_toQtPath(geom))
+            item.setPath(path_toQtPath(geom))
             item.setZValue(-node.value.height)
             r = item.path().boundingRect()
             base = self._root.value.height
@@ -728,7 +727,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Selected linkage
     linkage = settings.Setting(1)
     #: Index of the selected annotation item (variable, ...)
-    annotation = settings.ContextSetting("Enumeration")
+    annotation = settings.ContextSetting("Enumeration", exclude_metas=False)
     #: Out-of-context setting for the case when the "Name" option is available
     annotation_if_names = settings.Setting("Name")
     #: Out-of-context setting for the case with just "Enumerate" and "None"
@@ -989,7 +988,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                 items.domain.class_vars,
                 items.domain.metas,
                 [model.Separator] if (items.domain.class_vars or items.domain.metas) and
-                                     next(filter_visible(items.domain.attributes), False) else [],
+                next(filter_visible(items.domain.attributes), False) else [],
                 filter_visible(items.domain.attributes)
             )
             if items.domain.class_vars:
@@ -1000,9 +999,9 @@ class OWHierarchicalClustering(widget.OWWidget):
         else:
             name_option = bool(
                 items is not None and (
-                not axis or
-                isinstance(items, list) and
-                all(isinstance(var, Orange.data.Variable) for var in items)))
+                    not axis or
+                    isinstance(items, list) and
+                    all(isinstance(var, Orange.data.Variable) for var in items)))
             model[:] = self.basic_annotations + ["Name"] * name_option
             self.annotation = self.annotation_if_names if name_option \
                 else self.annotation_if_enumerate
@@ -1145,7 +1144,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                     str(self.cluster_name),
                     values=["C{}".format(i + 1)
                             for i in range(len(maps))] +
-                           ["Other"]
+                    ["Other"]
                 )
                 data, domain = items, items.domain
 
@@ -1161,7 +1160,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                     metas = metas + (clust_var,)
 
                 domain = Orange.data.Domain(attrs, class_, metas)
-                data = Orange.data.Table.from_table(domain, items)
+                data = items.transform(domain)
                 data.get_column_view(clust_var)[0][:] = c
             else:
                 data = items

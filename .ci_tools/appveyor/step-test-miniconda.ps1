@@ -28,7 +28,7 @@ echo "Starting conda build"
 echo "--------------------"
 & "$conda" build conda-recipe
 
-if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
 # also copy build conda pacakge to build artifacts
 echo "copying conda package to dist/conda"

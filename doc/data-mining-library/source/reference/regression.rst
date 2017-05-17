@@ -117,3 +117,12 @@ and the latter is faster.
 
 .. autoclass:: SklTreeRegressionLearner
    :members:
+
+
+.. index:: neural network
+   pair: regression; neural network
+
+Neural Network
+--------------
+.. autoclass:: NNRegressionLearner
+   :members:

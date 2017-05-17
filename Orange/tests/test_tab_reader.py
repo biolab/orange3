@@ -6,7 +6,6 @@ from os import path, remove
 import unittest
 import tempfile
 import shutil
-import pickle
 from collections import OrderedDict
 
 import numpy as np
@@ -180,29 +179,71 @@ class TestTabReader(unittest.TestCase):
 
     def test_attributes_saving(self):
         tempdir = tempfile.mkdtemp()
-        table = Table("titanic")
-        self.assertEqual(table.attributes, {})
-        table.attributes[1] = "test"
-        table.save(path.join(tempdir, "out.tab"))
-        table = Table(path.join(tempdir, "out.tab"))
-        self.assertEqual(table.attributes[1], "test")
-        shutil.rmtree(tempdir)
+        try:
+            table = Table("titanic")
+            self.assertEqual(table.attributes, {})
+            table.attributes[1] = "test"
+            table.save(path.join(tempdir, "out.tab"))
+            table = Table(path.join(tempdir, "out.tab"))
+            self.assertEqual(table.attributes[1], "test")
+        finally:
+            shutil.rmtree(tempdir)
 
     def test_attributes_saving_as_txt(self):
         tempdir = tempfile.mkdtemp()
-        table = Table("titanic")
-        table.attributes = OrderedDict()
-        table.attributes["a"] = "aa"
-        table.attributes["b"] = "bb"
-        table.save(path.join(tempdir, "out.tab"))
-        table = Table(path.join(tempdir, "out.tab"))
-        self.assertIsInstance(table.attributes, OrderedDict)
-        self.assertEqual(table.attributes["a"], "aa")
-        self.assertEqual(table.attributes["b"], "bb")
-        shutil.rmtree(tempdir)
+        try:
+            table = Table("titanic")
+            table.attributes = OrderedDict()
+            table.attributes["a"] = "aa"
+            table.attributes["b"] = "bb"
+            table.save(path.join(tempdir, "out.tab"))
+            table = Table(path.join(tempdir, "out.tab"))
+            self.assertIsInstance(table.attributes, OrderedDict)
+            self.assertEqual(table.attributes["a"], "aa")
+            self.assertEqual(table.attributes["b"], "bb")
+        finally:
+            shutil.rmtree(tempdir)
 
     def test_data_name(self):
         table1 = Table('iris')
         table2 = TabReader(table1.__file__).read()
         self.assertEqual(table1.name, 'iris')
         self.assertEqual(table2.name, 'iris')
+
+    def test_metadata(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            table = Table("titanic")
+            table.attributes = OrderedDict()
+            table.attributes["a"] = "aa"
+            table.attributes["b"] = "bb"
+            fname = path.join(tempdir, "out.tab")
+            TabReader.write_table_metadata(fname, table)
+            self.assertTrue(path.isfile(fname + ".metadata"))
+        finally:
+            shutil.rmtree(tempdir)
+
+    def test_no_metadata(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            table = Table("titanic")
+            table.attributes = OrderedDict()
+            fname = path.join(tempdir, "out.tab")
+            TabReader.write_table_metadata(fname, table)
+            self.assertFalse(path.isfile(fname + ".metadata"))
+        finally:
+            shutil.rmtree(tempdir)
+
+    def test_had_metadata_now_there_is_none(self):
+        tempdir = tempfile.mkdtemp()
+        try:
+            table = Table("titanic")
+            table.attributes["a"] = "aa"
+            fname = path.join(tempdir, "out.tab")
+            TabReader.write_table_metadata(fname, table)
+            self.assertTrue(path.isfile(fname + ".metadata"))
+            del table.attributes["a"]
+            TabReader.write_table_metadata(fname, table)
+            self.assertFalse(path.isfile(fname + ".metadata"))
+        finally:
+            shutil.rmtree(tempdir)

@@ -10,11 +10,13 @@ import numpy
 import scipy.spatial.distance
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction, QApplication,
-    QGraphicsLineItem
+    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction,
+    QApplication, QGraphicsLineItem
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
-from AnyQt.QtCore import Qt, QEvent
+from AnyQt.QtGui import (
+    QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
+)
+from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.ScatterPlotItem
@@ -133,6 +135,8 @@ class OWMDS(OWWidget):
         no_attributes = Msg("Data has no attributes")
         mismatching_dimensions = \
             Msg("Data and distances dimensions do not match.")
+        out_of_memory = Msg("Out of memory")
+        optimization_error = Msg("Error during optimization\n{}")
 
     def __init__(self):
         super().__init__()
@@ -163,6 +167,9 @@ class OWMDS(OWWidget):
         self._effective_matrix = None
 
         self.__update_loop = None
+        # timer for scheduling updates
+        self.__timer = QTimer(self, singleShot=True, interval=0)
+        self.__timer.timeout.connect(self.__next_step)
         self.__state = OWMDS.Waiting
         self.__in_next_step = False
         self.__draw_similar_pairs = False
@@ -590,8 +597,8 @@ class OWMDS(OWWidget):
         MDS points, `stress` is the current stress and `progress` a float
         ratio (0 <= progress <= 1)
 
-        If an existing update loop is already in palace it is interrupted
-        (closed).
+        If an existing update coroutine loop is already in palace it is
+        interrupted (i.e. closed).
 
         .. note::
             The `loop` must not explicitly yield control flow to the event
@@ -606,21 +613,28 @@ class OWMDS(OWWidget):
         self.__update_loop = loop
 
         if loop is not None:
+            self.setBlocking(True)
             self.progressBarInit(processEvents=None)
             self.setStatusMessage("Running")
             self.runbutton.setText("Stop")
             self.__state = OWMDS.Running
-            QApplication.postEvent(self, QEvent(QEvent.User))
+            self.__timer.start()
         else:
+            self.setBlocking(False)
             self.setStatusMessage("")
             self.runbutton.setText("Start")
             self.__state = OWMDS.Finished
+            self.__timer.stop()
 
     def __next_step(self):
         if self.__update_loop is None:
             return
 
+        assert not self.__in_next_step
+        self.__in_next_step = True
+
         loop = self.__update_loop
+        self.Error.out_of_memory.clear()
         try:
             embedding, stress, progress = next(self.__update_loop)
             assert self.__update_loop is loop
@@ -630,31 +644,23 @@ class OWMDS(OWWidget):
             self.__draw_similar_pairs = True
             self._update_plot()
             self.plot.autoRange(padding=0.1, items=[self._scatter_item])
+        except MemoryError:
+            self.Error.out_of_memory()
+            self.__set_update_loop(None)
+            self.__draw_similar_pairs = True
+        except Exception as exc:
+            self.Error.optimization_error(str(exc))
+            self.__set_update_loop(None)
+            self.__draw_similar_pairs = True
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
             self.plot.autoRange(padding=0.1, items=[self._scatter_item])
             # schedule next update
-            QApplication.postEvent(
-                self, QEvent(QEvent.User), Qt.LowEventPriority)
+            self.__timer.start()
 
-    def customEvent(self, event):
-        if event.type() == QEvent.User and self.__update_loop is not None:
-            if not self.__in_next_step:
-                self.__in_next_step = True
-                try:
-                    self.__next_step()
-                finally:
-                    self.__in_next_step = False
-            else:
-                warnings.warn(
-                    "Re-entry in update loop detected. "
-                    "A rogue `proccessEvents` is on the loose.",
-                    RuntimeWarning)
-                # re-schedule the update iteration.
-                QApplication.postEvent(self, QEvent(QEvent.User))
-        return super().customEvent(event)
+        self.__in_next_step = False
 
     def __invalidate_embedding(self):
         # reset/invalidate the MDS embedding, to the default initialization
@@ -742,8 +748,10 @@ class OWMDS(OWWidget):
 
         size = self._effective_matrix.shape[0]
 
-        def column(data, variable):
+        def column(data, variable, dtype=None):
             a, _ = data.get_column_view(variable)
+            if dtype is not None:
+                a = a.astype(dtype)
             return a.ravel()
 
         def attributes(matrix):
@@ -835,7 +843,7 @@ class OWMDS(OWWidget):
                 symbols = numpy.array(list(Symbols.keys()))
 
                 shape_var = self.shapevar_model[shape_index]
-                data = column(self.data, shape_var).astype(numpy.float)
+                data = column(self.data, shape_var, dtype=numpy.float)
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
@@ -861,9 +869,10 @@ class OWMDS(OWWidget):
                 size_data = MinPointSize + size_data * point_size
             elif have_data and size_index > 0:
                 size_var = self.sizevar_model[size_index]
-                size_data = column(self.data, size_var)
+                size_data = column(self.data, size_var, dtype=float)
                 size_data = scale(size_data)
                 size_data = MinPointSize + size_data * point_size
+                size_data[numpy.isnan(size_data)] = 1  # maybe 0?
             else:
                 size_data = point_size
             self._size_data = size_data
@@ -1007,7 +1016,7 @@ class OWMDS(OWWidget):
                 metas += embedding.domain.attributes
 
             domain = Orange.data.Domain(attrs, class_vars, metas)
-            output = Orange.data.Table.from_table(domain, self.data)
+            output = self.data.transform(domain)
 
             if self.output_embedding_role == OWMDS.AttrRole:
                 output.X[:] = embedding.X

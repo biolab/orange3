@@ -9,7 +9,7 @@ from pickle import PickleError
 import numpy as np
 
 from Orange.data import _variable
-from Orange.util import Registry, color_to_hex, hex_to_color
+from Orange.util import Registry, color_to_hex, hex_to_color, Reprable
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -238,7 +238,7 @@ class VariableMeta(Registry):
         return obj
 
 
-class Variable(metaclass=VariableMeta):
+class Variable(Reprable, metaclass=VariableMeta):
     """
     The base class for variable descriptors contains the variable's
     name and some basic properties.
@@ -408,14 +408,6 @@ class Variable(metaclass=VariableMeta):
     def __str__(self):
         return self.name
 
-    def __repr__(self):
-        """
-        Return a representation of the variable, like,
-        `'DiscreteVariable("gender")'`. Derived classes may overload this
-        method to provide a more informative representation.
-        """
-        return "{}('{}')".format(self.__class__.__name__, self.name)
-
     @property
     def compute_value(self):
         return self._compute_value
@@ -568,14 +560,11 @@ class DiscreteVariable(Variable):
     @property
     def colors(self):
         if self._colors is None:
-            if "colors" in self.attributes:
-                self._colors = np.array(
-                    [hex_to_color(col) for col in self.attributes["colors"]],
-                    dtype=np.uint8)
-            else:
-                from Orange.widgets.utils.colorpalette import \
-                    ColorPaletteGenerator
-                self._colors = ColorPaletteGenerator.palette(self)
+            from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
+            self._colors = ColorPaletteGenerator.palette(self)
+            colors = self.attributes.get('colors')
+            if colors:
+                self._colors[:len(colors)] = [hex_to_color(color) for color in colors]
             self._colors.flags.writeable = False
         return self._colors
 
@@ -591,20 +580,6 @@ class DiscreteVariable(Variable):
         self._colors[i, :] = color
         self._colors.flags.writeable = False
         self.attributes["colors"][i] = color_to_hex(color)
-
-    def __repr__(self):
-        """
-        Give a string representation of the variable, for instance,
-        `"DiscreteVariable('Gender', values=['male', 'female'])"`.
-        """
-        args = "values=[{}]".format(
-            ", ".join([repr(x) for x in self.values[:5]] +
-                      ["..."] * (len(self.values) > 5)))
-        if self.ordered:
-            args += ", ordered=True"
-        if self.base_value >= 0:
-            args += ", base_value={}".format(self.base_value)
-        return "{}('{}', {})".format(self.__class__.__name__, self.name, args)
 
     def to_val(self, s):
         """
@@ -636,6 +611,7 @@ class DiscreteVariable(Variable):
         """ Add a value `s` to the list of values.
         """
         self.values.append(s)
+        self._colors = None
 
     def val_from_str_add(self, s):
         """

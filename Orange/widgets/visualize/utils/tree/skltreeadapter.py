@@ -19,55 +19,22 @@ class SklTreeAdapter(BaseTreeAdapter):
 
     Parameters
     ----------
-    tree : sklearn.tree._tree.Tree
-        The raw sklearn classification tree.
-    domain : Orange.base.domain
-        The Orange domain that comes with the model.
-    adjust_weight : Callable, optional
-        If you want finer control over the weights of individual nodes you can
-        pass in a function that takes the existsing weight and modifies it.
-        The given function must have signture :: Number -> Number
+    model : SklModel
+        An sklearn tree model instance.
 
     """
 
     NO_CHILD = -1
     FEATURE_UNDEFINED = -2
 
-    def __init__(self, tree, domain, adjust_weight=lambda x: x):
-        self._tree = tree
-        self._domain = domain
-        self._adjust_weight = adjust_weight
-
+    def __init__(self, model):
+        super().__init__(model)
+        self._tree = model.skl_model.tree_
         self._all_leaves = None
 
     @memoize_method(maxsize=1024)
     def weight(self, node):
-        return self._adjust_weight(self.num_samples(node)) / \
-               self._adjusted_child_weight(self.parent(node))
-
-    @memoize_method(maxsize=1024)
-    def _adjusted_child_weight(self, node):
-        """Helps when dealing with adjusted weights.
-
-        It is needed when dealing with non linear weights e.g. when calculating
-        the log weight, the sum of logs of all the children will not be equal
-        to the log of all the data instances.
-        A simple example: log(2) + log(2) != log(4)
-
-        Parameters
-        ----------
-        node : int
-            The label of the node.
-
-        Returns
-        -------
-        float
-            The sum of all of the weights of the children of a given node.
-
-        """
-        return sum(self._adjust_weight(self.num_samples(c))
-                   for c in self.children(node)) \
-            if self.has_children(node) else 0
+        return self.num_samples(node) / self.num_samples(self.parent(node))
 
     def num_samples(self, node):
         return self._tree.n_node_samples[node]
@@ -82,8 +49,8 @@ class SklTreeAdapter(BaseTreeAdapter):
         return self.ROOT_PARENT
 
     def has_children(self, node):
-        return self._tree.children_left[node] != self.NO_CHILD \
-               or self._tree.children_right[node] != self.NO_CHILD
+        return (self._tree.children_left[node] != self.NO_CHILD or
+                self._tree.children_right[node] != self.NO_CHILD)
 
     def children(self, node):
         if self.has_children(node):
@@ -96,8 +63,17 @@ class SklTreeAdapter(BaseTreeAdapter):
     def __right_child(self, node):
         return self._tree.children_right[node]
 
+    @memoize_method(maxsize=1024)
     def get_distribution(self, node):
-        return self._tree.value[node]
+        value = self._tree.value[node]
+        # If regression tree, we have to compute variance by hand, we can
+        # detect this because you can't have classification trees when there's
+        # only one class
+        if value.shape[1] == 1:
+            var = np.var(self.get_instances_in_nodes(node).Y)
+            variances = np.array([(var * np.ones(value.shape[0]))]).T
+            value = np.hstack((value, variances))
+        return value
 
     def get_impurity(self, node):
         return self._tree.impurity[node]
@@ -113,10 +89,6 @@ class SklTreeAdapter(BaseTreeAdapter):
     @property
     def root(self):
         return 0
-
-    @property
-    def domain(self):
-        return self._domain
 
     @memoize_method(maxsize=1024)
     def rules(self, node):
@@ -164,6 +136,9 @@ class SklTreeAdapter(BaseTreeAdapter):
         else:
             return []
 
+    def short_rule(self, node):
+        return self.rules(node)[0].description
+
     def attribute(self, node):
         feature_idx = self.splitting_attribute(node)
         if feature_idx != self.FEATURE_UNDEFINED:
@@ -189,7 +164,7 @@ class SklTreeAdapter(BaseTreeAdapter):
 
         See Also
         --------
-        Orange.widgets.classify.owclassificationtreegraph.OWTreeGraph
+        Orange.widgets.model.owclassificationtreegraph.OWTreeGraph
         """
 
         def find_largest_idx(n):
@@ -215,7 +190,7 @@ class SklTreeAdapter(BaseTreeAdapter):
 
             return left, right + 1
 
-    def get_samples_in_leaves(self, data):
+    def get_samples_in_leaves(self):
         """Get an array of instance indices that belong to each leaf.
 
         For a given dataset X, separate the instances out into an array, so
@@ -251,7 +226,7 @@ class SklTreeAdapter(BaseTreeAdapter):
                 feature_idx = self._tree.feature[node_id]
                 thresh = self._tree.threshold[node_id]
 
-                column = data[indices, feature_idx]
+                column = self.instances.X[indices, feature_idx]
                 leftmask = column <= thresh
                 leftind = assign(self._tree.children_left[node_id],
                                  indices[leftmask])
@@ -259,22 +234,17 @@ class SklTreeAdapter(BaseTreeAdapter):
                                   indices[~leftmask])
                 return list.__iadd__(leftind, rightind)
 
-        # TODO this kind of cache can lead to all sorts of problems, but numpy
-        # arrays are unhashable, and this gives huge performance boosts
-        # also this would only become a problem if the function required to
-        # handle multiple datasets, which it doesn't, it just deals with the
-        # one the classification tree was fit to.
         if self._all_leaves is not None:
             return self._all_leaves
 
-        n, _ = data.shape
+        n, _ = self.instances.X.shape
 
         items = np.arange(n, dtype=int)
         leaf_indices = assign(0, items)
         self._all_leaves = leaf_indices
         return leaf_indices
 
-    def get_instances_in_nodes(self, dataset, nodes):
+    def get_instances_in_nodes(self, nodes):
         if not isinstance(nodes, (list, tuple)):
             nodes = [nodes]
 
@@ -287,11 +257,25 @@ class SklTreeAdapter(BaseTreeAdapter):
 
             indices = np.searchsorted(all_leaves, node_leaves)
             # all the leaf samples for each leaf
-            leaf_samples = self.get_samples_in_leaves(dataset.X)
+            leaf_samples = self.get_samples_in_leaves()
             # filter out the leaf samples array that are not selected
             leaf_samples = [leaf_samples[i] for i in indices]
             indices = np.hstack(leaf_samples)
         else:
             indices = []
 
-        return dataset[indices] if len(indices) else None
+        return self.instances[indices] if len(indices) else None
+
+    def get_indices(self, nodes):
+        if not isinstance(nodes, (list, tuple)):
+            nodes = [nodes]
+
+        node_leaves = [self.leaves(n) for n in nodes]
+        if len(node_leaves) > 0:
+            # get the leaves of the selected tree node
+            node_leaves = np.unique(np.hstack(node_leaves))
+
+            all_leaves = self.leaves(self.root)
+
+            return np.searchsorted(all_leaves, node_leaves)
+        return []

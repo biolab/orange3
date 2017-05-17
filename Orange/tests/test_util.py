@@ -1,9 +1,11 @@
+import os
 import unittest
+import warnings
 
 import numpy as np
 
-from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr
-
+from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
+    OrangeDeprecationWarning
 
 SOMETHING = 0xf00babe
 
@@ -31,9 +33,34 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(try_(lambda: np.whatever()))
         self.assertEqual(try_(len, default=SOMETHING), SOMETHING)
 
+    def test_reprable(self):
+        from Orange.data import ContinuousVariable
+        from Orange.preprocess.impute import ReplaceUnknownsRandom
+        from Orange.statistics.distribution import Continuous
+        from Orange.classification import LogisticRegressionLearner
+
+        var = ContinuousVariable('x')
+        transform = ReplaceUnknownsRandom(var, Continuous(1, var))
+
+        self.assertEqual(repr(transform).replace('\n       ', ' '),
+                         "ReplaceUnknownsRandom("
+                         "variable=ContinuousVariable(name='x', number_of_decimals=3), "
+                         "distribution=Continuous([[ 0.], [ 0.]]))")
+
+        # GH 2275
+        logit = LogisticRegressionLearner()
+        for _ in range(2):
+            self.assertEqual(repr(logit), 'LogisticRegressionLearner()')
+
     def test_deepgetattr(self):
         class a:
             l = []
         self.assertTrue(deepgetattr(a, 'l.__len__.__call__'), a.l.__len__.__call__)
         self.assertTrue(deepgetattr(a, 'l.__nx__.__x__', 42), 42)
         self.assertRaises(AttributeError, lambda: deepgetattr(a, 'l.__nx__.__x__'))
+
+    @unittest.skipUnless(os.environ.get('ORANGE_DEPRECATIONS_ERROR'),
+                         'ORANGE_DEPRECATIONS_ERROR not set')
+    def test_raise_deprecations(self):
+        with self.assertRaises(OrangeDeprecationWarning):
+            warnings.warn('foo', OrangeDeprecationWarning)

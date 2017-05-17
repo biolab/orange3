@@ -53,15 +53,18 @@ build_script:
         $env:PATH="C:\Program Files (x86)\NSIS;C:\msys2\bin;$env:PATH"
 
         bash scripts\windows\build-win-application.sh -d dist\installers
-        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+        if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
         bash scripts\windows\build-win-application.sh `
             -d installers `
             --standalone
-        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+        if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
       }
 
 test_script:
+  # Raise OrangeDeprecationWarnings as errors
+  - ps: $env:ORANGE_DEPRECATIONS_ERROR = "1"
+  - ps: $env:PYTHONWARNINGS = "module"
   - ps: |
       if ($env:PYTHON -eq "C:\Python34") {
           # can only test the .whl build on Python 3.4 32-bit because that

@@ -26,7 +26,7 @@ class KMeans(SklProjector):
         proj.silhouette = np.nan
         try:
             if self._compute_silhouette and 2 <= proj.n_clusters < X.shape[0]:
-                proj.silhouette = silhouette_score(X, proj.labels_)
+                proj.silhouette = silhouette_score(X, proj.labels_, sample_size=5000)
         except MemoryError:  # Pairwise dist in silhouette fails for large data
             pass
         proj.inertia = proj.inertia_ / X.shape[0]
@@ -44,7 +44,7 @@ class KMeansModel(Projection):
     def __call__(self, data):
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
-                data = Table(self.pre_domain, data)
+                data = data.transform(self.pre_domain)
             c = DiscreteVariable(name='Cluster id', values=range(self.k))
             domain = Domain([c])
             return Table(

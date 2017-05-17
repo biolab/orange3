@@ -533,6 +533,8 @@ class OWVennDiagram(widget.OWWidget):
         names = uniquify(names)
 
         for i, (key, input) in enumerate(self.data.items()):
+            if not len(input.table):
+                continue
             if self.useidentifiers:
                 attr = self.itemsetAttr(key)
                 if attr is not None:
@@ -594,7 +596,7 @@ class OWVennDiagram(widget.OWWidget):
             data = table_concat(selected_subsets)
             # Get all variables which are not constant between the same
             # item set
-            varying = varying_between(data, [item_id_var])
+            varying = varying_between(data, item_id_var)
 
             if source_var in varying:
                 varying.remove(source_var)
@@ -611,7 +613,7 @@ class OWVennDiagram(widget.OWWidget):
             annotated_data = table_concat(annotated_data_subsets)
             indices = numpy.hstack(annotated_data_masks)
             annotated_data = create_annotated_table(annotated_data, indices)
-            varying = varying_between(annotated_data, [item_id_var])
+            varying = varying_between(annotated_data, item_id_var)
             if source_var in varying:
                 varying.remove(source_var)
             annotated_data = reshape_wide(annotated_data, varying,
@@ -715,6 +717,7 @@ def table_concat(tables):
 
     for table in tables:
         new_table.extend(Orange.data.Table.from_table(domain, table))
+        new_table.attributes.update(table.attributes)
 
     return new_table
 
@@ -864,8 +867,6 @@ def unique(seq):
             yield item
             seen.add(item)
 
-from Orange.widgets.data.owmergedata import group_table_indices
-
 
 def unique_non_nan(ar):
     # metas have sometimes object dtype, but values are numpy floats
@@ -874,27 +875,22 @@ def unique_non_nan(ar):
     return uniq[~numpy.isnan(uniq)]
 
 
-def varying_between(table, idvarlist):
+def varying_between(table, idvar):
     """
     Return a list of all variables with non constant values between
-    groups defined by `idvarlist`.
+    groups defined by `idvar`.
 
     """
-    def inst_key(inst, vars):
-        return tuple(str(inst[var]) for var in vars)
-
-    excluded = set(idvarlist)
     all_possible = [var for var in table.domain.variables + table.domain.metas
-                    if var not in excluded]
+                    if var != idvar]
     candidate_set = set(all_possible)
 
-    idmap = group_table_indices(table, idvarlist)
-    values = {}
+    idmap = group_table_indices(table, idvar)
+
     varying = set()
     for indices in idmap.values():
         subset = table[indices]
         for var in list(candidate_set):
-            values = subset[:, var]
             values, _ = subset.get_column_view(var)
 
             if var.is_string:
@@ -1635,6 +1631,7 @@ def append_column(data, where, variable, column):
     domain = Orange.data.Domain(attr, class_vars, metas)
     table = Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
     table.ids = data.ids
+    table.attributes = data.attributes
     return table
 
 
@@ -1652,19 +1649,31 @@ def drop_columns(data, columns):
     return Orange.data.Table.from_table(domain, data)
 
 
+def group_table_indices(table, key_var):
+    """
+    Group table indices based on values of selected columns (`key_vars`).
+
+    Return a dictionary mapping all unique value combinations (keys)
+    into a list of indices in the table where they are present.
+    """
+    groups = defaultdict(list)
+    for i, inst in enumerate(table):
+        groups[str(inst[key_var])].append(i)
+    return groups
+
+
 def test():
-    import sklearn.cross_validation as skl_cross_validation
+    from Orange.evaluation import ShuffleSplit
+
     app = QApplication([])
     w = OWVennDiagram()
     data = Orange.data.Table("brown-selected")
     data = append_column(data, "M", Orange.data.StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
 
-    indices = skl_cross_validation.ShuffleSplit(
-        len(data), n_iter=5, test_size=0.7
-    )
-
-    indices = iter(indices)
+    res = ShuffleSplit(data, [None], n_resamples=5,
+                       test_size=0.7, stratified=False)
+    indices = iter(res.indices)
 
     def select(data):
         sample, _ = next(indices)

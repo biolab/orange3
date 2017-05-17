@@ -1,4 +1,6 @@
-from Orange.data import Table, Domain
+import numpy as np
+
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.preprocess.score import Scorer
 from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
@@ -193,3 +195,20 @@ class TestOWRank(WidgetTest):
         self.send_signal("Scorer", self.lin_reg, 2)
         self.assertEqual(self.get_output("Scores").X.shape,
                          (len(self.iris.domain.variables), 8))
+
+    def test_data_which_make_scorer_nan(self):
+        """
+        Tests if widget crashes due to too high (Infinite) calculated values.
+        GH-2168
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("c")],
+                [DiscreteVariable("d", values=[0, 1])]
+            ),
+            list(zip(
+                [-np.power(10, 10), 1, 1],
+                [0, 1, 1]
+            )))
+        self.widget.score_checks[3].setChecked(True) #ANOVA
+        self.send_signal("Data", table)

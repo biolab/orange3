@@ -1,9 +1,11 @@
+import random
 from unittest.mock import Mock
 
 from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest, \
     GridItem
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
@@ -25,7 +27,8 @@ class TestOWPythagoreanForest(WidgetTest):
         cls.housing.instances = housing_data
 
     def setUp(self):
-        self.widget = self.create_widget(OWPythagoreanForest)
+        self.widget = self.create_widget(OWPythagoreanForest)  # type: OWPythagoreanForest
+
 
     def get_tree_widgets(self):
         return [x for x in self.widget.scene.items()
@@ -34,15 +37,6 @@ class TestOWPythagoreanForest(WidgetTest):
     def get_grid_items(self):
         return [x for x in self.widget.scene.items()
                 if isinstance(x, GridItem)]
-
-    @staticmethod
-    def set_combo_option(combo_box, text):
-        """Set a given combo box value to some text (given that it exists)."""
-        index = combo_box.findText(text)
-        # This only changes the selection, need to emit signal to call callback
-        combo_box.setCurrentIndex(index)
-        # Apparently `currentIndexChanged` just isn't good enough...
-        combo_box.activated.emit(index)
 
     def test_sending_rf_draws_trees(self):
         # No trees by default
@@ -89,55 +83,101 @@ class TestOWPythagoreanForest(WidgetTest):
         for tree in trees:
             tree.set_depth_limit.assert_called_once_with(0)
 
-    def test_target_class_for_classification_rf(self):
+    def _pick_random_tree(self):
+        """Pick a random tree from all the trees on the grid.
+
+        Returns
+        -------
+        PythagorasTreeViewer
+
+        """
+        return random.choice(self.get_tree_widgets())
+
+    def _get_visible_squares(self, tree):
+        return [x for _, x in tree._square_objects.items() if x.isVisible()]
+
+    def _check_all_same(self, items):
+        iter_items = iter(items)
+        try:
+            first = next(iter_items)
+        except StopIteration:
+            return True
+        return all(first == curr for curr in iter_items)
+
+    def test_changing_target_class_changes_coloring(self):
+        """Changing the `Target class` combo box should update colors."""
+        def _test(data_type):
+            colors, tree = [], self._pick_random_tree()
+
+            def _callback():
+                colors.append([sq.brush().color() for sq in self._get_visible_squares(tree)])
+
+            simulate.combobox_run_through_all(
+                self.widget.ui_target_class_combo, callback=_callback)
+
+            # Check that individual squares all have different colors
+            squares_same = [self._check_all_same(x) for x in zip(*colors)]
+            # Check that at least some of the squares have different colors
+            self.assertTrue(any(x is False for x in squares_same),
+                            'Colors did not change for %s data' % data_type)
+
         self.send_signal('Random forest', self.titanic)
-
-        trees = self.get_tree_widgets()
-        for tree in trees:
-            tree.target_class_has_changed = Mock()
-
-        self.set_combo_option(self.widget.ui_target_class_combo, 'No')
-        for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
-            tree.target_class_has_changed.reset_mock()
-
-        self.set_combo_option(self.widget.ui_target_class_combo, 'Yes')
-        for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
-
-    def test_target_class_for_regression_rf(self):
+        _test('classification')
         self.send_signal('Random forest', self.housing)
+        _test('regression')
 
-        trees = self.get_tree_widgets()
-        for tree in trees:
-            tree.target_class_has_changed = Mock()
+    def test_changing_size_adjustment_changes_sizes(self):
+        self.send_signal('Random forest', self.titanic)
+        squares = []
+        # We have to get the same tree with an index on the grid items since
+        # the tree objects are deleted and recreated with every invalidation
+        tree_index = self.widget.grid_items.index(random.choice(self.get_grid_items()))
 
-        self.set_combo_option(self.widget.ui_target_class_combo, 'Class mean')
-        for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
-            tree.target_class_has_changed.reset_mock()
+        def _callback():
+            squares.append([sq.rect() for sq in self._get_visible_squares(
+                self.get_tree_widgets()[tree_index])])
 
-        self.set_combo_option(self.widget.ui_target_class_combo,
-                              'Standard deviation')
-        for tree in trees:
-            tree.target_class_has_changed.assert_called_with()
+        simulate.combobox_run_through_all(
+            self.widget.ui_size_calc_combo, callback=_callback)
+
+        # Check that individual squares are in different position
+        squares_same = [self._check_all_same(x) for x in zip(*squares)]
+        # Check that at least some of the squares have different positions
+        self.assertTrue(any(x is False for x in squares_same))
 
     def test_zoom(self):
         self.send_signal('Random forest', self.titanic)
 
         grid_item, zoom = self.get_grid_items()[0], self.widget.zoom
 
-        def destructure_rectf(r):
+        def _destructure_rectf(r):
             return r.width(), r.height()
 
-        iw, ih = destructure_rectf(grid_item.boundingRect())
+        iw, ih = _destructure_rectf(grid_item.boundingRect())
 
         # Increase the size of grid item
         self.widget.ui_zoom_slider.setValue(zoom + 1)
-        lw, lh = destructure_rectf(grid_item.boundingRect())
+        lw, lh = _destructure_rectf(grid_item.boundingRect())
         self.assertTrue(iw < lw and ih < lh)
 
         # Decrease the size of grid item
         self.widget.ui_zoom_slider.setValue(zoom - 1)
-        lw, lh = destructure_rectf(grid_item.boundingRect())
+        lw, lh = _destructure_rectf(grid_item.boundingRect())
         self.assertTrue(iw > lw and ih > lh)
+
+    def test_keep_colors_on_sizing_change(self):
+        """The color should be the same after a full recompute of the tree."""
+        self.send_signal('Random forest', self.titanic)
+        colors = []
+        tree_index = self.widget.grid_items.index(random.choice(self.get_grid_items()))
+
+        def _callback():
+            colors.append([sq.brush().color() for sq in self._get_visible_squares(
+                self.get_tree_widgets()[tree_index])])
+
+        simulate.combobox_run_through_all(
+            self.widget.ui_size_calc_combo, callback=_callback)
+
+        # Check that individual squares all have the same color
+        colors_same = [self._check_all_same(x) for x in zip(*colors)]
+        self.assertTrue(all(colors_same))

@@ -1,6 +1,7 @@
 import random
 import Orange
 import numpy as np
+from Orange.util import Reprable
 from scipy.sparse import issparse
 
 from itertools import takewhile
@@ -8,12 +9,11 @@ from operator import itemgetter
 
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
-from Orange.data import Domain
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
 
-class SelectBestFeatures:
+class SelectBestFeatures(Reprable):
     """
     A feature selector that builds a new data set consisting of either the top
     `k` features or all those that exceed a given `threshold`. Features are
@@ -65,12 +65,6 @@ class SelectBestFeatures:
             else:
                 method = UnivariateLinearRegression()
 
-        if not isinstance(data.domain.class_var, method.class_type):
-            raise ValueError(("Scoring method {} requires a class variable " +
-                              "of type {}.").format(
-                (method if type(method) == type else type(method)).__name__,
-                method.class_type.__name__)
-            )
         features = data.domain.attributes
         try:
             scores = method(data)
@@ -87,7 +81,7 @@ class SelectBestFeatures:
 
         domain = Orange.data.Domain([f for s, f in best],
                                     data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
     def score_only_nice_features(self, data, method):
         mask = np.array([isinstance(a, method.feature_type)
@@ -101,7 +95,7 @@ class SelectBestFeatures:
         return all_scores
 
 
-class SelectRandomFeatures:
+class SelectRandomFeatures(Reprable):
     """
     A feature selector that selects random `k` features from an input
     data set and returns a data set with selected features. Parameter
@@ -125,7 +119,7 @@ class SelectRandomFeatures:
             random.sample(data.domain.attributes,
                           min(self.k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
-        return data.from_table(domain, data)
+        return data.transform(domain)
 
 
 class RemoveNaNColumns(Preprocess):
@@ -154,4 +148,4 @@ class RemoveNaNColumns(Preprocess):
         att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
-        return Orange.data.Table(domain, data)
+        return data.transform(domain)

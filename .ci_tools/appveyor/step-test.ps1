@@ -25,7 +25,7 @@ try {
         --index-url "$env:STAGING_INDEX" `
         --only-binary "numpy,scipy" numpy scipy
 
-    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
 
     # Install specific Orange3 version
@@ -33,7 +33,7 @@ try {
         --find-links ../../dist `
         Orange3==$version
 
-    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
     # Instal other remaining dependencies
     python -m pip install `
@@ -41,7 +41,7 @@ try {
         --only-binary "numpy,scipy" `
         Orange3==$version
 
-    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
     echo "Test environment:"
     echo "-----------------"
@@ -53,11 +53,11 @@ try {
     echo "-------------"
     python -m unittest -v Orange.tests
 
-    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
     # Widget tests
     python -m pip install `
-        --extra-index-url "$Env:STAGING_INDEX" `
+        --index-url "$Env:STAGING_INDEX" `
         PyQt5
 
     echo "Running widget tests with PyQt5"
@@ -65,7 +65,7 @@ try {
     try {
         $Env:ANYQT_HOOK_BACKPORT = "pyqt4"
         python -m unittest -v Orange.widgets.tests
-        if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+        if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
     } finally {
         $Env:ANYQT_HOOK_BACKPORT = ""
     }
@@ -79,7 +79,7 @@ try {
     echo "-------------------------------"
 
     python -m unittest -v Orange.widgets.tests
-    if ($LastExitCode -ne 0) { $host.SetShouldExit($LastExitCode) }
+    if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
 } finally {
     popd

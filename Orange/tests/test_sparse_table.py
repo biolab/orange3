@@ -37,9 +37,7 @@ class InterfaceTest(tabletests.InterfaceTest):
             super().test_clear()
 
     def test_row_assignment(self):
-        with self.assertRaises(ValueError):
-            super().test_row_assignment()
+        super().test_row_assignment()
 
     def test_value_assignment(self):
-        with self.assertRaises(ValueError):
-            super().test_value_assignment()
+        super().test_value_assignment()

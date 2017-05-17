@@ -19,8 +19,8 @@ def _preprocess(table):
         [a for a in table.domain.attributes if a.is_continuous],
         table.domain.class_vars,
         table.domain.metas)
-    new_data = data.Table(new_domain, table)
-    new_data = SklImpute(new_data)
+    new_data = table.transform(new_domain)
+    new_data = SklImpute()(new_data)
     return new_data
 
 
@@ -208,12 +208,15 @@ class MahalanobisDistance(Distance):
         x = _orange_to_numpy(data)
         if axis == 0:
             x = x.T
-        n, m = x.shape
-        if n <= m:
-            raise ValueError(
-                'Too few observations for the number of dimensions.')
         self.axis = axis
-        self.VI = np.linalg.inv(np.cov(x.T))
+        try:
+            c = np.cov(x.T)
+        except:
+            raise MemoryError("Covariance matrix is too large.")
+        try:
+            self.VI = np.linalg.inv(c)
+        except:
+            raise ValueError("Computation of inverse covariance matrix failed.")
 
     def __call__(self, e1, e2=None, axis=None, impute=False):
         assert self.VI is not None, \
@@ -243,4 +246,16 @@ class MahalanobisDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-Mahalanobis = MahalanobisDistance()
+
+# Only retain this to raise errors on use. Remove in some future version.
+class __MahalanobisDistanceError(MahalanobisDistance):
+    def _raise_error(self, *args, **kwargs):
+        raise RuntimeError(
+            "Invalid use of MahalanobisDistance.\n"
+            "Create a new MahalanobisDistance instance first, e.g.\n"
+            ">>> metric = MahalanobisDistance(data)\n"
+            ">>> dist = metric(data)"
+        )
+    fit = _raise_error
+    __call__ = _raise_error
+Mahalanobis = __MahalanobisDistanceError()

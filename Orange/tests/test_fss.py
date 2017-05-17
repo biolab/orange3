@@ -43,7 +43,7 @@ class TestFSS(unittest.TestCase):
 
     def test_discrete_scores_on_continuous_features(self):
         c = self.iris.columns
-        for method in (Gini, Chi2):
+        for method in (Gini(), Chi2()):
             d1 = SelectBestFeatures(method=method)(self.iris)
             expected = \
                 (c.petal_length, c.petal_width, c.sepal_length, c.sepal_width)
@@ -56,16 +56,16 @@ class TestFSS(unittest.TestCase):
             self.assertIsInstance(score, float)
 
     def test_continuous_scores_on_discrete_features(self):
-        data = Impute(self.auro_mpg)
+        data = Impute()(self.auro_mpg)
         with self.assertRaises(ValueError):
-            UnivariateLinearRegression(data)
+            UnivariateLinearRegression()(data)
 
-        d1 = SelectBestFeatures(method=UnivariateLinearRegression)(data)
+        d1 = SelectBestFeatures(method=UnivariateLinearRegression())(data)
         self.assertEqual(len(d1.domain), len(data.domain))
 
     def test_defaults(self):
         fs = SelectBestFeatures(k=3)
-        data2 = fs(Impute(self.auro_mpg))
+        data2 = fs(Impute()(self.auro_mpg))
         self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
         data2 = fs(self.wine)
         self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
@@ -78,13 +78,13 @@ class TestRemoveNaNColumns(unittest.TestCase):
         data = Table("iris")
         data.X[:, (1, 3)] = np.NaN
 
-        new_data = RemoveNaNColumns(data)
+        new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes) - 2)
 
         data = Table("iris")
         data.X[0, 0] = np.NaN
-        new_data = RemoveNaNColumns(data)
+        new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))
 
@@ -92,7 +92,7 @@ class TestRemoveNaNColumns(unittest.TestCase):
         data = Table("iris")
         data.X = csr_matrix(data.X)
 
-        new_data = RemoveNaNColumns(data)
+        new_data = RemoveNaNColumns()(data)
         self.assertEqual(data, new_data)
 
 

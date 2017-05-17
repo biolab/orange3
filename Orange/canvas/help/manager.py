@@ -270,7 +270,7 @@ def qurl_from_path(urlpath):
 
 
 def create_intersphinx_provider(entry_point):
-    locations = entry_point.load()
+    locations = entry_point.resolve()
     replacements = _replacements_for_dist(entry_point.dist)
 
     formatter = string.Formatter()
@@ -317,7 +317,7 @@ def create_intersphinx_provider(entry_point):
 
 
 def create_html_provider(entry_point):
-    locations = entry_point.load()
+    locations = entry_point.resolve()
     replacements = _replacements_for_dist(entry_point.dist)
 
     formatter = string.Formatter()
@@ -350,7 +350,7 @@ def create_html_provider(entry_point):
 
 
 def create_html_inventory_provider(entry_point):
-    locations = entry_point.load()
+    locations = entry_point.resolve()
     replacements = _replacements_for_dist(entry_point.dist)
 
     formatter = string.Formatter()
