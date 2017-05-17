@@ -13,3 +13,8 @@ Widget Development
     gui
     highcharts
     testing
+
+API
+---
+.. toctree::
+    concurrent
