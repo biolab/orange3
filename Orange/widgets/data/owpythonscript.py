@@ -370,8 +370,8 @@ class OWPythonScript(widget.OWWidget):
     outputs = [("out_data", Orange.data.Table, ),
                # ("out_distance", Orange.misc.SymMatrix, ),
                ("out_learner", Learner, ),
-               ("out_classifier", Model, widget.Dynamic),
-               ("out_object", object, widget.Dynamic)]
+               ("out_classifier", Model),
+               ("out_object", object)]
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])

@@ -9,6 +9,7 @@ import copy
 import warnings
 
 # Exceptions
+from Orange.util import OrangeDeprecationWarning
 
 
 class DescriptionError(Exception):
@@ -44,9 +45,11 @@ NonDefault = 16
 # Explicit - only connected if specifically requested or the only possibility
 Explicit = 32
 
-# Dynamic type output signal
+# (Deprecated) Dynamic type output signal
 Dynamic = 64
 
+# This output can only be connected to inputs of the same class or superclass
+Strict = 128
 
 # Input/output signal (channel) description
 
@@ -156,10 +159,13 @@ class OutputSignal(object):
         if not (flags & Default or flags & NonDefault):
             flags += NonDefault
 
+        if flags & Dynamic:
+            warnings.warn("all outputs are dynamic; flag Dynamic is deprecated",
+                          OrangeDeprecationWarning)
         self.single = flags & Single
         self.default = flags & Default
         self.explicit = flags & Explicit
-        self.dynamic = flags & Dynamic
+        self.dynamic = not (flags & Strict)
         self.flags = flags
 
         if self.dynamic and not self.single:
