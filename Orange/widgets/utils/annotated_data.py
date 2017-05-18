@@ -6,6 +6,30 @@ ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
 
 
+def add_columns(domain, attributes=(), class_vars=(), metas=()):
+    """Construct a new domain with new columns added to the specified place
+
+    Parameters
+    ----------
+    domain : Domain
+        source domain
+    attributes
+        list of variables to append to attributes from source domain
+    class_vars
+        list of variables to append to class_vars from source domain
+    metas
+        list of variables to append to metas from source domain
+
+    Returns
+    -------
+    Domain
+    """
+    attributes = domain.attributes + tuple(attributes)
+    class_vars = domain.class_vars + tuple(class_vars)
+    metas = domain.metas + tuple(metas)
+    return Domain(attributes, class_vars, metas)
+
+
 def get_next_name(names, name):
     """
     Returns next 'possible' attribute name. The name should not be duplicated
@@ -36,8 +60,7 @@ def create_annotated_table(data, selected_indices):
         return None
     names = [var.name for var in data.domain.variables + data.domain.metas]
     name = get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
-    metas = data.domain.metas + (DiscreteVariable(name, ("No", "Yes")),)
-    domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
+    domain = add_columns(data.domain, metas=[DiscreteVariable(name, ("No", "Yes"))])
     annotated = np.zeros((len(data), 1))
     if selected_indices is not None:
         annotated[selected_indices] = 1
