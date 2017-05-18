@@ -5,7 +5,7 @@ import scipy.sparse as sp
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.unsupervised.owpca import OWPCA
+from Orange.widgets.unsupervised.owpca import OWPCA, DECOMPOSITIONS
 
 
 class TestOWPCA(WidgetTest):
@@ -71,11 +71,23 @@ class TestOWPCA(WidgetTest):
         var3 = self.widget.variance_covered
         self.assertGreater(var3, var2)
 
-    def test_error_on_sparse_data(self):
-        data = Table('iris')
+    def test_sparse_data(self):
+        data = Table("iris")
         data.X = sp.csr_matrix(data.X)
         self.widget.set_data(data)
-        self.assertTrue(self.widget.Error.sparse_data.is_shown())
+        decomposition = DECOMPOSITIONS[self.widget.decomposition_idx]
+        self.assertTrue(decomposition.supports_sparse)
+        self.assertFalse(self.widget.normalize_box.isEnabled())
+
+        buttons = self.widget.decomposition_box.group.box.buttons
+        for i, decomposition in enumerate(DECOMPOSITIONS):
+            if not decomposition.supports_sparse:
+                self.assertFalse(buttons[i].isEnabled())
+
+        data = Table("iris")
+        self.widget.set_data(data)
+        self.assertTrue(all([b.isEnabled() for b in buttons]))
+        self.assertTrue(self.widget.normalize_box.isEnabled())
 
     def test_all_components_continuous(self):
         data = Table("banking-crises.tab")
