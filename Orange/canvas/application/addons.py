@@ -56,6 +56,7 @@ OFFICIAL_ADDONS = [
     "Orange3-Text",
     "Orange3-Network",
     "Orange3-Associate",
+    "Orange3-Timeseries",
 ]
 
 Installable = namedtuple(
@@ -680,7 +681,7 @@ def list_pypi_addons():
     for addon, versions in zip(addons, releases):
         # Workaround for PyPI bug of search not returning the latest versions
         # https://bitbucket.org/pypa/pypi/issues/326/my-package-doesnt-appear-in-the-search
-        version_ = max(versions, key=version.LooseVersion)
+        version_ = max(versions, key=version.LooseVersion, default='0')
 
         name = addon["name"]
         multicall.release_data(name, version_)
