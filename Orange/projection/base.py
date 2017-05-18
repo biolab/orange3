@@ -82,6 +82,8 @@ class SklProjector(Projector, metaclass=WrapperMeta):
     __wraps__ = None
     _params = {}
     name = 'skl projection'
+    supports_sparse = False
+
     preprocessors = [Orange.preprocess.Continuize(),
                      Orange.preprocess.SklImpute()]
 

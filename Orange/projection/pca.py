@@ -34,6 +34,7 @@ class _FeatureScorerMixin(LearnerScorer):
 class PCA(SklProjector, _FeatureScorerMixin):
     __wraps__ = skl_decomposition.PCA
     name = 'pca'
+    supports_sparse = False
 
     def __init__(self, n_components=None, copy=True, whiten=False,
                  svd_solver='auto', tol=0.0, iterated_power='auto',
@@ -61,6 +62,7 @@ class PCA(SklProjector, _FeatureScorerMixin):
 class SparsePCA(SklProjector):
     __wraps__ = skl_decomposition.SparsePCA
     name = 'sparse pca'
+    supports_sparse = False
 
     def __init__(self, n_components=None, alpha=1, ridge_alpha=0.01,
                  max_iter=1000, tol=1e-8, method='lars', n_jobs=1, U_init=None,
@@ -125,6 +127,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
 class IncrementalPCA(SklProjector):
     __wraps__ = skl_decomposition.IncrementalPCA
     name = 'incremental pca'
+    supports_sparse = False
 
     def __init__(self, n_components=None, whiten=False, copy=True,
                  batch_size=None, preprocessors=None):
