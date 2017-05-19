@@ -196,10 +196,10 @@ class NodeBodyItem(GraphicsPathObject):
         if self.__progress >= 0:
             # Draw the progress meter over the shape.
             # Set the clip to shape so the meter does not overflow the shape.
+            painter.save()
             painter.setClipPath(self.shape(), Qt.ReplaceClip)
             color = self.palette.color(QPalette.ButtonText)
             pen = QPen(color, 5)
-            painter.save()
             painter.setPen(pen)
             painter.setRenderHints(QPainter.Antialiasing)
             span = max(1, int(self.__progress * 57.60))
