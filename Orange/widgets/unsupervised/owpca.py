@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt, QTimer
 import numpy
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
 from Orange.projection import PCA
@@ -419,7 +419,8 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
-            dom = Domain(self._pca.orig_domain.attributes,
+            dom = Domain([ContinuousVariable(a.name)
+                          for a in self._pca.orig_domain.attributes],
                          metas=[StringVariable(name='component')])
             metas = numpy.array([['PC{}'.format(i + 1)
                                   for i in range(self.ncomponents)]],
