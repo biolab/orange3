@@ -1,17 +1,18 @@
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
+from Orange.widgets.widget import OWWidget, Output
 from Orange.widgets.settings import Setting
 from PyQt4.QtGui import QIntValidator
 
 
-class OWWidgetNumber(widget.OWWidget):
+class OWWidgetNumber(OWWidget):
     name = "Number"
-    id = "orange.widgets.data.number"
     description = "Lets the user input a number"
     icon = "icons/Unknown.svg"
     priority = 10
     category = ""
-    keywords = ["list", "of", "keywords"]
-    outputs = [("Number", int)]
+
+    class Outputs:
+        number = Output("Number", int)
 
     want_main_area = False
 
@@ -27,4 +28,4 @@ class OWWidgetNumber(widget.OWWidget):
         self.number_changed()
 
     def number_changed(self):
-        self.send("Number", self.number)
+        self.Outputs.number.send(self.number)

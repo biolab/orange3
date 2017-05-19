@@ -3,7 +3,9 @@ engines:
    enabled: true
    config:
      languages:
-     - python
+       - python
+   exclude_paths:
+     - doc/
  pep8:
    enabled: false
  radon:

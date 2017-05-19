@@ -10,11 +10,12 @@ from PyQt4.QtGui import QTableWidget, QTableWidgetItem
 import Orange.data
 import Orange.classification
 
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, settings
+from Orange.widgets.widget import OWWidget, Input
 from Orange.evaluation.testing import Results
 
 
-class OWLearningCurveB(widget.OWWidget):
+class OWLearningCurveB(OWWidget):
     name = "Learning Curve (B)"
     description = ("Takes a data set and a set of learners and shows a "
                    "learning curve in a table")
@@ -22,10 +23,11 @@ class OWLearningCurveB(widget.OWWidget):
     priority = 1010
 
 # [start-snippet-1]
-    inputs = [("Data", Orange.data.Table, "set_dataset", widget.Default),
-              ("Test Data", Orange.data.Table, "set_testdataset"),
-              ("Learner", Orange.classification.Learner, "set_learner",
-               widget.Multiple + widget.Default)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table, default=True)
+        test_data = Input("Test Data", Orange.data.Table)
+        learner = Input("Learner", Orange.classification.Learner,
+                        multiple=True)
 # [end-snippet-1]
 
     #: cross validation folds
@@ -101,6 +103,7 @@ class OWLearningCurveB(widget.OWWidget):
     ##########################################################################
     # slots: handle input signals
 
+    @Inputs.data
     def set_dataset(self, data):
         """Set the input train dataset."""
         # Clear all results/scores
@@ -118,6 +121,7 @@ class OWLearningCurveB(widget.OWWidget):
 
         self.commitBtn.setEnabled(self.data is not None)
 
+    @Inputs.test_data
     def set_testdataset(self, testdata):
         """Set a separate test dataset."""
         # Clear all results/scores
@@ -128,6 +132,7 @@ class OWLearningCurveB(widget.OWWidget):
 
         self.testdata = testdata
 
+    @Inputs.learner
     def set_learner(self, learner, id):
         """Set the input learner for channel id."""
         if id in self.learners:

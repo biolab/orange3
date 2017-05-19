@@ -1,3 +1,6 @@
+# Module imports Input, Output and AttributeList to be used in widgets
+# pylint: disable=unused-import
+
 import sys
 import os
 import types
@@ -12,7 +15,10 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
-from Orange.canvas.registry import description as widget_description
+# OutputSignal and InputSignal are imported for compatibility, but shouldn't
+# be used; use Input and Output instead
+from Orange.canvas.registry import description as widget_description, \
+    WidgetDescription, OutputSignal, InputSignal
 from Orange.canvas.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
@@ -21,6 +27,8 @@ from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg
+from Orange.widgets.utils.signals import \
+    WidgetSignalsMixin, Input, Output, AttributeList
 from .utils.overlay import MessageOverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
@@ -46,34 +54,18 @@ class WidgetMetaClass(type(QDialog)):
     #noinspection PyMethodParameters
     # pylint: disable=bad-classmethod-argument
     def __new__(mcs, name, bases, kwargs):
-        from Orange.canvas.registry.description import (
-            input_channel_from_args, output_channel_from_args)
-
         cls = super().__new__(mcs, name, bases, kwargs)
         if not cls.name: # not a widget
             return cls
-
-        cls.inputs = [input_channel_from_args(inp) for inp in cls.inputs]
-        cls.outputs = [output_channel_from_args(outp) for outp in cls.outputs]
-
-        for inp in cls.inputs:
-            if not hasattr(cls, inp.handler):
-                raise AttributeError("missing input signal handler '{}' in {}".
-                                     format(inp.handler, cls.name))
-
-        # TODO Remove this when all widgets are migrated to Orange 3.0
-        if (hasattr(cls, "settingsToWidgetCallback") or
-                hasattr(cls, "settingsFromWidgetCallback")):
-            raise TypeError("Reimplement settingsToWidgetCallback and "
-                            "settingsFromWidgetCallback")
-
-        cls.settingsHandler = SettingsHandler.create(cls, template=cls.settingsHandler)
-
+        cls.convert_signals()
+        cls.settingsHandler = \
+            SettingsHandler.create(cls, template=cls.settingsHandler)
         return cls
 
 
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
-               WidgetMessagesMixin, metaclass=WidgetMetaClass):
+               WidgetMessagesMixin, WidgetSignalsMixin,
+               metaclass=WidgetMetaClass):
     """Base widget class"""
 
     # Global widget count
@@ -89,7 +81,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     version = None
     #: Short widget description (:class:`str` optional), displayed in
     #: canvas help tooltips.
-    description = None
+    description = ""
     #: Widget icon path relative to the defining module
     icon = "icons/Unknown.png"
     #: Widget priority used for sorting within a category
@@ -180,6 +172,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         QDialog.__init__(self, None, self.get_flags())
         OWComponent.__init__(self)
         WidgetMessagesMixin.__init__(self)
+        WidgetSignalsMixin.__init__(self)
 
         stored_settings = kwargs.get('stored_settings', None)
         if self.settingsHandler:
@@ -231,6 +224,21 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
         """__init__s are called in __new__; don't call them from here"""
+
+    @classmethod
+    def get_widget_description(cls):
+        if not cls.name:
+            return
+        properties = {name: getattr(cls, name) for name in
+                      ("name", "icon", "description", "priority", "keywords",
+                       "help", "help_ref", "url",
+                       "version", "background", "replaces")}
+        properties["id"] = cls.id or cls.__module__
+        properties["inputs"] = cls.get_signals("inputs")
+        properties["outputs"] = cls.get_signals("outputs")
+        properties["qualified_name"] = \
+            "{}.{}".format(cls.__module__, cls.__name__)
+        return properties
 
     @classmethod
     def get_flags(cls):
@@ -470,19 +478,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.show()
         self.raise_()
         self.activateWindow()
-
-    def send(self, signalName, value, id=None):
-        """
-        Send a `value` on the `signalName` widget output.
-
-        An output with `signalName` must be defined in the class ``outputs``
-        list.
-        """
-        if not any(s.name == signalName for s in self.outputs):
-            raise ValueError('{} is not a valid output signal for widget {}'.format(
-                signalName, self.name))
-        if self.signalManager is not None:
-            self.signalManager.send(self, signalName, value, id)
 
     def openContext(self, *a):
         """Open a new context corresponding to the given data.
@@ -820,12 +815,3 @@ Explicit = widget_description.Explicit
 #: to any input signal which can accept a subtype of the declared output
 #: type.
 Dynamic = widget_description.Dynamic
-
-InputSignal = widget_description.InputSignal
-OutputSignal = widget_description.OutputSignal
-
-
-class AttributeList(list):
-    """Signal type for lists of attributes (variables)
-    """
-    pass

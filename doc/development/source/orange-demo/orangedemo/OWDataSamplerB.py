@@ -2,17 +2,21 @@ import sys
 import numpy
 
 import Orange.data
-from Orange.widgets import widget, gui, settings
+from Orange.widgets.widget import OWWidget, Input, Output, settings
+from Orange.widgets import gui
 
 # [start-snippet-1]
-class OWDataSamplerB(widget.OWWidget):
+class OWDataSamplerB(OWWidget):
     name = "Data Sampler (B)"
     description = "Randomly selects a subset of instances from the data set."
     icon = "icons/DataSamplerB.svg"
     priority = 20
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Sampled Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        sample = Output("Sampled Data", Orange.data.Table)
 
     proportion = settings.Setting(50)
     commitOnChange = settings.Setting(0)
@@ -44,6 +48,7 @@ class OWDataSamplerB(widget.OWWidget):
 # [end-snippet-3]
 
 # [start-snippet-4]
+    @Inputs.data
     def set_data(self, dataset):
         if dataset is not None:
             self.dataset = dataset
@@ -69,7 +74,7 @@ class OWDataSamplerB(widget.OWWidget):
         self.infob.setText('%d sampled instances' % len(self.sample))
 
     def commit(self):
-        self.send("Sampled Data", self.sample)
+        self.Outputs.sample.send(self.sample)
 
     def checkCommit(self):
         if self.commitOnChange:
@@ -79,7 +84,6 @@ class OWDataSamplerB(widget.OWWidget):
 def main(argv=sys.argv):
     from PyQt4.QtGui import QApplication
     app = QApplication(list(argv))
-    args = app.argv()
     if len(argv) > 1:
         filename = argv[1]
     else:

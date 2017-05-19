@@ -342,7 +342,7 @@ max-branches=12
 max-statements=200
 
 # Maximum number of parents for a class (see R0901).
-max-parents=7
+max-parents=9
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=20

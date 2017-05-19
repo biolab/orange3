@@ -28,7 +28,7 @@ class TestOWTestLearners(WidgetTest):
         data = Table("iris")[::3]
         self.send_signal("Data", data)
         self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
-        res = self.get_output("Evaluation Results")
+        res = self.get_output(self.widget.Outputs.evaluations_results)
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
@@ -48,7 +48,7 @@ class TestOWTestLearners(WidgetTest):
 
     def test_testOnTest(self):
         data = Table("iris")
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.train_data, data)
         self.widget.resampling = OWTestLearners.TestOnTest
         self.send_signal("Test Data", data)
 
@@ -168,3 +168,6 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(r1.row_indices, res.row_indices)
         np.testing.assert_equal(r2.row_indices, res.row_indices)
         np.testing.assert_equal(r3.row_indices, res.row_indices)
+
+if __name__ == "__main__":
+    unittest.main()

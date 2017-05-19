@@ -191,7 +191,7 @@ class WidgetTest(GuiTest):
         widget.show()
         app.exec()
 
-    def send_signal(self, input_name, value, *args, widget=None, wait=-1):
+    def send_signal(self, input, value, *args, widget=None, wait=-1):
         """ Send signal to widget by calling appropriate triggers.
 
         Parameters
@@ -207,19 +207,21 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
-        for input_signal in widget.inputs:
-            if input_signal.name == input_name:
-                getattr(widget, input_signal.handler)(value, *args)
-                break
-        else:
-            raise ValueError("'{}' is not an input name for widget {}"
-                             .format(input_name, type(widget).__name__))
+        if isinstance(input, str):
+            for input_signal in widget.get_signals("inputs"):
+                if input_signal.name == input:
+                    input = input_signal
+                    break
+            else:
+                raise ValueError("'{}' is not an input name for widget {}"
+                                 .format(input, type(widget).__name__))
+        getattr(widget, input.handler)(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
             spy = QSignalSpy(widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout=wait))
 
-    def get_output(self, output_name, widget=None):
+    def get_output(self, output, widget=None):
         """Return the last output that has been sent from the widget.
 
         Parameters
@@ -234,7 +236,9 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
-        return self.signal_manager.outputs.get((widget, output_name), None)
+        if not isinstance(output, str):
+            output = output.name
+        return self.signal_manager.outputs.get((widget, output), None)
 
     @contextmanager
     def modifiers(self, modifiers):
