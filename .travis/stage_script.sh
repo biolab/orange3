@@ -2,6 +2,7 @@
 if [ "$RUN_PYLINT" ]; then
     cd $TRAVIS_BUILD_DIR
     foldable pip install -r requirements-dev.txt
+    foldable pip uninstall -y radon     # disable radon in favor of codeclimate
     cp pylintrc ~/.pylintrc
     .travis/check_pylint_diff
     exit $?
