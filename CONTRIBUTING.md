@@ -93,7 +93,7 @@ Testing
 If you contribute new code, write [unit tests] for it in _Orange/tests_ or
 _Orange/widgets/*/tests_, as appropriate. Ensure the tests pass by running:
 
-    python setup.py test
+    QT_API=pyqt4 python setup.py test
 
 Additionally, check that the tests for widgets pass:
 
