@@ -1,0 +1,29 @@
+.axisTitle {
+    font-weight: bold;
+}
+
+.axisTitle {
+    width: 8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.axisExtent {
+    display: none;
+}
+
+#filterBarPattern > rect {
+    stroke: black;
+    fill: black !important;
+    stroke-width: 3;
+}
+
+.axis > .domain {
+    stroke-opacity: .6;
+    stroke-width: 2px;
+}
+
+.tick text {
+    fill: black !important;
+}
