@@ -38,22 +38,14 @@ class PCA(SklProjector, _FeatureScorerMixin):
 
     def __init__(self, n_components=None, copy=True, whiten=False,
                  svd_solver='auto', tol=0.0, iterated_power='auto',
-                 random_state=None, preprocessors=None, max_components=None):
+                 random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
-        if n_components is not None and max_components is not None:
-            raise ValueError("n_components and max_components can not both be defined.")
-        # max_components limits the number of PCA components if the minimum
-        # shape of the X matrix (after preprocessing) is higher than
-        # max_components, so that sklearn does not always compute the full
-        # transform, which is faster and uses less memory for big data.
-        self.max_components = max_components
         self.params = vars()
 
     def fit(self, X, Y=None):
         params = self.params.copy()
-        if params["n_components"] is None and self.max_components is not None:
-            # shape of X after preprocessing
-            params["n_components"] = min(min(X.shape), self.max_components)
+        if params["n_components"] is not None:
+            params["n_components"] = min(min(X.shape), params["n_components"])
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain)
@@ -160,27 +152,16 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
     name = 'Truncated SVD'
     supports_sparse = True
 
-    def __init__(self, n_components=None, algorithm='randomized', n_iter=5,
-                 random_state=None, tol=0.0, preprocessors=None, max_components=None):
+    def __init__(self, n_components=2, algorithm='randomized', n_iter=5,
+                 random_state=None, tol=0.0, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
-        if n_components is not None and max_components is not None:
-            raise ValueError("n_components and max_components can not both be defined.")
-        # max_components limits the number of SVD components if the minimum
-        # shape of the X matrix (after preprocessing) is higher than
-        # max_components, so that sklearn does not always compute the full
-        # transform, which is faster and uses less memory for big data.
-        self.max_components = max_components
         self.params = vars()
 
     def fit(self, X, Y=None):
         params = self.params.copy()
-        if params["n_components"] is None:
-            params["n_components"] = self.max_components
-
-        if params["n_components"] >= min(X.shape):
-            # strict requirement in scikit fit_transform:
-            # n_components must be < n_features
-            params["n_components"] = min(X.shape) - 1
+        # strict requirement in scikit fit_transform:
+        # n_components must be < n_features
+        params["n_components"] = min(min(X.shape)-1, params["n_components"])
 
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)

@@ -413,7 +413,7 @@ class OWPCA(widget.OWWidget):
 
     def _init_projector(self):
         cls = DECOMPOSITIONS[self.decomposition_idx]
-        self._pca_projector = cls(max_components=MAX_COMPONENTS)
+        self._pca_projector = cls(n_components=MAX_COMPONENTS)
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = cls.preprocessors
 

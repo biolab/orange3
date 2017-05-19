@@ -160,7 +160,5 @@ class TestPCA(unittest.TestCase):
         data = Table(d)
         pca = PCA()(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 20)
-        pca = PCA(max_components=10)(data)
+        pca = PCA(n_components=10)(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 10)
-        with self.assertRaises(ValueError):
-            PCA(n_components=2, max_components=10)(data)
