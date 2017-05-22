@@ -33,7 +33,7 @@ def can_connect(source_node, sink_node):
     any input of `sink_node`.
 
     """
-    return True
+    return bool(possible_links(source_node, sink_node))
 
 
 def possible_links(source_node, sink_node):

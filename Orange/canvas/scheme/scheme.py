@@ -345,6 +345,9 @@ class Scheme(QObject):
         """
         check_type(link, SchemeLink)
 
+        if self.creates_cycle(link):
+            raise SchemeCycleError("Cannot create cycles in the scheme")
+
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
                     "Cannot connect %r to %r." \

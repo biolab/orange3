@@ -264,7 +264,13 @@ class NewLinkAction(UserInteraction):
         started) and `target_item` possible.
 
         """
-        return True
+        node1 = self.scene.node_for_item(self.from_item)
+        node2 = self.scene.node_for_item(target_item)
+
+        if self.direction == self.FROM_SOURCE:
+            return bool(self.scheme.propose_links(node1, node2))
+        else:
+            return bool(self.scheme.propose_links(node2, node1))
 
     def set_link_target_anchor(self, anchor):
         """

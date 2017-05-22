@@ -50,12 +50,12 @@ from ..help.manager import get_dist_meta, trim, parse_meta
 log = logging.getLogger(__name__)
 
 OFFICIAL_ADDONS = [
-    # "Orange-Bioinformatics",
-    # "Orange3-DataFusion",
-    # "Orange3-Prototypes",
-    # "Orange3-Text",
-    # "Orange3-Network",
-    # "Orange3-Associate",
+    "Orange-Bioinformatics",
+    "Orange3-DataFusion",
+    "Orange3-Prototypes",
+    "Orange3-Text",
+    "Orange3-Network",
+    "Orange3-Associate",
 ]
 
 Installable = namedtuple(
