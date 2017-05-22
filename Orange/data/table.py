@@ -57,15 +57,15 @@ class RowInstance(Instance):
         self.id = table.ids[row_index]
         self._x = table.X[row_index]
         if sp.issparse(self._x):
-            self.sparse_x = self._x
+            self.sparse_x = sp.csr_matrix(self._x)
             self._x = np.asarray(self._x.todense())[0]
         self._y = table._Y[row_index]
         if sp.issparse(self._y):
-            self.sparse_y = self._y
+            self.sparse_y = sp.csr_matrix(self._y)
             self._y = np.asarray(self._y.todense())[0]
         self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
-            self.sparse_metas = self._metas
+            self.sparse_metas = sp.csr_matrix(self._metas)
             self._metas = np.asarray(self._metas.todense())[0]
 
     @property
