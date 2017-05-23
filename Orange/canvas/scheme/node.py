@@ -71,7 +71,17 @@ class SchemeNode(QObject):
         self.properties = properties or {}
 
     def allows_cycle(self):
+        """
+        Return if the node allows cycle on her input / output
+        """
         return self.description.allows_cycle
+
+    def compress_received_signals(self):
+        """
+        Return if the node request the call to compress_signal before
+        processing
+        """
+        return self.description.compress_received_signals
 
     def input_channels(self):
         """
@@ -229,7 +239,7 @@ class SchemeNode(QObject):
 
     def __str__(self):
         return "SchemeNode(description_id=%s, title=%r, ...)" % \
-                (str(self.description.id), self.title)
+               (str(self.description.id), self.title)
 
     def __repr__(self):
         return str(self)

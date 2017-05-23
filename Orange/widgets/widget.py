@@ -102,7 +102,10 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     keywords = []
     background = None
     replaces = None
+    # can we create loop/cycle on this widget
     allows_cycle = False
+    # should the input signals be compressed for the widget
+    compress_received_signals = True
 
 
     #: A list of published input definitions

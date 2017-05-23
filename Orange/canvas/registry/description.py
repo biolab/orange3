@@ -227,7 +227,9 @@ class WidgetDescription(object):
         Widget's background color (in the canvas GUI).
     replaces : list-of-str, optional
         A list of `id`s this widget replaces (optional).
-    allows_cycle: True if the widget allows cycle creation on her
+    allows_cycle : True if the widget allows cycle creation on her
+    compress_received_signals : True if we want the input signals to be
+        compressed before processing.
     """
     def __init__(self, name, id, category=None, version=None,
                  description=None,
@@ -237,7 +239,8 @@ class WidgetDescription(object):
                  priority=sys.maxsize,
                  icon=None, background=None,
                  replaces=None,
-                 allows_cycle=False
+                 allows_cycle=False,
+                 compress_received_signals=True
                  ):
 
         if not qualified_name:
@@ -263,6 +266,7 @@ class WidgetDescription(object):
         self.background = background
         self.replaces = replaces
         self.allows_cycle = allows_cycle
+        self.compress_received_signals = compress_received_signals
 
     def __str__(self):
         return ("WidgetDescription(name=%(name)r, id=%(id)r), "
@@ -340,7 +344,9 @@ class WidgetDescription(object):
             icon=widget_class.icon,
             background=widget_class.background,
             replaces=widget_class.replaces,
-            allows_cycle=widget_class.allows_cycle)
+            allows_cycle=widget_class.allows_cycle,
+            compress_received_signals=widget_class.compress_received_signals
+            )
 
 
 class CategoryDescription(object):
