@@ -241,16 +241,19 @@ def default_entry_point():
     return ep
 
 
-def widgets_entry_points():
+def widgets_entry_points(with_default_entry=True):
     """
     Return an `EntryPoint` iterator for all 'orange.widget' entry
     points plus the default Orange Widgets.
 
     """
     ep_iter = pkg_resources.iter_entry_points(WIDGETS_ENTRY)
-    chain = [[default_entry_point()],
-             ep_iter
-             ]
+    if with_default_entry is True:
+        chain = [[default_entry_point()],
+                 ep_iter
+                 ]
+    else:
+        chain = [ep_iter]
     return itertools.chain(*chain)
 
 #: Parameters for searching add-on packages in PyPi using xmlrpc api.

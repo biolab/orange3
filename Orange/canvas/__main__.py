@@ -121,6 +121,9 @@ def main(argv=None):
     parser.add_option("--qt",
                       help="Additional arguments for QApplication",
                       type="str", default=None)
+    parser.add_option('--only-addon',
+                      action="store_true",
+                      help='display only add-on widgets')
 
     (options, args) = parser.parse_args(argv[1:])
 
@@ -258,6 +261,12 @@ def main(argv=None):
     else:
         reg_cache = None
 
+
+    if options.only_addon:
+        only_addon = True
+    else:
+        only_addon = False
+
     widget_discovery = qt.QtWidgetDiscovery(cached_descriptions=reg_cache)
 
     widget_registry = qt.QtWidgetRegistry()
@@ -294,7 +303,9 @@ def main(argv=None):
             widget_registry = pickle.load(f)
         widget_registry = qt.QtWidgetRegistry(widget_registry)
     else:
-        widget_discovery.run(config.widgets_entry_points())
+        entry_points = config.widgets_entry_points(
+            with_default_entry=(only_addon is False))
+        widget_discovery.run(entry_points)
         # Store cached descriptions
         cache.save_registry_cache(widget_discovery.cached_descriptions)
         with open(cache_filename, "wb") as f:
