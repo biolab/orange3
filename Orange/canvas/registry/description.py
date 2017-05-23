@@ -339,7 +339,8 @@ class WidgetDescription(object):
             priority=widget_class.priority,
             icon=widget_class.icon,
             background=widget_class.background,
-            replaces=widget_class.replaces)
+            replaces=widget_class.replaces,
+            allows_cycle=widget_class.allows_cycle)
 
 
 class CategoryDescription(object):

@@ -345,8 +345,9 @@ class Scheme(QObject):
         """
         check_type(link, SchemeLink)
 
-        if self.creates_cycle(link):
-            raise SchemeCycleError("Cannot create cycles in the scheme")
+        if not (link.source_node.allows_cycle() or link.sink_node.allows_cycle()):
+            if self.creates_cycle(link):
+                raise SchemeCycleError("Cannot create cycles in the scheme")
 
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
@@ -385,6 +386,8 @@ class Scheme(QObject):
         """
         check_type(link, SchemeLink)
         source_node, sink_node = link.source_node, link.sink_node
+        if source_node.allows_cycle() or sink_node.allows_cycle():
+            return False
         upstream = self.upstream_nodes(source_node)
         upstream.add(source_node)
         return sink_node in upstream
@@ -527,11 +530,12 @@ class Scheme(QObject):
         .. note:: This can depend on the links already in the scheme.
 
         """
-        if source_node is sink_node or \
-                self.is_ancestor(sink_node, source_node):
-            # Cyclic connections are not possible.
-            return []
-
+        if not (source_node.allows_cycle() or sink_node.allows_cycle()):
+            if source_node is sink_node or \
+                    self.is_ancestor(sink_node, source_node):
+                # Cyclic connections are not possible. Except if tagged
+                # 'allows_cycle'
+                return []
         outputs = source_node.output_channels()
         inputs = sink_node.input_channels()
 
