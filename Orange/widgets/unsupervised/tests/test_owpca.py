@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owpca import OWPCA
 
@@ -76,3 +76,18 @@ class TestOWPCA(WidgetTest):
         data.X = sp.csr_matrix(data.X)
         self.widget.set_data(data)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())
+
+    def test_all_components_continuous(self):
+        data = Table("banking-crises.tab")
+        # GH-2329 only occurred on TimeVariables when normalize=False
+        self.assertTrue(any(isinstance(a, TimeVariable)
+                            for a in data.domain.attributes))
+
+        self.widget.normalize = False
+        self.widget._update_normalize()     # pylint: disable=protected-access
+        self.widget.set_data(data)
+
+        components = self.get_output("Components")
+        self.assertTrue(all(type(a) is ContinuousVariable   # pylint: disable=unidiomatic-typecheck
+                            for a in components.domain.attributes),
+                        "Some variables aren't of type ContinuousVariable")
