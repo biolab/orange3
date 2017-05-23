@@ -1,0 +1,4 @@
+- add the --only-addon option on the canvas main to avoid loading the default orange widgets (data, visualize...)
+- add widget flags : 
+	- allows_cycle : to skip cycle detection when adding a link. In practice allow cycle creation on this specific node (default is False
+	- compress_received_signals : to avoid the call to compress-signal on the incoming signals for a specific widget
