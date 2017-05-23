@@ -410,6 +410,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             table = self.data
 
+        if table is not None and (len(table.domain) + len(table.domain.metas) == 0):
+            table = None
+
         self.send("Data", table)
         self.apply_button.setEnabled(False)
 
