@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import random
+import unittest
 
 import numpy as np
 
@@ -88,3 +89,19 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         )
         data = data.from_table(domain, data)
         self.send_signal(self.widget.Inputs.data, data)
+
+    def test_memory_error(self):
+        """
+        Handling memory error.
+        GH-2336
+        """
+        data = Orange.data.Table("iris")[::3]
+        self.assertFalse(self.widget.Error.memory_error.is_shown())
+        with unittest.mock.patch(
+            "numpy.asarray",
+            side_effect=MemoryError):
+            self.widget._matrix = None
+            self.widget.data = data
+            self.widget._effective_data = data
+            self.widget._update()
+            self.assertTrue(self.widget.Error.memory_error.is_shown())

@@ -83,6 +83,7 @@ class OWSilhouettePlot(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
         singleton_clusters_all = Msg("All clusters are singletons")
+        memory_error = Msg("Not enough memory")
 
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
@@ -253,6 +254,8 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _update(self):
         # Update/recompute the distances/scores as required
+        self.Error.memory_error.clear()
+
         if self.data is None or not len(self.data):
             self._mask = None
             self._silhouette = None
@@ -263,7 +266,11 @@ class OWSilhouettePlot(widget.OWWidget):
 
         if self._matrix is None and self._effective_data is not None:
             _, metric = self.Distances[self.distance_idx]
-            self._matrix = numpy.asarray(metric(self._effective_data))
+            try:
+                self._matrix = numpy.asarray(metric(self._effective_data))
+            except MemoryError:
+                self.Error.memory_error()
+                return
 
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
