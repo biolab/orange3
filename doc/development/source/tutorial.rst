@@ -125,7 +125,7 @@ widget functionality:
 .. seealso::
    :func:`Orange.widgets.gui.lineEdit`,
 
-By itself this widget is useless because no widget accepts its outpus.
+By itself this widget is useless because no widget accepts its output.
 So let us define a widget that displays a number.
 
 .. code-block:: python
