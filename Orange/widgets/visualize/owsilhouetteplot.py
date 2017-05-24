@@ -16,7 +16,7 @@ from AnyQt.QtWidgets import (
     QGraphicsProxyWidget, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsRectItem, QFrame, QSizePolicy
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFont, QFontMetrics
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -279,7 +279,7 @@ class OWSilhouettePlot(widget.OWWidget):
         labels = labels.astype(int)
         labels = labels[~mask]
 
-        labels_unq, counts = numpy.unique(labels, return_counts=True)
+        labels_unq, _ = numpy.unique(labels, return_counts=True)
 
         self.Error.singleton_clusters_all.clear()
         self.Error.need_two_clusters.clear()
@@ -536,8 +536,8 @@ class SilhouettePlot(QGraphicsWidget):
             else:
                 tooltips = grp.rownames
 
-            for bar, tooltip in zip(baritems, tooltips):
-                bar.setToolTip(tooltip)
+            for baritem, tooltip in zip(baritems, tooltips):
+                baritem.setToolTip(tooltip)
 
         self.layout().activate()
 
@@ -976,7 +976,7 @@ class BarPlotItem(QGraphicsWidget):
 
         pen = self.pen()
         brush = self.brush()
-        for i in range(self.count()):
+        for _ in range(self.count()):
             item = QGraphicsRectItem(self)
             item.setPen(pen)
             item.setBrush(brush)
@@ -1024,7 +1024,7 @@ class TextListWidget(QGraphicsWidget):
         self.__spacing = 0
 
         sp = QSizePolicy(QSizePolicy.Preferred,
-                               QSizePolicy.Preferred)
+                         QSizePolicy.Preferred)
         sp.setWidthForHeight(True)
         self.setSizePolicy(sp)
 
@@ -1120,8 +1120,10 @@ class TextListWidget(QGraphicsWidget):
         self.__textitems = []
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     from AnyQt.QtWidgets import QApplication
+    if argv is None:
+        argv = sys.argv
     app = QApplication(list(argv))
     argv = app.arguments()
     if len(argv) > 1:
