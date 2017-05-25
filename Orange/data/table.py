@@ -17,7 +17,8 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack
+from Orange.data.util import SharedComputeValue, vstack, hstack, assure_array_dense, assure_array_sparse, \
+    assure_column_dense, assure_column_sparse
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
@@ -280,44 +281,38 @@ class Table(MutableSequence, Storage):
 
         global _conversion_cache
 
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
-                        is_sparse=False):
-
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64, is_sparse=False):
             if not len(src_cols):
                 if is_sparse:
                     return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
                 else:
                     return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
+            # match density for subarrays
+            match_density = assure_array_sparse if is_sparse else assure_array_dense
             n_src_attrs = len(source.domain.attributes)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
                    for x in src_cols):
-                return _subarray(source.X, row_indices, src_cols)
+                return match_density(_subarray(source.X, row_indices, src_cols))
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                arr = _subarray(source.metas, row_indices,
-                                [-1 - x for x in src_cols])
+                arr = match_density(_subarray(source.metas, row_indices,
+                                            [-1 - x for x in src_cols]))
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
-                return _subarray(source._Y, row_indices,
-                                 [x - n_src_attrs for x in src_cols])
+                return match_density(_subarray(
+                    source._Y, row_indices,
+                    [x - n_src_attrs for x in src_cols]))
 
+            # initialize final array & set `match_density` for columns
             if is_sparse:
                 a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
+                match_density = assure_column_sparse
             else:
                 a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-
-            def match_type(x):
-                """ Assure that matrix and column are both dense or sparse. """
-                if is_sparse == sp.issparse(x):
-                    return x
-                elif is_sparse:
-                    x = np.asarray(x)
-                    return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
-                else:
-                    return np.ravel(x.toarray())
+                match_density = assure_column_dense
 
             shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
@@ -330,22 +325,22 @@ class Table(MutableSequence, Storage):
                                 col.compute_shared(source)
                         shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
-                            a[:, i] = match_type(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared)[row_indices])
                         else:
-                            a[:, i] = match_type(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            a[:, i] = match_type(col(source)[row_indices])
+                            a[:, i] = match_density(col(source)[row_indices])
                         else:
-                            a[:, i] = match_type(col(source))
+                            a[:, i] = match_density(col(source))
                 elif col < 0:
-                    a[:, i] = match_type(source.metas[row_indices, -1 - col])
+                    a[:, i] = match_density(source.metas[row_indices, -1 - col])
                 elif col < n_src_attrs:
-                    a[:, i] = match_type(source.X[row_indices, col])
+                    a[:, i] = match_density(source.X[row_indices, col])
                 else:
-                    a[:, i] = match_type(
+                    a[:, i] = match_density(
                         source._Y[row_indices, col - n_src_attrs])
 
             if is_sparse:
