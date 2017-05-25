@@ -18,15 +18,15 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
 
     def test_input_data(self):
         """Check number of tabs with data on the input"""
-        self.send_signal("Data", self.data, 1)
+        self.send_signal(self.widget.Inputs.data, self.data, 1)
         self.assertEqual(self.widget.tabs.count(), 1)
-        self.send_signal("Data", self.data, 2)
+        self.send_signal(self.widget.Inputs.data, self.data, 2)
         self.assertEqual(self.widget.tabs.count(), 2)
-        self.send_signal("Data", None, 1)
+        self.send_signal(self.widget.Inputs.data, None, 1)
         self.assertEqual(self.widget.tabs.count(), 1)
 
     def test_data_model(self):
-        self.send_signal("Data", self.data, 1)
+        self.send_signal(self.widget.Inputs.data, self.data, 1)
         self.assertEqual(self.widget.tabs.widget(0).model().rowCount(),
                          len(self.data))
 
