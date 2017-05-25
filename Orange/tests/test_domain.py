@@ -3,7 +3,7 @@
 import warnings
 from time import time
 from numbers import Real
-from itertools import starmap
+from itertools import starmap, chain
 import unittest
 import pickle
 
@@ -501,6 +501,42 @@ class TestDomainInit(unittest.TestCase):
 
         self.assertEqual(domain[age].number_of_decimals, 5)
         self.assertEqual(new_domain[age].number_of_decimals, 10)
+
+    def test_domain_conversion_sparsity(self):
+        destination = Domain(
+            attributes=[
+                ContinuousVariable(name='a'),
+                ContinuousVariable(name='b'),
+                ContinuousVariable(name='c'),
+            ],
+            class_vars=[DiscreteVariable('d', values=['e'])],
+            metas=[StringVariable('f')]
+        )
+
+        # all dense
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertFalse(conversion.sparse_X)
+        self.assertFalse(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
+
+        # set destination attributes as sparse
+        for a in destination.attributes:
+            a.sparse = True
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertTrue(conversion.sparse_X)
+        self.assertFalse(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
+
+        # set all destination variable as sparse
+        for a in chain(destination.variables, destination.metas):
+            a.sparse = True
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertTrue(conversion.sparse_X)
+        self.assertTrue(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
 
 
 class TestDomainFilter(unittest.TestCase):
