@@ -16,6 +16,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting, Setting
+from Orange.widgets.widget import Input, Output
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel, PyListModel
@@ -245,8 +246,13 @@ class OWSelectAttributes(widget.OWWidget):
                   "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table), ("Features", widget.AttributeList)]
+
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data = Output("Data", Table)
+        features = Output("Features", widget.AttributeList, dynamic=False)
 
     want_main_area = False
     want_control_area = True
@@ -401,6 +407,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.resize(500, 600)
 
+    @Inputs.data
     def set_data(self, data=None):
         self.update_domain_role_hints()
         self.closeContext()
@@ -599,12 +606,12 @@ class OWSelectAttributes(widget.OWWidget):
             domain = Orange.data.Domain(attributes, class_var, metas)
             newdata = self.data.transform(domain)
             self.output_data = newdata
-            self.send("Data", newdata)
-            self.send("Features", widget.AttributeList(attributes))
+            self.Outputs.data.send(newdata)
+            self.Outputs.features.send(widget.AttributeList(attributes))
         else:
             self.output_data = None
-            self.send("Data", None)
-            self.send("Features", None)
+            self.Outputs.data.send(None)
+            self.Outputs.features.send(None)
 
     def reset(self):
         if self.data is not None:
