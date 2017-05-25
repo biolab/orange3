@@ -484,6 +484,8 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         self.report_items((
+            ("Decomposition", DECOMPOSITIONS[self.decomposition_idx].name),
+            ("Normalize data", str(self.normalize)),
             ("Selected components", self.ncomponents),
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
         ))
