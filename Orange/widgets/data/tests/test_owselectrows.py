@@ -88,7 +88,7 @@ class TestOWSelectRows(WidgetTest):
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
         iris = Table("iris")[:5]
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         # Validating with C locale should accept decimal point
         self.widget.remove_all_button.click()
@@ -103,7 +103,7 @@ class TestOWSelectRows(WidgetTest):
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_continuous_filter_with_sl_SI_locale(self):
         iris = Table("iris")[:5]
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         # sl_SI locale should accept decimal comma
         self.widget.remove_all_button.click()
@@ -144,7 +144,7 @@ class TestOWSelectRows(WidgetTest):
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
         iris = Table("iris")[:5]
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         # sl_SI locale should accept decimal comma
         self.widget.remove_all_button.click()
@@ -152,7 +152,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(self.widget.conditions[0][2], ("5,2",))
 
         context = self.widget.current_context
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         saved_condition = context.values["conditions"][0]
         self.assertEqual(saved_condition[2][0], 5.2)
 
@@ -164,7 +164,7 @@ class TestOWSelectRows(WidgetTest):
         # Settings with string value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 2, ("5.2",)]])
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5.2"))
@@ -172,7 +172,7 @@ class TestOWSelectRows(WidgetTest):
         # Settings with float value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 2, (5.2,)]])
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5.2"))
@@ -183,7 +183,7 @@ class TestOWSelectRows(WidgetTest):
         # Settings with string value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 2, ("5.2",)]])
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5,2"))
@@ -191,14 +191,14 @@ class TestOWSelectRows(WidgetTest):
         # Settings with float value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 2, (5.2,)]])
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         values = self.widget.conditions[0][2]
         self.assertTrue(values[0].startswith("5,2"))
 
     def test_load_settings(self):
         iris = Table("iris")[:5]
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
 
         sepal_length, sepal_width = iris.domain[:2]
 
@@ -208,7 +208,7 @@ class TestOWSelectRows(WidgetTest):
         data = self.widget.settingsHandler.pack_data(self.widget)
 
         w2 = self.create_widget(OWSelectRows, data)
-        self.send_signal("Data", iris, widget=w2)
+        self.send_signal(self.widget.Inputs.data, iris, widget=w2)
 
         var_combo = w2.cond_list.cellWidget(0, 0)
         self.assertEqual(var_combo.currentText(), "sepal width")
@@ -224,7 +224,8 @@ class TestOWSelectRows(WidgetTest):
         # gh-2054 regression
 
         data = Table(datasets.path("testing_dataset_cls"))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
+
 
         self.enterFilter(data.domain["c2"], "is defined")
         self.assertFalse(self.widget.Error.parsing_error.is_shown())
