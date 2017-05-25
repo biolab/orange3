@@ -382,18 +382,19 @@ class Table(MutableSequence, Storage):
                 self.domain = domain
                 conversion = domain.get_conversion(source.domain)
                 self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                     is_sparse=sp.issparse(source.X))
+                                     is_sparse=conversion.sparse_X)
                 if self.X.ndim == 1:
                     self.X = self.X.reshape(-1, len(self.domain.attributes))
+
                 self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                     is_sparse=sp.issparse(source.Y))
+                                     is_sparse=conversion.sparse_Y)
 
                 dtype = np.float64
                 if any(isinstance(var, StringVariable) for var in domain.metas):
                     dtype = np.object
                 self.metas = get_columns(row_indices, conversion.metas,
                                          n_rows, dtype,
-                                         is_sparse=sp.issparse(source.metas))
+                                         is_sparse=conversion.sparse_metas)
                 if self.metas.ndim == 1:
                     self.metas = self.metas.reshape(-1, len(self.domain.metas))
                 if source.has_weights():
