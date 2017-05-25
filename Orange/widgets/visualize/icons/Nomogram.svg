@@ -1,16 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!-- Generator: Adobe Illustrator 16.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<rect x="22" y="13" fill="#333333" width="1" height="5"/>
-<rect x="22" y="20" fill="#333333" width="1" height="8"/>
-<rect x="22" y="30" fill="#333333" width="1" height="5"/>
-<polygon fill="#666666" points="34,16 34,18 26,18 26,16 25,16 25,18 23,18 22,18 17,18 17,16 16,16 16,18 8,18 8,16 7,16 7,18 
-	7,19 7,20 7,21 8,21 8,20 8,19 10,19 10,20 11,20 11,19 13,19 13,20 14,20 14,19 16,19 16,20 16,21 17,21 17,20 17,19 19,19 19,20 
-	20,20 20,19 22,19 22,20 23,20 23,19 25,19 25,20 25,21 26,21 26,20 26,19 28,19 28,20 29,20 29,19 31,19 31,20 32,20 32,19 34,19 
-	34,20 34,21 35,21 35,20 35,19 35,18 35,16 "/>
-<polygon fill="#666666" points="40,26 40,28 29,28 29,26 28,26 28,28 23,28 22,28 17,28 17,26 16,26 16,28 16,29 16,31 17,31 17,29 
-	19,29 19,30 20,30 20,29 22,29 22,30 23,30 23,29 25,29 25,30 26,30 26,29 28,29 28,30 28,31 29,31 29,30 29,29 31,29 31,30 32,30 
-	32,29 34,29 34,30 35,30 35,29 37,29 37,30 38,30 38,29 40,29 40,30 40,31 41,31 41,30 41,29 41,28 41,26 "/>
+	 width="24px" height="24px" viewBox="0 0 24 24" enable-background="new 0 0 24 24" xml:space="preserve">
+<path fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M-0.138,22.004"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="3.125" y1="8.249" x2="17.375" y2="8.249"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="10.25" y1="6.744" x2="10.25" y2="9.754"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="3.375" y1="6.745" x2="3.375" y2="9.753"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="17.375" y1="6.744" x2="17.375" y2="9.754"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="13.75" y1="7.122" x2="13.75" y2="9.376"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="6.625" y1="7.122" x2="6.625" y2="9.376"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="6.625" y1="15.549" x2="20.875" y2="15.549"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="6.625" y1="14.044" x2="6.625" y2="17.055"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="20.875" y1="14.044" x2="20.875" y2="17.055"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="17.25" y1="14.422" x2="17.25" y2="16.676"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="10.25" y1="3.87" x2="10.25" y2="20.129"/>
+<path fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M26.111,23.051"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="29.625" y1="8.858" x2="43.875" y2="8.858"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="36.75" y1="7.354" x2="36.75" y2="10.363"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="29.625" y1="7.354" x2="29.625" y2="10.363"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="43.875" y1="7.354" x2="43.875" y2="10.363"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="40.25" y1="7.731" x2="40.25" y2="9.985"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="33.125" y1="7.731" x2="33.125" y2="9.985"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="33.125" y1="16.158" x2="47.375" y2="16.158"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="40.25" y1="14.652" x2="40.25" y2="17.663"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="33.125" y1="14.652" x2="33.125" y2="17.663"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="47.375" y1="14.652" x2="47.375" y2="17.663"/>
+<line fill="none" stroke="#464545" stroke-width="0.75" stroke-miterlimit="10" x1="43.75" y1="15.031" x2="43.75" y2="17.285"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="36.75" y1="4.917" x2="36.75" y2="21.176"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="30.208" y1="28.508" x2="44.458" y2="28.508"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="37.333" y1="27.004" x2="37.333" y2="30.014"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="30.458" y1="26.566" x2="30.458" y2="29.576"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="44.458" y1="27.004" x2="44.458" y2="30.014"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="40.833" y1="27.381" x2="40.833" y2="29.635"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="33.708" y1="27.381" x2="33.708" y2="29.635"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="33.708" y1="35.809" x2="47.958" y2="35.809"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="40.833" y1="34.303" x2="40.833" y2="37.312"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="33.708" y1="34.303" x2="33.708" y2="37.312"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="44.333" y1="34.682" x2="44.333" y2="36.936"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="37.333" y1="24.129" x2="37.333" y2="40.389"/>
+<line fill="none" stroke="#333333" stroke-width="0.75" stroke-miterlimit="10" x1="47.958" y1="34.658" x2="47.958" y2="37.668"/>
+<line fill="none" stroke="#333333" stroke-miterlimit="10" x1="13.75" y1="14.422" x2="13.75" y2="16.676"/>
 </svg>
