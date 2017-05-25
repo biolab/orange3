@@ -11,7 +11,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
-from Orange.widgets.widget import Msg, OWWidget
+from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.util import Reprable
 
 
@@ -23,9 +23,13 @@ class OWDataSampler(OWWidget):
     priority = 100
     category = "Data"
     keywords = ["data", "sample"]
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data Sample", Table, widget.Default),
-               ("Remaining Data", Table)]
+
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data_sample = Output("Data Sample", Table, default=True)
+        remaining_data = Output("Remaining Data", Table)
 
     want_main_area = False
     resizing_enabled = False
@@ -160,6 +164,7 @@ class OWDataSampler(OWWidget):
     def settings_changed(self):
         self.indices = None
 
+    @Inputs.data
     def set_data(self, dataset):
         self.data = dataset
         if dataset is not None:
@@ -221,8 +226,8 @@ class OWDataSampler(OWWidget):
             other = self.data[remaining]
             self.sampled_instances = len(sample)
             self.remaining_instances = len(other)
-        self.send("Data Sample", sample)
-        self.send("Remaining Data", other)
+        self.Outputs.data_sample.send(sample)
+        self.Outputs.remaining_data.send(other)
 
     def updateindices(self):
         self.Error.clear()
