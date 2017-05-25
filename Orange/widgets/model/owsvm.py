@@ -199,6 +199,7 @@ class OWSVM(OWBaseLearner):
             'degree': self.degree,
             'gamma': self.gamma or self._default_gamma,
             'coef0': self.coef0,
+            'probability': True,
             'tol': self.tol,
             'max_iter': self.max_iter if self.limit_iter else -1,
             'preprocessors': self.preprocessors
