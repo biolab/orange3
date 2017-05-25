@@ -217,6 +217,7 @@ class OWTestLearners(OWWidget):
         too_many_folds = Msg("Number of folds exceeds the data size")
         class_inconsistent = Msg("Test and train data sets "
                                  "have different target variables.")
+        memory_error = Msg("Not enough memory.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
@@ -648,8 +649,11 @@ class OWTestLearners(OWWidget):
         """
         Commit the results to output.
         """
+        self.Error.memory_error.clear()
         valid = [slot for slot in self.learners.values()
                  if slot.results is not None and slot.results.success]
+        combined = None
+        predictions = None
         if valid:
             # Evaluation results
             combined = results_merge([slot.results.value for slot in valid])
@@ -657,10 +661,11 @@ class OWTestLearners(OWWidget):
                                       for slot in valid]
 
             # Predictions & Probabilities
-            predictions = combined.get_augmented_data(combined.learner_names)
-        else:
-            combined = None
-            predictions = None
+            try:
+                predictions = combined.get_augmented_data(combined.learner_names)
+            except MemoryError:
+                self.Error.memory_error()
+
         self.Outputs.evaluations_results.send(combined)
         self.Outputs.predictions.send(predictions)
 
