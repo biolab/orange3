@@ -38,15 +38,15 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         """Check learner and model for various values of all parameters
         when pruning parameters are not checked
         """
-        self.send_signal("Evaluation Results", self.results_2_iris)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_2_iris)
         self.assertEqual(self.widget.selected_learner, [0])
         self.widget.selected_learner[:] = [1]
-        self.send_signal("Evaluation Results", self.results_2_titanic)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_2_titanic)
         self.widget.selected_learner[:] = [1]
-        self.send_signal("Evaluation Results", self.results_1_iris)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_1_iris)
         self.widget.selected_learner[:] = [0]
-        self.send_signal("Evaluation Results", None)
-        self.send_signal("Evaluation Results", self.results_1_iris)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_1_iris)
         self.widget.selected_learner[:] = [0]
 
     def _select_data(self):
@@ -62,22 +62,22 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         """On regression data, the widget must show error"""
         housing = Table("housing")
         results = TestOnTrainingData(housing, [MeanLearner()], store_data=True)
-        self.send_signal("Evaluation Results", results)
+        self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.assertTrue(self.widget.Error.no_regression.is_shown())
-        self.send_signal("Evaluation Results", None)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.no_regression.is_shown())
-        self.send_signal("Evaluation Results", results)
+        self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.assertTrue(self.widget.Error.no_regression.is_shown())
-        self.send_signal("Evaluation Results", self.results_1_iris)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_1_iris)
         self.assertFalse(self.widget.Error.no_regression.is_shown())
 
     def test_row_indices(self):
         """Map data instances when using random shuffling"""
         results = ShuffleSplit(self.iris, [NaiveBayesLearner()],
                                store_data=True)
-        self.send_signal("Evaluation Results", results)
+        self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.widget.select_correct()
-        selected = self.get_output("Selected Data")
+        selected = self.get_output(self.widget.Outputs.selected_data)
         correct = np.equal(results.actual, results.predicted)[0]
         correct_indices = results.row_indices[correct]
         self.assertSetEqual(set(self.iris[correct_indices].ids),
@@ -90,7 +90,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         res.actual = np.array([])
         res.predicted = np.array([[]])
         res.probabilities = np.zeros((1, 0, 3))
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.select_correct()
         self.widget.select_wrong()
 
@@ -102,7 +102,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         res.predicted = np.array([[np.nan, 1, 2],
                                   [np.nan, np.nan, np.nan]])
         res.probabilities = np.zeros((1, 3, 3))
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.assertTrue(self.widget.Error.invalid_values.is_shown())
-        self.send_signal("Evaluation Results", None)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_values.is_shown())
