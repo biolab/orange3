@@ -31,7 +31,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
-from Orange.widgets.widget import Msg, OWWidget
+from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 
@@ -72,12 +72,15 @@ class OWMDS(OWWidget):
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
-    inputs = [("Data", Orange.data.Table, "set_data", widget.Default),
-              ("Distances", Orange.misc.DistMatrix, "set_disimilarity"),
-              ("Data Subset", Orange.data.Table, "set_subset_data")]
 
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table, default=True)
+        distances = Input("Distances", Orange.misc.DistMatrix)
+        data_subset = Input("Data Subset", Orange.data.Table)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     #: Initialization type
     PCA, Random = 0, 1
@@ -360,6 +363,7 @@ class OWMDS(OWWidget):
         self._initialize()
 
     @check_sql_input
+    @Inputs.data
     def set_data(self, data):
         """Set the input data set.
 
@@ -384,6 +388,7 @@ class OWMDS(OWWidget):
             self._invalidated = True
         self._selection_mask = None
 
+    @Inputs.distances
     def set_disimilarity(self, matrix):
         """Set the dissimilarity (distance) matrix.
 
@@ -406,6 +411,7 @@ class OWMDS(OWWidget):
         self._invalidated = True
         self._selection_mask = None
 
+    @Inputs.data_subset
     def set_subset_data(self, subset_data):
         """Set a subset of `data` input to highlight in the plot.
 
@@ -1030,9 +1036,8 @@ class OWMDS(OWWidget):
             subset = output[self._selection_mask]
         else:
             subset = None
-        self.send("Selected Data", subset)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(output, self._selection_mask))
+        self.Outputs.selected_data.send(subset)
+        self.Outputs.annotated_data.send(create_annotated_table(output, self._selection_mask))
 
     def onDeleteWidget(self):
         super().onDeleteWidget()

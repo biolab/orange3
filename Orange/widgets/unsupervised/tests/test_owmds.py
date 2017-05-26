@@ -9,7 +9,6 @@ from AnyQt.QtCore import QEvent
 
 from Orange.distance import Euclidean
 from Orange.widgets.unsupervised.owmds import OWMDS
-from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.tests.utils import simulate
 
@@ -41,7 +40,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
     def test_pca_init(self):
         self.send_signal(self.signal_name, self.signal_data, wait=1000)
-        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        output = self.get_output(self.widget.Outputs.annotated_data)
         expected = np.array(
             [[-2.69304803, 0.32676458],
              [-2.7246721, -0.20921726],
@@ -52,7 +51,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
     def test_nan_plot(self):
         data = datasets.missing_data_1()
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
         simulate.combobox_run_through_all(self.widget.cb_color_value)
         simulate.combobox_run_through_all(self.widget.cb_color_value)
@@ -60,7 +59,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         simulate.combobox_run_through_all(self.widget.cb_size_value)
         simulate.combobox_run_through_all(self.widget.cb_label_value)
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
 
         data.X[:, 0] = np.nan
         data.Y[:] = np.nan
@@ -76,7 +75,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
     @patch("Orange.projection.MDS.__call__", Mock(side_effect=MemoryError))
     def test_out_of_memory(self):
         with patch("sys.excepthook", Mock()) as hook:
-            self.send_signal("Data", self.data)
+            self.send_signal(self.widget.Inputs.data, self.data)
             self.process_events()
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.out_of_memory.is_shown())
@@ -84,7 +83,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
     @patch("Orange.projection.MDS.__call__", Mock(side_effect=ValueError))
     def test_other_error(self):
         with patch("sys.excepthook", Mock()) as hook:
-            self.send_signal("Data", self.data)
+            self.send_signal(self.widget.Inputs.data, self.data)
             self.process_events()
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.optimization_error.is_shown())
