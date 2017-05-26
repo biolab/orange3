@@ -35,6 +35,9 @@ from Orange.widgets.unsupervised.owhierarchicalclustering import \
 from Orange.widgets.widget import Msg
 
 
+ROW_NAMES_WIDTH = 200
+
+
 class OWSilhouettePlot(widget.OWWidget):
     name = "Silhouette Plot"
     description = "Visually assess cluster quality and " \
@@ -506,7 +509,10 @@ class SilhouettePlot(QGraphicsWidget):
             item = layout.itemAt(i + 1, 3)
 
             if grp.rownames is not None:
-                item.setItems(grp.rownames)
+                metrics = QFontMetrics(self.font())
+                rownames = [metrics.elidedText(rowname, Qt.ElideRight, ROW_NAMES_WIDTH)
+                            for rowname in grp.rownames]
+                item.setItems(rownames)
                 item.setVisible(self.__rowNamesVisible)
             else:
                 item.setItems([])
@@ -906,8 +912,7 @@ class BarPlotItem(QGraphicsWidget):
         return super().event(event)
 
     def sizeHint(self, which, constraint=QSizeF()):
-        spacing = max(self.__spacing * (self.count() - 1), 0)
-        return QSizeF(300, self.__barsize * self.count() + spacing)
+        return QSizeF(300, (self.__barsize + self.__spacing) * self.count())
 
     def setPreferredBarSize(self, size):
         if self.__barsize != size:
@@ -916,11 +921,6 @@ class BarPlotItem(QGraphicsWidget):
 
     def spacing(self):
         return self.__spacing
-
-    def setSpacing(self, spacing):
-        if self.__spacing != spacing:
-            self.__spacing = spacing
-            self.updateGeometry()
 
     def setPen(self, pen):
         pen = QPen(pen)
