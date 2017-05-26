@@ -14,7 +14,7 @@ from Orange.preprocess.transformation import Transformation, Lookup
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import DomainModel
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input, Output
 
 
 def map_by_substring(a, patterns, case_sensitive, match_beginning):
@@ -129,8 +129,11 @@ class OWCreateClass(widget.OWWidget):
     category = "Data"
     keywords = ["data"]
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data = Output("Data", Table)
 
     want_main_area = False
 
@@ -234,6 +237,7 @@ class OWCreateClass(widget.OWWidget):
             for edit, text in zip(editr, textr):
                 edit.setText(text)
 
+    @Inputs.data
     def set_data(self, data):
         """Input data signal handler."""
         self.closeContext()
@@ -244,7 +248,7 @@ class OWCreateClass(widget.OWWidget):
         self.Warning.no_nonnumeric_vars(shown=data is not None and not model)
         if not model:
             self.attribute = None
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             return
         self.attribute = model[0]
         self.openContext(data)
@@ -448,7 +452,7 @@ class OWCreateClass(widget.OWWidget):
     def apply(self):
         """Output the transformed data."""
         if not self.attribute:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             return
         domain = self.data.domain
         rules = self.active_rules
@@ -469,7 +473,7 @@ class OWCreateClass(widget.OWWidget):
         new_domain = Domain(
             domain.attributes, new_class, domain.metas + domain.class_vars)
         new_data = self.data.transform(new_domain)
-        self.send("Data", new_data)
+        self.Outputs.data.send(new_data)
 
     def send_report(self):
         def _cond_part():
