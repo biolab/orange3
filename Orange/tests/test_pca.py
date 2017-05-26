@@ -6,7 +6,7 @@ import pickle
 import numpy as np
 
 from Orange.preprocess import Continuize, Normalize
-from Orange.projection import PCA, SparsePCA, IncrementalPCA
+from Orange.projection import PCA, SparsePCA, IncrementalPCA, TruncatedSVD
 from Orange.data import Table
 
 
@@ -83,6 +83,22 @@ class TestPCA(unittest.TestCase):
         self.assertNotAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 2)
         pc1_ipca = pca_model.partial_fit(data[1::2]).components_[0]
         self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
+
+    def test_truncated_svd(self):
+        data = self.ionosphere
+        self.__truncated_svd_test_helper(data, n_com=3, min_xpl_var=0.5)
+        self.__truncated_svd_test_helper(data, n_com=10, min_xpl_var=0.7)
+        self.__truncated_svd_test_helper(data, n_com=31, min_xpl_var=0.99)
+
+    def __truncated_svd_test_helper(self, data, n_com, min_xpl_var):
+        pca = TruncatedSVD(n_components=n_com)
+        pca_model = pca(data)
+        pca_xpl_var = np.sum(pca_model.explained_variance_ratio_)
+        self.assertGreaterEqual(pca_xpl_var + 1e-6, min_xpl_var)
+        self.assertEqual(n_com, pca_model.n_components)
+        self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
+        proj = np.dot(data.X, pca_model.components_.T)
+        np.testing.assert_almost_equal(pca_model(data).X, proj)
 
     def test_compute_value(self):
         iris = self.iris
