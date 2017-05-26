@@ -1,4 +1,4 @@
-if [ "$PYQT5" ]; then
+if [ ! "$PYQT4" ]; then
     foldable pip install sip pyqt5
     return $?;
 fi

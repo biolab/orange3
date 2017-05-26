@@ -36,6 +36,11 @@ fi
 # Create a new database dir, create database test and register extensions
 $POSTGRES/bin/initdb -D $TRAVIS_BUILD_DIR/db
 $POSTGRES/bin/postgres -D $TRAVIS_BUILD_DIR/db -p 12345 &
+# Kill postgres upon exit so Travis doesn't hang
+# https://github.com/travis-ci/travis-ci/issues/6861#issuecomment-262166676
+POSTGRES_PID=$!
+trap 'kill -INT $POSTGRES_PID' EXIT
+
 sleep 1
 $POSTGRES/bin/createdb -p 12345 test
 $POSTGRES/bin/psql test -c 'CREATE EXTENSION quantile;' -p 12345
