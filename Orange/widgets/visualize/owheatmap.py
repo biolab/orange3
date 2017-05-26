@@ -34,11 +34,9 @@ from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets import widget, gui, settings
-
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
-
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input, Output
 
 
 def split_domain(domain, split_label):
@@ -389,9 +387,12 @@ class OWHeatMap(widget.OWWidget):
     icon = "icons/Heatmap.svg"
     priority = 260
 
-    inputs = [("Data", Table, "set_dataset")]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -641,6 +642,7 @@ class OWHeatMap(widget.OWWidget):
         self.row_dendrograms = []
         self.selection_rects = []
 
+    @Inputs.data
     def set_dataset(self, data=None):
         """Set the input dataset to display."""
         self.closeContext()
@@ -1463,9 +1465,8 @@ class OWHeatMap(widget.OWWidget):
 
             data = self.input_data[indices]
 
-        self.send("Selected Data", data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.input_data, indices))
+        self.Outputs.selected_data.send(data)
+        self.Outputs.annotated_data.send(create_annotated_table(self.input_data, indices))
 
     def onDeleteWidget(self):
         self.clear()
