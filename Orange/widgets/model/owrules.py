@@ -218,6 +218,7 @@ class OWRuleLearner(OWBaseLearner):
     auto_apply = Setting(True)
 
     LEARNER = CustomRuleLearner
+    supports_sparse = False
 
     storage_orders = ["ordered", "unordered"]
     storage_covers = ["exclusive", "weighted"]
