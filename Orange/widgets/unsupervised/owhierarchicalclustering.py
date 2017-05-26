@@ -34,6 +34,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -717,10 +718,12 @@ class OWHierarchicalClustering(widget.OWWidget):
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
 
-    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
+    class Inputs:
+        distances = Input("Distances", Orange.misc.DistMatrix)
 
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -956,6 +959,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
         self._set_cut_line_visible(self.selection_method == 1)
 
+    @Inputs.distances
     def set_distances(self, matrix):
         self.error()
         if matrix is not None:
@@ -1104,8 +1108,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
         if not items:
-            self.send("Selected Data", None)
-            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(None)
             return
 
         selection = self.dendrogram.selected_nodes()
@@ -1121,10 +1125,10 @@ class OWHierarchicalClustering(widget.OWWidget):
                                     set(selected_indices))
 
         if not selected_indices:
-            self.send("Selected Data", None)
+            self.Outputs.selected_data.send(None)
             annotated_data = create_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
-            self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
+            self.Outputs.annotated_data.send(annotated_data)
             return
 
         selected_data = None
@@ -1190,10 +1194,10 @@ class OWHierarchicalClustering(widget.OWWidget):
             selected_data = items.from_table(domain, items)
             data = None
 
-        self.send("Selected Data", selected_data)
+        self.Outputs.selected_data.send(selected_data)
         annotated_data = create_annotated_table(data, selected_indices) if \
             self.selection_method == 0 else None
-        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
+        self.Outputs.annotated_data.send(annotated_data)
 
     def sizeHint(self):
         return QSize(800, 500)
