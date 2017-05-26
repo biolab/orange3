@@ -13,7 +13,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
-from Orange.widgets import gui, widget, settings
+from Orange.widgets import gui, settings
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import to_html as to_html
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -21,7 +21,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
-from Orange.widgets.widget import OWWidget, Default, AttributeList
+from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
 
 
 class ChiSqStats:
@@ -73,10 +73,13 @@ class OWSieveDiagram(OWWidget):
     icon = "icons/SieveDiagram.svg"
     priority = 200
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Features", AttributeList, "set_input_features")]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Inputs:
+        data = Input("Data", Table, default=True)
+        features = Input("Features", AttributeList)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     graph_name = "canvas"
 
@@ -141,6 +144,7 @@ class OWSieveDiagram(OWWidget):
             settings.rename_setting(context, "attrY", "attr_y")
             settings.migrate_str_to_variable(context)
 
+    @Inputs.data
     def set_data(self, data):
         """
         Discretize continuous attributes, and put all attributes and discrete
@@ -222,6 +226,7 @@ class OWSieveDiagram(OWWidget):
             data.X = data.X.toarray()
         return discretizer(data)
 
+    @Inputs.features
     def set_input_features(self, attr_list):
         """
         Handler for the Features signal.
@@ -284,9 +289,8 @@ class OWSieveDiagram(OWWidget):
         Filter and output the data.
         """
         if self.areas is None or not self.selection:
-            self.send("Selected Data", None)
-            self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                      create_annotated_table(self.data, []))
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(create_annotated_table(self.data, []))
             return
 
         filts = []
@@ -313,9 +317,8 @@ class OWSieveDiagram(OWWidget):
         sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
         if self.discrete_data is not self.data:
             selection = self.data[sel_idx]
-        self.send("Selected Data", selection)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.data, sel_idx))
+        self.Outputs.selected_data.send(selection)
+        self.Outputs.annotated_data.send(create_annotated_table(self.data, sel_idx))
 
     def update_graph(self):
         # Function uses weird names like r, g, b, but it does it with utmost
