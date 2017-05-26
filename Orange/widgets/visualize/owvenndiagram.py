@@ -173,9 +173,9 @@ class OWVennDiagram(widget.OWWidget):
         self.samedomain = samedomain
 
         has_identifiers = all(source_attributes(input.table.domain)
-                              for input in self.data.values())
+                                    for input in self.data.values())
         has_any_identifiers = any(source_attributes(input.table.domain)
-                              for input in self.data.values())
+                                    for input in self.data.values())
         self.useequalityButton.setEnabled(samedomain)
         self.useidentifiersButton.setEnabled(
             has_any_identifiers or len(self.data) == 0)
@@ -495,7 +495,7 @@ class OWVennDiagram(widget.OWWidget):
                 index = i
                 break
 
-        assert (index is not None)
+        assert index is not None
 
         key, _ = inputs[index]
 
@@ -717,10 +717,9 @@ def table_concat(tables):
 
     tables = list(map(lambda tab: tab.transform(domain), tables))
 
-    # TODO: remove castint to Table when Corpus.concatenate becomes available
+    # TODO: remove casting to Table when Corpus.concatenate becomes available
     new_table = Orange.data.Table.from_table(domain,
-        Orange.data.Table.concatenate(tables, axis=0)
-    )
+                                             Orange.data.Table.concatenate(tables, axis=0))
     return new_table
 
 
@@ -841,7 +840,8 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
         if var in idvarlist or var in in_expanded:
             continue
         col, _ = newtable.get_column_view(var)
-        nan_indices = filter(lambda j: isinstance(col[j], str) or numpy.isnan(col[j]), col.nonzero()[0])
+        nan_indices = filter(lambda j: isinstance(col[j], str) or numpy.isnan(col[j]),
+                             col.nonzero()[0])
         for i in nan_indices:
             for ind in inst_by_id[ids[i]]:
                 if not numpy.isnan(table[ind, var]):
@@ -948,8 +948,7 @@ def discrete_attributes(domain):
     """
     Return all discrete attributes from the domain.
     """
-    return [attr for attr in domain.variables + domain.metas
-                 if attr.is_discrete]
+    return [attr for attr in domain.variables + domain.metas if attr.is_discrete]
 
 
 def source_attributes(domain):
@@ -1440,8 +1439,7 @@ def subset_anchors(shapes):
                 unit_point(270, r=0.35),  # C
                 unit_point(210, r=0.27),  # AC
                 unit_point(330, r=0.27),  # BC
-                unit_point(0, r=0),       # ABC
-                ]
+                unit_point(0, r=0),]      # ABC
     elif n == 4:
         anchors = [
             (0.400, 0.110),    # A
@@ -1637,7 +1635,7 @@ def append_column(data, where, variable, column):
         raise ValueError
     domain = Orange.data.Domain(attr, class_vars, metas)
     new_data = data.transform(domain)
-    new_data[:,variable] = column
+    new_data[:, variable] = column
     return new_data
 
 

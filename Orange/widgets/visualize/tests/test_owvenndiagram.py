@@ -76,8 +76,7 @@ class TestVennDiagram(unittest.TestCase):
                       source_var, item_id_var)
             temp_m = np.array([[cv[0, i], sources[i], table.metas[0 + i, 0]],
                                [cv[1, i], sources[i], table.metas[1 + i, 0]],
-                               [cv[2, i], sources[i], table.metas[2 + i, 0]]
-                               ], dtype=object)
+                               [cv[2, i], sources[i], table.metas[2 + i, 0]]], dtype=object)
             temp_table = self.add_metas(temp_table, temp_d, temp_m)
             tables.append(temp_table)
 
@@ -182,19 +181,19 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
 class GroupTableIndicesTest(unittest.TestCase):
 
     def test_varying_between_combined(self):
-        X = np.array([[0, 0, 0, 0, 0, 1, ],
-                      [0, 0, 1, 1, 0, 1, ],
-                      [0, 0, 0, 2, np.nan, np.nan, ],
-                      [0, 1, 0, 0, 0, 0, ],
-                      [0, 1, 0, 2, 0, 0, ],
-                      [0, 1, 0, 0, np.nan, 0, ]])
+        X = np.array([[0, 0, 0, 0, 0, 1,],
+                      [0, 0, 1, 1, 0, 1,],
+                      [0, 0, 0, 2, np.nan, np.nan,],
+                      [0, 1, 0, 0, 0, 0,],
+                      [0, 1, 0, 2, 0, 0,],
+                      [0, 1, 0, 0, np.nan, 0,]])
 
-        M = np.array([["A", 0, 0, 0, 0, 0,      1,      ],
-                      ["A", 0, 0, 1, 1, 0,      1,      ],
-                      ["A", 0, 0, 0, 2, np.nan, np.nan, ],
-                      ["B", 0, 1, 0, 0, 0,      0,      ],
-                      ["B", 0, 1, 0, 2, 0,      0,      ],
-                      ["B", 0, 1, 0, 0, np.nan, 0,      ]], dtype=str)
+        M = np.array([["A", 0, 0, 0, 0, 0, 1,],
+                      ["A", 0, 0, 1, 1, 0, 1,],
+                      ["A", 0, 0, 0, 2, np.nan, np.nan,],
+                      ["B", 0, 1, 0, 0, 0, 0,],
+                      ["B", 0, 1, 0, 2, 0, 0,],
+                      ["B", 0, 1, 0, 0, np.nan, 0,]], dtype=str)
 
         variables = [ContinuousVariable(name="F%d" % j) for j in range(X.shape[1])]
         metas = [StringVariable(name="M%d" % j) for j in range(M.shape[1])]
