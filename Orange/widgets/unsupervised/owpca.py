@@ -10,7 +10,7 @@ import pyqtgraph as pg
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
-from Orange.projection import PCA
+from Orange.projection import PCA, TruncatedSVD
 from Orange.widgets import widget, gui, settings
 
 try:
@@ -22,6 +22,11 @@ except ImportError:
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
+
+DECOMPOSITIONS = [
+    PCA,
+    TruncatedSVD
+]
 
 
 class OWPCA(widget.OWWidget):
@@ -35,13 +40,16 @@ class OWPCA(widget.OWWidget):
                ("Components", Table),
                ("PCA", PCA)]
 
+    settingsHandler = settings.DomainContextHandler()
+
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
     batch_size = settings.Setting(100)
     address = settings.Setting('')
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
-    normalize = settings.Setting(True)
+    normalize = settings.ContextSetting(True)
+    decomposition_idx = settings.ContextSetting(0)
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
@@ -66,10 +74,7 @@ class OWPCA(widget.OWWidget):
         self._variance_ratio = None
         self._cumulative = None
         self._line = False
-        # max_components limit allows scikit-learn to select a faster method for big data
-        self._pca_projector = PCA(max_components=MAX_COMPONENTS)
-        self._pca_projector.component = self.ncomponents
-        self._pca_preprocessors = PCA.preprocessors
+        self._init_projector()
 
         # Components Selection
         box = gui.vBox(self.controlArea, "Components Selection")
@@ -121,10 +126,20 @@ class OWPCA(widget.OWWidget):
 
         self.sampling_box.setVisible(remotely)
 
+        # Decomposition
+        self.decomposition_box = gui.radioButtons(
+            self.controlArea, self,
+            "decomposition_idx", [d.name for d in DECOMPOSITIONS],
+            box="Decomposition", callback=self._update_decomposition
+        )
+
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
-        gui.checkBox(self.options_box, self, "normalize", "Normalize data",
-                     callback=self._update_normalize)
+        self.normalize_box = gui.checkBox(
+            self.options_box, self, "normalize",
+            "Normalize data", callback=self._update_normalize
+        )
+
         self.maxp_spin = gui.spin(
             self.options_box, self, "maxp", 1, MAX_COMPONENTS,
             label="Show only first", callback=self._setup_plot,
@@ -160,6 +175,23 @@ class OWPCA(widget.OWWidget):
         else:
             self.__timer.stop()
 
+    def update_buttons(self, sparse_data=False):
+        if sparse_data:
+            self.normalize = False
+
+        buttons = self.decomposition_box.buttons
+        for cls, button in zip(DECOMPOSITIONS, buttons):
+            button.setDisabled(sparse_data and not cls.supports_sparse)
+
+        if not buttons[self.decomposition_idx].isEnabled():
+            # Set decomposition index to first sparse-enabled decomposition
+            for i, cls in enumerate(DECOMPOSITIONS):
+                if cls.supports_sparse:
+                    self.decomposition_idx = i
+                    break
+
+        self._init_projector()
+
     def start(self):
         if 'Abort' in self.start_button.text():
             self.rpca.abort()
@@ -175,6 +207,7 @@ class OWPCA(widget.OWWidget):
             self.start_button.setText("Abort remote computation")
 
     def set_data(self, data):
+        self.closeContext()
         self.clear_messages()
         self.clear()
         self.start_button.setEnabled(False)
@@ -194,11 +227,8 @@ class OWPCA(widget.OWWidget):
                 self.start_button.setEnabled(True)
         if not isinstance(data, SqlTable):
             self.sampling_box.setVisible(False)
+
         if isinstance(data, Table):
-            if data.is_sparse():
-                self.Error.sparse_data()
-                self.clear_outputs()
-                return
             if len(data.domain.attributes) == 0:
                 self.Error.no_features()
                 self.clear_outputs()
@@ -207,6 +237,12 @@ class OWPCA(widget.OWWidget):
                 self.Error.no_instances()
                 self.clear_outputs()
                 return
+
+        self.openContext(data)
+        sparse_data = data is not None and data.is_sparse()
+        self.normalize_box.setDisabled(sparse_data)
+        self.update_buttons(sparse_data=sparse_data)
+
         self.data = data
         self.fit()
 
@@ -375,6 +411,16 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             self._invalidate_selection()
 
+    def _init_projector(self):
+        cls = DECOMPOSITIONS[self.decomposition_idx]
+        self._pca_projector = cls(n_components=MAX_COMPONENTS)
+        self._pca_projector.component = self.ncomponents
+        self._pca_preprocessors = cls.preprocessors
+
+    def _update_decomposition(self):
+        self._init_projector()
+        self._update_normalize()
+
     def _nselected_components(self):
         """Return the number of selected components."""
         if self._pca is None:
@@ -438,6 +484,8 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         self.report_items((
+            ("Decomposition", DECOMPOSITIONS[self.decomposition_idx].name),
+            ("Normalize data", str(self.normalize)),
             ("Selected components", self.ncomponents),
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
         ))
