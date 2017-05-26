@@ -1,28 +1,25 @@
 language: python
 
 sudo: false
+dist: trusty
 
 matrix:
     include:
-        - &pylint
-          env: RUN_PYLINT=true
+        - env: RUN_PYLINT=true
           python: '3.4'
-          addons: { apt: { packages: [] } }
           cache: {}
-        - python: '3.4'
-        - python: '3.5'
-        - &docs
-          env: BUILD_DOCS=true
-          python: '3.4'
-          script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-        - &pyqt5
+        - env: BUILD_DOCS=true
           python: '3.5'
-          env:
-            - PYQT5=true
-            - UPLOAD_COVERAGE=true
-          dist: trusty
-          addons: { apt: { packages: [] } }
+          script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
+
+        - python: '3.4'
+          env: PYQT4=true
+        - python: '3.5'
+          env: UPLOAD_COVERAGE=true
+        - python: '3.6'
     fast_finish: true
+    allow_failures:
+      - python: '3.6'
 
 cache:
     apt: true
@@ -33,14 +30,6 @@ cache:
         - $TRAVIS_BUILD_DIR/pyqt
 
 before_cache:
-
-addons:
-    apt:
-        packages:
-            - libblas-dev
-            - liblapack-dev
-            - libqt4-dev
-            - gfortran
 
 before_install:
     - set -e  # fail on any error
