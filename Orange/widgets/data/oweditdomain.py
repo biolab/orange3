@@ -21,6 +21,7 @@ import Orange.preprocess.transformation
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 def get_qualified(module, name):
@@ -369,8 +370,11 @@ class OWEditDomain(widget.OWWidget):
     icon = "icons/EditDomain.svg"
     priority = 3125
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -417,6 +421,7 @@ class OWEditDomain(widget.OWWidget):
             "A variable name is duplicated.")
 
     @check_sql_input
+    @Inputs.data
     def set_data(self, data):
         """Set input data set."""
         self.closeContext()
@@ -562,7 +567,7 @@ class OWEditDomain(widget.OWWidget):
             else:
                 self.Error.duplicate_var_name()
 
-        self.send("Data", new_data)
+        self.Outputs.data.send(new_data)
 
     def sizeHint(self):
         sh = super().sizeHint()
