@@ -25,7 +25,7 @@ from Orange.widgets.settings import (Setting, DomainContextHandler,
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.widget import Default
+from Orange.widgets.widget import Input, Output
 
 
 def compute_scale(min_, max_):
@@ -117,9 +117,13 @@ class OWBoxPlot(widget.OWWidget):
     description = "Visualize the distribution of feature values in a box plot."
     icon = "icons/BoxPlot.svg"
     priority = 100
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Selected Data", Orange.data.Table, Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     #: Comparison types for continuous variables
     CompareNone, CompareMedians, CompareMeans = 0, 1, 2
@@ -254,6 +258,7 @@ class OWBoxPlot(widget.OWWidget):
         return super().eventFilter(obj, event)
 
     # noinspection PyTypeChecker
+    @Inputs.data
     def set_data(self, dataset):
         if dataset is not None and (
                 not bool(dataset) or not len(dataset.domain)):
@@ -873,9 +878,8 @@ class OWBoxPlot(widget.OWWidget):
             selected = Values(self.conditions, conjunction=False)(self.dataset)
             selection = [i for i, inst in enumerate(self.dataset)
                          if inst in selected]
-        self.send("Selected Data", selected)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.dataset, selection))
+        self.Outputs.selected_data.send(selected)
+        self.Outputs.annotated_data.send(create_annotated_table(self.dataset, selection))
 
     def show_posthoc(self):
         def line(y0, y1):
