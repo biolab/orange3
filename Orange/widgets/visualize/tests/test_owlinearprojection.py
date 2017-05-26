@@ -29,13 +29,13 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
-        self.send_signal("Data", Table(Table("iris").domain))
+        self.send_signal(self.widget.Inputs.data, Table(Table("iris").domain))
 
     def test_nan_plot(self):
         data = datasets.missing_data_1()
         espy = EventSpy(self.widget, OWLinearProjection.ReplotRequest)
         with excepthook_catch():
-            self.send_signal("Data", data)
+            self.send_signal(self.widget.Inputs.data, data)
             # ensure delayed replot request is processed
             if not espy.events():
                 assert espy.wait(1000)
@@ -56,8 +56,8 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
         data.Y[:] = np.nan
 
         spy = EventSpy(self.widget, OWLinearProjection.ReplotRequest)
-        self.send_signal("Data", data)
-        self.send_signal("Data Subset", data[2:3])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data_subset, data[2:3])
         if not spy.events():
             assert spy.wait()
 
