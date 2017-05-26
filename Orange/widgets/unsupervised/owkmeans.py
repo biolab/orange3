@@ -10,6 +10,7 @@ from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 class ClusterTableModel(QAbstractTableModel):
@@ -59,10 +60,12 @@ class OWKMeans(widget.OWWidget):
     icon = "icons/KMeans.svg"
     priority = 2100
 
-    inputs = [("Data", Table, "set_data")]
+    class Inputs:
+        data = Input("Data", Table)
 
-    outputs = [("Annotated Data", Table, widget.Default),
-               ("Centroids", Table)]
+    class Outputs:
+        annotated_data = Output("Annotated Data", Table, default=True)
+        centroids = Output("Centroids", Table)
 
     class Error(widget.OWWidget.Error):
         failed = widget.Msg("Clustering failed\nError: {}")
@@ -303,8 +306,8 @@ class OWKMeans(widget.OWWidget):
             k = self.k
         km = self.clusterings.get(k)
         if not self.data or km is None or isinstance(km, str):
-            self.send("Annotated Data", None)
-            self.send("Centroids", None)
+            self.Outputs.annotated_data.send(None)
+            self.Outputs.centroids.send(None)
             return
 
         clust_var = DiscreteVariable(
@@ -318,10 +321,11 @@ class OWKMeans(widget.OWWidget):
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
 
-        self.send("Annotated Data", new_table)
-        self.send("Centroids", centroids)
+        self.Outputs.annotated_data.send(new_table)
+        self.Outputs.centroids.send(centroids)
 
     @check_sql_input
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         self.invalidate(True)
