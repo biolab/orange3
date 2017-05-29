@@ -4,9 +4,11 @@ from itertools import chain, product, tee
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
 import numpy as np
+import scipy.sparse as sp
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable
+from Orange.data.util import hstack
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
@@ -362,20 +364,29 @@ class OWMergeData(widget.OWWidget):
     def _join_array_by_indices(left, right, indices, string_cols=None):
         """Join (horizontally) two arrays, taking pairs of rows given in indices
         """
-        tpe = object if object in (left.dtype, right.dtype) else left.dtype
-        left_width, right_width = left.shape[1], right.shape[1]
-        arr = np.full((indices.shape[1], left_width + right_width), np.nan, tpe)
-        if string_cols:
-            arr[:, string_cols] = ""
-        for indices, to_change, lookup in (
-                (indices[0], arr[:, :left_width], left),
-                (indices[1], arr[:, left_width:], right)):
-            known = indices != -1
-            to_change[known] = lookup[indices[known]]
-        return arr
+        def prepare(arr, inds, str_cols):
+            try:
+                newarr = arr[inds]
+            except IndexError:
+                newarr = np.full_like(arr, np.nan)
+            else:
+                empty = np.full(arr.shape[1], np.nan)
+                if str_cols:
+                    assert arr.dtype == object
+                    empty = empty.astype(object)
+                    empty[str_cols] = ''
+                newarr[inds == -1] = empty
+            return newarr
+
+        left_width = left.shape[1]
+        str_left = [i for i in string_cols or () if i < left_width]
+        str_right = [i - left_width for i in string_cols or () if i >= left_width]
+        res = hstack((prepare(left, indices[0], str_left),
+                      prepare(right, indices[1], str_right)))
+        return res
 
 
-def test():
+def main():
     app = QApplication([])
     w = OWMergeData()
     data = Orange.data.Table("tests/data-gender-region")
@@ -388,4 +399,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()
