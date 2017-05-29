@@ -6,7 +6,7 @@ from AnyQt.QtCore import Qt
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets import gui
 
@@ -159,8 +159,11 @@ class OWManifoldLearning(OWWidget):
     icon = "icons/Manifold.svg"
     priority = 2200
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Transformed data", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        transformed_data = Output("Transformed data", Table, dynamic=False)
 
     MANIFOLD_METHODS = (TSNE, MDS, Isomap, LocallyLinearEmbedding,
                         SpectralEmbedding)
@@ -231,6 +234,7 @@ class OWManifoldLearning(OWWidget):
     def settings_changed(self):
         self.apply()
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         self.n_components_spin.setMaximum(len(self.data.domain.attributes)
@@ -269,7 +273,7 @@ class OWManifoldLearning(OWWidget):
                     self.Error.manifold_error(e.args[0])
             except np.linalg.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
-        self.send("Transformed data", out)
+        self.Outputs.transformed_data.send(out)
 
     def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components,
