@@ -276,7 +276,7 @@ class Results:
 
         # add fold info
         if self.folds is not None:
-            new_meta_attr.append(DiscreteVariable(name="Fold", values=[i+1 for i, s in enumerate(self.folds)]))
+            new_meta_attr.append(DiscreteVariable(name="Fold", values=[str(i+1) for i, _ in enumerate(self.folds)]))
             fold = np.empty((len(data), 1))
             for i, s in enumerate(self.folds):
                 fold[s, 0] = i
