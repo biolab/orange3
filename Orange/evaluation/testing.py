@@ -228,10 +228,11 @@ class Results:
 
         return results
 
-    def get_augmented_data(self, model_names, include_attrs=True, include_predictions=True, include_probabilities=True):
+    def get_augmented_data(self, model_names, include_attrs=True, include_predictions=True,
+                           include_probabilities=True):
         """
-        Return the data, augmented with predictions, probabilities (if the task is classification) and folds info.
-        Predictions, probabilities and folds are inserted as meta attributes.
+        Return the data, augmented with predictions, probabilities (if the task is classification)
+        and folds info. Predictions, probabilities and folds are inserted as meta attributes.
 
         Args:
             model_names (list): A list of strings containing learners' names.
@@ -276,7 +277,9 @@ class Results:
 
         # add fold info
         if self.folds is not None:
-            new_meta_attr.append(DiscreteVariable(name="Fold", values=[str(i+1) for i, _ in enumerate(self.folds)]))
+            new_meta_attr.append(
+                DiscreteVariable(name="Fold",
+                                 values=[str(i+1) for i, _ in enumerate(self.folds)]))
             fold = np.empty((len(data), 1))
             for i, s in enumerate(self.folds):
                 fold[s, 0] = i
@@ -356,7 +359,7 @@ class Results:
         row_indices = []
 
         ptr = 0
-        for train, test in self.indices:
+        for _, test in self.indices:
             self.folds.append(slice(ptr, ptr + len(test)))
             row_indices.append(test)
             ptr += len(test)
@@ -459,7 +462,7 @@ class CrossValidationFeature(Results):
 
     """
     def __init__(self, data, learners, feature, store_data=False, store_models=False,
-                  preprocessor=None, callback=None, n_jobs=1):
+                 preprocessor=None, callback=None, n_jobs=1):
         self.feature = feature
         super().__init__(data, learners=learners, store_data=store_data,
                          store_models=store_models, preprocessor=preprocessor,
@@ -570,7 +573,7 @@ class TestOnTrainingData(TestOnTestData):
 
 
 def sample(table, n=0.7, stratified=False, replace=False,
-                    random_state=None):
+           random_state=None):
     """
     Samples data instances from a data table. Returns the sample and
     a data set from input data table that are not in the sample. Also
