@@ -8,8 +8,7 @@ from collections import defaultdict
 from Orange.data import (Table, Domain, StringVariable,
                          DiscreteVariable, ContinuousVariable)
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
-from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
 from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     table_concat,
                                                     varying_between,
@@ -109,11 +108,11 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
         cls.signal_data = cls.data[:25]
 
     def setUp(self):
         self.widget = self.create_widget(OWVennDiagram)
+        self.signal_name = self.widget.Inputs.data
 
     def _select_data(self):
         self.widget.vennwidget.vennareas()[1].setSelected(True)
@@ -124,11 +123,11 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.signal_name, self.data[50:], 2)
 
         # check selected data output
-        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
         # check annotated data output
         feature_name = ANNOTATED_DATA_FEATURE_NAME
-        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(0, np.sum([i[feature_name] for i in annotated]))
 
         # select data instances
@@ -136,7 +135,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         selected_indices = list(range(50, 100))
 
         # check selected data output
-        selected = self.get_output("Selected Data")
+        selected = self.get_output(self.widget.Outputs.selected_data)
         n_sel, n_attr = len(selected), len(self.data.domain.attributes)
         self.assertGreater(n_sel, 0)
         self.assertEqual(selected.domain == self.data.domain,
@@ -145,7 +144,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
                                       self.data.X[selected_indices])
 
         # check annotated data output
-        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(n_sel, np.sum([i[feature_name] for i in annotated]))
 
         # compare selected and annotated data domains
@@ -154,8 +153,8 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
         # check output when data is removed
         self.send_signal(self.signal_name, None, 1)
         self.send_signal(self.signal_name, None, 2)
-        self.assertIsNone(self.get_output("Selected Data"))
-        self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
