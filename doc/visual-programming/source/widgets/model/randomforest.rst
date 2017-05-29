@@ -1,3 +1,5 @@
+.. _model.rf:
+
 Random Forest
 =============
 

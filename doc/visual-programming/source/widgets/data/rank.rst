@@ -14,6 +14,11 @@ Signals
 
    An input data set.
 
+- **Scorer**  (multiple)
+
+  Models that implement the feature scoring interface, such as linear /
+  logistic regression, random forest, stochastic gradient descent, etc.
+
 **Outputs**:
 
 -  **Reduced Data**
@@ -46,6 +51,12 @@ Scoring methods
 5. `Chi2 <https://en.wikipedia.org/wiki/Chi-squared_distribution>`_: dependence between the feature and the class as measure by the chi-square statistice
 6. `ReliefF <https://en.wikipedia.org/wiki/Relief_(feature_selection)>`_: the ability of an attribute to distinguish between classes on similar data instances
 7. `FCBF (Fast Correlation Based Filter) <https://www.aaai.org/Papers/ICML/2003/ICML03-111.pdf>`_: entropy-based measure, which also identifies redundancy due to pairwise correlations between features
+
+Additionally, you can connect certain learners that enable scoring the features
+according to how important they are in models that the learners build (e.g.
+:ref:`Linear <model.lr>` / :ref:`Logistic Regression <model.logit>`,
+:ref:`Random Forest <model.rf>`, :ref:`SGD <model.sgd>`, …).
+
 
 Example: Attribute Ranking and Selection
 ----------------------------------------

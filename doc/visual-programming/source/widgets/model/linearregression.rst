@@ -1,3 +1,5 @@
+.. _model.lr:
+
 Linear Regression
 =================
 
