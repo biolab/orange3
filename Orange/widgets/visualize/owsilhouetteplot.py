@@ -32,7 +32,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input, Output
 
 
 ROW_NAMES_WIDTH = 200
@@ -46,9 +46,12 @@ class OWSilhouettePlot(widget.OWWidget):
     icon = "icons/SilhouettePlot.svg"
     priority = 300
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     replaces = [
         "orangecontrib.prototypes.widgets.owsilhouetteplot.OWSilhouettePlot",
@@ -160,6 +163,7 @@ class OWSilhouettePlot(widget.OWWidget):
         return sh.expandedTo(QSize(600, 720))
 
     @check_sql_input
+    @Inputs.data
     def set_data(self, data):
         """
         Set the input data set.
@@ -398,9 +402,8 @@ class OWSilhouettePlot(widget.OWWidget):
                     selected[:, silhouette_var] = numpy.c_[scores[selectedmask]]
                 data[:, silhouette_var] = numpy.c_[scores]
 
-        self.send("Selected Data", selected)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(data, indices))
+        self.Outputs.selected_data.send(selected)
+        self.Outputs.annotated_data.send(create_annotated_table(data, indices))
 
     def send_report(self):
         if not len(self.cluster_var_model):
