@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
     StringVariable
@@ -66,6 +67,7 @@ class LookupTest(unittest.TestCase):
     def test_transform(self):
         lookup = Lookup(None, np.array([1, 2, 0, 2]))
         column = np.array([1, 2, 3, 0, np.nan, 0], dtype=np.float64)
-        np.testing.assert_array_equal(
-            lookup.transform(column),
-            np.array([2, 0, 2, 1, np.nan, 1], dtype=np.float64))
+        for col in [column, sp.csr_matrix(column)]:
+            np.testing.assert_array_equal(
+                lookup.transform(col),
+                np.array([2, 0, 2, 1, np.nan, 1], dtype=np.float64))

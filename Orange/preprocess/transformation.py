@@ -143,6 +143,9 @@ class Lookup(Transformation):
         self.unknown = unknown
 
     def transform(self, column):
+        # Densify DiscreteVariable values coming from sparse data sets.
+        if sp.issparse(column):
+            column = column.toarray().ravel()
         mask = np.isnan(column)
         column = column.astype(int)
         column[mask] = 0
