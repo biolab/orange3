@@ -4,6 +4,7 @@ from Orange.widgets.settings import (Setting, ContextSetting,
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
+from Orange.widgets.widget import Input, Output
 
 
 class OWTranspose(OWWidget):
@@ -12,8 +13,11 @@ class OWTranspose(OWWidget):
     icon = "icons/Transpose.svg"
     priority = 2000
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data = Output("Data", Table, dynamic=False)
 
     resizing_enabled = False
     want_main_area = False
@@ -53,6 +57,7 @@ class OWTranspose(OWWidget):
         self.feature_type = 1
         self.apply()
 
+    @Inputs.data
     def set_data(self, data):
         # Skip the context if the combo is empty: a context with
         # feature_model == None would then match all domains
@@ -84,7 +89,7 @@ class OWTranspose(OWWidget):
                     self.data, self.feature_type and self.feature_names_column)
             except ValueError as e:
                 self.Error.value_error(e)
-        self.send("Data", transposed)
+        self.Outputs.data.send(transposed)
 
     def send_report(self):
         text = "from meta attribute: {}".format(self.feature_names_column) \
