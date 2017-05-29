@@ -4,7 +4,7 @@ from scipy.sparse import issparse
 import Orange.data
 from Orange.statistics import distribution, basic_stats
 from Orange.util import Reprable
-from .transformation import Transformation, Lookup as BaseLookup
+from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
            "Model", "AsValue", "Random", "Default"]
@@ -225,23 +225,6 @@ def domain_with_class_var(domain, class_var):
 class IsDefined(Transformation):
     def transform(self, c):
         return ~numpy.isnan(c)
-
-
-class Lookup(BaseLookup):
-    def __init__(self, variable, lookup_table, unknown=None):
-        super().__init__(variable, lookup_table)
-        self.unknown = unknown
-
-    def transform(self, column):
-        if self.unknown is None:
-            unknown = numpy.nan
-        else:
-            unknown = self.unknown
-
-        mask = numpy.isnan(column)
-        column_valid = numpy.where(mask, 0, column)
-        values = self.lookup_table[numpy.array(column_valid, dtype=int)]
-        return numpy.where(mask, unknown, values)
 
 
 class AsValue(BaseImputeMethod):

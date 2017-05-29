@@ -272,15 +272,6 @@ def sort_var_values(var):
                             compute_value=Lookup(var, translation_table))
 
 
-class Lookup(Lookup):
-    def transform(self, column):
-        column = np.array(column, dtype=np.float64)
-        mask = np.isnan(column)
-        column_valid = np.where(mask, 0, column)
-        values = self.lookup_table[np.array(column_valid, dtype=int)]
-        return np.where(mask, np.nan, values)
-
-
 def merge_lookup(A, B):
     """
     Merge two consecutive Lookup transforms into one.
