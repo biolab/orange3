@@ -23,8 +23,8 @@ import Orange.evaluation
 
 from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets import gui, settings
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils import colorpalette
@@ -46,11 +46,16 @@ class OWPredictions(OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display the predictions of models for an input data set."
-    inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Predictors", Model,
-               "set_predictor", widget.Multiple)]
-    outputs = [("Predictions", Orange.data.Table),
-               ("Evaluation Results", Orange.evaluation.Results)]
+
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+        predictors = Input("Predictors", Model, multiple=True)
+
+    class Outputs:
+        predictions = Output("Predictions", Orange.data.Table)
+        evaluation_results = Output("Evaluation Results",
+                                    Orange.evaluation.Results,
+                                    dynamic=False)
 
     class Warning(OWWidget.Warning):
         empty_data = Msg("Empty data set")
@@ -177,6 +182,7 @@ class OWPredictions(OWWidget):
         self.mainArea.layout().addWidget(self.splitter)
 
     @check_sql_input
+    @Inputs.data
     def set_data(self, data):
         """Set the input data set"""
         if data is not None and not len(data):
@@ -201,6 +207,7 @@ class OWPredictions(OWWidget):
 
         self._invalidate_predictions()
 
+    @Inputs.predictors
     def set_predictor(self, predictor=None, id=None):
         if id in self.predictors:
             if predictor is not None:
@@ -441,7 +448,7 @@ class OWPredictions(OWWidget):
     def _commit_evaluation_results(self):
         slots = self._valid_predictors()
         if not slots or self.data.domain.class_var is None:
-            self.send("Evaluation Results", None)
+            self.Outputs.evaluation_results.send(None)
             return
 
         class_var = self.class_var
@@ -458,12 +465,12 @@ class OWPredictions(OWWidget):
             results.probabilities = numpy.array(
                 [p.results[1][~nanmask] for p in slots])
         results.learner_names = [p.name for p in slots]
-        self.send("Evaluation Results", results)
+        self.Outputs.evaluation_results.send(results)
 
     def _commit_predictions(self):
         slots = self._valid_predictors()
         if not slots:
-            self.send("Predictions", None)
+            self.Outputs.predictions.send(None)
             return
 
         if self.class_var and self.class_var.is_discrete:
@@ -480,7 +487,7 @@ class OWPredictions(OWWidget):
             newcolumns = numpy.hstack(
                 [numpy.atleast_2d(cols) for cols in newcolumns])
             predictions.metas[:, -newcolumns.shape[1]:] = newcolumns
-        self.send("Predictions", predictions)
+        self.Outputs.predictions.send(predictions)
 
     def _classification_output_columns(self):
         newmetas = []

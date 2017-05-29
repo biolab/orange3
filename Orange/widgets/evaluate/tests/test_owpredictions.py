@@ -20,7 +20,7 @@ class TestOWPredictions(WidgetTest):
 
     def test_rowCount_from_model(self):
         """Don't crash if the bottom row is visible"""
-        self.send_signal("Data", self.iris[:5])
+        self.send_signal(self.widget.Inputs.data, self.iris[:5])
         self.widget.dataview.sizeHintForColumn(0)
 
     def test_nan_target_input(self):
@@ -28,14 +28,14 @@ class TestOWPredictions(WidgetTest):
         data.Y[1] = np.nan
         yvec, _ = data.get_column_view(data.domain.class_var)
         nanmask = np.isnan(yvec)
-        self.send_signal("Data", data)
-        self.send_signal("Predictors", ConstantLearner()(data), 1)
-        pred = self.get_output("Predictions", )
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
+        pred = self.get_output(self.widget.Outputs.predictions)
         self.assertIsInstance(pred, Table)
         np.testing.assert_array_equal(
             yvec, pred.get_column_view(data.domain.class_var)[0])
 
-        evres = self.get_output("Evaluation Results")
+        evres = self.get_output(self.widget.Outputs.evaluation_results)
         self.assertIsInstance(evres, Results)
         self.assertIsInstance(evres.data, Table)
         ev_yvec, _ = evres.data.get_column_view(data.domain.class_var)
@@ -44,8 +44,8 @@ class TestOWPredictions(WidgetTest):
         self.assertTrue(np.all(~np.isnan(evres.actual)))
 
         data.Y[:] = np.nan
-        self.send_signal("Data", data)
-        evres = self.get_output("Evaluation Results")
+        self.send_signal(self.widget.Inputs.data, data)
+        evres = self.get_output(self.widget.Outputs.evaluation_results)
         self.assertEqual(len(evres.data), 0)
 
     def test_mismatching_targets(self):
@@ -55,48 +55,48 @@ class TestOWPredictions(WidgetTest):
         majority_titanic = ConstantLearner()(titanic)
         majority_iris = ConstantLearner()(self.iris)
 
-        self.send_signal("Data", self.iris)
-        self.send_signal("Predictors", majority_iris, 1)
-        self.send_signal("Predictors", majority_titanic, 2)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
+        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
         self.assertTrue(error.predictors_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Predictors", None, 1)
+        self.send_signal(self.widget.Inputs.predictors, None, 1)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertTrue(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Predictors", None, 2)
+        self.send_signal(self.widget.Inputs.predictors, None, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Predictors", majority_titanic, 2)
+        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertTrue(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Predictors", majority_iris, 2)
+        self.send_signal(self.widget.Inputs.predictors, majority_iris, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        output = self.get_output("Predictions")
+        output = self.get_output(self.widget.Outputs.predictions)
         self.assertEqual(len(output.domain.metas), 4)
 
-        self.send_signal("Predictors", majority_iris, 1)
-        self.send_signal("Predictors", majority_titanic, 3)
+        self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
+        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 3)
         self.assertTrue(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
     def test_no_class_on_test(self):
         """Allow test data with no class"""
@@ -107,19 +107,19 @@ class TestOWPredictions(WidgetTest):
         majority_iris = ConstantLearner()(self.iris)
 
         no_class = Table(Domain(titanic.domain.attributes, None), titanic)
-        self.send_signal("Predictors", majority_titanic, 1)
-        self.send_signal("Data", no_class)
-        out = self.get_output("Predictions")
+        self.send_signal(self.widget.Inputs.predictors, majority_titanic, 1)
+        self.send_signal(self.widget.Inputs.data, no_class)
+        out = self.get_output(self.widget.Outputs.predictions)
         np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
 
-        self.send_signal("Predictors", majority_iris, 2)
+        self.send_signal(self.widget.Inputs.predictors, majority_iris, 2)
         self.assertTrue(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output("Predictions"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
-        self.send_signal("Predictors", None, 2)
-        self.send_signal("Data", titanic)
-        out = self.get_output("Predictions")
+        self.send_signal(self.widget.Inputs.predictors, None, 2)
+        self.send_signal(self.widget.Inputs.data, titanic)
+        out = self.get_output(self.widget.Outputs.predictions)
         np.testing.assert_allclose(out.get_column_view("constant")[0], 0)
 
     def test_bad_data(self):
@@ -158,15 +158,15 @@ class TestOWPredictions(WidgetTest):
         file2 = io.StringIO(filestr2)
         bad_table = TabReader(file2).read()
 
-        self.send_signal("Predictors", tree, 1)
+        self.send_signal(self.widget.Inputs.predictors, tree, 1)
 
         with excepthook_catch():
-            self.send_signal("Data", bad_table)
+            self.send_signal(self.widget.Inputs.data, bad_table)
 
         Variable._clear_all_caches()  # so that test excepting standard titanic work
 
     def test_continuous_class(self):
         data = Table("housing")
         cl_data = ConstantLearner()(data)
-        self.send_signal("Predictors", cl_data, 1)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.predictors, cl_data, 1)
+        self.send_signal(self.widget.Inputs.data, data)
