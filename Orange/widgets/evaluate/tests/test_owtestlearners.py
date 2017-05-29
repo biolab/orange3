@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import QMenu
 from AnyQt.QtCore import QPoint
 
 from Orange.classification import MajorityLearner
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData
 from Orange.modelling import ConstantLearner
 from Orange.regression import MeanLearner
@@ -155,6 +155,28 @@ class TestOWTestLearners(WidgetTest):
             side_effect=MemoryError):
             self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
+
+    def test_one_class_value(self):
+        """
+        Data with a class with one value causes widget to crash when that value
+        is selected.
+        GH-2351
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"), ContinuousVariable("b")],
+                [DiscreteVariable("c", values=["y"])]),
+            list(zip(
+                [42.48, 16.84, 15.23, 23.8],
+                [1., 2., 3., 4.],
+                "yyyy"))
+        )
+        self.widget.n_folds = 0
+        self.widget.class_selection = "y"
+        self.assertFalse(self.widget.Error.only_one_class_var_value.is_shown())
+        self.send_signal("Data", table)
+        self.send_signal("Learner", MajorityLearner(), 0, wait=1000)
+        self.assertTrue(self.widget.Error.only_one_class_var_value.is_shown())
 
 
 class TestHelpers(unittest.TestCase):
