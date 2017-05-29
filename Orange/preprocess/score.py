@@ -154,11 +154,10 @@ class LearnerScorer(Scorer):
         raise NotImplementedError
 
     def score_data(self, data, feature=None):
-        scores = self.score(data)
 
         def average_scores(scores):
             scores_grouped = defaultdict(list)
-            for attr, score in zip(self.domain.attributes, scores):
+            for attr, score in zip(model_domain.attributes, scores):
                 # Go up the chain of preprocessors to obtain the original variable
                 while getattr(attr, 'compute_value', False):
                     attr = getattr(attr.compute_value, 'variable', attr)
@@ -167,8 +166,14 @@ class LearnerScorer(Scorer):
                     if attr in scores_grouped else 0
                     for attr in data.domain.attributes]
 
-        scores = np.atleast_2d(scores)
-        if data.domain != self.domain:
+        scores = np.atleast_2d(self.score(data))
+
+        from Orange.modelling import Fitter  # Avoid recursive import
+        model_domain = (self.get_learner(data).domain
+                        if isinstance(self, Fitter) else
+                        self.domain)
+
+        if data.domain != model_domain:
             scores = np.array([average_scores(row) for row in scores])
 
         return scores[:, data.domain.attributes.index(feature)] \
