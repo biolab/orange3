@@ -370,15 +370,18 @@ class OWTestLearners(OWWidget):
         if data is not None and not len(data):
             self.Error.train_data_empty()
             data = None
-        if data and not data.domain.class_vars:
-            self.Error.class_required()
-            data = None
-        elif data and len(data.domain.class_vars) > 1:
-            self.Error.too_many_classes()
-            data = None
-        elif data and data.domain.has_discrete_class and len(data.domain.class_var.values) == 1:
-            self.Error.only_one_class_var_value()
-            data = None
+        if data:
+            conds = [not data.domain.class_vars,
+                     len(data.domain.class_vars) > 1,
+                     data.domain.has_discrete_class and len(data.domain.class_var.values) == 1]
+            errors = [self.Error.class_required,
+                      self.Error.too_many_classes,
+                      self.Error.only_one_class_var_value]
+            for cond, error in zip(conds, errors):
+                if cond:
+                    error()
+                    data = None
+                    break
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
