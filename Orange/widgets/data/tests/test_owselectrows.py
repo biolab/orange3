@@ -5,7 +5,7 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit
 
 from Orange.data import (
-    Table, ContinuousVariable, StringVariable, DiscreteVariable)
+    Table, ContinuousVariable, StringVariable, DiscreteVariable, Domain)
 from Orange.widgets.data.owselectrows import (
     OWSelectRows, FilterDiscreteType, SelectRowsContextHandler)
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -242,3 +242,31 @@ class TestOWSelectRows(WidgetTest):
         settings = dict(context_settings=[context])
 
         return self.create_widget(OWSelectRows, settings)
+
+    def test_metas_string_2_discrete(self):
+        """
+        Widget crashes when StringVariable is changed to DiscreteVariable.
+        GH-2353
+        """
+        domain = Domain([], metas=[StringVariable("meta")])
+        data_list = ["b", "a", "3.14", "42"]
+        data = Table(domain, list(zip(data_list)))
+        self.send_signal("Data", data)
+        self.enterFilter(data.domain["meta"], "contains", "a")
+        domain = Domain([], metas=[DiscreteVariable("meta", values=data_list)])
+        data = Table(domain, list(zip(data_list)))
+        self.send_signal("Data", data)
+
+    def test_metas_string_2_discrete_2(self):
+        """
+        Widget crashes when StringVariable is changed to DiscreteVariable.
+        GH-2353
+        """
+        domain = Domain([], metas=[StringVariable("meta")])
+        data_list = ["1", "2", "3.14", "42"]
+        data = Table(domain, list(zip(data_list)))
+        self.send_signal("Data", data)
+        self.enterFilter(data.domain["meta"], "is outside", "1", "2")
+        domain = Domain([], metas=[DiscreteVariable("meta", values=data_list)])
+        data = Table(domain, list(zip(data_list)))
+        self.send_signal("Data", data)
