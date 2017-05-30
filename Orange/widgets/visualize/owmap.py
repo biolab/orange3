@@ -862,7 +862,7 @@ class OWMap(widget.OWWidget):
                       self._label_model):
             model.set_domain(None)
         self.lat_attr = self.lon_attr = self.class_attr = self.color_attr = \
-        self.label_attr = self.shape_attr = self.size_attr = None
+        self.label_attr = self.shape_attr = self.size_attr = ''
 
 
 def test_main():
