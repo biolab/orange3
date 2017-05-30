@@ -26,22 +26,22 @@ class TestOWTestLearners(WidgetTest):
 
     def test_basic(self):
         data = Table("iris")[::3]
-        self.send_signal("Data", data)
-        self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
+        self.send_signal(self.widget.Inputs.train_data, data)
+        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=5000)
         res = self.get_output(self.widget.Outputs.evaluations_results)
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
         self.assertIsNotNone(res.probabilities)
 
-        self.send_signal("Learner", None, 0, wait=5000)
-        res = self.get_output("Evaluation Results")
+        self.send_signal(self.widget.Inputs.learner, None, 0, wait=5000)
+        res = self.get_output(self.widget.Outputs.evaluations_results)
         self.assertIsNone(res)
 
         data = Table("housing")[::10]
-        self.send_signal("Data", data)
-        self.send_signal("Learner", MeanLearner(), 0, wait=5000)
-        res = self.get_output("Evaluation Results")
+        self.send_signal(self.widget.Inputs.train_data, data)
+        self.send_signal(self.widget.Inputs.learner, MeanLearner(), 0, wait=5000)
+        res = self.get_output(self.widget.Outputs.evaluations_results)
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
@@ -50,7 +50,7 @@ class TestOWTestLearners(WidgetTest):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.train_data, data)
         self.widget.resampling = OWTestLearners.TestOnTest
-        self.send_signal("Test Data", data)
+        self.send_signal(self.widget.Inputs.test_data, data)
 
     def test_CrossValidationByFeature(self):
         data = Table("iris")
@@ -59,12 +59,12 @@ class TestOWTestLearners(WidgetTest):
         data_with_disc_metas = Table.from_table(domain, data)
         rb = self.widget.controls.resampling.buttons[OWTestLearners.FeatureFold]
 
-        self.send_signal("Learner", ConstantLearner(), 0)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.learner, ConstantLearner(), 0)
+        self.send_signal(self.widget.Inputs.train_data, data)
         self.assertFalse(rb.isEnabled())
         self.assertFalse(self.widget.features_combo.isEnabled())
 
-        self.send_signal("Data", data_with_disc_metas)
+        self.send_signal(self.widget.Inputs.train_data, data_with_disc_metas)
         self.assertTrue(rb.isEnabled())
         rb.click()
         self.assertEqual(self.widget.resampling, OWTestLearners.FeatureFold)
@@ -72,7 +72,7 @@ class TestOWTestLearners(WidgetTest):
         self.assertEqual(self.widget.features_combo.currentText(), "iris")
         self.assertEqual(len(self.widget.features_combo.model()), 1)
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.train_data, None)
         self.assertFalse(rb.isEnabled())
         self.assertEqual(self.widget.resampling, OWTestLearners.KFold)
         self.assertFalse(self.widget.features_combo.isEnabled())
@@ -147,13 +147,13 @@ class TestOWTestLearners(WidgetTest):
         GH-2316
         """
         data = Table("iris")[::3]
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.train_data, data)
         self.assertFalse(self.widget.Error.memory_error.is_shown())
 
         with unittest.mock.patch(
             "Orange.evaluation.testing.Results.get_augmented_data",
             side_effect=MemoryError):
-            self.send_signal("Learner", MajorityLearner(), 0, wait=5000)
+            self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=5000)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
 
 
