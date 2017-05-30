@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange import preprocess
 from Orange.preprocess.score import InfoGain, GainRatio, Gini, Chi2, ANOVA,\
     UnivariateLinearRegression, ReliefF, FCBF, RReliefF
@@ -129,5 +129,13 @@ class FeatureScoringTest(unittest.TestCase):
         scorer = FCBF()
         weights = scorer(self.zoo, None)
         found = [self.zoo.domain[attr].name for attr in reversed(weights.argsort()[-5:])]
-        reference = ['legs', 'backbone', 'toothed', 'hair', 'aquatic']
+        reference = ['legs', 'milk', 'toothed', 'feathers', 'backbone']
         self.assertEqual(found, reference)
+
+        # GH-1916
+        data = Table(Domain([ContinuousVariable('1'), ContinuousVariable('2')],
+                            DiscreteVariable('target')),
+                     np.full((2, 2), np.nan),
+                     np.r_[0., 1])
+        weights = scorer(data, None)
+        np.testing.assert_equal(weights, np.nan)
