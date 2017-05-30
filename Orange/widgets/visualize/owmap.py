@@ -95,6 +95,7 @@ class LeafletMap(WebviewWidget):
         if (data is None or not len(data) or
                 lat_attr not in data.domain or
                 lon_attr not in data.domain):
+            self.data = None
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
             return
 
@@ -296,7 +297,7 @@ class LeafletMap(WebviewWidget):
         self.evalJS('clear_heatmap()' if model is None else 'reset_heatmap()')
 
     def recompute_heatmap(self, points):
-        if self.model is None or not self.data or not self.lat_attr or not self.lon_attr:
+        if self.model is None or self.data is None:
             self.exposeObject('model_predictions', {})
             self.evalJS('draw_heatmap()')
             return
@@ -403,7 +404,7 @@ class LeafletMap(WebviewWidget):
 
     def redraw_markers_overlay_image(self, *args, new_image=False):
         if (not args and not self._drawing_args or
-                self.lat_attr is None or self.lon_attr is None):
+                self.data is None or not self.lat_attr or not self.lon_attr):
             return
 
         if args:
