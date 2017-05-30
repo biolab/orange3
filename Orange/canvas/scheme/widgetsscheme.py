@@ -262,6 +262,7 @@ class WidgetManager(QObject):
         """
         state = self.__initstate_for_node[node]
         if isinstance(state, WidgetManager.Materialized):
+            state.widget.updateProperties()
             return state.widget.settingsHandler.pack_data(state.widget)
         else:
             return node.properties
