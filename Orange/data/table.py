@@ -100,11 +100,11 @@ class RowInstance(Instance):
                                 type(value).__name__)
             if key < len(self._x):
                 self._x[key] = value
-                if self.sparse_x:
+                if self.sparse_x is not None:
                     self.table.X[self.row_index, key] = value
             else:
                 self._y[key - len(self._x)] = value
-                if self.sparse_y:
+                if self.sparse_y is not None:
                     self.table._Y[self.row_index, key - len(self._x)] = value
         else:
             self._metas[-1 - key] = value
