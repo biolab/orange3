@@ -935,6 +935,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             ti.setPos(x, y)
             self.labels.append(ti)
 
+    def _create_label_column(self):
+        if self.attr_label in self.data.domain:
+            return self.data.get_column_view(self.attr_label)[0]
+        return self.master.data.get_column_view(self.attr_label)[0]
+
     def update_labels(self):
         if self.attr_label is None or \
                 self.label_only_selected and self.selection is None:
@@ -944,7 +949,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.assure_attribute_present(self.attr_label)
         if not self.labels:
             self.create_labels()
-        label_column = self.data.get_column_view(self.attr_label)[0]
+        label_column = self._create_label_column()
         formatter = self.attr_label.str_val
         label_data = map(formatter, label_column)
         black = pg.mkColor(0, 0, 0)
