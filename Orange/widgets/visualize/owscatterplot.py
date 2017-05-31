@@ -22,7 +22,7 @@ from Orange.widgets.settings import \
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
-from Orange.widgets.widget import OWWidget, Default, AttributeList, Msg
+from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME,
                                                  get_next_name)
@@ -109,13 +109,15 @@ class OWScatterPlot(OWWidget):
     icon = "icons/ScatterPlot.svg"
     priority = 140
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data"),
-              ("Features", AttributeList, "set_shown_attributes")]
+    class Inputs:
+        data = Input("Data", Table, default=True)
+        data_subset = Input("Data Subset", Table)
+        features = Input("Features", AttributeList)
 
-    outputs = [("Selected Data", Table, Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table),
-               ("Features", Table)]
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
+        features = Output("Features", Table, dynamic=False)
 
     settingsHandler = DomainContextHandler()
 
@@ -285,6 +287,7 @@ class OWScatterPlot(OWWidget):
             self.graph.rescale_data()
             self.update_graph()
 
+    @Inputs.data
     def set_data(self, data):
         self.clear_messages()
         self.Information.sampled_sql.clear()
@@ -382,6 +385,7 @@ class OWScatterPlot(OWWidget):
             data = data.transform(new_domain)
         return data
 
+    @Inputs.data_subset
     def set_subset_data(self, subset_data):
         self.warning()
         if isinstance(subset_data, SqlTable):
@@ -448,6 +452,7 @@ class OWScatterPlot(OWWidget):
             self.graph.selection[self.selection] = 1
             self.graph.update_colors(keep_colors=True)
 
+    @Inputs.features
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
@@ -534,8 +539,8 @@ class OWScatterPlot(OWWidget):
             annotated = self.create_groups_table(self.data, graph.selection)
         else:
             annotated = create_annotated_table(self.data, selection)
-        self.send("Selected Data", selected)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated)
+        self.Outputs.selected_data.send(selected)
+        self.Outputs.annotated_data.send(annotated)
 
         # Store current selection in a setting that is stored in workflow
         if self.selection is not None and len(selection):
@@ -547,7 +552,7 @@ class OWScatterPlot(OWWidget):
             dom = Domain([], metas=(StringVariable(name="feature"),))
             features = Table(dom, [[self.attr_x], [self.attr_y]])
             features.name = "Features"
-        self.send("Features", features)
+        self.Outputs.features.send(features)
 
     def commit(self):
         self.send_data()

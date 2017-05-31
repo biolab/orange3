@@ -125,7 +125,7 @@ class TestOWSelectAttributes(WidgetTest):
         GH-2086
         """
         iris = Table("iris")
-        self.send_signal("Data", iris)
+        self.send_signal(self.widget.Inputs.data, iris)
         self.assertVariableCountsEqual(available=0, used=4, classattrs=1)
 
         self.widget.move_class_button.click()

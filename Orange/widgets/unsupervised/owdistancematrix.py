@@ -16,6 +16,7 @@ from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.widget import Input, Output
 
 
 class DistanceMatrixModel(QAbstractTableModel):
@@ -202,9 +203,12 @@ class OWDistanceMatrix(widget.OWWidget):
     icon = "icons/DistanceMatrix.svg"
     priority = 200
 
-    inputs = [("Distances", DistMatrix, "set_distances")]
-    outputs = [("Distances", DistMatrix),
-               ("Table", Table)]
+    class Inputs:
+        distances = Input("Distances", DistMatrix)
+
+    class Outputs:
+        distances = Output("Distances", DistMatrix, dynamic=False)
+        table = Output("Table", Table)
 
     settingsHandler = DistanceMatrixContextHandler()
     auto_commit = Setting(True)
@@ -255,6 +259,7 @@ class OWDistanceMatrix(widget.OWWidget):
     def sizeHint(self):
         return QSize(800, 500)
 
+    @Inputs.distances
     def set_distances(self, distances):
         self.closeContext()
         self.distances = distances
@@ -324,8 +329,8 @@ class OWDistanceMatrix(widget.OWWidget):
                 sub_distances = self.distances.submatrix(inds)
                 if self.distances.axis and isinstance(self.items, Table):
                     sub_table = self.items[inds]
-        self.send("Distances", sub_distances)
-        self.send("Table", sub_table)
+        self.Outputs.distances.send(sub_distances)
+        self.Outputs.table.send(sub_table)
 
     def send_report(self):
         if self.distances is None:

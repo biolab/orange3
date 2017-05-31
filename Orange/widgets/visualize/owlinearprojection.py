@@ -39,6 +39,7 @@ from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem, \
     legend_anchor_pos
 from Orange.widgets.utils import classdensity
+from Orange.widgets.widget import Input, Output
 from Orange.canvas import report
 
 
@@ -184,12 +185,16 @@ class OWLinearProjection(widget.OWWidget):
     icon = "icons/LinearProjection.svg"
     priority = 240
 
-    inputs = [("Data", Table, "set_data", widget.Default),
-              ("Data Subset", Table, "set_subset_data")]
+    class Inputs:
+        data = Input("Data", Table, default=True)
+        data_subset = Input("Data Subset", Table)
+
 #              #TODO: Allow for axes to be supplied from an external source.
 #               ("Projection", numpy.ndarray, "set_axes"),]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settings_version = 2
     settingsHandler = settings.DomainContextHandler()
@@ -470,6 +475,7 @@ class OWLinearProjection(widget.OWWidget):
         self.attr_size = None
         self.attr_label = None
 
+    @Inputs.data
     def set_data(self, data):
         """
         Set the input dataset.
@@ -520,6 +526,7 @@ class OWLinearProjection(widget.OWWidget):
             self.varmodel_other[:] = other
             self._invalidate_plot()
 
+    @Inputs.data_subset
     def set_subset_data(self, subset):
         """
         Set the supplementary input subset dataset.
@@ -940,9 +947,8 @@ class OWLinearProjection(widget.OWWidget):
             if len(indices) > 0:
                 subset = self.data[indices]
 
-        self.send("Selected Data", subset)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.data, indices))
+        self.Outputs.selected_data.send(subset)
+        self.Outputs.annotated_data.send(create_annotated_table(self.data, indices))
 
     def send_report(self):
         self.report_plot(name="", plot=self.viewbox.getViewBox())

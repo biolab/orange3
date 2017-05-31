@@ -27,6 +27,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.widget import Input, Output
 from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
 
 def _remove_item(item):
@@ -245,10 +246,13 @@ class OWDistanceMap(widget.OWWidget):
     icon = "icons/DistanceMap.svg"
     priority = 1200
 
-    inputs = [("Distances", Orange.misc.DistMatrix, "set_distances")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table),
-               ("Features", widget.AttributeList)]
+    class Inputs:
+        distances = Input("Distances", Orange.misc.DistMatrix)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
+        features = Output("Features", widget.AttributeList, dynamic=False)
 
     settingsHandler = settings.PerfectDomainContextHandler()
 
@@ -388,6 +392,7 @@ class OWDistanceMap(widget.OWWidget):
 
         self.grid_widget.scene().installEventFilter(self)
 
+    @Inputs.distances
     def set_distances(self, matrix):
         self.closeContext()
         self.clear()
@@ -635,10 +640,9 @@ class OWDistanceMap(widget.OWWidget):
             subset = [self.items[i] for i in self._selection]
             featuresubset = widget.AttributeList(subset)
 
-        self.send("Selected Data", datasubset)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.items, self._selection))
-        self.send("Features", featuresubset)
+        self.Outputs.selected_data.send(datasubset)
+        self.Outputs.annotated_data.send(create_annotated_table(self.items, self._selection))
+        self.Outputs.features.send(featuresubset)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()

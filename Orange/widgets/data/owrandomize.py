@@ -6,7 +6,7 @@ from AnyQt.QtWidgets import QSizePolicy
 from Orange.data import Table
 from Orange.preprocess import Randomize
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets import gui
 
 
@@ -16,8 +16,11 @@ class OWRandomize(OWWidget):
     icon = "icons/Random.svg"
     priority = 2100
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Data", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data = Output("Data", Table)
 
     resizing_enabled = False
     want_main_area = False
@@ -80,6 +83,7 @@ class OWRandomize(OWWidget):
     def _set_scope_label(self):
         self.scope_label.setText("{}%".format(self.scope_prop))
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         self.apply()
@@ -96,7 +100,7 @@ class OWRandomize(OWWidget):
             data = self.data.copy()
             for i, instance in zip(indices, randomized):
                 data[i] = instance
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def send_report(self):
         labels = ["classes", "features", "metas"]

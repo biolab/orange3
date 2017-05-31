@@ -20,7 +20,7 @@ import Orange.evaluation
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input, Output
 
 
 def confusion_matrix(res, index):
@@ -89,9 +89,12 @@ class OWConfusionMatrix(widget.OWWidget):
     icon = "icons/ConfusionMatrix.svg"
     priority = 1001
 
-    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+    class Inputs:
+        evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     quantities = ["Number of instances",
                   "Proportion of predicted",
@@ -227,6 +230,7 @@ class OWConfusionMatrix(widget.OWWidget):
         self.tablemodel.setRowCount(nclasses + 3)
         self.tablemodel.setColumnCount(nclasses + 3)
 
+    @Inputs.evaluation_results
     def set_results(self, results):
         """Set the input results."""
 
@@ -401,8 +405,8 @@ class OWConfusionMatrix(widget.OWWidget):
             data = None
             annotated_data = None
 
-        self.send("Selected Data", data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
+        self.Outputs.selected_data.send(data)
+        self.Outputs.annotated_data.send(annotated_data)
 
     def _invalidate(self):
         indices = self.tableview.selectedIndexes()

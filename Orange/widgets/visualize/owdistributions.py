@@ -22,7 +22,7 @@ from Orange.preprocess import Discretize, EqualWidth
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.widget import InputSignal
+from Orange.widgets.widget import Input
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 
 from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
@@ -84,8 +84,9 @@ class OWDistributions(widget.OWWidget):
     description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
     priority = 120
-    inputs = [InputSignal("Data", Orange.data.Table, "set_data",
-                          doc="Set the input data set")]
+
+    class Inputs:
+        data = Input("Data", Orange.data.Table, doc="Set the input data set")
 
     settingsHandler = settings.DomainContextHandler(
         match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)
@@ -213,6 +214,7 @@ class OWDistributions(widget.OWWidget):
         self.plot_prob.setGeometry(self.plot.sceneBoundingRect())
         self.plot_prob.linkedViewChanged(self.plot, self.plot_prob.XAxis)
 
+    @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.clear()

@@ -33,6 +33,7 @@ from Orange.statistics import basic_stats
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
+from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -367,9 +368,12 @@ class OWDataTable(widget.OWWidget):
 
     buttons_area_orientation = Qt.Vertical
 
-    inputs = [("Data", Table, "set_dataset", widget.Multiple)]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Inputs:
+        data = Input("Data", Table, multiple=True)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     show_distributions = Setting(False)
     dist_color_RGB = Setting((220, 220, 220, 255))
@@ -438,6 +442,7 @@ class OWDataTable(widget.OWWidget):
     def sizeHint(self):
         return QSize(800, 500)
 
+    @Inputs.data
     def set_dataset(self, data, tid=None):
         """Set the input dataset."""
         self.closeContext()
@@ -796,8 +801,8 @@ class OWDataTable(widget.OWWidget):
             # Selections of individual instances are not implemented
             # for SqlTables
             if isinstance(table, SqlTable):
-                self.send("Selected Data", selected_data)
-                self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
+                self.Outputs.selected_data.send(selected_data)
+                self.Outputs.annotated_data.send(None)
                 return
 
             rowsel, colsel = self.get_selection(view)
@@ -848,9 +853,8 @@ class OWDataTable(widget.OWWidget):
             else:
                 selected_data = select(table, rowsel, domain)
 
-        self.send("Selected Data", selected_data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(table, rowsel))
+        self.Outputs.selected_data.send(selected_data)
+        self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
 
     def copy(self):
         """

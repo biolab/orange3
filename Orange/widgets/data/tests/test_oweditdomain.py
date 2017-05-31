@@ -86,20 +86,20 @@ class TestOWEditDomain(WidgetTest):
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(self.widget.data, self.iris)
 
     def test_input_data_disconnect(self):
         """Check widget's data after disconnecting data on the input"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(self.widget.data, self.iris)
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
 
     def test_output_data(self):
         """Check data on the output after apply"""
-        self.send_signal("Data", self.iris)
-        output = self.get_output("Data")
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        output = self.get_output(self.widget.Outputs.data)
         np.testing.assert_array_equal(output.X, self.iris.X)
         np.testing.assert_array_equal(output.Y, self.iris.Y)
         self.assertEqual(output.domain, self.iris.domain)
@@ -123,7 +123,7 @@ class TestOWEditDomain(WidgetTest):
         d = Domain([a])
         t = Table(d)
 
-        self.send_signal("Data", t)
+        self.send_signal(self.widget.Inputs.data, t)
 
         assert isinstance(self.widget, OWEditDomain)
         # select first variable
@@ -137,7 +137,7 @@ class TestOWEditDomain(WidgetTest):
         editor.labels_model.setData(idx, "[1, 2, 4]", Qt.EditRole)
 
         self.widget.unconditional_commit()
-        t2 = self.get_output("Data")
+        t2 = self.get_output(self.widget.Outputs.data)
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
 
     def test_duplicate_names(self):
@@ -148,7 +148,7 @@ class TestOWEditDomain(WidgetTest):
         GH-2146
         """
         table = Table("iris")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(self.widget.Error.duplicate_var_name.is_shown())
 
         idx = self.widget.domain_view.model().index(0)
@@ -159,14 +159,14 @@ class TestOWEditDomain(WidgetTest):
         editor.commit()
         self.widget.commit()
         self.assertTrue(self.widget.Error.duplicate_var_name.is_shown())
-        output = self.get_output("Data")
+        output = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(output)
 
         editor.name_edit.setText("sepal height")
         editor.commit()
         self.widget.commit()
         self.assertFalse(self.widget.Error.duplicate_var_name.is_shown())
-        output = self.get_output("Data")
+        output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
 
 

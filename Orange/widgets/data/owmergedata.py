@@ -12,6 +12,7 @@ from Orange.data.util import hstack
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 class MergeType(IntEnum):
@@ -27,13 +28,14 @@ class OWMergeData(widget.OWWidget):
     icon = "icons/MergeData.svg"
     priority = 1110
 
-    inputs = [widget.InputSignal("Data", Orange.data.Table, "setData",
-                                 widget.Default, replaces=["Data A"]),
-              widget.InputSignal("Extra Data", Orange.data.Table,
-                                 "setExtraData", replaces=["Data B"])]
-    outputs = [widget.OutputSignal(
-        "Data", Orange.data.Table,
-        replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])]
+    class Inputs:
+        data = Input("Data", Orange.data.Table, default=True, replaces=["Data A"])
+        extra_data = Input("Extra Data", Orange.data.Table, replaces=["Data B"])
+
+    class Outputs:
+        data = Output("Data",
+                      Orange.data.Table,
+                      replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])
 
     attr_augment_data = settings.Setting('', schema_only=True)
     attr_augment_extra = settings.Setting('', schema_only=True)
@@ -190,6 +192,7 @@ class OWMergeData(widget.OWWidget):
             set_attrs("attr_combine_data", "attr_combine_extra", *attrs)
 
     @check_sql_input
+    @Inputs.data
     def setData(self, data):
         self.data = data
         self._set_model(data, self.model)
@@ -202,6 +205,7 @@ class OWMergeData(widget.OWWidget):
         self._find_best_match()
 
     @check_sql_input
+    @Inputs.extra_data
     def setExtraData(self, data):
         self.extra_data = data
         self._set_unique_model(data, self.extra_model_unique)
@@ -237,7 +241,7 @@ class OWMergeData(widget.OWWidget):
                                                        merged_domain.metas)]
                 if len(set(var_names)) != len(var_names):
                     self.Warning.duplicate_names()
-        self.send("Data", merged_data)
+        self.Outputs.data.send(merged_data)
 
     def _invalidate(self):
         self.commit()

@@ -148,43 +148,43 @@ class TestOWCreateClass(WidgetTest):
 
     def test_no_data(self):
         widget = self.widget
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         attr_combo = widget.controls.attribute
 
         self.assertFalse(attr_combo.model())
         self.assertIsNone(widget.attribute)
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
         # That's all. I don't care if line edits retain the content
 
         widget.apply()
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_no_useful_data(self):
         widget = self.widget
-        self.send_signal("Data", self.no_attributes)
+        self.send_signal(self.widget.Inputs.data, self.no_attributes)
         attr_combo = widget.controls.attribute
 
         self.assertFalse(attr_combo.model())
         self.assertIsNone(widget.attribute)
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
         self.assertTrue(widget.Warning.no_nonnumeric_vars.is_shown())
 
         widget.apply()
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self.assertFalse(widget.Warning.no_nonnumeric_vars.is_shown())
 
     def test_string_data(self):
         widget = self.widget
-        self.send_signal("Data", self.zoo)
+        self.send_signal(self.widget.Inputs.data, self.zoo)
         self._set_attr(self.zoo.domain.metas[0])
         widget.line_edits[0][1].setText("a")
 
         self._check_counts([["54", ""], ["47", ""]])
 
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         classes = outdata.get_column_view("class")[0]
         attr = outdata.get_column_view("name")[0].astype(str)
         has_a = np.char.find(attr, "a") != -1
@@ -211,7 +211,7 @@ class TestOWCreateClass(WidgetTest):
         self._check_counts([["117", ""], ["18", "+ 117"]])
 
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ["Cls1", "Cls2"])
         classes = outdata.get_column_view("class")[0]
         attr = outdata.get_column_view("thal")[0]
@@ -224,11 +224,11 @@ class TestOWCreateClass(WidgetTest):
 
     def test_flow_and_context_handling(self):
         widget = self.widget
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._test_default_rules()
 
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ["C1"])
         classes = outdata.get_column_view("class")[0]
         np.testing.assert_equal(classes, 0)
@@ -252,7 +252,7 @@ class TestOWCreateClass(WidgetTest):
         self._check_counts([["97", ""], ["206", "+ 97"]])
 
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(outdata.domain.class_var.values, ["C1", "C2"])
         classes = outdata.get_column_view("class")[0]
         attr = outdata.get_column_view("gender")[0]
@@ -264,29 +264,29 @@ class TestOWCreateClass(WidgetTest):
         self._check_thal()
 
         prev_rules = widget.rules
-        self.send_signal("Data", self.zoo)
+        self.send_signal(self.widget.Inputs.data, self.zoo)
         self.assertIsNot(widget.rules, prev_rules)
 
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._check_thal()
 
         # Check that sending None as data does not ruin the context, and that
         # the empty context does not match the true one later
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNot(widget.rules, prev_rules)
 
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._check_thal()
 
-        self.send_signal("Data", self.no_attributes)
+        self.send_signal(self.widget.Inputs.data, self.no_attributes)
         self.assertIsNot(widget.rules, prev_rules)
 
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._check_thal()
 
     def test_add_remove_lines(self):
         widget = self.widget
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._set_thal()
         widget.add_row()
         self.assertEqual(len(widget.line_edits), 3)
@@ -300,7 +300,7 @@ class TestOWCreateClass(WidgetTest):
         widget.line_edits[3][1].setText("c")
         widget.line_edits[4][1].setText("b")
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         # Ignore classes without labels
         self._check_counts([["117", ""], ["18", "+ 117"], ["166", "+ 117"],
                             ["", ""], ["", ""]])
@@ -322,19 +322,19 @@ class TestOWCreateClass(WidgetTest):
         while widget.remove_buttons:
             widget.remove_buttons[0].click()
         widget.apply()
-        outdata = self.get_output("Data")
+        outdata = self.get_output(self.widget.Outputs.data)
         np.testing.assert_equal(self.heart.X, outdata.X)
         self.assertTrue(np.all(np.isnan(outdata.Y)))
 
     def test_options(self):
         def _transformer_flags():
             widget.apply()
-            outdata = self.get_output("Data")
+            outdata = self.get_output(self.widget.Outputs.data)
             transformer = outdata.domain.class_var.compute_value
             return transformer.case_sensitive, transformer.match_beginning
 
         widget = self.widget
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self.assertEqual(_transformer_flags(), (False, False))
         widget.controls.case_sensitive.click()
         self.assertEqual(_transformer_flags(), (True, False))
@@ -347,7 +347,7 @@ class TestOWCreateClass(WidgetTest):
         widget = self.widget
         widget.send_report()
 
-        self.send_signal("Data", self.heart)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         thal = self.heart.domain["thal"]
         self._set_attr(thal)
         widget.line_edits[0][0].setText("Cls3")

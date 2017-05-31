@@ -28,12 +28,12 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_input_data(self):
         """Check widget's data"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(len(self.widget.attrs), 5)
         self.assertEqual(len(self.widget.group_vars), 2)
         self.assertFalse(self.widget.display_box.isHidden())
         self.assertTrue(self.widget.stretching_box.isHidden())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(len(self.widget.attrs), 0)
         self.assertEqual(len(self.widget.group_vars), 0)
         self.assertTrue(self.widget.display_box.isHidden())
@@ -43,14 +43,14 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         """Check widget with continuous data with missing values and group variable"""
         data = self.iris.copy()
         data.X[:, 0] = np.nan
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         # used to crash, see #1568
 
     def test_input_data_missings_cont_no_group_var(self):
         """Check widget with continuous data with missing values and no group variable"""
         data = self.housing
         data.X[:, 0] = np.nan
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         # used to crash, see #1568
 
     def test_input_data_missings_disc_group_var(self):
@@ -76,7 +76,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_attribute_combinations(self):
         data = Table("anneal")
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         group_list = self.widget.controls.group_var
         m = group_list.selectionModel()
         for i in range(len(group_list.model())):
@@ -131,15 +131,15 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_box_order_when_missing_stats(self):
         self.widget.compare = 1
         # The widget can't do anything smart here, but shouldn't crash
-        self.send_signal("Data", self.iris[49:51])
+        self.send_signal(self.widget.Inputs.data, self.iris[49:51])
 
     def test_saved_selection(self):
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         selected_indices = self._select_data()
-        self.send_signal("Data", self.zoo)
-        self.assertIsNone(self.get_output("Selected Data"))
-        self.send_signal("Data", self.data)
-        np.testing.assert_array_equal(self.get_output("Selected Data").X,
+        self.send_signal(self.widget.Inputs.data, self.zoo)
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.send_signal(self.widget.Inputs.data, self.data)
+        np.testing.assert_array_equal(self.get_output(self.widget.Outputs.selected_data).X,
                                       self.data.X[selected_indices])
 
     def _select_data(self):
@@ -155,5 +155,5 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         metas = domain.attributes[:-1] + (StringVariable("str"),)
         domain = Domain([], domain.class_var, metas)
         data = Table.from_table(domain, self.iris)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.widget.controls.order_by_importance.setChecked(True)

@@ -30,6 +30,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 _InputData = namedtuple("_InputData", ["key", "name", "table"])
@@ -43,9 +44,12 @@ class OWVennDiagram(widget.OWWidget):
     icon = "icons/VennDiagram.svg"
     priority = 280
 
-    inputs = [("Data", Orange.data.Table, "setData", widget.Multiple)]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table, multiple=True)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Orange.data.Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
     # Selected disjoint subset indices
     selection = settings.Setting([])
@@ -139,6 +143,7 @@ class OWVennDiagram(widget.OWWidget):
         self._queue = []
 
     @check_sql_input
+    @Inputs.data
     def setData(self, data, key=None):
         self.error()
         if not self._inputUpdate:
@@ -620,8 +625,8 @@ class OWVennDiagram(widget.OWWidget):
                                           [item_id_var], [source_var])
             annotated_data = drop_columns(annotated_data, [item_id_var])
 
-        self.send("Selected Data", data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME, annotated_data)
+        self.Outputs.selected_data.send(data)
+        self.Outputs.annotated_data.send(annotated_data)
 
     def getSettings(self, *args, **kwargs):
         self._storeHints()

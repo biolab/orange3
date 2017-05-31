@@ -28,11 +28,11 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
-        self.send_signal("Data", self.data[:0])
+        self.send_signal(self.widget.Inputs.data, self.data[:0])
 
     def test_empty_column(self):
         """Check that the widget doesn't crash if the columns are empty"""
-        self.send_signal("Data", self.data[:, :0])
+        self.send_signal(self.widget.Inputs.data, self.data[:, :0])
 
     def _select_data(self):
         self.widget.select_area(1, QMouseEvent(
@@ -46,27 +46,27 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
                         metas=[ContinuousVariable("m")])
         data = Table(domain, np.arange(6).reshape(6, 1),
                      metas=np.arange(6).reshape(6, 1))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_string_meta(self):
         """Check widget for dataset with only one string meta"""
         domain = Domain([], metas=[StringVariable("m")])
         data = Table(domain, np.empty((6, 0)),
                      metas=np.array(["meta"] * 6).reshape(6, 1))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_missing_values(self):
         """Check widget for dataset with missing values"""
         data = Table(Domain([DiscreteVariable("c1", [])]),
                      np.array([np.nan] * 6)[:, None])
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
         # missings in class variable
         attrs = [DiscreteVariable("c1", ["a", "b", "c"])]
         class_var = DiscreteVariable("cls", [])
         X = np.array([1, 2, 0, 1, 0, 2])[:, None]
         data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_keyerror(self):
         """gh-2014
@@ -75,7 +75,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         """
         data = Table("iris")
         data = data[0:1]
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
@@ -229,7 +229,7 @@ class MosaicVizRankTests(WidgetTest):
                 [0, np.NaN, 0]
             ])
         )
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
 
     def test_color_combo(self):
         """
@@ -241,7 +241,7 @@ class MosaicVizRankTests(WidgetTest):
         RESULTS = [[0, 2, 6], [0, 3, 10], [0, 4, 11],
                    [1, 2, 6], [1, 3, 7], [1, 4, 7]]
         table = Table("titanic")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain]
         for i, cv in enumerate(color_vars):
             idx = self.widget.cb_attr_color.findText(cv)
@@ -279,7 +279,7 @@ class MosaicVizRankTests(WidgetTest):
                   ('age', 'sex'): 5.49e-102,
                   ('age', 'sex', 'status'): 5.3e-128}
         table = Table("titanic")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.vizrank.compute_attr_order()
         self.widget.vizrank.max_attrs = 3
         state = None

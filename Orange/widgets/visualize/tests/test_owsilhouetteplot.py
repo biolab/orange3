@@ -26,16 +26,16 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
-        self.send_signal("Data", self.data[:0])
+        self.send_signal(self.widget.Inputs.data, self.data[:0])
 
     def test_outputs_add_scores(self):
         # check output when appending scores
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.controls.add_scores.setChecked(1)
         selected_indices = self._select_data()
         name = "Silhouette ({})".format(self.data.domain.class_var.name)
-        selected = self.get_output("Selected Data")
-        annotated = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(name, selected.domain.metas[0].name)
         self.assertEqual(name, annotated.domain.metas[0].name)
         np.testing.assert_array_equal(selected.X, self.data.X[selected_indices])
@@ -49,12 +49,12 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
     def test_insufficient_clusters(self):
         iris = self.data
         data_one_cluster = iris[:3]  # three instances Iris-setosa only
-        self.send_signal("Data", data_one_cluster)
+        self.send_signal(self.widget.Inputs.data, data_one_cluster)
         self.assertTrue(self.widget.Error.need_two_clusters.is_shown())
 
         data_singletons = iris[[0, 50, 100]]
         assert len(np.unique(data_singletons.Y)) == 3  # 3 instances 3 labels
-        self.send_signal("Data", data_singletons)
+        self.send_signal(self.widget.Inputs.data, data_singletons)
         self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())
 
     def test_unknowns_in_labels(self):
@@ -63,7 +63,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
         data.Y[::3] = np.nan
         valid = ~np.isnan(data.Y.flatten())
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         scores = output[:, scorename].metas.flatten()
         self.assertTrue(np.all(np.isnan(scores[::3])))
@@ -71,7 +71,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
 
         # Run again on subset with known labels
         data_1 = data[np.flatnonzero(valid)]
-        self.send_signal("Data", data_1)
+        self.send_signal(self.widget.Inputs.data, data_1)
         output_1 = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         scores_1 = output_1[:, scorename].metas.flatten()
         self.assertTrue(np.all(np.isfinite(scores_1)))
@@ -87,4 +87,4 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
              Orange.data.StringVariable("S")]
         )
         data = data.from_table(domain, data)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)

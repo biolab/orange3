@@ -48,7 +48,7 @@ class TestOWKMeans(WidgetTest):
 
     def test_optimization_report_display(self):
         """Check visibility of the table after selecting number of clusters"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.optimize_k = True
         radio_buttons = self.widget.controls.optimize_k.findChildren(QRadioButton)
         radio_buttons[0].click()
@@ -61,7 +61,7 @@ class TestOWKMeans(WidgetTest):
         self.assertEqual(self.widget.table_view.model().rowCount() > 0, True)
 
     def test_changing_k_changes_radio(self):
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
 
         widget = self.widget
         widget.auto_run = True
@@ -99,17 +99,17 @@ class TestOWKMeans(WidgetTest):
         widget.optimize_k = True
         widget.k_from, widget.k_to = 3, 4
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertTrue(self.widget.mainArea.isHidden())
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(self.widget.mainArea.isHidden())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertTrue(self.widget.mainArea.isHidden())
 
     def test_data_limits(self):
         widget = self.widget
 
-        self.send_signal("Data", self.iris[:5])
+        self.send_signal(self.widget.Inputs.data, self.iris[:5])
 
         widget.k = 10
         widget.unconditional_apply()
@@ -140,7 +140,7 @@ class TestOWKMeans(WidgetTest):
         widget.k = 3
         widget.optimize_k = False
 
-        self.send_signal("Data", self.iris[:50])
+        self.send_signal(self.widget.Inputs.data, self.iris[:50])
         widget.unconditional_apply()
 
         widget.k_from = 2
@@ -168,11 +168,11 @@ class TestOWKMeans(WidgetTest):
     def test_data_on_output(self):
         """Check if data is on output after create widget and run"""
         # Connect iris to widget
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.apply_button.button.click()
         self.assertNotEqual(self.widget.data, None)
         # Disconnect the data
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         # removing data should have cleared the output
         self.assertEqual(self.widget.data, None)
 
@@ -198,7 +198,7 @@ class TestOWKMeans(WidgetTest):
         model = widget.table_view.model()
         with patch.object(model, "set_scores",
                           wraps=model.set_scores) as set_scores:
-            self.send_signal("Data", self.iris)
+            self.send_signal(self.widget.Inputs.data, self.iris)
             scores, start_k = set_scores.call_args[0]
             self.assertEqual(scores,
                              [km if isinstance(km, str) else km.silhouette
@@ -213,32 +213,32 @@ class TestOWKMeans(WidgetTest):
         self.assertNotIsInstance(widget.clusterings[8], str)
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 1)
-        self.assertIsNotNone(self.get_output("Annotated Data"))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set(range(3, 9))
         widget.invalidate()
         self.assertTrue(widget.Error.failed.is_shown())
-        self.assertIsNone(self.get_output("Annotated Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set()
         widget.invalidate()
         self.assertFalse(widget.Error.failed.is_shown())
         self.assertEqual(widget.selected_row(), 0)
-        self.assertIsNotNone(self.get_output("Annotated Data"))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
     @patch("Orange.widgets.unsupervised.owkmeans.KMeans", new=KMeansFail)
     def test_run_fails(self):
         self.widget.k = 3
         self.widget.optimize_k = False
         self.KMeansFail.fail_on = {3}
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.Error.failed.is_shown())
-        self.assertIsNone(self.get_output("Annotated Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
         self.KMeansFail.fail_on = set()
         self.widget.invalidate()
         self.assertFalse(self.widget.Error.failed.is_shown())
-        self.assertIsNotNone(self.get_output("Annotated Data"))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_select_best_row(self):
         class Cluster:
@@ -259,12 +259,12 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
 
         domain = Domain([ContinuousVariable(x) for x in "abc"])
-        self.send_signal("Data", Table(domain))
+        self.send_signal(self.widget.Inputs.data, Table(domain))
         self.assertEqual(widget._get_var_name(), "Cluster")
 
         domain = Domain([ContinuousVariable("Cluster"),
                          ContinuousVariable("Cluster (4)")])
-        self.send_signal("Data", Table(domain))
+        self.send_signal(self.widget.Inputs.data, Table(domain))
         self.assertEqual(widget._get_var_name(), "Cluster (5)")
 
     def test_report(self):
@@ -306,7 +306,7 @@ class TestOWKMeans(WidgetTest):
         table = Table("iris")
         self.widget.controls.k_from.setValue(2)
         self.widget.controls.k_to.setValue(9)
-        self.send_signal("Data", table[0:1, :])
+        self.send_signal(self.widget.Inputs.data, table[0:1, :])
 
     def test_from_to_table(self):
         """
@@ -316,7 +316,7 @@ class TestOWKMeans(WidgetTest):
         table = Table("iris")
         k_from, k_to = 2, 9
         self.widget.controls.k_from.setValue(k_from)
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         check = lambda x: 2 if x - k_from + 1 < 2 else x - k_from + 1
         for i in range(k_from, k_to):
             self.widget.controls.k_to.setValue(i)

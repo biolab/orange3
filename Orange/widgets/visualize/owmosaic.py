@@ -16,7 +16,7 @@ from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.preprocess.score import ReliefF
 from Orange.statistics.distribution import get_distribution, get_distributions
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import (
     Setting, DomainContextHandler, ContextSetting, SettingProvider)
@@ -26,7 +26,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
-from Orange.widgets.widget import OWWidget, Default, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
 class MosaicVizRank(VizRankDialog, OWComponent):
@@ -266,10 +266,13 @@ class OWMosaicDisplay(OWWidget):
     icon = "icons/MosaicDisplay.svg"
     priority = 220
 
-    inputs = [("Data", Table, "set_data", Default),
-              ("Data Subset", Table, "set_subset_data")]
-    outputs = [("Selected Data", Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Inputs:
+        data = Input("Data", Table, default=True)
+        data_subset = Input("Data Subset", Table)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     PEARSON, CLASS_DISTRIBUTION = 0, 1
 
@@ -423,6 +426,7 @@ class OWMosaicDisplay(OWWidget):
         OWWidget.showEvent(self, ev)
         self.update_graph()
 
+    @Inputs.data
     def set_data(self, data):
         if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
@@ -450,6 +454,7 @@ class OWMosaicDisplay(OWWidget):
 
         self.set_color_data()
 
+    @Inputs.data_subset
     def set_subset_data(self, data):
         self.Warning.incompatible_subset.clear()
         if self.data is None:
@@ -518,9 +523,8 @@ class OWMosaicDisplay(OWWidget):
 
     def send_selection(self):
         if not self.selection or self.data is None:
-            self.send("Selected Data", None)
-            self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                      create_annotated_table(self.data, []))
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(create_annotated_table(self.data, []))
             return
         filters = []
         self.Warning.no_cont_selection_sql.clear()
@@ -542,9 +546,8 @@ class OWMosaicDisplay(OWWidget):
         sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
         if self.discrete_data is not self.data:
             selection = self.data[sel_idx]
-        self.send("Selected Data", selection)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.data, sel_idx))
+        self.Outputs.selected_data.send(selection)
+        self.Outputs.annotated_data.send(create_annotated_table(self.data, sel_idx))
 
     def send_report(self):
         self.report_plot(self.canvas)

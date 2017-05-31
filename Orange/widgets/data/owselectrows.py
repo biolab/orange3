@@ -22,6 +22,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
+from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.canvas import report
 from Orange.widgets.widget import Msg
@@ -71,8 +72,13 @@ class OWSelectRows(widget.OWWidget):
     icon = "icons/SelectRows.svg"
     priority = 100
     category = "Data"
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Matching Data", Table, widget.Default), ("Unmatched Data", Table)]
+
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        matching_data = Output("Matching Data", Table, default=True)
+        unmatched_data = Output("Unmatched Data", Table)
 
     want_main_area = False
 
@@ -385,6 +391,7 @@ class OWSelectRows(widget.OWWidget):
         if not adding_all:
             self.conditions_changed()
 
+    @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.data = data
@@ -523,8 +530,8 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
 
-        self.send("Matching Data", matching_output)
-        self.send("Unmatched Data", non_matching_output)
+        self.Outputs.matching_data.send(matching_output)
+        self.Outputs.unmatched_data.send(non_matching_output)
 
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)

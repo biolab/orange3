@@ -41,7 +41,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         class_var = DiscreteVariable("cls", [])
         X = np.array([1, 2, 0, 1, 0, 2])[:, None]
         data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_keyerror(self):
         """gh-2007
@@ -50,7 +50,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         """
         data = Table("iris")
         data = data[0:1]
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_chisquare(self):
         """
@@ -82,7 +82,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         )
         with patch("Orange.widgets.visualize.owsieve.Discretize",
                    wraps=Discretize) as disc:
-            self.send_signal("Data", table)
+            self.send_signal(self.widget.Inputs.data, table)
             self.assertTrue(disc.called)
         metas = self.widget.discrete_data.domain.metas
         self.assertEqual(len(metas), 2)
@@ -95,13 +95,13 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         GH-2260
         """
         table = Table("iris")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(len(self.widget.discrete_data.domain), len(table.domain))
         output = self.get_output("Data")
         self.assertFalse(output.is_sparse())
 
         table.X = sp.csr_matrix(table.X)
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(len(self.widget.discrete_data.domain), 2)
         output = self.get_output("Data")
         self.assertTrue(output.is_sparse())
