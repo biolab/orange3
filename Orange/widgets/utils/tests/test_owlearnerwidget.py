@@ -1,6 +1,8 @@
 # pylint: disable=missing-docstring
 from Orange.base import Learner, Model
 from Orange.data import Table, Domain
+from Orange.preprocess import Normalize
+from Orange.widgets.model.owlogisticregression import OWLogisticRegression
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.tests.base import WidgetTest
 
@@ -34,3 +36,14 @@ class TestOWBaseLearner(WidgetTest):
         self.assertTrue(self.widget.Error.fitting_failed.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.fitting_failed.is_shown())
+
+    def test_set_preprocessor(self):
+        w = self.create_widget(OWLogisticRegression)  # type: OWLogisticRegression
+        assert isinstance(w, OWBaseLearner)
+
+        for preprocessor in (Normalize(),
+                             [Normalize()]):
+            with self.subTest(preprocessor=preprocessor):
+                w.set_preprocessor(preprocessor)
+                learner = w.create_learner()
+                learner.fit_storage(self.iris)

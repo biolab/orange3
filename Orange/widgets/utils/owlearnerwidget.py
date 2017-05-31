@@ -1,3 +1,5 @@
+from collections import Sequence
+
 import numpy as np
 from AnyQt.QtCore import QTimer, Qt
 
@@ -160,6 +162,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         return []
 
     def set_preprocessor(self, preprocessor):
+        if not isinstance(preprocessor, Sequence):
+            preprocessor = (preprocessor,)
         self.preprocessors = preprocessor
         self.apply()
 
