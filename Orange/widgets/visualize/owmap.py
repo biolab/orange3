@@ -403,8 +403,7 @@ class LeafletMap(WebviewWidget):
     N_POINTS_PER_ITER = 666
 
     def redraw_markers_overlay_image(self, *args, new_image=False):
-        if (not args and not self._drawing_args or
-                self.data is None or not self.lat_attr or not self.lon_attr):
+        if not args and not self._drawing_args or self.data is None:
             return
 
         if args:
@@ -430,6 +429,10 @@ class LeafletMap(WebviewWidget):
                self._legend_shapes if is_js_path else [],
                self._legend_sizes))
 
+        np.random.shuffle(visible)
+        # Sort points in subset to be painted last
+        visible = visible[np.lexsort((in_subset[visible],))]
+
         if is_js_path:
             self.evalJS('clear_markers_overlay_image()')
             self._update_js_markers(visible, in_subset[visible])
@@ -438,8 +441,6 @@ class LeafletMap(WebviewWidget):
 
         self.evalJS('clear_markers_js();')
         self._owwidget.disable_some_controls(True)
-
-        np.random.shuffle(visible)
 
         selected = (self._selected_indices
                     if self._selected_indices is not None else
@@ -486,6 +487,7 @@ class LeafletMap(WebviewWidget):
             sizes = self._size_coef * \
                 (self._sizes[batch] if self._size_attr else np.tile(10, len(batch)))
 
+            opacity_subset, opacity_rest = self._opacity, int(.8 * self._opacity)
             for x, y, is_selected, size, color, _in_subset in \
                     zip(x, y, selected[batch], sizes, colors, in_subset[batch]):
 
@@ -501,9 +503,15 @@ class LeafletMap(WebviewWidget):
                                         size + selpensize2,
                                         size + selpensize2)
                 color = QColor(*color)
-                color.setAlpha(self._opacity)
-                painter.setBrush(QBrush(color) if _in_subset else Qt.NoBrush)
-                painter.setPen(QPen(QBrush(color.darker(180)), 2 * pensize2))
+                if _in_subset:
+                    color.setAlpha(opacity_subset)
+                    painter.setBrush(QBrush(color))
+                    painter.setPen(QPen(QBrush(color.darker(180)), 2 * pensize2))
+                else:
+                    color.setAlpha(opacity_rest)
+                    painter.setBrush(Qt.NoBrush)
+                    painter.setPen(QPen(QBrush(color.lighter(120)), 2 * pensize2))
+
                 painter.drawEllipse(x - size2 - pensize2,
                                     y - size2 - pensize2,
                                     size + pensize2,

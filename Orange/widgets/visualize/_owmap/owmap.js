@@ -224,10 +224,10 @@ function add_markers(latlon_data) {
 var _icons_canvas_ctx = document.getElementById('icons_canvas').getContext('2d'),
     _icons_cache = {};
 
-function _construct_icon(shape, color, do_fill) {
+function _construct_icon(shape, color, in_subset) {
     shape = shape % _N_SHAPES;
     var cached;
-    if (cached = _icons_cache[[shape, color, do_fill]])
+    if (cached = _icons_cache[[shape, color, in_subset]])
         return cached;
 
     var ctx = _icons_canvas_ctx,
@@ -238,7 +238,7 @@ function _construct_icon(shape, color, do_fill) {
     ctx.clearRect(0, 0, size + 2 * stroke, size + 2 * stroke);
     ctx.canvas.width = ctx.canvas.height = size + 2 * stroke;
     ctx.fillStyle = color;
-    ctx.strokeStyle = lightenColor(color, -30);
+    ctx.strokeStyle = lightenColor(color, in_subset ? -30 : 20);
     ctx.lineWidth = stroke;
 
     // Strokes for shapes added with CSS via filter:drop-shadow()
@@ -346,11 +346,11 @@ function _construct_icon(shape, color, do_fill) {
     }
     ctx.closePath();
     ctx.translate(-stroke, -stroke);
-    if (do_fill)
+    if (in_subset)
         ctx.fill();
     ctx.stroke();
     ctx.restore();
-    return _icons_cache[[shape, color, do_fill]] = ctx.canvas.toDataURL();
+    return _icons_cache[[shape, color, in_subset]] = ctx.canvas.toDataURL();
 }
 
 function lightenColor(hexcolor, percent) {
@@ -392,11 +392,15 @@ function _update_markers() {
     }
     for (var i=0; i<markers.length; ++i)
         if (markers[i]._icon)
-            _update_marker_icon(markers[i]);
+            _update_marker_icon(markers[i], in_subset[i]);
 }
-function _update_marker_icon(marker) {
+function _update_marker_icon(marker, in_subset) {
     var icon = marker._icon,
         img = icon.firstChild;
+
+    if (!in_subset)
+        img.classList.add('orange-marker-not-in-subset');
+
     img.src = marker._our_icon_uri;
     icon.style.width = icon.style.height =
         img.style.width = img.style.height = marker._our_icon_size;
@@ -409,14 +413,21 @@ function _update_marker_icon(marker) {
 
 var _opacity_stylesheet = document.styleSheets[document.styleSheets.length - 1];
 var _opacity_stylesheet_rule = _opacity_stylesheet.insertRule(
-    '.orange-marker { opacity: .8; }',
-    _opacity_stylesheet.rules.length);
+        '.orange-marker { opacity: .8; }',
+        _opacity_stylesheet.rules.length),
+    _opacity_stylesheet_rule2 = _opacity_stylesheet.insertRule(
+        '.orange-marker-not-in-subset { opacity: .7; }',
+        _opacity_stylesheet.rules.length);
 
 function set_marker_opacity(opacity) {
+    _opacity_stylesheet.deleteRule(_opacity_stylesheet_rule2);
     _opacity_stylesheet.deleteRule(_opacity_stylesheet_rule);
     _opacity_stylesheet.insertRule(
         '.orange-marker { opacity: ' + opacity + '; }',
         _opacity_stylesheet_rule);
+    _opacity_stylesheet.insertRule(
+        '.orange-marker-not-in-subset { opacity: ' + (.8 * opacity) + ' !important; }',
+        _opacity_stylesheet_rule2);
 }
 
 
