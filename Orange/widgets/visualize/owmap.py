@@ -82,6 +82,7 @@ class LeafletMap(WebviewWidget):
         self._prev_origin = None
         self._overlay_image_path = mkstemp(prefix='orange-Map-', suffix='.png')[1]
         self._subset_ids = np.array([])
+        self.is_js_path = None
 
     def __del__(self):
         os.remove(self._overlay_image_path)
@@ -285,12 +286,14 @@ class LeafletMap(WebviewWidget):
     def set_marker_size_coefficient(self, size):
         self._size_coef = size / 100
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
-        self.redraw_markers_overlay_image(new_image=True)
+        if not self.is_js_path:
+            self.redraw_markers_overlay_image(new_image=True)
 
     def set_marker_opacity(self, opacity):
         self._opacity = 255 * opacity // 100
         self.evalJS('''set_marker_opacity({});'''.format(opacity / 100))
-        self.redraw_markers_overlay_image(new_image=True)
+        if not self.is_js_path:
+            self.redraw_markers_overlay_image(new_image=True)
 
     def set_model(self, model):
         self.model = model
@@ -417,7 +420,7 @@ class LeafletMap(WebviewWidget):
                      if self._subset_ids.size else
                      np.tile(True, len(lon)))
 
-        is_js_path = len(visible) < self.N_POINTS_PER_ITER
+        is_js_path = self.is_js_path = len(visible) < self.N_POINTS_PER_ITER
 
         self.evalJS('''
             window.legend_colors = %s;
