@@ -2219,6 +2219,28 @@ class TestRowInstance(unittest.TestCase):
             row[0] = i
         np.testing.assert_array_equal(table.X[:, 0], np.arange(len(table)))
 
+    def test_sparse_assignment(self):
+        X = np.eye(4)
+        Y = X[2]
+        table = data.Table(X, Y)
+        row = table[1]
+        self.assertFalse(sp.issparse(row.sparse_x))
+        self.assertEqual(row[0], 0)
+        self.assertEqual(row[1], 1)
+
+        table.X = sp.csr_matrix(table.X)
+        table._Y = sp.csr_matrix(table._Y)
+        sparse_row = table[1]
+        self.assertTrue(sp.issparse(sparse_row.sparse_x))
+        self.assertEqual(sparse_row[0], 0)
+        self.assertEqual(sparse_row[1], 1)
+        sparse_row[1] = 0
+        self.assertEqual(sparse_row[1], 0)
+        self.assertEqual(table.X[1, 1], 0)
+        self.assertEqual(table[2][4], 1)
+        table[2][4] = 0
+        self.assertEqual(table[2][4], 0)
+
 
 class TestTableTranspose(unittest.TestCase):
     def test_transpose_no_class(self):
