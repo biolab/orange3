@@ -129,19 +129,25 @@ class Lookup(Transformation):
     """
     Transform a discrete variable according to lookup table (`self.lookup`).
     """
-    def __init__(self, variable, lookup_table):
+    def __init__(self, variable, lookup_table, unknown=np.nan):
         """
         :param variable: The variable whose transformed value is returned.
         :type variable: int or str or :obj:`~Orange.data.DiscreteVariable`
         :param lookup_table: transformations for each value of `self.variable`
         :type lookup_table: np.array or list or tuple
+        :param unknown: The value to be used as unknown value.
+        :type unknown: float or int 
         """
         super().__init__(variable)
         self.lookup_table = lookup_table
+        self.unknown = unknown
 
     def transform(self, column):
+        # Densify DiscreteVariable values coming from sparse data sets.
+        if sp.issparse(column):
+            column = column.toarray().ravel()
         mask = np.isnan(column)
         column = column.astype(int)
         column[mask] = 0
         values = self.lookup_table[column]
-        return np.where(mask, np.nan, values)
+        return np.where(mask, self.unknown, values)
