@@ -296,7 +296,10 @@ class ReplaceUnknownsRandom(Transformation):
             self.sample_prob = np.ones_like(counts) / len(counts)
 
     def transform(self, c):
-        c = np.array(c, copy=True)
+        if not sp.issparse(c):
+            c = np.array(c, copy=True)
+        else:
+            c = c.toarray().ravel()
         nanindices = np.flatnonzero(np.isnan(c))
 
         if self.variable.is_discrete:
