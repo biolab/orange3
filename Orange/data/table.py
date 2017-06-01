@@ -1,15 +1,14 @@
 import operator
 import os
 import zlib
-
 from collections import MutableSequence, Iterable, Sequence, Sized
+from functools import reduce
 from itertools import chain
 from numbers import Real, Integral
-from functools import reduce
 from threading import Lock, RLock
 
-import numpy as np
 import bottleneck as bn
+import numpy as np
 from scipy import sparse as sp
 
 import Orange.data  # import for io.py
@@ -19,7 +18,8 @@ from Orange.data import (
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
 from Orange.data.util import SharedComputeValue, vstack, hstack
-from Orange.statistics.util import bincount, countnans, contingency, stats as fast_stats
+from Orange.statistics.util import bincount, countnans, contingency, \
+    stats as fast_stats
 from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
@@ -100,11 +100,11 @@ class RowInstance(Instance):
                                 type(value).__name__)
             if key < len(self._x):
                 self._x[key] = value
-                if self.sparse_x:
+                if self.sparse_x is not None:
                     self.table.X[self.row_index, key] = value
             else:
                 self._y[key - len(self._x)] = value
-                if self.sparse_y:
+                if self.sparse_y is not None:
                     self.table._Y[self.row_index, key - len(self._x)] = value
         else:
             self._metas[-1 - key] = value
@@ -312,7 +312,8 @@ class Table(MutableSequence, Storage):
                 elif not isinstance(col, Integral):
                     if isinstance(col, SharedComputeValue):
                         if (id(col.compute_shared), id(source)) not in shared_cache:
-                            shared_cache[id(col.compute_shared), id(source)] = col.compute_shared(source)
+                            shared_cache[id(col.compute_shared), id(source)] = \
+                                col.compute_shared(source)
                         shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
                             a[:, i] = match_type(
@@ -564,8 +565,8 @@ class Table(MutableSequence, Storage):
         if not writer:
             desc = FileFormat.names.get(ext)
             if desc:
-                raise IOError("Writing of {}s is not supported".
-                    format(desc.lower()))
+                raise IOError(
+                    "Writing of {}s is not supported".format(desc.lower()))
             else:
                 raise IOError("Unknown file name extension.")
         writer.write_file(filename, self)
@@ -1493,10 +1494,10 @@ class Table(MutableSequence, Storage):
 
                 for col_i, arr_i, _ in cont_vars:
                     if sp.issparse(arr):
-                        col_data = arr.data[arr.indptr[arr_i]:
-                        arr.indptr[arr_i + 1]]
-                        rows = arr.indices[arr.indptr[arr_i]:
-                        arr.indptr[arr_i + 1]]
+                        col_data = arr.data[
+                                   arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
+                        rows = arr.indices[
+                               arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
                         W_ = None if W is None else W[rows]
                         classes_ = classes[rows]
                     else:
