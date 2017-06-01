@@ -135,6 +135,14 @@ class TestHierarchical(unittest.TestCase):
         tree = hierarchical.feature_clustering(table)
         numpy.testing.assert_almost_equal(tree.value.height, 0.75)
 
+    def test_invalid_linkage(self):
+        link = numpy.array(
+            [[0.0, 1.0, 1.0, 2.0],
+             [2.0, 1.0, 2.0, 3.0]]
+        )
+        with self.assertRaises(ValueError):
+            hierarchical.tree_from_linkage(link)
+
 
 class TestTree(unittest.TestCase):
     def test_tree(self):

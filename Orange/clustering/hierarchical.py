@@ -220,6 +220,8 @@ def tree_from_linkage(linkage):
     .. seealso:: scipy.cluster.hierarchy.linkage
 
     """
+    scipy.cluster.hierarchy.is_valid_linkage(
+        linkage, throw=True, name="linkage")
     T = {}
     N, _ = linkage.shape
     N = N + 1
