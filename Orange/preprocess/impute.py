@@ -1,5 +1,5 @@
-import numpy
-from scipy.sparse import issparse
+import numpy as np
+import scipy.sparse as sp
 
 import Orange.data
 from Orange.statistics import distribution, basic_stats
@@ -26,11 +26,11 @@ class ReplaceUnknowns(Transformation):
         self.value = value
 
     def transform(self, c):
-        if issparse(c):
-            c.data = numpy.where(numpy.isnan(c.data), self.value, c.data)
+        if sp.issparse(c):
+            c.data = np.where(np.isnan(c.data), self.value, c.data)
             return c
         else:
-            return numpy.where(numpy.isnan(c), self.value, c)
+            return np.where(np.isnan(c), self.value, c)
 
 
 class BaseImputeMethod(Reprable):
@@ -83,7 +83,7 @@ class DropInstances(BaseImputeMethod):
 
     def __call__(self, data, variable):
         index = data.domain.index(variable)
-        return numpy.isnan(data[:, index]).reshape(-1)
+        return np.isnan(data[:, index]).reshape(-1)
 
 
 class Average(BaseImputeMethod):
@@ -154,13 +154,13 @@ class ReplaceUnknownsModel(Reprable):
 
     def __call__(self, data):
         if isinstance(data, Orange.data.Instance):
-            column = numpy.array([float(data[self.variable])])
+            column = np.array([float(data[self.variable])])
         else:
-            column = numpy.array(data.get_column_view(self.variable)[0],
+            column = np.array(data.get_column_view(self.variable)[0],
                                  copy=True)
 
-        mask = numpy.isnan(column)
-        if not numpy.any(mask):
+        mask = np.isnan(column)
+        if not np.any(mask):
             return column
 
         if isinstance(data, Orange.data.Instance):
@@ -224,7 +224,7 @@ def domain_with_class_var(domain, class_var):
 
 class IsDefined(Transformation):
     def transform(self, c):
-        return ~numpy.isnan(c)
+        return ~np.isnan(c)
 
 
 class AsValue(BaseImputeMethod):
@@ -243,7 +243,7 @@ class AsValue(BaseImputeMethod):
                 base_value=variable.base_value,
                 compute_value=Lookup(
                     variable,
-                    numpy.arange(len(variable.values), dtype=int),
+                    np.arange(len(variable.values), dtype=int),
                     unknown=len(variable.values))
                 )
             return var
@@ -281,29 +281,29 @@ class ReplaceUnknownsRandom(Transformation):
         self.distribution = distribution
 
         if variable.is_discrete:
-            counts = numpy.array(distribution)
+            counts = np.array(distribution)
         elif variable.is_continuous:
-            counts = numpy.array(distribution)[1, :]
+            counts = np.array(distribution)[1, :]
         else:
             raise TypeError("Only discrete and continuous "
                             "variables are supported")
-        csum = numpy.sum(counts)
+        csum = np.sum(counts)
         if csum > 0:
             self.sample_prob = counts / csum
         else:
-            self.sample_prob = numpy.ones_like(counts) / len(counts)
+            self.sample_prob = np.ones_like(counts) / len(counts)
 
     def transform(self, c):
-        c = numpy.array(c, copy=True)
-        nanindices = numpy.flatnonzero(numpy.isnan(c))
+        c = np.array(c, copy=True)
+        nanindices = np.flatnonzero(np.isnan(c))
 
         if self.variable.is_discrete:
-            sample = numpy.random.choice(
+            sample = np.random.choice(
                 len(self.variable.values), size=len(nanindices),
                 replace=True, p=self.sample_prob)
         else:
-            sample = numpy.random.choice(
-                numpy.asarray(self.distribution)[0, :], size=len(nanindices),
+            sample = np.random.choice(
+                np.asarray(self.distribution)[0, :], size=len(nanindices),
                 replace=True, p=self.sample_prob)
 
         c[nanindices] = sample
@@ -328,9 +328,9 @@ class Random(BaseImputeMethod):
             raise ValueError("'{}' has an unknown distribution"
                              .format(variable))
 
-        if variable.is_discrete and numpy.sum(dist) == 0:
+        if variable.is_discrete and np.sum(dist) == 0:
             dist += 1 / len(dist)
-        elif variable.is_continuous and numpy.sum(dist[1, :]) == 0:
+        elif variable.is_continuous and np.sum(dist[1, :]) == 0:
             dist[1, :] += 1 / dist.shape[1]
         return variable.copy(
             compute_value=ReplaceUnknownsRandom(variable, dist))
