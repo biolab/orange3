@@ -98,6 +98,10 @@ class LeafletMap(WebviewWidget):
                 lon_attr not in data.domain):
             self.data = None
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
+            self._legend_colors = []
+            self._legend_shapes = []
+            self._legend_sizes = []
+            self._update_legend()
             return
 
         lat_attr = data.domain[lat_attr]
@@ -333,6 +337,17 @@ class LeafletMap(WebviewWidget):
         self.exposeObject('model_predictions', dict(data=predictions, **kwargs))
         self.evalJS('draw_heatmap()')
 
+    def _update_legend(self, is_js_path=False):
+        self.evalJS('''
+            window.legend_colors = %s;
+            window.legend_shapes = %s;
+            window.legend_sizes  = %s;
+            legendControl.remove();
+            legendControl.addTo(map);
+        ''' % (self._legend_colors,
+               self._legend_shapes if is_js_path else [],
+               self._legend_sizes))
+
     def _update_js_markers(self, visible, in_subset):
         self._visible = visible
         latlon = self._latlon_data
@@ -422,15 +437,7 @@ class LeafletMap(WebviewWidget):
 
         is_js_path = self.is_js_path = len(visible) < self.N_POINTS_PER_ITER
 
-        self.evalJS('''
-            window.legend_colors = %s;
-            window.legend_shapes = %s;
-            window.legend_sizes  = %s;
-            legendControl.remove();
-            legendControl.addTo(map);
-        ''' % (self._legend_colors,
-               self._legend_shapes if is_js_path else [],
-               self._legend_sizes))
+        self._update_legend(is_js_path)
 
         np.random.shuffle(visible)
         # Sort points in subset to be painted last
