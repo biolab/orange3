@@ -55,7 +55,7 @@ Example
 
 .. figure:: images/Predictions-Schema.png
 
-We randomly split the *iris* data into two subsets. The larger subset,
+We randomly split the *heart-disease* data into two subsets. The larger subset,
 containing 70 % of data instances, is sent to :doc:`Naive Bayes <../model/naivebayes>` and
 :doc:`Tree <../model/tree>`, so they can produce the corresponding
 model. Models are then sent into **Predictions**, among with
