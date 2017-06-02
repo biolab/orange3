@@ -84,25 +84,9 @@ class CA(Score):
         return self.from_predicted(results, skl_metrics.accuracy_score)
 
 
-class Precision(Score):
-    __wraps__ = skl_metrics.precision_score
-
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.precision_score,
-                                   average="weighted")
-
-
-class Recall(Score):
-    __wraps__ = skl_metrics.recall_score
-
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.recall_score,
-                                   average="weighted")
-
-
-class F1(Score):
+class TargetScore(Score):
     """
-    ${sklpar}
+    Base class for scorers that need a target value (a "positive" class).
 
     Parameters
     ----------
@@ -110,27 +94,43 @@ class F1(Score):
         Stored predictions and actual data in model testing.
 
     target : int, optional (default=None)
-        Value of class to report.
+        Target class value.
+        When None:
+          - if averaging is specified, use all classes and average results
+          - if average is 'binary' and class variable has exactly 2 values,
+            use the value '1' as the positive class
 
-    Examples
-    --------
-    >>> Orange.evaluation.F1(results)
-    array([ 0.9...])
+    average: str, method for averaging (default='binary')
+        Default requires a binary class or target to be set.
+        Options: 'weighted', 'macro', 'micro', None
 
     """
-    __wraps__ = skl_metrics.f1_score
+    __wraps__ = None  # Subclasses should set the scoring function
 
-    def compute_score(self, results, target=None):
-        if target is None:
-            if len(results.domain.class_var.values) <= 2:
-                return self.from_predicted(results, skl_metrics.f1_score, average='binary')
-            else:
-                return self.from_predicted(results, skl_metrics.f1_score, average='weighted')
-        else:
-            return np.fromiter(
-                (skl_metrics.f1_score(results.actual, predicted, average=None)[target]
-                 for predicted in results.predicted),
-                dtype=np.float64, count=len(results.predicted))
+    def compute_score(self, results, target=None, average='binary'):
+        if average == 'binary':
+            if target is None:
+                if len(results.domain.class_var.values) > 2:
+                    raise ValueError(
+                        "Multiclass data: specify target class or select "
+                        "averaging ('weighted', 'macro', 'micro')")
+                target = 1  # Default: use 1 as "positive" class
+            average = None
+        labels = None if target is None else [target]
+        return self.from_predicted(
+            results, type(self).__wraps__, labels=labels, average=average)
+
+
+class Precision(TargetScore):
+    __wraps__ = skl_metrics.precision_score
+
+
+class Recall(TargetScore):
+    __wraps__ = skl_metrics.recall_score
+
+
+class F1(TargetScore):
+    __wraps__ = skl_metrics.f1_score
 
 
 class PrecisionRecallFSupport(Score):
