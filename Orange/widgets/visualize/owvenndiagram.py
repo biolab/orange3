@@ -716,11 +716,7 @@ def table_concat(tables):
     domain = Orange.data.Domain(attributes, class_vars, metas)
 
     tables = list(map(lambda tab: tab.transform(domain), tables))
-
-    # TODO: remove casting to Table when Corpus.concatenate becomes available
-    new_table = Orange.data.Table.from_table(domain,
-                                             Orange.data.Table.concatenate(tables, axis=0))
-    return new_table
+    return tables[0].concatenate(tables, axis=0)
 
 
 def copy_descriptor(descriptor, newname=None):
