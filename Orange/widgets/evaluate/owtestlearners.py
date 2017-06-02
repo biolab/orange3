@@ -218,6 +218,7 @@ class OWTestLearners(OWWidget):
         class_inconsistent = Msg("Test and train data sets "
                                  "have different target variables.")
         memory_error = Msg("Not enough memory.")
+        only_one_class_var_value = Msg("Target variable has only one value.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
@@ -363,18 +364,24 @@ class OWTestLearners(OWWidget):
         """
         self.Information.data_sampled.clear()
         self.Error.train_data_empty.clear()
+        self.Error.class_required.clear()
+        self.Error.too_many_classes.clear()
+        self.Error.only_one_class_var_value.clear()
         if data is not None and not len(data):
             self.Error.train_data_empty()
             data = None
-        if data and not data.domain.class_vars:
-            self.Error.class_required()
-            data = None
-        elif data and len(data.domain.class_vars) > 1:
-            self.Error.too_many_classes()
-            data = None
-        else:
-            self.Error.class_required.clear()
-            self.Error.too_many_classes.clear()
+        if data:
+            conds = [not data.domain.class_vars,
+                     len(data.domain.class_vars) > 1,
+                     data.domain.has_discrete_class and len(data.domain.class_var.values) == 1]
+            errors = [self.Error.class_required,
+                      self.Error.too_many_classes,
+                      self.Error.only_one_class_var_value]
+            for cond, error in zip(conds, errors):
+                if cond:
+                    error()
+                    data = None
+                    break
 
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
