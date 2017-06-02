@@ -82,6 +82,7 @@ class LeafletMap(WebviewWidget):
         self._prev_origin = None
         self._overlay_image_path = mkstemp(prefix='orange-Map-', suffix='.png')[1]
         self._subset_ids = np.array([])
+        self.is_js_path = None
 
     def __del__(self):
         os.remove(self._overlay_image_path)
@@ -95,7 +96,12 @@ class LeafletMap(WebviewWidget):
         if (data is None or not len(data) or
                 lat_attr not in data.domain or
                 lon_attr not in data.domain):
+            self.data = None
             self.evalJS('clear_markers_js(); clear_markers_overlay_image();')
+            self._legend_colors = []
+            self._legend_shapes = []
+            self._legend_sizes = []
+            self._update_legend()
             return
 
         lat_attr = data.domain[lat_attr]
@@ -284,19 +290,21 @@ class LeafletMap(WebviewWidget):
     def set_marker_size_coefficient(self, size):
         self._size_coef = size / 100
         self.evalJS('''set_marker_size_coefficient({});'''.format(size / 100))
-        self.redraw_markers_overlay_image(new_image=True)
+        if not self.is_js_path:
+            self.redraw_markers_overlay_image(new_image=True)
 
     def set_marker_opacity(self, opacity):
         self._opacity = 255 * opacity // 100
         self.evalJS('''set_marker_opacity({});'''.format(opacity / 100))
-        self.redraw_markers_overlay_image(new_image=True)
+        if not self.is_js_path:
+            self.redraw_markers_overlay_image(new_image=True)
 
     def set_model(self, model):
         self.model = model
         self.evalJS('clear_heatmap()' if model is None else 'reset_heatmap()')
 
     def recompute_heatmap(self, points):
-        if self.model is None or not self.data or not self.lat_attr or not self.lon_attr:
+        if self.model is None or self.data is None:
             self.exposeObject('model_predictions', {})
             self.evalJS('draw_heatmap()')
             return
@@ -328,6 +336,17 @@ class LeafletMap(WebviewWidget):
                         for i in range(len(class_var.values))])
         self.exposeObject('model_predictions', dict(data=predictions, **kwargs))
         self.evalJS('draw_heatmap()')
+
+    def _update_legend(self, is_js_path=False):
+        self.evalJS('''
+            window.legend_colors = %s;
+            window.legend_shapes = %s;
+            window.legend_sizes  = %s;
+            legendControl.remove();
+            legendControl.addTo(map);
+        ''' % (self._legend_colors,
+               self._legend_shapes if is_js_path else [],
+               self._legend_sizes))
 
     def _update_js_markers(self, visible, in_subset):
         self._visible = visible
@@ -402,8 +421,7 @@ class LeafletMap(WebviewWidget):
     N_POINTS_PER_ITER = 666
 
     def redraw_markers_overlay_image(self, *args, new_image=False):
-        if (not args and not self._drawing_args or
-                self.lat_attr is None or self.lon_attr is None):
+        if not args and not self._drawing_args or self.data is None:
             return
 
         if args:
@@ -417,17 +435,13 @@ class LeafletMap(WebviewWidget):
                      if self._subset_ids.size else
                      np.tile(True, len(lon)))
 
-        is_js_path = len(visible) < self.N_POINTS_PER_ITER
+        is_js_path = self.is_js_path = len(visible) < self.N_POINTS_PER_ITER
 
-        self.evalJS('''
-            window.legend_colors = %s;
-            window.legend_shapes = %s;
-            window.legend_sizes  = %s;
-            legendControl.remove();
-            legendControl.addTo(map);
-        ''' % (self._legend_colors,
-               self._legend_shapes if is_js_path else [],
-               self._legend_sizes))
+        self._update_legend(is_js_path)
+
+        np.random.shuffle(visible)
+        # Sort points in subset to be painted last
+        visible = visible[np.lexsort((in_subset[visible],))]
 
         if is_js_path:
             self.evalJS('clear_markers_overlay_image()')
@@ -437,8 +451,6 @@ class LeafletMap(WebviewWidget):
 
         self.evalJS('clear_markers_js();')
         self._owwidget.disable_some_controls(True)
-
-        np.random.shuffle(visible)
 
         selected = (self._selected_indices
                     if self._selected_indices is not None else
@@ -485,6 +497,7 @@ class LeafletMap(WebviewWidget):
             sizes = self._size_coef * \
                 (self._sizes[batch] if self._size_attr else np.tile(10, len(batch)))
 
+            opacity_subset, opacity_rest = self._opacity, int(.8 * self._opacity)
             for x, y, is_selected, size, color, _in_subset in \
                     zip(x, y, selected[batch], sizes, colors, in_subset[batch]):
 
@@ -500,9 +513,15 @@ class LeafletMap(WebviewWidget):
                                         size + selpensize2,
                                         size + selpensize2)
                 color = QColor(*color)
-                color.setAlpha(self._opacity)
-                painter.setBrush(QBrush(color) if _in_subset else Qt.NoBrush)
-                painter.setPen(QPen(QBrush(color.darker(180)), 2 * pensize2))
+                if _in_subset:
+                    color.setAlpha(opacity_subset)
+                    painter.setBrush(QBrush(color))
+                    painter.setPen(QPen(QBrush(color.darker(180)), 2 * pensize2))
+                else:
+                    color.setAlpha(opacity_rest)
+                    painter.setBrush(Qt.NoBrush)
+                    painter.setPen(QPen(QBrush(color.lighter(120)), 2 * pensize2))
+
                 painter.drawEllipse(x - size2 - pensize2,
                                     y - size2 - pensize2,
                                     size + pensize2,
@@ -861,7 +880,7 @@ class OWMap(widget.OWWidget):
                       self._label_model):
             model.set_domain(None)
         self.lat_attr = self.lon_attr = self.class_attr = self.color_attr = \
-        self.label_attr = self.shape_attr = self.size_attr = None
+        self.label_attr = self.shape_attr = self.size_attr = ''
 
 
 def test_main():

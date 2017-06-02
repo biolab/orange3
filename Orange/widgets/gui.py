@@ -7,6 +7,7 @@ import os
 import re
 import itertools
 import warnings
+import logging
 from types import LambdaType
 from collections import defaultdict
 
@@ -40,6 +41,7 @@ YesNo = NoYes = ("No", "Yes")
 _enter_icon = None
 __re_label = re.compile(r"(^|[^%])%\((?P<value>[a-zA-Z]\w*)\)")
 
+log = logging.getLogger(__name__)
 
 OrangeUserRole = itertools.count(Qt.UserRole)
 
@@ -2379,23 +2381,21 @@ class CallFrontComboBox(ControlledCallFront):
         self.emptyString = emptyString
 
     def action(self, value):
-        if value is not None:
-            if value == "":
-                value = self.emptyString
-            if self.valType:
-                for i in range(self.control.count()):
-                    if self.valType(str(self.control.itemText(i))) == value:
-                        self.control.setCurrentIndex(i)
-                        return
-                values = ""
-                for i in range(self.control.count()):
-                    values += str(self.control.itemText(i)) + \
-                        (i < self.control.count() - 1 and ", " or ".")
-                print("unable to set %s to value '%s'. Possible values are %s"
-                      % (self.control, value, values))
-            else:
-                if value < self.control.count():
-                    self.control.setCurrentIndex(value)
+        if value in ('', None):
+            value = self.emptyString
+        if self.valType:
+            for i in range(self.control.count()):
+                if self.valType(self.control.itemText(i)) == value:
+                    self.control.setCurrentIndex(i)
+                    return
+            if value:
+                log.warning("Unable to set %s to '%s'. Possible values are: %s",
+                            self.control, value,
+                            ', '.join(self.control.itemText(i)
+                                      for i in range(self.control.count())))
+        else:
+            if value < self.control.count():
+                self.control.setCurrentIndex(value)
 
 
 class CallFrontComboBoxModel(ControlledCallFront):
