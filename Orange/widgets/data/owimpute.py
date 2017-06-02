@@ -65,6 +65,7 @@ class OWImpute(OWWidget):
 
     class Error(OWWidget.Error):
         imputation_failed = Msg("Imputation failed for '{}'")
+        model_based_imputer_sparse = Msg("Model based imputer does not work for sparse data")
 
     DEFAULT_LEARNER = SimpleTreeLearner()
     METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
@@ -258,9 +259,13 @@ class OWImpute(OWWidget):
 
             self.warning()
             self.Error.imputation_failed.clear()
+            self.Error.model_based_imputer_sparse.clear()
             with self.progressBar(len(self.varmodel)) as progress:
                 for i, var in enumerate(self.varmodel):
                     method = self.variable_methods.get(i, self.default_method)
+                    if isinstance(method, impute.Model) and data.is_sparse():
+                        self.Error.model_based_imputer_sparse()
+                        continue
 
                     try:
                         if not method.supports_variable(var):
