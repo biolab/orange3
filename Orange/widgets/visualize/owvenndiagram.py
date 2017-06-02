@@ -173,9 +173,9 @@ class OWVennDiagram(widget.OWWidget):
         self.samedomain = samedomain
 
         has_identifiers = all(source_attributes(input.table.domain)
-                                    for input in self.data.values())
+                              for input in self.data.values())
         has_any_identifiers = any(source_attributes(input.table.domain)
-                                    for input in self.data.values())
+                                  for input in self.data.values())
         self.useequalityButton.setEnabled(samedomain)
         self.useidentifiersButton.setEnabled(
             has_any_identifiers or len(self.data) == 0)
@@ -715,7 +715,7 @@ def table_concat(tables):
 
     domain = Orange.data.Domain(attributes, class_vars, metas)
 
-    tables = list(map(lambda tab: tab.transform(domain), tables))
+    tables = [tab.transform(domain) for tab in tables]
     return tables[0].concatenate(tables, axis=0)
 
 
@@ -785,7 +785,7 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
     # each instance in this list belongs to one group (but not all
     # groups need to be present).
     inst_by_id = defaultdict(list)
-    id_by_inst = defaultdict(list) # inverse mapping
+    id_by_inst = defaultdict(list)  # inverse mapping
 
     for i in range(len(table)):
         inst_id = instance_ids[i]
@@ -836,8 +836,8 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
         if var in idvarlist or var in in_expanded:
             continue
         col, _ = newtable.get_column_view(var)
-        nan_indices = filter(lambda j: isinstance(col[j], str) or numpy.isnan(col[j]),
-                             col.nonzero()[0])
+        nan_indices = (i for i in col.nonzero()[0]
+                       if isinstance(col[i], str) or numpy.isnan(col[i]))
         for i in nan_indices:
             for ind in inst_by_id[ids[i]]:
                 if not numpy.isnan(table[ind, var]):
@@ -936,8 +936,7 @@ def string_attributes(domain):
     """
     Return all string attributes from the domain.
     """
-    return [attr for attr in domain.variables + domain.metas
-            if attr.is_string]
+    return [attr for attr in domain.variables + domain.metas if attr.is_string]
 
 
 def discrete_attributes(domain):
