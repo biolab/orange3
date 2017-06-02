@@ -86,7 +86,6 @@ Base class
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
     .. autoattribute:: compute_value
 
     Method `compute_value` is usually invoked behind the scenes in
@@ -146,7 +145,6 @@ Continuous variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 Discrete variables
 ------------------
@@ -157,7 +155,6 @@ Discrete variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 String variables
 ----------------
@@ -168,7 +165,6 @@ String variables
     .. automethod:: is_primitive
     .. automethod:: str_val
     .. automethod:: to_val
-    .. automethod:: val_from_str_add
 
 Time variables
 --------------

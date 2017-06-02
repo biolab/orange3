@@ -239,11 +239,11 @@ class TestDiscreteVariable(VariableTest):
         # Test ncolors adapts to nvalues
         var = DiscreteVariable.make('foo', values=['d', 'r'])
         self.assertEqual(len(var.colors), 2)
-        var.add_value('e')
+        var._add_value('e')
         self.assertEqual(len(var.colors), 3)
         user_defined = (0, 0, 0)
         var.set_color(2, user_defined)
-        var.add_value('k')
+        var._add_value('k')
         self.assertEqual(len(var.colors), 4)
         np.testing.assert_array_equal(var.colors[2], user_defined)
 
@@ -271,11 +271,11 @@ class TestContinuousVariable(VariableTest):
     def test_adjust_decimals(self):
         a = ContinuousVariable("a")
         self.assertEqual(a.str_val(4.654321), "4.654")
-        a.val_from_str_add("5")
+        a._val_from_str_add("5")
         self.assertEqual(a.str_val(4.654321), "5")
-        a.val_from_str_add("  5.12    ")
+        a._val_from_str_add("  5.12    ")
         self.assertEqual(a.str_val(4.654321), "4.65")
-        a.val_from_str_add("5.1234")
+        a._val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
     def test_colors(self):

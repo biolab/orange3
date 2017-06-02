@@ -391,7 +391,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         raise RuntimeError(
             "primitive variable descriptors must overload to_val()")
 
-    def val_from_str_add(self, s):
+    def _val_from_str_add(self, s):
         """
         Convert the given string to a value of the variable. The method
         is similar to :obj:`to_val` except that it only accepts strings and
@@ -438,7 +438,7 @@ class ContinuousVariable(Variable):
         by :obj:`to_val`.
 
     The value of `number_of_decimals` is set to 3 and `adjust_decimals`
-    is set to 2. When :obj:`val_from_str_add` is called for the first
+    is set to 2. When :obj:`_val_from_str_add` is called for the first
     time with a string as an argument, `number_of_decimals` is set to the
     number of decimals in the string and `adjust_decimals` is set to 1.
     In the subsequent calls of `to_val`, the nubmer of decimals is
@@ -498,7 +498,7 @@ class ContinuousVariable(Variable):
             return Unknown
         return float(s)
 
-    def val_from_str_add(self, s):
+    def _val_from_str_add(self, s):
         """
         Convert a value from a string and adjust the number of decimals if
         `adjust_decimals` is non-zero.
@@ -527,7 +527,7 @@ class DiscreteVariable(Variable):
     are stored as floats; the numbers corresponds to indices in the list of
     values.
 
-    .. attribute:: values
+    .. attribute:: values (read-only)
 
         A list of variable's values.
 
@@ -557,7 +557,12 @@ class DiscreteVariable(Variable):
             raise TypeError("values of DiscreteVariables must be strings")
         super().__init__(name, compute_value)
         self.ordered = ordered
+        self._values = tuple(values)
         self.base_value = base_value
+
+    @property
+    def values(self):
+        return self._values
 
     @property
     def colors(self):
@@ -607,32 +612,31 @@ class DiscreteVariable(Variable):
         if not isinstance(s, str):
             raise TypeError('Cannot convert {} to value of "{}"'.format(
                 type(s).__name__, self.name))
-        return self.values.index(s)
+        return self._values.index(s)
 
-    def add_value(self, s):
+    def _add_value(self, s):
         """ Add a value `s` to the list of values.
         """
         if not isinstance(s, str):
             raise TypeError("values of DiscreteVariables must be strings")
-        self.values.append(s)
+        self._values += (s, )
         self._colors = None
 
-    def val_from_str_add(self, s):
+    def _val_from_str_add(self, s):
         """
-        Similar to :obj:`to_val`, except that it accepts only strings and that
-        it adds the value to the list if it does not exist yet.
+        Similar to :obj:`to_val`, except that it adds the value to the list
+        only if it does not exist yet.
 
         :param s: symbolic representation of the value
         :type s: str
         :rtype: float
         """
-        s = str(s) if s is not None else s
         try:
             return ValueUnknown if s in self.unknown_str \
-                else self.values.index(s)
+                else self._values.index(s)
         except ValueError:
-            self.add_value(s)
-            return len(self.values) - 1
+            self._add_value(s)
+            return len(self._values) - 1
 
     def repr_val(self, val):
         """
@@ -645,7 +649,7 @@ class DiscreteVariable(Variable):
         """
         if isnan(val):
             return "?"
-        return '{}'.format(self.values[int(val)])
+        return '{}'.format(self._values[int(val)])
 
     str_val = repr_val
 
@@ -653,7 +657,7 @@ class DiscreteVariable(Variable):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
         return make_variable, (self.__class__, self._compute_value, self.name,
-                               self.values, self.ordered, self.base_value), \
+                               self._values, self.ordered, self.base_value), \
             self.__dict__
 
     @classmethod
@@ -739,13 +743,13 @@ class DiscreteVariable(Variable):
                     if set(values[i:]) & set(var.values):
                         continue  # next var in existing
                     for val in values[i:]:
-                        var.add_value(val)
+                        var._add_value(val)
                 break  # we have the variable
             else:  # not ordered
                 vv = set(var.values)
                 for val in values:
                     if val not in vv:
-                        var.add_value(val)
+                        var._add_value(val)
                 break  # we have the variable
         else:
             return None
@@ -769,7 +773,7 @@ class DiscreteVariable(Variable):
             return sorted(values)
 
     def copy(self, compute_value=None):
-        var = DiscreteVariable(self.name, self.values, self.ordered,
+        var = DiscreteVariable(self.name, self._values, self.ordered,
                                self.base_value, compute_value)
         var.attributes = dict(self.attributes)
         return var
@@ -794,7 +798,7 @@ class StringVariable(Variable):
             return s
         return str(s)
 
-    val_from_str_add = to_val
+    _val_from_str_add = to_val
 
     @staticmethod
     def str_val(val):
