@@ -13,26 +13,177 @@ from Orange.evaluation import AUC, CA, Results, Recall, \
 from Orange.preprocess import discretize, Discretize
 
 
-class TestRecall(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.data = Table('iris')
-
-    def test_recall(self):
-        learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(self.data, [learner])
-        self.assertAlmostEqual(Recall(results)[0], 0.960, 3)
-
-
 class TestPrecision(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = Table('iris')
+        cls.iris = Table('iris')
+        cls.score = Precision()
 
-    def test_precision(self):
+    def test_precision_iris(self):
         learner = LogisticRegressionLearner(preprocessors=[])
-        results = TestOnTrainingData(self.data, [learner])
-        self.assertAlmostEqual(Precision(results)[0], 0.962, 3)
+        res = TestOnTrainingData(self.iris, [learner])
+        self.assertAlmostEqual(self.score(res, average='weighted')[0],
+                               0.96189, 5)
+        self.assertAlmostEqual(self.score(res, target=1)[0], 0.97826, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average=None)[0],
+                               0.97826, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average='weighted')[0],
+                               0.97826, 5)
+        self.assertAlmostEqual(self.score(res, target=0, average=None)[0], 1, 5)
+        self.assertAlmostEqual(self.score(res, target=2, average=None)[0],
+                               0.90741, 5)
+
+    def test_precision_multiclass(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01234")),
+            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
+        results.predicted = np.array([[0, 4, 4, 1, 2, 0, 1, 2, 3, 2],
+                                      [0, 1, 4, 1, 1, 0, 0, 2, 3, 1]])
+        res = self.score(results, average='weighted')
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 0.78333, 5)
+
+        for target, prob in ((0, 2 / 3),
+                             (1, 1 / 4),
+                             (2, 1 / 1),
+                             (3, 1 / 1),
+                             (4, 1 / 1)):
+            res = self.score(results, target=target, average=None)
+            self.assertEqual(res[0], 1.)
+            self.assertEqual(res[1], prob)
+
+    def test_precision_binary(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01")),
+            actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
+        results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+                                      [0, 1, 1, 1, 0, 0, 1, 1, 1, 0]])
+        res = self.score(results)
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 4 / 6)
+        res_target = self.score(results, target=1)
+        self.assertEqual(res[0], res_target[0])
+        self.assertEqual(res[1], res_target[1])
+        res_target = self.score(results, target=0)
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], 3 / 4)
+        res_target = self.score(results, average='macro')
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], (4 / 6 + 3 / 4) / 2)
+
+
+class TestRecall(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.score = Recall()
+
+    def test_recall_iris(self):
+        learner = LogisticRegressionLearner(preprocessors=[])
+        res = TestOnTrainingData(self.iris, [learner])
+        self.assertAlmostEqual(self.score(res, average='weighted')[0], 0.96, 5)
+        self.assertAlmostEqual(self.score(res, target=1)[0], 0.9, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average=None)[0],
+                               0.9, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average='weighted')[0],
+                               0.9, 5)
+        self.assertAlmostEqual(self.score(res, target=0, average=None)[0], 1, 5)
+        self.assertAlmostEqual(self.score(res, target=2, average=None)[0],
+                               0.98, 5)
+
+    def test_recall_multiclass(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01234")),
+            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
+        results.predicted = np.array([[0, 4, 4, 1, 2, 0, 1, 2, 3, 2],
+                                      [0, 1, 4, 1, 1, 0, 0, 2, 3, 1]])
+        res = self.score(results, average='weighted')
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 0.6)
+
+        for target, prob in ((0, 2 / 2),
+                             (1, 1 / 2),
+                             (2, 1 / 3),
+                             (3, 1 / 1),
+                             (4, 1 / 2)):
+            res = self.score(results, target=target)
+            self.assertEqual(res[0], 1.)
+            self.assertEqual(res[1], prob)
+
+    def test_recall_binary(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01")),
+            actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
+        results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+                                      [0, 1, 1, 1, 0, 0, 1, 1, 1, 0]])
+        res = self.score(results)
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 4 / 5)
+        res_target = self.score(results, target=1)
+        self.assertEqual(res[0], res_target[0])
+        self.assertEqual(res[1], res_target[1])
+        res_target = self.score(results, target=0)
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], 3 / 5)
+        res_target = self.score(results, average='macro')
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], (4 / 5 + 3 / 5) / 2)
+
+
+class TestF1(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+        cls.score = F1()
+
+    def test_recall_iris(self):
+        learner = LogisticRegressionLearner(preprocessors=[])
+        res = TestOnTrainingData(self.iris, [learner])
+        self.assertAlmostEqual(self.score(res, average='weighted')[0],
+                               0.959935, 5)
+        self.assertAlmostEqual(self.score(res, target=1)[0], 0.9375, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average=None)[0],
+                               0.9375, 5)
+        self.assertAlmostEqual(self.score(res, target=1, average='weighted')[0],
+                               0.9375, 5)
+        self.assertAlmostEqual(self.score(res, target=0, average=None)[0], 1, 5)
+        self.assertAlmostEqual(self.score(res, target=2, average=None)[0],
+                               0.942307, 5)
+
+    def test_F1_multiclass(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01234")),
+            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
+        results.predicted = np.array([[0, 4, 4, 1, 2, 0, 1, 2, 3, 2],
+                                      [0, 1, 4, 1, 1, 0, 0, 2, 3, 1]])
+        res = self.score(results, average='weighted')
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 0.61)
+
+        for target, prob in ((0, 4 / 5),
+                             (1, 1 / 3),
+                             (2, 1 / 2),
+                             (3, 1.),
+                             (4, 2 / 3)):
+            res = self.score(results, target=target)
+            self.assertEqual(res[0], 1.)
+            self.assertEqual(res[1], prob)
+
+    def test_F1_binary(self):
+        results = Results(
+            domain=Domain([], DiscreteVariable(name="y", values="01")),
+            actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
+        results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
+                                      [0, 1, 1, 1, 0, 0, 1, 1, 1, 1]])
+        res = self.score(results)
+        self.assertEqual(res[0], 1.)
+        self.assertAlmostEqual(res[1], 5 / 6)
+        res_target = self.score(results, target=1)
+        self.assertEqual(res[0], res_target[0])
+        self.assertEqual(res[1], res_target[1])
+        res_target = self.score(results, target=0)
+        self.assertEqual(res_target[0], 1.)
+        self.assertAlmostEqual(res_target[1], 3 / 4)
 
 
 class TestCA(unittest.TestCase):
@@ -176,49 +327,6 @@ class TestLogLoss(unittest.TestCase):
         ll_orange = LogLoss(results)
         self.assertAlmostEqual(ll_calc, ll_orange[0])
 
-
-class TestF1(unittest.TestCase):
-    def test_F1_multiclass(self):
-        results = Results(
-            domain=Domain([], DiscreteVariable(name="y", values="01234")),
-            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
-        results.predicted = np.array([[0, 1, 4, 1, 1, 0, 0, 2, 3, 1],
-                                      [0, 4, 4, 1, 2, 0, 1, 2, 3, 2]])
-        res = F1(results)
-        self.assertAlmostEqual(res[0], 0.61)
-        self.assertEqual(res[1], 1.)
-
-    def test_F1_target(self):
-        results = Results(
-            domain=Domain([], DiscreteVariable(name="y", values="01234")),
-            actual=[0, 4, 4, 1, 2, 0, 1, 2, 3, 2])
-        results.predicted = np.array([[0, 1, 4, 1, 1, 0, 0, 2, 3, 1],
-                                      [0, 4, 4, 1, 2, 0, 1, 2, 3, 2]])
-
-        for target, prob in ((0, 4 / 5),
-                             (1, 1 / 3),
-                             (2, 1 / 2),
-                             (3, 1.),
-                             (4, 2 / 3)):
-            res = F1(results, target=target)
-            self.assertEqual(res[0], prob)
-            self.assertEqual(res[1], 1.)
-
-    def test_F1_binary(self):
-        results = Results(
-            domain=Domain([], DiscreteVariable(name="y", values="01")),
-            actual=[0, 1, 1, 1, 0, 0, 1, 0, 0, 1])
-        results.predicted = np.array([[0, 1, 1, 1, 0, 0, 1, 0, 0, 1],
-                                      [0, 1, 1, 1, 0, 0, 1, 1, 1, 1]])
-        res = F1(results)
-        self.assertEqual(res[0], 1.)
-        self.assertAlmostEqual(res[1], 5 / 6)
-        res_target = F1(results, target=1)
-        self.assertEqual(res[0], res_target[0])
-        self.assertEqual(res[1], res_target[1])
-        res_target = F1(results, target=0)
-        self.assertEqual(res_target[0], 1.)
-        self.assertAlmostEqual(res_target[1], 3 / 4)
 
 if __name__ == '__main__':
     unittest.main()
