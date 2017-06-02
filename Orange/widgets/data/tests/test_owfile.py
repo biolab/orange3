@@ -215,3 +215,19 @@ a
         self.assertIsInstance(output, Table)
         self.assertEqual(iris.X.shape, output.X.shape)
         self.assertTrue(sp.issparse(output.X))
+
+    def test_drop_data_when_everything_skipped(self):
+        """
+        No data when everything is skipped. Otherwise Select Rows crashes.
+        GH-2237
+        """
+        self.open_dataset("iris")
+        data = self.get_output("Data")
+        self.assertTrue(len(data), 150)
+        self.assertTrue(len(data.domain), 5)
+        for i in range(5):
+            idx = self.widget.domain_editor.model().createIndex(i, 2)
+            self.widget.domain_editor.model().setData(idx, "skip", Qt.EditRole)
+        self.widget.apply_button.click()
+        data = self.get_output("Data")
+        self.assertIsNone(data)
