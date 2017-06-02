@@ -216,9 +216,9 @@ def stats(X, weights=None, compute_variance=False):
         non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
         X = X.tocsc()
         return np.column_stack((
-            X.min(axis=0).toarray().ravel(),
-            X.max(axis=0).toarray().ravel(),
-            np.asarray(X.mean(axis=0)).ravel() if not weighted else weighted_mean(),
+            nanmin(X, axis=0),
+            nanmax(X, axis=0),
+            nanmean(X, axis=0) if not weighted else weighted_mean(),
             np.zeros(X.shape[1]),      # variance not supported
             X.shape[0] - non_zero,
             non_zero))
@@ -280,15 +280,22 @@ def mean(x):
     n_values = np.prod(x.shape)
     return np.sum(x.data) / n_values
 
-
-def nanmean(x):
+def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    def nanmean_sparse(x):
+        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        return np.nansum(x.data) / n_values
+
     if not sp.issparse(x):
-        return np.nanmean(x)
-
-    n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
-    return np.nansum(x.data) / n_values
-
+        return np.nanmean(x, axis=axis)
+    if axis is None:
+        return nanmean_sparse(x)
+    if axis in [0, 1]:
+        arr = x if axis == 1 else x.T
+        arr = arr.tocsr()
+        return np.array([nanmean_sparse(row) for row in arr])
+    else:
+        raise NotImplementedError
 
 def unique(x, return_counts=False):
     """ Equivalent of np.unique that supports sparse or dense matrices. """

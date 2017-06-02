@@ -7,7 +7,9 @@ import scipy.sparse as sp
 
 from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
     OrangeDeprecationWarning
+from Orange.data import Table
 from Orange.data.util import vstack, hstack
+from Orange.statistics.util import stats
 
 SOMETHING = 0xf00babe
 
@@ -106,3 +108,12 @@ class TestUtil(unittest.TestCase):
     def test_raise_deprecations(self):
         with self.assertRaises(OrangeDeprecationWarning):
             warnings.warn('foo', OrangeDeprecationWarning)
+
+    def test_stats_sparse(self):
+        """
+        Stats should not fail when trying to calculate mean on sparse data.
+        GH-2357
+        """
+        data = Table("iris")
+        sparse_x = sp.csr_matrix(data.X)
+        self.assertTrue(stats(data.X).all() == stats(sparse_x).all())

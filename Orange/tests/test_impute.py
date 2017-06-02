@@ -158,7 +158,7 @@ class TestDefault(unittest.TestCase):
 
 
 class TestAsValue(unittest.TestCase):
-    def test_replacement(self):
+    def _create_table(self):
         nan = np.nan
         X = [
             [1.0, nan, 0.0],
@@ -170,7 +170,11 @@ class TestAsValue(unittest.TestCase):
              data.ContinuousVariable("B"),
              data.ContinuousVariable("C"))
         )
-        table = data.Table.from_numpy(domain, np.array(X))
+        return data.Table.from_numpy(domain, np.array(X))
+
+    def test_replacement(self):
+        table = self._create_table()
+        domain = table.domain
 
         v1 = impute.AsValue()(table, domain[0])
         self.assertTrue(np.all(np.isfinite(v1.compute_value(table))))
@@ -199,6 +203,20 @@ class TestAsValue(unittest.TestCase):
              [2, 1.0, 1, 3.0, 1],
              [3, 1.0, 0, 1.5, 0]]
         )
+
+    def test_sparse(self):
+        """
+        Impute: As a distinct value test. Sparse support.
+        GH-2357
+        """
+        table = self._create_table()
+        domain = table.domain
+        table.X = sp.csr_matrix(table.X)
+
+        v1, v2 = impute.AsValue()(table, domain[1])
+        self.assertTrue(np.all(np.isfinite(v2.compute_value(table))))
+        self.assertEqual([v2.str_val(v) for v in v2.compute_value(table)],
+                         ["undef", "def", "undef"])
 
 
 class TestModel(unittest.TestCase):
