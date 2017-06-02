@@ -56,10 +56,13 @@ def classification_stats(results):
 
 classification_stats.headers, classification_stats.scores = zip(*(
     ("AUC", scoring.AUC),
-    ("CA", scoring.CA),
-    ("F1", scoring.F1),
-    ("Precision", scoring.Precision),
-    ("Recall", scoring.Recall),
+    ("CA", lambda res, *args, **kwargs: scoring.CA(res)),
+    ("F1", (lambda res, target=None:
+            scoring.F1(res, target=target, average='weighted'))),
+    ("Precision", (lambda res, target=None:
+                   scoring.Precision(res, target=target, average='weighted'))),
+    ("Recall", (lambda res, target=None:
+                scoring.Recall(res, target=target, average='weighted'))),
 ))
 
 
@@ -559,7 +562,7 @@ class OWTestLearners(OWWidget):
                     ovr_results = results_one_vs_rest(
                         slot.results.value, target_index)
 
-                    stats = [Try(lambda: score(ovr_results))
+                    stats = [Try(lambda: score(ovr_results, target=1))
                              for score in classification_stats.scores]
                 else:
                     stats = None
