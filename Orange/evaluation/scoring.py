@@ -293,8 +293,8 @@ def compute_CD(avranks, N, alpha="0.05", test="nemenyi"):
     return cd
 
 
-def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, width=6, textspace=1,
-                reverse=False, filename=None, **kwargs):
+def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
+                width=6, textspace=1, reverse=False, filename=None, **kwargs):
     """
     Draws a CD graph, which is used to display  the differences in methods' performance.
     See Janez Demsar, Statistical Comparisons of Classifiers over Multiple Data Sets, 7(Jan):1--30, 2006.
@@ -324,7 +324,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_agg import FigureCanvasAgg
     except ImportError:
-        print("Function requires matplotlib. Please install it.", file=sys.stderr)
+        print("Function requires matplotlib. Please install it.",
+              file=sys.stderr)
         return
 
     width = float(width)
@@ -414,7 +415,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
             lsums = len(sums)
             allpairs = [(i, j) for i, j in mxrange([[lsums], [lsums]]) if j > i]
             # remove not significant
-            notSig = [(i, j) for i, j in allpairs if abs(sums[i] - sums[j]) <= hsd]
+            notSig = [(i, j) for i, j in allpairs
+                      if abs(sums[i] - sums[j]) <= hsd]
             # keep only longest
 
             def no_longer(ij_tuple, notSig):
@@ -478,23 +480,27 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         tick = smalltick
         if a == int(a):
             tick = bigtick
-        line([(rankpos(a), cline - tick / 2), (rankpos(a), cline)], linewidth=0.7)
+        line([(rankpos(a), cline - tick / 2), (rankpos(a), cline)],
+             linewidth=0.7)
 
     for a in range(lowv, highv + 1):
-        text(rankpos(a), cline - tick / 2 - 0.05, str(a), ha="center", va="bottom")
+        text(rankpos(a), cline - tick / 2 - 0.05, str(a),
+             ha="center", va="bottom")
 
     k = len(ssums)
 
     for i in range(math.ceil(k / 2)):
         chei = cline + minnotsignificant + i * 0.2
-        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei), (textspace - 0.1, chei)], linewidth=0.7)
+        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei),
+              (textspace - 0.1, chei)], linewidth=0.7)
         text(textspace - 0.2, chei, nnames[i], ha="right", va="center")
 
     for i in range(math.ceil(k / 2), k):
         chei = cline + minnotsignificant + (k - i - 1) * 0.2
-        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei), (textspace + scalewidth + 0.1, chei)],
-             linewidth=0.7)
-        text(textspace + scalewidth + 0.2, chei, nnames[i], ha="left", va="center")
+        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei),
+              (textspace + scalewidth + 0.1, chei)], linewidth=0.7)
+        text(textspace + scalewidth + 0.2, chei, nnames[i],
+             ha="left", va="center")
 
     if cd and cdmethod is None:
         # upper scale
@@ -504,15 +510,19 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
             begin, end = rankpos(highv), rankpos(highv - cd)
 
         line([(begin, distanceh), (end, distanceh)], linewidth=0.7)
-        line([(begin, distanceh + bigtick / 2), (begin, distanceh - bigtick / 2)], linewidth=0.7)
-        line([(end, distanceh + bigtick / 2), (end, distanceh - bigtick / 2)], linewidth=0.7)
-        text((begin + end) / 2, distanceh - 0.05, "CD", ha="center", va="bottom")
+        line([(begin, distanceh + bigtick / 2),
+              (begin, distanceh - bigtick / 2)], linewidth=0.7)
+        line([(end, distanceh + bigtick / 2),
+              (end, distanceh - bigtick / 2)], linewidth=0.7)
+        text((begin + end) / 2, distanceh - 0.05, "CD",
+             ha="center", va="bottom")
 
         # non significance lines
         def draw_lines(lines, side=0.05, height=0.1):
             start = cline + 0.2
             for l, r in lines:
-                line([(rankpos(ssums[l]) - side, start), (rankpos(ssums[r]) + side, start)], linewidth=2.5)
+                line([(rankpos(ssums[l]) - side, start),
+                      (rankpos(ssums[r]) + side, start)], linewidth=2.5)
                 start += height
 
         draw_lines(lines)
@@ -521,8 +531,10 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None, w
         begin = rankpos(avranks[cdmethod] - cd)
         end = rankpos(avranks[cdmethod] + cd)
         line([(begin, cline), (end, cline)], linewidth=2.5)
-        line([(begin, cline + bigtick / 2), (begin, cline - bigtick / 2)], linewidth=2.5)
-        line([(end, cline + bigtick / 2), (end, cline - bigtick / 2)], linewidth=2.5)
+        line([(begin, cline + bigtick / 2), (begin, cline - bigtick / 2)],
+             linewidth=2.5)
+        line([(end, cline + bigtick / 2), (end, cline - bigtick / 2)],
+             linewidth=2.5)
 
     if filename:
         print_figure(fig, filename, **kwargs)
