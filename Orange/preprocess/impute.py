@@ -224,6 +224,8 @@ def domain_with_class_var(domain, class_var):
 
 class IsDefined(Transformation):
     def transform(self, c):
+        if sp.issparse(c):
+            c = c.toarray()
         return ~np.isnan(c)
 
 
