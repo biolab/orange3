@@ -24,6 +24,7 @@ from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
+import Orange.statistics.util as util
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -179,7 +180,7 @@ class OWVennDiagram(widget.OWWidget):
         has_identifiers = all(source_attributes(input.table.domain)
                               for input in self.data.values())
         has_any_identifiers = any(source_attributes(input.table.domain)
-                              for input in self.data.values())
+                                  for input in self.data.values())
         self.useequalityButton.setEnabled(samedomain)
         self.useidentifiersButton.setEnabled(
             has_any_identifiers or len(self.data) == 0)
@@ -499,7 +500,7 @@ class OWVennDiagram(widget.OWWidget):
                 index = i
                 break
 
-        assert (index is not None)
+        assert index is not None
 
         key, _ = inputs[index]
 
@@ -718,13 +719,9 @@ def table_concat(tables):
         variables_seen.update(table.domain.metas)
 
     domain = Orange.data.Domain(attributes, class_vars, metas)
-    new_table = Orange.data.Table(domain)
 
-    for table in tables:
-        new_table.extend(Orange.data.Table.from_table(domain, table))
-        new_table.attributes.update(table.attributes)
-
-    return new_table
+    tables = [tab.transform(domain) for tab in tables]
+    return tables[0].concatenate(tables, axis=0)
 
 
 def copy_descriptor(descriptor, newname=None):
@@ -793,10 +790,12 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
     # each instance in this list belongs to one group (but not all
     # groups need to be present).
     inst_by_id = defaultdict(list)
+    id_by_inst = defaultdict(list)  # inverse mapping
 
     for i in range(len(table)):
         inst_id = instance_ids[i]
         inst_by_id[inst_id].append(i)
+        id_by_inst[i] = inst_id
 
     newfeatures = []
     newclass_vars = []
@@ -834,20 +833,26 @@ def reshape_wide(table, varlist, idvarlist, groupvarlist):
 
     domain = Orange.data.Domain(newfeatures, newclass_vars, newmetas)
     prototype_indices = [inst_by_id[inst_id][0] for inst_id in ids]
-    newtable = Orange.data.Table.from_table(domain, table)[prototype_indices]
+    newtable = table[prototype_indices].transform(domain)
     in_expanded = set(f for efd in expanded_features.values() for f in efd.values())
 
+    # Fill-in nan values
+    for var in domain.variables + domain.metas:
+        if var in idvarlist or var in in_expanded:
+            continue
+        col, _ = newtable.get_column_view(var)
+        nan_indices = (i for i in col.nonzero()[0]
+                       if isinstance(col[i], str) or numpy.isnan(col[i]))
+        for i in nan_indices:
+            for ind in inst_by_id[ids[i]]:
+                if not numpy.isnan(table[ind, var]):
+                    newtable[i, var] = table[ind, var]
+                    break
+
+    # Fill-in expanded features if any
     for i, inst_id in enumerate(ids):
         indices = inst_by_id[inst_id]
         instance = newtable[i]
-
-        for var in domain.variables + domain.metas:
-            if var in idvarlist or var in in_expanded:
-                continue
-            if numpy.isnan(instance[var]):
-                for ind in indices:
-                    if not numpy.isnan(table[ind, var]):
-                        newtable[i, var] = table[ind, var]
 
         for index in indices:
             source_inst = table[index]
@@ -896,14 +901,13 @@ def varying_between(table, idvar):
     for indices in idmap.values():
         subset = table[indices]
         for var in list(candidate_set):
-            values, _ = subset.get_column_view(var)
+            column, _ = subset.get_column_view(var)
+            values = util.unique(column)
 
-            if var.is_string:
-                uniq = set(values)
-            else:
-                uniq = unique_non_nan(values)
+            if not var.is_string:
+                values = unique_non_nan(values)
 
-            if len(uniq) > 1:
+            if len(values) > 1:
                 varying.add(var)
                 candidate_set.remove(var)
 
@@ -937,16 +941,14 @@ def string_attributes(domain):
     """
     Return all string attributes from the domain.
     """
-    return [attr for attr in domain.variables + domain.metas
-            if attr.is_string]
+    return [attr for attr in domain.variables + domain.metas if attr.is_string]
 
 
 def discrete_attributes(domain):
     """
     Return all discrete attributes from the domain.
     """
-    return [attr for attr in domain.variables + domain.metas
-                 if attr.is_discrete]
+    return [attr for attr in domain.variables + domain.metas if attr.is_discrete]
 
 
 def source_attributes(domain):
@@ -1437,8 +1439,7 @@ def subset_anchors(shapes):
                 unit_point(270, r=0.35),  # C
                 unit_point(210, r=0.27),  # AC
                 unit_point(330, r=0.27),  # BC
-                unit_point(0, r=0),       # ABC
-                ]
+                unit_point(0, r=0),]      # ABC
     elif n == 4:
         anchors = [
             (0.400, 0.110),    # A
@@ -1621,7 +1622,6 @@ def append_column(data, where, variable, column):
     attr = domain.attributes
     class_vars = domain.class_vars
     metas = domain.metas
-
     if where == "X":
         attr = attr + (variable,)
         X = numpy.hstack((X, column))
@@ -1634,10 +1634,9 @@ def append_column(data, where, variable, column):
     else:
         raise ValueError
     domain = Orange.data.Domain(attr, class_vars, metas)
-    table = Orange.data.Table.from_numpy(domain, X, Y, M, W if W.size else None)
-    table.ids = data.ids
-    table.attributes = data.attributes
-    return table
+    new_data = data.transform(domain)
+    new_data[:, variable] = column
+    return new_data
 
 
 def drop_columns(data, columns):
