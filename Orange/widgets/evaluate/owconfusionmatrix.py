@@ -371,7 +371,13 @@ class OWConfusionMatrix(widget.OWWidget):
             metas = self.data.domain.metas
 
             if self.append_predictions:
-                extra.append(predicted.reshape(-1, 1))
+                # predictions are not in the same order as data (i.e. they are
+                # shuffled according to 'self.results.row_indices'). To append
+                # them to self.data the order must first be restored.
+                revert_results_shuffle = numpy.empty(len(self.data), dtype=int)
+                for i, ind in enumerate(self.results.row_indices):
+                    revert_results_shuffle[ind] = i
+                extra.append(predicted[revert_results_shuffle].reshape(-1, 1))
                 var = Orange.data.DiscreteVariable(
                     "{}({})".format(class_var.name, learner_name),
                     class_var.values
