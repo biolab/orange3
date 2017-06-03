@@ -6,6 +6,48 @@ Change Log
 * ...
 
 
+[3.4.3] - 2017-06-03
+--------------------
+##### Enhancements
+* Venn diagram: Support sparse data ([#2334](../../pull/2334))
+* PCA: Support sparse data ([#2313](../../pull/2313))
+* Impute: Support sparse data ([#2357](../../pull/2357))
+* Merge: Support sparse data ([#2305](../../pull/2305))
+* Scatter Plot: Support sparse data ([#2152](../../pull/2152))
+* Manifold: Support t-SNE on sparse data ([#2281](../../pull/2281))
+* Mosaic: Selectable color variable ([#2133](../../pull/2133))
+* Test & Score: Allow choosing columns ([#2257](../../pull/2257))
+* Preprocess: Add all available methods to feature selection ([#2205](../../pull/2205))
+* Scatter Plot: Support string metas labels ([#2360](../../pull/2360))
+
+##### Bugfixes
+* Fix and improve Precision, Recall, F1 ([#2369](../../pull/2369))
+* Paint Data: Stores data in list and not np.array ([#2314](../../pull/2314))
+* Paint Data: Save and load labels ([#2259](../../pull/2259))
+* File: No domain or empty domain -> no data ([#2337](../../pull/2337))
+* File: Support sparse data in Domain Editor ([#2245](../../pull/2245))
+* File: Raise and handle Exc. when file bad pickle ([#2232](../../pull/2232))
+* Test & Score: Fix migration of old settings ([#2254](../../pull/2254))
+* Test & Score: Show correct error ([#2263](../../pull/2263))
+* Test & Score: Instantly recognize new input ([#2247](../../pull/2247))
+* Test & Score: Handling memory errors ([#2316](../../pull/2316))
+* Tree Viewer: Check if there is selected class value ([#2224](../../pull/2224))
+* CredentialManager: Handling password credentials error ([#2354](../../pull/2354))
+* RowInstance: Fix sparse check ([#2362](../../pull/2362))
+* Cross Validation: Cast fold number to string ([#2348](../../pull/2348))
+* Silhouette Plot: Elide hover labels if labels are long ([#2278](../../pull/2278))
+* Select Rows, Table: Filtering string values ([#2176](../../pull/2176))
+* Report: Handle PermissionError when trying to save ([#2225](../../pull/2225))
+* Continuize: Prevent crashing - column with equal and NaN values ([#2144](../../pull/2144))
+* Add-ons: Handling ValueError due to connection problems ([#2239](../../pull/2239))
+* Correspondence: Prevent crashing when cont attr has one value ([#2149](../../pull/2149))
+* WebEngineView: Insert JS if loading already started ([#2230](../../pull/2230))
+* Manifold Learning: handling numpy LinAlgError ([#2228](../../pull/2228))
+* MDS: Fix widget update scheduling ([#2211](../../pull/2211))
+* Settings: Handle permission errors when saving settings ([#2147](../../pull/2147))
+* Map: Minor fixes ([#2356](../../pull/2356))
+
+
 [3.4.2] - 2017-04-19
 --------------------
 ##### Enhancements
@@ -476,7 +518,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.2...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.3...HEAD
+[3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
 [3.4.2]: https://github.com/biolab/orange3/compare/3.4.1...3.4.2
 [3.4.1]: https://github.com/biolab/orange3/compare/3.4.0...3.4.1
 [3.4.0]: https://github.com/biolab/orange3/compare/3.3.12...3.4.0
