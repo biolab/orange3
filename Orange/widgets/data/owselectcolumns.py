@@ -320,6 +320,12 @@ class OWSelectAttributes(widget.OWWidget):
                           Orange.data.ContinuousVariable))
 
         self.used_attrs_view.setModel(self.used_attrs)
+
+        ua = self.used_attrs
+        ua.dataChanged.connect(self.update_completer_model)
+        ua.rowsInserted.connect(self.update_completer_model)
+        ua.rowsRemoved.connect(self.update_completer_model)
+
         self.used_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.used_attrs_view))
         self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
