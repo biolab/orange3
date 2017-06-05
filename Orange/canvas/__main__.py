@@ -7,6 +7,7 @@ import os
 import sys
 import gc
 import re
+import time
 import logging
 from logging.handlers import RotatingFileHandler
 import optparse
@@ -19,7 +20,7 @@ import pkg_resources
 
 from AnyQt.QtGui import QFont, QColor, QDesktopServices
 from AnyQt.QtWidgets import QMessageBox
-from AnyQt.QtCore import Qt, QDir, QUrl, QSettings
+from AnyQt.QtCore import Qt, QDir, QUrl, QSettings, QThread, pyqtSignal
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
@@ -83,6 +84,82 @@ def make_sql_logger(level=logging.INFO):
     handler = RotatingFileHandler(os.path.join(config.log_dir(), 'sql.log'),
                                   maxBytes=1e7, backupCount=2)
     sql_log.addHandler(handler)
+
+
+def show_survey():
+    # If run for the first time, open a browser tab with a survey
+    settings = QSettings()
+    show_survey = settings.value("startup/show-survey", True, type=bool)
+    if show_survey:
+        question = QMessageBox(
+            QMessageBox.Question,
+            'Orange Survey',
+            'We would like to know more about how our software is used.\n\n'
+            'Would you care to fill our short 1-minute survey?',
+            QMessageBox.Yes | QMessageBox.No)
+        question.setDefaultButton(QMessageBox.Yes)
+        later = question.addButton('Ask again later', QMessageBox.NoRole)
+        question.setEscapeButton(later)
+
+        def handle_response(result):
+            if result == QMessageBox.Yes:
+                success = QDesktopServices.openUrl(
+                    QUrl("https://orange.biolab.si/survey/short.html"))
+                settings.setValue("startup/show-survey", not success)
+            else:
+                settings.setValue("startup/show-survey", result != QMessageBox.No)
+
+        question.finished.connect(handle_response)
+        question.show()
+        return question
+
+
+def check_for_updates():
+    settings = QSettings()
+    check_updates = settings.value('startup/check-updates', True, type=bool)
+    last_check_time = settings.value('startup/last-update-check-time', 0, type=int)
+    ONE_DAY = 86400
+
+    if check_updates and time.time() - last_check_time > ONE_DAY:
+        settings.setValue('startup/last-update-check-time', int(time.time()))
+
+        from urllib.request import urlopen
+        from distutils.version import LooseVersion
+        from Orange.version import version as current
+
+        class GetLatestVersion(QThread):
+            resultReady = pyqtSignal(str)
+
+            def run(self):
+                try:
+                    self.resultReady.emit(
+                        urlopen('https://orange.biolab.si/version', timeout=10).read().decode())
+                except OSError:
+                    log.exception('Failed to check for updates')
+
+        def compare_versions(latest):
+            if LooseVersion(latest) <= LooseVersion(current):
+                return
+            question = QMessageBox(
+                QMessageBox.Information,
+                'Orange Update Available',
+                'A newer version of Orange is available.<br><br>'
+                '<b>Current version:</b> {}<br>'
+                '<b>Latest version:</b> {}'.format(current, latest),
+                textFormat=Qt.RichText)
+            ok = question.addButton('Download Now', question.AcceptRole)
+            question.setDefaultButton(ok)
+            question.addButton('Remind Later', question.RejectRole)
+            question.finished.connect(
+                lambda:
+                question.clickedButton() == ok and
+                QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/")))
+            question.show()
+
+        thread = GetLatestVersion()
+        thread.resultReady.connect(compare_versions)
+        thread.start()
+        return thread
 
 
 def main(argv=None):
@@ -328,29 +405,9 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
-    # If run for the first time, open a browser tab with a survey
-    show_survey = settings.value("startup/show-survey", True, type=bool)
-    if show_survey:
-        question = QMessageBox(
-            QMessageBox.Question,
-            'Orange Survey',
-            'We would like to know more about how our software is used.\n\n'
-            'Would you care to fill our short 1-minute survey?',
-            QMessageBox.Yes | QMessageBox.No)
-        question.setDefaultButton(QMessageBox.Yes)
-        later = question.addButton('Ask again later', QMessageBox.NoRole)
-        question.setEscapeButton(later)
-
-        def handle_response(result):
-            if result == QMessageBox.Yes:
-                success = QDesktopServices.openUrl(
-                    QUrl("http://orange.biolab.si/survey/short.html"));
-                settings.setValue("startup/show-survey", not success)
-            else:
-                settings.setValue("startup/show-survey", result != QMessageBox.No)
-
-        question.finished.connect(handle_response)
-        question.show()
+    # local references prevent destruction
+    _ = show_survey()
+    __ = check_for_updates()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.log_view()
