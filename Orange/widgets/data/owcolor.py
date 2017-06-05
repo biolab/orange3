@@ -286,7 +286,8 @@ class OWColor(widget.OWWidget):
     inputs = [("Data", Orange.data.Table, "set_data")]
     outputs = [("Data", Orange.data.Table)]
 
-    settingsHandler = settings.PerfectDomainContextHandler()
+    settingsHandler = settings.PerfectDomainContextHandler(
+        match_values=settings.PerfectDomainContextHandler.MATCH_VALUES_ALL)
     disc_data = settings.ContextSetting([])
     cont_data = settings.ContextSetting([])
     color_settings = settings.Setting(None)
