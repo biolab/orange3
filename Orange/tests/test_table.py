@@ -2086,7 +2086,7 @@ class InterfaceTest(unittest.TestCase):
     features = (
         data.ContinuousVariable(name="Continuous Feature 1"),
         data.ContinuousVariable(name="Continuous Feature 2"),
-        data.DiscreteVariable(name="Discrete Feature 1", values=[0, 1]),
+        data.DiscreteVariable(name="Discrete Feature 1", values=["0", "1"]),
         data.DiscreteVariable(name="Discrete Feature 2",
                               values=["value1", "value2"]),
     )

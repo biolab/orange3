@@ -45,7 +45,8 @@ class KMeansModel(Projection):
         if isinstance(data, Table):
             if data.domain is not self.pre_domain:
                 data = data.transform(self.pre_domain)
-            c = DiscreteVariable(name='Cluster id', values=range(self.k))
+            c = DiscreteVariable(name='Cluster id',
+                                 values=[str(i) for i in range(self.k)])
             domain = Domain([c])
             return Table(
                 domain,
@@ -53,7 +54,8 @@ class KMeansModel(Projection):
         elif isinstance(data, Instance):
             if data.domain is not self.pre_domain:
                 data = Instance(self.pre_domain, data)
-            c = DiscreteVariable(name='Cluster id', values=range(self.k))
+            c = DiscreteVariable(name='Cluster id',
+                                 values=[str(i) for i in range(self.k)])
             domain = Domain([c])
             return Table(
                 domain,

@@ -94,7 +94,7 @@ class ModelTest(unittest.TestCase):
         y[:, 0] = y[:, 0] // 3          # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3    # majority = 2
         domain = Domain([ContinuousVariable('i' + str(i)) for i in range(ncols)],
-                        [DiscreteVariable('c' + str(i), values=range(4))
+                        [DiscreteVariable('c' + str(i), values="0123")
                          for i in range(y.shape[1])])
         t = Table(domain, x, y)
         learn = DummyMulticlassLearner()
@@ -113,10 +113,12 @@ class ModelTest(unittest.TestCase):
 
         # single class variable
         y = np.random.randint(0, 2, (nrows, 1))
-        t = Table(Domain([DiscreteVariable('v' + str(i), values=np.unique(x[:, i]))
-                          for i in range(ncols)],
-                         DiscreteVariable('c', values=[1, 2])),
-                  x, y)
+        d = Domain([DiscreteVariable('v' + str(i),
+                                     values=[str(v)
+                                             for v in np.unique(x[:, i])])
+                    for i in range(ncols)],
+                   DiscreteVariable('c', values="12"))
+        t = Table(d, x, y)
         learn = DummyLearner()
         clf = learn(t)
         clf.ret = Model.Value
@@ -131,7 +133,7 @@ class ModelTest(unittest.TestCase):
         y[:, 0] = y[:, 0] // 3             # majority = 1
         y[:, 1] = (y[:, 1] + 4) // 3 - 1   # majority = 1
         domain = Domain([ContinuousVariable('i' + str(i)) for i in range(ncols)],
-                        [DiscreteVariable('c' + str(i), values=range(4))
+                        [DiscreteVariable('c' + str(i), values="0123")
                          for i in range(y.shape[1])])
         t = Table(domain, x, y)
         learn = DummyMulticlassLearner()
@@ -148,10 +150,11 @@ class ExpandProbabilitiesTest(unittest.TestCase):
     def prepareTable(self, rows, attr, vars, class_var_domain):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]
-        attr_vars = [DiscreteVariable(name=a, values=range(2))
-                     for a in attributes]
+        attr_vars = [DiscreteVariable(name=a, values="01") for a in attributes]
         class_vars = [DiscreteVariable(name=c,
-                                       values=range(class_var_domain))
+                                       values=[str(v)
+                                               for v in range(class_var_domain)]
+                                       )
                       for c in classes]
         meta_vars = []
         self.domain = Domain(attr_vars, class_vars, meta_vars)
@@ -345,9 +348,13 @@ class LearnerReprs(unittest.TestCase):
         srf = SimpleRandomForestLearner(n_estimators=20)
 
         learners = [lr, m, nb, rf, st, sm, svm,
-            lsvm, nsvm, osvm, tl, knn, el, srf]
+                    lsvm, nsvm, osvm, tl, knn, el, srf]
 
         for l in learners:
             repr_str = repr(l)
             new_l = eval(repr_str)
             self.assertEqual(repr(new_l), repr_str)
+
+
+if __name__ == "__main__":
+    unittest.main()
