@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import random
@@ -6,6 +7,7 @@ import unittest
 import numpy as np
 
 import Orange.data
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.visualize.owsilhouetteplot import OWSilhouettePlot
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -105,3 +107,21 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
             self.widget._effective_data = data
             self.widget._update()
             self.assertTrue(self.widget.Error.memory_error.is_shown())
+
+    def test_bad_data_range(self):
+        """
+        Silhouette Plot now sets axis range properly.
+        GH-2377
+        """
+        nan = np.NaN
+        table = Table(
+            Domain(
+                [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")],
+                [DiscreteVariable("d", values=["y", "n"])]),
+            list(zip([4, nan, nan],
+                     [15, nan, nan],
+                     [16, nan, nan],
+                     "nyy"))
+        )
+        self.widget.controls.add_scores.setChecked(1)
+        self.send_signal(self.widget.Inputs.data, table)

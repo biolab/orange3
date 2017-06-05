@@ -389,7 +389,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
             if self._mask is not None:
                 scores = np.full(shape=selectedmask.shape,
-                                    fill_value=np.nan)
+                                 fill_value=np.nan)
                 scores[~self._mask] = self._silhouette
             else:
                 scores = self._silhouette
@@ -589,13 +589,15 @@ class SilhouettePlot(QGraphicsWidget):
 
     def __setup(self):
         # Setup the subwidgets/groups/layout
-        smax = max((np.max(g.scores) for g in self.__groups
+        smax = max((np.nanmax(g.scores) for g in self.__groups
                     if g.scores.size),
                    default=1)
+        smax = 1 if np.isnan(smax) else smax
 
-        smin = min((np.min(g.scores) for g in self.__groups
+        smin = min((np.nanmin(g.scores) for g in self.__groups
                     if g.scores.size),
                    default=-1)
+        smin = -1 if np.isnan(smin) else smin
         smin = min(smin, 0)
 
         font = self.font()
