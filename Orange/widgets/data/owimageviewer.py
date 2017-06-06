@@ -38,6 +38,8 @@ import Orange.data
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.overlay import proxydoc
+from Orange.widgets.widget import Input, Output
+
 
 from concurrent.futures import Future
 
@@ -863,8 +865,11 @@ class OWImageViewer(widget.OWWidget):
     icon = "icons/ImageViewer.svg"
     priority = 4050
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table, )]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -944,6 +949,7 @@ class OWImageViewer(widget.OWWidget):
     def sizeHint(self):
         return QSize(800, 600)
 
+    @Inputs.data
     def setData(self, data):
         self.closeContext()
         self.clear()
@@ -1119,9 +1125,9 @@ class OWImageViewer(widget.OWWidget):
                 selected = self.data[self.selectedIndices]
             else:
                 selected = None
-            self.send("Data", selected)
+            self.Outputs.data.send(selected)
         else:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
 
     def _noteCompleted(self, future):
         # Note the completed future's state
