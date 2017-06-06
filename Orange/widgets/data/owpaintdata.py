@@ -29,7 +29,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
 def indices_to_mask(indices, size):
@@ -745,8 +745,11 @@ class OWPaintData(OWWidget):
     priority = 15
     keywords = ["data", "paint", "create"]
 
-    outputs = [("Data", Orange.data.Table)]
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     autocommit = Setting(True)
     table_name = Setting("Painted data")
@@ -975,6 +978,7 @@ class OWPaintData(OWWidget):
             if tool.only2d:
                 button.setDisabled(not self.hasAttr2)
 
+    @Inputs.data
     def set_data(self, data):
         """Set the input_data and call reset_to_input"""
         def _check_and_set_data(data):
@@ -1248,7 +1252,7 @@ class OWPaintData(OWWidget):
     def commit(self):
         data = np.array(self.data)
         if len(data) == 0:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             return
         if self.hasAttr2:
             X, Y = data[:, :2], data[:, 2]
@@ -1268,7 +1272,7 @@ class OWPaintData(OWWidget):
             domain = Orange.data.Domain(attrs)
             data = Orange.data.Table.from_numpy(domain, X)
         data.name = self.table_name
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def sizeHint(self):
         sh = super().sizeHint()
