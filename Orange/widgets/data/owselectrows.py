@@ -57,6 +57,62 @@ class SelectRowsContextHandler(DomainContextHandler):
                                       for i in values]))
         return value
 
+    def _blocked_variables(self, context, attrs, metas):
+        def merge_two_dicts(x, y):
+            z = x.copy()
+            z.update(y)
+            return z
+
+        attrs_metas = merge_two_dicts(attrs, metas)
+        context_attrs_metas = merge_two_dicts(context.attributes, context.metas)
+        blocked = []
+        for key in attrs_metas:
+            cam = context_attrs_metas.get(key)
+            if attrs_metas.get(key) != cam and cam is not None:
+                blocked.append(key)
+
+        return blocked
+
+    def _blocked_check(self, value, blocked):
+        for (name, _, _) in value:
+            if name in blocked:
+                return True
+        return False
+
+    def match(self, context, domain, attrs, metas):
+        def fill_matches(matches, setting, value):
+            if isinstance(value, list) and len(value) > 0:
+                matches.append(
+                    self.match_list(setting, value, context, attrs, metas))
+            elif value is not None and len(value) > 0:
+                matches.append(
+                    self.match_value(setting, value, attrs, metas))
+            return matches
+
+        if (attrs, metas) == (context.attributes, context.metas):
+            return self.PERFECT_MATCH
+
+        blocked = self._blocked_variables(context, attrs, metas)
+
+        matches = []
+        try:
+            for setting, data, _ in \
+                    self.provider.traverse_settings(data=context.values):
+                if not isinstance(setting, ContextSetting):
+                    continue
+                value = data.get(setting.name, None)
+                if self._blocked_check(value, blocked):
+                    return self.NO_MATCH
+                matches = fill_matches(matches, setting, value)
+
+        except super.IncompatibleContext:
+            return self.NO_MATCH
+
+        matches.append((0, 0))
+        matched, available = [sum(m) for m in zip(*matches)]
+
+        return matched / available if available else 0.1
+
 
 class FilterDiscreteType(enum.Enum):
     Equal = "Equal"
@@ -83,7 +139,7 @@ class OWSelectRows(widget.OWWidget):
     want_main_area = False
 
     settingsHandler = SelectRowsContextHandler()
-    conditions = ContextSetting([])
+    conditions = ContextSetting([], exclude_metas=False)
     update_on_change = Setting(True)
     purge_attributes = Setting(True)
     purge_classes = Setting(True)
