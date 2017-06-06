@@ -5,6 +5,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
 from Orange.widgets.utils import filedialogs
+from Orange.widgets.widget import Input
 
 
 class OWSave(widget.OWWidget):
@@ -14,7 +15,8 @@ class OWSave(widget.OWWidget):
     category = "Data"
     keywords = ["data", "save"]
 
-    inputs = [("Data", Table, "dataset")]
+    class Inputs:
+        data = Input("Data", Table)
 
     want_main_area = False
     resizing_enabled = False
@@ -49,6 +51,7 @@ class OWSave(widget.OWWidget):
             text = ["Save as '{}'", "Auto save as '{}'"][self.auto_save]
             self.save.button.setText(text.format(filename))
 
+    @Inputs.data
     def dataset(self, data):
         self.data = data
         self.save.setDisabled(data is None)
