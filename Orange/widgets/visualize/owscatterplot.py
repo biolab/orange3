@@ -401,7 +401,7 @@ class OWScatterPlot(OWWidget):
     def handleNewSignals(self):
         self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
                             self.sparse_to_dense(self.subset_data))
-        if self.attribute_selection_list and \
+        if self.attribute_selection_list and self.graph.domain and \
                 all(attr in self.graph.domain
                         for attr in self.attribute_selection_list):
             self.attr_x = self.attribute_selection_list[0]
