@@ -17,11 +17,11 @@ class TestOWOutliers(WidgetTest):
 
     def test_data(self):
         """Check widget's data and the output with data on the input"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(self.widget.data, self.iris)
-        self.assertEqual(len(self.get_output("Inliers")), 76)
-        self.assertEqual(len(self.get_output("Outliers")), 74)
-        self.send_signal("Data", None)
+        self.assertEqual(len(self.get_output(self.widget.Outputs.inliers)), 76)
+        self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 74)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output("Data"))
 
@@ -34,9 +34,9 @@ class TestOWOutliers(WidgetTest):
         X = np.arange(12).reshape(6, 2)
         Y = np.array([[0, 1], [2, 1], [0, 2], [1, 1], [1, 2], [2, 0]])
         data = Table(domain, X, Y)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Error.multiclass_error.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.multiclass_error.is_shown())
 
     def test_memory_error(self):

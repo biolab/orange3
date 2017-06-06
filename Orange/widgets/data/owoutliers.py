@@ -8,7 +8,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input, Output
 from Orange.widgets.utils.sql import check_sql_input
 
 
@@ -20,8 +20,12 @@ class OWOutliers(widget.OWWidget):
     category = "Data"
     keywords = ["data", "outlier", "inlier"]
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Inliers", Table), ("Outliers", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        inliers = Output("Inliers", Table)
+        outliers = Output("Outliers", Table)
 
     want_main_area = False
 
@@ -122,6 +126,7 @@ class OWOutliers(widget.OWWidget):
         self.support_fraction_spin.setDisabled(False)
         self.warning()
 
+    @Inputs.data
     @check_sql_input
     def set_data(self, dataset):
         self.data = dataset
@@ -170,8 +175,8 @@ class OWOutliers(widget.OWWidget):
             else:
                 inliers, outliers = self._get_outliers()
 
-        self.send("Inliers", inliers)
-        self.send("Outliers", outliers)
+        self.Outputs.inliers.send(inliers)
+        self.Outputs.outliers.send(outliers)
 
     def detect_outliers(self):
         if self.outlier_method == self.OneClassSVM:
