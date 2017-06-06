@@ -8,8 +8,9 @@ from Orange.regression.linear import (
     LassoRegressionLearner, LinearRegressionLearner,
     RidgeRegressionLearner, ElasticNetLearner
 )
-from Orange.widgets import widget, settings, gui
+from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.widget import Output
 
 
 class OWLinearRegression(OWBaseLearner):
@@ -24,7 +25,8 @@ class OWLinearRegression(OWBaseLearner):
 
     LEARNER = LinearRegressionLearner
 
-    outputs = [("Coefficients", Table, widget.Explicit)]
+    class Outputs:
+        coefficients = Output("Coefficients", Table, explicit=True)
 
     #: Types
     REGULARIZATION_TYPES = ["No regularization", "Ridge regression (L2)",
@@ -137,7 +139,7 @@ class OWLinearRegression(OWBaseLearner):
                     [attr.name for attr in self.model.domain.attributes]
             coef_table = Table(domain, list(zip(coefs, names)))
             coef_table.name = "coefficients"
-        self.send("Coefficients", coef_table)
+        self.Outputs.coefficients.send(coef_table)
 
     def get_learner_parameters(self):
         regularization = "No Regularization"
