@@ -55,10 +55,10 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
 
     def test_output_coefficients(self):
         """Check if coefficients are on output after apply"""
-        self.assertIsNone(self.get_output("Coefficients"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.coefficients))
         self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
-        self.assertIsInstance(self.get_output("Coefficients"), Table)
+        self.assertIsInstance(self.get_output(self.widget.Outputs.coefficients), Table)
 
     def test_domain_with_more_values_than_table(self):
         """
@@ -94,7 +94,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         )
         self.send_signal("Data", table)
         self.widget.apply_button.button.click()
-        coef = self.get_output("Coefficients")
+        coef = self.get_output(self.widget.Outputs.coefficients)
         self.assertEqual(coef.domain[0].name, "no")
         self.assertGreater(coef[2][0], 0.)
 
