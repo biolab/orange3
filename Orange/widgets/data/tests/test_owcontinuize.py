@@ -17,21 +17,21 @@ class TestOWContinuize(WidgetTest):
         widget = self.widget
         widget.multinomial_treatment = 1
 
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         widget.unconditional_commit()
-        imp_data = self.get_output("Data")
+        imp_data = self.get_output(self.widget.Outputs.data)
         np.testing.assert_equal(imp_data.X, data.X)
         np.testing.assert_equal(imp_data.Y, data.Y)
 
         widget.continuous_treatment = 1
-        self.send_signal("Data", Table(data.domain))
+        self.send_signal(self.widget.Inputs.data, Table(data.domain))
         widget.unconditional_commit()
-        imp_data = self.get_output("Data")
+        imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         widget.unconditional_commit()
-        imp_data = self.get_output("Data")
+        imp_data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(imp_data)
 
     def test_one_column_equal_values(self):
@@ -43,7 +43,7 @@ class TestOWContinuize(WidgetTest):
         table = Table("iris")
         table = table[:, 1]
         table[:] = 42.0
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
         self.widget.unconditional_commit()
@@ -57,13 +57,13 @@ class TestOWContinuize(WidgetTest):
         """
         table = Table("iris")
         table[:, 2] = np.NaN
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
         self.widget.unconditional_commit()
         table = Table("iris")
         table[1, 2] = np.NaN
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
 
 
@@ -75,11 +75,11 @@ class TestOWContinuize(WidgetTest):
         """
         table = Table("iris")
         table[:, 2] = np.NaN
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySpan
         self.widget.continuous_treatment = 1
         self.widget.unconditional_commit()
         table = Table("iris")
         table[1, 2] = np.NaN
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
