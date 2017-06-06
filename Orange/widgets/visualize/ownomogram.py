@@ -20,7 +20,7 @@ from Orange.classification.logistic_regression import \
     LogisticRegressionClassifier
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input
 from Orange.widgets import gui
 
 
@@ -607,8 +607,9 @@ class OWNomogram(OWWidget):
     icon = "icons/Nomogram.svg"
     priority = 2000
 
-    inputs = [("Classifier", Model, "set_classifier"),
-              ("Data", Table, "set_instance")]
+    class Inputs:
+        classifier = Input("Classifier", Model)
+        data = Input("Data", Table)
 
     MAX_N_ATTRS = 1000
     POINT_SCALE = 0
@@ -803,11 +804,13 @@ class OWNomogram(OWWidget):
             if self.sort_index in (SortBy.POSITIVE, SortBy.POSITIVE):
                 self.sort_index = SortBy.NO_SORTING
 
+    @Inputs.data
     def set_instance(self, data):
         self.instances = data
         self.feature_marker_values = []
         self.set_feature_marker_values()
 
+    @Inputs.classifier
     def set_classifier(self, classifier):
         self.closeContext()
         self.classifier = classifier

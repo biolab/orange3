@@ -28,14 +28,14 @@ class TestOWNomogram(WidgetTest):
 
     def test_input_nb_cls(self):
         """Check naive bayes classifier on input"""
-        self.send_signal("Classifier", self.nb_cls)
+        self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
         self.assertEqual(len([item for item in self.widget.scene.items() if
                               isinstance(item, DiscreteFeatureItem)]),
                          len([a for a in self.data.domain.attributes]))
 
     def test_input_lr_cls(self):
         """Check logistic regression classifier on input"""
-        self.send_signal("Classifier", self.lr_cls)
+        self.send_signal(self.widget.Inputs.classifier, self.lr_cls)
         self.assertEqual(
             len([item for item in self.widget.scene.items() if
                  isinstance(item, DiscreteFeatureItem)]),
@@ -48,24 +48,24 @@ class TestOWNomogram(WidgetTest):
     def test_input_invalid_cls(self):
         """Check any classifier on input"""
         majority_cls = MajorityLearner()(self.data)
-        self.send_signal("Classifier", majority_cls)
+        self.send_signal(self.widget.Inputs.classifier, majority_cls)
         self.assertTrue(self.widget.Error.invalid_classifier.is_shown())
-        self.send_signal("Classifier", None)
+        self.send_signal(self.widget.Inputs.classifier, None)
         self.assertFalse(self.widget.Error.invalid_classifier.is_shown())
 
     def test_input_instance(self):
         """ Check data instance on input"""
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.assertIsNotNone(self.widget.instances)
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.widget.instances)
 
     def test_target_values(self):
         """Check Target class combo values"""
-        self.send_signal("Classifier", self.nb_cls)
+        self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
         for i, text in enumerate(self.data.domain.class_var.values):
             self.assertEqual(text, self.widget.class_combo.itemText(i))
-        self.send_signal("Classifier", None)
+        self.send_signal(self.widget.Inputs.classifier, None)
         self.assertEqual(0, self.widget.class_combo.count())
 
     def test_nomogram_nb(self):
@@ -95,8 +95,8 @@ class TestOWNomogram(WidgetTest):
         classifier and data on input"""
         cls = NaiveBayesLearner()(self.titanic)
         data = self.titanic[10:11]
-        self.send_signal("Classifier", cls)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.classifier, cls)
+        self.send_signal(self.widget.Inputs.data, data)
         self._check_values(data.domain.attributes, data)
         self._test_sort([["status", "age", "sex"],
                          ["age", "sex", "status"],
@@ -109,8 +109,8 @@ class TestOWNomogram(WidgetTest):
         regression classifier and data on input"""
         cls = LogisticRegressionLearner()(self.titanic)
         data = self.titanic[10:11]
-        self.send_signal("Classifier", cls)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.classifier, cls)
+        self.send_signal(self.widget.Inputs.data, data)
         self._check_values(data.domain.attributes, data)
         self._test_sort([["status", "age", "sex"],
                          ["age", "sex", "status"],
@@ -143,7 +143,7 @@ class TestOWNomogram(WidgetTest):
         self._test_helper(cls, [50, 50])
 
     def _test_helper(self, cls, values):
-        self.send_signal("Classifier", cls)
+        self.send_signal(self.widget.Inputs.classifier, cls)
 
         # check for all class values
         for i in range(self.widget.class_combo.count()):
