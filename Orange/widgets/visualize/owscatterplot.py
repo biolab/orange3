@@ -323,8 +323,9 @@ class OWScatterPlot(OWWidget):
         self.vizrank.initialize()
         self.vizrank.attrs = self.data.domain.attributes if self.data is not None else []
         self.vizrank_button.setEnabled(
-            self.data is not None and self.data.domain.class_var is not None
-            and len(self.data.domain.attributes) > 1 and len(self.data) > 1)
+            self.data is not None and not self.data.is_sparse() and
+            self.data.domain.class_var is not None and
+            len(self.data.domain.attributes) > 1 and len(self.data) > 1)
         if self.data is not None and self.data.domain.class_var is None \
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1:
             self.vizrank_button.setToolTip(
@@ -423,7 +424,6 @@ class OWScatterPlot(OWWidget):
                             new=False)
 
     def sparse_to_dense(self, input_data=None):
-        self.vizrank_button.setEnabled(not (self.data and self.data.is_sparse()))
         if input_data is None or not input_data.is_sparse():
             return input_data
         keys = []
