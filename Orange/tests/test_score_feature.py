@@ -64,7 +64,8 @@ class FeatureScoringTest(unittest.TestCase):
         y = 10 + (-3*X[:, 1] + X[:, 3]) // 2
         domain = Domain.from_numpy(X, y)
         domain = Domain(domain.attributes,
-                        DiscreteVariable('c', values=np.unique(y)))
+                        DiscreteVariable('c',
+                                         values=[str(v) for v in np.unique(y)]))
         table = Table(domain, X, y)
         data = preprocess.Discretize()(table)
         scorer = Chi2()
@@ -77,7 +78,8 @@ class FeatureScoringTest(unittest.TestCase):
         y = 4 + (-3*X[:, 1] + X[:, 3]) // 2
         domain = Domain.from_numpy(X, y)
         domain = Domain(domain.attributes,
-                        DiscreteVariable('c', values=np.unique(y)))
+                        DiscreteVariable('c',
+                                         values=[str(v) for v in np.unique(y)]))
         data = Table(domain, X, y)
         scorer = ANOVA()
         sc = [scorer(data, a) for a in range(ncols)]

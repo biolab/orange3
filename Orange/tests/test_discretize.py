@@ -95,7 +95,7 @@ class TestEntropyMDL(TestCase):
     def test_entropy_constant(self):
         X = np.zeros((100, 1))
         domain = Domain([ContinuousVariable('v1')],
-                        [DiscreteVariable('c1', values=[1])])
+                        [DiscreteVariable('c1', values=["1"])])
         table = data.Table(domain, X, X)
         disc = discretize.EntropyMDL()
         dvar = disc(table, table.domain[0])

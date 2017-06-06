@@ -38,7 +38,8 @@ class DBSCANModel(Projection):
                 data = data.transform(self.pre_domain)
             y = self.proj.fit_predict(data.X)
             vals = [-1] + list(self.proj.core_sample_indices_)
-            c = DiscreteVariable(name='Core sample index', values=vals)
+            c = DiscreteVariable(name='Core sample index',
+                                 values=[str(v) for v in vals])
             domain = Domain([c])
             return Table(domain, y.reshape(len(y), 1))
 

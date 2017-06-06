@@ -204,7 +204,7 @@ class TestOWRank(WidgetTest):
         table = Table(
             Domain(
                 [ContinuousVariable("c")],
-                [DiscreteVariable("d", values=[0, 1])]
+                [DiscreteVariable("d", values="01")]
             ),
             list(zip(
                 [-np.power(10, 10), 1, 1],
