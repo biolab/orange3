@@ -37,6 +37,7 @@ before_install:
 
 install:
     - source $TRAVIS_BUILD_DIR/.travis/stage_install.sh
+    - python -c 'from PyQt5.Qt import PYQT_VERSION_STR; print("PYQT_VERSION_STR:", PYQT_VERSION_STR)'
 
 script:
     - source $TRAVIS_BUILD_DIR/.travis/stage_script.sh
