@@ -989,7 +989,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.make_legend()
 
     def assure_attribute_present(self, attr):
-        if attr not in self.data.domain:
+        if self.data is not None and attr not in self.data.domain:
             self.master.prepare_data()
 
     def update_grid(self):
