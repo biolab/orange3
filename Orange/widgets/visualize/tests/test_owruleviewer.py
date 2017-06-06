@@ -32,24 +32,24 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
     def test_set_data(self):
         # data must be None before assignment
         self.assertIsNone(self.widget.data)
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
         # assign None data
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.widget.data)
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
         # assign data
-        self.send_signal("Data", self.titanic)
+        self.send_signal(self.widget.Inputs.data, self.titanic)
         self.assertEqual(self.titanic, self.widget.data)
 
         # output signal should not be sent without a classifier
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
         # remove data
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.widget.data)
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
     def test_set_classifier(self):
         # classifier must be None before assignment
@@ -58,17 +58,17 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.widget.selected)
 
         # assign the classifier
-        self.send_signal("Classifier", self.classifier)
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
         self.assertIsNone(self.widget.data)
         self.assertIsNotNone(self.widget.classifier)
         self.assertIsNone(self.widget.selected)
 
         # without data also set, the output should be None
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
     def test_filtered_data_output(self):
-        self.send_signal("Data", self.titanic)
-        self.send_signal("Classifier", self.classifier)
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
 
         # select the last rule (TRUE)
         selection_model = self.widget.view.selectionModel()
@@ -78,17 +78,17 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
 
         # the number of output data instances (filtered)
         # must match the size of titanic data-set
-        output = self.get_output(self.widget.data_output_identifier)
+        output = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(self.titanic), len(output))
 
         # clear selection,
         selection_model.clearSelection()
 
         # output should now be None
-        self.assertIsNone(self.get_output(self.widget.data_output_identifier))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
     def test_copy_to_clipboard(self):
-        self.send_signal("Classifier", self.classifier)
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
 
         # select the last rule (TRUE)
         selection_model = self.widget.view.selectionModel()
@@ -103,7 +103,7 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
                         clipboard_contents)
 
     def test_restore_original_order(self):
-        self.send_signal("Classifier", self.classifier)
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
         bottom_row = len(self.classifier.rule_list) - 1
 
         # sort the table
@@ -133,7 +133,7 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(bottom_row, q_index.row())
 
     def test_selection_compact_view(self):
-        self.send_signal("Classifier", self.classifier)
+        self.send_signal(self.widget.Inputs.classifier, self.classifier)
 
         # test that selection persists through view change
         selection_model = self.widget.view.selectionModel()

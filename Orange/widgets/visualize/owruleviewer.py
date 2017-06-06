@@ -13,6 +13,7 @@ from Orange.classification.rules import _RuleClassifier
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.widget import Input, Output
 
 
 class OWRuleViewer(widget.OWWidget):
@@ -21,12 +22,13 @@ class OWRuleViewer(widget.OWWidget):
     icon = "icons/CN2RuleViewer.svg"
     priority = 1140
 
-    inputs = [("Data", Table, 'set_data'),
-              ("Classifier", _RuleClassifier, 'set_classifier')]
+    class Inputs:
+        data = Input("Data", Table)
+        classifier = Input("Classifier", _RuleClassifier)
 
-    data_output_identifier = "Selected Data"
-    outputs = [(data_output_identifier, Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     compact_view = settings.Setting(False)
 
@@ -75,10 +77,12 @@ class OWRuleViewer(widget.OWWidget):
         self.report_button.setFixedWidth(180)
         bottom_box.layout().addWidget(self.report_button)
 
+    @Inputs.data
     def set_data(self, data):
         self.data = data
         self.commit()
 
+    @Inputs.classifier
     def set_classifier(self, classifier):
         self.classifier = classifier
         self.selected = None
@@ -161,9 +165,8 @@ class OWRuleViewer(widget.OWWidget):
             data_output = data.from_table_rows(data, selected_indices) \
                 if len(selected_indices) else None
 
-        self.send(OWRuleViewer.data_output_identifier, data_output)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(data, selected_indices))
+        self.Outputs.selected_data.send(data_output)
+        self.Outputs.annotated_data.send(create_annotated_table(data, selected_indices))
 
     def send_report(self):
         if self.classifier is not None:
