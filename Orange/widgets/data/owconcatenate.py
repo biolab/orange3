@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 class OWConcatenate(widget.OWWidget):
@@ -27,11 +28,15 @@ class OWConcatenate(widget.OWWidget):
     priority = 1111
     icon = "icons/Concatenate.svg"
 
-    inputs = [("Primary Data", Orange.data.Table,
-               "set_primary_data"),
-              ("Additional Data", Orange.data.Table,
-               "set_more_data", widget.Multiple | widget.Default)]
-    outputs = [("Data", Orange.data.Table)]
+    class Inputs:
+        primary_data = Input("Primary Data", Orange.data.Table)
+        additional_data = Input("Additional Data",
+                                Orange.data.Table,
+                                multiple=True,
+                                default=True)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     #: Domain merging operations
     MergeUnion, MergeIntersection = 0, 1
@@ -125,10 +130,12 @@ class OWConcatenate(widget.OWWidget):
         box.layout().insertWidget(0, self.report_button)
         box.layout().insertSpacing(1, 20)
 
+    @Inputs.primary_data
     @check_sql_input
     def set_primary_data(self, data):
         self.primary_data = data
 
+    @Inputs.additional_data
     @check_sql_input
     def set_more_data(self, data=None, id=None):
         if data is not None:
@@ -175,7 +182,7 @@ class OWConcatenate(widget.OWWidget):
         else:
             data = None
 
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def _merge_type_changed(self, ):
         if self.primary_data is None and self.more_data:

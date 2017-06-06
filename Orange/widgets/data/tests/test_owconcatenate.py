@@ -22,22 +22,22 @@ class TestOWConcatenate(WidgetTest):
         self.titanic = Table("titanic")
 
     def test_single_input(self):
-        self.assertIsNone(self.get_output("Data"))
-        self.send_signal("Primary Data", self.iris)
-        output = self.get_output("Data")
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
+        output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(list(output), list(self.iris))
-        self.send_signal("Primary Data", None)
-        self.assertIsNone(self.get_output("Data"))
-        self.send_signal("Additional Data", self.iris)
-        output = self.get_output("Data")
+        self.send_signal(self.widget.Inputs.primary_data, None)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+        self.send_signal(self.widget.Inputs.additional_data, self.iris)
+        output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(list(output), list(self.iris))
-        self.send_signal("Additional Data", None)
-        self.assertIsNone(self.get_output("Data"))
+        self.send_signal(self.widget.Inputs.additional_data, None)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_two_inputs_union(self):
-        self.send_signal("Additional Data", self.iris, 0)
-        self.send_signal("Additional Data", self.titanic, 1)
-        output = self.get_output("Data")
+        self.send_signal(self.widget.Inputs.additional_data, self.iris, 0)
+        self.send_signal(self.widget.Inputs.additional_data, self.titanic, 1)
+        output = self.get_output(self.widget.Outputs.data)
         # needs to contain all instances
         self.assertEqual(len(output), len(self.iris) + len(self.titanic))
         # needs to contain all variables
@@ -51,10 +51,10 @@ class TestOWConcatenate(WidgetTest):
         self.assertTrue(np.isnan(output.X[len(self.iris):, :-3]).all())
 
     def test_two_inputs_intersection(self):
-        self.send_signal("Additional Data", self.iris, 0)
-        self.send_signal("Additional Data", self.titanic, 1)
+        self.send_signal(self.widget.Inputs.additional_data, self.iris, 0)
+        self.send_signal(self.widget.Inputs.additional_data, self.titanic, 1)
         self.widget.controls.merge_type.buttons[1].click()
-        output = self.get_output("Data")
+        output = self.get_output(self.widget.Outputs.data)
         # needs to contain all instances
         self.assertEqual(len(output), len(self.iris) + len(self.titanic))
         # no common variables
@@ -62,12 +62,12 @@ class TestOWConcatenate(WidgetTest):
         self.assertEqual(0, len(outvars))
 
     def test_source(self):
-        self.send_signal("Additional Data", self.iris, 0)
-        self.send_signal("Additional Data", self.titanic, 1)
-        outputb = self.get_output("Data")
+        self.send_signal(self.widget.Inputs.additional_data, self.iris, 0)
+        self.send_signal(self.widget.Inputs.additional_data, self.titanic, 1)
+        outputb = self.get_output(self.widget.Outputs.data)
         outvarsb = outputb.domain.variables
         def get_source():
-            output = self.get_output("Data")
+            output = self.get_output(self.widget.Outputs.data)
             outvars = output.domain.variables + output.domain.metas
             return (set(outvars) - set(outvarsb)).pop()
         # test adding source
@@ -85,22 +85,22 @@ class TestOWConcatenate(WidgetTest):
             self.widget.source_column_role = i
             self.widget.apply()
             source = get_source()
-            output = self.get_output("Data")
+            output = self.get_output(self.widget.Outputs.data)
             self.assertTrue(source in getattr(output.domain, place))
             data = Table(Domain([source]), output)
             np.testing.assert_equal(data[:len(self.iris)].X, 0)
             np.testing.assert_equal(data[len(self.iris):].X, 1)
 
     def test_singleclass_source_class(self):
-        self.send_signal("Primary Data", self.iris)
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
         # add source into a class variable
         self.widget.controls.append_source_column.toggle()
 
     def test_disable_merging_on_primary(self):
         self.assertTrue(self.widget.mergebox.isEnabled())
-        self.send_signal("Primary Data", self.iris)
+        self.send_signal(self.widget.Inputs.primary_data, self.iris)
         self.assertFalse(self.widget.mergebox.isEnabled())
-        self.send_signal("Primary Data", None)
+        self.send_signal(self.widget.Inputs.primary_data, None)
         self.assertTrue(self.widget.mergebox.isEnabled())
 
 
