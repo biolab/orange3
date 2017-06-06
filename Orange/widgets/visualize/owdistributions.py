@@ -371,6 +371,8 @@ class OWDistributions(widget.OWWidget):
                 self.tooltip_items.append((self.plot, item))
 
     def _on_relative_freq_changed(self):
+        if not self.distributions:
+            return
         self.set_left_axis_name()
         if self.cvar and self.cvar.is_discrete:
             self.display_contingency()
