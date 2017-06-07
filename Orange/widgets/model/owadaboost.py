@@ -6,7 +6,7 @@ from Orange.modelling import SklAdaBoostLearner, SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Input
 
 
 class OWAdaBoost(OWBaseLearner):
@@ -22,7 +22,8 @@ class OWAdaBoost(OWBaseLearner):
 
     LEARNER = SklAdaBoostLearner
 
-    inputs = [("Learner", Learner, "set_base_learner")]
+    class Inputs:
+        learner = Input("Learner", Learner)
 
     #: Algorithms for classification problems
     algorithms = ["SAMME", "SAMME.R"]
@@ -84,6 +85,7 @@ class OWAdaBoost(OWBaseLearner):
             algorithm=self.algorithms[self.algorithm_index],
             loss=self.losses[self.loss_index].lower())
 
+    @Inputs.learner
     def set_base_learner(self, learner):
         self.Error.no_weight_support.clear()
         if learner and not learner.supports_weights:
