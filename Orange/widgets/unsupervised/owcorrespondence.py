@@ -16,6 +16,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
+from Orange.widgets.widget import Input
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -47,7 +48,8 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     description = "Correspondence analysis for categorical multivariate data."
     icon = "icons/CorrespondenceAnalysis.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
 
     Invalidate = QEvent.registerEventType()
 
@@ -96,6 +98,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.plot.setMenuEnabled(False)
         self.mainArea.layout().addWidget(self.plot)
 
+    @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.clear()
