@@ -12,7 +12,7 @@ from AnyQt.QtGui import (
 from AnyQt.QtCore import (
     Qt, QSize, QItemSelectionModel, QItemSelection, QT_VERSION
 )
-import numpy
+import numpy as np
 import sklearn.metrics as skl_metrics
 
 import Orange
@@ -33,10 +33,10 @@ def confusion_matrix(res, index):
 
     Returns: Confusion matrix
     """
-    labels = numpy.arange(len(res.domain.class_var.values))
+    labels = np.arange(len(res.domain.class_var.values))
     if not res.actual.size:
         # scikit-learn will not return an zero matrix
-        return numpy.zeros((len(labels), len(labels)))
+        return np.zeros((len(labels), len(labels)))
     else:
         return skl_metrics.confusion_matrix(
             res.actual, res.predicted[index], labels=labels)
@@ -252,8 +252,8 @@ class OWConfusionMatrix(widget.OWWidget):
         nan_values = False
         if results is not None:
             assert isinstance(results, Orange.evaluation.Results)
-            if numpy.any(numpy.isnan(results.actual)) or \
-                    numpy.any(numpy.isnan(results.predicted)):
+            if np.any(np.isnan(results.actual)) or \
+                    np.any(np.isnan(results.predicted)):
                 # Error out here (could filter them out with a warning
                 # instead).
                 nan_values = True
@@ -354,53 +354,58 @@ class OWConfusionMatrix(widget.OWWidget):
             self.tableview.selectionModel().select(
                 selection, QItemSelectionModel.ClearAndSelect)
 
+    def _prepare_data(self):
+        indices = self.tableview.selectedIndexes()
+        indices = {(ind.row() - 2, ind.column() - 2) for ind in indices}
+        actual = self.results.actual
+        learner_name = self.learners[self.selected_learner[0]]
+        predicted = self.results.predicted[self.selected_learner[0]]
+        selected = [i for i, t in enumerate(zip(actual, predicted))
+                    if t in indices]
+
+        extra = []
+        class_var = self.data.domain.class_var
+        metas = self.data.domain.metas
+
+        if self.append_predictions:
+            extra.append(predicted.reshape(-1, 1))
+            var = Orange.data.DiscreteVariable(
+                "{}({})".format(class_var.name, learner_name),
+                class_var.values
+            )
+            metas = metas + (var,)
+
+        if self.append_probabilities and \
+                        self.results.probabilities is not None:
+            probs = self.results.probabilities[self.selected_learner[0]]
+            extra.append(np.array(probs, dtype=object))
+            pvars = [Orange.data.ContinuousVariable("p({})".format(value))
+                     for value in class_var.values]
+            metas = metas + tuple(pvars)
+
+        domain = Orange.data.Domain(self.data.domain.attributes,
+                                    self.data.domain.class_vars,
+                                    metas)
+        data = self.data.transform(domain)
+        if len(extra):
+            data.metas[:, len(self.data.domain.metas):] = \
+                np.hstack(tuple(extra))
+        data.name = learner_name
+
+        if selected:
+            annotated_data = create_annotated_table(data, selected)
+            data = data[selected]
+        else:
+            annotated_data = create_annotated_table(data, [])
+            data = None
+
+        return data, annotated_data
+
     def commit(self):
         """Output data instances corresponding to selected cells"""
         if self.results is not None and self.data is not None \
                 and self.selected_learner:
-            indices = self.tableview.selectedIndexes()
-            indices = {(ind.row() - 2, ind.column() - 2) for ind in indices}
-            actual = self.results.actual
-            learner_name = self.learners[self.selected_learner[0]]
-            predicted = self.results.predicted[self.selected_learner[0]]
-            selected = [i for i, t in enumerate(zip(actual, predicted))
-                        if t in indices]
-
-            extra = []
-            class_var = self.data.domain.class_var
-            metas = self.data.domain.metas
-
-            if self.append_predictions:
-                extra.append(predicted.reshape(-1, 1))
-                var = Orange.data.DiscreteVariable(
-                    "{}({})".format(class_var.name, learner_name),
-                    class_var.values
-                )
-                metas = metas + (var,)
-
-            if self.append_probabilities and \
-                    self.results.probabilities is not None:
-                probs = self.results.probabilities[self.selected_learner[0]]
-                extra.append(numpy.array(probs, dtype=object))
-                pvars = [Orange.data.ContinuousVariable("p({})".format(value))
-                         for value in class_var.values]
-                metas = metas + tuple(pvars)
-
-            domain = Orange.data.Domain(self.data.domain.attributes,
-                                        self.data.domain.class_vars,
-                                        metas)
-            data = self.data.transform(domain)
-            data.metas[:, len(self.data.domain.metas):] = \
-                numpy.hstack(tuple(extra))
-            data.name = learner_name
-
-            if selected:
-                annotated_data = create_annotated_table(data, selected)
-                data = data[selected]
-            else:
-                annotated_data = create_annotated_table(data, [])
-                data = None
-
+            data, annotated_data = self._prepare_data()
         else:
             data = None
             annotated_data = None
@@ -437,21 +442,21 @@ class OWConfusionMatrix(widget.OWWidget):
             colsum = cmatrix.sum(axis=0)
             rowsum = cmatrix.sum(axis=1)
             n = len(cmatrix)
-            diag = numpy.diag_indices(n)
+            diag = np.diag_indices(n)
 
-            colors = cmatrix.astype(numpy.double)
+            colors = cmatrix.astype(np.double)
             colors[diag] = 0
             if self.selected_quantity == 0:
-                normalized = cmatrix.astype(numpy.int)
+                normalized = cmatrix.astype(np.int)
                 formatstr = "{}"
-                div = numpy.array([colors.max()])
+                div = np.array([colors.max()])
             else:
                 if self.selected_quantity == 1:
                     normalized = 100 * cmatrix / colsum
                     div = colors.max(axis=0)
                 else:
-                    normalized = 100 * cmatrix / rowsum[:, numpy.newaxis]
-                    div = colors.max(axis=1)[:, numpy.newaxis]
+                    normalized = 100 * cmatrix / rowsum[:, np.newaxis]
+                    div = colors.max(axis=1)[:, np.newaxis]
                 formatstr = "{:2.1f} %"
             div[div == 0] = 1
             colors /= div

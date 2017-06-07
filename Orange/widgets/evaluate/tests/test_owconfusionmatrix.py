@@ -106,3 +106,12 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.invalid_values.is_shown())
         self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_values.is_shown())
+
+    def test_not_append_extra_meta_columns(self):
+        """
+        When a user does not want append extra meta column, the widget
+        should not crash.
+        GH-2386
+        """
+        self.widget.append_predictions = False
+        self.send_signal(self.widget.Inputs.evaluation_results, self.results_1_iris)
