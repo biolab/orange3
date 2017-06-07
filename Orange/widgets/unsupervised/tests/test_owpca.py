@@ -21,36 +21,36 @@ class TestOWPCA(WidgetTest):
     def test_constant_data(self):
         data = Table("iris")[::5]
         data.X[:, :] = 1.0
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.trivial_components.is_shown())
-        self.assertIsNone(self.get_output("Transformed Data"))
-        self.assertIsNone(self.get_output("Components"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.components))
 
     def test_empty_data(self):
         """ Check widget for dataset with no rows and for dataset with no attributes """
         data = Table("iris")
-        self.send_signal("Data", data[:0])
+        self.send_signal(self.widget.Inputs.data, data[:0])
         self.assertTrue(self.widget.Error.no_instances.is_shown())
 
         domain = Domain([], None, data.domain.variables)
         new_data = Table.from_table(domain, data)
-        self.send_signal("Data", new_data)
+        self.send_signal(self.widget.Inputs.data, new_data)
         self.assertTrue(self.widget.Error.no_features.is_shown())
         self.assertFalse(self.widget.Error.no_instances.is_shown())
 
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_features.is_shown())
 
     def test_limit_components(self):
         X = np.random.RandomState(0).rand(101, 101)
         data = Table(X)
         self.widget.ncomponents = 100
-        self.send_signal("Data", data)
-        tran = self.get_output("Transformed data")
+        self.send_signal(self.widget.Inputs.data, data)
+        tran = self.get_output(self.widget.Outputs.transformed_data)
         self.assertEqual(len(tran.domain.attributes), 100)
         self.widget.ncomponents = 101  # should not be accesible
         with self.assertRaises(IndexError):
-            self.send_signal("Data", data)
+            self.send_signal(self.widget.Inputs.data, data)
 
     def test_migrate_settings(self):
         settings = dict(ncomponents=10)
@@ -62,7 +62,7 @@ class TestOWPCA(WidgetTest):
 
     def test_variance_shown(self):
         data = Table("iris")
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.widget.maxp = 2
         self.widget._setup_plot()
         var2 = self.widget.variance_covered
@@ -99,7 +99,7 @@ class TestOWPCA(WidgetTest):
         self.widget._update_normalize()     # pylint: disable=protected-access
         self.widget.set_data(data)
 
-        components = self.get_output("Components")
+        components = self.get_output(self.widget.Outputs.components)
         self.assertTrue(all(type(a) is ContinuousVariable   # pylint: disable=unidiomatic-typecheck
                             for a in components.domain.attributes),
                         "Some variables aren't of type ContinuousVariable")
