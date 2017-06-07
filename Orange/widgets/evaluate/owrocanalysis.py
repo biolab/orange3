@@ -20,6 +20,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.io import FileFormat
+from Orange.widgets.widget import Input
 from Orange.canvas import report
 
 
@@ -296,7 +297,9 @@ class OWROCAnalysis(widget.OWWidget):
                   "based on the evaluation of classifiers."
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
-    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
+
+    class Inputs:
+        evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
     class Warning(widget.OWWidget.Warning):
         empty_results = widget.Msg(
@@ -417,6 +420,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
 
+    @Inputs.evaluation_results
     def set_results(self, results):
         """Set the input evaluation results."""
         self.clear()
