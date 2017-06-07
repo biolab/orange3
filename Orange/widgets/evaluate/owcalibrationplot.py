@@ -14,6 +14,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.io import FileFormat
+from Orange.widgets.widget import Input
 from Orange.canvas import report
 
 
@@ -35,7 +36,9 @@ class OWCalibrationPlot(widget.OWWidget):
     description = "Calibration plot based on evaluation of classifiers."
     icon = "icons/CalibrationPlot.svg"
     priority = 1030
-    inputs = [("Evaluation Results", Orange.evaluation.Results, "set_results")]
+
+    class Inputs:
+        evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
     class Warning(widget.OWWidget.Warning):
         empty_input = widget.Msg(
@@ -89,6 +92,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
 
+    @Inputs.evaluation_results
     def set_results(self, results):
         self.clear()
         results = check_results_adequacy(results, self.Error)

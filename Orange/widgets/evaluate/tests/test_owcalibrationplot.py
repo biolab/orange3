@@ -27,7 +27,7 @@ class TestOWCalibrationPlot(WidgetTest):
         self.widget = self.create_widget(OWCalibrationPlot)  # type: OWCalibrationPlot
 
     def test_basic(self):
-        self.send_signal("Evaluation Results", self.res)
+        self.send_signal(self.widget.Inputs.evaluation_results, self.res)
         self.widget.controls.display_rug.click()
 
     def test_empty(self):
@@ -36,7 +36,7 @@ class TestOWCalibrationPlot(WidgetTest):
         res.actual = res.actual[:0]
         res.predicted = res.predicted[:, 0]
         res.probabilities = res.probabilities[:, :0, :]
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
 
     def test_nan_input(self):
         res = copy.copy(self.res)
@@ -45,7 +45,7 @@ class TestOWCalibrationPlot(WidgetTest):
 
         res.actual[0] = np.nan
         res.probabilities[:, [0, 3], :] = np.nan
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
-        self.send_signal("Evaluation Results", None)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
