@@ -9,6 +9,7 @@ from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
+from Orange.widgets.widget import Input
 
 
 class OWSaveModel(widget.OWWidget):
@@ -18,7 +19,8 @@ class OWSaveModel(widget.OWWidget):
     replaces = ["Orange.widgets.classify.owsaveclassifier.OWSaveClassifier"]
     priority = 3000
 
-    inputs = [("Model", Model, "setModel")]
+    class Inputs:
+        model = Input("Model", Model)
 
     #: Current (last selected) filename or None.
     filename = Setting(None)
@@ -71,6 +73,7 @@ class OWSaveModel(widget.OWWidget):
             self.selectedIndex = -1
             self.filename = None
 
+    @Inputs.model
     def setModel(self, model):
         """Set input model."""
         self.model = model
