@@ -23,24 +23,24 @@ class TestOWDistances(WidgetTest):
     def test_distance_combo(self):
         """Check distances when the metric changes"""
         self.assertEqual(self.widget.metrics_combo.count(), len(METRICS))
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         for i, metric in enumerate(METRICS):
             if isinstance(metric, MahalanobisDistance):
                 metric = MahalanobisDistance(self.iris)
             self.widget.metrics_combo.activated.emit(i)
             self.widget.metrics_combo.setCurrentIndex(i)
-            self.send_signal("Data", self.iris)
+            self.send_signal(self.widget.Inputs.data, self.iris)
             np.testing.assert_array_equal(
-                metric(self.iris), self.get_output("Distances"))
+                metric(self.iris), self.get_output(self.widget.Outputs.distances))
 
     def test_error_message(self):
         """Check if error message appears and then disappears when
         data is removed from input"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
-        self.send_signal("Data", self.titanic)
+        self.send_signal(self.widget.Inputs.data, self.titanic)
         self.assertTrue(self.widget.Error.no_continuous_features.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
 
     def test_mahalanobis_error(self):
@@ -58,12 +58,12 @@ class TestOWDistances(WidgetTest):
 
         for data1, bad1, out1 in zip(datasets, bad, out):
             for data2, bad2, out2 in zip(datasets, bad, out):
-                self.send_signal("Data", data1)
+                self.send_signal(self.widget.Inputs.data, data1)
                 self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad1)
-                self.assertEqual(self.get_output("Distances") is not None, out1)
-                self.send_signal("Data", data2)
+                self.assertEqual(self.get_output(self.widget.Outputs.distances) is not None, out1)
+                self.send_signal(self.widget.Inputs.data, data2)
                 self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad2)
-                self.assertEqual(self.get_output("Distances") is not None, out2)
+                self.assertEqual(self.get_output(self.widget.Outputs.distances) is not None, out2)
 
     def test_too_big_array(self):
         """
@@ -72,7 +72,7 @@ class TestOWDistances(WidgetTest):
         GH-2315
         """
         self.assertEqual(len(self.widget.Error.active), 0)
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
 
         mock = Mock(side_effect=ValueError)
         self.widget.compute_distances(mock, self.iris)
