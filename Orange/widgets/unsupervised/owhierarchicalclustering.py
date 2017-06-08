@@ -997,6 +997,8 @@ class OWHierarchicalClustering(widget.OWWidget):
             )
             if items.domain.class_vars:
                 self.annotation = items.domain.class_vars[0]
+            elif items.domain.metas:
+                self.annotation = items.domain.metas[0]
             else:
                 self.annotation = "Enumeration"
             self.openContext(items.domain)
