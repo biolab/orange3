@@ -1171,7 +1171,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         """Context only matches when domains are the same"""
 
         return (self.PERFECT_MATCH
-                if (context.attributes == attributes and
+                if (hasattr(context, "attributes") and context.attributes == attributes and
                     context.class_vars == class_vars and
                     context.metas == metas)
                 else self.NO_MATCH)
