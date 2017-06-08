@@ -285,6 +285,7 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
+            self.cvar.values = list(map(str, self.cvar.values))
             self.cb_prob.clear()
             self.cb_prob.addItem("(None)")
             self.cb_prob.addItems(self.cvar.values)
