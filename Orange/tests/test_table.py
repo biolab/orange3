@@ -1749,6 +1749,19 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertIsNot(table, new_table)
         self.assertIs(new_table.domain, new_domain)
 
+    def test_transform_sparse(self):
+        """
+        When Y has only one column it is always dense.
+        GH-2359
+        """
+        table = Table("iris")
+        table.X = sp.csr_matrix(table.X)
+        attributes = table.domain.attributes[:3] + table.domain.class_vars
+        class_vars = table.domain.attributes[3]
+        newtable = table.transform(Domain(attributes=attributes,
+                                          class_vars=class_vars))
+        self.assertFalse(sp.issparse(newtable.Y))
+
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)
         self.assert_table_with_filter_matches(new_table, self.table)
