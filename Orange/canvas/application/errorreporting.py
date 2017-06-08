@@ -225,7 +225,7 @@ class ErrorReporting(QDialog):
                 except Exception:
                     pass
             data[F.WIDGET_SCHEME] = filename
-            with open(filename) as f:
+            with open(filename, encoding='utf-8') as f:
                 data['_' + F.WIDGET_SCHEME] = f.read()
         data[F.VERSION] = VERSION_STR
         data[F.ENVIRONMENT] = 'Python {} on {} {} {} {}'.format(
