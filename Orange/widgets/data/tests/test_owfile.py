@@ -18,10 +18,19 @@ from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
+from Orange.widgets.utils.filedialogs import dialog_formats
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
+
+
+class AddedFormat(FileFormat):
+    EXTENSIONS = ('.123',)
+    DESCRIPTION = "Test if a dialog format works after reading OWFile"
+
+    def read(self):
+        pass
 
 
 class TestOWFile(WidgetTest):
@@ -231,3 +240,8 @@ a
         self.widget.apply_button.click()
         data = self.get_output("Data")
         self.assertIsNone(data)
+
+    def test_add_new_format(self):
+        # test adding file formats after registering the widget
+        formats = dialog_formats()
+        self.assertTrue(".123" in formats)
