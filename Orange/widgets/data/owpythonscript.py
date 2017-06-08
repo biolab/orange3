@@ -1,6 +1,7 @@
 import sys
 import os
 import code
+import copy
 import keyword
 import itertools
 import unicodedata
@@ -512,19 +513,19 @@ class OWPythonScript(widget.OWWidget):
         self.resize(800, 600)
 
     def setExampleTable(self, et):
-        self.in_data = et
+        self.in_data = copy.deepcopy(et)
 
     def setDistanceMatrix(self, dm):
         self.in_distance = dm
 
     def setLearner(self, learner):
-        self.in_learner = learner
+        self.in_learner = copy.deepcopy(learner)
 
     def setClassifier(self, classifier):
-        self.in_classifier = classifier
+        self.in_classifier = copy.deepcopy(classifier)
 
     def setObject(self, obj):
-        self.in_object = obj
+        self.in_object = copy.deepcopy(obj)
 
     def handleNewSignals(self):
         self.unconditional_commit()

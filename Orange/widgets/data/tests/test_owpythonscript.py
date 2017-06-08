@@ -62,9 +62,10 @@ class TestOWPythonScript(WidgetTest):
                 ("in_data", "out_data", self.iris),
                 ("in_learner", "out_learner", self.learner),
                 ("in_classifier", "out_classifier", self.model)):
-            self.widget.text.setPlainText("{} = {}".format(_output, _input))
-            self.send_signal(_input, "42")
+            self.widget.text.setPlainText("{} = '42'".format(_output))
+            self.send_signal(_input, data)
             self.assertEqual(self.get_output(_output), None)
             self.assertTrue(getattr(self.widget.Error, _output).is_shown())
+            self.widget.text.setPlainText("{} = {}".format(_output, _input))
             self.send_signal(_input, data)
             self.assertFalse(getattr(self.widget.Error, _output).is_shown())
