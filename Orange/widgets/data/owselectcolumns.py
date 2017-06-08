@@ -252,7 +252,7 @@ class OWSelectAttributes(widget.OWWidget):
 
     class Outputs:
         data = Output("Data", Table)
-        features = Output("Features", widget.AttributeList, dynamic=False)
+        features = Output("Features", widget.AttributeList)
 
     want_main_area = False
     want_control_area = True
