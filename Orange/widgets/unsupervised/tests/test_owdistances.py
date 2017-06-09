@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
+
 import numpy as np
 
 from Orange.data import Table
@@ -62,3 +64,21 @@ class TestOWDistances(WidgetTest):
                 self.send_signal("Data", data2)
                 self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad2)
                 self.assertEqual(self.get_output("Distances") is not None, out2)
+
+    def test_too_big_array(self):
+        """
+        Users sees an error message when calculating too large arrays and Orange
+        does not crash.
+        GH-2315
+        """
+        self.assertEqual(len(self.widget.Error.active), 0)
+        self.send_signal("Data", self.iris)
+
+        mock = Mock(side_effect=ValueError)
+        self.widget.compute_distances(mock, self.iris)
+        self.assertTrue(self.widget.Error.distances_value_error.is_shown())
+
+        mock = Mock(side_effect=MemoryError)
+        self.widget.compute_distances(mock, self.iris)
+        self.assertEqual(len(self.widget.Error.active), 1)
+        self.assertTrue(self.widget.Error.distances_memory_error.is_shown())

@@ -1,5 +1,4 @@
 import bottleneck as bn
-import numpy
 from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 
@@ -48,6 +47,8 @@ class OWDistances(OWWidget):
         dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
         empty_data = Msg("Empty data set")
         mahalanobis_error = Msg("{}")
+        distances_memory_error = Msg("Not enough memory.")
+        distances_value_error = Msg("Error occurred while calculating distances\n{}")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring discrete features")
@@ -60,12 +61,12 @@ class OWDistances(OWWidget):
 
         gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
-        )
+                        )
         self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
                                           box="Distance Metric",
                                           items=[m.name for m in METRICS],
                                           callback=self._invalidate
-        )
+                                         )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
                               box=False, checkbox_label="Apply automatically")
         box.layout().insertWidget(0, self.report_button)
@@ -105,34 +106,41 @@ class OWDistances(OWWidget):
         self.send("Distances", self.compute_distances(metric, self.data))
 
     def compute_distances(self, metric, data):
+        def checks(metric, data):
+            if data is None:
+                return
+
+            if issparse(data.X) and not metric.supports_sparse:
+                self.Error.dense_metric_sparse_data()
+                return
+
+            if not any(a.is_continuous for a in data.domain.attributes):
+                self.Error.no_continuous_features()
+                return
+
+            needs_preprocessing = False
+            if any(a.is_discrete for a in self.data.domain.attributes):
+                self.Warning.ignoring_discrete()
+                needs_preprocessing = True
+
+            if not issparse(data.X) and bn.anynan(data.X):
+                self.Warning.imputing_data()
+                needs_preprocessing = True
+
+            if needs_preprocessing:
+                # removes discrete features and imputes data
+                data = distance._preprocess(data)
+
+            if not data.X.size:
+                self.Error.empty_data()
+                return
+
+            return data
+
         self.clear_messages()
 
+        data = checks(metric, data)
         if data is None:
-            return
-
-        if issparse(data.X) and not metric.supports_sparse:
-            self.Error.dense_metric_sparse_data()
-            return
-
-        if not any(a.is_continuous for a in data.domain.attributes):
-            self.Error.no_continuous_features()
-            return
-
-        needs_preprocessing = False
-        if any(a.is_discrete for a in self.data.domain.attributes):
-            self.Warning.ignoring_discrete()
-            needs_preprocessing = True
-
-        if not issparse(data.X) and bn.anynan(data.X):
-            self.Warning.imputing_data()
-            needs_preprocessing = True
-
-        if needs_preprocessing:
-            # removes discrete features and imputes data
-            data = distance._preprocess(data)
-
-        if not data.X.size:
-            self.Error.empty_data()
             return
 
         if isinstance(metric, distance.MahalanobisDistance):
@@ -144,7 +152,15 @@ class OWDistances(OWWidget):
                 self.Error.mahalanobis_error(e)
                 return
 
-        return metric(data, data, 1 - self.axis, impute=True)
+        try:
+            met = metric(data, data, 1 - self.axis, impute=True)
+        except ValueError as e:
+            self.Error.distances_value_error(e)
+            return
+        except MemoryError:
+            self.Error.distances_memory_error()
+            return
+        return met
 
     def _invalidate(self):
         self._checksparse()
