@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import unittest
+
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
@@ -36,3 +38,16 @@ class TestOWOutliers(WidgetTest):
         self.assertTrue(self.widget.Error.multiclass_error.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.multiclass_error.is_shown())
+
+    def test_memory_error(self):
+        """
+        Handling memory error.
+        GH-2374
+        """
+        data = Table("iris")[::3]
+        self.assertFalse(self.widget.Error.memory_error.is_shown())
+        with unittest.mock.patch(
+            "Orange.widgets.data.owoutliers.OWOutliers.detect_outliers",
+            side_effect=MemoryError):
+            self.send_signal("Data", data)
+            self.assertTrue(self.widget.Error.memory_error.is_shown())
