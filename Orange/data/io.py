@@ -923,6 +923,12 @@ class DotReader(FileFormat):
 
 
 class UrlReader(FileFormat):
+    def __init__(self, filename):
+        filename = filename.strip()
+        if not urlparse(filename).scheme:
+            filename = 'http://' + filename
+        super().__init__(filename)
+
     @staticmethod
     def urlopen(url):
         req = Request(

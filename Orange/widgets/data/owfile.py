@@ -1,6 +1,7 @@
 import os
 import logging
 from warnings import catch_warnings
+from urllib.parse import urlparse
 
 import numpy as np
 from AnyQt.QtWidgets import \
@@ -240,6 +241,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.load_data()
 
     def _url_set(self):
+        url = self.url_combo.currentText()
+        pos = self.recent_urls.index(url)
+        url = url.strip()
+
+        if not urlparse(url).scheme:
+            url = 'http://' + url
+            self.url_combo.setCurrentText(url)
+            self.recent_urls[pos] = url
+
         self.source = self.URL
         self.load_data()
 

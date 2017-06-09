@@ -1368,6 +1368,22 @@ class CreateTableWithFilename(TableTests):
 
 
 class CreateTableWithUrl(TableTests):
+    def test_url_no_scheme(self):
+
+        class SkipRest(Exception):
+            pass
+
+        mock_urlopen = Mock(side_effect=SkipRest())
+        url = 'www.foo.bar/xx.csv'
+
+        with patch('Orange.data.io.UrlReader.urlopen', mock_urlopen):
+            try:
+                Table.from_url(url)
+            except SkipRest:
+                pass
+
+        mock_urlopen.assert_called_once_with('http://' + url)
+
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
                                           'filename*=UTF-8''Something%20%28Responses%29.tsv'}
