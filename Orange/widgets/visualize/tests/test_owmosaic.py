@@ -214,6 +214,23 @@ class MosaicVizRankTests(WidgetTest):
         self.widget.set_data(data)
         self.vizrank.toggle()
 
+    def test_pause_continue(self):
+        data = Table("housing.tab")
+        self.widget.set_data(data)
+        self.vizrank.toggle()  # start
+        self.process_events(until=lambda: self.vizrank.saved_progress > 5)
+        self.vizrank.toggle()  # stop
+        self.process_events(until=lambda: not self.vizrank.keep_running)
+        self.vizrank.toggle()  # continue
+        self.process_events(until=lambda: self.vizrank.saved_progress > 20)
+
+    def test_finished(self):
+        data = Table("iris.tab")
+        self.widget.set_data(data)
+        self.vizrank.toggle()
+        self.process_events(until=lambda: not self.vizrank.keep_running)
+        self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
+
     def test_nan_column(self):
         """
         A column with only NaN-s used to throw an error
