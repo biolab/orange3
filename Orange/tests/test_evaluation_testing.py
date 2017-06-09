@@ -171,6 +171,7 @@ class TestCrossValidation(TestSampling):
             self.assertEqual(len(result.models), 5)
             for model in result.models:
                 self.assertIsInstance(model, learners[i].__returns__)
+            self.assertSequenceEqual(result.learners, [res.learners[i]])
 
     def test_10_fold_probs(self):
         learners = [MajorityLearner(), MajorityLearner()]

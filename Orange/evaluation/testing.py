@@ -386,6 +386,7 @@ class Results:
             res = Results()
             res.data = data
             res.domain = self.domain
+            res.learners = [self.learners[i]]
             res.row_indices = self.row_indices
             res.actual = self.actual
             res.folds = self.folds

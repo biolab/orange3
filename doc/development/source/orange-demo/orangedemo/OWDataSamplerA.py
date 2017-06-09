@@ -45,10 +45,13 @@ class OWDataSamplerA(OWWidget):
             self.Outputs.sample.send("Sampled Data")
 # [end-snippet-2]
 
+
 # [start-snippet-3]
-def main(argv=sys.argv):
-    from PyQt4.QtGui import QApplication
-    app = QApplication(list(argv))
+def main(argv=None):
+    from AnyQt.QtWidgets import QApplication
+    # PyQt changes argv list in-place
+    app = QApplication(list(argv) if argv else [])
+    argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
     else:
@@ -64,9 +67,10 @@ def main(argv=sys.argv):
     app.exec_()
     ow.set_data(None)
     ow.handleNewSignals()
+    ow.onDeleteWidget()
     return 0
 
-if __name__=="__main__":
-    sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
 
 # [end-snippet-3]
