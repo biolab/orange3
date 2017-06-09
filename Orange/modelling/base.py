@@ -1,6 +1,7 @@
 import numpy as np
 
 from Orange.base import Learner, Model, SklLearner
+from Orange.data import Table, Domain
 
 
 class Fitter(Learner):
@@ -31,10 +32,7 @@ class Fitter(Learner):
         self.__learners = {self.CLASSIFICATION: None, self.REGRESSION: None}
 
     def _fit_model(self, data):
-        if data.domain.has_discrete_class:
-            learner = self.get_learner(self.CLASSIFICATION)
-        else:
-            learner = self.get_learner(self.REGRESSION)
+        learner = self.get_learner(data)
 
         if type(self).fit is Learner.fit:
             return learner.fit_storage(data)
@@ -43,20 +41,34 @@ class Fitter(Learner):
             return learner.fit(X, Y, W)
 
     def preprocess(self, data):
-        if data.domain.has_discrete_class:
-            return self.get_learner(self.CLASSIFICATION).preprocess(data)
-        else:
-            return self.get_learner(self.REGRESSION).preprocess(data)
+        return self.get_learner(data).preprocess(data)
 
     def get_learner(self, problem_type):
         """Get the learner for a given problem type.
+
+        Parameters
+        ----------
+        problem_type: str or Table or Domain
+            If str, one of ``'classification'`` or ``'regression'``. If Table
+            or Domain, the type is inferred from Domain's first class variable.
 
         Returns
         -------
         Learner
             The appropriate learner for the given problem type.
 
+        Raises
+        ------
+        TypeError
+            When (inferred) problem type not one of ``'classification'``
+            or ``'regression'``.
         """
+        if isinstance(problem_type, Table):
+            problem_type = problem_type.domain
+        if isinstance(problem_type, Domain):
+            problem_type = (self.CLASSIFICATION if problem_type.has_discrete_class else
+                            self.REGRESSION if problem_type.has_continuous_class else
+                            None)
         # Prevent trying to access the learner when problem type is None
         if problem_type not in self.__fits__:
             raise TypeError("No learner to handle '{}'".format(problem_type))
@@ -112,8 +124,5 @@ class SklFitter(Fitter):
     def _fit_model(self, data):
         model = super()._fit_model(data)
         model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
-        if data.domain.has_discrete_class:
-            model.params = self.get_params(self.CLASSIFICATION)
-        else:
-            model.params = self.get_params(self.REGRESSION)
+        model.params = self.get_params(data)
         return model

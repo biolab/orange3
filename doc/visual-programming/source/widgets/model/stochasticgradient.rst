@@ -1,3 +1,5 @@
+.. _model.sgd:
+
 Stochastic Gradient Descent
 ===========================
 

@@ -1,3 +1,5 @@
+.. _model.logit:
+
 Logistic Regression
 ===================
 

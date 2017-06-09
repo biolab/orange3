@@ -1,12 +1,15 @@
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.modelling import RandomForestLearner, SGDLearner
 from Orange.preprocess.score import Scorer
 from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank
 from Orange.widgets.tests.base import WidgetTest
+
+from AnyQt.QtCore import Qt
 
 
 class TestOWRank(WidgetTest):
@@ -38,6 +41,31 @@ class TestOWRank(WidgetTest):
         value = self.widget.learners[1]
         self.assertEqual(self.log_reg, value.score)
         self.assertIsInstance(value.score, Scorer)
+
+    def test_input_scorer_fitter(self):
+        heart_disease = Table('heart_disease')
+        self.assertEqual(self.widget.learners, {})
+
+        for fitter, name in ((RandomForestLearner(), 'random forest'),
+                             (SGDLearner(), 'sgd')):
+            with self.subTest(fitter=fitter):
+                self.send_signal("Scorer", fitter, 1)
+
+                for data, model in ((self.housing, self.widget.contRanksModel),
+                                    (heart_disease, self.widget.discRanksModel)):
+                    with self.subTest(data=data.name):
+                        self.send_signal('Data', data)
+                        scores = [model.data(model.index(row, model.columnCount() - 1))
+                                  for row in range(model.rowCount())]
+                        self.assertEqual(len(scores), len(data.domain.attributes))
+                        self.assertFalse(np.isnan(scores).any())
+
+                        last_column = model.headerData(
+                            model.columnCount() - 1, Qt.Horizontal).lower()
+                        self.assertIn(name, last_column)
+
+                self.send_signal("Scorer", None, 1)
+                self.assertEqual(self.widget.learners, {})
 
     def test_input_scorer_disconnect(self):
         """Check widget's scorer after disconnecting scorer on the input"""

@@ -1,11 +1,24 @@
+import numpy as np
+
 from Orange.classification.sgd import SGDClassificationLearner
+from Orange.data import Variable
 from Orange.modelling import SklFitter
+from Orange.preprocess.score import LearnerScorer
 from Orange.regression import SGDRegressionLearner
 
 __all__ = ['SGDLearner']
 
 
-class SGDLearner(SklFitter):
+class _FeatureScorerMixin(LearnerScorer):
+    feature_type = Variable
+    class_type = Variable
+
+    def score(self, data):
+        model = self.get_learner(data)(data)
+        return np.atleast_2d(np.abs(model.skl_model.coef_)).mean(0)
+
+
+class SGDLearner(SklFitter, _FeatureScorerMixin):
     name = 'sgd'
 
     __fits__ = {'classification': SGDClassificationLearner,
