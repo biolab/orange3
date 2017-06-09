@@ -3,6 +3,7 @@ import unittest
 import tempfile
 from contextlib import contextmanager
 
+import numpy as np
 import Orange
 
 
@@ -17,6 +18,31 @@ def named_file(content, encoding=None, suffix=''):
         yield name
     finally:
         os.remove(name)
+
+
+@np.vectorize
+def naneq(a, b):
+    try:
+        return (np.isnan(a) and np.isnan(b)) or a == b
+    except TypeError:
+        return a == b
+
+
+def assert_array_nanequal(a, b, *args, **kwargs):
+    """
+    Similar as np.testing.assert_array_equal but with better handling of
+    object arrays.
+
+    Note
+    ----
+    Is not fast!
+
+    Parameters
+    ----------
+    a : array-like
+    b : array-like
+    """
+    return np.testing.utils.assert_array_compare(naneq, a, b, *args, **kwargs)
 
 
 def test_dirname():

@@ -14,21 +14,7 @@ import numpy as np
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
-from Orange.tests import test_dirname
-
-
-@np.vectorize
-def naneq(a, b):
-    try:
-        return (isnan(a) and isnan(b)) or a == b
-    except TypeError:
-        return a == b
-
-
-def assert_array_nanequal(*args, **kwargs):
-    # similar as np.testing.assert_array_equal but with better handling of
-    # object arrays
-    return np.testing.utils.assert_array_compare(naneq, *args, **kwargs)
+from Orange.tests import test_dirname, assert_array_nanequal
 
 
 class TableTestCase(unittest.TestCase):

@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal
 from Orange.data import \
     Instance, Domain, Unknown, Value, \
     DiscreteVariable, ContinuousVariable, StringVariable
+from Orange.tests import assert_array_nanequal
 
 
 class TestInstance(unittest.TestCase):
@@ -75,11 +76,10 @@ class TestInstance(unittest.TestCase):
         self.assertEqual(inst._metas.shape, (3, ))
         self.assertTrue(all(isnan(x) for x in inst._x))
         self.assertTrue(all(isnan(x) for x in inst._y))
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            assert_array_equal(inst._metas,
-                               np.array([var.Unknown for var in domain.metas],
-                                        dtype=object))
+
+        assert_array_nanequal(inst._metas,
+                              np.array([var.Unknown for var in domain.metas],
+                                       dtype=object))
 
     def test_init_x_arr(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")])
@@ -162,12 +162,11 @@ class TestInstance(unittest.TestCase):
                                      domain.class_vars,
                                      [self.metas[0], "w", domain[0]])
         inst2 = Instance(domain2, inst)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", FutureWarning)
-            assert_array_equal(inst2._x, np.array([Unknown, 0, 43]))
-            self.assertEqual(inst2._y[0], 1)
-            assert_array_equal(inst2._metas, np.array([0, Unknown, 42],
-                                                      dtype=object))
+
+        assert_array_nanequal(inst2._x, np.array([Unknown, 0, 43]))
+        self.assertEqual(inst2._y[0], 1)
+        assert_array_nanequal(inst2._metas, np.array([0, Unknown, 42],
+                                                     dtype=object))
 
     def test_get_item(self):
         domain = self.create_domain(["x", DiscreteVariable("g", values="MF")],
