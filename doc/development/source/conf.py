@@ -41,10 +41,9 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
-    'numpydoc'
+    'sphinx.ext.napoleon',
 ]
 
-numpydoc_show_class_members = False
 autodoc_member_order = "bysource"
 
 # Add any paths that contain templates here, relative to this directory.

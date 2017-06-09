@@ -231,7 +231,7 @@ class WidgetSignalsMixin:
         """
         old_style = cls.__dict__.get(direction, None)
         if old_style:
-            return [copy.copy(signal) for signal in old_style]
+            return old_style
 
         signal_class = getattr(cls, direction.title())
         return [signal for signal in signal_class.__dict__.values()

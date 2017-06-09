@@ -5,6 +5,7 @@ Widget meta description classes
 """
 
 import sys
+import copy
 
 # Exceptions
 from itertools import chain
@@ -275,6 +276,7 @@ class WidgetDescription(object):
             description = widget_class.get_widget_description()
             if description is None:
                 continue
+            description = copy.deepcopy(description)
             for s in chain(description["inputs"], description["outputs"]):
                 s.type = "%s.%s" % (s.type.__module__, s.type.__name__)
             description = WidgetDescription(**description)
