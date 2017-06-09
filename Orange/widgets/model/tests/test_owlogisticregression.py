@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring
 import unittest
 
+import numpy as np
+
 from Orange.classification import LogisticRegressionLearner
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.statistics.util import stats
@@ -95,3 +97,17 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         coef = self.get_output("Coefficients")
         self.assertEqual(coef.domain[0].name, "no")
         self.assertGreater(coef[2][0], 0.)
+
+    def test_target_with_nan(self):
+        """
+        Rows with targets with nans are removed.
+        GH-2392
+        """
+        table = Table("iris")
+        table.Y[5:10] = np.NaN
+        self.send_signal("Data", table)
+        coef1 = self.get_output("Coefficients")
+        del table[5:10]
+        self.send_signal("Data", table)
+        coef2 = self.get_output("Coefficients")
+        self.assertTrue(np.array_equal(coef1, coef2))
