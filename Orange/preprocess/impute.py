@@ -241,7 +241,7 @@ class AsValue(BaseImputeMethod):
             value = "N/A"
             var = Orange.data.DiscreteVariable(
                 fmt.format(var=variable),
-                values=variable.values + [value],
+                values=variable.values + (value, ),
                 base_value=variable.base_value,
                 compute_value=Lookup(
                     variable,

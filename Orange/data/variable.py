@@ -552,12 +552,12 @@ class DiscreteVariable(Variable):
 
     def __init__(self, name="", values=(), ordered=False, base_value=-1, compute_value=None):
         """ Construct a discrete variable descriptor with the given values. """
-        self.values = list(values)
-        if not all(isinstance(value, str) for value in self.values):
+        values = tuple(values)
+        if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
         super().__init__(name, compute_value)
+        self._values = values
         self.ordered = ordered
-        self._values = tuple(values)
         self.base_value = base_value
 
     @property

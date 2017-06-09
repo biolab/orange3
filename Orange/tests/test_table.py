@@ -1577,7 +1577,7 @@ class CreateTableWithData(TableTests):
         np.testing.assert_almost_equal(table.Y, Y)
         self.assertIsInstance(table.domain.class_vars[0],
                               data.DiscreteVariable)
-        self.assertEqual(table.domain.class_vars[0].values, ["v1", "v2"])
+        self.assertEqual(table.domain.class_vars[0].values, ("v1", "v2"))
 
     def test_creates_a_table_with_given_domain(self):
         domain = self.mock_domain()

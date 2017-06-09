@@ -67,7 +67,7 @@ class TestExcelHeader1(unittest.TestCase):
         self.assertIsInstance(domain[3], ContinuousVariable)
         for i, var in enumerate(domain):
             self.assertEqual(var.name, chr(97 + i))
-        self.assertEqual(domain[0].values, ["green", "red"])
+        self.assertEqual(domain[0].values, ("green", "red"))
         np.testing.assert_almost_equal(table.X,
                                        np.array([[1, 0.5, 0, 21],
                                                  [1, 0.1, 0, 123],
@@ -95,7 +95,7 @@ class TestExcelHeader1(unittest.TestCase):
         for n, var in zip("acf", domain.metas):
             self.assertEqual(var.name, n)
         self.assertIsInstance(domain.metas[0], DiscreteVariable)
-        self.assertEqual(domain.metas[0].values, ["green", "red"])
+        self.assertEqual(domain.metas[0].values, ("green", "red"))
         self.assertIsInstance(domain.metas[1], ContinuousVariable)
         np.testing.assert_almost_equal(
             table.metas[:, 0], np.array([1, 1, 0] * 7 + [1, 1]))
@@ -130,7 +130,7 @@ class TestExcelHeader3(unittest.TestCase):
         for n, var in zip("acf", domain.metas):
             self.assertEqual(var.name, n)
         self.assertIsInstance(domain.metas[0], DiscreteVariable)
-        self.assertEqual(domain.metas[0].values, ["green", "red"])
+        self.assertEqual(domain.metas[0].values, ("green", "red"))
         self.assertIsInstance(domain.metas[1], ContinuousVariable)
         np.testing.assert_almost_equal(
             table.metas[:, 0], np.array([1, 1, 0] * 7 + [1, 1]))
