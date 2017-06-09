@@ -16,7 +16,7 @@ from AnyQt.QtWidgets import (
     QGraphicsProxyWidget, QGraphicsItemGroup, QGraphicsSimpleTextItem,
     QGraphicsRectItem, QFrame, QSizePolicy
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFont, QFontMetrics
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -83,6 +83,7 @@ class OWSilhouettePlot(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")
         singleton_clusters_all = Msg("All clusters are singletons")
+        memory_error = Msg("Not enough memory")
 
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
@@ -253,18 +254,36 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _update(self):
         # Update/recompute the distances/scores as required
+        self._clear_messages()
+
         if self.data is None or not len(self.data):
-            self._mask = None
-            self._silhouette = None
-            self._labels = None
-            self._matrix = None
-            self._clear_scene()
+            self._reset_all()
             return
 
         if self._matrix is None and self._effective_data is not None:
             _, metric = self.Distances[self.distance_idx]
-            self._matrix = numpy.asarray(metric(self._effective_data))
+            try:
+                self._matrix = numpy.asarray(metric(self._effective_data))
+            except MemoryError:
+                self.Error.memory_error()
+                return
 
+        self._update_labels()
+
+    def _reset_all(self):
+        self._mask = None
+        self._silhouette = None
+        self._labels = None
+        self._matrix = None
+        self._clear_scene()
+
+    def _clear_messages(self):
+        self.Error.memory_error.clear()
+        self.Error.singleton_clusters_all.clear()
+        self.Error.need_two_clusters.clear()
+        self.Warning.missing_cluster_assignment.clear()
+
+    def _update_labels(self):
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
         labels = numpy.asarray(labels, dtype=float)
@@ -272,11 +291,7 @@ class OWSilhouettePlot(widget.OWWidget):
         labels = labels.astype(int)
         labels = labels[~mask]
 
-        labels_unq, counts = numpy.unique(labels, return_counts=True)
-
-        self.Error.singleton_clusters_all.clear()
-        self.Error.need_two_clusters.clear()
-        self.Warning.missing_cluster_assignment.clear()
+        labels_unq, _ = numpy.unique(labels, return_counts=True)
 
         if len(labels_unq) < 2:
             self.Error.need_two_clusters()
@@ -529,8 +544,8 @@ class SilhouettePlot(QGraphicsWidget):
             else:
                 tooltips = grp.rownames
 
-            for bar, tooltip in zip(baritems, tooltips):
-                bar.setToolTip(tooltip)
+            for baritem, tooltip in zip(baritems, tooltips):
+                baritem.setToolTip(tooltip)
 
         self.layout().activate()
 
@@ -969,7 +984,7 @@ class BarPlotItem(QGraphicsWidget):
 
         pen = self.pen()
         brush = self.brush()
-        for i in range(self.count()):
+        for _ in range(self.count()):
             item = QGraphicsRectItem(self)
             item.setPen(pen)
             item.setBrush(brush)
@@ -1017,7 +1032,7 @@ class TextListWidget(QGraphicsWidget):
         self.__spacing = 0
 
         sp = QSizePolicy(QSizePolicy.Preferred,
-                               QSizePolicy.Preferred)
+                         QSizePolicy.Preferred)
         sp.setWidthForHeight(True)
         self.setSizePolicy(sp)
 
@@ -1113,8 +1128,10 @@ class TextListWidget(QGraphicsWidget):
         self.__textitems = []
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     from AnyQt.QtWidgets import QApplication
+    if argv is None:
+        argv = sys.argv
     app = QApplication(list(argv))
     argv = app.arguments()
     if len(argv) > 1:
