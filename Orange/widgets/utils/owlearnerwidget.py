@@ -126,6 +126,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         data_error = Msg("{}")
         fitting_failed = Msg("Fitting failed.\n{}")
         sparse_not_supported = Msg("Sparse data is not supported.")
+        out_of_memory = Msg("Out of memory.")
 
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
