@@ -46,10 +46,10 @@ class TestUtil(unittest.TestCase):
         var = ContinuousVariable('x')
         transform = ReplaceUnknownsRandom(var, Continuous(1, var))
 
-        self.assertEqual(repr(transform).replace('\n       ', ' '),
+        self.assertEqual(repr(transform).replace('\n', '').replace(' ', ''),
                          "ReplaceUnknownsRandom("
-                         "variable=ContinuousVariable(name='x', number_of_decimals=3), "
-                         "distribution=Continuous([[ 0.], [ 0.]]))")
+                         "variable=ContinuousVariable(name='x',number_of_decimals=3),"
+                         "distribution=Continuous([[0.],[0.]]))")
 
         # GH 2275
         logit = LogisticRegressionLearner()
