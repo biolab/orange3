@@ -6,7 +6,7 @@ from Orange.base import Learner, Model
 __all__ = ['SimpleTreeLearner']
 
 from . import _simple_tree
-_tree = ct.pydll.LoadLibrary(_simple_tree.__file__)
+_tree = ct.cdll.LoadLibrary(_simple_tree.__file__)
 
 DiscreteNode = 0
 ContinuousNode = 1
