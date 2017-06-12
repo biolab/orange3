@@ -284,6 +284,14 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(data.is_sparse())
         self.assertEqual(len(data.domain), 5)
 
+    def test_features_and_no_data(self):
+        """
+        Prevent crashing when features are sent but no data.
+        GH-2384
+        """
+        domain = Table("iris").domain
+        self.send_signal(self.widget.Inputs.features, domain)
+
 
 if __name__ == "__main__":
     import unittest
