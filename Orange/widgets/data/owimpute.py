@@ -1,10 +1,11 @@
 import sys
 import copy
 import logging
+import enum
 import concurrent.futures
 from concurrent.futures import Future  # pylint: disable=unused-import
-from collections import namedtuple
-from typing import List, Any  # pylint: disable=unused-import
+from collections import namedtuple, OrderedDict
+from typing import List, Any, Dict, Tuple, Type, Optional # pylint: disable=unused-import
 
 import numpy as np
 
@@ -13,7 +14,7 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
-from AnyQt.QtCore import Qt, QThread
+from AnyQt.QtCore import Qt, QThread, QModelIndex  # pylint: disable=unused-import
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -86,6 +87,39 @@ class Task:
             f.cancel()
 
 
+class Method(enum.IntEnum):
+    AsAboveSoBelow = 0  # a special
+    Leave, Average, AsValue, Model, Random, Drop, Default = range(1, 8)
+
+
+METHODS = OrderedDict([
+    (Method.AsAboveSoBelow, AsDefault),
+    (Method.Leave, impute.DoNotImpute),
+    (Method.Average, impute.Average),
+    (Method.AsValue, impute.AsValue),
+    (Method.Model, impute.Model),
+    (Method.Random, impute.Random),
+    (Method.Drop, impute.DropInstances),
+    (Method.Default, impute.Default),
+])  # type: Dict[Method, Type[impute.BaseImputeMethod]]
+
+
+#: variable state type: store effective imputation method and optional
+#: parameters (currently used for storing per variable `impute.Default`'s
+#: value). NOTE: Must be hashable and __eq__ comparable.
+State = Tuple[int, Tuple[Any, ...]]
+#: variable key, for storing/restoring state
+VarKey = Tuple[str, str]
+
+VariableState = Dict[VarKey, State]
+
+
+def var_key(var):
+    # type: (Orange.data.Variable) -> Tuple[str, str]
+    qname = "{}.{}".format(type(var).__module__, type(var).__name__)
+    return qname, var.name
+
+
 class OWImpute(OWWidget):
     name = "Impute"
     description = "Impute missing values in the data table."
@@ -103,16 +137,11 @@ class OWImpute(OWWidget):
         imputation_failed = Msg("Imputation failed for '{}'")
         model_based_imputer_sparse = Msg("Model based imputer does not work for sparse data")
 
-    DEFAULT_LEARNER = SimpleTreeLearner()
-    METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
-               impute.AsValue(), impute.Model(DEFAULT_LEARNER), impute.Random(),
-               impute.DropInstances(), impute.Default()]
-    DEFAULT, DO_NOT_IMPUTE, MODEL_BASED_IMPUTER, AS_INPUT = 0, 1, 4, 7
-
     settingsHandler = settings.DomainContextHandler()
 
-    _default_method_index = settings.Setting(DO_NOT_IMPUTE)
-    variable_methods = settings.ContextSetting({})
+    _default_method_index = settings.Setting(int(Method.Leave))  # type: int
+    variable_state = settings.ContextSetting({})  # type: VariableState
+
     autocommit = settings.Setting(True)
 
     want_main_area = False
@@ -120,8 +149,12 @@ class OWImpute(OWWidget):
 
     def __init__(self):
         super().__init__()
-        # copy METHODS (some are modified by the widget)
-        self.methods = copy.deepcopy(OWImpute.METHODS)
+        self.data = None  # type: Optional[Orange.data.Table]
+        self.learner = None  # type: Optional[Learner]
+        self.default_learner = SimpleTreeLearner()
+        self.modified = False
+        self.executor = qconcurrent.ThreadExecutor(self)
+        self.__task = None
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(10, 10, 10, 10)
@@ -133,12 +166,13 @@ class OWImpute(OWWidget):
 
         button_group = QButtonGroup()
         button_group.buttonClicked[int].connect(self.set_default_method)
-        for i, method in enumerate(self.methods):
-            if not method.columns_only:
-                button = QRadioButton(method.name)
-                button.setChecked(i == self.default_method_index)
-                button_group.addButton(button, i)
-                box_layout.addWidget(button)
+
+        for method, _ in list(METHODS.items())[1:-1]:
+            imputer = self.create_imputer(method)
+            button = QRadioButton(imputer.name)
+            button.setChecked(method == self.default_method_index)
+            button_group.addButton(button, method)
+            box_layout.addWidget(button)
 
         self.default_button_group = button_group
 
@@ -166,9 +200,10 @@ class OWImpute(OWWidget):
         horizontal_layout.addLayout(method_layout)
 
         button_group = QButtonGroup()
-        for i, method in enumerate(self.methods):
-            button = QRadioButton(text=method.name)
-            button_group.addButton(button, i)
+        for method in Method:
+            imputer = self.create_imputer(method)
+            button = QRadioButton(text=imputer.name)
+            button_group.addButton(button, method)
             method_layout.addWidget(button)
 
         self.value_combo = QComboBox(
@@ -193,7 +228,7 @@ class OWImpute(OWWidget):
 
         reset_button = QPushButton(
                 "Restore All to Default", checked=False, checkable=False,
-                clicked=self.reset_variable_methods, default=False,
+                clicked=self.reset_variable_state, default=False,
                 autoDefault=False)
         method_layout.addWidget(reset_button)
 
@@ -206,12 +241,21 @@ class OWImpute(OWWidget):
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 
-        self.data = None
-        self.learner = None
-        self.modified = False
-        self.default_method = self.methods[self.default_method_index]
-        self.executor = qconcurrent.ThreadExecutor(self)
-        self.__task = None
+    def create_imputer(self, method, *args):
+        # type: (Method, ...) -> impute.BaseImputeMethod
+        if method == Method.Model:
+            if self.learner is not None:
+                return impute.Model(self.learner)
+            else:
+                return impute.Model(self.default_learner)
+        elif method == Method.AsAboveSoBelow:
+            assert self.default_method_index != Method.AsAboveSoBelow
+            default = self.create_imputer(Method(self.default_method_index))
+            m = AsDefault()
+            m.method = default
+            return m
+        else:
+            return METHODS[method](*args)
 
     @property
     def default_method_index(self):
@@ -220,16 +264,11 @@ class OWImpute(OWWidget):
     @default_method_index.setter
     def default_method_index(self, index):
         if self._default_method_index != index:
+            assert index != Method.AsAboveSoBelow
             self._default_method_index = index
             self.default_button_group.button(index).setChecked(True)
-            self.default_method = self.methods[self.default_method_index]
-            self.methods[self.DEFAULT].method = self.default_method
-
             # update variable view
-            for index in map(self.varmodel.index, range(len(self.varmodel))):
-                method = self.variable_methods.get(
-                    index.row(), self.methods[self.DEFAULT])
-                self.varmodel.setData(index, method, Qt.UserRole)
+            self.update_varview()
             self._invalidate()
 
     def set_default_method(self, index):
@@ -242,7 +281,7 @@ class OWImpute(OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.varmodel[:] = []
-        self.variable_methods = {}
+        self.variable_state = {}  # type: VariableState
         self.modified = False
         self.data = data
 
@@ -255,30 +294,32 @@ class OWImpute(OWWidget):
 
     @Inputs.learner
     def set_learner(self, learner):
-        self.learner = learner or self.DEFAULT_LEARNER
-        imputer = self.methods[self.MODEL_BASED_IMPUTER]
-        imputer.learner = self.learner
-
-        button = self.default_button_group.button(self.MODEL_BASED_IMPUTER)
+        self.learner = learner or self.default_learner
+        imputer = self.create_imputer(Method.Model)
+        button = self.default_button_group.button(Method.Model)
         button.setText(imputer.name)
 
-        variable_button = self.variable_button_group.button(self.MODEL_BASED_IMPUTER)
+        variable_button = self.variable_button_group.button(Method.Model)
         variable_button.setText(imputer.name)
 
         if learner is not None:
-            self.default_method_index = self.MODEL_BASED_IMPUTER
+            self.default_method_index = Method.Model
 
         self.update_varview()
         self.commit()
 
     def get_method_for_column(self, column_index):
-        """Returns the imputation method for column by its index.
+        # type: (int) -> impute.BaseImputeMethod
         """
-        if not isinstance(column_index, int):
-            column_index = column_index.row()
-
-        return self.variable_methods.get(column_index,
-                                         self.methods[self.DEFAULT])
+        Return the imputation method for column by its index.
+        """
+        assert 0 <= column_index < len(self.varmodel)
+        var = self.varmodel[column_index]  # type: Orange.data.Variable
+        try:
+            state = self.variable_state[var_key(var)]
+        except KeyError:
+            state = (Method.AsAboveSoBelow, ())
+        return self.create_imputer(state[0], *state[1])
 
     def _invalidate(self):
         self.modified = True
@@ -299,8 +340,13 @@ class OWImpute(OWWidget):
 
         data = self.data
         impute_state = [
-            (i, var, self.variable_methods.get(i, self.default_method))
+            (i, var, self.get_method_for_column(i))
             for i, var in enumerate(self.varmodel)
+        ]
+        # normalize to the effective method bypasing AsDefault
+        impute_state = [
+            (i, var, m.method if isinstance(m, AsDefault) else m)
+            for i, var, m in impute_state
         ]
 
         def impute_one(method, var, data):
@@ -416,38 +462,25 @@ class OWImpute(OWWidget):
     def send_report(self):
         specific = []
         for i, var in enumerate(self.varmodel):
-            method = self.variable_methods.get(i, None)
-            if method is not None:
+            method = self.get_method_for_column(i)
+            if not isinstance(method, AsDefault):
                 specific.append("{} ({})".format(var.name, str(method)))
 
-        default = self.default_method.name
+        default = self.create_imputer(Method.AsAboveSoBelow)
         if specific:
             self.report_items((
-                ("Default method", default),
+                ("Default method", default.name),
                 ("Specific imputers", ", ".join(specific))
             ))
         else:
-            self.report_items((("Method", default),))
+            self.report_items((("Method", default.name),))
 
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()
-        methods = [self.get_method_for_column(i.row()) for i in indexes]
-
-        def method_key(method):
-            """
-            Decompose method into its type and parameters.
-            """
-            # The return value should be hashable and  __eq__ comparable
-            if isinstance(method, AsDefault):
-                return AsDefault, (method.method,)
-            elif isinstance(method, impute.Model):
-                return impute.Model, (method.learner,)
-            elif isinstance(method, impute.Default):
-                return impute.Default, (method.default,)
-            else:
-                return type(method), None
-
-        methods = set(method_key(m) for m in methods)
+        defmethod = (Method.AsAboveSoBelow, ())
+        methods = [self.variable_state.get(var_key(var), defmethod)
+                   for var in variables]
+        methods = set(methods)
         selected_vars = [self.varmodel[index.row()] for index in indexes]
         has_discrete = any(var.is_discrete for var in selected_vars)
         fixed_value = None
@@ -456,12 +489,12 @@ class OWImpute(OWWidget):
 
         if len(methods) == 1:
             method_type, parameters = methods.pop()
-            for i, m in enumerate(self.methods):
-                if method_type == type(m):
-                    self.variable_button_group.button(i).setChecked(True)
+            for m in Method:
+                if method_type == m:
+                    self.variable_button_group.button(m).setChecked(True)
 
-            if method_type is impute.Default:
-                (fixed_value,) = parameters
+            if method_type == Method.Default:
+                (fixed_value, ) = parameters
 
         elif self.variable_button_group.checkedButton() is not None:
             # Uncheck the current button
@@ -470,29 +503,37 @@ class OWImpute(OWWidget):
             self.variable_button_group.setExclusive(True)
             assert self.variable_button_group.checkedButton() is None
 
-        for method, button in zip(self.methods,
-                                  self.variable_button_group.buttons()):
-            enabled = all(method.supports_variable(var) for var in
+        # Update variable methods GUI enabled state based on selection.
+        for method in Method:
+            # use a default constructed imputer to query support
+            imputer = self.create_imputer(method)
+            enabled = all(imputer.supports_variable(var) for var in
                           selected_vars)
+            button = self.variable_button_group.button(method)
             button.setEnabled(enabled)
 
+        # Update the "Value" edit GUI.
         if not has_discrete:
+            # no discrete variables -> allow mass edit for all (continuous vars)
             value_stack_enabled = True
             current_value_widget = self.value_double
         elif len(selected_vars) == 1:
+            # single discrete var -> enable and fill the values combo
             value_stack_enabled = True
             current_value_widget = self.value_combo
             self.value_combo.clear()
             self.value_combo.addItems(selected_vars[0].values)
         else:
+            # mixed type selection -> disable
             value_stack_enabled = False
             current_value_widget = None
-            self.variable_button_group.button(self.AS_INPUT).setEnabled(False)
+            self.variable_button_group.button(Method.Default).setEnabled(False)
 
         self.value_stack.setEnabled(value_stack_enabled)
         if current_value_widget is not None:
             self.value_stack.setCurrentWidget(current_value_widget)
             if fixed_value is not None:
+                # set current value
                 if current_value_widget is self.value_combo:
                     self.value_combo.setCurrentIndex(fixed_value)
                 elif current_value_widget is self.value_double:
@@ -501,26 +542,34 @@ class OWImpute(OWWidget):
                     assert False
 
     def set_method_for_current_selection(self, method_index):
+        # type: (Method) -> None
         indexes = self.selection.selectedIndexes()
         self.set_method_for_indexes(indexes, method_index)
 
     def set_method_for_indexes(self, indexes, method_index):
-        if method_index == self.DEFAULT:
+        # type: (List[QModelIndex], Method) -> None
+        if method_index == Method.AsAboveSoBelow:
             for index in indexes:
-                self.variable_methods.pop(index.row(), None)
-        elif method_index == OWImpute.AS_INPUT:
+                var = self.varmodel[index.row()]
+                assert isinstance(var, Orange.data.Variable)
+                self.variable_state.pop(var_key(var), None)
+        elif method_index == Method.Default:
             current = self.value_stack.currentWidget()
             if current is self.value_combo:
                 value = self.value_combo.currentIndex()
             else:
                 value = self.value_double.value()
             for index in indexes:
-                method = impute.Default(default=value)
-                self.variable_methods[index.row()] = method
+                state = (int(Method.Default), (value,))
+                var = self.varmodel[index.row()]
+                assert isinstance(var, Orange.data.Variable)
+                self.variable_state[var_key(var)] = state
         else:
-            method = self.methods[method_index]
+            state = (int(method_index), ())
             for index in indexes:
-                self.variable_methods[index.row()] = method
+                var = self.varmodel[index.row()]
+                assert isinstance(var, Orange.data.Variable)
+                self.variable_state[var_key(var)] = state
 
         self.update_varview(indexes)
         self._invalidate()
@@ -530,17 +579,19 @@ class OWImpute(OWWidget):
             indexes = map(self.varmodel.index, range(len(self.varmodel)))
 
         for index in indexes:
-            self.varmodel.setData(index, self.get_method_for_column(index.row()), Qt.UserRole)
+            self.varmodel.setData(
+                index, self.get_method_for_column(index.row()),
+                Qt.UserRole)
 
     def _on_value_selected(self):
         # The fixed 'Value' in the widget has been changed by the user.
-        self.variable_button_group.button(self.AS_INPUT).setChecked(True)
-        self.set_method_for_current_selection(self.AS_INPUT)
+        self.variable_button_group.button(Method.Default).setChecked(True)
+        self.set_method_for_current_selection(Method.Default)
 
-    def reset_variable_methods(self):
+    def reset_variable_state(self):
         indexes = list(map(self.varmodel.index, range(len(self.varmodel))))
-        self.set_method_for_indexes(indexes, self.DEFAULT)
-        self.variable_button_group.button(self.DEFAULT).setChecked(True)
+        self.set_method_for_indexes(indexes, Method.AsAboveSoBelow)
+        self.variable_button_group.button(Method.AsAboveSoBelow).setChecked(True)
 
 
 def main(argv=None):
@@ -566,6 +617,7 @@ def main(argv=None):
     w.handleNewSignals()
     w.onDeleteWidget()
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

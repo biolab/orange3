@@ -7,7 +7,7 @@ from AnyQt.QtTest import QTest
 
 from Orange.data import Table, Domain
 from Orange.preprocess import impute
-from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner
+from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner, Method
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.itemmodels import select_row
@@ -43,8 +43,7 @@ class TestOWImpute(WidgetTest):
         """No crash on empty data"""
         data = Table("iris")[::3]
         widget = self.widget
-        widget.default_method_index = widget.MODEL_BASED_IMPUTER
-        widget.default_method = widget.methods[widget.default_method_index]
+        widget.default_method_index = Method.Model
 
         self.send_signal(self.widget.Inputs.data, data, wait=1000)
         imp_data = self.get_output(self.widget.Outputs.data)
@@ -65,8 +64,7 @@ class TestOWImpute(WidgetTest):
 
     def test_model_error(self):
         widget = self.widget
-        widget.default_method_index = widget.MODEL_BASED_IMPUTER
-        widget.default_method = widget.methods[widget.default_method_index]
+        widget.default_method_index = Method.Model
         data = Table("brown-selected")[::4][:, :4]
         self.send_signal(self.widget.Inputs.data, data, wait=1000)
 
@@ -80,7 +78,6 @@ class TestOWImpute(WidgetTest):
         data = Table("iris")[::5]
 
         self.send_signal(self.widget.Inputs.data, data)
-        method_types = [type(m) for m in OWImpute.METHODS]
 
         widget = self.widget
         model = widget.varmodel
@@ -88,11 +85,8 @@ class TestOWImpute(WidgetTest):
         defbg = widget.default_button_group
         varbg = widget.variable_button_group
         self.assertSequenceEqual(list(model), data.domain.variables)
-        asdefid = method_types.index(AsDefault)
-        leaveid = method_types.index(impute.DoNotImpute)
-        avgid = method_types.index(impute.Average)
-        defbg.button(avgid).click()
-        self.assertEqual(widget.default_method_index, avgid)
+        defbg.button(Method.Average).click()
+        self.assertEqual(widget.default_method_index, Method.Average)
 
         self.assertTrue(
             all(isinstance(m, AsDefault) and isinstance(m.method, impute.Average)
@@ -101,7 +95,7 @@ class TestOWImpute(WidgetTest):
 
         # change method for first variable
         select_row(view, 0)
-        varbg.button(avgid).click()
+        varbg.button(Method.Average).click()
         met = widget.get_method_for_column(0)
         self.assertIsInstance(met, impute.Average)
 
@@ -111,13 +105,13 @@ class TestOWImpute(WidgetTest):
         # the current checked button must unset
         self.assertEqual(varbg.checkedId(), -1)
 
-        varbg.button(leaveid).click()
+        varbg.button(Method.Leave).click()
         self.assertIsInstance(widget.get_method_for_column(0),
                               impute.DoNotImpute)
         self.assertIsInstance(widget.get_method_for_column(2),
                               impute.DoNotImpute)
         # reset both back to default
-        varbg.button(asdefid).click()
+        varbg.button(Method.AsAboveSoBelow).click()
         self.assertIsInstance(widget.get_method_for_column(0), AsDefault)
         self.assertIsInstance(widget.get_method_for_column(2), AsDefault)
 
@@ -129,9 +123,6 @@ class TestOWImpute(WidgetTest):
         view = widget.varview
         selmodel = view.selectionModel()
         varbg = widget.variable_button_group
-        method_types = [type(m) for m in OWImpute.METHODS]
-        asdefid = method_types.index(AsDefault)
-        valueid = method_types.index(impute.Default)
 
         def selectvars(varlist, command=selmodel.ClearAndSelect):
             indices = [data.domain.index(var) for var in varlist]
@@ -148,12 +139,12 @@ class TestOWImpute(WidgetTest):
         selectvars(['chest pain'])
         self.assertTrue(widget.value_combo.isVisibleTo(widget) and
                         widget.value_combo.isEnabledTo(widget))
-        self.assertEqual(varbg.checkedId(), asdefid)
+        self.assertEqual(varbg.checkedId(), Method.AsAboveSoBelow)
 
         simulate.combobox_activate_item(
             widget.value_combo, data.domain["chest pain"].values[1])
         # The 'Value' (impute.Default) should have been selected automatically
-        self.assertEqual(varbg.checkedId(), valueid)
+        self.assertEqual(varbg.checkedId(), Method.Default)
         imputer = effective_method('chest pain')
         self.assertIsInstance(imputer, impute.Default)
         self.assertEqual(imputer.default, 1)
@@ -162,11 +153,11 @@ class TestOWImpute(WidgetTest):
         selectvars(["rest SBP", "cholesterol"])
         self.assertTrue(widget.value_double.isVisibleTo(widget) and
                         widget.value_double.isEnabledTo(widget))
-        self.assertEqual(varbg.checkedId(), asdefid)
+        self.assertEqual(varbg.checkedId(), Method.AsAboveSoBelow)
         widget.value_double.setValue(-1.0)
         QTest.keyClick(self.widget.value_double, Qt.Key_Enter)
         # The 'Value' (impute.Default) should have been selected automatically
-        self.assertEqual(varbg.checkedId(), valueid)
+        self.assertEqual(varbg.checkedId(), Method.Default)
         imputer = effective_method("rest SBP")
         self.assertIsInstance(imputer, impute.Default)
         self.assertEqual(imputer.default, -1.0)
@@ -186,5 +177,5 @@ class TestOWImpute(WidgetTest):
         selectvars(["chest pain"])
         self.assertTrue(widget.value_combo.isVisibleTo(widget) and
                         widget.value_combo.isEnabledTo(widget))
-        self.assertEqual(varbg.checkedId(), valueid)
+        self.assertEqual(varbg.checkedId(), Method.Default)
         self.assertEqual(widget.value_combo.currentIndex(), 1)
