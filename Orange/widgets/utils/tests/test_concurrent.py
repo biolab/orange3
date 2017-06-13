@@ -1,5 +1,6 @@
 import unittest
 import threading
+import random
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from types import SimpleNamespace
@@ -8,7 +9,7 @@ from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, pyqtSlot
 from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.utils.concurrent import (
-    ThreadExecutor, FutureWatcher, Task, methodinvoke
+    ThreadExecutor, FutureWatcher, FutureSetWatcher, Task, methodinvoke
 )
 
 
@@ -129,6 +130,76 @@ class TestFutureWatcher(CoreAppTestCase):
         self.assertEqual(list(spy.error), [])
         self.assertEqual(list(spy.result), [])
         self.assertEqual(list(spy.cancelled), [[f]])
+
+
+class TestFutureSetWatcher(CoreAppTestCase):
+    def test_watcher(self):
+        def spies(w):
+            # type: (FutureSetWatcher) -> SimpleNamespace
+            return SimpleNamespace(
+                doneAt=QSignalSpy(w.doneAt),
+                finishedAt=QSignalSpy(w.finishedAt),
+                cancelledAt=QSignalSpy(w.cancelledAt),
+                resultAt=QSignalSpy(w.resultReadyAt),
+                exceptionAt=QSignalSpy(w.exceptionReadyAt),
+                doneAll=QSignalSpy(w.doneAll),
+            )
+
+        executor = ThreadPoolExecutor(max_workers=5)
+        fs = [executor.submit(lambda i: "Hello {}".format(i), i)
+              for i in range(10)]
+        w = FutureSetWatcher(fs)
+        spy = spies(w)
+
+        def as_set(seq):
+            # type: (Iterable[list]) -> Set[tuple]
+            seq = list(map(tuple, seq))
+            set_ = set(seq)
+            assert len(set_) == len(seq)
+            return set_
+
+        self.assertTrue(spy.doneAll.wait())
+        expected = {(i, "Hello {}".format(i)) for i in range(10)}
+        self.assertSetEqual(as_set(spy.doneAt), set(enumerate(fs)))
+        self.assertSetEqual(as_set(spy.finishedAt), set(enumerate(fs)))
+        self.assertSetEqual(as_set(spy.cancelledAt), set())
+        self.assertSetEqual(as_set(spy.resultAt), expected)
+        self.assertSetEqual(as_set(spy.exceptionAt), set())
+
+        rseq = [random.randrange(0, 10) for _ in range(10)]
+        fs = [executor.submit(lambda i: 1 / (i % 3), i) for i in rseq]
+        w = FutureSetWatcher(fs)
+        spy = spies(w)
+
+        self.assertTrue(spy.doneAll.wait())
+        self.assertSetEqual(as_set(spy.doneAt), set(enumerate(fs)))
+        self.assertSetEqual(as_set(spy.finishedAt), set(enumerate(fs)))
+        self.assertSetEqual(as_set(spy.cancelledAt), set())
+        results = {(i, f.result())
+                   for i, f in enumerate(fs) if not f.exception()}
+        exceptions = {(i, f.exception())
+                      for i, f in enumerate(fs) if f.exception()}
+        assert len(results | exceptions) == len(fs)
+        self.assertSetEqual(as_set(spy.resultAt), results)
+        self.assertSetEqual(as_set(spy.exceptionAt), exceptions)
+
+        executor = ThreadPoolExecutor(max_workers=1)
+        ev = threading.Event()
+        # Block the single worker thread to ensure successful cancel for f2
+        f1 = executor.submit(lambda: ev.wait())
+        f2 = executor.submit(lambda: 42)
+        w = FutureSetWatcher([f1, f2])
+        self.assertTrue(f2.cancel())
+        # Unblock the worker
+        ev.set()
+
+        spy = spies(w)
+        self.assertTrue(spy.doneAll.wait())
+        self.assertSetEqual(as_set(spy.doneAt), {(0, f1), (1, f2)})
+        self.assertSetEqual(as_set(spy.finishedAt), {(0, f1)})
+        self.assertSetEqual(as_set(spy.cancelledAt), {(1, f2)})
+        self.assertSetEqual(as_set(spy.resultAt), {(0, True)})
+        self.assertSetEqual(as_set(spy.exceptionAt), set())
 
 
 class TestTask(CoreAppTestCase):

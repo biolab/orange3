@@ -8,6 +8,7 @@ import atexit
 import logging
 import warnings
 import weakref
+from functools import partial
 import concurrent.futures
 
 from concurrent.futures import Future, CancelledError, TimeoutError
@@ -15,7 +16,7 @@ from contextlib import contextmanager
 
 try:
     # pylint: disable=unused-import
-    from typing import Callable, Optional, Any
+    from typing import Callable, Optional, Any, List
 except ImportError:
     pass
 
@@ -505,6 +506,143 @@ class FutureWatcher(QObject):
         if event.type() == FutureWatcher.__FutureDone:
             self.__emitSignals()
         super().customEvent(event)
+
+
+class FutureSetWatcher(QObject):
+    """
+    An `QObject` watching the state changes of a list of
+    `concurrent.futures.Future` instances
+
+    Note
+    ----
+    The state change notification signals (`doneAt`, `finishedAt`, ...)
+    are always emitted when the control flow reaches the event loop
+    (even if the future is already completed when set).
+
+    Note
+    ----
+    An event loop must be running, otherwise the notifier signals will
+    not be emitted.
+
+    Parameters
+    ----------
+    parent : QObject
+        Parent object.
+    futures : List[Future]
+        A list of future instance to watch.
+
+    Example
+    -------
+    >>> app = QCoreApplication.instance() or QCoreApplication([])
+    >>> fs = [submit(lambda i, j: i ** j, 10, 3) for i in range(10)]
+    >>> watcher = FutureSetWatcher(fs)
+    >>> watcher.resultReadyAt.connect(
+    ...     lambda i, res: print("Result at {}: {}".format(i, res))
+    ... )
+    >>> watcher.doneAll.connect(app.quit)
+    >>> _ = app.exec()
+    Result at 0: 1000
+    ...
+    """
+    #: Signal emitted when the future at `index` is done (cancelled or
+    #: finished)
+    doneAt = Signal([int, Future])
+
+    #: Signal emitted when the future at index is finished (i.e. returned
+    #: a result)
+    finishedAt = Signal([int, Future])
+
+    #: Signal emitted when the future at `index` was cancelled.
+    cancelledAt = Signal([int, Future])
+
+    #: Signal emitted with the future's result when successfully
+    #: finished.
+    resultReadyAt = Signal([int, object])
+
+    #: Signal emitted with the future's exception when finished with an
+    #: exception.
+    exceptionReadyAt = Signal([int, BaseException])
+
+    #: Signal reporting the current completed count
+    progressChanged = Signal([int, int])
+
+    #: Signal emitted when all the futures have completed.
+    doneAll = Signal()
+
+    def __init__(self, futures=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__futures = None
+        self.__countdone = 0
+        if futures:
+            self.setFutures(futures)
+
+    def setFutures(self, futures):
+        # type: (List[Future]) -> None
+        """
+        Set the future instances to watch.
+
+        Raise a `RuntimeError` if futures are already set.
+
+        Parameters
+        ----------
+        futures : List[Future]
+        """
+        if self.__futures is not None:
+            raise RuntimeError("already set")
+        self.__futures = []
+        selfweakref = weakref.ref(self)
+        schedule_emit = methodinvoke(self, "__emitpending", (int, Future))
+
+        for i, future in enumerate(futures):
+            self.__futures.append(future)
+
+            def on_done(index, f):
+                selfref = selfweakref()  # not safe really
+                if selfref is None:
+                    return
+                try:
+                    schedule_emit(index, f)
+                except RuntimeError:
+                    # Ignore RuntimeErrors (when C++ side of QObject is deleted)
+                    # (? Use QObject.destroyed and remove the done callback ?)
+                    pass
+
+            future.add_done_callback(partial(on_done, i))
+
+    @Slot(int, Future)
+    def __emitpending(self, index, future):
+        # type: (int, Future) -> None
+        assert QThread.currentThread() is self.thread()
+        assert self.__futures[index] is future
+        assert future.done()
+        assert self.__countdone < len(self.__futures)
+        self.__futures[index] = None
+        self.__countdone += 1
+
+        if future.cancelled():
+            self.cancelledAt.emit(index, future)
+            self.doneAt.emit(index, future)
+        elif future.done():
+            self.finishedAt.emit(index, future)
+            self.doneAt.emit(index, future)
+            if future.exception():
+                self.exceptionReadyAt.emit(index, future.exception())
+            else:
+                self.resultReadyAt.emit(index, future.result())
+        else:
+            assert False
+
+        self.progressChanged.emit(self.__countdone, len(self.__futures))
+
+        if self.__countdone == len(self.__futures):
+            self.doneAll.emit()
+
+    def flush(self):
+        """
+        Flush all pending signal emits currently enqueued.
+        """
+        assert QThread.currentThread() is self.thread()
+        QCoreApplication.sendPostedEvents(self, QEvent.MetaCall)
 
 
 class methodinvoke(object):
