@@ -5,7 +5,7 @@ import numpy as np
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtTest import QTest
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.preprocess import impute
 from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner
 from Orange.widgets.tests.base import WidgetTest
@@ -41,7 +41,7 @@ class TestOWImpute(WidgetTest):
 
     def test_empty_data(self):
         """No crash on empty data"""
-        data = Table("iris")
+        data = Table("iris")[::3]
         widget = self.widget
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
         widget.default_method = widget.methods[widget.default_method_index]
@@ -54,6 +54,14 @@ class TestOWImpute(WidgetTest):
         self.send_signal(self.widget.Inputs.data, Table(data.domain), wait=1000)
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
+
+        # only meta columns
+        data = data.transform(Domain([], [], data.domain.attributes))
+        self.send_signal("Data", data, wait=1000)
+        imp_data = self.get_output("Data")
+        self.assertEqual(len(imp_data), len(data))
+        self.assertEqual(imp_data.domain, data.domain)
+        np.testing.assert_equal(imp_data.metas, data.metas)
 
     def test_model_error(self):
         widget = self.widget
