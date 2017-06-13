@@ -1,5 +1,10 @@
 import sys
 import copy
+import logging
+import concurrent.futures
+from concurrent.futures import Future  # pylint: disable=unused-import
+from collections import namedtuple
+from typing import List, Any  # pylint: disable=unused-import
 
 import numpy as np
 
@@ -8,13 +13,15 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QThread
+from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
 from Orange.preprocess import impute
 from Orange.base import Learner
 from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
@@ -51,6 +58,32 @@ class AsDefault(impute.BaseImputeMethod):
 
     def __call__(self, *args, **kwargs):
         return self.method(*args, **kwargs)
+
+
+class SparseNotSupported(ValueError):
+    pass
+
+
+class VariableNotSupported(ValueError):
+    pass
+
+
+RowMask = namedtuple("RowMask", ["mask"])
+
+
+class Task:
+    futures = []    # type: List[Future]
+    watcher = ...   # type: qconcurrent.FutureSetWatcher
+    cancelled = False
+
+    def __init__(self, futures, watcher):
+        self.futures = futures
+        self.watcher = watcher
+
+    def cancel(self):
+        self.cancelled = True
+        for f in self.futures:
+            f.cancel()
 
 
 class OWImpute(OWWidget):
@@ -176,6 +209,8 @@ class OWImpute(OWWidget):
         self.learner = None
         self.modified = False
         self.default_method = self.methods[self.default_method_index]
+        self.executor = qconcurrent.ThreadExecutor(self)
+        self.__task = None
 
     @property
     def default_method_index(self):
@@ -246,64 +281,136 @@ class OWImpute(OWWidget):
 
     def _invalidate(self):
         self.modified = True
+        if self.__task is not None:
+            self.cancel()
         self.commit()
 
     def commit(self):
+        self.cancel()
+        self.warning()
+        self.Error.imputation_failed.clear()
+        self.Error.model_based_imputer_sparse.clear()
+
+        if self.data is None or len(self.data) == 0 or len(self.varmodel) == 0:
+            self.Outputs.data.send(self.data)
+            self.modified = False
+            return
+
         data = self.data
+        impute_state = [
+            (i, var, self.variable_methods.get(i, self.default_method))
+            for i, var in enumerate(self.varmodel)
+        ]
 
-        if self.data is not None:
-            if not len(self.data):
-                self.Outputs.data.send(self.data)
-                self.modified = False
-                return
-
-            drop_mask = np.zeros(len(self.data), bool)
-
-            attributes = []
-            class_vars = []
-
-            self.warning()
-            self.Error.imputation_failed.clear()
-            self.Error.model_based_imputer_sparse.clear()
-            with self.progressBar(len(self.varmodel)) as progress:
-                for i, var in enumerate(self.varmodel):
-                    method = self.variable_methods.get(i, self.default_method)
-                    if isinstance(method, impute.Model) and data.is_sparse():
-                        self.Error.model_based_imputer_sparse()
-                        continue
-
-                    try:
-                        if not method.supports_variable(var):
-                            self.warning("Default method can not handle '{}'".
-                                         format(var.name))
-                        elif isinstance(method, impute.DropInstances):
-                                drop_mask |= method(self.data, var)
-                        else:
-                            var = method(self.data, var)
-                    except Exception:  # pylint: disable=broad-except
-                        self.Error.imputation_failed(var.name)
-                        attributes = class_vars = None
-                        break
-
-                    if isinstance(var, Orange.data.Variable):
-                        var = [var]
-
-                    if i < len(self.data.domain.attributes):
-                        attributes.extend(var)
-                    else:
-                        class_vars.extend(var)
-
-                    progress.advance()
-
-            if attributes is None:
-                data = None
+        def impute_one(method, var, data):
+            # type: (impute.BaseImputeMethod, Variable, Table) -> Any
+            if isinstance(method, impute.Model) and data.is_sparse():
+                raise SparseNotSupported()
+            elif isinstance(method, impute.DropInstances):
+                return RowMask(method(data, var))
+            elif not method.supports_variable(var):
+                raise VariableNotSupported(var)
             else:
-                domain = Orange.data.Domain(attributes, class_vars,
-                                            self.data.domain.metas)
-                data = self.data.from_table(domain, self.data[~drop_mask])
+                return method(data, var)
+
+        futures = []
+        for _, var, method in impute_state:
+            f = self.executor.submit(
+                impute_one, copy.deepcopy(method), var, data)
+            futures.append(f)
+
+        w = qconcurrent.FutureSetWatcher(futures)
+        w.doneAll.connect(self.__commit_finish)
+        w.progressChanged.connect(self.__progress_changed)
+        self.__task = Task(futures, w)
+        self.progressBarInit(processEvents=False)
+        self.setBlocking(True)
+
+    @Slot()
+    def __commit_finish(self):
+        assert QThread.currentThread() is self.thread()
+        assert self.__task is not None
+        futures = self.__task.futures
+        assert len(futures) == len(self.varmodel)
+        assert self.data is not None
+
+        self.__task = None
+        self.setBlocking(False)
+        self.progressBarFinished()
+
+        data = self.data
+        attributes = []
+        class_vars = []
+        drop_mask = np.zeros(len(self.data), bool)
+
+        for i, (var, fut) in enumerate(zip(self.varmodel, futures)):
+            assert fut.done()
+            newvar = []
+            try:
+                res = fut.result()
+            except SparseNotSupported:
+                self.Error.model_based_imputer_sparse()
+                # ?? break
+            except VariableNotSupported:
+                self.warning("Default method can not handle '{}'".
+                             format(var.name))
+            except Exception:  # pylint: disable=broad-except
+                log = logging.getLogger(__name__)
+                log.info("Error for %s", var, exc_info=True)
+                self.Error.imputation_failed(var.name)
+                attributes = class_vars = None
+                break
+            else:
+                if isinstance(res, RowMask):
+                    drop_mask |= res.mask
+                    newvar = var
+                else:
+                    newvar = res
+
+            if isinstance(newvar, Orange.data.Variable):
+                newvar = [newvar]
+
+            if i < len(data.domain.attributes):
+                attributes.extend(newvar)
+            else:
+                class_vars.extend(newvar)
+
+        if attributes is None:
+            data = None
+        else:
+            domain = Orange.data.Domain(attributes, class_vars,
+                                        data.domain.metas)
+            try:
+                data = self.data.from_table(domain, data[~drop_mask])
+            except Exception:  # pylint: disable=broad-except
+                log = logging.getLogger(__name__)
+                log.info("Error", exc_info=True)
+                self.Error.imputation_failed("Unknown")
+                data = None
 
         self.Outputs.data.send(data)
         self.modified = False
+
+    @Slot(int, int)
+    def __progress_changed(self, n, d):
+        assert QThread.currentThread() is self.thread()
+        assert self.__task is not None
+        self.progressBarSet(100. * n / d)
+
+    def cancel(self):
+        if self.__task is not None:
+            task, self.__task = self.__task, None
+            task.cancel()
+            task.watcher.doneAll.disconnect(self.__commit_finish)
+            task.watcher.progressChanged.disconnect(self.__progress_changed)
+            concurrent.futures.wait(task.futures)
+            task.watcher.flush()
+            self.progressBarFinished()
+            self.setBlocking(False)
+
+    def onDeleteWidget(self):
+        self.cancel()
+        super().onDeleteWidget()
 
     def send_report(self):
         specific = []
@@ -435,9 +542,10 @@ class OWImpute(OWWidget):
         self.variable_button_group.button(self.DEFAULT).setChecked(True)
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     from AnyQt.QtWidgets import QApplication
-    app = QApplication(list(argv))
+    logging.basicConfig()
+    app = QApplication(list(argv) if argv else [])
     argv = app.arguments()
     if len(argv) > 1:
         filename = argv[1]
@@ -459,4 +567,4 @@ def main(argv=sys.argv):
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))
