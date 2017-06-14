@@ -5,8 +5,6 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
-from AnyQt.QtCore import QEvent
-
 from Orange.distance import Euclidean
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME
