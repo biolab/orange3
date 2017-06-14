@@ -32,7 +32,7 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 FeatureDescriptor = \
     namedtuple("FeatureDescriptor", ["name", "expression"])
@@ -321,8 +321,12 @@ class OWFeatureConstructor(OWWidget):
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input data set."
     icon = "icons/FeatureConstructor.svg"
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     want_main_area = False
 
@@ -486,6 +490,7 @@ class OWFeatureConstructor(OWWidget):
         self.descriptors = descriptors
         self.featuremodel[:] = list(self.descriptors)
 
+    @Inputs.data
     @check_sql_input
     def setData(self, data=None):
         """Set the input dataset."""
@@ -519,7 +524,7 @@ class OWFeatureConstructor(OWWidget):
         if self.data is not None:
             self.apply()
         else:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
 
     def addFeature(self, descriptor):
         self.featuremodel.append(descriptor)
@@ -607,7 +612,7 @@ class OWFeatureConstructor(OWWidget):
             self.Error.more_values_needed(disc_attrs_not_ok)
             return
 
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def send_report(self):
         items = OrderedDict()
