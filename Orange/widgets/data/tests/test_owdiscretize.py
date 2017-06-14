@@ -14,5 +14,5 @@ class TestOWDiscretize(WidgetTest):
         data = Table("iris")
         widget = self.widget
         widget.default_method = 3
-        self.send_signal("Data", Table(data.domain))
+        self.send_signal(self.widget.Inputs.data, Table(data.domain))
         widget.unconditional_commit()
