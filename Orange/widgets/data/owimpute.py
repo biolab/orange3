@@ -517,7 +517,7 @@ class OWImpute(OWWidget):
                 method = impute.Default(default=value)
                 self.variable_methods[index.row()] = method
         else:
-            method = self.methods[method_index].copy()
+            method = self.methods[method_index]
             for index in indexes:
                 self.variable_methods[index.row()] = method
 
