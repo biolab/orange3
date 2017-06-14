@@ -447,15 +447,16 @@ class OWMDS(OWWidget):
             self._legend_item = None
 
     def update_controls(self):
-        if self.data is None and getattr(self.matrix, 'axis', 1) == 0:
-            # Column-wise distances
-            attr = "Attribute names"
-            self.labelvar_model[:] = ["No labels", attr]
-            self.shapevar_model[:] = ["Same shape", attr]
-            self.colorvar_model[:] = ["Same color", attr]
+        if self.data is None:
+            if getattr(self.matrix, 'axis', 1) == 0:
+                # Column-wise distances
+                attr = "Attribute names"
+                self.labelvar_model[:] = ["No labels", attr]
+                self.shapevar_model[:] = ["Same shape", attr]
+                self.colorvar_model[:] = ["Same color", attr]
 
-            self.color_value = attr
-            self.shape_value = attr
+                self.color_value = attr
+                self.shape_value = attr
         else:
             domain = self.data.domain
             all_vars = list(filter_visible(domain.variables + domain.metas))

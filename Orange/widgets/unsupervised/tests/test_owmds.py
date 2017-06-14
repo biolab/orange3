@@ -95,3 +95,12 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         signal_data = Euclidean(self.data, axis=0)
         signal_data.row_items = None
         self.send_signal("Distances", signal_data)
+
+    def test_distances_without_data_1(self):
+        """
+        Only distances and no data.
+        GH-2335
+        """
+        signal_data = Euclidean(self.data, axis=1)
+        signal_data.row_items = None
+        self.send_signal("Distances", signal_data)
