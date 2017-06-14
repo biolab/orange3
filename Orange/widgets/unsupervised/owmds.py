@@ -818,7 +818,7 @@ class OWMDS(OWWidget):
                         [pen_data, plotstyle.selected_pen])
                     pen_data = pen_data[self._selection_mask.astype(int)]
                 else:
-                    pen_data = numpy.full(self._effective_matrix.dim, pen_data,
+                    pen_data = numpy.full(self._effective_matrix.shape[0], pen_data,
                                           dtype=object)
                 brush_data = numpy.full(
                     size, pg.mkColor((192, 192, 192, self.symbol_opacity)),
