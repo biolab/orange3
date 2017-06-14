@@ -20,7 +20,9 @@ import pkg_resources
 
 from AnyQt.QtGui import QFont, QColor, QDesktopServices
 from AnyQt.QtWidgets import QMessageBox
-from AnyQt.QtCore import Qt, QDir, QUrl, QSettings, QThread, pyqtSignal
+from AnyQt.QtCore import (
+    Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
+)
 
 from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
@@ -240,6 +242,9 @@ def main(argv=None):
         qt_argv += shlex.split(options.qt)
 
     qt_argv += args
+
+    if QT_VERSION >= 0x50600:
+        CanvasApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)

@@ -995,20 +995,29 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
     :type color: QColor
     :rtype: QIcon
     """
-    pixmap = QtGui.QPixmap(13, 13)
-    pixmap.fill(QtGui.QColor(0, 0, 0, 0))
-    painter = QtGui.QPainter()
-    painter.begin(pixmap)
-    painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing |
-                           painter.SmoothPixmapTransform)
-    painter.setPen(background)
-    painter.setBrush(background)
-    rect = QtCore.QRectF(0, 0, 13, 13)
-    painter.drawRoundedRect(rect, 4, 4)
-    painter.setPen(color)
-    painter.drawText(2, 11, char)
-    painter.end()
-    return QtGui.QIcon(pixmap)
+    icon = QtGui.QIcon()
+    for size in (13, 16, 18, 20, 22, 24, 28, 32, 64):
+        pixmap = QtGui.QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        painter = QtGui.QPainter()
+        painter.begin(pixmap)
+        painter.setRenderHints(painter.Antialiasing | painter.TextAntialiasing |
+                               painter.SmoothPixmapTransform)
+        painter.setPen(background)
+        painter.setBrush(background)
+        margin = 1 + size // 16
+        text_margin = size // 20
+        rect = QtCore.QRectF(margin, margin,
+                             size - 2 * margin, size - 2 * margin)
+        painter.drawRoundedRect(rect, 30.0, 30.0, Qt.RelativeSize)
+        painter.setPen(color)
+        font = painter.font()  # type: QtGui.QFont
+        font.setPixelSize(size - 2 * margin - 2 * text_margin)
+        painter.setFont(font)
+        painter.drawText(rect, Qt.AlignCenter, char)
+        painter.end()
+        icon.addPixmap(pixmap)
+    return icon
 
 
 class __AttributeIconDict(dict):

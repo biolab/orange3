@@ -10,13 +10,15 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsObject, QGraphicsTextItem,
-    QGraphicsDropShadowEffect, QGraphicsView, QStyle, QApplication
+    QGraphicsDropShadowEffect, QStyle, QApplication
 )
 from AnyQt.QtGui import (
     QPen, QBrush, QColor, QPalette, QIcon, QPainter, QPainterPath,
     QPainterPathStroker
 )
-from AnyQt.QtCore import Qt, QPointF, QRectF, QSize, QTimer, QPropertyAnimation
+from AnyQt.QtCore import (
+    Qt, QPointF, QRectF, QRect, QSize, QTimer, QPropertyAnimation
+)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .graphicspathobject import GraphicsPathObject
@@ -98,11 +100,19 @@ class NodeBodyItem(GraphicsPathObject):
             blurRadius=3,
             color=QColor(SHADOW_COLOR),
             offset=QPointF(0, 0),
-            )
-
-        self.setGraphicsEffect(self.shadow)
+        )
         self.shadow.setEnabled(True)
 
+        # An item with the same shape as this object, stacked behind this
+        # item as a source for QGraphicsDropShadowEffect. Cannot attach
+        # the effect to this item directly as QGraphicsEffect makes the item
+        # non devicePixelRatio aware.
+        shadowitem = GraphicsPathObject(self, objectName="shadow-shape-item")
+        shadowitem.setPen(Qt.NoPen)
+        shadowitem.setBrush(QBrush(QColor(SHADOW_COLOR).lighter()))
+        shadowitem.setGraphicsEffect(self.shadow)
+        shadowitem.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.__shadow = shadowitem
         self.__blurAnimation = QPropertyAnimation(self.shadow, b"blurRadius",
                                                   self)
         self.__blurAnimation.setDuration(100)
@@ -123,6 +133,7 @@ class NodeBodyItem(GraphicsPathObject):
         path = QPainterPath()
         path.addEllipse(rect)
         self.setPath(path)
+        self.__shadow.setPath(path)
         self.__shapeRect = rect
 
     def setPalette(self, palette):
@@ -185,10 +196,10 @@ class NodeBodyItem(GraphicsPathObject):
         if self.__progress >= 0:
             # Draw the progress meter over the shape.
             # Set the clip to shape so the meter does not overflow the shape.
+            painter.save()
             painter.setClipPath(self.shape(), Qt.ReplaceClip)
             color = self.palette.color(QPalette.ButtonText)
             pen = QPen(color, 5)
-            painter.save()
             painter.setPen(pen)
             painter.setRenderHints(QPainter.Antialiasing)
             span = max(1, int(self.__progress * 57.60))
@@ -656,34 +667,13 @@ class GraphicsIconItem(QGraphicsItem):
             else:
                 mode = QIcon.Disabled
 
-            transform = self.sceneTransform()
-
-            if widget is not None:
-                # 'widget' is the QGraphicsView.viewport()
-                view = widget.parent()
-                if isinstance(view, QGraphicsView):
-                    # Combine the scene transform with the view transform.
-                    view_transform = view.transform()
-                    transform = view_transform * view_transform
-
-            lod = option.levelOfDetailFromTransform(transform)
-
             w, h = self.__iconSize.width(), self.__iconSize.height()
-            target = QRectF(0, 0, w, h)
-            source = QRectF(0, 0, w * lod, w * lod).toRect()
-
-            # The actual size of the requested pixmap can be smaller.
-            size = self.__icon.actualSize(source.size(), mode=mode)
-            source.setSize(size)
-
-            pixmap = self.__icon.pixmap(source.size(), mode=mode)
-
+            target = QRect(0, 0, w, h)
             painter.setRenderHint(
                 QPainter.SmoothPixmapTransform,
                 self.__transformationMode == Qt.SmoothTransformation
             )
-
-            painter.drawPixmap(target, pixmap, QRectF(source))
+            self.__icon.paint(painter, target, Qt.AlignCenter, mode)
 
 
 class NameTextItem(QGraphicsTextItem):
