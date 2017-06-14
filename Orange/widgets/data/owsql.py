@@ -264,9 +264,12 @@ class OWSql(OWWidget):
                         "Specify a table name to materialize the query")
                     return
                 try:
-                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " + self.materialize_table_name):
+                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " +
+                                                        self.materialize_table_name):
                         pass
-                    with self.backend.execute_sql_query("CREATE TABLE " + self.materialize_table_name + " AS " + self.table):
+                    with self.backend.execute_sql_query("CREATE TABLE " +
+                                                        self.materialize_table_name +
+                                                        " AS " + self.table):
                         pass
                     with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
                         pass
