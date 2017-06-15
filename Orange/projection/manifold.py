@@ -1,4 +1,8 @@
 import numpy as np
+
+from scipy.sparse.linalg import eigsh as arpack_eigh
+from scipy.linalg import eigh as lapack_eigh
+
 import sklearn.manifold as skl_manifold
 
 from Orange.distance import Distance, DistanceModel, Euclidean
@@ -8,14 +12,27 @@ __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
 
 
-def torgerson(distances, n_components=2):
+def torgerson(distances, n_components=2, eigen_solver="auto"):
     """
-    Perform classical mds (Torgerson scaling).
+    Perform classical mds (Torgerson-Gower scaling).
 
     ..note ::
         If the distances are euclidean then this is equivalent to projecting
         the original data points to the first `n` principal components.
 
+    Parameters
+    ----------
+    distances : (N, N) ndarray
+        Input distance (dissimilarity) matrix.
+    n_components : int
+        Number of components to return
+    eigen_solver : str
+        One of `lapack`, `arpack` or `'auto'`. The later chooses between the
+        former based on the input.
+
+    See Also
+    --------
+    `cmdscale` in R
     """
     distances = np.asarray(distances)
     assert distances.shape[0] == distances.shape[1]
@@ -30,16 +47,34 @@ def torgerson(distances, n_components=2):
     D_sq -= rsum / N
     D_sq -= csum / N
     D_sq += total / (N ** 2)
+
     B = np.multiply(D_sq, -0.5, out=D_sq)
 
-    U, L, _ = np.linalg.svd(B)
+    if eigen_solver == 'auto':
+        if N > 200 and n_components < 10:  # arbitrary - follow skl KernelPCA
+            eigen_solver = 'arpack'
+        else:
+            eigen_solver = 'lapack'
+
+    if eigen_solver == "arpack":
+        v0 = np.random.RandomState(0xD06).uniform(-1, 1, B.shape[0])
+        w, v = arpack_eigh(B, k=n_components, v0=v0)
+        assert np.all(np.diff(w) > 0)
+        U, L = v[:, ::-1], w[::-1]
+    elif eigen_solver == "lapack":  # lapack (d|s)syevr
+        w, v = lapack_eigh(B, overwrite_a=True,
+                           eigvals=(max(N - n_components, 0), N - 1))
+        assert np.all(np.diff(w) > 0)
+        U, L = v[:, ::-1], w[::-1]
+    else:
+        raise ValueError(eigen_solver)
+
     if n_components > N:
         U = np.hstack((U, np.zeros((N, n_components - N))))
         L = np.hstack((L, np.zeros((n_components - N))))
     U = U[:, :n_components]
     L = L[:n_components]
-    D = np.diag(np.sqrt(L))
-    return np.dot(U, D)
+    return U * np.sqrt(L.reshape((1, n_components)))
 
 
 class MDS(SklProjector):
