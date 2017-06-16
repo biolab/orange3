@@ -448,15 +448,14 @@ class OWMDS(OWWidget):
 
     def update_controls(self):
         if self.data is None:
-            if getattr(self.matrix, 'axis', 1) == 0:
-                # Column-wise distances
-                attr = "Attribute names"
-                self.labelvar_model[:] = ["No labels", attr]
-                self.shapevar_model[:] = ["Same shape", attr]
-                self.colorvar_model[:] = ["Same color", attr]
+            axis = getattr(self.matrix, 'axis', 1)
+            attr = ["Column labels", "Row labels"][axis]
+            self.labelvar_model[:] = ["No labels", attr]
+            self.shapevar_model[:] = ["Same shape"]
+            self.colorvar_model[:] = ["Same color"]
 
-                self.color_value = attr
-                self.shape_value = attr
+            self.color_value = "Same color"
+            self.shape_value = "Same shape"
         else:
             domain = self.data.domain
             all_vars = list(filter_visible(domain.variables + domain.metas))
@@ -802,18 +801,6 @@ class OWMDS(OWWidget):
                 )
                 pen_data = Mdsplotutils.pen_data(color_data * 0.8, pointflags)
                 brush_data = Mdsplotutils.brush_data(color_data)
-            elif have_matrix_transposed and \
-                    self.colorvar_model[color_index] == 'Attribute names':
-                attr = attributes(self.matrix)
-                palette = colorpalette.ColorPaletteGenerator(len(attr))
-                color_data = [palette.getRGB(i) for i in range(len(attr))]
-                color_data = numpy.hstack((
-                    color_data,
-                    numpy.full((len(color_data), 1), self.symbol_opacity,
-                               dtype=float))
-                                         )
-                pen_data = Mdsplotutils.pen_data(color_data * 0.8, pointflags)
-                brush_data = Mdsplotutils.brush_data(color_data)
             else:
                 pen_data = make_pen(QColor(Qt.darkGray), cosmetic=True)
                 if self._selection_mask is not None:
@@ -846,13 +833,6 @@ class OWMDS(OWWidget):
                 data = data % (len(Symbols) - 1)
                 data[numpy.isnan(data)] = len(Symbols) - 1
                 shape_data = symbols[data.astype(int)]
-            elif have_matrix_transposed and \
-                    self.shapevar_model[shape_index] == 'Attribute names':
-                Symbols = ScatterPlotItem.Symbols
-                symbols = numpy.array(list(Symbols.keys()))
-                attr = [i % (len(Symbols) - 1)
-                        for i, _ in enumerate(attributes(self.matrix))]
-                shape_data = symbols[attr]
             else:
                 shape_data = "o"
             self._shape_data = shape_data
@@ -884,10 +864,10 @@ class OWMDS(OWWidget):
                 label_data = [label_var.str_val(val) for val in label_data]
                 label_items = [pg.TextItem(text, anchor=(0.5, 0), color=0.0)
                                for text in label_data]
-            elif have_matrix_transposed and \
-                    self.labelvar_model[label_index] == 'Attribute names':
+            elif self.matrix is not None and label_index:
                 attr = attributes(self.matrix)
-                label_items = [pg.TextItem(str(text), anchor=(0.5, 0))
+                label_items = [pg.TextItem(str(text), anchor=(0.5, 0),
+                                           color=0.0)
                                for text in attr]
             else:
                 label_items = None
