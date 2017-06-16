@@ -67,3 +67,12 @@ class TestOWDistributions(WidgetTest):
             for var_idx in range(len(self.widget.varmodel)):
                 self.widget.variable_idx = var_idx
                 self.widget._setup()
+
+    def test_no_distributions(self):
+        """
+        Do not fail when there is no data and when sb clicks
+        "Show relative frequencies".
+        GH-2383
+        """
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.cb_rel_freq.click()
