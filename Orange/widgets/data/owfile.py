@@ -17,7 +17,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -104,13 +104,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     url = Setting("")
 
     variables = ContextSetting([])
-
-    dlg_formats = (
-        "All readable files ({});;".format(
-            '*' + ' *'.join(FileFormat.readers.keys())) +
-        ";;".join("{} (*{})".format(f.DESCRIPTION, ' *'.join(f.EXTENSIONS))
-                  for f in sorted(set(FileFormat.readers.values()),
-                                  key=list(FileFormat.readers.values()).index)))
 
     domain_editor = SettingProvider(DomainEditor)
 
@@ -261,7 +254,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = self.last_path() or os.path.expanduser("~/")
 
         filename, _ = QFileDialog.getOpenFileName(
-            self, 'Open Orange Data File', start_file, self.dlg_formats)
+            self, 'Open Orange Data File', start_file, dialog_formats())
         if not filename:
             return
         self.add_path(filename)
