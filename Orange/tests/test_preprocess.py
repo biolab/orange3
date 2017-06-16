@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import os
+import pickle
 import unittest
 from unittest.mock import Mock, MagicMock, patch
 import numpy as np
@@ -130,3 +131,23 @@ class TestReprs(unittest.TestCase):
             repr_str = repr(preproc())
             new_preproc = eval(repr_str)
             self.assertEqual(repr(new_preproc), repr_str)
+
+class TestEnumPickling(unittest.TestCase):
+    def test_continuize_pickling(self):
+        c = Continuize(multinomial_treatment=Continuize.FirstAsBase)
+        s = pickle.dumps(c, -1)
+        c1 = pickle.loads(s)
+        self.assertIs(c1.multinomial_treatment, c.multinomial_treatment)
+
+    def test_randomize_pickling(self):
+        c = Randomize(rand_type=Randomize.RandomizeMetas)
+        s = pickle.dumps(c, -1)
+        c1 = pickle.loads(s)
+        self.assertIs(c1.rand_type, c.rand_type)
+
+    def test_scaling_pickling(self):
+        c = Scale(center=Scale.Median, scale=Scale.Span)
+        s = pickle.dumps(c, -1)
+        c1 = pickle.loads(s)
+        self.assertIs(c1.center, c.center)
+        self.assertIs(c1.scale, c.scale)
