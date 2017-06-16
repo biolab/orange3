@@ -5,8 +5,6 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
-from AnyQt.QtCore import QEvent
-
 from Orange.distance import Euclidean
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
@@ -88,3 +86,20 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.optimization_error.is_shown())
 
+    def test_distances_without_data_0(self):
+        """
+        Only distances and no data.
+        GH-2335
+        """
+        signal_data = Euclidean(self.data, axis=0)
+        signal_data.row_items = None
+        self.send_signal("Distances", signal_data)
+
+    def test_distances_without_data_1(self):
+        """
+        Only distances and no data.
+        GH-2335
+        """
+        signal_data = Euclidean(self.data, axis=1)
+        signal_data.row_items = None
+        self.send_signal("Distances", signal_data)
