@@ -80,11 +80,8 @@ class DotItem(QGraphicsEllipseItem):
         self.setX(x)
 
     def move_to_val(self, val):
-        x = self._scale * val - self._r / 2 + self._offset
-        if x < self._min_x:
-            x = self._min_x
-        if x > self._max_x:
-            x = self._max_x
+        x = np.clip(self._scale * val - self._r / 2 + self._offset,
+                    self._min_x, self._max_x)
         self.move(x)
 
     def hoverEnterEvent(self, event):
@@ -94,6 +91,7 @@ class DotItem(QGraphicsEllipseItem):
         self.tool_tip.hide()
 
     def mouseMoveEvent(self, _):
+        # Prevent click-moving of these items
         return
 
 
@@ -717,7 +715,7 @@ class OWNomogram(OWWidget):
 
     def _class_combo_changed(self):
         values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(values)
+        self.feature_marker_values = self.scale_back(np.asarray(values))
         with np.errstate(invalid='ignore'):
             coeffs = [np.nan_to_num(p[self.target_class_index] /
                                     p[self.old_target_class_index])
@@ -726,17 +724,18 @@ class OWNomogram(OWWidget):
         self.feature_marker_values = [
             self.get_points_from_coeffs(v, c, p) for (v, c, p) in
             zip(self.feature_marker_values, coeffs, points)]
+        self.feature_marker_values = np.asarray(self.feature_marker_values)
         self.update_scene()
         self.old_target_class_index = self.target_class_index
 
     def _norm_check_changed(self):
         values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(values)
+        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def _scale_radio_changed(self):
         values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(values)
+        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def _n_attributes_radio_changed(self):
@@ -770,7 +769,7 @@ class OWNomogram(OWWidget):
 
     def _cont_feature_dim_combo_changed(self):
         values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(values)
+        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def update_controls(self):
@@ -906,23 +905,19 @@ class OWNomogram(OWWidget):
         if self.scale == OWNomogram.POINT_SCALE:
             points = [p * d for p in points]
 
-        if self.scale == OWNomogram.POINT_SCALE and \
-                self.align == OWNomogram.ALIGN_LEFT:
-            self.scale_back = lambda x: [p / d + m for m, p in zip(minimums, x)]
-            self.scale_forth = lambda x: [(p - m) * d for m, p
-                                          in zip(minimums, x)]
-        if self.scale == OWNomogram.POINT_SCALE and \
-                self.align != OWNomogram.ALIGN_LEFT:
-            self.scale_back = lambda x: [p / d for p in x]
-            self.scale_forth = lambda x: [p * d for p in x]
-        if self.scale != OWNomogram.POINT_SCALE and \
-                self.align == OWNomogram.ALIGN_LEFT:
-            self.scale_back = lambda x: [p + m for m, p in zip(minimums, x)]
-            self.scale_forth = lambda x: [p - m for m, p in zip(minimums, x)]
-        if self.scale != OWNomogram.POINT_SCALE and \
-                self.align != OWNomogram.ALIGN_LEFT:
-            self.scale_back = lambda x: x
-            self.scale_forth = lambda x: x
+            if self.align == OWNomogram.ALIGN_LEFT:
+                self.scale_back = lambda x: x / d + minimums
+                self.scale_forth = lambda x: (x - minimums) * d
+            else:
+                self.scale_back = lambda x: x / d
+                self.scale_forth = lambda x: x * d
+        else:
+            if self.align == OWNomogram.ALIGN_LEFT:
+                self.scale_back = lambda x: x + minimums
+                self.scale_forth = lambda x: x - minimums
+            else:
+                self.scale_back = lambda x: x
+                self.scale_forth = lambda x: x
 
         point_item, nomogram_head = self.create_main_nomogram(
             name_items, points, max_width, point_text, name_offset)
@@ -1044,10 +1039,11 @@ class OWNomogram(OWWidget):
     def __get_totals_for_class_values(self, minimums):
         cls_index = self.target_class_index
         marker_values = [item.dot.value for item in self.feature_items]
+        marker_values = np.asarray(marker_values)
         if not self.markers_set:
             marker_values = self.scale_forth(marker_values)
         totals = np.empty(len(self.domain.class_var.values))
-        totals[cls_index] = sum(marker_values)
+        totals[cls_index] = marker_values.sum()
         marker_values = self.scale_back(marker_values)
         for i in range(len(self.domain.class_var.values)):
             if i == cls_index:
@@ -1066,12 +1062,12 @@ class OWNomogram(OWWidget):
         return totals
 
     def set_feature_marker_values(self):
+
         if not (len(self.points) and len(self.feature_items)):
             return
         if not len(self.feature_marker_values):
             self._init_feature_marker_values()
-        self.feature_marker_values = self.scale_forth(
-            self.feature_marker_values)
+        self.feature_marker_values = self.scale_forth(self.feature_marker_values)
         item = self.feature_items[0]
         for i, item in enumerate(self.feature_items):
             item.dot.move_to_val(self.feature_marker_values[i])
@@ -1082,6 +1078,7 @@ class OWNomogram(OWWidget):
         cls_index = self.target_class_index
         instances = Table(self.domain, self.instances) \
             if self.instances else None
+        values = []
         for i, attr in enumerate(self.domain.attributes):
             value, feature_val = 0, None
             if len(self.log_reg_coeffs):
@@ -1094,10 +1091,11 @@ class OWNomogram(OWWidget):
             if inst_in_dom and not np.isnan(instances[0][attr]):
                 feature_val = instances[0][attr]
             if feature_val is not None:
-                value = self.points[i][cls_index][int(feature_val)] \
-                    if attr.is_discrete else \
-                    self.log_reg_coeffs_orig[i][cls_index][0] * feature_val
-            self.feature_marker_values.append(value)
+                value = (self.points[i][cls_index][int(feature_val)]
+                         if attr.is_discrete else
+                         self.log_reg_coeffs_orig[i][cls_index][0] * feature_val)
+            values.append(value)
+        self.feature_marker_values = np.asarray(values)
 
     def clear_scene(self):
         self.feature_items = []
@@ -1151,7 +1149,7 @@ class OWNomogram(OWWidget):
 
     @staticmethod
     def get_points_from_coeffs(current_value, coefficients, possible_values):
-        if any(np.isnan(possible_values)):
+        if np.isnan(possible_values).any():
             return 0
         indices = np.argsort(possible_values)
         sorted_values = possible_values[indices]
@@ -1177,7 +1175,7 @@ if __name__ == "__main__":
     clf = NaiveBayesLearner()(data)
     # clf = LogisticRegressionLearner()(data)
     ow.set_classifier(clf)
-    ow.set_data(data[0:])
+    ow.set_data(data)
     ow.show()
     app.exec_()
     ow.saveSettings()
