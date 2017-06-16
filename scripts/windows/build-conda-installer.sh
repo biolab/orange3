@@ -111,6 +111,13 @@ PYTHON_VER=${PYTHON_VERSION%.*}
 # MajorMinor
 PYTAG=${PYTHON_VER/./}
 
+if [[ ${PLATTAG} == win32 ]]; then
+    CONDAPLATTAG=x86
+else
+    CONDAPLATTAG=x86_64
+fi
+
+
 BUILDBASE=${BUILDBASE:-./build}
 BASEDIR="${BUILDBASE:?}"/temp.${PLATTAG}-${PYTHON_VER}.conda-installer
 
@@ -291,8 +298,8 @@ make-installer() {
     local scriptdir="$(dirname "$0")"
     local nsis_script="${scriptdir:?}/orange-conda.nsi"
     local outpath=${DISTDIR:?}
-    local filename=${NAME:?}-${VERSION:?}-Miniconda.exe
-    local pyinstaller=Miniconda3-${MINICONDA_VERSION:?}-Windows-x86_64.exe
+    local filename=${NAME:?}-${VERSION:?}-Miniconda-${CONDAPLATTAG}.exe
+    local pyinstaller=Miniconda3-${MINICONDA_VERSION:?}-Windows-${CONDAPLATTAG}.exe
     local extransisparams=( -DMINICONDA_VERSION=${MINICONDA_VERSION:?} )
     if [[ "${ONLINE}" == yes ]]; then
         extransisparams+=( -DONLINE )
@@ -359,7 +366,7 @@ if [[ ! "${VERSION}" ]]; then
     exit 1
 fi
 
-cp "${CACHEDIR:?}/miniconda/Miniconda3-${MINICONDA_VERSION}-Windows-x86_64.exe" \
+cp "${CACHEDIR:?}/miniconda/Miniconda3-${MINICONDA_VERSION}-Windows-${CONDAPLATTAG}.exe" \
    "${BASEDIR:?}/"
 
 mkdir -p "${BASEDIR:?}/icons"
