@@ -10,8 +10,9 @@ import pickle
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from Orange.data import (ContinuousVariable, DiscreteVariable, Domain, Table,
-                         StringVariable, Variable, DomainConversion)
+from Orange.data import (
+    ContinuousVariable, DiscreteVariable,  StringVariable, TimeVariable,
+    Variable, Domain, Table, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
 from Orange.tests.base import create_pickling_tests
@@ -27,7 +28,8 @@ def create_domain(*ss):
         education=DiscreteVariable(name="education", values=["GS", "HS", "C"]),
         ssn=StringVariable(name="SSN"),
         race=DiscreteVariable(name="race",
-                              values=["White", "Hypsanic", "African", "Other"]))
+                              values=["White", "Hypsanic", "African", "Other"]),
+        arrival=TimeVariable("arrival"))
 
     def map_vars(s):
         return [vars[x] for x in s]
@@ -51,10 +53,10 @@ PickleDomain = create_pickling_tests(
 )
 
 
-age, gender, incomeA, income, education, ssn, race = \
+age, gender, incomeA, income, education, ssn, race, arrival = \
     create_domain([], [],
                   ["age", "gender", "incomeA", "income", "education", "ssn",
-                   "race"]).metas
+                   "race", "arrival"]).metas
 
 
 class TestDomainInit(unittest.TestCase):
@@ -345,6 +347,23 @@ class TestDomainInit(unittest.TestCase):
         self.assertTrue(d.has_continuous_attributes(True, True))
         d = Domain([], [race], [gender])
         self.assertFalse(d.has_continuous_attributes(True, True))
+
+    def test_has_time(self):
+        self.assertFalse(Domain([]).has_time_attributes())
+        self.assertFalse(Domain([], [age]).has_time_attributes())
+        self.assertFalse(Domain([], [race]).has_time_attributes())
+        self.assertFalse(Domain([], [arrival]).has_time_attributes())
+        self.assertFalse(Domain([], [], [arrival]).has_time_attributes())
+
+        self.assertTrue(Domain([arrival], []).has_time_attributes())
+        self.assertTrue(Domain([], [arrival]).has_time_attributes(
+            include_class=True))
+        self.assertTrue(Domain([], [], [arrival]).has_time_attributes(
+            include_metas=True))
+
+        self.assertFalse(Domain([arrival], []).has_time_class)
+        self.assertTrue(Domain([], [arrival]).has_time_class)
+        self.assertFalse(Domain([], [], [arrival]).has_time_class)
 
     def test_get_conversion(self):
         compute_value = lambda: 42
