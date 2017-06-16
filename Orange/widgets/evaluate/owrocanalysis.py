@@ -448,7 +448,10 @@ class OWROCAnalysis(widget.OWWidget):
             names = ["#{}".format(i + 1)
                      for i in range(len(results.predicted))]
 
-        self.colors = colorpalette.ColorPaletteGenerator(len(names))
+        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
+        if len(names) > len(scheme):
+            scheme = colorpalette.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(len(names), scheme)
 
         self.classifier_names = names
         self.selected_classifiers = list(range(len(names)))
