@@ -47,16 +47,45 @@ enum { DiscreteNode, ContinuousNode, PredictorNode };
 enum { Classification, Regression };
 enum { IntVar, FloatVar };
 
-int compar_attr;
+/*
+ * Common interface for qsort_r
+ * (there are 3 (possibly more) different qsort_r call styles in the wild).
+ *
+ */
 
-/* This function uses the global variable compar_attr.
+#if (defined __APPLE__ || defined __DARWIN__ || defined __BSD__)
+#define QSORT_R_STYLE_BSD
+#define QSORT_R_FUNC(base, nel, size, thunk, compar) \
+	qsort_r(base, nel, size, thunk, compar)
+#elif (defined __GLIBC__ || defined __GNU__ || defined __linux__)
+#define QSORT_R_STYLE_GNU
+#define QSORT_R_FUNC(base, nel, size, thunk, compar) \
+	qsort_r(base, nel, size, compar, thunk)
+#elif (defined _MSC_VER)
+#define QSORT_R_STYLE_MSVC
+#define QSORT_R_FUNC(base, nel, size, thunk, compar) \
+	qsort_s(base, nel, size, compar, thunk)
+#endif
+
+
+#if (defined QSORT_R_STYLE_BSD || defined QSORT_R_STYLE_MSVC)
+#define SORT_CMP_FUNC(name) \
+	int name(void *context, const void *ptr1, const void *ptr2)
+#elif (defined QSORT_R_STYLE_GNU)
+#define SORT_CMP_FUNC(name) \
+	int name(const void *ptr1, const void *ptr2, void *context)
+#else
+#error "Unkown qsort_r comparator call convention"
+#endif
+
+
+/*
  * Examples with unknowns are larger so that, when sorted, they appear at the bottom.
  */
-int
-compar_examples(const void *ptr1, const void *ptr2)
+SORT_CMP_FUNC(compar_examples)
 {
 	double x1, x2;
-
+	int compar_attr = *(int *)context;
 	x1 = ((struct Example *)ptr1)->x[compar_attr];
 	x2 = ((struct Example *)ptr2)->x[compar_attr];
 	if (isnan(x1))
@@ -102,7 +131,7 @@ gain_ratio_c(struct Example *examples, int size, int attr, float cls_entropy, st
 	struct Example *ex, *ex_end, *ex_next;
 	int i, cls, cls_vals, min_instances, size_known;
 	float score, *dist_lt, *dist_ge, *attr_dist, best_score, size_weight;
-
+	int compar_attr;
 	cls_vals = args->cls_vals;
 
 	/* min_instances should be at least 1, otherwise there is no point in splitting */
@@ -115,7 +144,7 @@ gain_ratio_c(struct Example *examples, int size, int attr, float cls_entropy, st
 
 	/* sort */
 	compar_attr = attr;
-	qsort(examples, size, sizeof(struct Example), compar_examples);
+	QSORT_R_FUNC(examples, size, sizeof(struct Example), (void*) &compar_attr, compar_examples);
 
 	/* compute gain ratio for every split */
 	size_known = size;
@@ -236,6 +265,7 @@ mse_c(struct Example *examples, int size, int attr, float cls_mse, struct Args *
 	struct Example *ex, *ex_end, *ex_next;
 	int i, min_instances, size_known;
 	float size_attr_known, size_weight, cls_val, best_score, size_attr_cls_known, score;
+	int compar_attr;
 
 	struct Variance {
 		double n, sum, sum2;
@@ -246,7 +276,7 @@ mse_c(struct Example *examples, int size, int attr, float cls_mse, struct Args *
 
 	/* sort */
 	compar_attr = attr;
-	qsort(examples, size, sizeof(struct Example), compar_examples);
+	QSORT_R_FUNC(examples, size, sizeof(struct Example), (void *)&compar_attr, compar_examples);
 
 	/* compute mse for every split */
 	size_known = size;
