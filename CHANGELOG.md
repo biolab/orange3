@@ -6,6 +6,34 @@ Change Log
 * ...
 
 
+[3.4.4] - 2017-06-16
+--------------------
+##### Enhancements
+* SimpleTreeLearner: Release GIL & thread safety ([#2398](../../pull/2398))
+* Improve support for HiDPI displays ([#2325](../../pull/2325))
+* Add a tutorial section on responsive GUI ([#2318](../../pull/2318))
+* Check if updates are available upon startup ([#2273](../../pull/2273))
+
+##### Bugfixes
+* Vizrank: interact with gui from main thread only ([#2389](../../pull/2389))
+* Some preprocessors couldn not be pickled ([#2409](../../pull/2409))
+* MDS: Support distances without domain information ([#2335](../../pull/2335))
+* Paint Data: Fix crash on empty data ([#2399](../../pull/2399))
+* Distributions: do not crash on empty data ([#2383](../../pull/2383))
+* Update checker: LooseVersion does not handle str parts ([#2401](../../pull/2401))
+* owpreproces: Stable order of continuizers ([#2400](../../pull/2400))
+* owmanifoldlearning: Remove `n_jobs=-2` parameter ([#2371](../../pull/2371))
+* Scatter Plot: features and no data ([#2384](../../pull/2384))
+* tests: Fix test errors when running with numpy 1.13.0 ([#2396](../../pull/2396))
+* OWColor: Use DiscreteVariable values for matching contexts ([#2376](../../pull/2376))
+* Outliers: handling memory error ([#2374](../../pull/2374))
+* score.FCBF: do not segfault on continuous variables w/ <0 values ([#2355](../../pull/2355))
+* Rank widget supports Scorer inputs ([#2350](../../pull/2350))
+* Silhouette Plot: handling memory error ([#2336](../../pull/2336))
+* Distances: handling errors due to too large arrays ([#2315](../../pull/2315))
+* Confusion Matrix: do not append extra column if empty ([#2386](../../pull/2386))
+
+
 [3.4.3] - 2017-06-03
 --------------------
 ##### Enhancements
@@ -518,7 +546,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.3...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.4...HEAD
+[3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
 [3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
 [3.4.2]: https://github.com/biolab/orange3/compare/3.4.1...3.4.2
 [3.4.1]: https://github.com/biolab/orange3/compare/3.4.0...3.4.1
