@@ -71,3 +71,10 @@ class TestOWPaintData(WidgetTest):
         self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Warning.sparse_not_supported.is_shown())
+
+    def test_load_empty_data(self):
+        """
+        It should not crash when old workflow with no data is loaded.
+        GH-2399
+        """
+        self.create_widget(OWPaintData, stored_settings={"data": []})
