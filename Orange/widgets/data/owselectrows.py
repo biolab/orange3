@@ -363,7 +363,7 @@ class OWSelectRows(widget.OWWidget):
                 self.cond_list.setCellWidget(oper_combo.row, 2, button)
             else:
                 combo = QComboBox()
-                combo.addItems([""] + var.values)
+                combo.addItems(("", ) + var.values)
                 if lc[0]:
                     combo.setCurrentIndex(int(lc[0]))
                 else:

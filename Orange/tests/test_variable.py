@@ -250,7 +250,7 @@ class TestDiscreteVariable(VariableTest):
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
         a = DiscreteVariable("foo", values=["a", "b", "c"])
-        self.assertRaises(TypeError, a.add_value, 42)
+        self.assertRaises(TypeError, a._add_value, 42)
 
 
 @variabletest(ContinuousVariable)

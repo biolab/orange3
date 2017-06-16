@@ -329,7 +329,7 @@ class OWColor(widget.OWWidget):
             if var.is_discrete or var.is_continuous:
                 var = var.make_proxy()
                 if var.is_discrete:
-                    var.values = var.values[:]
+                    var._values = var.values[:]
                     self.disc_colors.append(var)
                 else:
                     self.cont_colors.append(var)

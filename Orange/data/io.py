@@ -614,7 +614,7 @@ class FileFormat(metaclass=FileFormatMeta):
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
                 try:
-                    values = [float(i) for i in orig_values]
+                    values = tuple(float(i) for i in orig_values)
                 except ValueError:
                     for row, num in enumerate(orig_values):
                         try:

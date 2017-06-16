@@ -67,7 +67,7 @@ class TestSqlTable(PostgresTest):
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
             self.assertEqual(len(filtered_table), 13)
 
-            table.domain[0].values += ('x', )
+            table.domain[0]._values += ('x', )
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
 
