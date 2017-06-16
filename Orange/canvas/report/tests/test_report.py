@@ -86,8 +86,7 @@ class TestReport(WidgetTest):
         view.setModel(model)
         rep.report_table('Name', view)
         self.maxDiff = None
-        self.assertEqual(
-            rep.report_html,
+        self.assertIn(
             '<h2>Name</h2><table>\n'
             '<tr>'
             '<th style="color:black;border:0;background:transparent;'
@@ -112,7 +111,12 @@ class TestReport(WidgetTest):
             'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
             '<td style="color:black;border:0;background:#ff0000;'
             'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
-            '</tr></table>')
+            '</tr></table>', rep.report_html)
+
+    def test_report_plot(self):
+        rep = OWReport.get_instance()
+        widget = self.create_widget(OWFile)
+        rep.report_plot('Some widget', widget)
 
     def test_save_report(self):
         """

@@ -155,6 +155,7 @@ class Report:
         if not (isinstance(name, str) and plot is None):
             name, plot = self._fix_args(name, plot)
         from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget, GraphicsView
+        from PyQt4.QtGui import QWidget
         from Orange.widgets.highcharts import Highchart
         self.report_name(name)
         if plot is None:
@@ -167,7 +168,7 @@ class Report:
             self.report_html += get_html_img(plot.plotItem)
         elif isinstance(plot, GraphicsWidget):
             self.report_html += get_html_img(plot.scene())
-        elif isinstance(plot, GraphicsView):
+        elif isinstance(plot, (GraphicsView, QWidget)):
             self.report_html += get_html_img(plot)
         elif isinstance(plot, Highchart):
             self.report_html += plot.svg()
