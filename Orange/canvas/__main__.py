@@ -126,7 +126,6 @@ def check_for_updates():
         settings.setValue('startup/last-update-check-time', int(time.time()))
 
         from urllib.request import urlopen
-        from distutils.version import LooseVersion
         from Orange.version import version as current
 
         class GetLatestVersion(QThread):
@@ -135,12 +134,13 @@ def check_for_updates():
             def run(self):
                 try:
                     self.resultReady.emit(
-                        urlopen('https://orange.biolab.si/version', timeout=10).read().decode())
+                        urlopen('https://orange.biolab.si/version/', timeout=10).read().decode())
                 except OSError:
                     log.exception('Failed to check for updates')
 
         def compare_versions(latest):
-            if LooseVersion(latest) <= LooseVersion(current):
+            version = pkg_resources.parse_version
+            if version(latest) <= version(current):
                 return
             question = QMessageBox(
                 QMessageBox.Information,
