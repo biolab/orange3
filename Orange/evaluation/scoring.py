@@ -11,17 +11,41 @@ Examples
 """
 
 import math
-import sys
 
 import numpy as np
 import sklearn.metrics as skl_metrics
+
+from Orange.data import DiscreteVariable, ContinuousVariable
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "R2", "compute_CD", "graph_ranks", "LogLoss"]
 
 
-class Score(metaclass=WrapperMeta):
+class ScoreMetaType(WrapperMeta):
+    """
+    Maintain a registry of non-abstract subclasses and assign the default
+    value of `name`.
+
+    The existing meta class Registry cannot be used since a meta class cannot
+    have multiple inherited __new__ methods."""
+    def __new__(mcs, name, bases, dict_, **kwargs):
+        cls = WrapperMeta.__new__(mcs, name, bases, dict_)
+        # Essentially `if cls is not Score`, except that Score may not exist yet
+        if hasattr(cls, "registry"):
+            if not kwargs.get("abstract"):
+                # Don't use inherited names, look into dict_
+                cls.name = dict_.get("name", name)
+                cls.registry[name] = cls
+        else:
+            cls.registry = {}
+        return cls
+
+    def __init__(cls, *args, **_):
+        WrapperMeta.__init__(cls, *args)
+
+
+class Score(metaclass=ScoreMetaType):
     """
     ${sklpar}
     Parameters
@@ -29,8 +53,17 @@ class Score(metaclass=WrapperMeta):
     results : Orange.evaluation.Results
         Stored predictions and actual data in model testing.
     """
+    __wraps__ = None
+
     separate_folds = False
     is_scalar = True
+    is_binary = False  #: If true, compute_score accepts `target` and `average`
+    #: If the class doesn't explicitly contain `abstract=True`, it is not
+    #: abstract; essentially, this attribute is not inherited
+    abstract = True
+    class_types = ()
+    name = None
+    long_name = None  #: A short user-readable name (e.g. a few words)
 
     def __new__(cls, results=None, **kwargs):
         self = super().__new__(cls)
@@ -65,7 +98,11 @@ class Score(metaclass=WrapperMeta):
         return scores
 
     def compute_score(self, results):
-        return NotImplementedError
+        wraps = type(self).__wraps__  # self.__wraps__ is invisible
+        if wraps:
+            return self.from_predicted(results, wraps)
+        else:
+            return NotImplementedError
 
     @staticmethod
     def from_predicted(results, score_function, **kwargs):
@@ -75,16 +112,26 @@ class Score(metaclass=WrapperMeta):
             dtype=np.float64, count=len(results.predicted))
 
 
-## Classification scores
+class ClassificationScore(Score, abstract=True):
+    class_types = (DiscreteVariable, )
 
-class CA(Score):
+
+class RegressionScore(Score, abstract=True):
+    class_types = (ContinuousVariable, )
+
+
+# pylint: disable=invalid-name
+class CA(ClassificationScore):
     __wraps__ = skl_metrics.accuracy_score
-
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.accuracy_score)
+    long_name = "Classification accuracy"
 
 
-class TargetScore(Score):
+class PrecisionRecallFSupport(ClassificationScore):
+    __wraps__ = skl_metrics.precision_recall_fscore_support
+    is_scalar = False
+
+
+class TargetScore(ClassificationScore):
     """
     Base class for scorers that need a target value (a "positive" class).
 
@@ -105,6 +152,8 @@ class TargetScore(Score):
         Options: 'weighted', 'macro', 'micro', None
 
     """
+    is_binary = True
+    abstract = True
     __wraps__ = None  # Subclasses should set the scoring function
 
     def compute_score(self, results, target=None, average='binary'):
@@ -133,16 +182,7 @@ class F1(TargetScore):
     __wraps__ = skl_metrics.f1_score
 
 
-class PrecisionRecallFSupport(Score):
-    __wraps__ = skl_metrics.precision_recall_fscore_support
-    is_scalar = False
-
-    def compute_score(self, results):
-        return self.from_predicted(
-            results, skl_metrics.precision_recall_fscore_support)
-
-
-class AUC(Score):
+class AUC(ClassificationScore):
     """
     ${sklpar}
 
@@ -156,6 +196,8 @@ class AUC(Score):
     """
     __wraps__ = skl_metrics.roc_auc_score
     separate_folds = True
+    is_binary = True
+    long_name = "Area under ROC curve"
 
     def calculate_weights(self, results):
         classes = np.unique(results.actual)
@@ -184,7 +226,7 @@ class AUC(Score):
                               for class_ in classes])
         return np.sum(auc_array.T * weights, axis=1)
 
-    def compute_score(self, results, target=None):
+    def compute_score(self, results, target=None, average=None):
         domain = results.domain
         n_classes = len(domain.class_var.values)
 
@@ -199,7 +241,7 @@ class AUC(Score):
                 return self.single_class_auc(results, target)
 
 
-class LogLoss(Score):
+class LogLoss(ClassificationScore):
     """
     ${sklpar}
 
@@ -227,7 +269,8 @@ class LogLoss(Score):
     """
     __wraps__ = skl_metrics.log_loss
 
-    def compute_score(self, results, eps=1e-15, normalize=True, sample_weight=None):
+    def compute_score(self, results, eps=1e-15, normalize=True,
+                      sample_weight=None):
         return np.fromiter(
             (skl_metrics.log_loss(results.actual,
                                   probabilities,
@@ -238,37 +281,44 @@ class LogLoss(Score):
             dtype=np.float64, count=len(results.probabilities))
 
 
-## Regression scores
+# Regression scores
 
-class MSE(Score):
+class MSE(RegressionScore):
     __wraps__ = skl_metrics.mean_squared_error
-
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.mean_squared_error)
+    long_name = "Mean square error"
 
 
-class RMSE(Score):
+class RMSE(RegressionScore):
+    long_name = "Root mean square error"
+
     def compute_score(self, results):
         return np.sqrt(MSE(results))
 
 
-class MAE(Score):
+class MAE(RegressionScore):
     __wraps__ = skl_metrics.mean_absolute_error
-
-    def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.mean_absolute_error)
+    long_name = "Mean absolute error"
 
 
-class R2(Score):
+# pylint: disable=invalid-name
+class R2(RegressionScore):
     __wraps__ = skl_metrics.r2_score
+    long_name = "Coefficient of determination"
+
+
+class CVRMSE(RegressionScore):
+    long_name = "Coefficient of variation of the RMSE"
 
     def compute_score(self, results):
-        return self.from_predicted(results, skl_metrics.r2_score)
+        mean = np.nanmean(results.actual)
+        if mean < 1e-10:
+            raise ValueError("Mean value is too small")
+        return RMSE(results) / mean * 100
 
 
-## CD scores and plot
+# CD scores and plot
 
-def compute_CD(avranks, N, alpha="0.05", test="nemenyi"):
+def compute_CD(avranks, n, alpha="0.05", test="nemenyi"):
     """
     Returns critical difference for Nemenyi or Bonferroni-Dunn test
     according to given alpha (either alpha="0.05" or alpha="0.1") for average
@@ -279,7 +329,8 @@ def compute_CD(avranks, N, alpha="0.05", test="nemenyi"):
     d = {("nemenyi", "0.05"): [0, 0, 1.959964, 2.343701, 2.569032, 2.727774,
                                2.849705, 2.94832, 3.030879, 3.101730, 3.163684,
                                3.218654, 3.268004, 3.312739, 3.353618, 3.39123,
-                               3.426041, 3.458425, 3.488685, 3.517073, 3.543799],
+                               3.426041, 3.458425, 3.488685, 3.517073,
+                               3.543799],
          ("nemenyi", "0.1"): [0, 0, 1.644854, 2.052293, 2.291341, 2.459516,
                               2.588521, 2.692732, 2.779884, 2.854606, 2.919889,
                               2.977768, 3.029694, 3.076733, 3.119693, 3.159199,
@@ -289,44 +340,45 @@ def compute_CD(avranks, N, alpha="0.05", test="nemenyi"):
          ("bonferroni-dunn", "0.1"): [0, 0, 1.645, 1.960, 2.128, 2.241, 2.326,
                                       2.394, 2.450, 2.498, 2.539]}
     q = d[(test, alpha)]
-    cd = q[k] * (k * (k + 1) / (6.0 * N)) ** 0.5
+    cd = q[k] * (k * (k + 1) / (6.0 * n)) ** 0.5
     return cd
 
 
 def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
                 width=6, textspace=1, reverse=False, filename=None, **kwargs):
     """
-    Draws a CD graph, which is used to display  the differences in methods' performance.
-    See Janez Demsar, Statistical Comparisons of Classifiers over Multiple Data Sets, 7(Jan):1--30, 2006.
+    Draws a CD graph, which is used to display  the differences in methods'
+    performance. See Janez Demsar, Statistical Comparisons of Classifiers over
+    Multiple Data Sets, 7(Jan):1--30, 2006.
 
     Needs matplotlib to work.
 
-    The image is ploted on *plt* which should be imported using *import matplotlib.pyplot as plt*.
+    The image is ploted on `plt` imported using
+    `import matplotlib.pyplot as plt`.
 
-    :param avranks: List of average methods' ranks.
-    :param names: List of methods' names.
-    :param cd: Critical difference. Used for marking methods whose
-               difference is not statistically significant.
-    :param cdmethod: None by default. It can be an index of element in avranks
-                     or names which specifies the method which should be
-                     marked with an interval.
-    :param lowv: The lowest shown rank, if None, use 1.
-    :param highv: The highest shown rank, if None, use len(avranks).
-    :param width: Width of the drawn figure in inches, default 6 in.
-    :param textspace: Space on figure sides left for the description
-                      of methods, default 1 in.
-    :param reverse:  If True, the lowest rank is on the right. Default\: False.
-    :param filename: Output file name (with extension). If not None, the image is also saved to a file.
-                    Formats supported by matplotlib can be used.
+    Args:
+        avranks (list of float): average ranks of methods.
+        names (list of str): names of methods.
+        cd (float): Critical difference used for statistically significance of
+            difference between methods.
+        cdmethod (int, optional): the method that is compared with other methods
+            If omitted, show pairwise comparison of methods
+        lowv (int, optional): the lowest shown rank
+        highv (int, optional): the highest shown rank
+        width (int, optional): default width in inches (default: 6)
+        textspace (int, optional): space on figure sides (in inches) for the
+            method names (default: 1)
+        reverse (bool, optional):  if set to `True`, the lowest rank is on the
+            right (default: `False`)
+        filename (str, optional): output file name (with extension). If not
+            given, the function does not write a file.
     """
     try:
         import matplotlib
         import matplotlib.pyplot as plt
         from matplotlib.backends.backend_agg import FigureCanvasAgg
     except ImportError:
-        print("Function requires matplotlib. Please install it.",
-              file=sys.stderr)
-        return
+        raise ImportError("Function graph_ranks requires matplotlib.")
 
     width = float(width)
     textspace = float(textspace)
@@ -367,7 +419,7 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
         else:
             # it can work with single numbers
             index = lr[0]
-            if type(1) == type(index):
+            if isinstance(index, int):
                 index = [index]
             for a in range(*index):
                 for b in mxrange(lr[1:]):
@@ -480,7 +532,8 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
         tick = smalltick
         if a == int(a):
             tick = bigtick
-        line([(rankpos(a), cline - tick / 2), (rankpos(a), cline)],
+        line([(rankpos(a), cline - tick / 2),
+              (rankpos(a), cline)],
              linewidth=0.7)
 
     for a in range(lowv, highv + 1):
@@ -491,14 +544,18 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
 
     for i in range(math.ceil(k / 2)):
         chei = cline + minnotsignificant + i * 0.2
-        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei),
-              (textspace - 0.1, chei)], linewidth=0.7)
+        line([(rankpos(ssums[i]), cline),
+              (rankpos(ssums[i]), chei),
+              (textspace - 0.1, chei)],
+             linewidth=0.7)
         text(textspace - 0.2, chei, nnames[i], ha="right", va="center")
 
     for i in range(math.ceil(k / 2), k):
         chei = cline + minnotsignificant + (k - i - 1) * 0.2
-        line([(rankpos(ssums[i]), cline), (rankpos(ssums[i]), chei),
-              (textspace + scalewidth + 0.1, chei)], linewidth=0.7)
+        line([(rankpos(ssums[i]), cline),
+              (rankpos(ssums[i]), chei),
+              (textspace + scalewidth + 0.1, chei)],
+             linewidth=0.7)
         text(textspace + scalewidth + 0.2, chei, nnames[i],
              ha="left", va="center")
 
@@ -511,18 +568,21 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
 
         line([(begin, distanceh), (end, distanceh)], linewidth=0.7)
         line([(begin, distanceh + bigtick / 2),
-              (begin, distanceh - bigtick / 2)], linewidth=0.7)
+              (begin, distanceh - bigtick / 2)],
+             linewidth=0.7)
         line([(end, distanceh + bigtick / 2),
-              (end, distanceh - bigtick / 2)], linewidth=0.7)
+              (end, distanceh - bigtick / 2)],
+             linewidth=0.7)
         text((begin + end) / 2, distanceh - 0.05, "CD",
              ha="center", va="bottom")
 
-        # non significance lines
+        # no-significance lines
         def draw_lines(lines, side=0.05, height=0.1):
             start = cline + 0.2
             for l, r in lines:
                 line([(rankpos(ssums[l]) - side, start),
-                      (rankpos(ssums[r]) + side, start)], linewidth=2.5)
+                      (rankpos(ssums[r]) + side, start)],
+                     linewidth=2.5)
                 start += height
 
         draw_lines(lines)
@@ -530,10 +590,13 @@ def graph_ranks(avranks, names, cd=None, cdmethod=None, lowv=None, highv=None,
     elif cd:
         begin = rankpos(avranks[cdmethod] - cd)
         end = rankpos(avranks[cdmethod] + cd)
-        line([(begin, cline), (end, cline)], linewidth=2.5)
-        line([(begin, cline + bigtick / 2), (begin, cline - bigtick / 2)],
+        line([(begin, cline), (end, cline)],
              linewidth=2.5)
-        line([(end, cline + bigtick / 2), (end, cline - bigtick / 2)],
+        line([(begin, cline + bigtick / 2),
+              (begin, cline - bigtick / 2)],
+             linewidth=2.5)
+        line([(end, cline + bigtick / 2),
+              (end, cline - bigtick / 2)],
              linewidth=2.5)
 
     if filename:
