@@ -33,12 +33,14 @@ class Preprocess(_RefuseDataInConstructor, Reprable):
 
 
 class Continuize(Preprocess):
+    MultinomialTreatment = Enum(
+        "Continuize",
+        ("Indicators", "FirstAsBase", "FrequentAsBase", "Remove",
+         "RemoveMultinomial", "ReportError", "AsOrdinal", "AsNormalizedOrdinal",
+         "Leave"),
+        qualname="Continuize.MultinomialTreatment")
     (Indicators, FirstAsBase, FrequentAsBase, Remove, RemoveMultinomial,
-     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = Enum(
-         "Continuize",
-         "Indicators, FirstAsBase, FrequentAsBase,"
-         "Remove, RemoveMultinomial, ReportError, AsOrdinal,"
-         "AsNormalizedOrdinal, Leave")
+     ReportError, AsOrdinal, AsNormalizedOrdinal, Leave) = MultinomialTreatment
 
     def __init__(self, zero_based=True,
                  multinomial_treatment=Indicators):
@@ -255,8 +257,8 @@ class Normalize(Preprocess):
     >>> normalizer = Normalize(norm_type=Normalize.NormalizeBySpan)
     >>> normalized_data = normalizer(data)
     """
-    Type = Enum("Normalize",
-                "NormalizeBySpan, NormalizeBySD")
+    Type = Enum("Normalize", ("NormalizeBySpan", "NormalizeBySD"),
+                qualname="Normalize.Type")
     NormalizeBySpan, NormalizeBySD = Type
 
     def __init__(self,
@@ -326,8 +328,12 @@ class Randomize(Preprocess):
     >>> randomizer = Randomize(Randomize.RandomizeClasses)
     >>> randomized_data = randomizer(data)
     """
-    Type = Enum("Randomize", dict(RandomizeClasses=1, RandomizeAttributes=2,
-                                  RandomizeMetas=4), type=int)
+    Type = Enum("Randomize",
+                dict(RandomizeClasses=1,
+                     RandomizeAttributes=2,
+                     RandomizeMetas=4),
+                type=int,
+                qualname="Randomize.Type")
     RandomizeClasses, RandomizeAttributes, RandomizeMetas = Type
 
     def __init__(self, rand_type=RandomizeClasses, rand_seed=None):
@@ -396,8 +402,10 @@ class Scale(Preprocess):
         def __call__(self, *args, **kwargs):
             return getattr(Scale, '_' + self.name)(*args, **kwargs)
 
-    CenteringType = _MethodEnum('Scale', 'NoCentering, Mean, Median')
-    ScalingType = _MethodEnum('Scale', 'NoScaling, Std, Span')
+    CenteringType = _MethodEnum("Scale", ("NoCentering", "Mean", "Median"),
+                                qualname="Scale.CenteringType")
+    ScalingType = _MethodEnum("Scale", ("NoScaling", "Std", "Span"),
+                              qualname="Scale.ScalingType")
     NoCentering, Mean, Median = CenteringType
     NoScaling, Std, Span = ScalingType
 
