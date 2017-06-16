@@ -220,7 +220,7 @@ def gaussian_smoother(x, y, sigma=1.0):
         W = a * numpy.exp(-gamma * ((xs - x) ** 2))
         return numpy.average(y, weights=W)
 
-    return numpy.frompyfunc(smoother, 1, 1)
+    return numpy.vectorize(smoother, otypes=[numpy.float])
 
 
 def main():
