@@ -13,6 +13,7 @@ import builtins
 import math
 import random
 import logging
+import numpy as np
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
@@ -878,9 +879,9 @@ __ALLOWED = [
     "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
     "divmod", "enumerate", "filter", "float", "format", "frozenset",
     "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
-    "list", "map", "max", "memoryview", "min", "next", "object",
+    "list", "map", "memoryview", "next", "object",
     "oct", "ord", "pow", "range", "repr", "reversed", "round",
-    "set", "slice", "sorted", "str", "sum", "tuple", "type",
+    "set", "slice", "sorted", "str", "tuple", "type",
     "zip"
 ]
 
@@ -901,7 +902,19 @@ __GLOBALS.update({
     "vonmisesvariate": random.vonmisesvariate,
     "weibullvariate": random.weibullvariate,
     "triangular": random.triangular,
-    "uniform": random.uniform}
+    "uniform": random.uniform,
+    "mean": lambda *args: np.nanmean(args),
+    "min": lambda *args: np.nanmin(args),
+    "max": lambda *args: np.nanmax(args),
+    "sum": lambda *args: np.nansum(args),
+    "std": lambda *args: np.nanstd(args),
+    "median": lambda *args: np.nanmedian(args),
+    "cumsum": lambda *args: np.nancumsum(args),
+    "cumprod": lambda *args: np.nancumprod(args),
+    "argmax": lambda *args: np.nanargmax(args),
+    "argmin": lambda *args: np.nanargmin(args),
+    "var": lambda *args: np.nanvar(args)
+}
 )
 
 
