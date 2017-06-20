@@ -70,7 +70,8 @@ class OWImpute(OWWidget):
     DEFAULT_LEARNER = SimpleTreeLearner()
     METHODS = [AsDefault(), impute.DoNotImpute(), impute.Average(),
                impute.AsValue(), impute.Model(DEFAULT_LEARNER), impute.Random(),
-               impute.DropInstances(), impute.Default()]
+               impute.DropInstances(), impute.Default(),
+               impute.FillForward(), impute.FillBackward()]
     DEFAULT, DO_NOT_IMPUTE, MODEL_BASED_IMPUTER, AS_INPUT = 0, 1, 4, 7
 
     settingsHandler = settings.DomainContextHandler()
