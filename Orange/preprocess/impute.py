@@ -7,7 +7,8 @@ from Orange.util import Reprable
 from .transformation import Transformation, Lookup
 
 __all__ = ["ReplaceUnknowns", "Average", "DoNotImpute", "DropInstances",
-           "Model", "AsValue", "Random", "Default"]
+           "Model", "AsValue", "Random", "Default",
+           "FillForward", "FillBackward"]
 
 
 class ReplaceUnknowns(Transformation):
@@ -339,3 +340,64 @@ class Random(BaseImputeMethod):
             dist[1, :] += 1 / dist.shape[1]
         return variable.copy(
             compute_value=ReplaceUnknownsRandom(variable, dist))
+
+
+class ReplaceUnknownsPreviousOrNext(Transformation):
+    """
+    A column transformation which replaces unknown values with the previous|next seen value.
+
+    Parameters
+    ----------
+    variable : Orange.data.Variable
+        The target variable for imputation.
+    method : 'ffill' or 'bfill'
+        Way to fill unknown values
+    """
+
+    def __init__(self, variable, method='ffill'):
+        super().__init__(variable)
+        if method in ('ffill', 'bfill'):
+            self.method = method
+        else:
+            raise ValueError('Unhandled method. Expected "forward" or "backward"')
+
+    def transform(self, c):
+        if sp.issparse(c):  # sparse does not have unknown values
+            return c
+        else:
+            if self.method == "ffill":
+                prev = np.arange(len(c))
+                prev[np.isnan(c)] = 0
+                prev = np.maximum.accumulate(prev)
+                return c[prev]
+            elif self.method == "bfill":
+                next = np.arange(len(c))
+                next[np.isnan(c[::-1])] = 0
+                next = np.maximum.accumulate(next)
+                return c[::-1][next][::-1]
+
+
+class _FillNaN(BaseImputeMethod):
+    name = short_name = description = fill_method = None
+
+    def __call__(self, data, variable):
+        variable = data.domain[variable]
+        if not (variable.is_continuous or variable.is_discrete):
+            raise TypeError("Variable must be continuous or discrete")
+
+        a = variable.copy(compute_value=ReplaceUnknownsPreviousOrNext(variable, method=self.fill_method))
+        return a
+
+
+class FillForward(_FillNaN):
+    name = "Forward Fill"
+    short_name = "ffill"
+    description = "Fill forward with last seen value"
+    fill_method = 'ffill'
+
+
+class FillBackward(_FillNaN):
+    name = "Backward Fill"
+    short_name = "bffill"
+    description = "Fill backward with last seen value"
+    fill_method = 'bfill'
