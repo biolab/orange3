@@ -5,7 +5,9 @@ if [ "$RUN_PYLINT" ]; then
     foldable pip uninstall -y radon     # disable radon in favor of codeclimate
     cp pylintrc ~/.pylintrc
     .travis/check_pylint_diff
-    exit $?
+    EXIT_CODE=$?
+    echo "Lint check returned ${EXIT_CODE}"
+    exit ${EXIT_CODE}
 fi
 
 cd "$ORANGE_DIR"
