@@ -7,7 +7,7 @@ if [ "$RUN_PYLINT" ]; then
     .travis/check_pylint_diff
     EXIT_CODE=$?
     echo "Lint check returned ${EXIT_CODE}"
-    exit ${EXIT_CODE}
+    return ${EXIT_CODE}
 fi
 
 cd "$ORANGE_DIR"
