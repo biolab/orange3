@@ -154,14 +154,14 @@ class Report:
         """
         if not (isinstance(name, str) and plot is None):
             name, plot = self._fix_args(name, plot)
+
         from pyqtgraph import PlotWidget, PlotItem, GraphicsWidget, GraphicsView
-        from Orange.widgets.highcharts import Highchart
+        from Orange.widgets.utils.webview import WebviewWidget
+
         self.report_name(name)
         if plot is None:
             plot = getdeepattr(self, self.graph_name)
-        if isinstance(plot, QGraphicsScene):
-            self.report_html += get_html_img(plot)
-        elif isinstance(plot, PlotItem):
+        if isinstance(plot, (QGraphicsScene, PlotItem)):
             self.report_html += get_html_img(plot)
         elif isinstance(plot, PlotWidget):
             self.report_html += get_html_img(plot.plotItem)
@@ -169,8 +169,12 @@ class Report:
             self.report_html += get_html_img(plot.scene())
         elif isinstance(plot, GraphicsView):
             self.report_html += get_html_img(plot)
-        elif isinstance(plot, Highchart):
-            self.report_html += plot.svg()
+        elif isinstance(plot, WebviewWidget):
+            try:
+                svg = plot.svg()
+            except IndexError:
+                svg = plot.html()
+            self.report_html += svg
 
     # noinspection PyBroadException
     def report_table(self, name, table=None, header_rows=0, header_columns=0,

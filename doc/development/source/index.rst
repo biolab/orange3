@@ -12,7 +12,6 @@ Widget Development
     tutorial-utilities
     widget
     gui
-    highcharts
     testing
 
 API
