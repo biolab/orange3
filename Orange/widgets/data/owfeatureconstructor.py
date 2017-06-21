@@ -244,7 +244,7 @@ class DiscreteFeatureEditor(FeatureEditor):
     def editorData(self):
         values = self.valuesedit.text()
         values = re.split(r"(?<!\\),", values)
-        values = tuple(v.replace(r"\,", ",").strip() for v in values)
+        values = tuple(filter(None, [v.replace(r"\,", ",").strip() for v in values]))
         return DiscreteDescriptor(
             name=self.nameedit.text(),
             values=values,
@@ -292,7 +292,7 @@ class DescriptorModel(itemmodels.PyListModel):
             return super().data(index, role)
 
 
-class FeatureConstructorSettingsHandler(DomainContextHandler):
+class FeatureConstructorHandler(DomainContextHandler):
     """Context handler that filters descriptors"""
 
     def is_valid_item(self, setting, descriptor, attrs, metas):
@@ -326,7 +326,7 @@ class OWFeatureConstructor(OWWidget):
 
     want_main_area = False
 
-    settingsHandler = FeatureConstructorSettingsHandler()
+    settingsHandler = FeatureConstructorHandler()
     descriptors = ContextSetting([])
     currentIndex = ContextSetting(-1)
 
@@ -850,7 +850,7 @@ def make_lambda(expression, args, values):
         if sys.version_info >= (3, 0):
             return ast.arg(arg=name, annotation=None)
         else:
-            return ast.Name(id=arg, ctx=ast.Param(), lineno=1, col_offset=0)
+            return ast.Name(id=name, ctx=ast.Param(), lineno=1, col_offset=0)
 
     lambda_ = ast.Lambda(
         args=ast.arguments(
@@ -902,7 +902,7 @@ __GLOBALS.update({
     "weibullvariate": random.weibullvariate,
     "triangular": random.triangular,
     "uniform": random.uniform}
-)
+                )
 
 
 class FeatureFunc:
@@ -930,8 +930,10 @@ def unique(seq):
     return unique_el
 
 
-def main(argv=sys.argv):
+def main(argv=None):
     from AnyQt.QtWidgets import QApplication
+    if argv is None:
+        argv = sys.argv
     app = QApplication(list(argv))
     argv = app.arguments()
     if len(argv) > 1:
