@@ -68,3 +68,23 @@ class TestOWPythonScript(WidgetTest):
             self.assertTrue(getattr(self.widget.Error, _output).is_shown())
             self.send_signal(_input, data)
             self.assertFalse(getattr(self.widget.Error, _output).is_shown())
+
+    def test_multiple_data_inputs(self):
+        """
+        Python Script can accept multiple inputs.
+        GH-2418
+        """
+        table2 = Table("titanic")
+        table3 = Table("housing")
+        self.send_signal("in_data", self.iris, 0)
+        self.assertEqual(len(self.widget.in_datas), 1)
+        self.send_signal("in_data", table2, 1)
+        self.assertEqual(len(self.widget.in_datas), 2)
+        self.send_signal("in_data", table3, 2)
+        self.assertEqual(len(self.widget.in_datas), 3)
+        self.send_signal("in_data", None, 2)
+        self.assertEqual(len(self.widget.in_datas), 2)
+        self.send_signal("in_data", table3, 1)
+        self.assertEqual(len(self.widget.in_datas), 2)
+        self.send_signal("in_data", None, 2)
+        self.assertEqual(len(self.widget.in_datas), 2)

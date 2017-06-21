@@ -357,14 +357,14 @@ class OWPythonScript(widget.OWWidget):
     icon = "icons/PythonScript.svg"
     priority = 3150
 
-    inputs_names = ["in_data", "in_learner", "in_classifier", "in_object"]
+    inputs_names = ("in_data", "in_learner", "in_classifier", "in_object")
 
     class Inputs:
-        in_data = Input("in_data", Orange.data.Table, default=True)
-        # in_distance = Input("in_distance", Orange.misc.SymMatrix, default=True)
-        in_learner = Input("in_learner", Learner, default=True)
-        in_classifier = Input("in_classifier", Model, default=True)
-        in_object = Input("in_object", object)
+        in_data = Input("in_data", Orange.data.Table, default=True, multiple=True)
+        # in_distance = Input("in_distance", Orange.misc.SymMatrix, default=True, multiple=True)
+        in_learner = Input("in_learner", Learner, default=True, multiple=True)
+        in_classifier = Input("in_classifier", Model, default=True, multiple=True)
+        in_object = Input("in_object", object, multiple=True)
 
     outputs_names = ["out_data", "out_learner", "out_classifier", "out_object"]
 
@@ -387,11 +387,11 @@ class OWPythonScript(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.in_data = None
-        self.in_distance = None
-        self.in_learner = None
-        self.in_classifier = None
-        self.in_object = None
+        self.in_datas = dict()
+        self.in_distances = dict()
+        self.in_learners = dict()
+        self.in_classifiers = dict()
+        self.in_objects = dict()
 
         for s in self.libraryListSource:
             s.flags = 0
@@ -402,7 +402,7 @@ class OWPythonScript(widget.OWWidget):
         gui.label(
             self.infoBox, self,
             "<p>Execute python script.</p><p>Input variables:<ul><li> " + \
-            "<li>".join(name for name in self.inputs_names) + \
+            "<li>".join(name + ', ' + name + 's' for name in self.inputs_names) + \
             "</ul></p><p>Output variables:<ul><li>" + \
             "<li>".join(name for name in self.outputs_names) + \
             "</ul></p>"
@@ -513,25 +513,32 @@ class OWPythonScript(widget.OWWidget):
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
 
+    def _set_dict(self, dic, input, id):
+        id = id[0] if isinstance(id, tuple) else id
+        if input is not None:
+            dic[id] = input
+        elif id in dic.keys():
+            del dic[id]
+
     @Inputs.in_data
-    def setExampleTable(self, et):
-        self.in_data = et
+    def setExampleTable(self, et, id=None):
+        self._set_dict(self.in_datas, et, id)
 
     # @Inputs.in_distance
-    def setDistanceMatrix(self, dm):
-        self.in_distance = dm
+    def setDistanceMatrix(self, dm, id=None):
+        self._set_dict(self.in_distances, dm, id)
 
     @Inputs.in_learner
-    def setLearner(self, learner):
-        self.in_learner = learner
+    def setLearner(self, learner, id=None):
+        self._set_dict(self.in_learners, learner, id)
 
     @Inputs.in_classifier
-    def setClassifier(self, classifier):
-        self.in_classifier = classifier
+    def setClassifier(self, classifier, id=None):
+        self._set_dict(self.in_classifiers, classifier, id)
 
     @Inputs.in_object
-    def setObject(self, obj):
-        self.in_object = obj
+    def setObject(self, obj, id=None):
+        self._set_dict(self.in_objects, obj, id)
 
     def handleNewSignals(self):
         self.unconditional_commit()
@@ -653,7 +660,12 @@ class OWPythonScript(widget.OWWidget):
 
     def initial_locals_state(self):
         d = dict([(name, getattr(self, name, None)) for name in self.inputs_names])
-        d.update(dict([(name, None) for name in self.outputs_names]))
+        for name in self.inputs_names:
+            value = getattr(self, name + 's', None)
+            all_values = list(value.values()) if value is not None else []
+            one_value = all_values[0] if len(all_values) == 1 else None
+            d[name + 's'] = all_values
+            d[name] = one_value
         return d
 
     def commit(self):
