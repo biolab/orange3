@@ -11,7 +11,8 @@ from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       ContinuousDescriptor,
                                                       StringDescriptor,
-                                                      construct_variables, OWFeatureConstructor)
+                                                      construct_variables, OWFeatureConstructor,
+                                                      DiscreteFeatureEditor)
 
 from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
 
@@ -238,3 +239,22 @@ class OWFeatureConstructorTests(WidgetTest):
         )
         self.widget.apply()
         self.assertTrue(self.widget.Error.invalid_expressions.is_shown())
+
+    def test_discrete_no_values(self):
+        """
+        Should not fail when there are no values set.
+        GH-2417
+        """
+        data = Table("iris")
+        self.widget.setData(data)
+        discreteFeatureEditor = DiscreteFeatureEditor()
+
+        discreteFeatureEditor.valuesedit.setText("")
+        discreteFeatureEditor.nameedit.setText("D1")
+        discreteFeatureEditor.expressionedit.setText("iris")
+        self.widget.addFeature(
+            discreteFeatureEditor.editorData()
+        )
+        self.assertFalse(self.widget.Error.more_values_needed.is_shown())
+        self.widget.apply()
+        self.assertTrue(self.widget.Error.more_values_needed.is_shown())

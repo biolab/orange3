@@ -244,7 +244,7 @@ class DiscreteFeatureEditor(FeatureEditor):
     def editorData(self):
         values = self.valuesedit.text()
         values = re.split(r"(?<!\\),", values)
-        values = tuple(v.replace(r"\,", ",").strip() for v in values)
+        values = tuple(filter(None, [v.replace(r"\,", ",").strip() for v in values]))
         return DiscreteDescriptor(
             name=self.nameedit.text(),
             values=values,
