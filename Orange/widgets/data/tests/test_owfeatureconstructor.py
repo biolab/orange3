@@ -13,9 +13,7 @@ from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
                                                       StringDescriptor,
                                                       construct_variables, OWFeatureConstructor)
 
-from Orange.widgets.data.owfeatureconstructor import (
-    freevars, make_lambda, validate_exp
-)
+from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
 
 import dill as pickle  # Import dill after Orange because patched
 
@@ -99,11 +97,11 @@ class PicklingTest(unittest.TestCase):
     def test_lambdas_pickle(self):
         NONLOCAL_CONST = 5
 
-        lambda_func = lambda x, LOCAL_CONST=7: \
-            x * LOCAL_CONST * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
+        lambda_func = lambda x, local_const=7: \
+            x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
 
-        def nested_func(x, LOCAL_CONST=7):
-            return x * LOCAL_CONST * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
+        def nested_func(x, local_const=7):
+            return x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
 
         self.assertEqual(lambda_func(11),
                          pickle.loads(pickle.dumps(lambda_func))(11))
