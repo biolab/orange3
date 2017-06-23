@@ -5,7 +5,7 @@ from collections import namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
 
-import numpy
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
@@ -605,7 +605,7 @@ class DendrogramWidget(QGraphicsWidget):
         else:
             drect = QSizeF(leaf_count, self._root.value.height)
 
-        eps = numpy.finfo(numpy.float64).eps
+        eps = np.finfo(np.float64).eps
 
         if abs(drect.width()) < eps:
             sx = 1.0
@@ -1135,7 +1135,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
-            c = numpy.zeros(self.matrix.shape[0])
+            c = np.zeros(self.matrix.shape[0])
 
             for i, indices in enumerate(maps):
                 c[indices] = i

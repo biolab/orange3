@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import numpy
+import numpy as np
 import Orange.misc
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -53,7 +53,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_all_zero_inputs(self):
-        d = Orange.misc.DistMatrix(numpy.zeros((10, 10)))
+        d = Orange.misc.DistMatrix(np.zeros((10, 10)))
         self.widget.set_distances(d)
 
     def test_annotation_settings_retrieval(self):
@@ -61,8 +61,8 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         widget = self.widget
 
         dist_names = Orange.misc.DistMatrix(
-            numpy.zeros((4, 4)), self.data, axis=0)
-        dist_no_names = Orange.misc.DistMatrix(numpy.zeros((10, 10)), axis=1)
+            np.zeros((4, 4)), self.data, axis=0)
+        dist_no_names = Orange.misc.DistMatrix(np.zeros((10, 10)), axis=1)
 
         self.send_signal(self.widget.Inputs.distances, self.distances)
         # Check that default is set (class variable)
