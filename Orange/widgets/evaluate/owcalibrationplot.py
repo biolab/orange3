@@ -75,15 +75,18 @@ class OWCalibrationPlot(widget.OWWidget):
                      callback=self._on_display_rug_changed)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plot = pg.PlotItem()
+        self.plot = pg.PlotItem(enableMenu=False)
+        self.plot.setMouseEnabled(False, False)
+        self.plot.hideButtons()
 
         axis = self.plot.getAxis("bottom")
         axis.setLabel("Predicted Probability")
 
         axis = self.plot.getAxis("left")
         axis.setLabel("Observed Average")
-        self.plotview.setCentralItem(self.plot)
 
+        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0), padding=0.05)
+        self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
 
     def set_results(self, results):

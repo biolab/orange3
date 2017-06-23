@@ -392,9 +392,9 @@ class OWROCAnalysis(widget.OWWidget):
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
 
-        self.plot = pg.PlotItem()
-        self.plot.getViewBox().setMenuEnabled(False)
-        self.plot.getViewBox().setMouseEnabled(False, False)
+        self.plot = pg.PlotItem(enableMenu=False)
+        self.plot.setMouseEnabled(False, False)
+        self.plot.hideButtons()
 
         pen = QPen(self.palette().color(QPalette.Text))
 
@@ -412,7 +412,7 @@ class OWROCAnalysis(widget.OWWidget):
         axis.setLabel("TP Rate (Sensitivity)")
 
         self.plot.showGrid(True, True, alpha=0.1)
-        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0))
+        self.plot.setRange(xRange=(0.0, 1.0), yRange=(0.0, 1.0), padding=0.05)
 
         self.plotview.setCentralItem(self.plot)
         self.mainArea.layout().addWidget(self.plotview)
