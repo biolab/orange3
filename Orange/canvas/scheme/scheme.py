@@ -19,7 +19,7 @@ from .node import SchemeNode
 from .link import SchemeLink, compatible_channels
 from .annotations import BaseSchemeAnnotation
 
-from ..utils import check_arg, check_type
+from ..utils import check_arg, check_type, name_lookup
 
 from .errors import (
     SchemeCycleError, IncompatibleChannelTypeError, SinkChannelError,
@@ -541,11 +541,19 @@ class Scheme(QObject):
                                    if link.sink_channel.single]
 
         def weight(out_c, in_c):
+            # type: (OutputSignal, InputSignal) -> int
             if out_c.explicit or in_c.explicit:
                 # Zero weight for explicit links
                 weight = 0
             else:
-                check = [not out_c.dynamic,  # Dynamic signals are last
+                # Does the connection type check (can only ever be False for
+                # dynamic signals)
+                type_checks = issubclass(name_lookup(out_c.type),
+                                         name_lookup(in_c.type))
+                assert type_checks or out_c.dynamic
+                # Dynamic signals that require runtime instance type check
+                # are considered last.
+                check = [type_checks,
                          in_c not in already_connected_sinks,
                          bool(in_c.default),
                          bool(out_c.default)
