@@ -73,6 +73,13 @@ class TestOWDistributions(WidgetTest):
         Do not fail when there is no data and when sb clicks
         "Show relative frequencies".
         GH-2383
+        GH-2428
         """
         self.send_signal(self.widget.Inputs.data, None)
+        self.widget.cb_rel_freq.click()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.cb_rel_freq.setChecked(False)
+        self.widget.cb_rel_freq.click()
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.cb_rel_freq.setChecked(True)
         self.widget.cb_rel_freq.click()

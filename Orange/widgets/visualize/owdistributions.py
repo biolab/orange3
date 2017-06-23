@@ -220,6 +220,8 @@ class OWDistributions(widget.OWWidget):
         self.clear()
         self.warning()
         self.data = data
+        self.distributions = None
+        self.contingencies = None
         if self.data is not None:
             if not self.data:
                 self.warning("Empty input data cannot be visualized")
@@ -332,7 +334,7 @@ class OWDistributions(widget.OWWidget):
     def display_distribution(self):
         dist = self.distributions
         var = self.var
-        if not len(dist):
+        if dist is None or not len(dist):
             return
         self.plot.clear()
         self.plot_prob.clear()
@@ -371,8 +373,6 @@ class OWDistributions(widget.OWWidget):
                 self.tooltip_items.append((self.plot, item))
 
     def _on_relative_freq_changed(self):
-        if not self.distributions:
-            return
         self.set_left_axis_name()
         if self.cvar and self.cvar.is_discrete:
             self.display_contingency()
@@ -386,7 +386,7 @@ class OWDistributions(widget.OWWidget):
         """
         cont = self.contingencies
         var, cvar = self.var, self.cvar
-        if not len(cont):
+        if cont is None or not len(cont):
             return
         self.plot.clear()
         self.plot_prob.clear()
