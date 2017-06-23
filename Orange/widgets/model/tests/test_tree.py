@@ -1,4 +1,9 @@
+# pylint: disable=protected-access
+import numpy as np
+import scipy.sparse as sp
+
 from Orange.base import Model
+from Orange.data import Table
 from Orange.widgets.model.owtree import OWTreeLearner
 from Orange.widgets.tests.base import (
     DefaultParameterMapping,
@@ -35,3 +40,18 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         self.parameters = [DefaultParameterMapping(par.name, val)
                            for par, val in zip(self.parameters, (None, 2, 1))]
         self.test_parameters()
+
+    def test_sparse_data(self):
+        """
+        Tree can handle sparse data.
+        GH-2430
+        """
+        table1 = Table("iris")
+        self.send_signal("Data", table1)
+        model_dense = self.get_output("Model")
+        table2 = Table("iris")
+        table2.X = sp.csr_matrix(table2.X)
+        model_sparse = self.get_output("Model")
+        self.assertTrue(np.array_equal(model_dense._code, model_sparse._code))
+        self.assertTrue(np.array_equal(model_dense._thresholds, model_sparse._thresholds))
+        self.assertTrue(np.array_equal(model_dense._values, model_sparse._values))
