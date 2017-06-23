@@ -117,7 +117,7 @@ class OWScatterPlot(OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        features = Output("Features", Table, dynamic=False)
+        features = Output("Features", Table)
 
     settingsHandler = DomainContextHandler()
 
