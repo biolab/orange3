@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 import numpy as np
 import Orange.misc
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
@@ -102,3 +103,23 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         data = self.data[:, :4]
         distances = Euclidean(data)
         self.send_signal(self.widget.Inputs.distances, distances)
+
+    def test_infinite_distances(self):
+        """
+        Scipy does not accept infinite distances and neither does this widget.
+        Error is shown.
+        GH-2380
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a")],
+                [DiscreteVariable("b", values=["y"])]),
+            list(zip([1.79e308, -1e120],
+                     "yy"))
+        )
+        distances = Euclidean(table)
+        self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
+        self.send_signal(self.widget.Inputs.distances, distances)
+        self.assertTrue(self.widget.Error.not_finite_distances.is_shown())
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
