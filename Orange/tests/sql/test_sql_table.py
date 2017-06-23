@@ -40,7 +40,7 @@ class TestSqlTable(PostgresTest):
             self.assertIsInstance(discrete_attr, DiscreteVariable)
             self.assertEqual(discrete_attr.name, "col1")
             self.assertTrue('"col1"' in discrete_attr.to_sql())
-            self.assertEqual(discrete_attr.values, ['f', 'm'])
+            self.assertEqual(discrete_attr.values, ('f', 'm'))
 
             self.assertIsInstance(string_attr, StringVariable)
             self.assertEqual(string_attr.name, "col2")
@@ -67,7 +67,7 @@ class TestSqlTable(PostgresTest):
             filtered_table = filter.SameValue(table.domain[0], 'm')(table)
             self.assertEqual(len(filtered_table), 13)
 
-            table.domain[0].values.append('x')
+            table.domain[0]._values += ('x', )
             filtered_table = filter.SameValue(table.domain[0], 'x')(table)
             self.assertEqual(len(filtered_table), 0)
 

@@ -158,7 +158,7 @@ class TestDiscreteVariable(VariableTest):
 
         # Compatible, adds values
         self.assertIs(find_comp("gend", values=["F", "N", "R"]), gend)
-        self.assertEqual(gend.values, ["F", "M", "N", "R"])
+        self.assertEqual(gend.values, ("F", "M", "N", "R"))
 
     def test_find_compatible_ordered(self):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
@@ -188,7 +188,7 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "a")
-        self.assertEqual(var.values, ["F", "M"])
+        self.assertEqual(var.values, ("F", "M"))
 
     def test_val_from_str(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
@@ -199,15 +199,15 @@ class TestDiscreteVariable(VariableTest):
         var = DiscreteVariable.make("a", values=["F", "M"])
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'])")
+            "DiscreteVariable(name='a', values=('F', 'M'))")
         var.base_value = 1
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], base_value=1)")
+            "DiscreteVariable(name='a', values=('F', 'M'), base_value=1)")
         var.ordered = True
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], "
+            "DiscreteVariable(name='a', values=('F', 'M'), "
             "ordered=True, base_value=1)")
 
         var = DiscreteVariable.make("a", values="1234567")
@@ -239,18 +239,18 @@ class TestDiscreteVariable(VariableTest):
         # Test ncolors adapts to nvalues
         var = DiscreteVariable.make('foo', values=['d', 'r'])
         self.assertEqual(len(var.colors), 2)
-        var.add_value('e')
+        var._add_value('e')
         self.assertEqual(len(var.colors), 3)
         user_defined = (0, 0, 0)
         var.set_color(2, user_defined)
-        var.add_value('k')
+        var._add_value('k')
         self.assertEqual(len(var.colors), 4)
         np.testing.assert_array_equal(var.colors[2], user_defined)
 
     def test_no_nonstringvalues(self):
         self.assertRaises(TypeError, DiscreteVariable, "foo", values=["a", 42])
         a = DiscreteVariable("foo", values=["a", "b", "c"])
-        self.assertRaises(TypeError, a.add_value, 42)
+        self.assertRaises(TypeError, a._add_value, 42)
 
 
 @variabletest(ContinuousVariable)
@@ -271,11 +271,11 @@ class TestContinuousVariable(VariableTest):
     def test_adjust_decimals(self):
         a = ContinuousVariable("a")
         self.assertEqual(a.str_val(4.654321), "4.654")
-        a.val_from_str_add("5")
+        a._val_from_str_add("5")
         self.assertEqual(a.str_val(4.654321), "5")
-        a.val_from_str_add("  5.12    ")
+        a._val_from_str_add("  5.12    ")
         self.assertEqual(a.str_val(4.654321), "4.65")
-        a.val_from_str_add("5.1234")
+        a._val_from_str_add("5.1234")
         self.assertEqual(a.str_val(4.654321), "4.6543")
 
     def test_colors(self):

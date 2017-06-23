@@ -47,7 +47,7 @@ class TestDomainContextHandler(TestCase):
 
         self.assertEqual(encoded_attributes,
                          {'c1': Continuous, 'd1': Discrete, 'd2': Discrete,
-                          'd3': list('ghi')})
+                          'd3': tuple('ghi')})
         self.assertEqual(encoded_metas, {'c2': Continuous, 'd4': Discrete})
 
     def test_encode_domain_with_match_all(self):
@@ -58,10 +58,10 @@ class TestDomainContextHandler(TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
         self.assertEqual(encoded_attributes,
-                         {'c1': Continuous, 'd1': list('abc'),
-                          'd2': list('def'), 'd3': list('ghi')})
+                         {'c1': Continuous, 'd1': tuple('abc'),
+                          'd2': tuple('def'), 'd3': tuple('ghi')})
         self.assertEqual(encoded_metas,
-                         {'c2': Continuous, 'd4': list('jkl')})
+                         {'c2': Continuous, 'd4': tuple('jkl')})
 
     def test_encode_domain_with_false_attributes_in_res(self):
         handler = DomainContextHandler(attributes_in_res=False,

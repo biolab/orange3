@@ -59,7 +59,7 @@ class TestClassValuesContextHandler(TestCase):
         self.handler.open_context(widget, self.args[0][1])
 
         context = widget.current_context
-        self.assertEqual(context.classes, ['a', 'b', 'c'])
+        self.assertEqual(context.classes, ('a', 'b', 'c'))
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [])
 

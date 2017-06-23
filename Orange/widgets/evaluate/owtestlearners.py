@@ -596,7 +596,7 @@ class OWTestLearners(OWWidget):
         if self.data.domain.has_discrete_class:
             self.cbox.setVisible(True)
             class_var = self.data.domain.class_var
-            items = [self.TARGET_AVERAGE] + class_var.values
+            items = (self.TARGET_AVERAGE, ) + class_var.values
             self.class_selection_combo.addItems(items)
 
             class_index = 0
