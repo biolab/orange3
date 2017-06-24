@@ -117,6 +117,7 @@ class Learner(_ReprableWithPreprocessors):
 
         self.domain = data.domain
         model = self._fit_model(data)
+        model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         model.domain = data.domain
         model.supports_multiclass = self.supports_multiclass
         model.name = self.name
@@ -377,7 +378,6 @@ class SklLearner(Learner, metaclass=WrapperMeta):
 
     def __call__(self, data):
         m = super().__call__(data)
-        m.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         m.params = self.params
         return m
 
