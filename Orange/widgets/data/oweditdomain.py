@@ -420,8 +420,8 @@ class OWEditDomain(widget.OWWidget):
             "duplicate_var_name",
             "A variable name is duplicated.")
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def set_data(self, data):
         """Set input data set."""
         self.closeContext()

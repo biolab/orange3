@@ -143,8 +143,8 @@ class OWVennDiagram(widget.OWWidget):
 
         self._queue = []
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def setData(self, data, key=None):
         self.error()
         if not self._inputUpdate:

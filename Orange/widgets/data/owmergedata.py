@@ -191,8 +191,8 @@ class OWMergeData(widget.OWWidget):
             set_attrs("attr_merge_data", "attr_merge_extra", *attrs)
             set_attrs("attr_combine_data", "attr_combine_extra", *attrs)
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def setData(self, data):
         self.data = data
         self._set_model(data, self.model)
@@ -204,8 +204,8 @@ class OWMergeData(widget.OWWidget):
         self.infoBoxData.setText(self.dataInfoText(data))
         self._find_best_match()
 
-    @check_sql_input
     @Inputs.extra_data
+    @check_sql_input
     def setExtraData(self, data):
         self.extra_data = data
         self._set_unique_model(data, self.extra_model_unique)

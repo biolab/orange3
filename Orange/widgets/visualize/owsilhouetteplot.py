@@ -163,8 +163,8 @@ class OWSilhouettePlot(widget.OWWidget):
         sh = self.controlArea.sizeHint()
         return sh.expandedTo(QSize(600, 720))
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def set_data(self, data):
         """
         Set the input data set.
