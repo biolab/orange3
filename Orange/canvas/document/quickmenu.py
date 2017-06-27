@@ -1079,10 +1079,7 @@ class QuickMenu(FramelessWindow):
 
         self.show()
 
-        if searchText:
-            self.setFocusProxy(self.__search)
-        else:
-            self.setFocusProxy(None)
+        self.setFocusProxy(self.__search)
 
     def exec_(self, pos=None, searchText=""):
         """
