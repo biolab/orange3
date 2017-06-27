@@ -633,6 +633,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.master.Information.missing_coords.clear()
         self._clear_plot_widget()
 
+        if self.shown_y != attr_y:
+            # 'reset' the axis text width estimation. Without this the left
+            # axis tick labels space only ever expands
+            yaxis = self.plot_widget.getAxis("left")
+            yaxis.textWidth = 30
+
         self.shown_x, self.shown_y = attr_x, attr_y
 
         if self.jittered_data is None or not len(self.jittered_data):

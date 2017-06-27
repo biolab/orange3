@@ -496,8 +496,6 @@ class OWScatterPlot(OWWidget):
         self.update_graph(reset_view=False)
 
     def update_graph(self, reset_view=True, **_):
-        axis = self.graph.plot_widget.getAxis("left")
-        axis.textWidth = 0
         self.graph.zoomStack = []
         if self.graph.data is None:
             return
