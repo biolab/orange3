@@ -196,7 +196,7 @@ class OWTestLearners(OWWidget):
         ContinuousVariable: ("MSE", "RMSE", "MAE", "R2")}
 
     shown_scores = \
-        settings.Setting(set(chain(BUILTIN_ORDER.values())))
+        settings.Setting(set(chain(*BUILTIN_ORDER.values())))
 
     class Error(OWWidget.Error):
         train_data_empty = Msg("Train data set is empty.")
