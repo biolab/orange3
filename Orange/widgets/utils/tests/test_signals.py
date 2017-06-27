@@ -11,8 +11,9 @@ from unittest.mock import patch, MagicMock
 from Orange.canvas.registry.description import \
     Single, Multiple, Default, NonDefault, Explicit, Dynamic, InputSignal, \
     OutputSignal
-from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.base import GuiTest, WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.signals import _Signal, Input, Output
+from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget
 
 
@@ -185,6 +186,48 @@ class WidgetSignalsMixinTest(GuiTest):
         output, = MockWidget.get_signals("outputs")
         self.assertIsInstance(output, OutputSignal)
         self.assertEqual(output.name, "another name")
+
+
+class TestOWMockWidget(WidgetTest, WidgetOutputsTestMixin):
+    """
+    Test if check_sql_input is called when data is sent to a widget.
+    GH-2382
+    """
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        WidgetOutputsTestMixin.init(cls)
+
+        cls.signal_name = "Foo"
+        cls.signal_data = 42
+
+    def setUp(self):
+        self.widget = self.create_widget(self.MockWidget)
+
+    def test_outputs(self, timeout=None):
+        pass
+
+    def _select_data(self):
+        pass
+
+    class MockWidget(OWWidget):
+        name = "foo"
+
+        class Inputs:
+            input = Input("Foo", int)
+
+        @Inputs.input
+        @check_sql_input
+        def foo(self, number):
+            pass
+
+    @patch("Orange.widgets.widget.OWWidget.Error.add_message")
+    def test_inputs_check_sql(self, mock):
+        try:
+            self.send_signal(self.widget.Inputs.input, 42)
+        except AttributeError:
+            pass
+        self.assertTrue(mock.called)
 
 
 if __name__ == "__main__":

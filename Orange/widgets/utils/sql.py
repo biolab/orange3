@@ -1,3 +1,5 @@
+from functools import wraps
+
 from Orange.widgets.utils.messages import UnboundMsg
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
@@ -16,6 +18,7 @@ def check_sql_input(f):
     :param f: widget's `set_data` method to wrap
     :return: wrapped method that handles SQL data inputs
     """
+    @wraps(f)
     def new_f(widget, data, *args, **kwargs):
         widget.Error.add_message("download_sql_data", _download_sql_data)
         widget.Error.download_sql_data.clear()
