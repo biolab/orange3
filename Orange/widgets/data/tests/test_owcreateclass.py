@@ -360,5 +360,30 @@ class TestOWCreateClass(WidgetTest):
         widget.line_edits[1][1].setText("c")
         widget.send_report()
 
+    def test_bad_class_name(self):
+        """
+        Error shown if class name is duplicated or empty and no data on output.
+        GH-2440
+        """
+        def assertError(class_name, class_name_empty, class_name_duplicated, is_out):
+            widget.class_name = class_name
+            widget.apply()
+            output = self.get_output("Data")
+            self.assertEqual(widget.Error.class_name_empty.is_shown(), class_name_empty)
+            self.assertEqual(widget.Error.class_name_duplicated.is_shown(), class_name_duplicated)
+            self.assertEqual(output is not None, is_out)
+
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.data, self.heart)
+
+        assertError("", True, False, False)
+        assertError("class", False, False, True)
+        assertError("gender", False, True, False)
+
+        widget.class_name = "  class "
+        widget.apply()
+        self.assertEqual(widget.class_name, "class")
+
+
 if __name__ == "__main__":
     unittest.main()
