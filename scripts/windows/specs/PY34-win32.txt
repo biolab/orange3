@@ -1,0 +1,24 @@
+# List packages that are/would be required for installation
+
+--find-links=https://orange.biolab.si/download/files/wheelhouse
+--only-binary numpy,scipy,Bottleneck,scikit-learn,PyQt5
+
+AnyQt==0.0.8
+numpy==1.12.1
+scipy==0.16.1
+scikit-learn==0.18.1
+Bottleneck==1.1.0
+joblib==0.11
+chardet==2.3.0
+keyring==10.3.1
+keyrings.alt==2.2
+pywin32-ctypes==0.0.1
+pyreadline==2.1
+AnyQt==0.0.8
+PyQt5==5.5.1
+docutils==0.13.1
+pip==9.0.1
+dill==0.2.6
+pyqtgraph==0.10.0
+six==1.10.0
+xlrd==1.0.0
