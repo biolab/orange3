@@ -48,6 +48,8 @@ class OWSql(OWWidget):
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
 
+    settings_version = 2
+
     want_main_area = False
     resizing_enabled = False
 
@@ -172,9 +174,9 @@ class OWSql(OWWidget):
         cm = self._credential_manager(self.host, self.port)
         self.username = cm.username
         self.password = cm.password
+
         if self.username:
             self.usernametext.setText(self.username)
-
         if self.password:
             self.passwordtext.setText(self.password)
 
@@ -377,6 +379,16 @@ class OWSql(OWWidget):
         if self.data_desc_table:
             self.report_items("Data",
                               report.describe_data(self.data_desc_table))
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            # Until Orange version 3.4.4 username and password had been stored
+            # in Settings.
+            cm = cls._credential_manager(settings["host"], settings["port"])
+            cm.username = settings["username"]
+            cm.password = settings["password"]
+
 
 if __name__ == "__main__":
     a = QApplication(sys.argv)
