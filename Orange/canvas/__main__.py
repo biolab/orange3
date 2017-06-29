@@ -116,6 +116,26 @@ def show_survey():
         return question
 
 
+def user_telemetry_agreement():
+    settings = QSettings()
+    user_telemetry_agree = settings.value("startup/user-telemetry-agree", False, type=bool)
+    last_ask_time = settings.value("startup/last-telemetry-agree-time", 0, type=float)
+    ONE_WEEK = 86400*7
+    if not user_telemetry_agree and time.time() - last_ask_time > ONE_WEEK:
+        question = QMessageBox(
+            QMessageBox.Question,
+            "Orange Agreement",
+            "Do you agree?",
+            QMessageBox.Yes | QMessageBox.No)
+        question.setDefaultButton(QMessageBox.Yes)
+        def handle_response(result):
+            settings.setValue("startup/user-telemetry-agree", result == QMessageBox.Yes)
+            settings.setValue("startup/last-telemetry-agree-time", time.time())
+
+        question.finished.connect(handle_response)
+        question.show()
+        return question
+
 def check_for_updates():
     settings = QSettings()
     check_updates = settings.value('startup/check-updates', True, type=bool)
@@ -413,6 +433,7 @@ def main(argv=None):
     # local references prevent destruction
     _ = show_survey()
     __ = check_for_updates()
+    _ = user_telemetry_agreement()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.log_view()
