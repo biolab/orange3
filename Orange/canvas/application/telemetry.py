@@ -1,16 +1,15 @@
 import codecs
 from contextlib import closing
 from itertools import groupby
-import pip
+import json
 import logging
 import platform
+from urllib.parse import urlencode
+from urllib.request import urlopen, build_opener
 import uuid
 from time import time
 
-from urllib.parse import urlencode
-from urllib.request import urlopen, build_opener
-
-import json
+import pip
 
 from AnyQt.QtCore import QSettings
 
@@ -46,7 +45,7 @@ class Telemetry():
             desc = node.description
             nodes.append({"name": desc.name,
                           "qualified_name": desc.qualified_name,
-                          })
+                         })
 
         self.schemes["scheme_{}".format(self.scheme_id)] = unique_and_count(nodes)
         now = time()
@@ -91,7 +90,7 @@ class Telemetry():
                             self._geo(),
                             self._orange(),
                             self.schemes,
-                           {"end_time:": self.end_time}])
+                            {"end_time:": self.end_time}])
 
     def send(self):
         self.end_time = time()
