@@ -1,3 +1,5 @@
+import codecs
+from contextlib import closing
 import pip
 import logging
 import platform
@@ -6,6 +8,8 @@ from time import time
 
 from urllib.parse import urlencode
 from urllib.request import urlopen, build_opener
+
+import json
 
 from AnyQt.QtCore import QSettings
 
@@ -61,7 +65,12 @@ class Telemetry():
 
     def _geo(self):
         geo = {}
-        # TODO
+        try:
+            with closing(urlopen(GEO_URL)) as response:
+                reader = codecs.getreader("utf-8")
+                geo = json.load(reader(response))
+        except Exception:
+            pass
         return geo
 
     def _prepare_data(self):
