@@ -71,6 +71,8 @@ from .. import config
 
 from . import workflows
 
+from .telemetry import Telemetry
+
 log = logging.getLogger(__name__)
 
 # TODO: Orange Version in the base link
@@ -161,6 +163,8 @@ class CanvasMainWindow(QMainWindow):
 
     def __init__(self, *args):
         QMainWindow.__init__(self, *args)
+
+        self.telemetry = Telemetry()
 
         self.__scheme_margins_enabled = True
         self.__document_title = "untitled"
@@ -874,6 +878,8 @@ class CanvasMainWindow(QMainWindow):
             if status == QDialog.Rejected:
                 return QDialog.Rejected
 
+        self.telemetry.add_scheme(self.current_document().scheme())
+
         self.set_new_scheme(new_scheme)
 
         return QDialog.Accepted
@@ -885,6 +891,8 @@ class CanvasMainWindow(QMainWindow):
         """
         if not self.pre_close_save():
             return QDialog.Rejected
+
+        self.telemetry.add_scheme(self.current_document().scheme())
 
         if self.last_scheme_dir is None:
             # Get user 'Documents' folder
@@ -1740,6 +1748,11 @@ class CanvasMainWindow(QMainWindow):
                 self.ask_save_report() == QDialog.Rejected:
             event.ignore()
             return
+
+        self.telemetry.add_scheme(scheme=document.scheme())
+        USER_AGREES = True
+        if USER_AGREES:
+            self.telemetry.send()
 
         old_scheme = document.scheme()
 
