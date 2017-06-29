@@ -1,5 +1,6 @@
 import codecs
 from contextlib import closing
+from itertools import groupby
 import pip
 import logging
 import platform
@@ -33,6 +34,13 @@ class Telemetry():
         self.end_time = 0
 
     def add_scheme(self, scheme):
+        def canonicalize_dict(x):
+            return sorted(x.items(), key=lambda x: hash(x[0]))
+
+        def unique_and_count(lst):
+            grouper = groupby(sorted(map(canonicalize_dict, lst)))
+            return [dict(k + [("count", len(list(g)))]) for k, g in grouper]
+
         nodes = []
         for node in scheme.nodes:
             desc = node.description
@@ -40,7 +48,7 @@ class Telemetry():
                           "qualified_name": desc.qualified_name,
                           })
 
-        self.schemes["scheme_{}".format(self.scheme_id)] = nodes
+        self.schemes["scheme_{}".format(self.scheme_id)] = unique_and_count(nodes)
         now = time()
         self.schemes["scheme_duration_{}".format(self.scheme_id)] = now - self.last_time
         self.last_time = now
