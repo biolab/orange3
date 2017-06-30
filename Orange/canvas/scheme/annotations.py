@@ -102,16 +102,21 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
     Text annotation in the scheme.
     """
 
+    # Signal emitted when the annotation content change.
+    content_changed = Signal(str, str)
+
     # Signal emitted when the annotation text changes.
     text_changed = Signal(str)
 
     # Signal emitted when the annotation text font changes.
     font_changed = Signal(dict)
 
-    def __init__(self, rect, text="", font=None, anchor=None, parent=None):
+    def __init__(self, rect, text="", content_type="text/plain", font=None,
+                 anchor=None, parent=None):
         BaseSchemeAnnotation.__init__(self, parent)
         self.__rect = rect
-        self.__text = text
+        self.__content = text
+        self.__content_type = content_type
         self.__font = {} if font is None else font
         self.__anchor = anchor
 
@@ -150,24 +155,65 @@ class SchemeTextAnnotation(BaseSchemeAnnotation):
     def set_text(self, text):
         """
         Set the annotation text.
+
+        Same as `set_content(text, "text/plain")`
         """
         check_type(text, str)
         text = str(text)
-        if self.__text != text:
-            self.__text = text
-            self.text_changed.emit(text)
+        self.set_content(text, "text/plain")
 
     def text(self):
         """
         Annotation text.
+
+        .. deprecated::
+            Use `content` instead.
         """
-        return self.__text
+        return self.__content
 
     text = Property(tuple, fget=text, fset=set_text)
 
+    @property
+    def content_type(self):
+        """
+        Return the annotations' content type.
+
+        Currently this will be 'text/plain', 'text/html' or 'text/rst'.
+        """
+        return self.__content_type
+
+    @property
+    def content(self):
+        """
+        The annotation content.
+
+        How the content is interpreted/displayed depends on `content_type`.
+        """
+        return self.__content
+
+    def set_content(self, content, content_type="text/plain"):
+        """
+        Set the annotation content.
+
+        Parameters
+        ----------
+        content : str
+            The content.
+        content_type : str
+            Content type. Currently supported are 'text/plain' 'text/html'
+            (subset supported by `QTextDocument`) and `text/rst`.
+        """
+        if self.__content != content or self.__content_type != content_type:
+            text_changed = self.__content != content
+            self.__content = content
+            self.__content_type = content_type
+            self.content_changed.emit(content, content_type)
+            if text_changed:
+                self.text_changed.emit(content)
+
     def set_font(self, font):
         """
-        Set the annotation's font as a dictionary of font properties
+        Set the annotation's default font as a dictionary of font properties
         (at the moment only family and size are used).
 
             >>> annotation.set_font({"family": "Helvetica", "size": 16})

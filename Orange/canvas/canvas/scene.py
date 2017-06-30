@@ -550,7 +550,6 @@ class CanvasScene(QGraphicsScene):
 
         if isinstance(scheme_annot, scheme.SchemeTextAnnotation):
             item = items.TextAnnotation()
-            item.setPlainText(scheme_annot.text)
             x, y, w, h = scheme_annot.rect
             item.setPos(x, y)
             item.resize(w, h)
@@ -558,8 +557,8 @@ class CanvasScene(QGraphicsScene):
 
             font = font_from_dict(scheme_annot.font, item.font())
             item.setFont(font)
-            scheme_annot.text_changed.connect(item.setPlainText)
-
+            item.setContent(scheme_annot.content, scheme_annot.content_type)
+            scheme_annot.content_changed.connect(item.setContent)
         elif isinstance(scheme_annot, scheme.SchemeArrowAnnotation):
             item = items.ArrowAnnotation()
             start, end = scheme_annot.start_pos, scheme_annot.end_pos
@@ -597,10 +596,7 @@ class CanvasScene(QGraphicsScene):
         )
 
         if isinstance(scheme_annotation, scheme.SchemeTextAnnotation):
-            scheme_annotation.text_changed.disconnect(
-                item.setPlainText
-            )
-
+            scheme_annotation.content_changed.disconnect(item.setContent)
         self.remove_annotation_item(item)
 
     def annotation_items(self):
@@ -813,7 +809,7 @@ class CanvasScene(QGraphicsScene):
 
         # Right (context) click on the node item. If the widget is not
         # in the current selection then select the widget (only the widget).
-        # Else simply return and let customContextMenuReqested signal
+        # Else simply return and let customContextMenuRequested signal
         # handle it
         shape_item = self.item_at(event.scenePos(), items.NodeItem)
         if shape_item and event.button() == Qt.RightButton and \
@@ -855,6 +851,12 @@ class CanvasScene(QGraphicsScene):
                 self.user_interaction_handler.keyReleaseEvent(event):
             return
         return QGraphicsScene.keyReleaseEvent(self, event)
+
+    def contextMenuEvent(self, event):
+        if self.user_interaction_handler and \
+                self.user_interaction_handler.contextMenuEvent(event):
+            return
+        super().contextMenuEvent(event)
 
     def set_user_interaction_handler(self, handler):
         if self.user_interaction_handler and \

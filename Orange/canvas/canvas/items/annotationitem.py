@@ -1,17 +1,24 @@
 
 import logging
+from collections import OrderedDict
+from xml.sax.saxutils import escape
+
+import docutils.core
+import CommonMark
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsPathItem, QGraphicsWidget, QGraphicsTextItem,
-    QGraphicsDropShadowEffect
+    QGraphicsDropShadowEffect, QMenu, QAction, QActionGroup
 )
 from AnyQt.QtGui import (
     QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen
 )
 from AnyQt.QtCore import (
-    Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, QT_VERSION
+    Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, QMetaObject, QT_VERSION
 )
-from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
+from AnyQt.QtCore import (
+    pyqtSignal as Signal, pyqtProperty as Property, pyqtSlot as Slot
+)
 
 log = logging.getLogger(__name__)
 
@@ -40,10 +47,17 @@ class GraphicsTextEdit(QGraphicsTextItem):
     property (text displayed when no text is set).
 
     """
+    #: Signal emitted when editing operation starts (the item receives edit
+    #: focus)
+    editingStarted = Signal()
+    #: Signal emitted when editing operation ends (the item loses edit focus)
+    editingFinished = Signal()
+
     def __init__(self, *args, **kwargs):
         QGraphicsTextItem.__init__(self, *args, **kwargs)
-
+        self.setAcceptHoverEvents(True)
         self.__placeholderText = ""
+        self.__editing = False  # text editing in progress
 
     def setPlaceholderText(self, text):
         """
@@ -83,25 +97,163 @@ class GraphicsTextEdit(QGraphicsTextItem):
             painter.setPen(QPen(color))
             painter.drawText(brect, Qt.AlignTop | Qt.AlignLeft, text)
 
+    def hoverMoveEvent(self, event):
+        layout = self.document().documentLayout()
+        if layout.anchorAt(event.pos()):
+            self.setCursor(Qt.PointingHandCursor)
+        else:
+            self.unsetCursor()
+        super().hoverMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        flags = self.textInteractionFlags()
+        if flags & Qt.LinksAccessibleByMouse \
+                and not flags & Qt.TextSelectableByMouse \
+                and self.document().documentLayout().anchorAt(event.pos()):
+            # QGraphicsTextItem ignores the press event without
+            # Qt.TextSelectableByMouse flag set. This causes the
+            # corresponding mouse release to never get to this item
+            # and therefore no linkActivated/openUrl ...
+            super().mousePressEvent(event)
+            if not event.isAccepted():
+                event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def setTextInteractionFlags(self, flags):
+        super().setTextInteractionFlags(flags)
+        if self.hasFocus() and flags & Qt.TextEditable and not self.__editing:
+            self.__editing = True
+            self.editingStarted.emit()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        if self.textInteractionFlags() & Qt.TextEditable and \
+                not self.__editing:
+            self.__editing = True
+            self.editingStarted.emit()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        if self.__editing and \
+                event.reason() not in {Qt.ActiveWindowFocusReason,
+                                       Qt.PopupFocusReason}:
+            self.__editing = False
+            self.editingFinished.emit()
+
+
+def render_plain(content):
+    """
+    Return a html fragment for a plain pre-formatted text
+
+    Parameters
+    ----------
+    content : str
+        Plain text content
+
+    Returns
+    -------
+    html : str
+    """
+    return '<p style="white-space: pre-wrap;">' + escape(content) + "</p>"
+
+
+def render_html(content):
+    """
+    Return a html fragment unchanged.
+
+    Parameters
+    ----------
+    content : str
+        Html text.
+
+    Returns
+    -------
+    html : str
+    """
+    return content
+
+
+def render_markdown(content):
+    """
+    Return a html fragment from markdown text content
+
+    Parameters
+    ----------
+    content : str
+        A markdown formatted text
+
+    Returns
+    -------
+    html : str
+    """
+    return CommonMark.commonmark(content)
+
+
+def render_rst(content):
+    """
+    Return a html fragment from a RST text content
+
+    Parameters
+    ----------
+    content : str
+        A RST formatted text content
+
+    Returns
+    -------
+    html : str
+    """
+    overrides = {
+        "report_level": 10,  # suppress errors from appearing in the html
+        "output-encoding": "utf-8"
+    }
+    html = docutils.core.publish_string(
+        content, writer_name="html",
+        settings_overrides=overrides
+    )
+    return html.decode("utf-8")
+
 
 class TextAnnotation(Annotation):
-    """Text annotation item for the canvas scheme.
-
     """
-    editingFinished = Signal()
-    """Emitted when the editing is finished (i.e. the item loses focus)."""
+    Text annotation item for the canvas scheme.
 
+    Text interaction (if enabled) is started by double clicking the item.
+    """
+    #: Emitted when the editing is finished (i.e. the item loses edit focus).
+    editingFinished = Signal()
+
+    #: Emitted when the text content changes on user interaction.
     textEdited = Signal()
-    """Emitted when the edited text changes."""
+
+    #: Emitted when the text annotation's contents change
+    #: (`content` or `contentType` changed)
+    contentChanged = Signal()
+
+    #: Mapping of supported content types to corresponding
+    #: content -> html transformer.
+    ContentRenderer = OrderedDict([
+        ("text/plain", render_plain),
+        ("text/rst", render_rst),
+        ("text/markdown", render_markdown),
+        ("text/html", render_html),
+    ])  # type: Dict[str, Callable[[str], [str]]]
 
     def __init__(self, parent=None, **kwargs):
-        Annotation.__init__(self, parent, **kwargs)
+        super().__init__(None, **kwargs)
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setFlag(QGraphicsItem.ItemIsSelectable)
 
         self.setFocusPolicy(Qt.ClickFocus)
 
+        self.__contentType = "text/plain"
+        self.__content = ""
+        self.__renderer = render_plain
+
         self.__textMargins = (2, 2, 2, 2)
+        self.__textInteractionFlags = Qt.NoTextInteraction
+        self.__defaultInteractionFlags = (
+            Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard)
 
         rect = self.geometry().translated(-self.pos())
         self.__framePen = QPen(Qt.NoPen)
@@ -109,18 +261,32 @@ class TextAnnotation(Annotation):
         self.__framePathItem.setPen(self.__framePen)
 
         self.__textItem = GraphicsTextEdit(self)
+        self.__textItem.setOpenExternalLinks(True)
         self.__textItem.setPlaceholderText(self.tr("Enter text here"))
         self.__textItem.setPos(2, 2)
         self.__textItem.setTextWidth(rect.width() - 4)
         self.__textItem.setTabChangesFocus(True)
-        self.__textItem.setTextInteractionFlags(Qt.NoTextInteraction)
+        self.__textItem.setTextInteractionFlags(self.__defaultInteractionFlags)
         self.__textItem.setFont(self.font())
-        self.__textInteractionFlags = Qt.NoTextInteraction
-
+        self.__textItem.editingFinished.connect(self.__textEditingFinished)
+        if self.__textItem.scene() is not None:
+            self.__textItem.installSceneEventFilter(self)
         layout = self.__textItem.document().documentLayout()
         layout.documentSizeChanged.connect(self.__onDocumentSizeChanged)
 
         self.__updateFrame()
+        # set parent item at the end in order to ensure
+        # QGraphicsItem.ItemSceneHasChanged is delivered after initialization
+        if parent is not None:
+            self.setParentItem(parent)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSceneHasChanged:
+            if self.__textItem.scene() is not None:
+                self.__textItem.installSceneEventFilter(self)
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.__updateFrameStyle()
+        return super().itemChange(change, value)
 
     def adjustSize(self):
         """Resize to a reasonable size.
@@ -163,18 +329,31 @@ class TextAnnotation(Annotation):
 
         self.__framePathItem.setPen(pen)
 
+    def contentType(self):
+        return self.__contentType
+
+    def setContent(self, content, contentType="text/plain"):
+        if self.__content != content or self.__contentType != contentType:
+            self.__contentType = contentType
+            self.__content = content
+            self.__updateRenderedContent()
+            self.contentChanged.emit()
+
+    def content(self):
+        return self.__content
+
     def setPlainText(self, text):
-        """Set the annotation plain text.
+        """Set the annotation text as plain text.
         """
-        self.__textItem.setPlainText(text)
+        self.setContent(text, "text/plain")
 
     def toPlainText(self):
         return self.__textItem.toPlainText()
 
     def setHtml(self, text):
-        """Set the annotation rich text.
+        """Set the annotation text as html.
         """
-        self.__textItem.setHtml(text)
+        self.setContent(text, "text/html")
 
     def toHtml(self):
         return self.__textItem.toHtml()
@@ -233,11 +412,9 @@ class TextAnnotation(Annotation):
     def startEdit(self):
         """Start the annotation text edit process.
         """
+        self.__textItem.setPlainText(self.__content)
         self.__textItem.setTextInteractionFlags(self.__textInteractionFlags)
         self.__textItem.setFocus(Qt.MouseFocusReason)
-
-        # Install event filter to find out when the text item loses focus.
-        self.__textItem.installSceneEventFilter(self)
         self.__textItem.document().contentsChanged.connect(
             self.textEdited
         )
@@ -245,28 +422,32 @@ class TextAnnotation(Annotation):
     def endEdit(self):
         """End the annotation edit.
         """
-        self.__textItem.setTextInteractionFlags(Qt.NoTextInteraction)
-        self.__textItem.removeSceneEventFilter(self)
+        content = self.__textItem.toPlainText()
+
+        self.__textItem.setTextInteractionFlags(self.__defaultInteractionFlags)
         self.__textItem.document().contentsChanged.disconnect(
             self.textEdited
         )
         cursor = self.__textItem.textCursor()
         cursor.clearSelection()
         self.__textItem.setTextCursor(cursor)
+        self.__content = content
+
         self.editingFinished.emit()
+        # Cannot change the textItem's html immediately, this method is
+        # invoked from it.
+        # TODO: Separate the editor from the view.
+        QMetaObject.invokeMethod(
+            self, "__updateRenderedContent", Qt.QueuedConnection)
 
     def __onDocumentSizeChanged(self, size):
         # The size of the text document has changed. Expand the text
         # control rect's height if the text no longer fits inside.
-        try:
-            rect = self.geometry()
-            _, top, _, bottom = self.textMargins()
-            if rect.height() < (size.height() + bottom + top):
-                rect.setHeight(size.height() + bottom + top)
-                self.setGeometry(rect)
-        except Exception:
-            log.error("error in __onDocumentSizeChanged",
-                      exc_info=True)
+        rect = self.geometry()
+        _, top, _, bottom = self.textMargins()
+        if rect.height() < (size.height() + bottom + top):
+            rect.setHeight(size.height() + bottom + top)
+            self.setGeometry(rect)
 
     def __updateFrame(self):
         rect = self.geometry()
@@ -282,25 +463,78 @@ class TextAnnotation(Annotation):
         self.__updateFrame()
         QGraphicsWidget.resizeEvent(self, event)
 
+    def __textEditingFinished(self):
+        self.endEdit()
+
     def sceneEventFilter(self, obj, event):
-        if obj is self.__textItem and event.type() == QEvent.FocusOut:
-            self.__textItem.focusOutEvent(event)
-            self.endEdit()
+        if obj is self.__textItem and \
+                not (self.__textItem.hasFocus() and
+                     self.__textItem.textInteractionFlags() & Qt.TextEditable) and \
+                event.type() in {QEvent.GraphicsSceneContextMenu} and \
+                event.modifiers() & Qt.AltModifier:
+            # Handle Alt + context menu events here
+            self.contextMenuEvent(event)
+            event.accept()
             return True
-
-        return Annotation.sceneEventFilter(self, obj, event)
-
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.__updateFrameStyle()
-
-        return Annotation.itemChange(self, change, value)
+        return super().sceneEventFilter(obj, event)
 
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
             self.__textItem.setFont(self.font())
 
         Annotation.changeEvent(self, event)
+
+    @Slot()
+    def __updateRenderedContent(self):
+        try:
+            renderer = TextAnnotation.ContentRenderer[self.__contentType]
+        except KeyError:
+            renderer = render_plain
+        self.__textItem.setHtml(renderer(self.__content))
+
+    def contextMenuEvent(self, event):
+        if event.modifiers() & Qt.AltModifier:
+            menu = QMenu(event.widget())
+            menu.setAttribute(Qt.WA_DeleteOnClose)
+            formatmenu = menu.addMenu("Render as")
+            group = QActionGroup(self, exclusive=True)
+
+            def makeaction(text, parent, data=None, **kwargs):
+                action = QAction(text, parent, **kwargs)
+                if data is not None:
+                    action.setData(data)
+                return action
+
+            formatactions = [
+                makeaction("Plain Text", group, checkable=True,
+                           toolTip=self.tr("Render contents as plain text"),
+                           data="text/plain"),
+                makeaction("HTML", group, checkable=True,
+                           toolTip=self.tr("Render contents as HTML"),
+                           data="text/html"),
+                makeaction("RST", group, checkable=True,
+                           toolTip=self.tr("Render contents as RST "
+                                           "(reStructuredText)"),
+                           data="text/rst"),
+                makeaction("Markdown", group, checkable=True,
+                           toolTip=self.tr("Render contents as Markdown"),
+                           data="text/markdown")
+            ]
+            for action in formatactions:
+                action.setChecked(action.data() == self.__contentType.lower())
+                formatmenu.addAction(action)
+
+            def ontriggered(action):
+                mimetype = action.data()
+                content = self.content()
+                self.setContent(content, mimetype)
+                self.editingFinished.emit()
+
+            menu.triggered.connect(ontriggered)
+            menu.popup(event.screenPos())
+            event.accept()
+        else:
+            event.ignore()
 
 
 class ArrowItem(GraphicsPathObject):

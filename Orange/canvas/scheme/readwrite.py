@@ -85,12 +85,7 @@ def terminal_eval(source):
 
     """
     node = ast.parse(source, "<source>", mode="eval")
-
-    try:
-        return _terminal_value(node.body)
-    except ValueError:
-        raise
-        raise ValueError("%r is not a terminal constant" % source)
+    return _terminal_value(node.body)
 
 
 def _terminal_value(node):
@@ -426,7 +421,7 @@ _annotation = namedtuple(
 
 _text_params = namedtuple(
     "_text_params",
-    ["geometry", "text", "font"])
+    ["geometry", "text", "font", "content_type"])
 
 _arrow_params = namedtuple(
     "_arrow_params",
@@ -487,10 +482,13 @@ def parse_ows_etree_v_2_0(tree):
             if font_size:
                 font["size"] = int(font_size)
 
+            content_type = annot.get("type", "text/plain")
+
             annotation = _annotation(
                 id=annot.get("id"),
                 type="text",
-                params=_text_params(rect, annot.text or "", font),
+                params=_text_params(rect, annot.text or "", font,
+                                    content_type),
             )
         elif annot.tag == "arrow":
             start = tuple_eval(annot.get("start", "(0, 0)"))
@@ -727,8 +725,10 @@ def scheme_load(scheme, stream, registry=None, error_handler=None):
     for annot_d in desc.annotations:
         params = annot_d.params
         if annot_d.type == "text":
-            annot = SchemeTextAnnotation(params.geometry, params.text,
-                                         params.font)
+            annot = SchemeTextAnnotation(
+                params.geometry, params.text, params.content_type,
+                params.font
+            )
         elif annot_d.type == "arrow":
             start, end = params.geometry
             annot = SchemeArrowAnnotation(start, end, params.color)
@@ -818,6 +818,7 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
         data = None
         if isinstance(annotation, SchemeTextAnnotation):
             tag = "text"
+            attrs.update({"type": annotation.content_type})
             attrs.update({"rect": repr(annotation.rect)})
 
             # Save the font attributes
@@ -827,21 +828,12 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
             attrs = [(key, value) for key, value in attrs.items()
                      if value is not None]
             attrs = dict((key, str(value)) for key, value in attrs)
-
-            data = annotation.text
-
+            data = annotation.content
         elif isinstance(annotation, SchemeArrowAnnotation):
             tag = "arrow"
             attrs.update({"start": repr(annotation.start_pos),
-                          "end": repr(annotation.end_pos)})
-
-            # Save the arrow color
-            try:
-                color = annotation.color
-                attrs.update({"fill": color})
-            except AttributeError:
-                pass
-
+                          "end": repr(annotation.end_pos),
+                          "fill": annotation.color})
             data = None
         else:
             log.warning("Can't save %r", annotation)
