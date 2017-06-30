@@ -5,6 +5,7 @@ from AnyQt import QtWidgets
 from AnyQt import QtCore
 
 from Orange.widgets import widget, gui
+from Orange.widgets.widget import Input
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
 from Orange.canvas import report
@@ -23,7 +24,9 @@ class OWDataInfo(widget.OWWidget):
     priority = 80
     category = "Data"
     keywords = ["data", "info"]
-    inputs = [("Data", Table, "data")]
+
+    class Inputs:
+        data = Input("Data", Table)
 
     want_main_area = False
 
@@ -53,6 +56,7 @@ class OWDataInfo(widget.OWWidget):
         self.targets = ""
         self.data_desc = None
 
+    @Inputs.data
     def data(self, data):
         def n_or_none(i):
             return i or "(none)"

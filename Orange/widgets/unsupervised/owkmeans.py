@@ -324,8 +324,8 @@ class OWKMeans(widget.OWWidget):
         self.Outputs.annotated_data.send(new_table)
         self.Outputs.centroids.send(centroids)
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def set_data(self, data):
         self.data = data
         self.invalidate(True)

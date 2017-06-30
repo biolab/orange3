@@ -95,7 +95,7 @@ class TestOWROCAnalysis(WidgetTest):
 
     def test_basic(self):
         res = self.res
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
         self.widget._replot()
         self.widget.roc_averaging = OWROCAnalysis.Vertical
@@ -104,7 +104,7 @@ class TestOWROCAnalysis(WidgetTest):
         self.widget._replot()
         self.widget.roc_averaging = OWROCAnalysis.NoAveraging
         self.widget._replot()
-        self.send_signal("Evaluation Results", None)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
 
     def test_empty_input(self):
         res = Orange.evaluation.Results(
@@ -114,7 +114,7 @@ class TestOWROCAnalysis(WidgetTest):
         res.predicted = numpy.zeros((2, 0))
         res.probabilities = numpy.zeros((2, 0, 3))
 
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
         self.widget._replot()
         self.widget.roc_averaging = OWROCAnalysis.Vertical
@@ -129,7 +129,7 @@ class TestOWROCAnalysis(WidgetTest):
         res.predicted = numpy.zeros((2, 1))
         res.probabilities = numpy.zeros((2, 1, 3))
 
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
         self.widget._replot()
         self.widget.roc_averaging = OWROCAnalysis.Vertical
@@ -149,11 +149,10 @@ class TestOWROCAnalysis(WidgetTest):
         res.predicted[:, 1] = numpy.nan
         res.probabilities[0, 1, :] = numpy.nan
 
-        self.send_signal("Evaluation Results", res)
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
-        self.send_signal("Evaluation Results", None)
+        self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
-
     def test_many_evaluation_results(self):
         """
         Now works with more than 9 evaluation results.

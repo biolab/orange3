@@ -11,7 +11,7 @@ import Orange.preprocess.discretize as disc
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype
-from Orange.widgets.widget import OutputSignal, InputSignal
+from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWDiscretize"]
 
@@ -127,10 +127,12 @@ class OWDiscretize(widget.OWWidget):
     name = "Discretize"
     description = "Discretize the numeric data features."
     icon = "icons/Discretize.svg"
-    inputs = [InputSignal("Data", Orange.data.Table, "set_data",
-                          doc="Input data table")]
-    outputs = [OutputSignal("Data", Orange.data.Table,
-                            doc="Table with discretized features")]
+
+    class Inputs:
+        data = Input("Data", Orange.data.Table, doc="Input data table")
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table, doc="Table with discretized features")
 
     settingsHandler = settings.DomainContextHandler()
     saved_var_states = settings.ContextSetting({})
@@ -238,6 +240,7 @@ class OWDiscretize(widget.OWWidget):
         self._update_spin_positions()
 
 
+    @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.data = data
@@ -468,7 +471,7 @@ class OWDiscretize(widget.OWWidget):
         if self.data is not None and len(self.data):
             domain = self.discretized_domain()
             output = self.data.transform(domain)
-        self.send("Data", output)
+        self.Outputs.data.send(output)
 
     def storeSpecificSettings(self):
         super().storeSpecificSettings()

@@ -16,7 +16,7 @@ from Orange.base import Learner
 from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
 
@@ -59,9 +59,12 @@ class OWImpute(OWWidget):
     icon = "icons/Impute.svg"
     priority = 2130
 
-    inputs = [("Data", Orange.data.Table, "set_data"),
-              ("Learner", Learner, "set_learner")]
-    outputs = [("Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+        learner = Input("Learner", Learner)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     class Error(OWWidget.Error):
         imputation_failed = Msg("Imputation failed for '{}'")
@@ -198,6 +201,7 @@ class OWImpute(OWWidget):
         """
         self.default_method_index = index
 
+    @Inputs.data
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
@@ -213,6 +217,7 @@ class OWImpute(OWWidget):
         self.update_varview()
         self.unconditional_commit()
 
+    @Inputs.learner
     def set_learner(self, learner):
         self.learner = learner or self.DEFAULT_LEARNER
         imputer = self.methods[self.MODEL_BASED_IMPUTER]
@@ -248,7 +253,7 @@ class OWImpute(OWWidget):
 
         if self.data is not None:
             if not len(self.data):
-                self.send("Data", self.data)
+                self.Outputs.data.send(self.data)
                 self.modified = False
                 return
 
@@ -297,7 +302,7 @@ class OWImpute(OWWidget):
                                             self.data.domain.metas)
                 data = self.data.from_table(domain, self.data[~drop_mask])
 
-        self.send("Data", data)
+        self.Outputs.data.send(data)
         self.modified = False
 
     def send_report(self):

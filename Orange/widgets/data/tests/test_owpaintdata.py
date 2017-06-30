@@ -24,17 +24,17 @@ class TestOWPaintData(WidgetTest):
     def test_empty_data(self):
         """No crash on empty data"""
         data = Table("iris")
-        self.send_signal("Data", data)
-        self.send_signal("Data", Table(data.domain))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, Table(data.domain))
 
     def test_nan_data(self):
         data = datasets.missing_data_2()
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_output_shares_internal_buffer(self):
         data = Table("iris")[::5]
-        self.send_signal("Data", data)
-        output1 = self.get_output("Data")
+        self.send_signal(self.widget.Inputs.data, data)
+        output1 = self.get_output(self.widget.Outputs.data)
         output1_copy = output1.copy()
         self.widget._add_command(
             owpaintdata.SelectRegion(QRectF(0.25, 0.25, 0.5, 0.5))
@@ -42,7 +42,7 @@ class TestOWPaintData(WidgetTest):
         self.widget._add_command(
             owpaintdata.MoveSelection(QPointF(0.1, 0.1))
         )
-        output2 = self.get_output("Data")
+        output2 = self.get_output(self.widget.Outputs.data)
         self.assertIsNot(output1, output2)
 
         np.testing.assert_equal(output1.X, output1_copy.X)
@@ -57,7 +57,7 @@ class TestOWPaintData(WidgetTest):
             DiscreteVariable("C", values=[chr(ord("a") + i) for i in range(20)])
         )
         data = Table(domain, [[0.1, 0.2, "a"], [0.4, 0.7, "t"]])
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
     def test_sparse_data(self):
         """
@@ -67,9 +67,9 @@ class TestOWPaintData(WidgetTest):
         """
         data = Table("iris")[::25]
         data.X = sp.csr_matrix(data.X)
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.sparse_not_supported.is_shown())
 
     def test_load_empty_data(self):

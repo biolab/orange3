@@ -24,15 +24,15 @@ class TestOWImpute(WidgetTest):
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
         widget.default_method = widget.methods[widget.default_method_index]
 
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         widget.unconditional_commit()
-        imp_data = self.get_output("Data")
+        imp_data = self.get_output(self.widget.Outputs.data)
         np.testing.assert_equal(imp_data.X, data.X)
         np.testing.assert_equal(imp_data.Y, data.Y)
 
-        self.send_signal("Data", Table(data.domain))
+        self.send_signal(self.widget.Inputs.data, Table(data.domain))
         widget.unconditional_commit()
-        imp_data = self.get_output("Data")
+        imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
 
     def test_no_features(self):
@@ -40,20 +40,20 @@ class TestOWImpute(WidgetTest):
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
         widget.default_method = widget.methods[widget.default_method_index]
 
-        self.send_signal("Data", Table("iris"))
+        self.send_signal(self.widget.Inputs.data, Table("iris"))
 
-        self.send_signal("Learner", lambda *_: 1/0)  # Learner fails
+        self.send_signal(self.widget.Inputs.learner, lambda *_: 1/0)  # Learner fails
         widget.unconditional_commit()
         self.assertTrue(widget.Error.imputation_failed.is_shown())
 
-        self.send_signal("Learner", lambda *_: (lambda *_: 1/0))  # Model fails
+        self.send_signal(self.widget.Inputs.learner, lambda *_: (lambda *_: 1/0))  # Model fails
         widget.unconditional_commit()
         self.assertTrue(widget.Error.imputation_failed.is_shown())
 
     def test_select_method(self):
         data = Table("iris")[::5]
 
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         method_types = [type(m) for m in OWImpute.METHODS]
 
         widget = self.widget
@@ -97,7 +97,7 @@ class TestOWImpute(WidgetTest):
 
     def test_value_edit(self):
         data = Table("heart_disease")[::10]
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         widget = self.widget
         model = widget.varmodel
         view = widget.varview

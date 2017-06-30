@@ -323,8 +323,8 @@ class OWRank(OWWidget):
         self.score_stack.setCurrentIndex(index)
         self.updateVisibleScoreColumns()
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def setData(self, data):
         self.closeContext()
         self.clear_messages()

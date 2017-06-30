@@ -14,7 +14,7 @@ from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.widget import OWWidget, OutputSignal, Msg
+from Orange.widgets.widget import OWWidget, Output, Msg
 
 MAX_DL_LIMIT = 1000000
 
@@ -43,9 +43,9 @@ class OWSql(OWWidget):
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]
-    outputs = [OutputSignal(
-        "Data", Table,
-        doc="Attribute-valued data set read from the input file.")]
+
+    class Outputs:
+        data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
 
     want_main_area = False
     resizing_enabled = False
@@ -241,7 +241,7 @@ class OWSql(OWWidget):
     def open_table(self):
         table = self.get_table()
         self.data_desc_table = table
-        self.send("Data", table)
+        self.Outputs.data.send(table)
 
     def get_table(self):
         if self.tablecombo.currentIndex() <= 0:

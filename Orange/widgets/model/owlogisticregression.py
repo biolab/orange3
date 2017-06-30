@@ -5,8 +5,9 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification.logistic_regression import LogisticRegressionLearner
-from Orange.widgets import widget, settings, gui
+from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.widget import Output
 
 
 class OWLogisticRegression(OWBaseLearner):
@@ -21,7 +22,8 @@ class OWLogisticRegression(OWBaseLearner):
 
     LEARNER = LogisticRegressionLearner
 
-    outputs = [("Coefficients", Table, widget.Explicit)]
+    class Outputs:
+        coefficients = Output("Coefficients", Table, explicit=True)
 
     penalty_type = settings.Setting(1)
     C_index = settings.Setting(61)
@@ -82,7 +84,7 @@ class OWLogisticRegression(OWBaseLearner):
         coef_table = None
         if self.model is not None:
             coef_table = create_coef_table(self.model)
-        self.send("Coefficients", coef_table)
+        self.Outputs.coefficients.send(coef_table)
 
     def get_learner_parameters(self):
         return (("Regularization", "{}, C={}".format(

@@ -22,7 +22,7 @@ from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.widget import OWWidget, Input, Output
 
 __all__ = ["OWPythonScript"]
 
@@ -357,21 +357,23 @@ class OWPythonScript(widget.OWWidget):
     icon = "icons/PythonScript.svg"
     priority = 3150
 
-    inputs = [("in_data", Orange.data.Table, "setExampleTable",
-               widget.Default),
-              # ("in_distance", Orange.misc.SymMatrix, "setDistanceMatrix",
-              # widget.Default),
-              ("in_learner", Learner, "setLearner",
-               widget.Default),
-              ("in_classifier", Model, "setClassifier",
-               widget.Default),
-              ("in_object", object, "setObject")]
+    inputs_names = ["in_data", "in_learner", "in_classifier", "in_object"]
 
-    outputs = [("out_data", Orange.data.Table, ),
-               # ("out_distance", Orange.misc.SymMatrix, ),
-               ("out_learner", Learner, ),
-               ("out_classifier", Model, widget.Dynamic),
-               ("out_object", object, widget.Dynamic)]
+    class Inputs:
+        in_data = Input("in_data", Orange.data.Table, default=True)
+        # in_distance = Input("in_distance", Orange.misc.SymMatrix, default=True)
+        in_learner = Input("in_learner", Learner, default=True)
+        in_classifier = Input("in_classifier", Model, default=True)
+        in_object = Input("in_object", object)
+
+    outputs_names = ["out_data", "out_learner", "out_classifier", "out_object"]
+
+    class Outputs:
+        out_data = Output("out_data", Orange.data.Table)
+        # out_distance = Output(("out_distance", Orange.misc.SymMatrix)
+        out_learner = Output("out_learner", Learner)
+        out_classifier = Output("out_classifier", Model)
+        out_object = Output("out_object", object)
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
@@ -400,9 +402,9 @@ class OWPythonScript(widget.OWWidget):
         gui.label(
             self.infoBox, self,
             "<p>Execute python script.</p><p>Input variables:<ul><li> " + \
-            "<li>".join(t.name for t in self.inputs) + \
+            "<li>".join(name for name in self.inputs_names) + \
             "</ul></p><p>Output variables:<ul><li>" + \
-            "<li>".join(t.name for t in self.outputs) + \
+            "<li>".join(name for name in self.outputs_names) + \
             "</ul></p>"
         )
 
@@ -511,18 +513,23 @@ class OWPythonScript(widget.OWWidget):
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
 
+    @Inputs.in_data
     def setExampleTable(self, et):
         self.in_data = et
 
+    # @Inputs.in_distance
     def setDistanceMatrix(self, dm):
         self.in_distance = dm
 
+    @Inputs.in_learner
     def setLearner(self, learner):
         self.in_learner = learner
 
+    @Inputs.in_classifier
     def setClassifier(self, classifier):
         self.in_classifier = classifier
 
+    @Inputs.in_object
     def setObject(self, obj):
         self.in_object = obj
 
@@ -645,8 +652,8 @@ class OWPythonScript(widget.OWWidget):
             f.close()
 
     def initial_locals_state(self):
-        d = dict([(i.name, getattr(self, i.name, None)) for i in self.inputs])
-        d.update(dict([(o.name, None) for o in self.outputs]))
+        d = dict([(name, getattr(self, name, None)) for name in self.inputs_names])
+        d.update(dict([(name, None) for name in self.outputs_names]))
         return d
 
     def commit(self):
@@ -658,16 +665,16 @@ class OWPythonScript(widget.OWWidget):
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
         self.console.new_prompt(sys.ps1)
-        for out in self.outputs:
-            signal = out.name
+        for signal in self.outputs_names:
             out_var = self.console.locals.get(signal, None)
-            if not isinstance(out_var, out.type) and out_var is not None:
+            signal_type = getattr(self.Outputs, signal).type
+            if not isinstance(out_var, signal_type) and out_var is not None:
                 self.Error.add_message(signal,
                                        "Variable '{}' has to be an instance of '{}'.".
-                                       format(signal, out.type.__name__))
+                                       format(signal, signal_type.__name__))
                 getattr(self.Error, signal)()
                 out_var = None
-            self.send(signal, out_var)
+            getattr(self.Outputs, signal).send(out_var)
 
 
 if __name__ == "__main__":

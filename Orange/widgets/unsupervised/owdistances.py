@@ -7,7 +7,7 @@ import Orange.misc
 from Orange import distance
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 # A placeholder. This metric is handled specially in commit method.
 __Mahalanobis = distance.MahalanobisDistance()
@@ -32,8 +32,11 @@ class OWDistances(OWWidget):
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
 
-    inputs = [("Data", Orange.data.Table, "set_data")]
-    outputs = [("Distances", Orange.misc.DistMatrix)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        distances = Output("Distances", Orange.misc.DistMatrix, dynamic=False)
 
     axis = settings.Setting(0)
     metric_idx = settings.Setting(0)
@@ -74,6 +77,7 @@ class OWDistances(OWWidget):
 
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
+    @Inputs.data
     @check_sql_input
     def set_data(self, data):
         """
@@ -103,7 +107,7 @@ class OWDistances(OWWidget):
 
     def commit(self):
         metric = METRICS[self.metric_idx]
-        self.send("Distances", self.compute_distances(metric, self.data))
+        self.Outputs.distances.send(self.compute_distances(metric, self.data))
 
     def compute_distances(self, metric, data):
         def checks(metric, data):

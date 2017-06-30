@@ -18,6 +18,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats
+from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -76,9 +77,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     priority = 10
     category = "Data"
     keywords = ["data", "file", "load", "read"]
-    outputs = [widget.OutputSignal(
-        "Data", Table,
-        doc="Attribute-valued data set read from the input file.")]
+
+    class Outputs:
+        data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
 
     want_main_area = False
 
@@ -273,7 +274,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.set_file_list()
         if self.last_path() and not os.path.exists(self.last_path()):
             self.Error.file_not_found()
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             self.info.setText("No data.")
             return
 
@@ -282,7 +283,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.reader = self._get_reader()
             if self.reader is None:
                 self.data = None
-                self.send("Data", None)
+                self.Outputs.data.send(None)
                 self.info.setText("No data.")
                 self.sheet_box.hide()
                 return
@@ -301,7 +302,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         if error:
             self.data = None
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             self.info.setText("An error occurred:\n{}".format(error))
             self.sheet_box.hide()
             return
@@ -406,7 +407,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 table.ids = np.array(self.data.ids)
                 table.attributes = getattr(self.data, 'attributes', {})
 
-        self.send("Data", table)
+        self.Outputs.data.send(table)
         self.apply_button.setEnabled(False)
 
     def get_widget_name_extension(self):

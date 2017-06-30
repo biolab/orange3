@@ -11,7 +11,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Output
 
 
 class OWLoadModel(widget.OWWidget):
@@ -21,7 +21,8 @@ class OWLoadModel(widget.OWWidget):
     replaces = ["Orange.widgets.classify.owloadclassifier.OWLoadClassifier"]
     icon = "icons/LoadModel.svg"
 
-    outputs = [("Model", Model, widget.Dynamic)]
+    class Outputs:
+        model = Output("Model", Model)
 
     #: List of recent filenames.
     history = Setting([])
@@ -106,7 +107,7 @@ class OWLoadModel(widget.OWWidget):
         else:
             self.Error.load_error.clear()
             self._remember(filename)
-            self.send("Model", model)
+            self.Outputs.model.send(model)
 
     def _remember(self, filename):
         """

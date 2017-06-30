@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import QFileDialog
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
+from Orange.widgets.widget import Input
 
 
 class OWSaveDistances(widget.OWWidget):
@@ -14,7 +15,8 @@ class OWSaveDistances(widget.OWWidget):
     category = "Unsupervised"
     keywords = ["distance matrix", "save"]
 
-    inputs = [("Distances", DistMatrix, "set_distances")]
+    class Inputs:
+        distances = Input("Distances", DistMatrix)
 
     want_main_area = False
     resizing_enabled = False
@@ -43,6 +45,7 @@ class OWSaveDistances(widget.OWWidget):
             text = ["Save as '{}'", "Auto save as '{}'"][self.auto_save]
             self.save.button.setText(text.format(filename))
 
+    @Inputs.distances
     def set_distances(self, distances):
         self.distances = distances
         self.save.setDisabled(distances is None)

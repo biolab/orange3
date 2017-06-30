@@ -181,8 +181,8 @@ class OWPredictions(OWWidget):
 
         self.mainArea.layout().addWidget(self.splitter)
 
-    @check_sql_input
     @Inputs.data
+    @check_sql_input
     def set_data(self, data):
         """Set the input data set"""
         if data is not None and not len(data):

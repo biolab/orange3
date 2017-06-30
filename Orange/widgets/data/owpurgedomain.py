@@ -4,6 +4,7 @@ from Orange.preprocess.remove import Remove
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 class OWPurgeDomain(widget.OWWidget):
@@ -14,8 +15,11 @@ class OWPurgeDomain(widget.OWWidget):
     category = "Data"
     keywords = ["data", "purge", "domain"]
 
-    inputs = [("Data", Table, "setData")]
-    outputs = [("Data", Table)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        data = Output("Data", Table)
 
     removeValues = Setting(1)
     removeAttributes = Setting(1)
@@ -96,6 +100,7 @@ class OWPurgeDomain(widget.OWWidget):
                         orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)
 
+    @Inputs.data
     @check_sql_input
     def setData(self, dataset):
         if dataset is not None:
@@ -110,7 +115,7 @@ class OWPurgeDomain(widget.OWWidget):
             self.resortedClasses = "-"
             self.removedMetas = "-"
             self.reducedMetas = "-"
-            self.send("Data", None)
+            self.Outputs.data.send(None)
             self.data = None
 
     def optionsChanged(self):
@@ -143,7 +148,7 @@ class OWPurgeDomain(widget.OWWidget):
         self.removedMetas = meta_res['removed']
         self.reducedMetas = meta_res['reduced']
 
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def send_report(self):
         def list_opts(opts):

@@ -12,7 +12,7 @@ class TestOWCorrespondence(WidgetTest):
 
     def test_no_data(self):
         """Check that the widget doesn't crash on empty data"""
-        self.send_signal("Data", Table(Table("iris").domain))
+        self.send_signal(self.widget.Inputs.data, Table(Table("iris").domain))
         self.assertTrue(self.widget.Error.empty_data.is_shown())
         self.assertIsNone(self.widget.data)
 
@@ -36,7 +36,7 @@ class TestOWCorrespondence(WidgetTest):
                 "yyyy",
                 "klkk"
             )))
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
 
     def test_data_one_value_zero(self):
         """
@@ -50,4 +50,4 @@ class TestOWCorrespondence(WidgetTest):
             ),
             [(0,), (0,), (0,)]
         )
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)

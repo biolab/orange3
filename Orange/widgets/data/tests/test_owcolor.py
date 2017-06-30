@@ -12,13 +12,13 @@ class TestOWColor(WidgetTest):
         self.iris = Table("iris")
 
     def test_reuse_old_settings(self):
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
 
         assert isinstance(self.widget, OWColor)
         self.widget.saveSettings()
 
         w = self.create_widget(OWColor, reset_default_settings=False)
-        self.send_signal("Data", self.iris, widget=w)
+        self.send_signal(self.widget.Inputs.data, self.iris, widget=w)
 
     def test_invalid_input_colors(self):
         a = ContinuousVariable("a")
@@ -26,4 +26,4 @@ class TestOWColor(WidgetTest):
         a.colors
         t = Table(Domain([a]))
 
-        self.send_signal("Data", t)
+        self.send_signal(self.widget.Inputs.data, t)

@@ -12,6 +12,7 @@ from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import Normalize
 from Orange.projection import PCA, TruncatedSVD
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.widget import Input, Output
 
 try:
     from orangecontrib import remote
@@ -35,10 +36,13 @@ class OWPCA(widget.OWWidget):
     icon = "icons/PCA.svg"
     priority = 3050
 
-    inputs = [("Data", Table, "set_data")]
-    outputs = [("Transformed data", Table),
-               ("Components", Table),
-               ("PCA", PCA)]
+    class Inputs:
+        data = Input("Data", Table)
+
+    class Outputs:
+        transformed_data = Output("Transformed data", Table)
+        components = Output("Components", Table)
+        pca = Output("PCA", PCA, dynamic=False)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -206,6 +210,7 @@ class OWPCA(widget.OWWidget):
             self.update_model()
             self.start_button.setText("Abort remote computation")
 
+    @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.clear_messages()
@@ -279,9 +284,9 @@ class OWPCA(widget.OWWidget):
         self.plot.clear()
 
     def clear_outputs(self):
-        self.send("Transformed data", None)
-        self.send("Components", None)
-        self.send("PCA", self._pca_projector)
+        self.Outputs.transformed_data.send(None)
+        self.Outputs.components.send(None)
+        self.Outputs.pca.send(self._pca_projector)
 
     def get_model(self):
         if self.rpca is None:
@@ -476,9 +481,9 @@ class OWPCA(widget.OWWidget):
             components.name = 'components'
 
         self._pca_projector.component = self.ncomponents
-        self.send("Transformed data", transformed)
-        self.send("Components", components)
-        self.send("PCA", self._pca_projector)
+        self.Outputs.transformed_data.send(transformed)
+        self.Outputs.components.send(components)
+        self.Outputs.pca.send(self._pca_projector)
 
     def send_report(self):
         if self.data is None:

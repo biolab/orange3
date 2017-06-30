@@ -15,6 +15,7 @@ from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.widget import Input, Output
 
 
 class OWContinuize(widget.OWWidget):
@@ -25,8 +26,11 @@ class OWContinuize(widget.OWWidget):
     category = "Data"
     keywords = ["data", "continuize"]
 
-    inputs = [("Data", Orange.data.Table, "setData")]
-    outputs = [("Data", Orange.data.Table)]
+    class Inputs:
+        data = Input("Data", Orange.data.Table)
+
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -99,11 +103,12 @@ class OWContinuize(widget.OWWidget):
     def settings_changed(self):
         self.commit()
 
+    @Inputs.data
     @check_sql_input
     def setData(self, data):
         self.data = data
         if data is None:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
         else:
             self.unconditional_commit()
 
@@ -129,9 +134,9 @@ class OWContinuize(widget.OWWidget):
         if self.data is not None and len(self.data):
             domain = continuizer(self.data)
             data = self.data.transform(domain)
-            self.send("Data", data)
+            self.Outputs.data.send(data)
         else:
-            self.send("Data", self.data)  # None or empty data
+            self.Outputs.data.send(self.data)  # None or empty data
 
     def send_report(self):
         self.report_items(

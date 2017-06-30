@@ -23,8 +23,8 @@ class TestOWPreprocess(WidgetTest):
                                      "rand_seed": 1})]}
         model = self.widget.load(saved)
         self.widget.set_model(model)
-        self.send_signal("Data", self.zoo)
-        output = self.get_output("Preprocessed Data")
+        self.send_signal(self.widget.Inputs.data, self.zoo)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
         np.random.seed(1)
         np.random.shuffle(self.zoo.Y)
         np.testing.assert_array_equal(self.zoo.X, output.X)
@@ -38,8 +38,8 @@ class TestOWPreprocess(WidgetTest):
                                      "scale": Scale.ScalingType.Std})]}
         model = self.widget.load(saved)
         self.widget.set_model(model)
-        self.send_signal("Data", data)
-        output = self.get_output("Preprocessed Data")
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
 
         np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
         np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
@@ -56,7 +56,7 @@ class TestOWPreprocess(WidgetTest):
                                      "scale": Scale.ScalingType.Std})]}
         model = self.widget.load(saved)
         self.widget.set_model(model)
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
 
 
 # Test for editors

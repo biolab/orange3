@@ -7,6 +7,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.widget import Output
 
 
 class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
@@ -17,7 +18,9 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
     priority = 10
     category = "Data"
     keywords = ["data", "distances", "load", "read"]
-    outputs = [("Distances", DistMatrix)]
+
+    class Outputs:
+        distances = Output("Distances", DistMatrix, dynamic=False)
 
     want_main_area = False
     resizing_enabled = False
@@ -104,7 +107,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
                 self.information("Loading '{}' from the current directory."
                                  .format(basename))
         if fn == "(none)":
-            self.send("Distances", None)
+            self.Outputs.distances.send(None)
             self.infoa.setText("No data loaded")
             self.infob.setText("")
             self.warnings.setText("")
@@ -133,7 +136,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
             else:
                 distances.name = file_name
 
-        self.send("Distances", distances)
+        self.Outputs.distances.send(distances)
 
     def send_report(self):
         if not self.loaded_file:
