@@ -1,7 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import numpy
+import numpy as np
 import Orange.misc
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
@@ -53,7 +54,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_all_zero_inputs(self):
-        d = Orange.misc.DistMatrix(numpy.zeros((10, 10)))
+        d = Orange.misc.DistMatrix(np.zeros((10, 10)))
         self.widget.set_distances(d)
 
     def test_annotation_settings_retrieval(self):
@@ -61,8 +62,8 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         widget = self.widget
 
         dist_names = Orange.misc.DistMatrix(
-            numpy.zeros((4, 4)), self.data, axis=0)
-        dist_no_names = Orange.misc.DistMatrix(numpy.zeros((10, 10)), axis=1)
+            np.zeros((4, 4)), self.data, axis=0)
+        dist_no_names = Orange.misc.DistMatrix(np.zeros((10, 10)), axis=1)
 
         self.send_signal(self.widget.Inputs.distances, self.distances)
         # Check that default is set (class variable)
@@ -102,3 +103,23 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         data = self.data[:, :4]
         distances = Euclidean(data)
         self.send_signal(self.widget.Inputs.distances, distances)
+
+    def test_infinite_distances(self):
+        """
+        Scipy does not accept infinite distances and neither does this widget.
+        Error is shown.
+        GH-2380
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a")],
+                [DiscreteVariable("b", values=["y"])]),
+            list(zip([1.79e308, -1e120],
+                     "yy"))
+        )
+        distances = Euclidean(table)
+        self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
+        self.send_signal(self.widget.Inputs.distances, distances)
+        self.assertTrue(self.widget.Error.not_finite_distances.is_shown())
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertFalse(self.widget.Error.not_finite_distances.is_shown())

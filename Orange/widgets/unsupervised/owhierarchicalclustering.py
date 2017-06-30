@@ -5,7 +5,7 @@ from collections import namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
 
-import numpy
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
@@ -34,7 +34,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import Input, Output, Msg
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -605,7 +605,7 @@ class DendrogramWidget(QGraphicsWidget):
         else:
             drect = QSizeF(leaf_count, self._root.value.height)
 
-        eps = numpy.finfo(numpy.float64).eps
+        eps = np.finfo(np.float64).eps
 
         if abs(drect.width()) < eps:
             sx = 1.0
@@ -762,6 +762,9 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     cluster_roles = ["Attribute", "Class variable", "Meta variable"]
     basic_annotations = ["None", "Enumeration"]
+
+    class Error(widget.OWWidget.Error):
+        not_finite_distances = Msg("Some distances are infinite")
 
     def __init__(self):
         super().__init__()
@@ -962,10 +965,15 @@ class OWHierarchicalClustering(widget.OWWidget):
     @Inputs.distances
     def set_distances(self, matrix):
         self.error()
+        self.Error.clear()
         if matrix is not None:
             N, _ = matrix.shape
             if N < 2:
                 self.error("Empty distance matrix")
+                matrix = None
+        if matrix is not None:
+            if not np.all(np.isfinite(matrix)):
+                self.Error.not_finite_distances()
                 matrix = None
 
         self.matrix = matrix
@@ -1135,7 +1143,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
-            c = numpy.zeros(self.matrix.shape[0])
+            c = np.zeros(self.matrix.shape[0])
 
             for i, indices in enumerate(maps):
                 c[indices] = i
