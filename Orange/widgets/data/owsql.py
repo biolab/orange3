@@ -2,9 +2,10 @@ import sys
 from collections import OrderedDict
 
 from AnyQt.QtWidgets import (
-    QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy, QApplication)
+    QLineEdit, QComboBox, QTextEdit, QMessageBox, QSizePolicy, QApplication, QDialog, QPushButton, QVBoxLayout,
+    QDialogButtonBox, QErrorMessage)
 from AnyQt.QtGui import QCursor
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt, QTimer, QSize, pyqtSignal
 
 from Orange.canvas import report
 from Orange.data import Table
@@ -12,6 +13,7 @@ from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import BackendError
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
+from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.widget import OWWidget, OutputSignal, Msg
@@ -27,12 +29,10 @@ class TableModel(PyListModel):
         return super().data(index, role)
 
 
-class BackendModel(PyListModel):
-    def data(self, index, role=Qt.DisplayRole):
-        row = index.row()
-        if role == Qt.DisplayRole:
-            return self[row].display_name
-        return super().data(index, role)
+class MyCombo(QComboBox):
+    def currentItem(self):
+        if len(self.model()):
+            return self.model()[self.currentIndex()]
 
 
 class OWSql(OWWidget):
@@ -48,14 +48,20 @@ class OWSql(OWWidget):
         doc="Attribute-valued data set read from the input file.")]
 
     want_main_area = False
-    resizing_enabled = False
 
-    host = Setting(None)
-    port = Setting(None)
-    database = Setting(None)
-    schema = Setting(None)
-    username = Setting(None)
-    password = Setting(None)
+    _connections = None
+
+    class ConnectionsSetting(Setting):
+        def __get__(self, instance, type=None):
+            if instance is None:
+                return self
+            return [c.encode() for c in instance.connections_combo.model()]
+
+        def __set__(self, instance, value):
+            instance._connections = [Connection.decode(c) for c in value]
+
+    connections = ConnectionsSetting([])
+
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
@@ -76,53 +82,35 @@ class OWSql(OWWidget):
         super().__init__()
 
         self.backend = None
-        self.data_desc_table = None
-        self.database_desc = None
 
-        vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
+        vbox = gui.vBox(self.controlArea, "Connection", addSpace=True)
         box = gui.vBox(vbox)
 
-        self.backendmodel = BackendModel(Backend.available_backends())
-        self.backendcombo = QComboBox(box)
-        if len(self.backendmodel):
-            self.backendcombo.setModel(self.backendmodel)
-        else:
-            self.Error.no_backends()
-            box.setEnabled(False)
-        box.layout().addWidget(self.backendcombo)
+        hbox = gui.hBox(box)
+        model = TableModel(self._connections)
+        self.connections_combo = MyCombo()
+        self.connections_combo.setModel(model)
+        self.connections_combo.currentIndexChanged[int].connect(self.connect)
+        hbox.layout().addWidget(self.connections_combo)
 
-        self.servertext = QLineEdit(box)
-        self.servertext.setPlaceholderText('Server')
-        self.servertext.setToolTip('Server')
-        if self.host:
-            self.servertext.setText(self.host if not self.port else
-                                    '{}:{}'.format(self.host, self.port))
-        box.layout().addWidget(self.servertext)
-        self.databasetext = QLineEdit(box)
-        self.databasetext.setPlaceholderText('Database[/Schema]')
-        self.databasetext.setToolTip('Database or optionally Database/Schema')
-        if self.database:
-            self.databasetext.setText(
-                self.database if not self.schema else
-                '{}/{}'.format(self.database, self.schema))
-        box.layout().addWidget(self.databasetext)
-        self.usernametext = QLineEdit(box)
-        self.usernametext.setPlaceholderText('Username')
-        self.usernametext.setToolTip('Username')
-        if self.username:
-            self.usernametext.setText(self.username)
-        box.layout().addWidget(self.usernametext)
-        self.passwordtext = QLineEdit(box)
-        self.passwordtext.setPlaceholderText('Password')
-        self.passwordtext.setToolTip('Password')
-        self.passwordtext.setEchoMode(QLineEdit.Password)
-        if self.password:
-            self.passwordtext.setText(self.password)
-        box.layout().addWidget(self.passwordtext)
+        dlg = EditConnection(self)
+        dlg.connected.connect(self.update_connection)
+        dlg.deleted.connect(self.remove_connection)
+        self.edit_button = btn = QPushButton("✎", hbox)
+        btn.clicked.connect(lambda x:
+            dlg.show(self.connections_combo.currentItem()))
+        btn.setEnabled(len(self.connections_combo.model()) > 0)
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        hbox.layout().addWidget(btn)
+
+        btn = QPushButton("+", hbox)
+        btn.clicked.connect(lambda x: dlg.show())
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        hbox.layout().addWidget(btn)
 
         tables = gui.hBox(box)
         self.tablemodel = TableModel()
-        self.tablecombo = QComboBox(
+        self.tablecombo = MyCombo(
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
@@ -164,62 +152,40 @@ class OWSql(OWWidget):
         gui.rubber(self.buttonsArea)
         QTimer.singleShot(0, self.connect)
 
-    def error(self, id=0, text=""):
-        super().error(id, text)
-        err_style = 'QLineEdit {border: 2px solid red;}'
-        if 'server' in text or 'host' in text:
-            self.servertext.setStyleSheet(err_style)
-        else:
-            self.servertext.setStyleSheet('')
-        if 'role' in text:
-            self.usernametext.setStyleSheet(err_style)
-        else:
-            self.usernametext.setStyleSheet('')
-        if 'database' in text:
-            self.databasetext.setStyleSheet(err_style)
-        else:
-            self.databasetext.setStyleSheet('')
+    def update_connection(self, connection):
+        if connection not in self.connections_combo.model():
+            self.connections_combo.model().insert(0, connection)
+            self.connections_combo.setCurrentIndex(0)
+        self.edit_button.setEnabled(len(self.connections_combo.model()) > 0)
+
+    def remove_connection(self, connection):
+        if connection in self.connections_combo.model():
+            self.connections_combo.model().remove(connection)
+        self.edit_button.setEnabled(len(self.connections_combo.model()) > 0)
 
     def connect(self):
-        hostport = self.servertext.text().split(':')
-        self.host = hostport[0]
-        self.port = hostport[1] if len(hostport) == 2 else None
-        self.database, _, self.schema = self.databasetext.text().partition('/')
-        self.username = self.usernametext.text() or None
-        self.password = self.passwordtext.text() or None
+        connection = self.connections_combo.currentItem()
+        if not connection:
+            return
+
         try:
-            if self.backendcombo.currentIndex() < 0:
-                return
-            backend = self.backendmodel[self.backendcombo.currentIndex()]
-            self.backend = backend(dict(
-                host=self.host,
-                port=self.port,
-                database=self.database,
-                user=self.username,
-                password=self.password
-            ))
+            self.backend = connection.connect()
             self.Error.connection.clear()
-            self.database_desc = OrderedDict((
-                ("Host", self.host), ("Port", self.port),
-                ("Database", self.database), ("User name", self.username)
-            ))
             self.refresh_tables()
             self.select_table()
         except BackendError as err:
             error = str(err).split('\n')[0]
             self.Error.connection(error)
-            self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
     def refresh_tables(self):
         self.tablemodel.clear()
         self.Error.missing_extension.clear()
         if self.backend is None:
-            self.data_desc_table = None
             return
 
         self.tablemodel.append("Select a table")
-        self.tablemodel.extend(self.backend.list_tables(self.schema))
+        self.tablemodel.extend(self.backend.list_tables(self.connections_combo.currentItem().schema))
         self.tablemodel.append("Custom SQL")
 
     def select_table(self):
@@ -229,8 +195,6 @@ class OWSql(OWWidget):
             return self.open_table()
         else:
             self.custom_sql.setVisible(True)
-            self.data_desc_table = None
-            self.database_desc["Table"] = "(None)"
             self.table = None
 
         #self.Error.missing_extension(
@@ -240,21 +204,14 @@ class OWSql(OWWidget):
 
     def open_table(self):
         table = self.get_table()
-        self.data_desc_table = table
         self.send("Data", table)
 
     def get_table(self):
         if self.tablecombo.currentIndex() <= 0:
-            if self.database_desc:
-                self.database_desc["Table"] = "(None)"
-            self.data_desc_table = None
             return
 
         if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
             self.table = self.tablemodel[self.tablecombo.currentIndex()]
-            self.database_desc["Table"] = self.table
-            if "Query" in self.database_desc:
-                del self.database_desc["Query"]
         else:
             self.sql = self.table = self.sqltext.toPlainText()
             if self.materialize:
@@ -276,11 +233,8 @@ class OWSql(OWWidget):
                     return
 
         try:
-            table = SqlTable(dict(host=self.host,
-                                  port=self.port,
-                                  database=self.database,
-                                  user=self.username,
-                                  password=self.password),
+            connection = self.connections_combo.currentItem()
+            table = SqlTable(connection.parameters,
                              self.table,
                              backend=type(self.backend),
                              inspect_values=False)
@@ -289,7 +243,6 @@ class OWSql(OWWidget):
             return
 
         self.Error.connection.clear()
-
 
         sample = False
         if table.approx_len() > LARGE_TABLE and self.guess_values:
@@ -341,13 +294,225 @@ class OWSql(OWWidget):
         return table
 
     def send_report(self):
-        if not self.database_desc:
+        connection = self.connections_combo.currentItem()
+        if not connection:
             self.report_paragraph("No database connection.")
             return
-        self.report_items("Database", self.database_desc)
-        if self.data_desc_table:
-            self.report_items("Data",
-                              report.describe_data(self.data_desc_table))
+        parameters = connection.parameters
+        parameters.pop("password", None)
+        self.report_items([("connection", str(connection))])
+
+
+class Connection:
+    def __init__(self):
+        self.backend = ""
+        self.host = ""
+        self.port = ""
+        self.database = ""
+        self.schema = ""
+        self.username = ""
+        self._password = ""
+
+    def connect(self):
+        for backend in Backend.available_backends():
+            if backend.display_name == self.backend:
+                return backend(self.parameters)
+        raise BackendError("Backend {} is not installed".format(self.backend))
+
+    @property
+    def parameters(self):
+        params = OrderedDict()
+        if self.host:
+            params["host"] = self.host
+        if self.port:
+            params["port"] = self.port
+        if self.database:
+            params["database"] = self.database
+        if self.schema:
+            params["schema"] = self.schema
+        if self.username:
+            params["user"] = self.username
+        if self.password:
+            params["password"] = self.password
+        return params
+
+    @property
+    def server_port(self):
+        if self.host:
+            if self.port:
+                return '{}:{}'.format(self.host, self.port)
+            else:
+                return self.host
+        else:
+            return ""
+
+    @server_port.setter
+    def server_port(self, value):
+        self.host, _, self.port = value.partition(":")
+
+    @property
+    def database_schema(self):
+        if self.database:
+            if self.schema:
+                return '{}/{}'.format(self.database, self.schema)
+            else:
+                return self.database
+        else:
+            return ""
+
+    @database_schema.setter
+    def database_schema(self, value):
+        self.database, _, self.schema = value.partition("/")
+
+    @property
+    def password(self):
+        if not self._password:
+            cm = CredentialManager("/".join([self.host, self.username]))
+            self._password = cm.password
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        cm = CredentialManager("/".join([self.host, self.username]))
+        self._password = cm.password = value
+
+    def encode(self):
+        c = dict(self.__dict__)
+        c.pop("_password")
+        return c
+
+    @staticmethod
+    def decode(parameters):
+        c = Connection()
+        c.__dict__.update(parameters)
+        return c
+
+    def __str__(self):
+        user = "{}@".format(self.username) if self.username else ""
+        database = ", db={}".format(self.database) if self.database else ""
+        return "{}{}{}".format(user, self.host, database)
+
+
+class BackendModel(PyListModel):
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        if role == Qt.DisplayRole:
+            return self[row].display_name
+        return super().data(index, role)
+
+
+class EditConnection(QDialog):
+    connection = None
+
+    connected = pyqtSignal('PyQt_PyObject')
+    deleted = pyqtSignal('PyQt_PyObject')
+
+    def __init__(self, parent):
+        super().__init__(parent, Qt.Dialog)
+
+        self.setLayout(QVBoxLayout())
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+
+        self.backend = self.create_backend_combo()
+        self.server = self.create_line_edit('Server')
+        self.database = self.create_line_edit(
+            'Database[/Schema]', 'Database or optionally Database/Schema')
+        self.username = self.create_line_edit('Username')
+        self.password = self.create_line_edit('Password')
+        self.password.setEchoMode(QLineEdit.Password)
+
+        self.layout().addStretch(1)
+
+        btns = QDialogButtonBox(self)
+        ok = QPushButton("Connect")
+        ok.setEnabled(False)
+        ok.clicked.connect(self.save)
+        cancel = QPushButton("Cancel")
+        cancel.clicked.connect(lambda x: self.hide())
+        self.deletebtn = delete = QPushButton("Delete")
+        delete.clicked.connect(self.delete)
+
+        btns.addButton(ok, QDialogButtonBox.AcceptRole)
+        btns.addButton(cancel, QDialogButtonBox.RejectRole)
+        btns.addButton(delete, QDialogButtonBox.ResetRole)
+
+        self.layout().addWidget(btns)
+
+        # ok button is enabled when server name is set
+        self.server.textChanged.connect(
+            lambda x: ok.setEnabled(self.server.text() != ""))
+
+    def sizeHint(self):
+        return QSize(500, 250)
+
+    def create_backend_combo(self):
+        model = BackendModel(Backend.available_backends())
+        combo = MyCombo(self)
+        if len(model):
+            combo.setModel(model)
+        else:
+            self.setEnabled(False)
+        self.layout().addWidget(combo)
+        return combo
+
+    def create_line_edit(self, placeholder, tooltip=None):
+        tooltip = tooltip or placeholder
+
+        lineedit = QLineEdit(self)
+        lineedit.setPlaceholderText(placeholder)
+        lineedit.setToolTip(tooltip)
+        self.layout().addWidget(lineedit)
+        return lineedit
+
+    def show(self, connection=None):
+        new = connection is None
+        connection = connection or Connection()
+
+        if new:
+            self.setWindowTitle("New connection")
+            self.deletebtn.hide()
+        else:
+            self.setWindowTitle("Edit connection")
+            self.deletebtn.show()
+
+        self.connection = connection
+        if connection.backend:
+            selected_backend = [b for b in Backend.available_backends()
+                                if b.display_name == connection.backend]
+            if selected_backend:
+                self.backend.setCurrentIndex(
+                    self.backend.model().indexOf(selected_backend[0]))
+        self.server.setText(connection.server_port)
+        self.database.setText(connection.database_schema)
+        self.username.setText(connection.username)
+        self.password.setText(connection.password)
+        super().show()
+
+    def save(self):
+        backend = self.backend.model()[self.backend.currentIndex()]
+        self.connection.backend = backend.display_name
+        self.connection.server_port = self.server.text()
+        self.connection.database_schema = self.database.text()
+        self.connection.username = self.username.text()
+        self.connection.password = self.password.text()
+
+        try:
+            self.connection.connect()
+            self.connected.emit(self.connection)
+            self.hide()
+        except BackendError as err:
+            message = QMessageBox(self)
+            message.setIcon(QMessageBox.Critical)
+            message.setText("Could not connect to {}\n\n"
+                            "Additional information:\n"
+                            "{}".format(
+                                self.connection.host, str(err)))
+            message.show()
+
+    def delete(self):
+        print("deleting")
+        self.deleted.emit(self.connection)
+        self.hide()
 
 if __name__ == "__main__":
     a = QApplication(sys.argv)
