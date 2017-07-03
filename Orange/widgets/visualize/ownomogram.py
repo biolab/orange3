@@ -57,14 +57,13 @@ class DotItem(QGraphicsEllipseItem):
     </head><body><b>{}</b><hr/>{}</body></html>
     """
 
-    def __init__(self, r, scale, offset, min_x, max_x):
-        super().__init__(0, 0, r, r)
-        self._r = r
-        self._min_x = min_x * scale - r / 2 + offset
-        self._max_x = max_x * scale - r / 2 + offset
+    def __init__(self, radius, scale, offset, min_x, max_x):
+        super().__init__(0, 0, radius, radius)
+        self._min_x = min_x * scale - radius / 2 + offset
+        self._max_x = max_x * scale - radius / 2 + offset
         self._scale = scale
         self._offset = offset
-        self.setPos(0, - r / 2)
+        self.setPos(0, - radius / 2)
         self.setFlag(QGraphicsItem.ItemIsMovable)
         self.setBrush(QColor(170, 220, 255, 255))
         self.setPen(QPen(QBrush(QColor(20, 130, 250, 255)), 2))
@@ -74,13 +73,13 @@ class DotItem(QGraphicsEllipseItem):
 
     @property
     def value(self):
-        return (self.x() + self._r / 2 - self._offset) / self._scale
+        return (self.x() + self.rect().width() / 2 - self._offset) / self._scale
 
     def move(self, x):
         self.setX(x)
 
     def move_to_val(self, val):
-        x = np.clip(self._scale * val - self._r / 2 + self._offset,
+        x = np.clip(self._scale * val - self.rect().width() / 2 + self._offset,
                     self._min_x, self._max_x)
         self.move(x)
 
@@ -96,12 +95,12 @@ class DotItem(QGraphicsEllipseItem):
 
 
 class ProbabilitiesDotItem(DotItem):
-    def __init__(self, r, scale, offset, min_x, max_x, title,
+    def __init__(self, radius, scale, offset, min_x, max_x, title,
                  get_probabilities):
         self.title = title
         self.get_probabilities = get_probabilities
         self.movable_dot_items = []
-        super().__init__(r, scale, offset, min_x, max_x)
+        super().__init__(radius, scale, offset, min_x, max_x)
         self.setBrush(QColor(150, 150, 150, 255))
         self.setPen(QPen(QBrush(QColor(75, 75, 75, 255)), 2))
 
@@ -119,11 +118,11 @@ class ProbabilitiesDotItem(DotItem):
 
 
 class MovableDotItem(DotItem):
-    def __init__(self, r, scale, offset, min_x, max_x):
+    def __init__(self, radius, scale, offset, min_x, max_x):
         self.tooltip_labels = []
         self.tooltip_values = []
-        super().__init__(r, scale, offset, min_x, max_x)
-        self._x = min_x * scale - r / 2 + offset
+        super().__init__(radius, scale, offset, min_x, max_x)
+        self._x = min_x * scale - radius / 2 + offset
         self._point_dot = None
         self._total_dot = None
         self._probs_dot = None
@@ -198,7 +197,7 @@ class MovableDotItem(DotItem):
         return super().mousePressEvent(event)
 
     def _show_vertical_line_and_point_dot(self):
-        self.vertical_line.setX(self.x() + self._r / 2 - self._offset)
+        self.vertical_line.setX(self.x() + self.rect().width() / 2 - self._offset)
         self.vertical_line.setVisible(True)
         self.point_dot.move_to_val(self.value)
         self.point_dot.setVisible(True)
@@ -245,8 +244,8 @@ class ContinuousMovableDotItem(MovableDotItem, ContinuousItemMixin):
 
 
 class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
-    def __init__(self, r, scale, offset, min_x, max_x, min_y, max_y):
-        super().__init__(r, scale, offset, min_x, max_x)
+    def __init__(self, radius, scale, offset, min_x, max_x, min_y, max_y):
+        super().__init__(radius, scale, offset, min_x, max_x)
         self._min_y = min_y
         self._max_y = max_y
         self._horizontal_line = None
@@ -264,7 +263,7 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
         super().move(x)
         diff_ = np.nan_to_num(self._max_x - self._min_x)
         k = (x - self._min_x) / diff_ if diff_ else 0
-        self.setY(self._min_y - self._r / 2 + (self._max_y - self._min_y) * k)
+        self.setY(self._min_y - self.rect().width() / 2 + (self._max_y - self._min_y) * k)
 
     def mousePressEvent(self, event):
         self._show_horizontal_line()
@@ -279,7 +278,7 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
         return super().mouseReleaseEvent(event)
 
     def _show_horizontal_line(self):
-        self.horizontal_line.setY(self.y() + self._r / 2 -
+        self.horizontal_line.setY(self.y() + self.rect().width() / 2 -
                                   abs(self._max_y - self._min_y) / 2)
         self.horizontal_line.setVisible(True)
 
@@ -287,7 +286,7 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
 class RulerItem(QGraphicsWidget):
     tick_height = 6
     tick_width = 0
-    dot_r = 12
+    DOT_RADIUS = 12
     half_tick_height = 3
     bold_label = True
     DOT_ITEM_CLS = DotItem
@@ -304,7 +303,7 @@ class RulerItem(QGraphicsWidget):
         name.setParentItem(self)
 
         # prediction marker
-        self.dot = self.DOT_ITEM_CLS(self.dot_r, scale, offset, values[0],
+        self.dot = self.DOT_ITEM_CLS(self.DOT_RADIUS, scale, offset, values[0],
                                      values[-1])
         self.dot.setParentItem(self)
 
@@ -324,10 +323,10 @@ class RulerItem(QGraphicsWidget):
             text = QGraphicsSimpleTextItem(label)
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             if text_finish > x_text - 10:
-                y_text, y_tick = self.dot_r * 0.7, 0
+                y_text, y_tick = self.DOT_RADIUS * 0.7, 0
                 text_finish = values[0] * scale + offset
             else:
-                y_text = - text.boundingRect().height() - self.dot_r * 0.7
+                y_text = - text.boundingRect().height() - self.DOT_RADIUS * 0.7
                 y_tick = - self.tick_height
                 text_finish = x_text + text.boundingRect().width()
             text.setPos(x_text, y_text)
@@ -350,7 +349,7 @@ class RulerItem(QGraphicsWidget):
 
 class ProbabilitiesRulerItem(QGraphicsWidget):
     tick_height = 6
-    dot_r = 14
+    DOT_RADIUS = 14
     y_diff = 4
 
     def __init__(self, name, values, scale, name_offset, offset, get_points,
@@ -375,9 +374,9 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
 
         # prediction marker
         self.dot = ProbabilitiesDotItem(
-            self.dot_r, scale, offset, values[0], values[-1],
+            self.DOT_RADIUS, scale, offset, values[0], values[-1],
             title, get_probabilities)
-        self.dot.setPos(0, (- self.dot_r + self.y_diff) / 2)
+        self.dot.setPos(0, (- self.DOT_RADIUS + self.y_diff) / 2)
         self.dot.setParentItem(self)
 
         # two lines
@@ -400,7 +399,7 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
                 break
             text = QGraphicsTextItem(str(abs(value) if value == -0 else value))
             x_text = value * scale - text.boundingRect().width() / 2 + offset
-            y_text = - text.boundingRect().height() - self.dot_r * 0.7
+            y_text = - text.boundingRect().height() - self.DOT_RADIUS * 0.7
             text.setPos(x_text, y_text)
             text.setParentItem(self)
             tick = QGraphicsLineItem(x_tick, -self.tick_height, x_tick, 0)
@@ -435,7 +434,6 @@ class DiscreteFeatureItem(RulerItem):
     tick_height = 6
     tick_width = 2
     half_tick_height = 0
-    dot_r = 12
     bold_label = False
     DOT_ITEM_CLS = DiscreteMovableDotItem
 
@@ -455,7 +453,6 @@ class ContinuousFeatureItem(RulerItem):
     tick_height = 6
     tick_width = 2
     half_tick_height = 0
-    dot_r = 12
     bold_label = False
     DOT_ITEM_CLS = ContinuousMovableDotItem
 
@@ -474,7 +471,7 @@ class ContinuousFeatureItem(RulerItem):
 class ContinuousFeature2DItem(QGraphicsWidget):
     tick_height = 6
     tick_width = 2
-    dot_r = 12
+    DOT_RADIUS = 12
     y_diff = 80
     n_tck = 4
 
@@ -507,7 +504,7 @@ class ContinuousFeature2DItem(QGraphicsWidget):
 
         # prediction marker
         self.dot = Continuous2DMovableDotItem(
-            self.dot_r, scale, offset, values[0], values[-1], y_start, y_stop)
+            self.DOT_RADIUS, scale, offset, values[0], values[-1], y_start, y_stop)
         self.dot.tooltip_labels = labels
         self.dot.tooltip_values = values
         self.dot.setParentItem(self)
