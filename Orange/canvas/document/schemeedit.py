@@ -930,6 +930,10 @@ class SchemeEditWidget(QWidget):
                     )
 
         if ok:
+            # name =... It enforces a unique name. It can be useful to address specific nodes 
+            #  by their unique name ( for add-ons)
+            name = self.enumerateTitle(name) 
+
             self.__undoStack.push(
                 commands.RenameNodeCommand(self.__scheme, node, node.title,
                                            str(name))
