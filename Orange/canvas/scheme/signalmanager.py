@@ -193,7 +193,10 @@ class SignalManager(QObject):
         link.set_runtime_state(SchemeLink.Empty)
         if link.enabled:
             log.info("Link added (%s). Scheduling signal data update.", link)
-            self._schedule(self.signals_on_link(link))
+            self._schedule(self.signals_on_link(link, added=True ))  
+							##  added: a   widget might 
+                                                        ## want to know if the signal he is receving is coming from a link 
+                                                        ## operation or from a calculation
             self._update()
 
         link.enabled_changed.connect(self.link_enabled_changed)
@@ -210,7 +213,7 @@ class SignalManager(QObject):
             log.info("Link %s enabled. Scheduling signal data update.", link)
             self._schedule(self.signals_on_link(link))
 
-    def signals_on_link(self, link):
+    def signals_on_link(self, link, added=False):
         """
         Return _Signal instances representing the current values
         present on the link.
@@ -220,6 +223,8 @@ class SignalManager(QObject):
         signals = []
 
         for key, value in list(items.items()):
+            if (hasattr(value,"set_isOrangeSignalFromLinking")) :
+                value.set_isOrangeSignalFromLinking(added)
             signals.append(_Signal(link, value, key))
 
         return signals
