@@ -452,6 +452,9 @@ class WidgetManager(QObject):
         if not initialized:
             try:
                 widget.__init__()
+                widget.node = node 
+                             # addons widgets might want to access node properties like his name, 
+                             # to know who he really is in the user view
             except Exception:
                 sys.excepthook(*sys.exc_info())
                 msg = traceback.format_exc()
