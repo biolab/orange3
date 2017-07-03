@@ -234,9 +234,21 @@ class WidgetSignalsMixin:
             return old_style
 
         signal_class = getattr(cls, direction.title())
-        return [signal for signal in signal_class.__dict__.values()
+
+        res=[]
+        my_bases = get_bases( signal_class   )
+        for bc in my_bases:
+            res = res +  [signal for signal in bc.__dict__.values()
                 if isinstance(signal, _Signal)]
+        return res
 
+def get_bases(cls):
+    res=[cls]
+    for bc  in cls.__bases__:
+        res.extend(  get_bases(bc))
+    return res
+    
 
+    
 class AttributeList(list):
     """Signal type for lists of attributes (variables)"""
