@@ -17,7 +17,7 @@ $conda = "$env:MINICONDA\Scripts\conda"
 # some required packages that are not on conda-forge
 & "$conda" config --append channels ales-erjavec
 
-& "$conda" install --yes conda-build
+& "$conda" install --yes conda-build=2.1.15
 
 echo "Conda info"
 echo "----------"
