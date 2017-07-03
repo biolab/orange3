@@ -207,31 +207,34 @@ Meta Attributes
 
 Often, we wish to include descriptive fields in the data that will not be used in any computation (distance estimation, modeling), but will serve for identification or additional information. These are called meta attributes, and are marked with ``meta`` in the third header row:
 
-..  literalinclude:: code/student-grades.tab
+..  literalinclude:: code/zoo.tab
 
 Values of meta attributes and all other (non-meta) attributes are treated similarly in Orange, but stored in the separate numpy arrays:
 
-    >>> data = Orange.data.Table("student-grades")
+    >>> data = Orange.data.Table("zoo")
     >>> data[0]["name"]
-    >>> data[0]["biology"]
+    >>> data[0]["type"]
     >>> for d in data:
-        ...:     print("{}/{}: {}".format(d["name"], d["gender"], d["math"]))
+        ...:     print("{}/{}: {}".format(d["name"], d["type"], d["legs"]))
         ...:
-    jane/f: 10.000
-    bill/m: 7.000
-    ian/m: 8.000
+    aardvark/mammal: 4
+    antelope/mammal: 4
+    bass/fish: 0
+    bear/mammal: 4
     >>> data.X
-    array([[ 10.,   7.,   8.],
-           [  7.,   6.,  10.],
-           [  8.,  10.,  10.]])
+    array([[ 1.,  0.,  1.,  1.,  2.],
+           [ 1.,  0.,  1.,  1.,  2.],
+           [ 0.,  1.,  0.,  1.,  0.],
+           [ 1.,  0.,  1.,  1.,  2.]]))
     >>> data.metas
-    array([['jane', 0.0],
-           ['bill', 1.0],
-           ['ian', 1.0]], dtype=object)
+    array([['aardvark'],
+           ['antelope'],
+           ['bass'],
+           ['bear']], dtype=object))
 
 Meta attributes may be passed to ``Orange.data.Table`` after providing arrays for attribute and class values::
 
-..  literalinclude:: code/student-grades.tab
+..   literalinclude:: code/data-metas.py
 
 The script outputs::
 

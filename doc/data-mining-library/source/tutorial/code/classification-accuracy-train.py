@@ -2,5 +2,6 @@ import Orange
 import numpy as np
 
 data = Orange.data.Table("voting")
-classifier = Orange.classification.LogisticRegressionLearner(data)
+learner = Orange.classification.LogisticRegressionLearner()
+classifier = learner(data)
 x = np.sum(data.Y != classifier(data))
