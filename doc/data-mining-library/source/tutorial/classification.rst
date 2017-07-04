@@ -7,6 +7,7 @@ Classification
 
 Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on the data with class-labeled instances, like that of senate voting. Here is a code that loads this data set, displays the first data instance and shows its predicted class (``republican``)::
 
+   >>> import Orange
    >>> data = Orange.data.Table("voting")
    >>> data[0]
    [n, y, n, y, y, ... | republican]
