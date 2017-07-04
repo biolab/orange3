@@ -150,9 +150,20 @@ class WidgetSignalsMixin:
 
     def _bind_outputs(self):
         bound_cls = self.Outputs()
-        for name, signal in self.Outputs.__dict__.items():
+
+        tutti=[]
+        my_bases = get_bases( self.Outputs  )
+        for bc in my_bases:
+            tutti = tutti +  [ (name,signal) for (name,signal) in bc.__dict__.items()
+                if isinstance(signal, Output)]
+ 
+        # for name, signal in self.Outputs.__dict__.items():
+        for name, signal in tutti :
             if isinstance(signal, Output):
                 bound_cls.__dict__[name] = signal.bound_signal(self)
+
+
+                
         setattr(self, "Outputs", bound_cls)
 
     def send(self, signalName, value, id=None):
