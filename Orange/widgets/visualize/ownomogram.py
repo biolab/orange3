@@ -309,8 +309,8 @@ class RulerItem(QGraphicsWidget):
 
         # line
         line = QGraphicsLineItem(min(values) * scale + offset, 0,
-                                 max(values) * scale + offset, 0)
-        line.setParentItem(self)
+                                 max(values) * scale + offset, 0,
+                                 self)
 
         if labels is None:
             labels = [str(abs(v) if v == -0 else v) for v in values]
@@ -336,14 +336,14 @@ class RulerItem(QGraphicsWidget):
 
             x_tick = value * scale - self.tick_width / 2 + offset
             tick = QGraphicsRectItem(
-                x_tick, y_tick, self.tick_width, self.tick_height)
+                x_tick, y_tick, self.tick_width, self.tick_height,
+                self)
             tick.setBrush(QColor(Qt.black))
-            tick.setParentItem(self)
 
             if self.half_tick_height and i:
                 x = x_tick - (x_tick - old_x_tick) / 2
-                half_tick = QGraphicsLineItem(x, - self.half_tick_height, x, 0)
-                half_tick.setParentItem(self)
+                half_tick = QGraphicsLineItem(x, - self.half_tick_height, x, 0,
+                                              self)
             old_x_tick = x_tick
 
 
@@ -364,10 +364,9 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
         # leading labels
         font = name.document().defaultFont()
         font.setWeight(QFont.Bold)
-        name_total = QGraphicsTextItem("Total")
+        name_total = QGraphicsTextItem("Total", self)
         name_total.setFont(font)
         name_total.setPos(name_offset, -25)
-        name_total.setParentItem(self)
         name.setFont(font)
         name.setPos(name_offset, 10)
         name.setParentItem(self)
@@ -381,29 +380,29 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
 
         # two lines
         t_line = QGraphicsLineItem(self.min_val * scale + offset, 0,
-                                   self.max_val * scale + offset, 0)
+                                   self.max_val * scale + offset, 0,
+                                   self)
         p_line = QGraphicsLineItem(self.min_val * scale + offset, self.y_diff,
-                                   self.max_val * scale + offset, self.y_diff)
-        t_line.setParentItem(self)
-        p_line.setParentItem(self)
+                                   self.max_val * scale + offset, self.y_diff,
+                                   self)
 
         # ticks and labels
         old_x_tick = values[0] * scale + offset
         for i, value in enumerate(values[1:]):
             x_tick = value * scale + offset
             x = x_tick - (x_tick - old_x_tick) / 2
-            half_tick = QGraphicsLineItem(x, - self.tick_height / 2, x, 0)
-            half_tick.setParentItem(self)
+            half_tick = QGraphicsLineItem(x, - self.tick_height / 2, x, 0,
+                                          self)
             old_x_tick = x_tick
             if i == len(values) - 2:
                 break
-            text = QGraphicsTextItem(str(abs(value) if value == -0 else value))
+            text = QGraphicsTextItem(str(abs(value) if value == -0 else value),
+                                     self)
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             y_text = - text.boundingRect().height() - self.DOT_RADIUS * 0.7
             text.setPos(x_text, y_text)
-            text.setParentItem(self)
-            tick = QGraphicsLineItem(x_tick, -self.tick_height, x_tick, 0)
-            tick.setParentItem(self)
+            tick = QGraphicsLineItem(x_tick, -self.tick_height, x_tick, 0,
+                                     self)
 
         self.prob_items = [
             (i / 10, QGraphicsTextItem(" " + str(i * 10) + " "),
@@ -494,13 +493,11 @@ class ContinuousFeature2DItem(QGraphicsWidget):
         ascending = data_start < data_stop
         y_start, y_stop = (self.y_diff, 0) if ascending else (0, self.y_diff)
         for i in range(self.n_tck):
-            text = QGraphicsSimpleTextItem(labels[i])
+            text = QGraphicsSimpleTextItem(labels[i], self)
             w = text.boundingRect().width()
             y = y_start + (y_stop - y_start) / (self.n_tck - 1) * i
             text.setPos(-5 - w, y - 8)
-            text.setParentItem(self)
-            tick = QGraphicsLineItem(-2, y, 2, y)
-            tick.setParentItem(self)
+            tick = QGraphicsLineItem(-2, y, 2, y, self)
 
         # prediction marker
         self.dot = Continuous2DMovableDotItem(
@@ -509,17 +506,17 @@ class ContinuousFeature2DItem(QGraphicsWidget):
         self.dot.tooltip_values = values
         self.dot.setParentItem(self)
         h_line = QGraphicsLineItem(values[0] * scale + offset, self.y_diff / 2,
-                                   values[-1] * scale + offset, self.y_diff / 2)
+                                   values[-1] * scale + offset, self.y_diff / 2,
+                                   self)
         pen = QPen(Qt.DashLine)
         pen.setBrush(QColor(Qt.red))
         h_line.setPen(pen)
-        h_line.setParentItem(self)
         self.dot.horizontal_line = h_line
 
         # line
         line = QGraphicsLineItem(values[0] * scale + offset, y_start,
-                                 values[-1] * scale + offset, y_stop)
-        line.setParentItem(self)
+                                 values[-1] * scale + offset, y_stop,
+                                 self)
 
         # ticks
         for value in values:
@@ -528,18 +525,18 @@ class ContinuousFeature2DItem(QGraphicsWidget):
             y_tick = (y_stop - y_start) * k + y_start - self.tick_height / 2
             x_tick = value * scale - self.tick_width / 2 + offset
             tick = QGraphicsRectItem(
-                x_tick, y_tick, self.tick_width, self.tick_height)
+                x_tick, y_tick, self.tick_width, self.tick_height,
+                self)
             tick.setBrush(QColor(Qt.black))
-            tick.setParentItem(self)
 
         # rect
         rect = QGraphicsRectItem(
             values[0] * scale + offset, -self.y_diff * 0.125,
-            values[-1] * scale + offset, self.y_diff * 1.25)
+            values[-1] * scale + offset, self.y_diff * 1.25,
+            self)
         pen = QPen(Qt.DotLine)
         pen.setBrush(QColor(50, 150, 200, 255))
         rect.setPen(pen)
-        rect.setParentItem(self)
         self.setPreferredSize(self.preferredWidth(), self.y_diff * 1.5)
 
 
