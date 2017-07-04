@@ -437,11 +437,7 @@ class DiscreteFeatureItem(RulerItem):
     bold_label = False
     DOT_ITEM_CLS = DiscreteMovableDotItem
 
-    def __init__(self, name, labels, values, scale, name_offset, offset, coef):
-        self.name = name.toPlainText()
-        self.min_value = min(coef)
-        self.max_value = max(coef)
-        self.diff = self.max_value - self.min_value
+    def __init__(self, name, labels, values, scale, name_offset, offset):
         indices = np.argsort(values)
         labels, values = np.array(labels)[indices], values[indices]
         super().__init__(name, values, scale, name_offset, offset, labels)
@@ -456,10 +452,7 @@ class ContinuousFeatureItem(RulerItem):
     bold_label = False
     DOT_ITEM_CLS = ContinuousMovableDotItem
 
-    def __init__(self, name, data_extremes, values, scale, name_offset, offset,
-                 coef):
-        self.name = name.toPlainText()
-        self.diff = (data_extremes[1] - data_extremes[0]) * coef
+    def __init__(self, name, data_extremes, values, scale, name_offset, offset):
         diff_ = np.nan_to_num(values[-1] - values[0])
         k = (data_extremes[1] - data_extremes[0]) / diff_ if diff_ else 0
         labels = [str(np.round(v * k + data_extremes[0], 1)) for v in values]
@@ -475,12 +468,9 @@ class ContinuousFeature2DItem(QGraphicsWidget):
     y_diff = 80
     n_tck = 4
 
-    def __init__(self, name, data_extremes, values, scale, name_offset, offset,
-                 coef):
+    def __init__(self, name, data_extremes, values, scale, name_offset, offset):
         super().__init__()
         data_start, data_stop = data_extremes[0], data_extremes[1]
-        self.name = name.toPlainText()
-        self.diff = (data_stop - data_start) * coef
         labels = [str(np.round(data_start + (data_stop - data_start) * i /
                                (self.n_tck - 1), 1)) for i in range(self.n_tck)]
 
@@ -553,42 +543,6 @@ class NomogramItem(QGraphicsWidget):
             self.layout().addItem(item)
 
 
-class SortableNomogramItem(NomogramItem):
-    def __init__(self):
-        super().__init__()
-        self._sorted_items = []
-
-    def add_items(self, items, sort_type=SortBy.NO_SORTING, n_show=None):
-        self._items = items
-        self.sort(sort_type)
-        self.hide(n_show)
-
-    def sort(self, sort_type=SortBy.NO_SORTING):
-        if sort_type == SortBy.NAME:
-            reverse, key = False, lambda x: x.name.lower()
-        elif sort_type == SortBy.ABSOLUTE:
-            reverse, key = True, lambda x: x.diff
-        elif sort_type == SortBy.POSITIVE:
-            reverse, key = True, lambda x: x.max_value
-        elif sort_type == SortBy.NEGATIVE:
-            reverse, key = False, lambda x: x.min_value
-        self._sorted_items = self._items if sort_type == SortBy.NO_SORTING \
-            else sorted(self._items, key=key, reverse=reverse)
-        for item in self._sorted_items:
-            self.layout().addItem(item)
-
-    def hide(self, n):
-        items = self._sorted_items or self._items
-        for i, item in enumerate(items):
-            item.show()
-            if n is not None and i >= n:
-                item.hide()
-        self.resize(self.preferredSize())
-        parent = self.parentWidget()
-        if parent:
-            parent.resize(parent.preferredSize())
-
-
 class OWNomogram(OWWidget):
     name = "Nomogram"
     description = " Nomograms for Visualization of Naive Bayesian" \
@@ -634,16 +588,13 @@ class OWNomogram(OWWidget):
         self.p = None
         self.b0 = None
         self.points = []
-        self.feature_items = []
+        self.feature_items = {}
         self.feature_marker_values = []
-        self.scale_back = lambda x: x
-        self.scale_forth = lambda x: x
-        self.nomogram = None
+        self.scale_marker_values = lambda x: x
         self.nomogram_main = None
         self.vertical_line = None
         self.hidden_vertical_line = None
         self.old_target_class_index = self.target_class_index
-        self.markers_set = False
         self.repaint = False
 
         # GUI
@@ -711,16 +662,20 @@ class OWNomogram(OWWidget):
                                  verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
                                  styleSheet='QGraphicsView {background: white}')
                 self.viewport().setMinimumWidth(300)  # XXX: This prevents some tests failing
+                self._is_resizing = False
 
             w = self
 
             def resizeEvent(self, resizeEvent):
-                nonlocal owwidget
-                owwidget.repaint = True
-                values = [item.dot.value for item in owwidget.feature_items]
-                owwidget.feature_marker_values = owwidget.scale_back(values)
-                owwidget.update_scene()
+                # Recompute main scene on window width change
+                if resizeEvent.size().width() != resizeEvent.oldSize().width():
+                    self._is_resizing = True
+                    self.w.update_scene()
+                    self._is_resizing = False
                 return super().resizeEvent(resizeEvent)
+
+            def is_resizing(self):
+                return self._is_resizing
 
             def sizeHint(self):
                 return QSize(400, 200)
@@ -744,8 +699,6 @@ class OWNomogram(OWWidget):
             self.mainArea.layout().addWidget(view)
 
     def _class_combo_changed(self):
-        values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(np.asarray(values))
         with np.errstate(invalid='ignore'):
             coeffs = [np.nan_to_num(p[self.target_class_index] /
                                     p[self.old_target_class_index])
@@ -759,47 +712,24 @@ class OWNomogram(OWWidget):
         self.old_target_class_index = self.target_class_index
 
     def _norm_check_changed(self):
-        values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def _scale_radio_changed(self):
-        values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def _n_attributes_radio_changed(self):
-        self.__hide_attrs(self.n_attributes if self.display_index else None)
+        self.update_scene()
 
     def _n_spin_changed(self):
         self.display_index = 1
-        self.__hide_attrs(self.n_attributes)
-
-    def __hide_attrs(self, n_show):
-        if self.nomogram_main is None:
-            return
-        self.nomogram_main.hide(n_show)
-        if self.vertical_line:
-            x = self.vertical_line.line().x1()
-            y = self.nomogram_main.layout().preferredHeight() + 10
-            self.vertical_line.setLine(x, -6, x, y)
-            self.hidden_vertical_line.setLine(x, -6, x, y)
-        rect = QRectF(self.scene.sceneRect().x(),
-                      self.scene.sceneRect().y(),
-                      self.scene.itemsBoundingRect().width(),
-                      self.nomogram.preferredSize().height())
-        self.scene.setSceneRect(rect)
+        self.update_scene()
 
     def _sort_combo_changed(self):
         if self.nomogram_main is None:
             return
-        self.nomogram_main.hide(None)
-        self.nomogram_main.sort(self.sort_index)
-        self.__hide_attrs(self.n_attributes if self.display_index else None)
+        self.update_scene()
 
     def _cont_feature_dim_combo_changed(self):
-        values = [item.dot.value for item in self.feature_items]
-        self.feature_marker_values = self.scale_back(np.asarray(values))
         self.update_scene()
 
     def update_controls(self):
@@ -837,6 +767,7 @@ class OWNomogram(OWWidget):
         self.instances = data
         self.feature_marker_values = []
         self.set_feature_marker_values()
+        self.update_scene()
 
     @Inputs.classifier
     def set_classifier(self, classifier):
@@ -918,7 +849,10 @@ class OWNomogram(OWWidget):
         if self.domain is None or not len(self.points[0]):
             return
 
-        name_items = [QGraphicsTextItem(a.name) for a in self.domain.attributes]
+        n_attrs = self.n_attributes if self.display_index else int(1e10)
+        attr_inds, attributes = zip(*self.get_ordered_attributes()[:n_attrs])
+
+        name_items = [QGraphicsTextItem(attr.name) for attr in attributes]
         point_text = QGraphicsTextItem("Points")
         probs_text = QGraphicsTextItem("Probabilities (%)")
         all_items = name_items + [point_text, probs_text]
@@ -926,34 +860,32 @@ class OWNomogram(OWWidget):
         w = self.view.viewport().rect().width()
         max_width = w + name_offset - 30
 
-        points = [pts[self.target_class_index] for pts in self.points]
-        minimums = [min(p) for p in points]
+        points = [self.points[i][self.target_class_index]
+                  for i in attr_inds]
         if self.align == OWNomogram.ALIGN_LEFT:
-            points = [p - m for m, p in zip(minimums, points)]
+            points = [p - p.min() for p in points]
         max_ = np.nan_to_num(max(max(abs(p)) for p in points))
         d = 100 / max_ if max_ else 1
+        minimums = [p[self.target_class_index].min() for p in self.points]
         if self.scale == OWNomogram.POINT_SCALE:
             points = [p * d for p in points]
 
             if self.align == OWNomogram.ALIGN_LEFT:
-                self.scale_back = lambda x: x / d + minimums
-                self.scale_forth = lambda x: (x - minimums) * d
+                self.scale_marker_values = lambda x: (x - minimums) * d
             else:
-                self.scale_back = lambda x: x / d
-                self.scale_forth = lambda x: x * d
+                self.scale_marker_values = lambda x: x * d
         else:
             if self.align == OWNomogram.ALIGN_LEFT:
-                self.scale_back = lambda x: x + minimums
-                self.scale_forth = lambda x: x - minimums
+                self.scale_marker_values = lambda x: x - minimums
             else:
-                self.scale_back = lambda x: x
-                self.scale_forth = lambda x: x
+                self.scale_marker_values = lambda x: x
 
         point_item, nomogram_head = self.create_main_nomogram(
+            attributes, attr_inds,
             name_items, points, max_width, point_text, name_offset)
         probs_item, nomogram_foot = self.create_footer_nomogram(
             probs_text, d, minimums, max_width, name_offset)
-        for item in self.feature_items:
+        for item in self.feature_items.values():
             item.dot.point_dot = point_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
@@ -961,7 +893,9 @@ class OWNomogram(OWWidget):
         self.nomogram = nomogram = NomogramItem()
         nomogram.add_items([nomogram_head, self.nomogram_main, nomogram_foot])
         self.scene.addItem(nomogram)
+
         self.set_feature_marker_values()
+
         rect = QRectF(self.scene.itemsBoundingRect().x(),
                       self.scene.itemsBoundingRect().y(),
                       self.scene.itemsBoundingRect().width(),
@@ -977,11 +911,11 @@ class OWNomogram(OWWidget):
         self.top_view.setSceneRect(rect.x(), rect.y() + 3, rect.width() - 10, 20)
         self.bottom_view.setSceneRect(rect.x(), rect.height() - 110, rect.width() - 10, 30)
 
-    def create_main_nomogram(self, name_items, points, max_width, point_text,
-                             name_offset):
+    def create_main_nomogram(self, attributes, attr_inds, name_items, points,
+                             max_width, point_text, name_offset):
         cls_index = self.target_class_index
-        min_p = min(min(p) for p in points)
-        max_p = max(max(p) for p in points)
+        min_p = min(p.min() for p in points)
+        max_p = max(p.max() for p in points)
         values = self.get_ruler_values(min_p, max_p, max_width)
         min_p, max_p = min(values), max(values)
         diff_ = np.nan_to_num(max_p - min_p)
@@ -993,27 +927,25 @@ class OWNomogram(OWWidget):
         point_item.setPreferredSize(point_item.preferredWidth(), 35)
         nomogram_header.add_items([point_item])
 
-        self.nomogram_main = SortableNomogramItem()
+        self.nomogram_main = NomogramItem()
         cont_feature_item_class = ContinuousFeature2DItem if \
             self.cont_feature_dim_index else ContinuousFeatureItem
 
-        self.feature_items = [
+        feature_items = [
             DiscreteFeatureItem(
-                name_items[i], att.values, points[i],
-                scale_x, name_offset, - scale_x * min_p,
-                self.points[i][cls_index])
-            if att.is_discrete else
+                name_item, attr.values, point,
+                scale_x, name_offset, - scale_x * min_p)
+            if attr.is_discrete else
             cont_feature_item_class(
-                name_items[i], self.log_reg_cont_data_extremes[i][cls_index],
+                name_item, self.log_reg_cont_data_extremes[i][cls_index],
                 self.get_ruler_values(
-                    np.min(points[i]), np.max(points[i]),
-                    scale_x * (np.max(points[i]) - np.min(points[i])), False),
-                scale_x, name_offset, - scale_x * min_p,
-                self.log_reg_coeffs_orig[i][cls_index][0])
-            for i, att in enumerate(self.domain.attributes)]
-        self.nomogram_main.add_items(
-            self.feature_items, self.sort_index,
-            self.n_attributes if self.display_index else None)
+                    point.min(), point.max(),
+                    scale_x * point.ptp(), False),
+                scale_x, name_offset, - scale_x * min_p)
+            for i, attr, name_item, point in zip(attr_inds, attributes, name_items, points)]
+
+        self.nomogram_main.add_items(feature_items)
+        self.feature_items = OrderedDict(sorted(zip(attr_inds, feature_items)))
 
         x = - scale_x * min_p
         y = self.nomogram_main.layout().preferredHeight() + 10
@@ -1027,6 +959,56 @@ class OWNomogram(OWWidget):
         self.hidden_vertical_line.setParentItem(point_item)
 
         return point_item, nomogram_header
+
+    def get_ordered_attributes(self):
+        """Return (in_domain_index, attr) pairs, ordered by method in SortBy combo"""
+        if not self.domain or not self.domain.attributes:
+            return []
+
+        attrs = self.domain.attributes
+        sort_by = self.sort_index
+        class_value = self.target_class_index
+
+        if sort_by == SortBy.NO_SORTING:
+            return list(enumerate(attrs))
+
+        elif sort_by == SortBy.NAME:
+
+            def key(x):
+                _, attr = x
+                return attr.name.lower()
+
+        elif sort_by == SortBy.ABSOLUTE:
+
+            def key(x):
+                i, attr = x
+                if attr.is_discrete:
+                    ptp = self.points[i][class_value].ptp()
+                else:
+                    coef = np.abs(self.log_reg_coeffs_orig[i][class_value]).mean()
+                    ptp = coef * np.ptp(self.log_reg_cont_data_extremes[i][class_value])
+                return -ptp
+
+        elif sort_by == SortBy.POSITIVE:
+
+            def key(x):
+                i, attr = x
+                max_value = (self.points[i][class_value].max()
+                             if attr.is_discrete else
+                             np.mean(self.log_reg_cont_data_extremes[i][class_value]))
+                return -max_value
+
+        elif sort_by == SortBy.NEGATIVE:
+
+            def key(x):
+                i, attr = x
+                min_value = (self.points[i][class_value].min()
+                             if attr.is_discrete else
+                             np.mean(self.log_reg_cont_data_extremes[i][class_value]))
+                return min_value
+
+        return sorted(enumerate(attrs), key=key)
+
 
     def create_footer_nomogram(self, probs_text, d, minimums,
                                max_width, name_offset):
@@ -1065,32 +1047,26 @@ class OWNomogram(OWWidget):
             p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
             return (k[cls_index] - np.log(1 / (prob * p_sum) - 1)) * d_
 
-        self.markers_set = False
         probs_item = ProbabilitiesRulerItem(
             probs_text, values, scale_x, name_offset, - scale_x * min_sum,
             get_points=get_points,
             title="{}='{}'".format(cls_var.name, cls_var.values[cls_index]),
             get_probabilities=get_normalized_probabilities)
-        self.markers_set = True
         nomogram_footer.add_items([probs_item])
         return probs_item, nomogram_footer
 
     def __get_totals_for_class_values(self, minimums):
         cls_index = self.target_class_index
-        marker_values = [item.dot.value for item in self.feature_items]
-        marker_values = np.asarray(marker_values)
-        if not self.markers_set:
-            marker_values = self.scale_forth(marker_values)
-        totals = np.empty(len(self.domain.class_var.values))
+        marker_values = self.scale_marker_values(self.feature_marker_values)
+        totals = np.full(len(self.domain.class_var.values), np.nan)
         totals[cls_index] = marker_values.sum()
-        marker_values = self.scale_back(marker_values)
         for i in range(len(self.domain.class_var.values)):
             if i == cls_index:
                 continue
             coeffs = [np.nan_to_num(p[i] / p[cls_index]) for p in self.points]
             points = [p[cls_index] for p in self.points]
             total = sum([self.get_points_from_coeffs(v, c, p) for (v, c, p)
-                         in zip(marker_values, coeffs, points)])
+                         in zip(self.feature_marker_values, coeffs, points)])
             if self.align == OWNomogram.ALIGN_LEFT:
                 points = [p - m for m, p in zip(minimums, points)]
                 total -= sum([min(p) for p in [p[i] for p in self.points]])
@@ -1098,18 +1074,17 @@ class OWNomogram(OWWidget):
             if self.scale == OWNomogram.POINT_SCALE:
                 total *= d
             totals[i] = total
+        assert not np.any(np.isnan(totals))
         return totals
 
     def set_feature_marker_values(self):
-
         if not (len(self.points) and len(self.feature_items)):
             return
         if not len(self.feature_marker_values):
             self._init_feature_marker_values()
-        self.feature_marker_values = self.scale_forth(self.feature_marker_values)
-        item = self.feature_items[0]
-        for i, item in enumerate(self.feature_items):
-            item.dot.move_to_val(self.feature_marker_values[i])
+        marker_values = self.scale_marker_values(self.feature_marker_values)
+        for i, item in self.feature_items.items():
+            item.dot.move_to_val(marker_values[i])
         item.dot.probs_dot.move_to_sum()
 
     def _init_feature_marker_values(self):
@@ -1137,9 +1112,8 @@ class OWNomogram(OWWidget):
         self.feature_marker_values = np.asarray(values)
 
     def clear_scene(self):
-        self.feature_items = []
-        self.scale_back = lambda x: x
-        self.scale_forth = lambda x: x
+        self.feature_items = {}
+        self.scale_marker_values = lambda x: x
         self.nomogram = None
         self.nomogram_main = None
         self.vertical_line = None
