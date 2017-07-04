@@ -754,13 +754,6 @@ class OWNomogram(OWWidget):
         if self.classifier and isinstance(self.classifier,
                                           LogisticRegressionClassifier):
             self.align = OWNomogram.ALIGN_LEFT
-            item = model.item(SortBy.POSITIVE)
-            item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
-            item = model.item(SortBy.NEGATIVE)
-            item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
-            if self.sort_index in (SortBy.POSITIVE,
-                                   SortBy.NEGATIVE):
-                self.sort_index = SortBy.NO_SORTING
 
     @Inputs.data
     def set_data(self, data):
