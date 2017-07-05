@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy,
+    QSizePolicy, QApplication,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
@@ -308,6 +308,7 @@ class RulerItem(QGraphicsWidget):
                                      values[-1])
         self.dot.setParentItem(self)
 
+        # pylint: disable=unused-variable
         # line
         line = QGraphicsLineItem(min(values) * scale + offset, 0,
                                  max(values) * scale + offset, 0,
@@ -379,6 +380,7 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
         self.dot.setPos(0, (- self.DOT_RADIUS + self.y_diff) / 2)
         self.dot.setParentItem(self)
 
+        # pylint: disable=unused-variable
         # two lines
         t_line = QGraphicsLineItem(self.min_val * scale + offset, 0,
                                    self.max_val * scale + offset, 0,
@@ -504,6 +506,7 @@ class ContinuousFeature2DItem(QGraphicsWidget):
         h_line.setPen(pen)
         self.dot.horizontal_line = h_line
 
+        # pylint: disable=unused-variable
         # line
         line = QGraphicsLineItem(values[0] * scale + offset, y_start,
                                  values[-1] * scale + offset, y_stop,
@@ -604,19 +607,19 @@ class OWNomogram(OWWidget):
             contentsLength=12)
         self.norm_check = gui.checkBox(
             box, self, "normalize_probabilities", "Normalize probabilities",
-            hidden=True, callback=self._norm_check_changed,
+            hidden=True, callback=self.update_scene,
             tooltip="For multiclass data 1 vs. all probabilities do not"
                     " sum to 1 and therefore could be normalized.")
 
         self.scale_radio = gui.radioButtons(
             self.controlArea, self, "scale", ["Point scale", "Log odds ratios"],
-            box="Scale", callback=self._scale_radio_changed)
+            box="Scale", callback=self.update_scene)
 
         box = gui.vBox(self.controlArea, "Display features")
         grid = QGridLayout()
         radio_group = gui.radioButtonsInBox(
             box, self, "display_index", [], orientation=grid,
-            callback=self._n_attributes_radio_changed)
+            callback=self.update_scene)
         radio_all = gui.appendRadioButton(
             radio_group, "All", addToLayout=False)
         radio_best = gui.appendRadioButton(
@@ -631,12 +634,12 @@ class OWNomogram(OWWidget):
 
         self.sort_combo = gui.comboBox(
             box, self, "sort_index", label="Rank by:", items=SortBy.items(),
-            orientation=Qt.Horizontal, callback=self._sort_combo_changed)
+            orientation=Qt.Horizontal, callback=self.update_scene)
 
         self.cont_feature_dim_combo = gui.comboBox(
             box, self, "cont_feature_dim_index", label="Continuous features: ",
             items=["1D projection", "2D curve"], orientation=Qt.Horizontal,
-            callback=self._cont_feature_dim_combo_changed)
+            callback=self.update_scene)
 
         gui.rubber(self.controlArea)
 
@@ -711,25 +714,8 @@ class OWNomogram(OWWidget):
         self.update_scene()
         self.old_target_class_index = self.target_class_index
 
-    def _norm_check_changed(self):
-        self.update_scene()
-
-    def _scale_radio_changed(self):
-        self.update_scene()
-
-    def _n_attributes_radio_changed(self):
-        self.update_scene()
-
     def _n_spin_changed(self):
         self.display_index = 1
-        self.update_scene()
-
-    def _sort_combo_changed(self):
-        if self.nomogram_main is None:
-            return
-        self.update_scene()
-
-    def _cont_feature_dim_combo_changed(self):
         self.update_scene()
 
     def update_controls(self):
@@ -1173,7 +1159,6 @@ class OWNomogram(OWWidget):
 if __name__ == "__main__":
     from Orange.classification import NaiveBayesLearner, \
         LogisticRegressionLearner
-    from AnyQt.QtWidgets import QApplication
 
     app = QApplication([])
     ow = OWNomogram()
