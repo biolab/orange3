@@ -7,7 +7,7 @@ import scipy as sp
 from scipy.sparse import csr_matrix, issparse
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, mean, nanmean, digitize, var
+    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
 
 
 class TestUtil(unittest.TestCase):
@@ -145,6 +145,13 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_array_equal(
             unique(x1, return_counts=True),
             unique(x2, return_counts=True),
+        )
+
+    def test_nanunique(self):
+        x = csr_matrix(np.array([0, 1, 1, np.nan]))
+        np.testing.assert_array_equal(
+            nanunique(x),
+            np.array([0, 1])
         )
 
     def test_mean(self):
