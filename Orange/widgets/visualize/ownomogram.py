@@ -7,7 +7,8 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
-    QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame
+    QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
+    QSizePolicy,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
@@ -688,7 +689,31 @@ class OWNomogram(OWWidget):
 
         gui.rubber(self.controlArea)
 
-        class GraphicsView(QGraphicsView):
+        class _GraphicsView(QGraphicsView):
+            def __init__(self, scene, parent, **kwargs):
+                for k, v in dict(verticalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
+                                 horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
+                                 viewportUpdateMode=QGraphicsView.BoundingRectViewportUpdate,
+                                 renderHints=(QPainter.Antialiasing |
+                                              QPainter.TextAntialiasing |
+                                              QPainter.SmoothPixmapTransform),
+                                 alignment=(Qt.AlignTop |
+                                            Qt.AlignLeft),
+                                 sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                                        QSizePolicy.MinimumExpanding)).items():
+                    kwargs.setdefault(k, v)
+
+                super().__init__(scene, parent, **kwargs)
+
+        class GraphicsView(_GraphicsView):
+            def __init__(self, scene, parent):
+                super().__init__(scene, parent,
+                                 verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
+                                 styleSheet='QGraphicsView {background: white}')
+                self.viewport().setMinimumWidth(300)  # XXX: This prevents some tests failing
+
+            w = self
+
             def resizeEvent(self, resizeEvent):
                 nonlocal owwidget
                 owwidget.repaint = True
@@ -697,15 +722,26 @@ class OWNomogram(OWWidget):
                 owwidget.update_scene()
                 return super().resizeEvent(resizeEvent)
 
-        self.scene = QGraphicsScene()
-        owwidget = self
-        self.view = GraphicsView(
-            self.scene, horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
-            renderHints=QPainter.Antialiasing | QPainter.TextAntialiasing |
-                        QPainter.SmoothPixmapTransform, alignment=Qt.AlignLeft)
-        self.view.viewport().setMinimumWidth(300)
-        self.view.sizeHint = lambda: QSize(600, 500)
-        self.mainArea.layout().addWidget(self.view)
+            def sizeHint(self):
+                return QSize(400, 200)
+
+        class FixedSizeGraphicsView(_GraphicsView):
+            def __init__(self, scene, parent):
+                super().__init__(scene, parent,
+                                 sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
+                                                        QSizePolicy.Minimum))
+
+            def sizeHint(self):
+                return QSize(400, 85)
+
+        scene = self.scene = QGraphicsScene(self)
+
+        top_view = self.top_view = FixedSizeGraphicsView(scene, self)
+        mid_view = self.view = GraphicsView(scene, self)
+        bottom_view = self.bottom_view = FixedSizeGraphicsView(scene, self)
+
+        for view in (top_view, mid_view, bottom_view):
+            self.mainArea.layout().addWidget(view)
 
     def _class_combo_changed(self):
         values = [item.dot.value for item in self.feature_items]
@@ -745,14 +781,14 @@ class OWNomogram(OWWidget):
         self.nomogram_main.hide(n_show)
         if self.vertical_line:
             x = self.vertical_line.line().x1()
-            y = self.nomogram_main.layout().preferredHeight() + 30
+            y = self.nomogram_main.layout().preferredHeight() + 10
             self.vertical_line.setLine(x, -6, x, y)
             self.hidden_vertical_line.setLine(x, -6, x, y)
         rect = QRectF(self.scene.sceneRect().x(),
                       self.scene.sceneRect().y(),
                       self.scene.itemsBoundingRect().width(),
                       self.nomogram.preferredSize().height())
-        self.scene.setSceneRect(rect.adjusted(0, 0, 70, 70))
+        self.scene.setSceneRect(rect)
 
     def _sort_combo_changed(self):
         if self.nomogram_main is None:
@@ -886,9 +922,9 @@ class OWNomogram(OWWidget):
         point_text = QGraphicsTextItem("Points")
         probs_text = QGraphicsTextItem("Probabilities (%)")
         all_items = name_items + [point_text, probs_text]
-        name_offset = -max(t.boundingRect().width() for t in all_items) - 50
+        name_offset = -max(t.boundingRect().width() for t in all_items) - 10
         w = self.view.viewport().rect().width()
-        max_width = w + name_offset - 100
+        max_width = w + name_offset - 30
 
         points = [pts[self.target_class_index] for pts in self.points]
         minimums = [min(p) for p in points]
@@ -929,8 +965,17 @@ class OWNomogram(OWWidget):
         rect = QRectF(self.scene.itemsBoundingRect().x(),
                       self.scene.itemsBoundingRect().y(),
                       self.scene.itemsBoundingRect().width(),
-                      self.nomogram.preferredSize().height())
-        self.scene.setSceneRect(rect.adjusted(0, 0, 70, 70))
+                      self.nomogram.preferredSize().height()).adjusted(10, 0, 20, 0)
+        self.scene.setSceneRect(rect)
+
+        # Clip top and bottom (60 and 150) parts from the main view
+        self.view.setSceneRect(rect.x(), rect.y() + 80, rect.width() - 10, rect.height() - 160)
+        self.view.viewport().setMaximumHeight(rect.height() - 160)
+        # Clip main part from top/bottom views
+        # below point values are imprecise (less/more than required) but this
+        # is not a problem due to clipped scene content still being drawn
+        self.top_view.setSceneRect(rect.x(), rect.y() + 3, rect.width() - 10, 20)
+        self.bottom_view.setSceneRect(rect.x(), rect.height() - 110, rect.width() - 10, 30)
 
     def create_main_nomogram(self, name_items, points, max_width, point_text,
                              name_offset):
@@ -971,7 +1016,7 @@ class OWNomogram(OWWidget):
             self.n_attributes if self.display_index else None)
 
         x = - scale_x * min_p
-        y = self.nomogram_main.layout().preferredHeight() + 30
+        y = self.nomogram_main.layout().preferredHeight() + 10
         self.vertical_line = QGraphicsLineItem(x, -6, x, y)
         self.vertical_line.setPen(QPen(Qt.DotLine))
         self.vertical_line.setParentItem(point_item)
