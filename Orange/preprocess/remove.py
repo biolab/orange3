@@ -1,9 +1,11 @@
 from collections import namedtuple
+
 import numpy as np
 
-from .preprocess import Preprocess
 from Orange.data import Domain, DiscreteVariable, Table
 from Orange.preprocess.transformation import Lookup
+from Orange.statistics.util import nanunique
+from .preprocess import Preprocess
 
 __all__ = ["Remove"]
 
@@ -234,10 +236,7 @@ def remove_unused_values(var, data):
         Domain([var]),
         data
     )
-    array = column_data.X.ravel()
-    mask = np.isfinite(array)
-    unique = np.array(np.unique(array[mask]), dtype=int)
-
+    unique = nanunique(column_data.X).astype(int)
     if len(unique) == len(var.values):
         return var
 

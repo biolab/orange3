@@ -4,6 +4,8 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
+
 from Orange.data import Table
 from Orange.preprocess import Remove
 from Orange.tests import test_filename
@@ -133,3 +135,19 @@ class TestRemover(unittest.TestCase):
         self.assertEqual(res.domain["b"].values, res.domain["c"].values)
         self.assertEqual(res.domain["d"].values, ["1", "2"])
         self.assertEqual(res.domain["f"].values, ['1', 'hey'])
+
+    def test_remove_unused_values_attr_sparse(self):
+        data = self.test8
+        data = data[1:]
+        data.X = sp.csr_matrix(data.X)
+        remover = Remove(Remove.RemoveUnusedValues)
+        new_data = remover(data)
+        attr_res = remover.attr_results
+
+        self.assertEqual((new_data.X != data.X).nnz, 0)
+        self.assertEqual([a.values for a in new_data.domain.attributes
+                          if a.is_discrete], [['1'], ['4']])
+        self.assertEqual([c.values for c in new_data.domain.class_vars
+                          if c.is_discrete], [['1', '2', '3'], ['2']])
+        self.assertDictEqual(attr_res,
+                             {'removed': 0, 'reduced': 1, 'sorted': 0})
