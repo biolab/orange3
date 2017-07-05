@@ -26,14 +26,14 @@ class Remove(Preprocess):
     attr_flags : int (default: 0)
         If SortValues, values of discrete attributes are sorted.
         If RemoveConstant, unused attributes are removed.
-        If RemoveUnusedValues, unused values are removed from descrete
+        If RemoveUnusedValues, unused values are removed from discrete
         attributes.
         It is possible to merge operations in one by summing several types.
 
     class_flags: int (default: 0)
         If SortValues, values of discrete class attributes are sorted.
         If RemoveConstant, unused class attributes are removed.
-        If RemoveUnusedValues, unused values are removed from descrete
+        If RemoveUnusedValues, unused values are removed from discrete
         class attributes.
         It is possible to merge operations in one by summing several types.
 
