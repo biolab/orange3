@@ -7,10 +7,11 @@ import types
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
-    QShortcut, QSplitter, QSplitterHandle, QPushButton
+    QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal)
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
+)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
@@ -26,10 +27,10 @@ from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
-    WidgetMessagesMixin, UnboundMsg
+    WidgetMessagesMixin, UnboundMsg, MessagesWidget
 from Orange.widgets.utils.signals import \
     WidgetSignalsMixin, Input, Output, AttributeList
-from .utils.overlay import MessageOverlayWidget
+from Orange.widgets.utils.overlay import MessageOverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
 # than the one with the mixin (Orange.widgets.utils.messages). Assignment is
@@ -322,21 +323,31 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         and attribute `graph_name`.
         """
         self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(2, 2, 2, 2)
+        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setSpacing(0)
+
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
 
         self.want_main_area = self.want_main_area or self.graph_name
         self._create_default_buttons()
 
-        if self.want_message_bar:
-            self.insert_message_bar()
-
         self._insert_splitter()
         if self.want_control_area:
             self._insert_control_area()
         if self.want_main_area:
             self._insert_main_area()
+
+        if self.want_message_bar:
+            sb = QStatusBar()
+            sb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+            sb.setSizeGripEnabled(self.resizing_enabled)
+            self.layout().addWidget(sb)
+
+            self.message_bar = MessagesWidget(self)
+            self.message_bar.setSizePolicy(QSizePolicy.Preferred,
+                                           QSizePolicy.Preferred)
+            sb.addPermanentWidget(self.message_bar)
 
     def save_graph(self):
         """Save the graph with the name given in class attribute `graph_name`.
