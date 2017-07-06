@@ -81,6 +81,10 @@ ENTRY_POINTS = {
 }
 
 
+EXTRAS_REQUIRE = {
+    ':python_version<="3.4"': ["typing"],
+}
+
 # Return the git revision as a string
 def git_version():
     """Return the git revision as a string.
