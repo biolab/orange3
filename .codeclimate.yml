@@ -5,7 +5,7 @@ engines:
      languages:
        python:
          python_version: 3
-         mass_threshold: 350
+         mass_threshold: 50
    exclude_paths:
      - doc/
  pep8:
