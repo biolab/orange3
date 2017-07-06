@@ -1,4 +1,8 @@
-from AnyQt.QtWidgets import QPushButton, QStyle, QStyleOptionButton
+from AnyQt.QtWidgets import (
+    QPushButton, QAbstractButton, QFocusFrame, QStyle, QStylePainter,
+    QStyleOptionButton
+
+)
 from AnyQt.QtCore import Qt, QSize
 
 
@@ -59,3 +63,49 @@ class VariableTextPushButton(QPushButton):
                 style.sizeFromContents(QStyle.CT_PushButton, option,
                                        size, self))
         return sh
+
+
+class SimpleButton(QAbstractButton):
+    """
+    A simple icon button widget.
+    """
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__focusframe = None
+
+    def focusInEvent(self, event):
+        # reimplemented
+        event.accept()
+        self.__focusframe = QFocusFrame(self)
+        self.__focusframe.setWidget(self)
+
+    def focusOutEvent(self, event):
+        # reimplemented
+        event.accept()
+        self.__focusframe.deleteLater()
+        self.__focusframe = None
+
+    def sizeHint(self):
+        # reimplemented
+        self.ensurePolished()
+        iconsize = self.iconSize()
+        icon = self.icon()
+        if not icon.isNull():
+            iconsize = icon.actualSize(iconsize)
+        return iconsize
+
+    def minimumSizeHint(self):
+        # reimplemented
+        return self.sizeHint()
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        option = QStyleOptionButton()
+        option.initFrom(self)
+        option.text = ""
+        option.icon = self.icon()
+        option.iconSize = self.iconSize()
+        option.features = QStyleOptionButton.Flat
+        if self.isDown():
+            option.state |= QStyle.State_Sunken
+        painter.drawControl(QStyle.CE_PushButton, option)
