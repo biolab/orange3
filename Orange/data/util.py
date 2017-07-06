@@ -91,6 +91,11 @@ def hstack(arrays):
         return np.hstack(arrays)
     if any(sp.issparse(arr) for arr in arrays):
         arrays = [sp.csc_matrix(arr) for arr in arrays]
-        return sp.hstack(arrays)
+        r = sp.hstack(arrays)
+        density = r.nnz / np.prod(r.shape)
+        print('density:', density)
+        if density > 1/3:
+            r = r.toarray()
+        return r
     else:
         return np.hstack(arrays)
