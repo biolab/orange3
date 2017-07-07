@@ -4,6 +4,7 @@ and once used from the bottlechest package (fork of bottleneck).
 
 It also patches bottleneck to contain these functions.
 """
+from warnings import warn
 import numpy as np
 import scipy.sparse as sp
 import bottleneck as bn
@@ -274,11 +275,13 @@ def nanmax(x, axis=None):
 
 def mean(x):
     """ Equivalent of np.mean that supports sparse or dense matrices. """
-    if not sp.issparse(x):
-        return np.mean(x)
-
-    n_values = np.prod(x.shape)
-    return np.sum(x.data) / n_values
+    m = (np.sum(x.data) / np.prod(x.shape)
+         if sp.issparse(x) else
+         np.mean(x))
+    if np.isnan(m):
+        warn('mean() resulted in nan. If input can contain nan values, perhaps '
+             'you meant nanmean?', stacklevel=2)
+    return m
 
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
