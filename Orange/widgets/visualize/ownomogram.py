@@ -14,7 +14,7 @@ from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
 
 from Orange.data import Table, Domain
-from Orange.statistics.util import nanmin, nanmax, mean, unique
+from Orange.statistics.util import nanmin, nanmax, nanmean, unique
 from Orange.classification import Model
 from Orange.classification.naive_bayes import NaiveBayesModel
 from Orange.classification.logistic_regression import \
@@ -1079,10 +1079,14 @@ class OWNomogram(OWWidget):
                     ind, n = unique(self.data.X[:, i], return_counts=True)
                     feature_val = np.nan_to_num(ind[np.argmax(n)])
                 else:
-                    feature_val = mean(self.data.X[:, i])
+                    feature_val = nanmean(self.data.X[:, i])
+
+            # If data is provided on a separate signal, use the first data
+            # instance to position the points instead of the mean
             inst_in_dom = instances and attr in instances.domain
             if inst_in_dom and not np.isnan(instances[0][attr]):
                 feature_val = instances[0][attr]
+
             if feature_val is not None:
                 value = (self.points[i][cls_index][int(feature_val)]
                          if attr.is_discrete else

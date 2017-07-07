@@ -77,7 +77,8 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons"""
-        self._test_helper(self.lr_cls, [9, 91])
+        self.widget.display_index = 0  # show ALL features
+        self._test_helper(self.lr_cls, [58, 42])
 
     def test_nomogram_nb_multiclass(self):
         """Check probabilities for naive bayes classifier for various values
@@ -168,6 +169,7 @@ class TestOWNomogram(WidgetTest):
             self.assertGreaterEqual(5, len(visible_items))
 
             # 2D curve
+            self.widget.n_attributes = 15
             self.widget.cont_feature_dim_combo.activated.emit(1)
             self.widget.cont_feature_dim_combo.setCurrentIndex(1)
             self._test_helper_check_probability(values[i])
