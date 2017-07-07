@@ -32,6 +32,7 @@ from Orange.widgets.utils.messages import \
 from Orange.widgets.utils.signals import \
     WidgetSignalsMixin, Input, Output, AttributeList
 from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
+from Orange.widgets.utils.buttons import SimpleButton
 
 # Msg is imported and renamed, so widgets can import it from this module rather
 # than the one with the mixin (Orange.widgets.utils.messages). Assignment is
@@ -289,10 +290,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.buttonsArea = gui.widgetBox(
             self.left_side, addSpace=0, spacing=9,
             orientation=self.buttons_area_orientation)
-        if self.graphButton is not None:
-            self.buttonsArea.layout().addWidget(self.graphButton)
-        if self.report_button is not None:
-            self.buttonsArea.layout().addWidget(self.report_button)
 
     def _insert_main_area(self):
         self.mainArea = gui.vBox(
@@ -350,6 +347,25 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             sb.setSizeGripEnabled(self.resizing_enabled)
             c.layout().addWidget(sb)
 
+            b = SimpleButton(
+                icon=QIcon(gui.resource_filename("icons/help.svg")),
+                toolTip="Show widget help",
+            )
+            sb.addWidget(b)
+            if self.graph_name is not None:
+                b = SimpleButton(
+                    icon=QIcon(gui.resource_filename("icons/chart.svg")),
+                    toolTip="Save Image",
+                )
+                b.clicked.connect(self.save_graph)
+                sb.addWidget(b)
+            if hasattr(self, "send_report"):
+                b = SimpleButton(
+                    icon=QIcon(gui.resource_filename("icons/report.svg")),
+                    toolTip="Report"
+                )
+                b.clicked.connect(self.show_report)
+                sb.addWidget(b)
             self.message_bar = MessagesWidget(self)
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
