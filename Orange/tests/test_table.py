@@ -3,14 +3,14 @@
 
 import copy
 import os
+import random
 import unittest
 from itertools import chain
 from math import isnan
-import random
-
 from unittest.mock import Mock, MagicMock, patch
-import scipy.sparse as sp
+
 import numpy as np
+import scipy.sparse as sp
 
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
