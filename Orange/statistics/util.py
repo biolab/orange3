@@ -316,3 +316,53 @@ def unique(x, return_counts=False):
         if explicit_zeros:
             return r
         return np.insert(r, 0, 0)
+
+
+def digitize(x, bins, right=False):
+    """Equivalent of np.digitize that supports sparse and dense matrices.
+
+    If a sparse matrix is provided and the '0's belong to the '0'th bin, then
+    a sparse matrix is returned.
+
+    Because this can return both sparse and dense matrices, we must keep the
+    return shape consistent. Since sparse matrices don't support 1d matrices,
+    we reshape any returned 1d numpy array to a 2d matrix, with the first
+    dimension shape being 1. This is equivalent to the behaviour of sparse
+    matrices.
+
+    Parameters
+    ----------
+    x : Union[np.ndarry, sp.csr_matrix, sp.csc_matrix]
+    bins : np.ndarray
+    right : Optional[bool]
+
+    Returns
+    -------
+    Union[np.ndarray, sp.csr_matrix]
+
+    """
+    if not sp.issparse(x):
+        result = np.digitize(x, bins, right)
+        # In order to keep the return shape consistent, and sparse matrices
+        # don't support 1d matrices, make sure to convert 1d to 2d matrices
+        if result.ndim == 1:
+            result = result.reshape(((1,) + result.shape))
+        return result
+
+    # Find the bin where zeros belong, depending on the `right` parameter
+    zero_bin = np.searchsorted(bins, 0, side=['right', 'left'][right])
+
+    if zero_bin == 0:
+        r = sp.lil_matrix(x.shape, dtype=np.int64)
+    else:
+        r = zero_bin * np.ones(x.shape, dtype=np.int64)
+
+    for idx, row in enumerate(x.tocsr()):
+        r[idx, row.indices] = np.digitize(row.data, bins, right)
+
+    # Orange mainly deals with `csr_matrix`, but `lil_matrix` is more efficient
+    # for incremental building
+    if sp.issparse(r):
+        r = r.tocsr()
+
+    return r
