@@ -78,27 +78,6 @@ class RemoveConstant(unittest.TestCase):
         self.assertEqual(len(d.domain.attributes), 4)
 
 
-class TestRemoveNanClass(unittest.TestCase):
-    def test_remove_nan_classes(self):
-        table = Table("imports-85")
-        self.assertTrue(np.isnan(table.Y).any())
-        table = RemoveNaNClasses()(table)
-        self.assertTrue(not np.isnan(table.Y).any())
-
-    def test_remove_nan_classes_multiclass(self):
-        domain = Domain([DiscreteVariable("a", values="01")],
-                        [DiscreteVariable("b", values="01"),
-                        DiscreteVariable("c", values="01")])
-        table = Table(domain, [[0, 1, np.nan],
-                               [1, np.nan, 0],
-                               [1, 0, 1],
-                               [1, np.nan, np.nan]])
-        table = RemoveNaNClasses()(table)
-        self.assertTrue(not np.isnan(table).any())
-        self.assertEqual(table.domain, domain)
-        self.assertEqual(len(table), 1)
-
-
 class TestScaling(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -122,7 +101,7 @@ class TestScaling(unittest.TestCase):
 class TestReprs(unittest.TestCase):
     def test_reprs(self):
         preprocs = [Continuize, Discretize, Impute, SklImpute, Normalize,
-                    Randomize, RemoveNaNClasses, ProjectPCA, ProjectCUR, Scale,
+                    Randomize, ProjectPCA, ProjectCUR, Scale,
                     EqualFreq, EqualWidth, EntropyMDL, SelectBestFeatures,
                     SelectRandomFeatures, RemoveNaNColumns, DoNotImpute, DropInstances,
                     Average, Default]

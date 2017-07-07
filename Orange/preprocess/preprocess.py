@@ -12,7 +12,7 @@ import Orange.data
 from Orange.data.filter import HasClass
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
-from Orange.util import Reprable, Enum
+from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
 
 __all__ = ["Continuize", "Discretize", "Impute",
@@ -198,6 +198,7 @@ class RemoveConstant(Preprocess):
         return data.transform(domain)
 
 
+@deprecated
 class RemoveNaNClasses(Preprocess):
     """
     Construct preprocessor that removes examples with missing class

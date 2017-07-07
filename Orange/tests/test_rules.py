@@ -3,18 +3,17 @@
 
 import unittest
 import numpy as np
-from Orange.data import Table
-from Orange.preprocess import RemoveNaNClasses, Impute
 
-from Orange.classification.rules import main as rules_main
+from Orange.classification import (CN2Learner, CN2UnorderedLearner,
+                                   CN2SDLearner, CN2SDUnorderedLearner)
 from Orange.classification.rules import (_RuleLearner, _RuleClassifier,
                                          RuleHunter, Rule, EntropyEvaluator,
                                          LaplaceAccuracyEvaluator,
                                          WeightedRelativeAccuracyEvaluator,
                                          argmaxrnd, hash_dist)
-
-from Orange.classification import (CN2Learner, CN2UnorderedLearner,
-                                   CN2SDLearner, CN2SDUnorderedLearner)
+from Orange.data import Table
+from Orange.data.filter import HasClass
+from Orange.preprocess import Impute
 
 
 class TestRuleInduction(unittest.TestCase):
@@ -41,7 +40,7 @@ class TestRuleInduction(unittest.TestCase):
         self.assertEqual(len(list(base_rule_learner.active_preprocessors)), 3)
         # preprocessor types
         preprocessor_types = [type(x) for x in base_rule_learner.active_preprocessors]
-        self.assertIn(RemoveNaNClasses, preprocessor_types)
+        self.assertIn(HasClass, preprocessor_types)
         self.assertIn(Impute, preprocessor_types)
 
         # test find_rules

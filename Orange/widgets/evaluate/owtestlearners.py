@@ -2,7 +2,6 @@
 # pylint: disable=invalid-sequence-index
 
 import sys
-import functools
 from itertools import chain
 import abc
 import enum
@@ -13,7 +12,6 @@ from functools import partial, reduce
 
 import concurrent.futures
 from concurrent.futures import Future
-
 from collections import OrderedDict, namedtuple
 
 try:
@@ -31,20 +29,20 @@ from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import Qt, QSize, QThread, QMetaObject, Q_ARG
 from AnyQt.QtCore import pyqtSlot as Slot
 
+from Orange.base import Learner
+import Orange.classification
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data.filter import HasClass
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
-import Orange.classification
-import Orange.regression
-
-from Orange.base import Learner
 from Orange.evaluation import scoring, Results
 from Orange.preprocess.preprocess import Preprocess
-from Orange.preprocess import RemoveNaNClasses
+import Orange.regression
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.concurrent import ThreadExecutor
+
 
 log = logging.getLogger(__name__)
 
@@ -389,7 +387,7 @@ class OWTestLearners(OWWidget):
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
             if data:
-                data = RemoveNaNClasses(data)
+                data = HasClass()(data)
         else:
             self.Warning.missing_data.clear()
 
@@ -439,7 +437,7 @@ class OWTestLearners(OWWidget):
         if self.train_data_missing_vals or self.test_data_missing_vals:
             self.Warning.missing_data(self._which_missing_data())
             if data:
-                data = RemoveNaNClasses()(data)
+                data = HasClass()(data)
         else:
             self.Warning.missing_data.clear()
 

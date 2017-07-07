@@ -4,12 +4,13 @@ from itertools import chain
 
 import numpy as np
 from sklearn import feature_selection as skl_fss
-from Orange.misc.wrapper_meta import WrapperMeta
 
-from Orange.statistics import contingency, distribution
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.preprocess import Discretize, Impute, RemoveNaNClasses
+from Orange.data.filter import HasClass
+from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.preprocess.preprocess import Discretize, Impute
 from Orange.preprocess.util import _RefuseDataInConstructor
+from Orange.statistics import contingency, distribution
 from Orange.util import Reprable
 
 __all__ = ["Chi2",
@@ -27,9 +28,7 @@ class Scorer(_RefuseDataInConstructor, Reprable):
     feature_type = None
     class_type = None
     supports_sparse_data = None
-    preprocessors = [
-        RemoveNaNClasses()
-    ]
+    preprocessors = [HasClass()]
 
     @property
     def friendly_name(self):
