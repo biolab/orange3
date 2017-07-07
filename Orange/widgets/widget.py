@@ -7,7 +7,8 @@ import types
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
-    QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar
+    QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
+    QProgressBar
 )
 from AnyQt.QtCore import (
     Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
@@ -347,7 +348,27 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.message_bar = MessagesWidget(self)
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
+            pb = QProgressBar(maximumWidth=120, minimum=0, maximum=100)
+            pb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored)
+            pb.setAttribute(Qt.WA_LayoutUsesWidgetRect)
+            pb.setAttribute(Qt.WA_MacMiniSize)
+            pb.hide()
+            sb.addPermanentWidget(pb)
             sb.addPermanentWidget(self.message_bar)
+
+            def statechanged():
+                pb.setVisible(bool(self.processingState) or self.isBlocking())
+                if self.isBlocking() and not self.processingState:
+                    pb.setRange(0, 0)  # indeterminate pb
+                elif self.processingState:
+                    pb.setRange(0, 100)  # determinate pb
+
+            self.processingStateChanged.connect(statechanged)
+            self.blockingStateChanged.connect(statechanged)
+
+            @self.progressBarValueChanged.connect
+            def _(val):
+                pb.setValue(int(val))
 
     def save_graph(self):
         """Save the graph with the name given in class attribute `graph_name`.
