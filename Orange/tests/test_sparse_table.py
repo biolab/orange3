@@ -1,9 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import numpy as np
 from scipy.sparse import csr_matrix
 
 from Orange import data
+from Orange.data import Table
 from Orange.tests import test_table as tabletests
 
 
@@ -41,3 +43,8 @@ class InterfaceTest(tabletests.InterfaceTest):
 
     def test_value_assignment(self):
         super().test_value_assignment()
+
+    def test_str(self):
+        iris = Table('iris')
+        iris.X, iris.Y = csr_matrix(iris.X), csr_matrix(iris.Y)
+        str(iris)

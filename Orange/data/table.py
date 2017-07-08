@@ -115,15 +115,24 @@ class RowInstance(Instance):
         def sp_values(matrix, variables):
             if not sp.issparse(matrix):
                 return Instance.str_values(matrix[row], variables, limit)
-            begptr, endptr = matrix.indptr[row:row + 2]
-            rendptr = endptr if not limit else min(endptr, begptr + 5)
-            variables = [variables[var]
-                         for var in matrix.indices[begptr:rendptr]]
-            s = ", ".join(
-                "{}={}".format(var.name, var.str_val(val))
-                for var, val in zip(variables, matrix.data[begptr:rendptr]))
-            if limit and rendptr != endptr:
+
+            row_entries, idx = [], 0
+            while idx < len(variables):
+                # Make sure to stop printing variables if we limit the output
+                if limit and len(row_entries) >= 5:
+                    break
+
+                var = variables[idx]
+                if var.is_discrete or matrix[row, idx]:
+                    row_entries.append("%s=%s" % (var.name, var.str_val(matrix[row, idx])))
+
+                idx += 1
+
+            s = ", ".join(row_entries)
+
+            if limit and idx < len(variables):
                 s += ", ..."
+
             return s
 
         table = self.table
@@ -825,7 +834,7 @@ class Table(MutableSequence, Storage):
         return self.X.shape[0]
 
     def __str__(self):
-        return "[" + ",\n ".join(str(ex) for ex in self)
+        return "[" + ",\n ".join(str(ex) for ex in self) + "]"
 
     def __repr__(self):
         head = 5
