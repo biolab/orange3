@@ -302,7 +302,7 @@ class OWSql(OWWidget):
                     with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
                         pass
                     self.table = self.materialize_table_name
-                except psycopg2.ProgrammingError as ex:
+                except (psycopg2.ProgrammingError, BackendError) as ex:
                     self.Error.connection(str(ex))
                     return
 

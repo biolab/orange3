@@ -86,7 +86,7 @@ class SqlTable(Table):
         if table_or_sql is not None:
             if isinstance(table_or_sql, TableDesc):
                 table = table_or_sql.sql
-            elif "SELECT" in table_or_sql:
+            elif "select" in table_or_sql.lower():
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
                 table = self.backend.quote_identifier(table_or_sql)
