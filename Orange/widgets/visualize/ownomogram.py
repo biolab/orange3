@@ -46,9 +46,16 @@ class MovableToolTip(QLabel):
         self.hide()
 
     def show(self, pos, text, change_y=True):
-        self.move(pos.x(), pos.y() + 15 if change_y else self.y())
         self.setText(text)
         self.adjustSize()
+
+        x, y = pos.x(), (pos.y() + 15 if change_y else self.y())
+        avail = QApplication.focusWindow().screen().availableGeometry()
+        if x + self.width() > avail.right():
+            x -= self.width()
+        if y + self.height() > avail.bottom():
+            y = (pos.y() - 10 - self.height() if change_y else self.y() - self.height())
+        self.move(x, y)
         super().show()
 
 
