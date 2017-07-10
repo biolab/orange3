@@ -77,6 +77,25 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         data = data[0:1]
         self.send_signal(self.widget.Inputs.data, data)
 
+    def test_combos_and_mosaic(self):
+        """
+        Text in combos is wiped away when there is no data and mosaic disappears as well.
+        GH-2459
+        GH-2462
+        """
+        def assertCount(cb_color, cb_attr, areas):
+            self.assertEqual(len(self.widget.areas), areas)
+            self.assertEqual(self.widget.cb_attr_color.count(), cb_color)
+            for i, combo in enumerate(self.widget.attr_combos):
+                self.assertEqual(combo.count(), cb_attr[i])
+
+        data = Table("iris")
+        assertCount(1, [0, 0, 0, 0], 0)
+        self.send_signal(self.widget.Inputs.data, data)
+        assertCount(6, [5, 6, 6, 6], 16)
+        self.send_signal(self.widget.Inputs.data, None)
+        assertCount(1, [0, 0, 0, 0], 0)
+
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
 

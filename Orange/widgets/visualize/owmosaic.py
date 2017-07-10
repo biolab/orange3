@@ -384,6 +384,7 @@ class OWMosaicDisplay(OWWidget):
         for combo in self.attr_combos:
             combo.clear()
         if data is None:
+            self.color_model.set_domain(None)
             return
         for combo in self.attr_combos[1:]:
             combo.addItem("(None)")
@@ -440,6 +441,8 @@ class OWMosaicDisplay(OWWidget):
             and len(self.data.domain.attributes) >= 1)
 
         if self.data is None:
+            self.discrete_data = None
+            self.init_combos(None)
             return
 
         self.color_model.set_domain(self.data.domain)
