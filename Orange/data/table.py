@@ -349,7 +349,10 @@ class Table(MutableSequence, Storage):
                     if cached:
                         return cached
                 if domain == source.domain:
-                    return cls.from_table_rows(source, row_indices)
+                    table = cls.from_table_rows(source, row_indices)
+                    # assure resulting domain is the instance passed on input
+                    table.domain = domain
+                    return table
 
                 if isinstance(row_indices, slice):
                     start, stop, stride = row_indices.indices(source.X.shape[0])

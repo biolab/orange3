@@ -1,15 +1,16 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import copy
 import os
+import random
 import unittest
 from itertools import chain
 from math import isnan
-import random
-
 from unittest.mock import Mock, MagicMock, patch
-import scipy.sparse as sp
+
 import numpy as np
+import scipy.sparse as sp
 
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
@@ -1734,6 +1735,12 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertIsInstance(new_table, MyTableClass)
         self.assertIsNot(table, new_table)
         self.assertIs(new_table.domain, new_domain)
+
+    def test_transform_same_domain(self):
+        iris = data.Table("iris")
+        new_domain = copy.copy(iris.domain)
+        new_data = iris.transform(new_domain)
+        self.assertIs(new_data.domain, new_domain)
 
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)
