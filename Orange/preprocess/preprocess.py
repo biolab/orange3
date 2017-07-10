@@ -9,9 +9,10 @@ from sklearn.utils import shuffle as skl_shuffle
 import bottleneck as bn
 
 import Orange.data
+from Orange.data.filter import HasClass
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
-from Orange.util import Reprable, Enum
+from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
 
 __all__ = ["Continuize", "Discretize", "Impute",
@@ -197,6 +198,7 @@ class RemoveConstant(Preprocess):
         return data.transform(domain)
 
 
+@deprecated("Orange.data.filter.HasClas")
 class RemoveNaNClasses(Preprocess):
     """
     Construct preprocessor that removes examples with missing class
@@ -216,11 +218,7 @@ class RemoveNaNClasses(Preprocess):
         -------
         data : data set without rows with missing classes
         """
-        if len(data.Y.shape) > 1:
-            nan_cls = np.any(np.isnan(data.Y), axis=1)
-        else:
-            nan_cls = np.isnan(data.Y)
-        return data[~nan_cls]
+        return HasClass()(data)
 
 
 class Normalize(Preprocess):

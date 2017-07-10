@@ -92,6 +92,19 @@ class TestHasClassFilter(unittest.TestCase):
         self.assertEqual(len(without_class), self.n_missing)
         self.assertTrue(without_class.has_missing_class())
 
+    def test_has_class_multiclass(self):
+        domain = Domain([DiscreteVariable("x", values="01")],
+                        [DiscreteVariable("y1", values="01"),
+                        DiscreteVariable("y2", values="01")])
+        table = Table(domain, [[0, 1, np.nan],
+                               [1, np.nan, 0],
+                               [1, 0, 1],
+                               [1, np.nan, np.nan]])
+        table = HasClass()(table)
+        self.assertTrue(not np.isnan(table).any())
+        self.assertEqual(table.domain, domain)
+        self.assertEqual(len(table), 1)
+
     def test_has_class_filter_instance(self):
         class_missing = self.table[9]
         class_present = self.table[0]
