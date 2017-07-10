@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+from math import sqrt
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange import distance
@@ -145,12 +146,11 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/3, 2/3, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1/3, 2/3, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 5/9, 1 - 3/9, 1 - 5/9]))
+                            [1 - 5/9, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2, 3],
                                               [2, 0, 2],
@@ -161,12 +161,12 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/2, 1/2, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1/2, 1/2, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]
+                            ])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 2/4, 1 - 3/9, 1 - 5/9]))
+                            [1 - 2/4, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2.5, 3],
                                               [2.5, 0, 1.5],
@@ -177,12 +177,11 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1, 0, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1, 0, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 1, 1 - 3/9, 1 - 5/9]))
+                            [1 - 1, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2, 2],
                                               [2, 0, 1],
@@ -194,12 +193,11 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/2, 1/2, 1, 1],
-                                      [3/4, 2/4, 1, 3/4],
-                                      [3/4, 1/4, 1, 1]
-                                     ]))
+                            [[1/2, 1/2, 1, 1],
+                             [3/4, 2/4, 1, 3/4],
+                             [3/4, 1/4, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 2/4, 1 - 6/16, 1 - 10/16]))
+                            [1 - 2/4, 1 - 6/16, 1 - 10/16])
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2.5, 2.5, 2.5],
                                               [2.5, 0, 0.5, 1.5],
@@ -223,19 +221,19 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Euclidean(data, axis=1, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 4.472135955, 2.236067977, 6.164414003],
-                      [4.472135955, 0, 5.385164807, 6.480740698],
-                      [2.236067977, 5.385164807, 0, 6.403124237],
-                      [6.164414003, 6.480740698, 6.403124237, 0]]))
+            [[0, 4.472135955, 2.236067977, 6.164414003],
+             [4.472135955, 0, 5.385164807, 6.480740698],
+             [2.236067977, 5.385164807, 0, 6.403124237],
+             [6.164414003, 6.480740698, 6.403124237, 0]])
 
         data.X[0, 0] = np.nan
         dist = distance.Euclidean(data, axis=1, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 5.099019514, 4.795831523, 4.472135955],
-                      [5.099019514, 0, 5.916079783, 6],
-                      [4.795831523, 5.916079783, 0, 6.403124237],
-                      [4.472135955, 6, 6.403124237, 0]]))
+            [[0, 5.099019514, 4.795831523, 4.472135955],
+             [5.099019514, 0, 5.916079783, 6],
+             [4.795831523, 5.916079783, 0, 6.403124237],
+             [4.472135955, 6, 6.403124237, 0]])
 
     def test_euclidean_cont_normalized(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -243,51 +241,51 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["means"], np.array([2, 2.75, 1.5]))
-        assert_almost_equal(params["vars"], np.array([9, 2.1875, 1.25]))
+        assert_almost_equal(params["means"], [2, 2.75, 1.5])
+        assert_almost_equal(params["vars"], [9, 2.1875, 1.25])
         assert_almost_equal(params["dist_missing"], np.zeros((3, 0)))
-        assert_almost_equal(params["dist_missing2"], np.ones(3))
+        assert_almost_equal(params["dist_missing2"], [1, 1, 1])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 1.654239383, 1.146423008, 1.621286967],
-                      [1.654239383, 0, 2.068662631, 3.035242727],
-                      [1.146423008, 2.068662631, 0, 1.956673562],
-                      [1.621286967, 3.035242727, 1.956673562, 0]]))
+            [[0, 1.654239383, 1.146423008, 1.621286967],
+             [1.654239383, 0, 2.068662631, 3.035242727],
+             [1.146423008, 2.068662631, 0, 1.956673562],
+             [1.621286967, 3.035242727, 1.956673562, 0]])
 
         dist = distance.Euclidean(data, axis=1, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 1.654239383, 1.146423008, 1.621286967],
-                      [1.654239383, 0, 2.068662631, 3.035242727],
-                      [1.146423008, 2.068662631, 0, 1.956673562],
-                      [1.621286967, 3.035242727, 1.956673562, 0]]))
+            [[0, 1.654239383, 1.146423008, 1.621286967],
+             [1.654239383, 0, 2.068662631, 3.035242727],
+             [1.146423008, 2.068662631, 0, 1.956673562],
+             [1.621286967, 3.035242727, 1.956673562, 0]])
 
         data.X[1, 0] = np.nan
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["means"], np.array([3, 2.75, 1.5]))
-        assert_almost_equal(params["vars"], np.array([8, 2.1875, 1.25]))
+        assert_almost_equal(params["means"], [3, 2.75, 1.5])
+        assert_almost_equal(params["vars"], [8, 2.1875, 1.25])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 1.806733438, 1.146423008, 1.696635326],
-                      [1.806733438, 0, 2.192519751, 2.675283697],
-                      [1.146423008, 2.192519751, 0, 2.019547333],
-                      [1.696635326, 2.675283697, 2.019547333, 0]]))
+            [[0, 1.806733438, 1.146423008, 1.696635326],
+             [1.806733438, 0, 2.192519751, 2.675283697],
+             [1.146423008, 2.192519751, 0, 2.019547333],
+             [1.696635326, 2.675283697, 2.019547333, 0]])
 
         data.X[0, 0] = np.nan
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["means"], np.array([4, 2.75, 1.5]))
-        assert_almost_equal(params["vars"], np.array([9, 2.1875, 1.25]))
+        assert_almost_equal(params["means"], [4, 2.75, 1.5])
+        assert_almost_equal(params["vars"], [9, 2.1875, 1.25])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 1.874642823, 1.521277659, 1.276154939],
-                      [1.874642823, 0, 2.248809209, 2.580143961],
-                      [1.521277659, 2.248809209, 0, 1.956673562],
-                      [1.276154939, 2.580143961, 1.956673562, 0]]))
+            [[0, 1.874642823, 1.521277659, 1.276154939],
+             [1.874642823, 0, 2.248809209, 2.580143961],
+             [1.521277659, 2.248809209, 0, 1.956673562],
+             [1.276154939, 2.580143961, 1.956673562, 0]])
 
     def test_euclidean_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -296,25 +294,25 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Euclidean(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 8.062257748, 4.242640687],
-                      [8.062257748, 0, 5.196152423],
-                      [4.242640687, 5.196152423, 0]]))
+            [[0, 8.062257748, 4.242640687],
+             [8.062257748, 0, 5.196152423],
+             [4.242640687, 5.196152423, 0]])
 
         data.X[1, 1] = np.nan
         dist = distance.Euclidean(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 6.218252702, 4.242640687],
-                      [6.218252702, 0, 2.581988897],
-                      [4.242640687, 2.581988897, 0]]))
+            [[0, 6.218252702, 4.242640687],
+             [6.218252702, 0, 2.581988897],
+             [4.242640687, 2.581988897, 0]])
 
         data.X[1, 0] = np.nan
         dist = distance.Euclidean(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 6.218252702, 5.830951895],
-                      [6.218252702, 0, 2.581988897],
-                      [5.830951895, 2.581988897, 0]]))
+            [[0, 6.218252702, 5.830951895],
+             [6.218252702, 0, 2.581988897],
+             [5.830951895, 2.581988897, 0]])
 
     def test_euclidean_cols_normalized(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -323,25 +321,25 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Euclidean(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.455273959, 0.649839392],
-                      [2.455273959, 0, 2.473176308],
-                      [0.649839392, 2.473176308, 0]]))
+            [[0, 2.455273959, 0.649839392],
+             [2.455273959, 0, 2.473176308],
+             [0.649839392, 2.473176308, 0]])
 
         data.X[1, 1] = np.nan
         dist = distance.Euclidean(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 2, 0.649839392],
-                      [2, 0, 1.704275472],
-                      [0.649839392, 1.704275472, 0]]))
+            [[0, 2, 0.649839392],
+             [2, 0, 1.704275472],
+             [0.649839392, 1.704275472, 0]])
 
         data.X[1, 0] = np.nan
         dist = distance.Euclidean(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 2, 1.450046001],
-                      [2, 0, 1.704275472],
-                      [1.450046001, 1.704275472, 0]]))
+            [[0, 2, 1.450046001],
+             [2, 0, 1.704275472],
+             [1.450046001, 1.704275472, 0]])
 
     def test_euclidean_mixed(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -349,26 +347,23 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["means"],
-                            np.array([1/3, 3, 1, 0, 0, 0]))
-        assert_almost_equal(params["vars"],
-                            np.array([8/9, 8/3, 2/3, -1, -1, -1]))
+        assert_almost_equal(params["means"], [1/3, 3, 1, 0, 0, 0])
+        assert_almost_equal(params["vars"], [8/9, 8/3, 2/3, -1, -1, -1])
         assert_almost_equal(params["dist_missing"],
-                            np.array([[0, 0, 0, 0],
-                                      [0, 0, 0, 0],
-                                      [0, 0, 0, 0],
-                                      [1/3, 2/3, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[0, 0, 0, 0],
+                             [0, 0, 0, 0],
+                             [0, 0, 0, 0],
+                             [1/3, 2/3, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9]))
+                            [1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.828427125, 2.121320344],
-                      [2.828427125, 0, 2.828427125],
-                      [2.121320344, 2.828427125, 0]]))
+            [[0, 2.828427125, 2.121320344],
+             [2.828427125, 0, 2.828427125],
+             [2.121320344, 2.828427125, 0]])
 
     def test_two_tables(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -377,24 +372,22 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
                                   normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[1.17040218, 0.47809144],
-                      [2.78516478, 1.96961039],
-                      [1.28668394, 0.79282497],
-                      [1.27179413, 1.54919334]]))
+            [[1.17040218, 0.47809144],
+             [2.78516478, 1.96961039],
+             [1.28668394, 0.79282497],
+             [1.27179413, 1.54919334]])
 
         model = distance.Euclidean(normalize=True).fit(self.cont_data)
         dist = model(self.cont_data, self.cont_data2)
         assert_almost_equal(
             dist,
-            np.array([[1.17040218, 0.47809144],
-                      [2.78516478, 1.96961039],
-                      [1.28668394, 0.79282497],
-                      [1.27179413, 1.54919334]]))
+            [[1.17040218, 0.47809144],
+             [2.78516478, 1.96961039],
+             [1.28668394, 0.79282497],
+             [1.27179413, 1.54919334]])
 
         dist = model(self.cont_data2)
-        assert_almost_equal(
-            dist,
-            np.array([[0, 0.827119692], [0.827119692, 0]]))
+        assert_almost_equal(dist, [[0, 0.827119692], [0.827119692, 0]])
 
 
 class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
@@ -433,48 +426,45 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/3, 2/3, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1/3, 2/3, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 5/9, 1 - 3/9, 1 - 5/9]))
+                            [1 - 5/9, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
-                            np.array([[0, 2, 3],
-                                      [2, 0, 2],
-                                      [3, 2, 0]]))
+                            [[0, 2, 3],
+                             [2, 0, 2],
+                             [3, 2, 0]])
 
         data.X[1, 0] = np.nan
         model = distance.Manhattan().fit(data)
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/2, 1/2, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1/2, 1/2, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1 ]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 2/4, 1 - 3/9, 1 - 5/9]))
+                            [1 - 2/4, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
-                            np.array([[0, 2.5, 3],
-                                      [2.5, 0, 1.5],
-                                      [3, 1.5, 0]]))
+                            [[0, 2.5, 3],
+                             [2.5, 0, 1.5],
+                             [3, 1.5, 0]])
 
         data.X[0, 0] = np.nan
         model = distance.Manhattan().fit(data)
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1, 0, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[1, 0, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 1, 1 - 3/9, 1 - 5/9]))
+                            [1 - 1, 1 - 3/9, 1 - 5/9])
         assert_almost_equal(dist,
-                            np.array([[0, 2, 2],
-                                      [2, 0, 1],
-                                      [2, 1, 0]]))
+                            [[0, 2, 2],
+                             [2, 0, 1],
+                             [2, 1, 0]])
 
         data = self.disc_data4
         data.X[:2, 0] = np.nan
@@ -482,17 +472,16 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = model(data)
         params = model.fit_params
         assert_almost_equal(params["dist_missing"],
-                            np.array([[1/2, 1/2, 1, 1],
-                                      [3/4, 2/4, 1, 3/4],
-                                      [3/4, 1/4, 1, 1]
-                                     ]))
+                            [[1/2, 1/2, 1, 1],
+                             [3/4, 2/4, 1, 3/4],
+                             [3/4, 1/4, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1 - 2/4, 1 - 6/16, 1 - 10/16]))
+                            [1 - 2/4, 1 - 6/16, 1 - 10/16])
         assert_almost_equal(dist,
-                            np.array([[0, 2.5, 2.5, 2.5],
-                                      [2.5, 0, 0.5, 1.5],
-                                      [2.5, 0.5, 0, 2],
-                                      [2.5, 1.5, 2, 0]]))
+                            [[0, 2.5, 2.5, 2.5],
+                             [2.5, 0, 0.5, 1.5],
+                             [2.5, 0.5, 0, 2],
+                             [2.5, 1.5, 2, 0]])
 
     def test_manhattan_cont(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -501,28 +490,28 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Manhattan(data, axis=1, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 7, 6, 9],
-                      [7, 0, 5, 16],
-                      [6, 5, 0, 13],
-                      [9, 16, 13, 0]]))
+            [[0, 7, 6, 9],
+             [7, 0, 5, 16],
+             [6, 5, 0, 13],
+             [9, 16, 13, 0]])
 
         data.X[1, 0] = np.nan
         dist = distance.Manhattan(data, axis=1, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 7, 6, 9],
-                      [7, 0, 3, 14],
-                      [6, 3, 0, 13],
-                      [9, 14, 13, 0]]))
+            [[0, 7, 6, 9],
+             [7, 0, 3, 14],
+             [6, 3, 0, 13],
+             [9, 14, 13, 0]])
 
         data.X[0, 0] = np.nan
         dist = distance.Manhattan(data, axis=1, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 10, 10, 8],
-                      [10, 0, 7, 13],
-                      [10, 7, 0, 13],
-                      [8, 13, 13, 0]]))
+            [[0, 10, 10, 8],
+             [10, 0, 7, 13],
+             [10, 7, 0, 13],
+             [8, 13, 13, 0]])
 
     def test_manhattan_cont_normalized(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -530,51 +519,51 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["medians"], np.array([1.5, 4.5, 1.5]))
-        assert_almost_equal(params["mads"], np.array([1.5, 2, 1]))
+        assert_almost_equal(params["medians"], [1.5, 4.5, 1.5])
+        assert_almost_equal(params["mads"], [1.5, 2, 1])
         assert_almost_equal(params["dist_missing"], np.zeros((3, 0)))
         assert_almost_equal(params["dist_missing2"], np.ones(3))
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.416666667, 1.833333333, 3],
-                      [2.416666667, 0, 1.75, 5.416666667],
-                      [1.833333333, 1.75, 0, 4.166666667],
-                      [3, 5.416666667, 4.166666667, 0]]))
+            [[0, 2.416666667, 1.833333333, 3],
+             [2.416666667, 0, 1.75, 5.416666667],
+             [1.833333333, 1.75, 0, 4.166666667],
+             [3, 5.416666667, 4.166666667, 0]])
 
         dist = distance.Manhattan(data, axis=1, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.416666667, 1.833333333, 3],
-                      [2.416666667, 0, 1.75, 5.416666667],
-                      [1.833333333, 1.75, 0, 4.166666667],
-                      [3, 5.416666667, 4.166666667, 0]]))
+            [[0, 2.416666667, 1.833333333, 3],
+             [2.416666667, 0, 1.75, 5.416666667],
+             [1.833333333, 1.75, 0, 4.166666667],
+             [3, 5.416666667, 4.166666667, 0]])
 
         data.X[1, 0] = np.nan
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["medians"], np.array([2, 4.5, 1.5]))
-        assert_almost_equal(params["mads"], np.array([1, 2, 1]))
+        assert_almost_equal(params["medians"], [2, 4.5, 1.5])
+        assert_almost_equal(params["mads"], [1, 2, 1])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.75, 2, 4],
-                      [2.75, 0, 1.25, 5.75],
-                      [2, 1.25, 0, 5],
-                      [4, 5.75, 5, 0]]))
+            [[0, 2.75, 2, 4],
+             [2.75, 0, 1.25, 5.75],
+             [2, 1.25, 0, 5],
+             [4, 5.75, 5, 0]])
 
         data.X[0, 0] = np.nan
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["medians"], np.array([4.5, 4.5, 1.5]))
-        assert_almost_equal(params["mads"], np.array([2.5, 2, 1]))
+        assert_almost_equal(params["medians"], [4.5, 4.5, 1.5])
+        assert_almost_equal(params["mads"], [2.5, 2, 1])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 2.75, 2.5, 2],
-                      [2.75, 0, 1.75, 3.75],
-                      [2.5, 1.75, 0, 3.5],
-                      [2, 3.75, 3.5, 0]]))
+            [[0, 2.75, 2.5, 2],
+             [2.75, 0, 1.75, 3.75],
+             [2.5, 1.75, 0, 3.5],
+             [2, 3.75, 3.5, 0]])
 
     def test_manhattan_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -583,25 +572,25 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Manhattan(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 20, 7],
-                      [20, 0, 15],
-                      [7, 15, 0]]))
+            [[0, 20, 7],
+             [20, 0, 15],
+             [7, 15, 0]])
 
         data.X[1, 1] = np.nan
         dist = distance.Manhattan(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 19, 7],
-                      [19, 0, 14],
-                      [7, 14, 0]]))
+            [[0, 19, 7],
+             [19, 0, 14],
+             [7, 14, 0]])
 
         data.X[1, 0] = np.nan
         dist = distance.Manhattan(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            np.array([[0, 17, 9],
-                      [17, 0, 14],
-                      [9, 14, 0]]))
+            [[0, 17, 9],
+             [17, 0, 14],
+             [9, 14, 0]])
 
 
     def test_manhattan_cols_normalized(self):
@@ -611,25 +600,25 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         dist = distance.Manhattan(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 4.5833333, 2],
-                     [4.5833333, 0,  4.25],
-                     [2, 4.25, 0]]))
+            [[0, 4.5833333, 2],
+             [4.5833333, 0,  4.25],
+             [2, 4.25, 0]])
 
         data.X[1, 1] = np.nan
         dist = distance.Manhattan(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 4.6666667, 2],
-                      [4.6666667, 0, 4],
-                      [2, 4, 0]]))
+            [[0, 4.6666667, 2],
+             [4.6666667, 0, 4],
+             [2, 4, 0]])
 
         data.X[1, 0] = np.nan
         dist = distance.Manhattan(data, axis=0, normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[0, 5.5, 4],
-                      [5.5, 0, 4],
-                      [4, 4, 0]]))
+            [[0, 5.5, 4],
+             [5.5, 0, 4],
+             [4, 4, 0]])
 
     def test_manhattan_mixed(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -638,26 +627,23 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data.X[2, 0] = 2  # prevent mads[0] = 0
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
         params = model.fit_params
-        assert_almost_equal(params["medians"],
-                            np.array([1, 3, 1, 0, 0, 0]))
-        assert_almost_equal(params["mads"],
-                            np.array([1, 2, 1, -1, -1, -1]))
+        assert_almost_equal(params["medians"], [1, 3, 1, 0, 0, 0])
+        assert_almost_equal(params["mads"], [1, 2, 1, -1, -1, -1])
         assert_almost_equal(params["dist_missing"],
-                            np.array([[0, 0, 0, 0],
-                                      [0, 0, 0, 0],
-                                      [0, 0, 0, 0],
-                                      [1/3, 2/3, 1, 1],
-                                      [2/3, 2/3, 1, 2/3],
-                                      [2/3, 1/3, 1, 1]
-                                     ]))
+                            [[0, 0, 0, 0],
+                             [0, 0, 0, 0],
+                             [0, 0, 0, 0],
+                             [1/3, 2/3, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
         assert_almost_equal(params["dist_missing2"],
-                            np.array([1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9]))
+                            [1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9])
         dist = model(data)
         assert_almost_equal(
             dist,
-            np.array([[0, 4.5, 4.5],
-                      [4.5, 0, 5],
-                      [4.5, 5, 0]]))
+            [[0, 4.5, 4.5],
+             [4.5, 0, 5],
+             [4.5, 5, 0]])
 
     def test_two_tables(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -666,30 +652,180 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
                                   normalize=True)
         assert_almost_equal(
             dist,
-            np.array([[1.3333333, 0.25],
-                      [3.75, 2.6666667],
-                      [2.5, 2.0833333],
-                      [1.6666667, 2.75]]))
+            [[1.3333333, 0.25],
+             [3.75, 2.6666667],
+             [2.5, 2.0833333],
+             [1.6666667, 2.75]])
 
         model = distance.Manhattan(normalize=True).fit(self.cont_data)
         dist = model(self.cont_data, self.cont_data2)
         assert_almost_equal(
             dist,
-            np.array([[1.3333333, 0.25],
-                      [3.75, 2.6666667],
-                      [2.5, 2.0833333],
-                      [1.6666667, 2.75]]))
+            [[1.3333333, 0.25],
+             [3.75, 2.6666667],
+             [2.5, 2.0833333],
+             [1.6666667, 2.75]])
 
         dist = model(self.cont_data2)
-        assert_almost_equal(
-            dist,
-            np.array([[0, 1.083333333], [1.083333333, 0]]))
+        assert_almost_equal(dist, [[0, 1.083333333], [1.083333333, 0]])
 
     def test_manhattan_mixed_cols(self):
         self.assertRaises(ValueError,
                           distance.Manhattan, self.mixed_data, axis=0)
         self.assertRaises(ValueError,
                           distance.Manhattan(axis=0).fit, self.mixed_data)
+
+
+class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
+    Distance = distance.Cosine
+
+    def test_cosine_disc(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.disc_data
+        data.X = np.array([[1, 0, 0],
+                           [0, 1, 1],
+                           [1, 3, 0]], dtype=float)
+
+        model = distance.Cosine().fit(data)
+        dist = model(data)
+        params = model.fit_params
+        assert_almost_equal(params["means"], [2 / 3, 2 / 3, 1 / 3])
+        assert_almost_equal(params["vars"], [-1, -1, -1])
+        assert_almost_equal(params["dist_missing2"], [2 / 3, 2/ 3, 1 / 3])
+        assert_almost_equal(dist, 1 - np.cos(np.array([[0, 0, 1 / sqrt(2)],
+                                                       [0, 0, 0.5],
+                                                       [1 / sqrt(2), 0.5, 0]])))
+
+        data.X[1, 1] = np.nan
+        model = distance.Cosine().fit(data)
+        dist = model(data)
+        params = model.fit_params
+        assert_almost_equal(params["means"], [2 / 3, 1 / 2, 1 / 3])
+        assert_almost_equal(params["vars"], [-1, -1, -1])
+        assert_almost_equal(params["dist_missing2"], [2 / 3, 1 / 2, 1 / 3])
+        assert_almost_equal(
+            dist,
+            1 - np.cos(np.array([[0, 0, 1 / sqrt(2)],
+                                 [0, 0, 0.5 / sqrt(1.5) / sqrt(2)],
+                                 [1 / sqrt(2), 0.5 / sqrt(1.5) / sqrt(2), 0]])))
+
+        data.X = np.array([[1, 0, 0],
+                           [0, np.nan, 1],
+                           [1, np.nan, 1],
+                           [1, 3, 1]])
+        model = distance.Cosine().fit(data)
+        dist = model(data)
+        params = model.fit_params
+        assert_almost_equal(params["means"], [0.75, 0.5, 0.75])
+        assert_almost_equal(dist, [[0, 0, 0.1934216, 0.1620882],
+                                   [0, 0, 0.2852968, 0.2397554],
+                                   [0.1934216, 0.2852968, 0, 0.3885234],
+                                   [0.1620882, 0.2397554, 0.3885234, 0]])
+
+    def test_cosine_cont(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.cont_data
+
+        dist = distance.Cosine(data, axis=1)
+        assert_almost_equal(
+            dist,
+            [[0, 0.257364665, 0.398820559, 0.200841332],
+             [0.257364665, 0, 0.100822814, 0.002790265],
+             [0.398820559, 0.100822814, 0, 0.362758445],
+             [0.200841332, 0.002790265, 0.362758445, 0]]
+        )
+
+        data.X[1, 0] = np.nan
+        dist = distance.Cosine(data, axis=1)
+        assert_almost_equal(
+            dist,
+            [[0, 0.2630893, 0.3988206, 0.2008413],
+             [0.2630893, 0, 0.2433986, 0.1789183],
+             [0.3988206, 0.2433986, 0, 0.3627584],
+             [0.2008413, 0.1789183, 0.3627584, 0]])
+
+        data.X[0, 0] = np.nan
+        dist = distance.Cosine(data, axis=1)
+        assert_almost_equal(
+            dist,
+            [[0, 0.2424135, 0.3347198, 0.3207717],
+             [0.2424135, 0, 0.2580666, 0.2240018],
+             [0.3347198, 0.2580666, 0, 0.3627584],
+             [0.3207717, 0.2240018, 0.3627584, 0]])
+
+    def test_cosine_mixed(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.mixed_data
+        data.X = np.array([[1, 3, 2, 1, 0, 0],
+                           [-1, 5, 0, 0, 1, 1],
+                           [1, 1, 1, 1, 3, 0]], dtype=float)
+
+        model = distance.Cosine(axis=1).fit(data)
+        params = model.fit_params
+        assert_almost_equal(params["means"], [1/3, 3, 1, 2/3, 2/3, 1/3])
+        assert_almost_equal(params["vars"], [8/9, 8/3, 2/3, -1, -1, -1])
+        assert_almost_equal(params["dist_missing2"],
+                            [1/9, 9, 1, 2/3, 2/3, 1/3])
+        dist = model(data)
+        assert_almost_equal(
+            dist,
+            [[0, 0.2243992, 0.3092643],
+             [0.2243992, 0, 0.0879649],
+             [0.3092643, 0.0879649, 0]])
+
+    def test_two_tables(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        self.cont_data.X[1, 0] = np.nan
+        self.cont_data2.X[1, 0] = np.nan
+
+        dist = distance.Cosine(self.cont_data, self.cont_data2)
+        assert_almost_equal(
+            dist,
+            [[0.2931168, 0.231869],
+             [0.1011388, 0.1670357],
+             [0.3988206, 0.3092643],
+             [0.3389322, 0.2943107]])
+
+        model = distance.Cosine().fit(self.cont_data)
+        dist = model(self.cont_data, self.cont_data2)
+        assert_almost_equal(
+            dist,
+            [[0.2931168, 0.231869],
+             [0.1011388, 0.1670357],
+             [0.3988206, 0.3092643],
+             [0.3389322, 0.2943107]])
+
+        dist = model(self.cont_data2)
+        assert_almost_equal(dist, [[0, 0.26717482], [0.26717482, 0]])
+
+
+    def test_cosine_cols(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.cont_data
+
+        dist = distance.Cosine(data, axis=0, normalize=False)
+        assert_almost_equal(
+            dist,
+            [[0, 0.0413781, 0.3701989],
+             [0.0413781, 0, 0.150811],
+             [0.3701989, 0.150811, 0]])
+
+        data.X[1, 1] = np.nan
+        dist = distance.Cosine(data, axis=0, normalize=False)
+        assert_almost_equal(
+            dist,
+            [[0, 0.1289953, 0.3701989],
+             [0.1289953, 0, 0.3062882],
+             [0.3701989, 0.3062882, 0]])
+
+        data.X[1, 0] = np.nan
+        data.X[1, 2] = 2
+        dist = distance.Cosine(data, axis=0, normalize=False)
+        assert_almost_equal(
+            dist,
+            [[0, 0.2184396, 0.3456646],
+             [0.2184396, 0, 0.4001047],
+             [0.3456646, 0.4001047, 0]])
 
 
 class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
@@ -708,7 +844,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         assert_almost_equal = np.testing.assert_almost_equal
 
         model = distance.Jaccard().fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], np.array([0.75, 0.5, 0.75]))
+        assert_almost_equal(model.fit_params["ps"], [0.75, 0.5, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[0, 2/3, 1/3, 0],
@@ -730,7 +866,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
     def test_jaccard_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
         model = distance.Jaccard(axis=0).fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], np.array([0.75, 0.5, 0.75]))
+        assert_almost_equal(model.fit_params["ps"], [0.75, 0.5, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[0, 1/4, 1/2],
@@ -742,7 +878,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                                 [np.nan, 0, 1],
                                 [1, 1, 0]])
         model = distance.Jaccard(axis=0).fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], np.array([0.5, 2/3, 0.75]))
+        assert_almost_equal(model.fit_params["ps"], [0.5, 2/3, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[0, 0.4, 0.25],

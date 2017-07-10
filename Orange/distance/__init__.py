@@ -104,7 +104,10 @@ class FittedDistanceModel(DistanceModel):
             return self.distance_by_cols(x1, self.fit_params)
         else:
             return self.distance_by_rows(
-                x1, x2 if x2 is not None else x1, self.fit_params)
+                x1,
+                x2 if x2 is not None else x1,
+                x2 is not None,
+                self.fit_params)
 
 
 class FittedDistance(Distance):
@@ -120,6 +123,13 @@ class FittedDistance(Distance):
         fit_params = [self.fit_cols, self.fit_rows][self.axis](x, n_vals)
         # pylint: disable=not-callable
         return self.ModelType(attributes, axis=self.axis, fit_params=fit_params)
+
+    def fit_cols(self, x, n_vals):
+        if any(n_vals):
+            raise ValueError("columns with discrete values are incommensurable")
+
+    def fit_rows(self, x, n_vals):
+        pass
 
 
 class EuclideanModel(FittedDistanceModel):
@@ -137,6 +147,7 @@ class Euclidean(FittedDistance):
         return super().__new__(cls, *args, **kwargs)
 
     def fit_rows(self, x, n_vals):
+        super().fit_rows(x, n_vals)
         n_cols = len(n_vals)
         n_bins = max(n_vals)
         means = np.zeros(n_cols, dtype=float)
@@ -171,9 +182,7 @@ class Euclidean(FittedDistance):
                     normalize=int(self.normalize))
 
     def fit_cols(self, x, n_vals):
-        if any(n_vals):
-            raise ValueError(
-                "columns with discrete values are not commensurate")
+        super().fit_cols(x, n_vals)
         means = np.nanmean(x, axis=0)
         vars = np.nanvar(x, axis=0)
         if np.isnan(vars).any() or not vars.all():
@@ -196,6 +205,7 @@ class Manhattan(FittedDistance):
         return super().__new__(cls, *args, **kwargs)
 
     def fit_rows(self, x, n_vals):
+        super().fit_rows(x, n_vals)
         n_cols = len(n_vals)
         n_bins = max(n_vals)
 
@@ -227,9 +237,7 @@ class Manhattan(FittedDistance):
                     normalize=int(self.normalize))
 
     def fit_cols(self, x, n_vals):
-        if any(n_vals):
-            raise ValueError(
-                "columns with discrete values are not commensurate")
+        super().fit_cols(x, n_vals)
         medians = np.nanmedian(x, axis=0)
         mads = np.nanmedian(np.abs(x - medians), axis=0)
         if np.isnan(mads).any() or not mads.all():
@@ -237,6 +245,49 @@ class Manhattan(FittedDistance):
                 "some columns have zero absolute distance from median, "
                 "or no values")
         return dict(medians=medians, mads=mads, normalize=int(self.normalize))
+
+
+class CosineModel(FittedDistanceModel):
+    supports_sparse = False
+    distance_by_rows = _distance.cosine_rows
+    distance_by_cols = _distance.cosine_cols
+
+
+class Cosine(FittedDistance):
+    ModelType = CosineModel
+
+    def __new__(cls, *args, **kwargs):
+        kwargs.setdefault("normalize", False)
+        return super().__new__(cls, *args, **kwargs)
+
+    def fit_rows(self, x, n_vals):
+        super().fit_rows(x, n_vals)
+        n, n_cols = x.shape
+        means = np.zeros(n_cols, dtype=float)
+        vars = np.empty(n_cols, dtype=float)
+        dist_missing2 = np.zeros(n_cols, dtype=float)
+
+        for col in range(n_cols):
+            column = x[:, col]
+            if n_vals[col]:
+                vars[col] = -1
+                nonnans = n - np.sum(np.isnan(column))
+                means[col] = 1 - np.sum(column == 0) / nonnans
+                dist_missing2[col] = means[col]
+            elif np.isnan(column).all():  # avoid warnings in nanmean and nanvar
+                vars[col] = -2
+            else:
+                means[col] = util.nanmean(column)
+                vars[col] = util.nanvar(column)
+                if vars[col] == 0:
+                    vars[col] = -2
+                dist_missing2[col] = means[col] ** 2
+                if np.isnan(dist_missing2[col]):
+                    dist_missing2[col] = 0
+
+        return dict(means=means, vars=vars, dist_missing2=dist_missing2)
+
+    fit_cols = fit_rows
 
 
 class JaccardModel(FittedDistanceModel):
@@ -248,17 +299,14 @@ class JaccardModel(FittedDistanceModel):
 class Jaccard(FittedDistance):
     ModelType = JaccardModel
     name = "Jaccard"
-    fit_rows = fit_cols = _distance.fit_jaccard
 
+    def fit_rows(self, x, n_vals):
+        return {
+            "ps": np.fromiter(
+                (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
+                dtype=np.double, count=len(n_vals))}
 
-class CosineModel(EuclideanModel):
-    def compute_distances(self, x1, x2=None):
-        return 1 - np.cos(1 - super().compute_distances(x1, x2))
-
-
-class Cosine(Euclidean):
-    ModelType = CosineModel
-    name = "Cosine"
+    fit_cols = fit_rows
 
 
 class SpearmanDistance(Distance):

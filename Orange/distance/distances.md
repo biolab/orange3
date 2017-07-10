@@ -2,7 +2,7 @@
 
 This document describes and justifies how Orange 3 computes distances between data rows or columns from the data that can include discrete (nominal) and numeric features with missing values.
 
-The aim of normalization is to bring all numeric features onto the same scale and on the same scale as discrete features. The meaning of *the same scale* is rather arbitrary. We gauge the normalization so that missing values have the same effect for all features and their types, and so that Euclidean and cosine distances are nicely related.
+The aim of normalization is to bring all numeric features onto the same scale and on the same scale as discrete features. The meaning of *the same scale* is rather arbitrary. We gauge the normalization so that missing values have the same effect for all features and their types.
 
 For missing values, we compute the expected difference given the probability distribution of the feature that is estimated from the data.
 
@@ -91,19 +91,44 @@ Same as for Euclidean because $I_{v\ne x}^2 = I_{v\ne x}$.
 
 ## Cosine distance
 
-Consider that Euclidean distance $\sum_i(x_i - y_i)^2$ equals $\sum_i{x_i^2} + \sum_i{y_i^2} - 2\sum_i{x_iy_i}$. Now assume that $x$ and $y$ are normalized as described in the computation of the Euclidean distance, except that when computing the distances across the rows, the normalization is also done **across the rows**, not columns (features). In this case, $\sum_i{x_i^2} = \sum_i{y_i^2} = 1 / 2$. Thus with proper normalization, cosine distance can be computed using the same formulae for missing values as the Euclidean distance, and then converted by
+The cosine similarity is normalized, so we do not normalize the data.
 
-$$Cosine(x, y) = 
-\cos\frac{\sum_i x_iy_i}{\sqrt{\sum_i x_i^2}\sqrt{\sum_i y_i^2}} = \\ \cos\frac{1/2\left(\sum_i{x_i^2} + \sum_i{y_i^2} - \sum_i(x_i - y_i)^2\right)}{\sqrt{\sum_i x_i^2}\sqrt{\sum_i y_i^2}} = \\
-\cos\frac{1/2\left(1/2 + 1/2 - \sum_i(x_i - y_i)^2\right)}{\sqrt{1/2}\sqrt{1/2}} = \\
-\cos(1 - Eucl(x, y))$$
+Cosine distance treats discrete features differently from the Euclidean and Manhattan distance. The latter needs to consider only whether two values of a discrete feature is different or not, while the cosine distance normalizes by dividing by vector lengths. For this, we need the notion of absolute magnitude of a (single) discrete value -- as compared to some "base value".
 
+For this reason, cosine distance treats discrete attributes as boolean, that is, all non-zero values are treated as 1. This may be incorrect in some scenarios, especially those in which cosine distance is inappropriate anyway. How to (and whether to) use cosine distances on discrete data is up to the user.
+
+#### Distances between rows
+
+For a continuous variable $x$, product of $v$ and a missing value is computed as
+
+$$\int_{-\infty}^{\infty}vxp(x)dx = v\mu_x$$
+
+The product of two unknown values is
+
+$$\int_{-\infty}^{\infty}xp(x)yp(y)dxdy=\mu_x^2$$
+
+For discrete values, we compute the probabilities $p(x=0)$ and $p_x(x\ne 0)$. The product of known value $v$ and a missing value is 0 if v=0 and $p(x \ne 1)$ otherwise. The product of two missing values is $p(x\ne 1)^2$.
+
+When computing the absolute value of a row, a missing value of continuous variable contributes 
+
+$$\int_{-infty}^{\infty}x^2p(x)dx = \mu_x^2 + \sigma_x^2$$
+
+A missing value of discrete variable contributes
+
+$$1\cdot 1\;p(x\ne 0) = p(x\ne 0)$$
+
+
+#### Distances between columns
+
+The product of a known value $v$ and a missing value of $x$ is $v\mu_x$. The contribution of a missing value to the absolute value of the column is $\mu_x^2+\sigma_x^2$. All derivations are same as above.
 
 ## Jaccard distance
 
+Jaccard index, whose computation is described below, is a measure of similarity. The distance is computed by subtracting the similarity from 1.
+
 Let $p(A_i)$ be the probability (computed from the training data) that a random data instance belongs to set $A_i$, i.e., have a non-zero value for feature $A_i$.
 
-### Distances between rows (instances)
+### Similarity between rows (instances)
 
 Let $M$ and $N$ be two data instances. $M$ and $N$ can belong to $A_i$ (or not). The Jaccard similarity between $M$ and $N$ is the number of the common sets to which $M$ and $N$ belong, divided by the number of sets with either $M$ or $N$ (or both).
 
@@ -124,7 +149,7 @@ $$\mbox{I}_{M\vee N} + p(A_i)\mbox{I}_{M'\wedge N?} + p(A_i)\mbox{I}_{M?\wedge N
 
 Note that the denominator counts cases $\mbox{I}_{M'\wedge N?}$ and not $\mbox{I}_{N?}$, since those for which $M\in A_i$ are already covered in $\mbox{I}_{M\vee N}$. The last term refers to the probability that at least one (that is, not none) of the two instances is in $A_i$.
 
-### Distances between columns
+### Similarity between columns
 
 $\mbox{I}_{i}$ will now denote that a data instance $M$ belongs to $A_i$, $\mbox{I}_{i'}$ will denote it does not, and $\mbox{I}_{i?}$ will denote that it is unknown whether $M$ belongs to $A_i$.
 
@@ -149,7 +174,7 @@ $$Jaccard(A_i, A_j) = \frac{
       N_{i\wedge j}
     + p(A_j)N_{i\wedge j?}
     + p(A_i)N_{i?\wedge j}
-    + p(A_i) p(A_j)N_{i?\wedge j?}   
+    + p(A_i) p(A_j)N_{i?\wedge j?}
     }{
       N_{i\vee j}
     + p(A_j)N_{i'\wedge j?}
