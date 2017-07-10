@@ -215,6 +215,9 @@ class WidgetTest(GuiTest):
             else:
                 raise ValueError("'{}' is not an input name for widget {}"
                                  .format(input, type(widget).__name__))
+        if widget.isBlocking():
+            raise RuntimeError("'send_signal' called but the widget is in "
+                               "blocking state and does not accept inputs.")
         getattr(widget, input.handler)(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
