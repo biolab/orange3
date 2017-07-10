@@ -4,21 +4,21 @@
 import os
 import pickle
 import unittest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock
 import numpy as np
 
-import Orange
-from Orange.data import Domain, Table, DiscreteVariable
-from Orange.preprocess import *
-from Orange.preprocess.discretize import *
-from Orange.preprocess.fss import *
-from Orange.preprocess.impute import *
+from Orange.data import Table
+from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, SelectRandomFeatures, EqualFreq, \
+    RemoveNaNColumns, DropInstances
+from Orange.preprocess import EqualWidth, SelectBestFeatures
+from Orange.preprocess.preprocess import Preprocess, Scale, Randomize, Continuize, Discretize, Impute, SklImpute, \
+    Normalize, ProjectCUR, ProjectPCA, RemoveConstant
 from Orange.util import OrangeDeprecationWarning
 
 
 class TestPreprocess(unittest.TestCase):
     def test_read_data_calls_reader(self):
-        class MockPreprocessor(Orange.preprocess.preprocess.Preprocess):
+        class MockPreprocessor(Preprocess):
             __init__ = Mock(return_value=None)
             __call__ = Mock()
             @classmethod
@@ -26,7 +26,7 @@ class TestPreprocess(unittest.TestCase):
                 cls.__init__.reset_mock()
                 cls.__call__.reset_mock()
 
-        table = Mock(Orange.data.Table)
+        table = Mock(Table)
         MockPreprocessor(1, 2, a=3)(table)
         MockPreprocessor.__init__.assert_called_with(1, 2, a=3)
         MockPreprocessor.__call__.assert_called_with(table)
@@ -52,29 +52,29 @@ class TestPreprocess(unittest.TestCase):
         expected = self.assertRaises if is_CI else self.assertWarns
         with expected(OrangeDeprecationWarning):
             try:
-                Orange.preprocess.preprocess.Preprocess(Table('iris'))
+                Preprocess(Table('iris'))
             except NotImplementedError:
                 # Expected from default Preprocess.__call__
                 pass
 
 
-class RemoveConstant(unittest.TestCase):
+class TestRemoveConstant(unittest.TestCase):
     def test_remove_columns(self):
         X = np.random.rand(6, 4)
         X[:, (1,3)] = 5
         X[3, 1] = np.nan
         X[1, 1] = np.nan
-        data = Orange.data.Table(X)
-        d = Orange.preprocess.preprocess.RemoveConstant()(data)
+        data = Table(X)
+        d = RemoveConstant()(data)
         self.assertEqual(len(d.domain.attributes), 2)
 
-        pp_rc = Orange.preprocess.preprocess.RemoveConstant()
+        pp_rc = RemoveConstant()
         d = pp_rc(data)
         self.assertEqual(len(d.domain.attributes), 2)
 
     def test_nothing_to_remove(self):
-        data = Orange.data.Table("iris")
-        d = Orange.preprocess.preprocess.RemoveConstant()(data)
+        data = Table("iris")
+        d = RemoveConstant()(data)
         self.assertEqual(len(d.domain.attributes), 4)
 
 
@@ -110,6 +110,7 @@ class TestReprs(unittest.TestCase):
             repr_str = repr(preproc())
             new_preproc = eval(repr_str)
             self.assertEqual(repr(new_preproc), repr_str)
+
 
 class TestEnumPickling(unittest.TestCase):
     def test_continuize_pickling(self):

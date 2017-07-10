@@ -198,7 +198,7 @@ class RemoveConstant(Preprocess):
         return data.transform(domain)
 
 
-@deprecated
+@deprecated("Orange.data.filter.HasClas")
 class RemoveNaNClasses(Preprocess):
     """
     Construct preprocessor that removes examples with missing class
