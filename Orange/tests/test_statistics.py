@@ -1,11 +1,13 @@
 import unittest
 import warnings
+from itertools import chain
+
 import numpy as np
 import scipy as sp
 from scipy.sparse import csr_matrix, issparse
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, mean, nanmean, digitize
+    nanmin, nanmax, unique, mean, nanmean, digitize, var
 
 
 class TestUtil(unittest.TestCase):
@@ -223,3 +225,12 @@ class TestUtil(unittest.TestCase):
         bins = np.array([1])
         # Then digitize should return a sparse matrix
         self.assertTrue(issparse(digitize(data, bins)))
+
+    def test_var(self):
+        for data in self.data:
+            for axis in chain((None,), range(len(data.shape))):
+                # Can't use array_equal here due to differences on 1e-16 level
+                np.testing.assert_array_almost_equal(
+                    var(csr_matrix(data), axis=axis),
+                    np.var(data, axis=axis)
+                )

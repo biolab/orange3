@@ -375,3 +375,13 @@ def digitize(x, bins, right=False):
         r = r.tocsr()
 
     return r
+
+
+def var(x, axis=None):
+    """ Equivalent of np.var that supports sparse and dense matrices. """
+    if not sp.issparse(x):
+        return np.var(x, axis)
+
+    result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
+    result = np.squeeze(np.asarray(result))
+    return result
