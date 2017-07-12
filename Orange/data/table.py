@@ -114,6 +114,8 @@ class RowInstance(Instance):
     def _str(self, limit):
         def sp_values(matrix, variables):
             if not sp.issparse(matrix):
+                if matrix.ndim == 1:
+                    matrix = matrix[:, np.newaxis]
                 return Instance.str_values(matrix[row], variables, limit)
 
             row_entries, idx = [], 0
@@ -140,7 +142,7 @@ class RowInstance(Instance):
         row = self.row_index
         s = "[" + sp_values(table.X, domain.attributes)
         if domain.class_vars:
-            s += " | " + sp_values(table._Y, domain.class_vars)
+            s += " | " + sp_values(table.Y, domain.class_vars)
         s += "]"
         if self._domain.metas:
             s += " {" + sp_values(table.metas, domain.metas) + "}"
@@ -1507,10 +1509,8 @@ class Table(MutableSequence, Storage):
 
                 for col_i, arr_i, _ in cont_vars:
                     if sp.issparse(arr):
-                        col_data = arr.data[
-                                   arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
-                        rows = arr.indices[
-                               arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
+                        col_data = arr.data[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
+                        rows = arr.indices[arr.indptr[arr_i]:arr.indptr[arr_i + 1]]
                         W_ = None if W is None else W[rows]
                         classes_ = classes[rows]
                     else:
