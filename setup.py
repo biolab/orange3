@@ -67,6 +67,10 @@ INSTALL_REQUIRES = sorted(set(
 ) - {''})
 
 
+EXTRAS_REQUIRE = {
+    ':python_version<="3.4"': ["typing"],
+}
+
 ENTRY_POINTS = {
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
@@ -268,6 +272,7 @@ def setup_package():
         packages=PACKAGES,
         package_data=PACKAGE_DATA,
         install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.suite',
