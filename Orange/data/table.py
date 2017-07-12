@@ -189,6 +189,8 @@ class Table(MutableSequence, Storage):
     def Y(self, value):
         if len(value.shape) == 1:
             value = value[:, None]
+        if sp.issparse(value) and len(self) != value.shape[0]:
+            value = value.T
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
