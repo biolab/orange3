@@ -342,7 +342,11 @@ def digitize(x, bins, right=False):
 
     """
     if not sp.issparse(x):
+        # TODO Remove reshaping logic when support for numpy==1.9 is dropped
+        original_shape = x.shape
+        x = x.flatten()
         result = np.digitize(x, bins, right)
+        result = result.reshape(original_shape)
         # In order to keep the return shape consistent, and sparse matrices
         # don't support 1d matrices, make sure to convert 1d to 2d matrices
         if result.ndim == 1:
@@ -358,7 +362,9 @@ def digitize(x, bins, right=False):
         r = zero_bin * np.ones(x.shape, dtype=np.int64)
 
     for idx, row in enumerate(x.tocsr()):
-        r[idx, row.indices] = np.digitize(row.data, bins, right)
+        # TODO Remove this check when support for numpy==1.9 is dropped
+        if row.nnz > 0:
+            r[idx, row.indices] = np.digitize(row.data, bins, right)
 
     # Orange mainly deals with `csr_matrix`, but `lil_matrix` is more efficient
     # for incremental building

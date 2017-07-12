@@ -164,13 +164,14 @@ class TestUtil(unittest.TestCase):
             x_sparse = csr_matrix(x)
             bins = np.arange(-2, 2)
 
+            x_shape = x.shape
             np.testing.assert_array_equal(
-                np.digitize(x, bins),
+                np.digitize(x.flatten(), bins).reshape(x_shape),
                 digitize(x, bins),
                 'Digitize fails on dense data'
             )
             np.testing.assert_array_equal(
-                np.digitize(x, bins),
+                np.digitize(x.flatten(), bins).reshape(x_shape),
                 digitize(x_sparse, bins),
                 'Digitize fails on sparse data'
             )
@@ -180,13 +181,14 @@ class TestUtil(unittest.TestCase):
             x_sparse = csr_matrix(x)
             bins = np.arange(-2, 2)
 
+            x_shape = x.shape
             np.testing.assert_array_equal(
-                np.digitize(x, bins, right=True),
+                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
                 digitize(x, bins, right=True),
                 'Digitize fails on dense data'
             )
             np.testing.assert_array_equal(
-                np.digitize(x, bins, right=True),
+                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
                 digitize(x_sparse, bins, right=True),
                 'Digitize fails on sparse data'
             )
@@ -197,13 +199,14 @@ class TestUtil(unittest.TestCase):
         x_sparse = csr_matrix(x)
         bins = np.arange(-2, 2)
 
+        x_shape = x.shape
         np.testing.assert_array_equal(
-            [np.digitize(x, bins)],
+            [np.digitize(x.flatten(), bins).reshape(x_shape)],
             digitize(x, bins),
             'Digitize fails on 1d dense data'
         )
         np.testing.assert_array_equal(
-            [np.digitize(x, bins)],
+            [np.digitize(x.flatten(), bins).reshape(x_shape)],
             digitize(x_sparse, bins),
             'Digitize fails on 1d sparse data'
         )
