@@ -1,4 +1,3 @@
-import bottleneck as bn
 from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 
@@ -9,21 +8,17 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
-# A placeholder. This metric is handled specially in commit method.
-__Mahalanobis = distance.MahalanobisDistance()
-__Mahalanobis.fit = None
-
 
 METRICS = [
-    distance.Euclidean,
-    distance.Manhattan,
-    __Mahalanobis,
-    distance.Cosine,
-    distance.Jaccard,
-    distance.SpearmanR,
-    distance.SpearmanRAbsolute,
-    distance.PearsonR,
-    distance.PearsonRAbsolute,
+    ("Euclidean", distance.Euclidean),
+    ("Manhattan", distance.Manhattan),
+    ("Mahalanobis", distance.Mahalanobis),
+    ("Cosine", distance.Cosine),
+    ("Jaccard", distance.Jaccard),
+    ("Spearman", distance.SpearmanR),
+    ("Absolute Spearman", distance.SpearmanRAbsolute),
+    ("Pearson", distance.PearsonR),
+    ("Absolute Pearson", distance.PearsonRAbsolute),
 ]
 
 
@@ -67,7 +62,7 @@ class OWDistances(OWWidget):
                         )
         self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
                                           box="Distance Metric",
-                                          items=[m.name for m in METRICS],
+                                          items=[m[0] for m in METRICS],
                                           callback=self._invalidate
                                          )
         box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
@@ -94,7 +89,7 @@ class OWDistances(OWWidget):
         sparse = self.data is not None and issparse(self.data.X)
         for i, metric in enumerate(METRICS):
             item = self.metrics_combo.model().item(i)
-            item.setEnabled(not sparse or metric.supports_sparse)
+            item.setEnabled(not sparse or metric[1].supports_sparse)
 
         self._checksparse()
 
@@ -103,59 +98,40 @@ class OWDistances(OWWidget):
         # appropriate informational GUI state
         self.Error.dense_metric_sparse_data(
             shown=self.data is not None and issparse(self.data.X) and
-            not METRICS[self.metric_idx].supports_sparse)
+            not METRICS[self.metric_idx][1].supports_sparse)
 
     def commit(self):
-        metric = METRICS[self.metric_idx]
-        self.Outputs.distances.send(self.compute_distances(metric, self.data))
+        metric = METRICS[self.metric_idx][1]
+        dist = self.compute_distances(metric, self.data)
+        self.Outputs.distances.send(dist)
 
     def compute_distances(self, metric, data):
         def checks(metric, data):
             if data is None:
                 return
-
-            if issparse(data.X) and not metric.supports_sparse:
-                self.Error.dense_metric_sparse_data()
-                return
-
-            if not any(a.is_continuous for a in data.domain.attributes):
-                self.Error.no_continuous_features()
-                return
-
-            needs_preprocessing = False
-            if any(a.is_discrete for a in self.data.domain.attributes):
-                self.Warning.ignoring_discrete()
-                needs_preprocessing = True
-
-            if not issparse(data.X) and bn.anynan(data.X):
-                self.Warning.imputing_data()
-                needs_preprocessing = True
-
-            if needs_preprocessing:
-                # removes discrete features and imputes data
-                data = distance._preprocess(data)
-
+            if issparse(data.X):
+                if not metric.supports_sparse:
+                    self.Error.dense_metric_sparse_data()
+                    return
+                remove_discrete = metric.fallback is not None \
+                        and self.data.domain.has_discrete_attributes()
+            else:  # not sparse
+                remove_discrete = \
+                    not metric.supports_discrete or self.axis == 1 \
+                    and self.data.domain.has_discrete_attributes()
+            if remove_discrete:
+                data = distance._preprocess(data, impute=False)
+                if data.X.size:
+                    self.Warning.ignoring_discrete()
             if not data.X.size:
                 self.Error.empty_data()
                 return
-
             return data
 
         self.clear_messages()
-
         data = checks(metric, data)
         if data is None:
             return
-
-        if isinstance(metric, distance.MahalanobisDistance):
-            # Mahalanobis distance has to be trained before it can be used
-            # to compute distances
-            try:
-                metric = distance.MahalanobisDistance(data, axis=1 - self.axis)
-            except (ValueError, MemoryError) as e:
-                self.Error.mahalanobis_error(e)
-                return
-
         try:
             met = metric(data, data, 1 - self.axis, impute=True)
         except ValueError as e:
@@ -173,5 +149,5 @@ class OWDistances(OWWidget):
     def send_report(self):
         self.report_items((
             ("Distances Between", ["Rows", "Columns"][self.axis]),
-            ("Metric", METRICS[self.metric_idx].name)
+            ("Metric", METRICS[self.metric_idx][0])
         ))
