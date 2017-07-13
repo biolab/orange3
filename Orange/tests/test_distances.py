@@ -2,7 +2,6 @@
 # pylint: disable=missing-docstring
 
 from unittest import TestCase
-import os
 import pickle
 
 import numpy as np
@@ -214,11 +213,6 @@ class TestEuclidean(TestCase):
         np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:3]),
                                        np.array([[0., 0.53851648, 0.50990195],
                                                  [0.53851648, 0., 0.3]]))
-        np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:2], axis=0),
-                                       np.array([[0., 2.48394847, 5.09313263, 6.78969808],
-                                                 [2.48394847, 0., 2.64007576, 4.327817],
-                                                 [5.09313263, 2.64007576, 0., 1.69705627],
-                                                 [6.78969808, 4.327817, 1.69705627, 0.]]))
 
     def test_euclidean_distance_sparse(self):
         np.testing.assert_almost_equal(self.dist(self.sparse),
@@ -281,11 +275,6 @@ class TestManhattan(TestCase):
         np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:3]),
                                        np.array([[0., 0.7, 0.8],
                                                  [0.7, 0., 0.5]]))
-        np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:2], axis=0),
-                                       np.array([[0., 3.5, 7.2, 9.6],
-                                                 [3.5, 0., 3.7, 6.1],
-                                                 [7.2, 3.7, 0., 2.4],
-                                                 [9.6, 6.1, 2.4, 0.]]))
 
     def test_manhattan_distance_sparse(self):
         np.testing.assert_almost_equal(self.dist(self.sparse),
@@ -347,11 +336,6 @@ class TestCosine(TestCase):
         np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:3]),
                                        np.array([[0.0, 1.42083650e-03, 1.26527175e-05],
                                                  [1.42083650e-03, 0.0, 1.20854727e-03]]))
-        np.testing.assert_almost_equal(self.dist(self.iris[:2], self.iris[:2], axis=0),
-                                       np.array([[0.0, 1.61124231e-03, 1.99940020e-04, 1.99940020e-04],
-                                                 [1.61124231e-03, 0.0, 2.94551450e-03, 2.94551450e-03],
-                                                 [1.99940020e-04, 2.94551450e-03, 0.0, 0.0],
-                                                 [1.99940020e-04, 2.94551450e-03, 0.0, 0.0]]))
 
     def test_cosine_distance_sparse(self):
         np.testing.assert_almost_equal(self.dist(self.sparse),
@@ -413,10 +397,6 @@ class TestJaccard(TestCase):
         np.testing.assert_almost_equal(self.dist(self.titanic[:2], self.titanic[:3]),
                                        np.array([[0., 0., 0.5],
                                                  [0., 0., 0.5]]))
-        np.testing.assert_almost_equal(self.dist(self.titanic, self.titanic, axis=0),
-                                       np.array([[0., 1., 0.5],
-                                                 [1., np.nan, 1.],
-                                                 [0.5, 1., 0.]]))
 
     def test_jaccard_distance_numpy(self):
         np.testing.assert_almost_equal(self.dist(self.titanic[0].x, self.titanic[2].x, axis=1), np.array([[0.5]]))
@@ -771,14 +751,6 @@ class TestMahalanobis(TestCase):
         self.assertEqual(metric(tab).shape, (150, 150))
         self.assertEqual(metric(tab[0], tab[1]).shape, (1, 1))
 
-    def test_axis(self):
-        mah = MahalanobisDistance(self.x, axis=1)
-        self.assertEqual(mah(self.x, self.x).shape, (self.n, self.n))
-        x = self.x.T
-        mah = MahalanobisDistance(x, axis=0)
-        self.assertRaises(AssertionError, mah, x, axis=1)
-        self.assertEqual(mah(x, x).shape, (self.n, self.n))
-
     def test_dimensions(self):
         x = Table('iris')[:20].X
         xt = Table('iris')[:20].X.T
@@ -786,17 +758,6 @@ class TestMahalanobis(TestCase):
         mah(x[0], x[1])
         mah = MahalanobisDistance(xt)
         mah(xt[0], xt[1])
-
-    def test_global_is_borked(self):
-        """
-        Test that the global state retaining non-safe Mahalanobis instance
-        raises RuntimeErrors on all invocations
-        """
-        from Orange.distance import Mahalanobis
-        with self.assertRaises(RuntimeError):
-            Mahalanobis.fit(self.x)
-        with self.assertRaises(RuntimeError):
-            Mahalanobis(self.x)
 
 
 class TestDistances(TestCase):
