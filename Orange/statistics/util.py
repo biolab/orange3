@@ -294,7 +294,7 @@ def _apply_func(x, dense_func, sparse_func, axis=None):
         arr = x if axis == 1 else x.T
         arr = arr.tocsr()
         return np.fromiter((sparse_func(row) for row in arr),
-                           dtype=np.double, count=len(arr))
+                           dtype=np.double, count=arr.shape[0])
     else:
         raise NotImplementedError
 
