@@ -13,7 +13,6 @@ cdef extern from "numpy/npy_math.h":
 cdef extern from "math.h":
     double fabs(double x) nogil
     double sqrt(double x) nogil
-    double cos(double x) nogil
 
 
 # This function is unused, but kept here for any future use
@@ -331,7 +330,7 @@ def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,
                             d += val1 * means[col]
                         else:
                             d += val1 * val2
-                distances[row1, row2] = 1 - cos(d / abs1[row1] / abs2[row2])
+                distances[row1, row2] = 1 - d / abs1[row1] / abs2[row2]
     if not two_tables:
         _lower_to_symmetric(distances)
     return distances
@@ -348,6 +347,7 @@ cdef _abs_cols(double [:, :] x, double[:] means, double[:] vars):
     with nogil:
         for col in range(n_cols):
             if vars[col] == -2:
+                abss[col] = 1
                 continue
             d = 0
             nan_cont = 0
@@ -378,7 +378,6 @@ def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
     assert n_cols == len(vars) == len(means)
     abss = _abs_cols(x, means, vars)
     distances = np.zeros((n_cols, n_cols), dtype=float)
-
     for col1 in range(n_cols):
         if vars[col1] == -2:
             distances[col1, :] = distances[:, col1] = 1.0
@@ -399,7 +398,7 @@ def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
                     else:
                         d += val1 * val2
                 distances[col1, col2] = distances[col2, col1] = \
-                    1 - cos(d / abss[col1] / abss[col2])
+                    1 - d / abss[col1] / abss[col2]
     return distances
 
 
@@ -419,13 +418,13 @@ def jaccard_rows(np.ndarray[np.float64_t, ndim=2] x1,
     n_rows2 = x2.shape[0]
     assert n_cols == x2.shape[1] == ps.shape[0]
 
-    distances = np.ones((n_rows1, n_rows2), dtype=float)
+    distances = np.zeros((n_rows1, n_rows2), dtype=float)
     with nogil:
         for row1 in range(n_rows1):
             for row2 in range(n_rows2 if two_tables else row1):
                 intersection = union = 0
                 for col in range(n_cols):
-                    val1, val2 = x1[row1, col], x1[row2, col]
+                    val1, val2 = x1[row1, col], x2[row2, col]
                     if npy_isnan(val1):
                         if npy_isnan(val2):
                             intersection += ps[col] ** 2
@@ -464,7 +463,7 @@ def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
         double [:, :] distances
 
     n_rows, n_cols = x.shape[0], x.shape[1]
-    distances = np.ones((n_cols, n_cols), dtype=float)
+    distances = np.zeros((n_cols, n_cols), dtype=float)
     for col1 in range(n_cols):
         for col2 in range(col1):
             in_both = in_one = 0

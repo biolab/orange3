@@ -2,11 +2,12 @@ import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 
+
 from Orange import data
 from Orange.misc import DistMatrix
-from Orange.preprocess import SklImpute
 from Orange.distance import _distance
 from Orange.statistics import util
+from Orange.preprocess import SklImpute
 
 __all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', '`SpearmanR',
            'SpearmanRAbsolute', 'PearsonR', 'PearsonRAbsolute', 'Mahalanobis',
@@ -17,7 +18,13 @@ def _preprocess(table):
     """Remove categorical attributes and impute missing values."""
     if not len(table):
         return table
-    return SklImpute()(table)
+    new_domain = data.Domain(
+        [a for a in table.domain.attributes if a.is_continuous],
+        table.domain.class_vars,
+        table.domain.metas)
+    new_data = table.transform(new_domain)
+    new_data = SklImpute()(new_data)
+    return new_data
 
 
 def _orange_to_numpy(x):
@@ -44,7 +51,14 @@ class Distance:
         if e1 is None:
             return self
 
-        # Backwards compatibility with SKL-based instances
+        # Handling sparse data and maintaining backwards compatibility with
+        # old-style calls
+        if not hasattr(e1, "domain") \
+                or hasattr(e1, "is_sparse") and e1.is_sparse():
+            fallback = fallbacks.get(self.__class__.__name__, None)
+            if fallback:
+                return fallback(e1, e2, axis,
+                                impute=kwargs.get("impute", False))
         model = self.fit(e1)
         return model(e1, e2)
 
@@ -133,8 +147,7 @@ class FittedDistance(Distance):
 
 
 class EuclideanModel(FittedDistanceModel):
-    name = "Euclidean"
-    supports_sparse = False
+    supports_sparse = True  # via fallback
     distance_by_cols = _distance.euclidean_cols
     distance_by_rows = _distance.euclidean_rows
 
@@ -168,10 +181,10 @@ class Euclidean(FittedDistance):
             else:
                 means[col] = util.nanmean(column)
                 vars[col] = util.nanvar(column)
-                if vars[col] == 0:
-                    vars[col] = -2
                 if self.normalize:
                     dist_missing2[col] = 1
+                    if vars[col] == 0:
+                        vars[col] = -2
                 else:
                     dist_missing2[col] = 2 * vars[col]
                     if np.isnan(dist_missing2[col]):
@@ -185,20 +198,19 @@ class Euclidean(FittedDistance):
         super().fit_cols(x, n_vals)
         means = np.nanmean(x, axis=0)
         vars = np.nanvar(x, axis=0)
-        if np.isnan(vars).any() or not vars.all():
+        if self.normalize and (np.isnan(vars).any() or not vars.all()):
             raise ValueError("some columns are constant or have no values")
         return dict(means=means, vars=vars, normalize=int(self.normalize))
 
 
 class ManhattanModel(FittedDistanceModel):
-    supports_sparse = False
+    supports_sparse = True  # via fallback
     distance_by_cols = _distance.manhattan_cols
     distance_by_rows = _distance.manhattan_rows
 
 
 class Manhattan(FittedDistance):
     ModelType = ManhattanModel
-    name = "Manhattan"
 
     def __new__(cls, *args, **kwargs):
         kwargs.setdefault("normalize", False)
@@ -226,10 +238,10 @@ class Manhattan(FittedDistance):
             else:
                 medians[col] = np.nanmedian(column)
                 mads[col] = np.nanmedian(np.abs(column - medians[col]))
-                if mads[col] == 0:
-                    mads[col] = -2
                 if self.normalize:
                     dist_missing2[col] = 1
+                    if mads[col] == 0:
+                        mads[col] = -2
                 else:
                     dist_missing2[col] = 2 * mads[col]
         return dict(medians=medians, mads=mads,
@@ -240,7 +252,7 @@ class Manhattan(FittedDistance):
         super().fit_cols(x, n_vals)
         medians = np.nanmedian(x, axis=0)
         mads = np.nanmedian(np.abs(x - medians), axis=0)
-        if np.isnan(mads).any() or not mads.all():
+        if self.normalize and (np.isnan(mads).any() or not mads.all()):
             raise ValueError(
                 "some columns have zero absolute distance from median, "
                 "or no values")
@@ -248,7 +260,7 @@ class Manhattan(FittedDistance):
 
 
 class CosineModel(FittedDistanceModel):
-    supports_sparse = False
+    supports_sparse = True  # via fallback
     distance_by_rows = _distance.cosine_rows
     distance_by_cols = _distance.cosine_cols
 
@@ -279,8 +291,6 @@ class Cosine(FittedDistance):
             else:
                 means[col] = util.nanmean(column)
                 vars[col] = util.nanvar(column)
-                if vars[col] == 0:
-                    vars[col] = -2
                 dist_missing2[col] = means[col] ** 2
                 if np.isnan(dist_missing2[col]):
                     dist_missing2[col] = 0
@@ -298,7 +308,6 @@ class JaccardModel(FittedDistanceModel):
 
 class Jaccard(FittedDistance):
     ModelType = JaccardModel
-    name = "Jaccard"
 
     def fit_rows(self, x, n_vals):
         return {
@@ -310,22 +319,21 @@ class Jaccard(FittedDistance):
 
 
 class SpearmanDistance(Distance):
+    supports_sparse = False
+
     """ Generic Spearman's rank correlation coefficient. """
-    def __init__(self, absolute, name):
+    def __init__(self, absolute):
         """
         Constructor for Spearman's and Absolute Spearman's distances.
 
         Args:
             absolute (boolean): Whether to use absolute values or not.
-            name (str): Name of the distance
 
         Returns:
             If absolute=True return Spearman's Absolute rank class else return
                 Spearman's rank class.
         """
         self.absolute = absolute
-        self.name = name
-        self.supports_sparse = False
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
@@ -350,27 +358,26 @@ class SpearmanDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-SpearmanR = SpearmanDistance(absolute=False, name='Spearman')
-SpearmanRAbsolute = SpearmanDistance(absolute=True, name='Spearman absolute')
+SpearmanR = SpearmanDistance(absolute=False)
+SpearmanRAbsolute = SpearmanDistance(absolute=True)
 
 
 class PearsonDistance(Distance):
+    supports_sparse = False
+
     """ Generic Pearson's rank correlation coefficient. """
-    def __init__(self, absolute, name):
+    def __init__(self, absolute):
         """
         Constructor for Pearson's and Absolute Pearson's distances.
 
         Args:
             absolute (boolean): Whether to use absolute values or not.
-            name (str): Name of the distance
 
         Returns:
             If absolute=True return Pearson's Absolute rank class else return
                 Pearson's rank class.
         """
         self.absolute = absolute
-        self.name = name
-        self.supports_sparse = False
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
         x1 = _orange_to_numpy(e1)
@@ -393,80 +400,117 @@ class PearsonDistance(Distance):
             dist = DistMatrix(dist)
         return dist
 
-PearsonR = PearsonDistance(absolute=False, name='Pearson')
-PearsonRAbsolute = PearsonDistance(absolute=True, name='Pearson absolute')
+PearsonR = PearsonDistance(absolute=False)
+PearsonRAbsolute = PearsonDistance(absolute=True)
 
 
-class MahalanobisDistance(Distance):
-    """Mahalanobis distance."""
-    def __init__(self, data=None, axis=1, name='Mahalanobis'):
-        self.name = name
-        self.supports_sparse = False
-        self.axis = None
-        self.VI = None
-        if data is not None:
-            self.fit(data, axis)
+class Mahalanobis(Distance):
+    supports_sparse = False
 
     def fit(self, data, axis=1):
-        """
-        Compute the covariance matrix needed for calculating distances.
-
-        Args:
-            data: The dataset used for calculating covariances.
-            axis: If axis=1 we calculate distances between rows, if axis=0 we
-                calculate distances between columns.
-        """
         x = _orange_to_numpy(data)
         if axis == 0:
             x = x.T
-        self.axis = axis
         try:
             c = np.cov(x.T)
         except:
             raise MemoryError("Covariance matrix is too large.")
         try:
-            self.VI = np.linalg.inv(c)
+            vi = np.linalg.inv(c)
         except:
             raise ValueError("Computation of inverse covariance matrix failed.")
+        return MahalanobisModel(axis, getattr(self, "impute", False), vi)
 
-    def __call__(self, e1, e2=None, axis=None, impute=False):
-        assert self.VI is not None, \
-            "Mahalanobis distance must be initialized with the fit() method."
 
-        x1 = _orange_to_numpy(e1)
-        x2 = _orange_to_numpy(e2)
+class MahalanobisModel(DistanceModel):
+    def __init__(self, axis, impute, vi):
+        super().__init__(axis)
+        self.impute = impute
+        self.vi = vi
 
-        if axis is not None:
-            assert axis == self.axis, \
-                "Axis must match its value at initialization."
+    def __call__(self, e1, e2=None, impute=None):
+        # backward compatibility
+        if impute is not None:
+            self.impute = impute
+        return super().__call__(e1, e2)
+
+    def compute_distances(self, x1, x2):
         if self.axis == 0:
             x1 = x1.T
             if x2 is not None:
                 x2 = x2.T
-        if not x1.shape[1] == self.VI.shape[0] or \
-                x2 is not None and not x2.shape[1] == self.VI.shape[0]:
+        if x1.shape[1] != self.vi.shape[0] or \
+                x2 is not None and x2.shape[1] != self.vi.shape[0]:
             raise ValueError('Incorrect number of features.')
 
         dist = skl_metrics.pairwise.pairwise_distances(
-                x1, x2, metric='mahalanobis', VI=self.VI)
-        if np.isnan(dist).any() and impute:
+                x1, x2, metric='mahalanobis', VI=self.vi)
+        if np.isnan(dist).any() and self.impute:
             dist = np.nan_to_num(dist)
+        return dist
+
+
+# Backward compatibility
+
+class MahalanobisDistance:
+    def __new__(self, data=None, axis=1, _='Mahalanobis'):
+        if data is None:
+            return MahalanobisDistance
+        return Mahalanobis().fit(data, axis)
+
+
+# Fallbacks for distances in sparse data
+# To be removed as the corresponding functionality is implemented above
+
+
+class SklDistance:
+    def __init__(self, metric, name, supports_sparse):
+        """
+        Args:
+            metric: The metric to be used for distance calculation
+            name (str): Name of the distance
+            supports_sparse (boolean): Whether this metric works on sparse data
+                or not.
+        """
+        self.metric = metric
+        self.name = name
+        self.supports_sparse = supports_sparse
+
+    def __call__(self, e1, e2=None, axis=1, impute=False):
+        """
+        :param e1: input data instances, we calculate distances between all
+            pairs
+        :type e1: :class:`Orange.data.Table` or
+            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances if provided,
+            distances between each pair, where first item is from e1 and
+            second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or
+            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows, if axis=0
+            we calculate distances between columns
+        :type axis: int
+        :param impute: if impute=True all NaN values in matrix are replaced
+            with 0
+        :type impute: bool
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
+        """
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
+        if axis == 0:
+            x1 = x1.T
+            if x2 is not None:
+                x2 = x2.T
+        dist = skl_metrics.pairwise.pairwise_distances(
+                x1, x2, metric=self.metric)
         if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, self.axis)
+            dist = DistMatrix(dist, e1, e2, axis)
         else:
             dist = DistMatrix(dist)
         return dist
 
-
-# Only retain this to raise errors on use. Remove in some future version.
-class __MahalanobisDistanceError(MahalanobisDistance):
-    def _raise_error(self, *args, **kwargs):
-        raise RuntimeError(
-            "Invalid use of MahalanobisDistance.\n"
-            "Create a new MahalanobisDistance instance first, e.g.\n"
-            ">>> metric = MahalanobisDistance(data)\n"
-            ">>> dist = metric(data)"
-        )
-    fit = _raise_error
-    __call__ = _raise_error
-Mahalanobis = __MahalanobisDistanceError()
+fallbacks = dict(Euclidean=SklDistance('euclidean', 'Euclidean', True),
+                 Manhattan=SklDistance('manhattan', 'Manhattan', True),
+                 Cosine=SklDistance('cosine', 'Cosine', True),
+                 Jaccard=SklDistance('jaccard', 'Jaccard', False))
