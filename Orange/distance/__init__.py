@@ -14,7 +14,10 @@ __all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', '`SpearmanR',
            'MahalanobisDistance']
 
 
-def _preprocess(table):
+# TODO this *private* function is called from several widgets to prepare
+# data for calling the below classes. After we (mostly) stopped relying
+# on sklearn.metrics, this is (mostly) unnecessary
+def _preprocess(table, impute=True):
     """Remove categorical attributes and impute missing values."""
     if not len(table):
         return table
@@ -23,7 +26,8 @@ def _preprocess(table):
         table.domain.class_vars,
         table.domain.metas)
     new_data = table.transform(new_domain)
-    new_data = SklImpute()(new_data)
+    if impute:
+        new_data = SklImpute()(new_data)
     return new_data
 
 
@@ -42,6 +46,10 @@ def _orange_to_numpy(x):
 
 
 class Distance:
+    supports_sparse = False
+    supports_discrete = False
+    supports_normalization = False
+
     def __new__(cls, e1=None, e2=None, axis=1, **kwargs):
         self = super().__new__(cls)
         self.axis = axis
@@ -53,12 +61,11 @@ class Distance:
 
         # Handling sparse data and maintaining backwards compatibility with
         # old-style calls
-        if not hasattr(e1, "domain") \
-                or hasattr(e1, "is_sparse") and e1.is_sparse():
-            fallback = fallbacks.get(self.__class__.__name__, None)
-            if fallback:
-                return fallback(e1, e2, axis,
-                                impute=kwargs.get("impute", False))
+        if (not hasattr(e1, "domain")
+                or hasattr(e1, "is_sparse") and e1.is_sparse()) \
+                and self.fallback:
+            return self.fallback(e1, e2, axis,
+                                 impute=kwargs.get("impute", False))
         model = self.fit(e1)
         return model(e1, e2)
 
@@ -86,7 +93,11 @@ class DistanceModel:
             A distance matrix (Orange.misc.distmatrix.DistMatrix)
         """
         if self.axis == 0 and e2 is not None:
-            raise ValueError("Two tables cannot be compared by columns")
+            # Backward compatibility fix
+            if e2 is e1:
+                e2 = None
+            else:
+                raise ValueError("Two tables cannot be compared by columns")
 
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
@@ -146,13 +157,67 @@ class FittedDistance(Distance):
         pass
 
 
+# Fallbacks for distances in sparse data
+# To be removed as the corresponding functionality is implemented above
+
+class SklDistance:
+    def __init__(self, metric, name, supports_sparse):
+        """
+        Args:
+            metric: The metric to be used for distance calculation
+            name (str): Name of the distance
+            supports_sparse (boolean): Whether this metric works on sparse data
+                or not.
+        """
+        self.metric = metric
+        self.name = name
+        self.supports_sparse = supports_sparse
+
+    def __call__(self, e1, e2=None, axis=1, impute=False):
+        """
+        :param e1: input data instances, we calculate distances between all
+            pairs
+        :type e1: :class:`Orange.data.Table` or
+            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param e2: optional second argument for data instances if provided,
+            distances between each pair, where first item is from e1 and
+            second is from e2, are calculated
+        :type e2: :class:`Orange.data.Table` or
+            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
+        :param axis: if axis=1 we calculate distances between rows, if axis=0
+            we calculate distances between columns
+        :type axis: int
+        :param impute: if impute=True all NaN values in matrix are replaced
+            with 0
+        :type impute: bool
+        :return: the matrix with distances between given examples
+        :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
+        """
+        x1 = _orange_to_numpy(e1)
+        x2 = _orange_to_numpy(e2)
+        if axis == 0:
+            x1 = x1.T
+            if x2 is not None:
+                x2 = x2.T
+        dist = skl_metrics.pairwise.pairwise_distances(
+                x1, x2, metric=self.metric)
+        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+            dist = DistMatrix(dist, e1, e2, axis)
+        else:
+            dist = DistMatrix(dist)
+        return dist
+
+
 class EuclideanModel(FittedDistanceModel):
-    supports_sparse = True  # via fallback
     distance_by_cols = _distance.euclidean_cols
     distance_by_rows = _distance.euclidean_rows
 
 
 class Euclidean(FittedDistance):
+    supports_sparse = True  # via fallback
+    supports_discrete = True
+    supports_normalization = True
+    fallback = SklDistance('euclidean', 'Euclidean', True)
     ModelType = EuclideanModel
 
     def __new__(cls, *args, **kwargs):
@@ -204,12 +269,15 @@ class Euclidean(FittedDistance):
 
 
 class ManhattanModel(FittedDistanceModel):
-    supports_sparse = True  # via fallback
     distance_by_cols = _distance.manhattan_cols
     distance_by_rows = _distance.manhattan_rows
 
 
 class Manhattan(FittedDistance):
+    supports_sparse = True  # via fallback
+    supports_discrete = True
+    supports_normalization = True
+    fallback = SklDistance('manhattan', 'Manhattan', True)
     ModelType = ManhattanModel
 
     def __new__(cls, *args, **kwargs):
@@ -260,12 +328,14 @@ class Manhattan(FittedDistance):
 
 
 class CosineModel(FittedDistanceModel):
-    supports_sparse = True  # via fallback
     distance_by_rows = _distance.cosine_rows
     distance_by_cols = _distance.cosine_cols
 
 
 class Cosine(FittedDistance):
+    supports_sparse = True  # via fallback
+    supports_discrete = True
+    fallback = SklDistance('cosine', 'Cosine', True)
     ModelType = CosineModel
 
     def __new__(cls, *args, **kwargs):
@@ -301,12 +371,14 @@ class Cosine(FittedDistance):
 
 
 class JaccardModel(FittedDistanceModel):
-    supports_sparse = False
     distance_by_cols = _distance.jaccard_cols
     distance_by_rows = _distance.jaccard_rows
 
 
 class Jaccard(FittedDistance):
+    supports_sparse = False
+    supports_discrete = True
+    fallback = SklDistance('jaccard', 'Jaccard', True)
     ModelType = JaccardModel
 
     def fit_rows(self, x, n_vals):
@@ -457,60 +529,3 @@ class MahalanobisDistance:
         if data is None:
             return MahalanobisDistance
         return Mahalanobis().fit(data, axis)
-
-
-# Fallbacks for distances in sparse data
-# To be removed as the corresponding functionality is implemented above
-
-
-class SklDistance:
-    def __init__(self, metric, name, supports_sparse):
-        """
-        Args:
-            metric: The metric to be used for distance calculation
-            name (str): Name of the distance
-            supports_sparse (boolean): Whether this metric works on sparse data
-                or not.
-        """
-        self.metric = metric
-        self.name = name
-        self.supports_sparse = supports_sparse
-
-    def __call__(self, e1, e2=None, axis=1, impute=False):
-        """
-        :param e1: input data instances, we calculate distances between all
-            pairs
-        :type e1: :class:`Orange.data.Table` or
-            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances if provided,
-            distances between each pair, where first item is from e1 and
-            second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or
-            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows, if axis=0
-            we calculate distances between columns
-        :type axis: int
-        :param impute: if impute=True all NaN values in matrix are replaced
-            with 0
-        :type impute: bool
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
-        """
-        x1 = _orange_to_numpy(e1)
-        x2 = _orange_to_numpy(e2)
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        dist = skl_metrics.pairwise.pairwise_distances(
-                x1, x2, metric=self.metric)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
-        return dist
-
-fallbacks = dict(Euclidean=SklDistance('euclidean', 'Euclidean', True),
-                 Manhattan=SklDistance('manhattan', 'Manhattan', True),
-                 Cosine=SklDistance('cosine', 'Cosine', True),
-                 Jaccard=SklDistance('jaccard', 'Jaccard', False))
