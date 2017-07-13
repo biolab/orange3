@@ -157,40 +157,41 @@ def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,
             == len(dist_missing) == len(dist_missing2)
 
     distances = np.zeros((n_rows1, n_rows2), dtype=float)
-    for row1 in range(n_rows1):
-        for row2 in range(n_rows2 if two_tables else row1):
-            d = 0
-            for col in range(n_cols):
-                if mads[col] == -2:
-                    continue
+    with nogil:
+        for row1 in range(n_rows1):
+            for row2 in range(n_rows2 if two_tables else row1):
+                d = 0
+                for col in range(n_cols):
+                    if mads[col] == -2:
+                        continue
 
-                val1, val2 = x1[row1, col], x2[row2, col]
-                if npy_isnan(val1) and npy_isnan(val2):
-                    d += dist_missing2[col]
-                elif mads[col] == -1:
-                    ival1, ival2 = int(val1), int(val2)
-                    if npy_isnan(val1):
-                        d += dist_missing[col, ival2]
-                    elif npy_isnan(val2):
-                        d += dist_missing[col, ival1]
-                    elif ival1 != ival2:
-                        d += 1
-                elif normalize:
-                    if npy_isnan(val1):
-                        d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5
-                    elif npy_isnan(val2):
-                        d += fabs(val1 - medians[col]) / mads[col] / 2 + 0.5
+                    val1, val2 = x1[row1, col], x2[row2, col]
+                    if npy_isnan(val1) and npy_isnan(val2):
+                        d += dist_missing2[col]
+                    elif mads[col] == -1:
+                        ival1, ival2 = int(val1), int(val2)
+                        if npy_isnan(val1):
+                            d += dist_missing[col, ival2]
+                        elif npy_isnan(val2):
+                            d += dist_missing[col, ival1]
+                        elif ival1 != ival2:
+                            d += 1
+                    elif normalize:
+                        if npy_isnan(val1):
+                            d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5
+                        elif npy_isnan(val2):
+                            d += fabs(val1 - medians[col]) / mads[col] / 2 + 0.5
+                        else:
+                            d += fabs(val1 - val2) / mads[col] / 2
                     else:
-                        d += fabs(val1 - val2) / mads[col] / 2
-                else:
-                    if npy_isnan(val1):
-                        d += fabs(val2 - medians[col]) + mads[col]
-                    elif npy_isnan(val2):
-                        d += fabs(val1 - medians[col]) + mads[col]
-                    else:
-                        d += fabs(val1 - val2)
+                        if npy_isnan(val1):
+                            d += fabs(val2 - medians[col]) + mads[col]
+                        elif npy_isnan(val2):
+                            d += fabs(val1 - medians[col]) + mads[col]
+                        else:
+                            d += fabs(val1 - val2)
 
-            distances[row1, row2] = d
+                distances[row1, row2] = d
 
     if not two_tables:
         _lower_to_symmetric(distances)
@@ -209,35 +210,36 @@ def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
 
     n_rows, n_cols = x.shape[0], x.shape[1]
     distances = np.zeros((n_cols, n_cols), dtype=float)
-    for col1 in range(n_cols):
-        for col2 in range(col1):
-            d = 0
-            for row in range(n_rows):
-                val1, val2 = x[row, col1], x[row, col2]
-                if normalize:
-                    val1 = (val1 - medians[col1]) / (2 * mads[col1])
-                    val2 = (val2 - medians[col2]) / (2 * mads[col2])
-                    if npy_isnan(val1):
-                        if npy_isnan(val2):
-                            d += 1
+    with nogil:
+        for col1 in range(n_cols):
+            for col2 in range(col1):
+                d = 0
+                for row in range(n_rows):
+                    val1, val2 = x[row, col1], x[row, col2]
+                    if normalize:
+                        val1 = (val1 - medians[col1]) / (2 * mads[col1])
+                        val2 = (val2 - medians[col2]) / (2 * mads[col2])
+                        if npy_isnan(val1):
+                            if npy_isnan(val2):
+                                d += 1
+                            else:
+                                d += fabs(val2) + 0.5
+                        elif npy_isnan(val2):
+                            d += fabs(val1) + 0.5
                         else:
-                            d += fabs(val2) + 0.5
-                    elif npy_isnan(val2):
-                        d += fabs(val1) + 0.5
+                            d += fabs(val1 - val2)
                     else:
-                        d += fabs(val1 - val2)
-                else:
-                    if npy_isnan(val1):
-                        if npy_isnan(val2):
-                            d += mads[col1] + mads[col2] \
-                                 + fabs(medians[col1] - medians[col2])
+                        if npy_isnan(val1):
+                            if npy_isnan(val2):
+                                d += mads[col1] + mads[col2] \
+                                     + fabs(medians[col1] - medians[col2])
+                            else:
+                                d += fabs(val2 - medians[col1]) + mads[col1]
+                        elif npy_isnan(val2):
+                            d += fabs(val1 - medians[col2]) + mads[col2]
                         else:
-                            d += fabs(val2 - medians[col1]) + mads[col1]
-                    elif npy_isnan(val2):
-                        d += fabs(val1 - medians[col2]) + mads[col2]
-                    else:
-                        d += fabs(val1 - val2)
-            distances[col1, col2] = distances[col2, col1] = d
+                            d += fabs(val1 - val2)
+                distances[col1, col2] = distances[col2, col1] = d
     return distances
 
 
@@ -474,36 +476,37 @@ def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
 
     n_rows, n_cols = x.shape[0], x.shape[1]
     distances = np.zeros((n_cols, n_cols), dtype=float)
-    for col1 in range(n_cols):
-        for col2 in range(col1):
-            in_both = in_one = 0
-            in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
-            for row in range(n_rows):
-                val1, val2 = x[row, col1], x[row, col2]
-                if npy_isnan(val1):
-                    if npy_isnan(val2):
-                        unk1_unk2 += 1
-                    elif val2 != 0:
-                        unk1_in2 += 1
+    with nogil:
+        for col1 in range(n_cols):
+            for col2 in range(col1):
+                in_both = in_one = 0
+                in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
+                for row in range(n_rows):
+                    val1, val2 = x[row, col1], x[row, col2]
+                    if npy_isnan(val1):
+                        if npy_isnan(val2):
+                            unk1_unk2 += 1
+                        elif val2 != 0:
+                            unk1_in2 += 1
+                        else:
+                            unk1_not2 += 1
+                    elif npy_isnan(val2):
+                        if val1 != 0:
+                            in1_unk2 += 1
+                        else:
+                            not1_unk2 += 1
                     else:
-                        unk1_not2 += 1
-                elif npy_isnan(val2):
-                    if val1 != 0:
-                        in1_unk2 += 1
-                    else:
-                        not1_unk2 += 1
-                else:
-                    if val1 != 0 and val2 != 0:
-                        in_both += 1
-                    elif val1 != 0 or val2 != 0:
-                        in_one += 1
-            distances[col1, col2] = distances[col2, col1] = \
-                1 - float(in_both
-                          + ps[col1] * unk1_in2 +
-                          + ps[col2] * in1_unk2 +
-                          + ps[col1] * ps[col2] * unk1_unk2) / \
-                (in_both + in_one + unk1_in2 + in1_unk2 +
-                 + ps[col1] * unk1_not2
-                 + ps[col2] * not1_unk2
-                 + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
+                        if val1 != 0 and val2 != 0:
+                            in_both += 1
+                        elif val1 != 0 or val2 != 0:
+                            in_one += 1
+                distances[col1, col2] = distances[col2, col1] = \
+                    1 - float(in_both
+                              + ps[col1] * unk1_in2 +
+                              + ps[col2] * in1_unk2 +
+                              + ps[col1] * ps[col2] * unk1_unk2) / \
+                    (in_both + in_one + unk1_in2 + in1_unk2 +
+                     + ps[col1] * unk1_not2
+                     + ps[col2] * not1_unk2
+                     + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
     return distances
