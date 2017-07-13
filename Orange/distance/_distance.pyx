@@ -330,7 +330,12 @@ def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,
                             d += val1 * means[col]
                         else:
                             d += val1 * val2
-                distances[row1, row2] = 1 - d / abs1[row1] / abs2[row2]
+                d = 1 - d / abs1[row1] / abs2[row2]
+                if d < 0:   # clip off any numeric errors
+                    d = 0
+                elif d > 1:
+                    d = 1
+                distances[row1, row2] = d
     if not two_tables:
         _lower_to_symmetric(distances)
     return distances
@@ -397,8 +402,13 @@ def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
                         d += val1 * means[col2]
                     else:
                         d += val1 * val2
-                distances[col1, col2] = distances[col2, col1] = \
-                    1 - d / abss[col1] / abss[col2]
+
+                d = 1 - d / abss[col1] / abss[col2]
+                if d < 0:   # clip off any numeric errors
+                    d = 0
+                elif d > 1:
+                    d = 1
+                distances[col1, col2] = distances[col2, col1] = d
     return distances
 
 
