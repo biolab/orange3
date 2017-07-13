@@ -1649,6 +1649,40 @@ class Table(MutableSequence, Storage):
         self.attributes["old_domain"] = table.domain
         return self
 
+    def to_sparse(self, sparse_attributes=True, sparse_class=False,
+                  sparse_metas=False):
+        def sparsify(features):
+            for f in features:
+                f.sparse = True
+
+        new_domain = self.domain.copy()
+
+        if sparse_attributes:
+            sparsify(new_domain.attributes)
+        if sparse_class:
+            sparsify(new_domain.class_vars)
+        if sparse_metas:
+            sparsify(new_domain.metas)
+        return self.transform(new_domain)
+
+    def to_dense(self, dense_attributes=True, dense_class=True,
+                 dense_metas=True):
+        def densify(features):
+            for f in features:
+                f.sparse = False
+
+        new_domain = self.domain.copy()
+
+        if dense_attributes:
+            densify(new_domain.attributes)
+        if dense_class:
+            densify(new_domain.class_vars)
+        if dense_metas:
+            densify(new_domain.metas)
+        t = self.transform(new_domain)
+        t.ids = self.ids    # preserve indices
+        return t
+
 
 def _check_arrays(*arrays, dtype=None):
     checked = []

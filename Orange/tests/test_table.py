@@ -2705,6 +2705,28 @@ class TestTableTranspose(unittest.TestCase):
                           for x in table2.domain.metas])
 
 
+class TestTableSparseDenseTransformations(unittest.TestCase):
+    def setUp(self):
+        self.iris = Table('iris')
+
+    def test_conversion(self):
+        iris = Table('iris')
+        iris_sparse = iris.to_sparse(sparse_attributes=True)
+        self.assertTrue(sp.issparse(iris_sparse.X))
+        self.assertFalse(sp.issparse(iris_sparse.Y))
+        self.assertFalse(sp.issparse(iris_sparse.metas))
+
+        iris_sparse = iris.to_sparse(sparse_attributes=True, sparse_class=True)
+        self.assertTrue(sp.issparse(iris_sparse.X))
+        self.assertTrue(sp.issparse(iris_sparse.Y))
+        self.assertFalse(sp.issparse(iris_sparse.metas))
+
+        dense_iris = iris_sparse.to_dense()
+        self.assertFalse(sp.issparse(dense_iris.X))
+        self.assertFalse(sp.issparse(dense_iris.Y))
+        self.assertFalse(sp.issparse(dense_iris.metas))
+
+
 if __name__ == "__main__":
     unittest.main()
 
