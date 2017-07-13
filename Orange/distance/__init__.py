@@ -3,13 +3,13 @@ from scipy import stats
 import sklearn.metrics as skl_metrics
 
 
-from Orange import data
+from Orange.data import Table, Domain, Instance, RowInstance
 from Orange.misc import DistMatrix
 from Orange.distance import _distance
 from Orange.statistics import util
 from Orange.preprocess import SklImpute
 
-__all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', '`SpearmanR',
+__all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', 'SpearmanR',
            'SpearmanRAbsolute', 'PearsonR', 'PearsonRAbsolute', 'Mahalanobis',
            'MahalanobisDistance']
 
@@ -21,7 +21,7 @@ def _preprocess(table, impute=True):
     """Remove categorical attributes and impute missing values."""
     if not len(table):
         return table
-    new_domain = data.Domain(
+    new_domain = Domain(
         [a for a in table.domain.attributes if a.is_continuous],
         table.domain.class_vars,
         table.domain.metas)
@@ -31,13 +31,25 @@ def _preprocess(table, impute=True):
     return new_data
 
 
+def remove_discrete_features(data):
+    new_domain = Domain(
+        [a for a in data.domain.attributes if a.is_continuous],
+        data.domain.class_vars,
+        data.domain.metas)
+    return data.transform(new_domain)
+
+
+def impute(data):
+    return SklImpute()(data)
+
+
 def _orange_to_numpy(x):
     """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance`
     to :class:`numpy.ndarray`.
     """
-    if isinstance(x, data.Table):
+    if isinstance(x, Table):
         return x.X
-    elif isinstance(x, data.Instance):
+    elif isinstance(x, Instance):
         return np.atleast_2d(x.x)
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
@@ -49,6 +61,7 @@ class Distance:
     supports_sparse = False
     supports_discrete = False
     supports_normalization = False
+    supports_missing = True
 
     def __new__(cls, e1=None, e2=None, axis=1, **kwargs):
         self = super().__new__(cls)
@@ -62,10 +75,11 @@ class Distance:
         # Handling sparse data and maintaining backwards compatibility with
         # old-style calls
         if (not hasattr(e1, "domain")
-                or hasattr(e1, "is_sparse") and e1.is_sparse()) \
-                and self.fallback:
-            return self.fallback(e1, e2, axis,
-                                 impute=kwargs.get("impute", False))
+                or hasattr(e1, "is_sparse") and e1.is_sparse()):
+            fallback = getattr(self, "fallback", None)
+            if fallback is not None:
+                return fallback(e1, e2, axis,
+                                impute=kwargs.get("impute", False))
         model = self.fit(e1)
         return model(e1, e2)
 
@@ -102,7 +116,7 @@ class DistanceModel:
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         dist = self.compute_distances(x1, x2)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
+        if isinstance(e1, Table) or isinstance(e1, RowInstance):
             dist = DistMatrix(dist, e1, e2, self.axis)
         else:
             dist = DistMatrix(dist)
@@ -200,12 +214,12 @@ class SklDistance:
             if x2 is not None:
                 x2 = x2.T
         dist = skl_metrics.pairwise.pairwise_distances(
-                x1, x2, metric=self.metric)
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
+            x1, x2, metric=self.metric)
+        if isinstance(e1, Table) or isinstance(e1, RowInstance):
+            dist_matrix = DistMatrix(dist, e1, e2, axis)
         else:
-            dist = DistMatrix(dist)
-        return dist
+            dist_matrix = DistMatrix(dist)
+        return dist_matrix
 
 
 class EuclideanModel(FittedDistanceModel):
@@ -390,98 +404,74 @@ class Jaccard(FittedDistance):
     fit_cols = fit_rows
 
 
-class SpearmanDistance(Distance):
-    supports_sparse = False
-
-    """ Generic Spearman's rank correlation coefficient. """
-    def __init__(self, absolute):
-        """
-        Constructor for Spearman's and Absolute Spearman's distances.
-
-        Args:
-            absolute (boolean): Whether to use absolute values or not.
-
-        Returns:
-            If absolute=True return Spearman's Absolute rank class else return
-                Spearman's rank class.
-        """
+class CorrelationDistanceModel(DistanceModel):
+    def __init__(self, absolute, axis=1, impute=False):
+        super().__init__(axis, impute)
         self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1, impute=False):
-        x1 = _orange_to_numpy(e1)
-        x2 = _orange_to_numpy(e2)
+    def compute_distances(self, x1, x2):
         if x2 is None:
             x2 = x1
-        slc = len(x1) if axis == 1 else x1.shape[1]
-        rho, _ = stats.spearmanr(x1, x2, axis=axis)
+        rho = self.compute_correlation(x1, x2)
         if np.isnan(rho).any() and impute:
             rho = np.nan_to_num(rho)
         if self.absolute:
-            dist = (1. - np.abs(rho)) / 2.
+            return (1. - np.abs(rho)) / 2.
         else:
-            dist = (1. - rho) / 2.
-        if isinstance(dist, np.float):
-            dist = np.array([[dist]])
-        elif isinstance(dist, np.ndarray):
-            dist = dist[:slc, slc:]
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
-        return dist
+            return (1. - rho) / 2.
 
-SpearmanR = SpearmanDistance(absolute=False)
-SpearmanRAbsolute = SpearmanDistance(absolute=True)
+    def compute_correlation(self, x1, x2):
+        pass
 
 
-class PearsonDistance(Distance):
-    supports_sparse = False
+class SpearmanModel(CorrelationDistanceModel):
+    def compute_correlation(self, x1, x2):
+        rho = stats.spearmanr(x1, x2, axis=self.axis)[0]
+        if isinstance(rho, np.float):
+            return np.array([[rho]])
+        slc = x1.shape[1 - self.axis]
+        return rho[:slc, slc:]
 
-    """ Generic Pearson's rank correlation coefficient. """
-    def __init__(self, absolute):
-        """
-        Constructor for Pearson's and Absolute Pearson's distances.
 
-        Args:
-            absolute (boolean): Whether to use absolute values or not.
+class CorrelationDistance(Distance):
+    supports_missing = False
 
-        Returns:
-            If absolute=True return Pearson's Absolute rank class else return
-                Pearson's rank class.
-        """
-        self.absolute = absolute
 
-    def __call__(self, e1, e2=None, axis=1, impute=False):
-        x1 = _orange_to_numpy(e1)
-        x2 = _orange_to_numpy(e2)
-        if x2 is None:
-            x2 = x1
-        if axis == 0:
+class SpearmanR(CorrelationDistance):
+    def fit(self, _):
+        return SpearmanModel(False, self.axis, getattr(self, "impute", False))
+
+
+class SpearmanRAbsolute(CorrelationDistance):
+    def fit(self, _):
+        return SpearmanModel(True, self.axis, getattr(self, "impute", False))
+
+
+class PearsonModel(CorrelationDistanceModel):
+    def compute_correlation(self, x1, x2):
+        if self.axis == 0:
             x1 = x1.T
             x2 = x2.T
-        rho = np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
-        if np.isnan(rho).any() and impute:
-            rho = np.nan_to_num(rho)
-        if self.absolute:
-            dist = (1. - np.abs(rho)) / 2.
-        else:
-            dist = (1. - rho) / 2.
-        if isinstance(e1, data.Table) or isinstance(e1, data.RowInstance):
-            dist = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist = DistMatrix(dist)
-        return dist
+        return np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
 
-PearsonR = PearsonDistance(absolute=False)
-PearsonRAbsolute = PearsonDistance(absolute=True)
+
+class PearsonR(CorrelationDistance):
+    def fit(self, _):
+        return PearsonModel(False, self.axis, getattr(self, "impute", False))
+
+
+class PearsonRAbsolute(CorrelationDistance):
+    def fit(self, _):
+        return PearsonModel(True, self.axis, getattr(self, "impute", False))
 
 
 class Mahalanobis(Distance):
     supports_sparse = False
+    supports_missing = False
 
-    def fit(self, data, axis=1):
+    def fit(self, data):
         x = _orange_to_numpy(data)
-        if axis == 0:
+        if self.axis == 0:
             x = x.T
         try:
             c = np.cov(x.T)
@@ -491,7 +481,7 @@ class Mahalanobis(Distance):
             vi = np.linalg.inv(c)
         except:
             raise ValueError("Computation of inverse covariance matrix failed.")
-        return MahalanobisModel(axis, getattr(self, "impute", False), vi)
+        return MahalanobisModel(self.axis, getattr(self, "impute", False), vi)
 
 
 class MahalanobisModel(DistanceModel):
@@ -516,7 +506,7 @@ class MahalanobisModel(DistanceModel):
             raise ValueError('Incorrect number of features.')
 
         dist = skl_metrics.pairwise.pairwise_distances(
-                x1, x2, metric='mahalanobis', VI=self.vi)
+            x1, x2, metric='mahalanobis', VI=self.vi)
         if np.isnan(dist).any() and self.impute:
             dist = np.nan_to_num(dist)
         return dist
@@ -525,7 +515,7 @@ class MahalanobisModel(DistanceModel):
 # Backward compatibility
 
 class MahalanobisDistance:
-    def __new__(self, data=None, axis=1, _='Mahalanobis'):
+    def __new__(cls, data=None, axis=1, _='Mahalanobis'):
         if data is None:
-            return MahalanobisDistance
-        return Mahalanobis().fit(data, axis)
+            return cls
+        return Mahalanobis(axis=axis).fit(data)
