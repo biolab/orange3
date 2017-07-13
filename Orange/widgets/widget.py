@@ -31,7 +31,7 @@ from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg, MessagesWidget
 from Orange.widgets.utils.signals import \
     WidgetSignalsMixin, Input, Output, AttributeList
-from Orange.widgets.utils.overlay import MessageOverlayWidget
+from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
 # than the one with the mixin (Orange.widgets.utils.messages). Assignment is
@@ -324,8 +324,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         and attribute `graph_name`.
         """
         self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.layout().setSpacing(0)
+        self.layout().setContentsMargins(2, 2, 2, 2)
 
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
@@ -340,10 +339,16 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self._insert_main_area()
 
         if self.want_message_bar:
+            # Use a OverlayWidget for status bar positioning.
+            c = OverlayWidget(self, alignment=Qt.AlignBottom)
+            c.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            c.setWidget(self)
+            c.setLayout(QVBoxLayout())
+            c.layout().setContentsMargins(0, 0, 0, 0)
             sb = QStatusBar()
             sb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
             sb.setSizeGripEnabled(self.resizing_enabled)
-            self.layout().addWidget(sb)
+            c.layout().addWidget(sb)
 
             self.message_bar = MessagesWidget(self)
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
@@ -369,6 +374,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             @self.progressBarValueChanged.connect
             def _(val):
                 pb.setValue(int(val))
+
+            # Reserve the bottom margins for the status bar
+            margins = self.layout().contentsMargins()
+            margins.setBottom(sb.sizeHint().height())
+            self.setContentsMargins(margins)
 
     def save_graph(self):
         """Save the graph with the name given in class attribute `graph_name`.
