@@ -8,7 +8,7 @@ import types
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar
+    QProgressBar, QAction
 )
 from AnyQt.QtCore import (
     Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
@@ -170,6 +170,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     contextOpened = Signal()
     contextClosed = Signal()
 
+    # pylint: disable=protected-access
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
@@ -208,6 +209,12 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__msgwidget = None
         self.__msgchoice = 0
 
+        self.__help_action = QAction(
+            "Help", self, objectName="action-help", toolTip="Show help",
+            enabled=False, visible=False, shortcut=QKeySequence(Qt.Key_F1)
+        )
+        self.addAction(self.__help_action)
+
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
         self.splitter = None
@@ -219,6 +226,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         sc = QShortcut(QKeySequence.Copy, self)
         sc.activated.connect(self.copy_to_clipboard)
+
         if self.controlArea is not None:
             # Otherwise, the first control has focus
             self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
@@ -347,11 +355,18 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             sb.setSizeGripEnabled(self.resizing_enabled)
             c.layout().addWidget(sb)
 
-            b = SimpleButton(
+            help = self.__help_action
+            help_button = SimpleButton(
                 icon=QIcon(gui.resource_filename("icons/help.svg")),
-                toolTip="Show widget help",
+                toolTip="Show widget help", visible=help.isVisible(),
             )
-            sb.addWidget(b)
+            @help.changed.connect
+            def _():
+                help_button.setVisible(help.isVisible())
+                help_button.setEnabled(help.isEnabled())
+            help_button.clicked.connect(help.trigger)
+            sb.addWidget(help_button)
+
             if self.graph_name is not None:
                 b = SimpleButton(
                     icon=QIcon(gui.resource_filename("icons/chart.svg")),
