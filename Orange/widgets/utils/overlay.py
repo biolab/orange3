@@ -158,14 +158,14 @@ class OverlayWidget(QWidget):
         if alignment & Qt.AlignLeft:
             x = bounds.x()
         elif alignment & Qt.AlignRight:
-            x = bounds.right() - size.width()
+            x = bounds.x() + bounds.width() - size.width()
         else:
             x = bounds.x() + max(0, bounds.width() - size.width()) // 2
 
         if alignment & Qt.AlignTop:
             y = bounds.y()
         elif alignment & Qt.AlignBottom:
-            y = bounds.bottom() - size.height()
+            y = bounds.y() + bounds.height() - size.height()
         else:
             y = bounds.y() + max(0, bounds.height() - size.height()) // 2
 
