@@ -1,8 +1,7 @@
 import numpy as np
 import sklearn.manifold as skl_manifold
 
-from Orange.distance import (SklDistance, SpearmanDistance, PearsonDistance,
-                             Euclidean)
+from Orange.distance import Distance, DistanceModel, Euclidean
 from Orange.projection import SklProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
@@ -60,8 +59,9 @@ class MDS(SklProjector):
     def __call__(self, data):
         params = self.params.copy()
         dissimilarity = params['dissimilarity']
-        distances = SklDistance, SpearmanDistance, PearsonDistance
-        if isinstance(self._metric, distances):
+        if isinstance(self._metric, DistanceModel) \
+                or (isinstance(self._metric, type)
+                    and issubclass(self._metric, Distance)):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
@@ -147,8 +147,7 @@ class TSNE(SklProjector):
         else:
             data = self.preprocess(data)
             X, Y, domain = data.X, data.Y, data.domain
-            distances = SklDistance, SpearmanDistance, PearsonDistance
-            if isinstance(metric, distances):
+            if isinstance(metric, Distance):
                 X = metric(X)
                 params['metric'] = 'precomputed'
 
