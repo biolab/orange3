@@ -12,7 +12,8 @@ from Orange.canvas.registry.description import \
     Single, Multiple, Default, NonDefault, Explicit, Dynamic, InputSignal, \
     OutputSignal
 from Orange.widgets.tests.base import GuiTest
-from Orange.widgets.utils.signals import _Signal, Input, Output
+from Orange.widgets.utils.signals import _Signal, Input, Output, \
+    WidgetSignalsMixin
 from Orange.widgets.widget import OWWidget
 
 
@@ -186,6 +187,26 @@ class WidgetSignalsMixinTest(GuiTest):
         self.assertIsInstance(output, OutputSignal)
         self.assertEqual(output.name, "another name")
 
+    def test_get_signals_order(self):
+        class TestWidget(WidgetSignalsMixin):
+            class Inputs:
+                input_1 = Input("1", int)
+                input_2 = Input("2", int)
+                input_3 = Input("3", int)
+                input_a = Input("a", object)
+
+            class Outputs:
+                output_1 = Output("1", int)
+                output_2 = Output("2", int)
+                output_3 = Output("3", int)
+                output_a = Output("a", object)
+
+        inputs = TestWidget.get_signals("inputs")
+        self.assertTrue(all(isinstance(s, Input) for s in inputs))
+        self.assertSequenceEqual([s.name for s in inputs], list("123a"))
+        outputs = TestWidget.get_signals("outputs")
+        self.assertTrue(all(isinstance(s, Output) for s in outputs))
+        self.assertSequenceEqual([s.name for s in outputs], list("123a"))
 
 if __name__ == "__main__":
     unittest.main()

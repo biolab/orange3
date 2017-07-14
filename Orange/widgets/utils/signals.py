@@ -1,6 +1,12 @@
 import copy
+import itertools
 
 from Orange.canvas.registry.description import InputSignal, OutputSignal
+
+# increasing counter for ensuring the order of Input/Output definitions
+# is preserved when going through the unordered class namespace of
+# WidgetSignalsMixin.Inputs/Outputs.
+_counter = itertools.count()
 
 
 class _Signal:
@@ -61,6 +67,7 @@ class Input(InputSignal, _Signal):
                  multiple=False, default=False, explicit=False):
         flags = self.get_flags(multiple, default, explicit, False)
         super().__init__(name, type, "", flags, id, doc, replaces or [])
+        self._seq_id = next(_counter)
 
     def __call__(self, method):
         """
@@ -118,6 +125,7 @@ class Output(OutputSignal, _Signal):
         flags = self.get_flags(False, default, explicit, dynamic)
         super().__init__(name, type, flags, id, doc, replaces or [])
         self.widget = None
+        self._seq_id = next(_counter)
 
     def bound_signal(self, widget):
         """
@@ -234,8 +242,9 @@ class WidgetSignalsMixin:
             return old_style
 
         signal_class = getattr(cls, direction.title())
-        return [signal for signal in signal_class.__dict__.values()
-                if isinstance(signal, _Signal)]
+        signals = [signal for signal in signal_class.__dict__.values()
+                   if isinstance(signal, _Signal)]
+        return list(sorted(signals, key=lambda s: s._seq_id))
 
 
 class AttributeList(list):
