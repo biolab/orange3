@@ -356,6 +356,13 @@ class TableTestCase(unittest.TestCase):
             del d[:]
             self.assertEqual(len(d), 0)
 
+    def test_del_slice_ids(self):
+        # __del__ updates `ids` member
+        d = data.Table("test2")
+        ids = d.ids.copy()
+        del d[2:4]
+        np.testing.assert_array_equal(d.ids, np.delete(ids, slice(2, 4)))
+
     def test_set_slice_example(self):
         import warnings
 
