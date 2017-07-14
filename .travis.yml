@@ -16,10 +16,7 @@ matrix:
           env: PYQT4=true
         - python: '3.5'
           env: UPLOAD_COVERAGE=true
-        - python: '3.6'
     fast_finish: true
-    allow_failures:
-      - python: '3.6'
 
 cache:
     apt: true
