@@ -538,6 +538,7 @@ class LeafletMap(WebviewWidget):
                 self._owwidget.progressBarAdvance(100 / n_iters, None)
             else:
                 self._owwidget.progressBarFinished(None)
+                self._image_token = None
 
         self._owwidget.progressBarFinished(None)
         self._owwidget.progressBarInit(None)
@@ -611,7 +612,7 @@ class OWMap(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.map = map = LeafletMap(self)
+        self.map = map = LeafletMap(self)  # type: LeafletMap
         self.mainArea.layout().addWidget(map)
         self.selection = None
         self.data = None
@@ -885,8 +886,7 @@ class OWMap(widget.OWWidget):
 
 def test_main():
     from AnyQt.QtWidgets import QApplication
-    from Orange.regression import KNNRegressionLearner as Learner
-    from Orange.classification import KNNLearner as Learner
+    from Orange.modelling import KNNLearner as Learner
     a = QApplication([])
 
     ow = OWMap()
@@ -895,7 +895,7 @@ def test_main():
     data = Table('philadelphia-crime')
     ow.set_data(data)
 
-    QTimer.singleShot(10, lambda: ow.set_learner(Learner(20)))
+    QTimer.singleShot(10, lambda: ow.set_learner(Learner()))
 
     ow.handleNewSignals()
     a.exec()
