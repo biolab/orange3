@@ -108,12 +108,18 @@ class ProbabilitiesDotItem(DotItem):
         self.title = title
         self.get_probabilities = get_probabilities
         self.movable_dot_items = []
+        self._invisible_sum = 0
         super().__init__(radius, scale, offset, min_x, max_x)
         self.setBrush(QColor(150, 150, 150, 255))
         self.setPen(QPen(QBrush(QColor(75, 75, 75, 255)), 2))
 
-    def move_to_sum(self):
+    def move_to_sum(self, invisible_sum: float=None):
         total = sum(item.value for item in self.movable_dot_items)
+
+        if invisible_sum is not None:
+            self._invisible_sum = invisible_sum
+        total += self._invisible_sum
+
         self.move_to_val(total)
         self.parentItem().rescale()
 
@@ -1069,9 +1075,17 @@ class OWNomogram(OWWidget):
         if not len(self.feature_marker_values):
             self._init_feature_marker_values()
         marker_values = self.scale_marker_values(self.feature_marker_values)
-        for i, item in self.feature_items.items():
-            item.dot.move_to_val(marker_values[i])
-        item.dot.probs_dot.move_to_sum()
+
+        invisible_sum = 0
+        for i in range(len(marker_values)):
+            try:
+                item = self.feature_items[i]
+            except KeyError:
+                invisible_sum += marker_values[i]
+            else:
+                item.dot.move_to_val(marker_values[i])
+
+        item.dot.probs_dot.move_to_sum(invisible_sum)
 
     def _init_feature_marker_values(self):
         self.feature_marker_values = []
