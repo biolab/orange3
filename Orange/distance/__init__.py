@@ -120,6 +120,8 @@ class DistanceModel:
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         dist = self.compute_distances(x1, x2)
+        if self.impute and np.isnan(dist).any():
+            dist = np.nan_to_num(dist)
         if isinstance(e1, Table) or isinstance(e1, RowInstance):
             dist = DistMatrix(dist, e1, e2, self.axis)
         else:
@@ -131,7 +133,7 @@ class DistanceModel:
 
 
 class FittedDistanceModel(DistanceModel):
-    def __init__(self, attributes, axis, impute=False, fit_params=None):
+    def __init__(self, attributes, axis=1, impute=False, fit_params=None):
         super().__init__(axis, impute)
         self.attributes = attributes
         self.fit_params = fit_params
@@ -219,6 +221,8 @@ class SklDistance:
                 x2 = x2.T
         dist = skl_metrics.pairwise.pairwise_distances(
             x1, x2, metric=self.metric)
+        if impute and np.isnan(dist).any():
+            dist = np.nan_to_num(dist)
         if isinstance(e1, Table) or isinstance(e1, RowInstance):
             dist_matrix = DistMatrix(dist, e1, e2, axis)
         else:
@@ -238,9 +242,8 @@ class Euclidean(FittedDistance):
     fallback = SklDistance('euclidean', 'Euclidean', True)
     ModelType = EuclideanModel
 
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("normalize", False)
-        return super().__new__(cls, *args, **kwargs)
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def fit_rows(self, x, n_vals):
         super().fit_rows(x, n_vals)
@@ -298,9 +301,8 @@ class Manhattan(FittedDistance):
     fallback = SklDistance('manhattan', 'Manhattan', True)
     ModelType = ManhattanModel
 
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("normalize", False)
-        return super().__new__(cls, *args, **kwargs)
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def fit_rows(self, x, n_vals):
         super().fit_rows(x, n_vals)
@@ -355,10 +357,6 @@ class Cosine(FittedDistance):
     supports_discrete = True
     fallback = SklDistance('cosine', 'Cosine', True)
     ModelType = CosineModel
-
-    def __new__(cls, *args, **kwargs):
-        kwargs.setdefault("normalize", False)
-        return super().__new__(cls, *args, **kwargs)
 
     def fit_rows(self, x, n_vals):
         super().fit_rows(x, n_vals)
@@ -417,8 +415,6 @@ class CorrelationDistanceModel(DistanceModel):
         if x2 is None:
             x2 = x1
         rho = self.compute_correlation(x1, x2)
-        if np.isnan(rho).any() and impute:
-            rho = np.nan_to_num(rho)
         if self.absolute:
             return (1. - np.abs(rho)) / 2.
         else:
@@ -443,12 +439,12 @@ class CorrelationDistance(Distance):
 
 class SpearmanR(CorrelationDistance):
     def fit(self, _):
-        return SpearmanModel(False, self.axis, getattr(self, "impute", False))
+        return SpearmanModel(False, self.axis, self.impute)
 
 
 class SpearmanRAbsolute(CorrelationDistance):
     def fit(self, _):
-        return SpearmanModel(True, self.axis, getattr(self, "impute", False))
+        return SpearmanModel(True, self.axis, self.impute)
 
 
 class PearsonModel(CorrelationDistanceModel):
@@ -461,12 +457,12 @@ class PearsonModel(CorrelationDistanceModel):
 
 class PearsonR(CorrelationDistance):
     def fit(self, _):
-        return PearsonModel(False, self.axis, getattr(self, "impute", False))
+        return PearsonModel(False, self.axis, self.impute)
 
 
 class PearsonRAbsolute(CorrelationDistance):
     def fit(self, _):
-        return PearsonModel(True, self.axis, getattr(self, "impute", False))
+        return PearsonModel(True, self.axis, self.impute)
 
 
 class Mahalanobis(Distance):
@@ -485,17 +481,16 @@ class Mahalanobis(Distance):
             vi = np.linalg.inv(c)
         except:
             raise ValueError("Computation of inverse covariance matrix failed.")
-        return MahalanobisModel(self.axis, getattr(self, "impute", False), vi)
+        return MahalanobisModel(self.axis, self.impute, vi)
 
 
 class MahalanobisModel(DistanceModel):
     def __init__(self, axis, impute, vi):
-        super().__init__(axis)
-        self.impute = impute
+        super().__init__(axis, impute)
         self.vi = vi
 
     def __call__(self, e1, e2=None, impute=None):
-        # backward compatibility
+        # argument `impute` is here just for backward compatibility; don't use
         if impute is not None:
             self.impute = impute
         return super().__call__(e1, e2)
@@ -508,16 +503,11 @@ class MahalanobisModel(DistanceModel):
         if x1.shape[1] != self.vi.shape[0] or \
                 x2 is not None and x2.shape[1] != self.vi.shape[0]:
             raise ValueError('Incorrect number of features.')
-
-        dist = skl_metrics.pairwise.pairwise_distances(
+        return skl_metrics.pairwise.pairwise_distances(
             x1, x2, metric='mahalanobis', VI=self.vi)
-        if np.isnan(dist).any() and self.impute:
-            dist = np.nan_to_num(dist)
-        return dist
 
 
 # Backward compatibility
-
 class MahalanobisDistance:
     def __new__(cls, data=None, axis=1, _='Mahalanobis'):
         if data is None:
