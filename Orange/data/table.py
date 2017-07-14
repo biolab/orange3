@@ -819,6 +819,7 @@ class Table(MutableSequence, Storage):
         self.Y = np.delete(self._Y, key, axis=0)
         self.metas = np.delete(self.metas, key, axis=0)
         self.W = np.delete(self.W, key, axis=0)
+        self.ids = np.delete(self.ids, key, axis=0)
 
     def __len__(self):
         return self.X.shape[0]
