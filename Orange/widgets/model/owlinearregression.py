@@ -25,8 +25,8 @@ class OWLinearRegression(OWBaseLearner):
 
     LEARNER = LinearRegressionLearner
 
-    class Outputs:
-        coefficients = Output("Coefficients", Table, explicit=True)
+    class Outputs(OWBaseLearner.Outputs):
+        coefficients = Output("Coefficients", Table)
 
     #: Types
     REGULARIZATION_TYPES = ["No regularization", "Ridge regression (L2)",

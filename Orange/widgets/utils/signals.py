@@ -1,4 +1,5 @@
 import copy
+import inspect
 import itertools
 
 from Orange.canvas.registry.description import InputSignal, OutputSignal
@@ -145,6 +146,12 @@ class Output(OutputSignal, _Signal):
             signal_manager.send(self.widget, self.name, value, id)
 
 
+def _get_members(obj, member_type):
+    def is_member_type(member):
+        return isinstance(member, member_type)
+    return inspect.getmembers(obj, is_member_type)
+
+
 class WidgetSignalsMixin:
     """Mixin for managing widget's input and output signals"""
     class Inputs:
@@ -158,9 +165,8 @@ class WidgetSignalsMixin:
 
     def _bind_outputs(self):
         bound_cls = self.Outputs()
-        for name, signal in self.Outputs.__dict__.items():
-            if isinstance(signal, Output):
-                bound_cls.__dict__[name] = signal.bound_signal(self)
+        for name, signal in _get_members(bound_cls, Output):
+            setattr(bound_cls, name, signal.bound_signal(self))
         setattr(self, "Outputs", bound_cls)
 
     def send(self, signalName, value, id=None):
@@ -210,8 +216,9 @@ class WidgetSignalsMixin:
 
     @classmethod
     def _check_input_handlers(cls):
-        unbound = [signal.name for signal in cls.Inputs.__dict__.values()
-                   if isinstance(signal, Input) and not signal.handler]
+        unbound = [signal.name
+                   for _, signal in _get_members(cls.Inputs, Input)
+                   if not signal.handler]
         if unbound:
             raise ValueError("unbound signal(s) in {}: {}".
                              format(cls.__name__, ", ".join(unbound)))
@@ -242,8 +249,7 @@ class WidgetSignalsMixin:
             return old_style
 
         signal_class = getattr(cls, direction.title())
-        signals = [signal for signal in signal_class.__dict__.values()
-                   if isinstance(signal, _Signal)]
+        signals = [signal for _, signal in _get_members(signal_class, _Signal)]
         return list(sorted(signals, key=lambda s: s._seq_id))
 
 
