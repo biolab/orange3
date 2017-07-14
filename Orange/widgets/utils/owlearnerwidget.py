@@ -1,106 +1,34 @@
 import numpy as np
+from copy import deepcopy
+
 from AnyQt.QtCore import QTimer, Qt
 
-from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
-from Orange.modelling import Fitter
+from Orange.modelling import Fitter, Learner, Model
 from Orange.preprocess.preprocess import Preprocess
-from Orange.regression.base_regression import LearnerRegression
 from Orange.widgets import gui
-from Orange.widgets import widget
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
 
 
-class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
-    """Metaclass that adds default inputs and outputs objects.
+class OWBaseLearnerMeta(WidgetMetaClass):
+    """ Meta class for learner widgets
     """
-
-    REQUIRED_ATTRIBUTES = []
-
-    def __new__(mcls, name, bases, attrib):
-        # check whether it is abstract class
-        if attrib.get('name', False):
-            # Ensure all needed attributes are present
-            if not all(attr in attrib for attr in mcls.REQUIRED_ATTRIBUTES):
+    def __new__(mcls, name, bases, attributes):
+        learner = attributes.get("LEARNER", None)
+        # classes with empty names are considered abstract
+        if attributes.get(name):
+            if learner is None:
                 raise AttributeError(
-                    "'{}' must have '{}' attributes"
-                    .format(name, "', '".join(mcls.REQUIRED_ATTRIBUTES)))
+                    "'{}' must declare attribute LEARNER".format(name))
 
-            attrib['outputs'] = mcls.update_channel(
-                mcls.default_outputs(attrib),
-                attrib.get('outputs', [])
-            )
+            outputs = attributes["Outputs"] = deepcopy(attributes["Outputs"])
+            outputs.learner.type = learner
+            outputs.model.type = learner.__returns__
 
-            attrib['inputs'] = mcls.update_channel(
-                mcls.default_inputs(attrib),
-                attrib.get('inputs', [])
-            )
-
-            mcls.add_extra_attributes(name, attrib)
-
-        return super().__new__(mcls, name, bases, attrib)
-
-    @classmethod
-    def default_inputs(cls, attrib):
-        return []
-
-    @classmethod
-    def default_outputs(cls, attrib):
-        return []
-
-    @classmethod
-    def update_channel(cls, channel, items):
-        item_names = set(item[0] if isinstance(item, tuple) else item.name
-                         for item in channel)
-
-        for item in items:
-            if item[0] not in item_names:
-                channel.append(item)
-
-        return channel
-
-    @classmethod
-    def add_extra_attributes(cls, name, attrib):
-        return attrib
-
-
-class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
-    """Metaclass that adds default inputs (table, preprocess) and
-    outputs (learner, model) for learner widgets.
-    """
-
-    REQUIRED_ATTRIBUTES = ['LEARNER']
-
-    @classmethod
-    def default_inputs(cls, attrib):
-        return [("Data", Table, "set_data"),
-                ("Preprocessor", Preprocess, "set_preprocessor")]
-
-    @classmethod
-    def default_outputs(cls, attrib):
-        learner_class = attrib['LEARNER']
-        replaces = []
-        if issubclass(learner_class, LearnerClassification):
-            model_name = 'Classifier'
-        elif issubclass(learner_class, LearnerRegression):
-            model_name = 'Predictor'
-        else:
-            model_name = 'Model'
-            replaces = ['Classifier', 'Predictor']
-
-        attrib['OUTPUT_MODEL_NAME'] = model_name
-
-        return [widget.OutputSignal("Learner", learner_class),
-                widget.OutputSignal(model_name, learner_class.__returns__,
-                                    replaces=replaces)]
-
-    @classmethod
-    def add_extra_attributes(cls, name, attrib):
-        if 'learner_name' not in attrib:
-            attrib['learner_name'] = Setting(attrib['name'])
-        return attrib
+        return super().__new__(mcls, name, bases, attributes)
 
 
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
@@ -131,11 +59,23 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     class Warning(OWWidget.Warning):
         outdated_learner = Msg("Press Apply to submit changes.")
 
+    class Inputs:
+        data = Input("Data", Table)
+        preprocessor = Input("Preprocessor", Preprocess)
+
+    class Outputs:
+        # Exact output types for each learner widget are set in
+        # OWBaseLearnerMeta meta class
+        learner = Output("Learner", Learner, dynamic=False)
+        model = Output("Model", Model, dynamic=False,
+                       replaces=["Classifier", "Predictor"])
+
     def __init__(self):
         super().__init__()
         self.data = None
         self.valid_data = False
         self.learner = None
+        self.learner_name = self.LEARNER.name
         self.model = None
         self.preprocessors = None
         self.outdated_settings = False
@@ -160,10 +100,12 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         """
         return []
 
+    @Inputs.preprocessor
     def set_preprocessor(self, preprocessor):
         self.preprocessors = preprocessor
         self.apply()
 
+    @Inputs.data
     @check_sql_input
     def set_data(self, data):
         """Set the input train data set."""
@@ -186,7 +128,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.learner_name
-        self.send("Learner", self.learner)
+        self.Outputs.learner.send(self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
 
@@ -206,7 +148,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             else:
                 self.model.name = self.learner_name
                 self.model.instances = self.data
-        self.send(self.OUTPUT_MODEL_NAME, self.model)
+        self.Outputs.model.send(self.model)
 
     def check_data(self):
         self.valid_data = False
@@ -232,15 +174,15 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
 
-    def _change_name(self, instance, signal_name):
+    def _change_name(self, instance, output):
         if instance:
             instance.name = self.learner_name
             if self.auto_apply:
-                self.send(signal_name, instance)
+                output.send(instance)
 
     def learner_name_changed(self):
-        self._change_name(self.learner, "Learner")
-        self._change_name(self.model, self.OUTPUT_MODEL_NAME)
+        self._change_name(self.learner, self.Outputs.learner)
+        self._change_name(self.model, self.Outputs.model)
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
