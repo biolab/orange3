@@ -24,7 +24,8 @@ from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (
     LearnerClassification, ModelClassification
 )
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable,\
+    Variable
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
@@ -100,6 +101,7 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
+        Variable._clear_all_caches()
 
     def tearDown(self):
         """Process any pending events before the next test is executed."""
@@ -687,6 +689,7 @@ class WidgetOutputsTestMixin:
     """
 
     def init(self):
+        Variable._clear_all_caches()
         self.data = Table("iris")
         self.same_input_output_domain = True
 
