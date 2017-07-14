@@ -152,6 +152,9 @@ class TestUtil(unittest.TestCase):
                 mean(X_sparse),
                 np.mean(X))
 
+        with self.assertWarns(UserWarning):
+            mean([1, np.nan, 0])
+
     def test_nanmean(self):
         for X in self.data:
             X_sparse = csr_matrix(X)

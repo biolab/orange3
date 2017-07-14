@@ -23,18 +23,19 @@ class TestOWNomogram(WidgetTest):
         cls.lenses = Table("lenses")
 
     def setUp(self):
-        self.widget = self.create_widget(OWNomogram)
-        self.widget.repaint = True
+        self.widget = self.create_widget(OWNomogram)  # type: OWNomogram
 
     def test_input_nb_cls(self):
         """Check naive bayes classifier on input"""
         self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
         self.assertEqual(len([item for item in self.widget.scene.items() if
                               isinstance(item, DiscreteFeatureItem)]),
-                         len([a for a in self.data.domain.attributes]))
+                         min(self.widget.n_attributes,
+                             len(self.data.domain.attributes)))
 
     def test_input_lr_cls(self):
         """Check logistic regression classifier on input"""
+        self.widget.display_index = 0  # display ALL features
         self.send_signal(self.widget.Inputs.classifier, self.lr_cls)
         self.assertEqual(
             len([item for item in self.widget.scene.items() if
@@ -76,7 +77,8 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons"""
-        self._test_helper(self.lr_cls, [9, 91])
+        self.widget.display_index = 0  # show ALL features
+        self._test_helper(self.lr_cls, [58, 42])
 
     def test_nomogram_nb_multiclass(self):
         """Check probabilities for naive bayes classifier for various values
@@ -167,6 +169,7 @@ class TestOWNomogram(WidgetTest):
             self.assertGreaterEqual(5, len(visible_items))
 
             # 2D curve
+            self.widget.n_attributes = 15
             self.widget.cont_feature_dim_combo.activated.emit(1)
             self.widget.cont_feature_dim_combo.setCurrentIndex(1)
             self._test_helper_check_probability(values[i])
@@ -184,7 +187,8 @@ class TestOWNomogram(WidgetTest):
                       prob_marker.get_tooltip_text())
 
     def _check_values(self, attributes, data):
-        for attr, item in zip(attributes, self.widget.feature_items):
+        for attr, item in zip(attributes, self.widget.feature_items.values()):
+            assert attr.name == item.childItems()[0].toPlainText()
             value = data[0][attr.name].value
             value = "{}: 100%".format(value) if attr.is_discrete \
                 else "Value: {}".format(value)
@@ -194,6 +198,6 @@ class TestOWNomogram(WidgetTest):
         for i in range(self.widget.sort_combo.count()):
             self.widget.sort_combo.activated.emit(i)
             self.widget.sort_combo.setCurrentIndex(i)
-            ordered = [self.widget.nomogram_main.layout.itemAt(i).name
-                       for i in range(self.widget.nomogram_main.layout.count())]
+            ordered = [self.widget.nomogram_main.layout().itemAt(i).childItems()[0].toPlainText()
+                       for i in range(self.widget.nomogram_main.layout().count())]
             self.assertListEqual(names[i], ordered)
