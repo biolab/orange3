@@ -231,6 +231,11 @@ class WidgetTest(GuiTest):
             raise RuntimeError("'send_signal' called but the widget is in "
                                "blocking state and does not accept inputs.")
         handler = getattr(widget, input.handler)
+
+        # Assert sent input is of correct class
+        assert isinstance(value, (input.type, type(None))), \
+            '{} should be {}'.format(value.__class__.__mro__, input.type)
+
         handler(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
