@@ -66,10 +66,8 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         """Initialize triggered by change of coloring"""
         super().initialize()
 
-    def run(self):
+    def before_running(self):
         """
-        Add handling of the spin box for maximal number of attributes.
-
         Disable the spin for maximal number of attributes before running and
         enable afterwards. Also, if the number of attributes is different than
         in the last run, reset the saved state (if it was paused).
@@ -83,10 +81,9 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.compute_attr_order()
         self.last_run_max_attr = self.max_attrs
         self.max_attr_spin.setDisabled(True)
-        try:
-            super().run()
-        finally:
-            self.max_attr_spin.setDisabled(False)
+
+    def stopped(self):
+        self.max_attr_spin.setDisabled(False)
 
     def max_attr_changed(self):
         """
