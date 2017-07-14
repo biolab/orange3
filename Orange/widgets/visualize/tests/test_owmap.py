@@ -19,19 +19,22 @@ class TestOWMap(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        np.random.seed(666)
         cls.data = Table(Domain([ContinuousVariable('latitude'),
                                  ContinuousVariable('longitude'),
-                                 DiscreteVariable('foo', list(map(str, range(5))))]),
+                                 DiscreteVariable('foo', list(map(str, range(5))))],
+                                ContinuousVariable('cls')),
                          np.c_[np.random.random((20, 2)) * 10,
-                               np.random.randint(5, size=20)])
+                               np.random.randint(5, size=20)],
+                         np.random.random(20))
 
     def setUp(self):
         super().setUp()
-        self.widget = self.create_widget(OWMap)
+        self.widget = self.create_widget(OWMap)  # type: OWMap
 
     def test_inputs(self):
-        self.widget.set_data(self.data)
-        self.widget.set_learner(KNNRegressionLearner())
+        self.send_signal('Data', self.data)
+        self.send_signal('Learner', KNNRegressionLearner())
         self.widget.handleNewSignals()
         self.assertEqual(self.widget.map.lat_attr, self.data.domain[0])
 
@@ -55,7 +58,11 @@ class TestOWMap(WidgetTest):
 
     def test_coverage(self):
         # Due to async nature of these calls, these tests just cover
-        self.widget.set_data(self.data)
+        self.send_signal('Data', self.data)
+        self.send_signal('Learner', KNNRegressionLearner())
+        self.widget.class_attr = 'cls'
+        self.widget.handleNewSignals()
+
         self.widget.map.fit_to_bounds()
         self.widget.map.selected_area(90, 180, -90, -180)
         self.widget.map.set_map_provider(next(iter(self.widget.TILE_PROVIDERS.values())))
@@ -67,6 +74,13 @@ class TestOWMap(WidgetTest):
         self.widget.map.set_marker_size('latitude')
         self.widget.map.set_marker_size_coefficient(50)
         self.widget.map.set_marker_opacity(20)
-        self.widget.map.recompute_heatmap(np.random.random((30, 30)))
-        self.widget.map._update_js_markers(np.r_[0, 1, 2, 3], np.r_[1, 0, 1, 0])
+        self.widget.map.recompute_heatmap(np.random.random((20, 2)))
+
+        args = [100, 100, -100, -100, 1000, 1000, 3, [-100, 100], [0, 0]]
+        self.widget.map.redraw_markers_overlay_image(*args, new_image=True)
+        # Force non-JS overlay redrawing
+        self.widget.map.N_POINTS_PER_ITER = 5
+        self.widget.map.redraw_markers_overlay_image(*args, new_image=True)
+        self.process_events(until=lambda: self.widget.map._image_token is None)
+
         self.widget.clear()
