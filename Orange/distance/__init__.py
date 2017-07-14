@@ -89,8 +89,12 @@ class Distance:
 
 class DistanceModel:
     def __init__(self, axis, impute=False):
-        self.axis = axis
+        self._axis = axis
         self.impute = impute
+
+    @property
+    def axis(self):
+        return self._axis
 
     def __call__(self, e1, e2=None):
         """
