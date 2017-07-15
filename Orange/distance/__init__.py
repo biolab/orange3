@@ -31,7 +31,10 @@ def _preprocess(table, impute=True):
     return new_data
 
 
+# TODO I have put this function here as a substitute the above `_preprocess`.
+# None of them really belongs here; (re?)move them, eventually.
 def remove_discrete_features(data):
+    """Remove discrete columns from the data."""
     new_domain = Domain(
         [a for a in data.domain.attributes if a.is_continuous],
         data.domain.class_vars,
@@ -40,12 +43,15 @@ def remove_discrete_features(data):
 
 
 def impute(data):
+    """Impute missing values."""
     return SklImpute()(data)
 
 
 def _orange_to_numpy(x):
-    """Convert :class:`Orange.data.Table` and :class:`Orange.data.RowInstance`
-    to :class:`numpy.ndarray`.
+    """
+    Return :class:`numpy.ndarray` (dense or sparse) with attribute data
+    from the given instance of :class:`Orange.data.Table`,
+    :class:`Orange.data.RowInstance` or :class:`Orange.data.Instance`.    .
     """
     if isinstance(x, Table):
         return x.X
@@ -58,36 +64,135 @@ def _orange_to_numpy(x):
 
 
 class Distance:
+    """
+    Base class for construction of distances models (:obj:`DistanceModel`).
+    
+    Distances can be computed between all pairs of rows in one table, or
+    between pairs where one row is from one table and one from another.
+    
+    If `axis` is set to `0`, the class computes distances between all pairs
+    of columns in a table. Distances between columns from separate tables are
+    probably meaningless, thus unsupported.
+    
+    The class can be used as follows:
+    
+    - Constructor is called only with keyword argument `axis` that
+      specifies the axis over which the distances are computed, and with other
+      subclass-specific keyword arguments.
+    - Next, we call the method `fit(data)` to produce an instance of
+      :obj:`DistanceModel`; the instance stores any parameters needed for
+      computation of distances, such as statistics for normalization and
+      handling of missing data.
+    - We can then call the :obj:`DistanceModel` with data to compute the
+      distance between its rows or columns, or with two data tables to
+      compute distances between all pairs of rows.
+    
+    The second, shorter way to use this class is to call the constructor with
+    one or two data tables and any additional keyword arguments. Constructor
+    will execute the above steps and return :obj:`~Orange.misc.DistMatrix`.
+    Such usage is here for backward compatibility, practicality and efficiency.
+    
+    Args:
+        e1 (:obj:`~Orange.data.Table` or :obj:`~Orange.data.Instance` or :obj:`np.ndarray` or `None`):
+            data on which to train the model and compute the distances
+        e2 (:obj:`~Orange.data.Table` or :obj:`~Orange.data.Instance` or :obj:`np.ndarray` or `None`):
+            if present, the class computes distances with pairs coming from
+            the two tables
+        axis (int):
+            axis over which the distances are computed, 1 (default) for
+            rows, 0 for columns
+    
+    Attributes:
+        axis (int):
+            axis over which the distances are computed, 1 (default) for
+            rows, 0 for columns
+        impute (bool):
+            if `True` (default is `False`), nans in the computed distances
+            are replaced with zeros, and infs with very large numbers.            
+
+    The capabilities of the metrics are described with class attributes.
+
+    If class attribute `supports_discrete` is `True`, the distance
+    also uses discrete attributes to compute row distances. The use of discrete
+    attributes depends upon the type of distance; e.g. Jaccard distance observes
+    whether the value is zero or non-zero, while Euclidean and Manhattan
+    distance observes whether a pair of values is same or different.
+        
+    Class attribute `supports_missing` indicates that the distance can cope
+    with missing data. In such cases, letting the distance handle it should
+    be preferred over pre-imputation of missing values.
+    
+    Class attribute `supports_normalization` indicates that the constructor
+    accepts an argument `normalize`. If set to `True`, the metric will attempt
+    to normalize the values in a sense that each attribute will have equal
+    influence. For instance, the Euclidean distance subtract the mean and
+    divides the result by the deviation, while Manhattan distance uses the
+    median and MAD.
+    
+    If class attribute `supports_sparse` is `True`, the class will handle
+    sparse data. Currently, all classes that do handle it rely on fallbacks to
+    SKL metrics. These, however, do not support discrete data and missing
+    values, and will fail silently.
+    """
     supports_sparse = False
     supports_discrete = False
     supports_normalization = False
     supports_missing = True
 
-    def __new__(cls, e1=None, e2=None, axis=1, **kwargs):
+    def __new__(cls, e1=None, e2=None, axis=1, impute=False, **kwargs):
         self = super().__new__(cls)
         self.axis = axis
-        # Ugly, but needed for backwards compatibility hack below, to allow
-        # setting parameters like 'normalize'
+        self.impute = impute
+        # Ugly, but needed to allow allow setting subclass-specific parameters
+        # (such as normalize) when `e1` is not `None` and the `__new__` in the
+        # subclass is skipped
         self.__dict__.update(**kwargs)
         if e1 is None:
             return self
 
-        # Handling sparse data and maintaining backwards compatibility with
-        # old-style calls
+        # Fallbacks for sparse data and numpy tables. Remove when subclasses
+        # no longer use fallbacks for sparse data, and handling numpy tables
+        # becomes obsolete (or handled elsewhere)
         if (not hasattr(e1, "domain")
                 or hasattr(e1, "is_sparse") and e1.is_sparse()):
             fallback = getattr(self, "fallback", None)
             if fallback is not None:
-                return fallback(e1, e2, axis,
-                                impute=kwargs.get("impute", False))
+                return fallback(e1, e2, axis, impute)
+
+        # Magic constructor
         model = self.fit(e1)
         return model(e1, e2)
 
     def fit(self, e1):
+        """
+        Return a :obj:`DistanceModel` fit to the data. Must be implemented in
+        subclasses.
+        
+        Args:
+            e1 (:obj:`~Orange.data.Table` or :obj:`~Orange.data.Instance` or
+                :obj:`np.ndarray` or `None`:
+                data on which to train the model and compute the distances
+
+        Returns: `DistanceModel`
+        """
         pass
 
 
 class DistanceModel:
+    """
+    Base class for classes that compute distances between data rows or columns.
+    Instances of these classes are not constructed directly but returned by
+    the corresponding instances of :obj:`Distance`.
+    
+    Attributes:
+        axis (int, readonly):
+            axis over which the distances are computed, 1 (default) for
+            rows, 0 for columns
+        impute (bool):
+            if `True` (default is `False`), nans in the computed distances
+            are replaced with zeros, and infs with very large numbers 
+            
+    """
     def __init__(self, axis, impute=False):
         self._axis = axis
         self.impute = impute
@@ -101,12 +206,17 @@ class DistanceModel:
         If e2 is omitted, calculate distances between all rows (axis=1) or
         columns (axis=2) of e1. If e2 is present, calculate distances between
         all pairs if rows from e1 and e2.
+        
+        This method converts the data into numpy arrays, calls the method
+        `compute_data` and packs the result into `DistMatrix`. Subclasses are
+        expected to define the `compute_data` and not the `__call__` method.
 
         Args:
-            e1 (Orange.data.Table or Orange.data.RowInstance or numpy.ndarray):
+            e1 (Orange.data.Table or Orange.data.Instance or numpy.ndarray):
                 input data
-            e2 (Orange.data.Table or Orange.data.RowInstance or numpy.ndarray):
+            e2 (Orange.data.Table or Orange.data.Instance or numpy.ndarray):
                 secondary data
+                
         Returns:
             A distance matrix (Orange.misc.distmatrix.DistMatrix)
         """
@@ -129,22 +239,53 @@ class DistanceModel:
         return dist
 
     def compute_distances(self, x1, x2):
+        """
+        Compute the distance between rows or colums of `x1`, or between rows
+        of `x1` and `x2`. This method must be implement by subclasses. Do not
+        call directly."""
         pass
 
 
 class FittedDistanceModel(DistanceModel):
+    """
+    Convenient common parent class for distance models with separate methods
+    for fitting and for computation of distances across rows and columns.
+    
+    Results of fitting are packed into a dictionary for easier passing to
+    Cython function that do the heavy lifting in these classes.
+    
+    Attributes:
+        attributes (list of `Variable`): attributes on which the model was fit
+        fit_params (dict): data used by the model
+        
+    Class attributes:
+        distance_by_cols: a function that accepts a numpy array and parameters
+            and returns distances by columns. Usually a Cython function.
+        distance_by_rows: a function that accepts one or two numpy arrays,
+            an indicator whether the distances are to be computed within
+            a single array or between two arrays, and parameters; and
+            returns distances by columns. Usually a Cython function.
+    """
     def __init__(self, attributes, axis=1, impute=False, fit_params=None):
         super().__init__(axis, impute)
         self.attributes = attributes
         self.fit_params = fit_params
 
     def __call__(self, e1, e2=None):
+        """
+        Check the validity of the domains before passing the data to the 
+        inherited method.
+        """
         if e1.domain.attributes != self.attributes or \
                 e2 is not None and e2.domain.attributes != self.attributes:
             raise ValueError("mismatching domains")
         return super().__call__(e1, e2)
 
     def compute_distances(self, x1, x2=None):
+        """
+        Compute distances by calling either `distance_by_cols` or
+        `distance_by_wors`
+        """
         if self.axis == 0:
             return self.distance_by_cols(x1, self.fit_params)
         else:
@@ -156,6 +297,19 @@ class FittedDistanceModel(DistanceModel):
 
 
 class FittedDistance(Distance):
+    """
+    Convenient common parent class for distancess with separate methods for
+    fitting and for computation of distances across rows and columns.
+    Results of fitting are packed into a dictionary for easier passing to
+    Cython function that do the heavy lifting in these classes.
+    
+    The class implements a method `fit` that calls either `fit_columns`
+    or `fit_rows` with the data and the number of values for discrete
+    attributes.
+
+    Class attribute `ModelType` contains the type of the model returned by
+    `fit`.
+    """
     ModelType = None  #: Option[FittedDistanceModel]
 
     def fit(self, data):
@@ -181,38 +335,16 @@ class FittedDistance(Distance):
 # To be removed as the corresponding functionality is implemented above
 
 class SklDistance:
-    def __init__(self, metric, name, supports_sparse):
-        """
-        Args:
-            metric: The metric to be used for distance calculation
-            name (str): Name of the distance
-            supports_sparse (boolean): Whether this metric works on sparse data
-                or not.
-        """
+    """
+    Wrapper for functions sklearn's metrics. Used only as temporary fallbacks
+    when `Euclidean`, `Manhattan`, `Cosine` or `Jaccard` are given sparse data
+    or raw numpy arrays. These classes can't handle discrete or missing data
+    and normalization. Do not use for wrapping new classes.
+    """
+    def __init__(self, metric):
         self.metric = metric
-        self.name = name
-        self.supports_sparse = supports_sparse
 
     def __call__(self, e1, e2=None, axis=1, impute=False):
-        """
-        :param e1: input data instances, we calculate distances between all
-            pairs
-        :type e1: :class:`Orange.data.Table` or
-            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param e2: optional second argument for data instances if provided,
-            distances between each pair, where first item is from e1 and
-            second is from e2, are calculated
-        :type e2: :class:`Orange.data.Table` or
-            :class:`Orange.data.RowInstance` or :class:`numpy.ndarray`
-        :param axis: if axis=1 we calculate distances between rows, if axis=0
-            we calculate distances between columns
-        :type axis: int
-        :param impute: if impute=True all NaN values in matrix are replaced
-            with 0
-        :type impute: bool
-        :return: the matrix with distances between given examples
-        :rtype: :class:`Orange.misc.distmatrix.DistMatrix`
-        """
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
         if axis == 0:
@@ -239,13 +371,31 @@ class Euclidean(FittedDistance):
     supports_sparse = True  # via fallback
     supports_discrete = True
     supports_normalization = True
-    fallback = SklDistance('euclidean', 'Euclidean', True)
+    fallback = SklDistance('euclidean')
     ModelType = EuclideanModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def fit_rows(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for row distances. Returns a dictionary with the
+        following keys:
+        
+        - means: a means of numeric columns; undefined for discrete
+        - vars: variances of numeric columns, -1 for discrete, -2 to ignore
+        - dist_missing: a 2d-array; dist_missing[col, value] is the distance
+            added for the given `value` in discrete column `col` if the value
+            for the other row is missing; undefined for numeric columns
+        - dist_missing2: the value used for distance if both values are missing;
+            used for discrete and numeric columns
+        - normalize: set to `self.normalize`, so it is passed to the Cython
+            function
+            
+        A column is marked to be ignored if all its values are nan or if
+        `self.normalize` is `True` and the variance of the column is 0.
+        """
         super().fit_rows(x, n_vals)
         n_cols = len(n_vals)
         n_bins = max(n_vals)
@@ -281,6 +431,16 @@ class Euclidean(FittedDistance):
                     normalize=int(self.normalize))
 
     def fit_cols(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for columns. Returns a dictionary with the
+        following keys:
+
+        - means: column means
+        - vars: column variances
+        - normalize: set to self.normalize, so it is passed to the Cython
+            function
+        """
         super().fit_cols(x, n_vals)
         means = np.nanmean(x, axis=0)
         vars = np.nanvar(x, axis=0)
@@ -298,13 +458,32 @@ class Manhattan(FittedDistance):
     supports_sparse = True  # via fallback
     supports_discrete = True
     supports_normalization = True
-    fallback = SklDistance('manhattan', 'Manhattan', True)
+    fallback = SklDistance('manhattan')
     ModelType = ManhattanModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def fit_rows(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for row distances. Returns a dictionary with the
+        following keys:
+
+        - medians: medians of numeric columns; undefined for discrete
+        - mads: medians of absolute distances from the median for numeric
+            columns, -1 for discrete, -2 to ignore
+        - dist_missing: a 2d-array; dist_missing[col, value] is the distance
+            added for the given `value` in discrete column `col` if the value
+            for the other row is missing; undefined for numeric columns
+        - dist_missing2: the value used for distance if both values are missing;
+            used for discrete and numeric columns
+        - normalize: set to `self.normalize`, so it is passed to the Cython
+            function
+
+        A column is marked to be ignored if all its values are nan or if
+        `self.normalize` is `True` and the median of the column is 0.
+        """
         super().fit_rows(x, n_vals)
         n_cols = len(n_vals)
         n_bins = max(n_vals)
@@ -337,6 +516,16 @@ class Manhattan(FittedDistance):
                     normalize=int(self.normalize))
 
     def fit_cols(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for columns. Returns a dictionary with the
+        following keys:
+
+        - medians: column medians
+        - mads: medians of absolute distances from medians
+        - normalize: set to self.normalize, so it is passed to the Cython
+            function
+        """
         super().fit_cols(x, n_vals)
         medians = np.nanmedian(x, axis=0)
         mads = np.nanmedian(np.abs(x - medians), axis=0)
@@ -355,10 +544,25 @@ class CosineModel(FittedDistanceModel):
 class Cosine(FittedDistance):
     supports_sparse = True  # via fallback
     supports_discrete = True
-    fallback = SklDistance('cosine', 'Cosine', True)
+    fallback = SklDistance('cosine')
     ModelType = CosineModel
 
     def fit_rows(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for row and column based distances. Although the
+        computation is asymmetric, the same statistics are needed in both cases.
+        
+        Returns a dictionary with the following keys:
+
+        - means: means of numeric columns; relative frequencies of non-zero
+            values for discrete
+        - vars: variances of numeric columns, -1 for discrete, -2 to ignore
+        - dist_missing2: the value used for distance if both values are missing;
+            used for discrete and numeric columns
+
+        A column is marked to be ignored if all its values are nan.
+        """
         super().fit_rows(x, n_vals)
         n, n_cols = x.shape
         means = np.zeros(n_cols, dtype=float)
@@ -394,10 +598,20 @@ class JaccardModel(FittedDistanceModel):
 class Jaccard(FittedDistance):
     supports_sparse = False
     supports_discrete = True
-    fallback = SklDistance('jaccard', 'Jaccard', True)
+    fallback = SklDistance('jaccard')
     ModelType = JaccardModel
 
     def fit_rows(self, x, n_vals):
+        """
+        Compute statistics needed for normalization and for handling
+        missing data for row and column based distances. Although the
+        computation is asymmetric, the same statistics are needed in both cases.
+
+        Returns a dictionary with the following key:
+
+        - ps: relative freuenceies of non-zero values
+        """
+
         return {
             "ps": np.fromiter(
                 (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
@@ -407,6 +621,7 @@ class Jaccard(FittedDistance):
 
 
 class CorrelationDistanceModel(DistanceModel):
+    """Helper class for normal and absolute Pearson and Spearman correlation"""
     def __init__(self, absolute, axis=1, impute=False):
         super().__init__(axis, impute)
         self.absolute = absolute
@@ -470,6 +685,7 @@ class Mahalanobis(Distance):
     supports_missing = False
 
     def fit(self, data):
+        """Return a model with stored inverse covariance matrix"""
         x = _orange_to_numpy(data)
         if self.axis == 0:
             x = x.T
@@ -507,8 +723,19 @@ class MahalanobisModel(DistanceModel):
             x1, x2, metric='mahalanobis', VI=self.vi)
 
 
-# Backward compatibility
+# TODO: Appears to have been used only in the Distances widget (where it had
+# to be handled as a special case and is now replaced with the above class)
+# and in tests. Remove?
 class MahalanobisDistance:
+    """
+    Obsolete class needed for backward compatibility.
+    
+    Previous implementation of instances did not have a separate fitting phase,
+    except for MahalanobisDistance, which was implemented in a single class
+    but required first (explicitly) calling the method 'fit'. The backward
+    compatibility hack in :obj:`Distance` cannot handle such use, hence it
+    is provided in this class.
+    """
     def __new__(cls, data=None, axis=1, _='Mahalanobis'):
         if data is None:
             return cls
