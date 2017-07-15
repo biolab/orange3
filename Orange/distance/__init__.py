@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
-
+from sklearn.utils.extmath import row_norms, safe_sparse_dot
 
 from Orange.data import Table, Domain, Instance, RowInstance
 from Orange.misc import DistMatrix
@@ -363,8 +363,87 @@ class SklDistance:
 
 
 class EuclideanModel(FittedDistanceModel):
-    distance_by_cols = _distance.euclidean_cols
-    distance_by_rows = _distance.euclidean_rows
+    def distance_by_rows(self, x1, x2, two_tables, fit_params):
+        vars = fit_params["vars"]
+        means = fit_params["means"]
+        dist_missing = fit_params["dist_missing"]
+        dist_missing2 = fit_params["dist_missing2"]
+        normalize = fit_params["normalize"]
+
+        cols = vars >= 0
+        if np.any(cols):
+            if normalize:
+                data1 = x1[:, cols]
+                data1 -= means[cols]
+                data1 /= np.sqrt(2 * vars[cols])
+                if two_tables:
+                    data2 = x2[:, cols]
+                    data2 -= means
+                    data2 /= np.sqrt(2 * vars[cols])
+                else:
+                    data2 = data1
+            elif np.all(cols):
+                data1, data2 = x1, x2
+            else:
+                data1 = x1[:, cols]
+                data2 = x2[:, cols] if two_tables else data1
+
+            # adapted from sklearn.metric.euclidean_distances
+            xx = row_norms(data1, squared=True)[:, np.newaxis]
+            if two_tables:
+                yy = row_norms(data2, squared=True)[np.newaxis, :]
+            else:
+                yy = xx.T
+            distances = safe_sparse_dot(data1, data2.T, dense_output=True)
+            distances *= -2
+            distances += xx
+            distances += yy
+            np.maximum(distances, 0, out=distances)
+            if not two_tables:
+                distances.flat[::distances.shape[0] + 1] = 0.0
+
+            if normalize:
+                _distance.fix_euclidean_rows_normalized(distances, data1, data2, means[cols], vars[cols], dist_missing2[cols], two_tables)
+            else:
+                _distance.fix_euclidean_rows(distances, data1, data2, means[cols], vars[cols], dist_missing2[cols], two_tables)
+
+        else:
+            distances = np.zeros((x1.shape[0], x2.shape[0]))
+
+        cols = vars == -1
+        if np.any(cols):
+            if np.all(cols):
+                data1, data2 = x1, x2
+            else:
+                data1 = x1[:, cols]
+                data2 = x2[:, cols] if two_tables else data1
+            _distance.euclidean_rows_discrete(distances, data1, data2, dist_missing[cols], dist_missing2[cols], two_tables)
+
+        return np.sqrt(distances)
+
+    def distance_by_cols(self, x1, fit_params):
+        vars = fit_params["vars"]
+        means = fit_params["means"]
+        normalize = fit_params["normalize"]
+
+        if normalize:
+            x1 = x1 - means
+            x1 /= np.sqrt(2 * vars)
+
+        # adapted from sklearn.metric.euclidean_distances
+        xx = row_norms(x1.T, squared=True)[:, np.newaxis]
+        distances = safe_sparse_dot(x1.T, x1, dense_output=True)
+        distances *= -2
+        distances += xx
+        distances += xx.T
+        np.maximum(distances, 0, out=distances)
+        distances.flat[::distances.shape[0] + 1] = 0.0
+
+        if normalize:
+            _distance.fix_euclidean_cols_normalized(distances, x1, means, vars)
+        else:
+            _distance.fix_euclidean_cols(distances, x1, means, vars)
+        return np.sqrt(distances)
 
 
 class Euclidean(FittedDistance):

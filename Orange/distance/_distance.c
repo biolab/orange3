@@ -519,16 +519,6 @@ static const char *__pyx_f[] = {
   "stringsource",
   "type.pxd",
 };
-/* MemviewSliceStruct.proto */
-struct __pyx_memoryview_obj;
-typedef struct {
-  struct __pyx_memoryview_obj *memview;
-  char *data;
-  Py_ssize_t shape[8];
-  Py_ssize_t strides[8];
-  Py_ssize_t suboffsets[8];
-} __Pyx_memviewslice;
-
 /* BufferFormatStructs.proto */
 #define IS_UNSIGNED(type) (((type) -1) > 0)
 struct __Pyx_StructField_;
@@ -564,6 +554,16 @@ typedef struct {
   char enc_packmode;
   char is_valid_array;
 } __Pyx_BufFmt_Context;
+
+/* MemviewSliceStruct.proto */
+struct __pyx_memoryview_obj;
+typedef struct {
+  struct __pyx_memoryview_obj *memview;
+  char *data;
+  Py_ssize_t shape[8];
+  Py_ssize_t strides[8];
+  Py_ssize_t suboffsets[8];
+} __Pyx_memviewslice;
 
 /* Atomics.proto */
 #include <pythread.h>
@@ -1076,6 +1076,22 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_GetAttrStr(PyObject* obj, PyObject
 /* GetBuiltinName.proto */
 static PyObject *__Pyx_GetBuiltinName(PyObject *name);
 
+/* RaiseArgTupleInvalid.proto */
+static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
+    Py_ssize_t num_min, Py_ssize_t num_max, Py_ssize_t num_found);
+
+/* RaiseDoubleKeywords.proto */
+static void __Pyx_RaiseDoubleKeywordsError(const char* func_name, PyObject* kw_name);
+
+/* ParseKeywords.proto */
+static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[],\
+    PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args,\
+    const char* function_name);
+
+/* ArgTypeTest.proto */
+static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
+    const char *name, int exact);
+
 /* BufferFormatCheck.proto */
 static CYTHON_INLINE int  __Pyx_GetBufferAndValidate(Py_buffer* buf, PyObject* obj,
     __Pyx_TypeInfo* dtype, int flags, int nd, int cast, __Pyx_BufFmt_StackElem* stack);
@@ -1085,6 +1101,8 @@ static void __Pyx_BufFmt_Init(__Pyx_BufFmt_Context* ctx,
                               __Pyx_BufFmt_StackElem* stack,
                               __Pyx_TypeInfo* type); // PROTO
 
+#define __Pyx_BufPtrStrided2d(type, buf, i0, s0, i1, s1) (type)((char*)buf + i0 * s0 + i1 * s1)
+#define __Pyx_BufPtrStrided1d(type, buf, i0, s0) (type)((char*)buf + i0 * s0)
 /* MemviewSliceInit.proto */
 #define __Pyx_BUF_MAX_NDIMS %(BUF_MAX_NDIMS)d
 #define __Pyx_MEMVIEW_DIRECT   1
@@ -1111,28 +1129,6 @@ static CYTHON_INLINE int __pyx_sub_acquisition_count_locked(
 static CYTHON_INLINE void __Pyx_INC_MEMVIEW(__Pyx_memviewslice *, int, int);
 static CYTHON_INLINE void __Pyx_XDEC_MEMVIEW(__Pyx_memviewslice *, int, int);
 
-/* PyObjectCall.proto */
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
-#else
-#define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
-#endif
-
-/* PyObjectCallMethO.proto */
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
-#endif
-
-/* PyObjectCallOneArg.proto */
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
-
-/* PyObjectCallNoArg.proto */
-#if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func);
-#else
-#define __Pyx_PyObject_CallNoArg(func) __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL)
-#endif
-
 /* PyThreadStateGet.proto */
 #if CYTHON_COMPILING_IN_CPYTHON
 #define __Pyx_PyThreadState_declare  PyThreadState *__pyx_tstate;
@@ -1157,40 +1153,32 @@ static CYTHON_INLINE void __Pyx_ErrFetchInState(PyThreadState *tstate, PyObject 
 #define __Pyx_ErrFetch(type, value, tb)  PyErr_Fetch(type, value, tb)
 #endif
 
-/* RaiseException.proto */
-static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
-
-/* WriteUnraisableException.proto */
-static void __Pyx_WriteUnraisable(const char *name, int clineno,
-                                  int lineno, const char *filename,
-                                  int full_traceback, int nogil);
-
-/* RaiseArgTupleInvalid.proto */
-static void __Pyx_RaiseArgtupleInvalid(const char* func_name, int exact,
-    Py_ssize_t num_min, Py_ssize_t num_max, Py_ssize_t num_found);
-
-/* RaiseDoubleKeywords.proto */
-static void __Pyx_RaiseDoubleKeywordsError(const char* func_name, PyObject* kw_name);
-
-/* ParseKeywords.proto */
-static int __Pyx_ParseOptionalKeywords(PyObject *kwds, PyObject **argnames[],\
-    PyObject *kwds2, PyObject *values[], Py_ssize_t num_pos_args,\
-    const char* function_name);
-
-/* ArgTypeTest.proto */
-static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
-    const char *name, int exact);
-
 /* GetModuleGlobalName.proto */
 static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name);
 
-#define __Pyx_BufPtrStrided2d(type, buf, i0, s0, i1, s1) (type)((char*)buf + i0 * s0 + i1 * s1)
-#define __Pyx_BufPtrStrided1d(type, buf, i0, s0) (type)((char*)buf + i0 * s0)
+/* PyObjectCall.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw);
+#else
+#define __Pyx_PyObject_Call(func, arg, kw) PyObject_Call(func, arg, kw)
+#endif
+
+/* PyObjectCallMethO.proto */
+#if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg);
+#endif
+
+/* PyObjectCallOneArg.proto */
+static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
+
 /* ExtTypeTest.proto */
 static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type);
 
 /* BufferFallbackError.proto */
 static void __Pyx_RaiseBufferFallbackError(void);
+
+/* RaiseException.proto */
+static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
 
 /* DictGetItem.proto */
 #if PY_MAJOR_VERSION >= 3 && !CYTHON_COMPILING_IN_PYPY
@@ -1377,6 +1365,11 @@ static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname);
   #define __PYX_FORCE_INIT_THREADS 0
 #endif
 
+/* WriteUnraisableException.proto */
+static void __Pyx_WriteUnraisable(const char *name, int clineno,
+                                  int lineno, const char *filename,
+                                  int full_traceback, int nogil);
+
 /* SetVTable.proto */
 static int __Pyx_SetVtable(PyObject *dict, void *vtable);
 
@@ -1438,12 +1431,32 @@ static int __pyx_slices_overlap(__Pyx_memviewslice *slice1,
 /* Capsule.proto */
 static CYTHON_INLINE PyObject *__pyx_capsule_create(void *p, const char *sig);
 
-/* MemviewDtypeToObject.proto */
-static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp);
-static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj);
+/* TypeInfoCompare.proto */
+static int __pyx_typeinfo_cmp(__Pyx_TypeInfo *a, __Pyx_TypeInfo *b);
+
+/* MemviewSliceValidateAndInit.proto */
+static int __Pyx_ValidateAndInit_memviewslice(
+                int *axes_specs,
+                int c_or_f_flag,
+                int buf_flags,
+                int ndim,
+                __Pyx_TypeInfo *dtype,
+                __Pyx_BufFmt_StackElem stack[],
+                __Pyx_memviewslice *memviewslice,
+                PyObject *original_obj);
+
+/* ObjectToMemviewSlice.proto */
+static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_dsds_double(PyObject *);
+
+/* ObjectToMemviewSlice.proto */
+static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_ds_double(PyObject *);
 
 /* CIntToPy.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value);
+
+/* MemviewDtypeToObject.proto */
+static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp);
+static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj);
 
 /* None.proto */
 #if CYTHON_CCOMPLEX
@@ -1569,26 +1582,6 @@ static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value);
 
 /* CIntFromPy.proto */
 static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *);
-
-/* TypeInfoCompare.proto */
-static int __pyx_typeinfo_cmp(__Pyx_TypeInfo *a, __Pyx_TypeInfo *b);
-
-/* MemviewSliceValidateAndInit.proto */
-static int __Pyx_ValidateAndInit_memviewslice(
-                int *axes_specs,
-                int c_or_f_flag,
-                int buf_flags,
-                int ndim,
-                __Pyx_TypeInfo *dtype,
-                __Pyx_BufFmt_StackElem stack[],
-                __Pyx_memviewslice *memviewslice,
-                PyObject *original_obj);
-
-/* ObjectToMemviewSlice.proto */
-static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_ds_double(PyObject *);
-
-/* ObjectToMemviewSlice.proto */
-static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_dsds_double(PyObject *);
 
 /* CheckBinaryVersion.proto */
 static int __Pyx_check_binary_version(void);
@@ -1722,7 +1715,6 @@ static const char __pyx_k_np[] = "np";
 static const char __pyx_k_ps[] = "ps";
 static const char __pyx_k_x1[] = "x1";
 static const char __pyx_k_x2[] = "x2";
-static const char __pyx_k_all[] = "all";
 static const char __pyx_k_col[] = "col";
 static const char __pyx_k_obj[] = "obj";
 static const char __pyx_k_row[] = "row";
@@ -1742,7 +1734,6 @@ static const char __pyx_k_pack[] = "pack";
 static const char __pyx_k_row1[] = "row1";
 static const char __pyx_k_row2[] = "row2";
 static const char __pyx_k_size[] = "size";
-static const char __pyx_k_sqrt[] = "sqrt";
 static const char __pyx_k_step[] = "step";
 static const char __pyx_k_stop[] = "stop";
 static const char __pyx_k_test[] = "__test__";
@@ -1755,7 +1746,6 @@ static const char __pyx_k_dtype[] = "dtype";
 static const char __pyx_k_empty[] = "empty";
 static const char __pyx_k_error[] = "error";
 static const char __pyx_k_flags[] = "flags";
-static const char __pyx_k_isnan[] = "isnan";
 static const char __pyx_k_ival1[] = "ival1";
 static const char __pyx_k_ival2[] = "ival2";
 static const char __pyx_k_means[] = "means";
@@ -1809,23 +1799,26 @@ static const char __pyx_k_jaccard_cols[] = "jaccard_cols";
 static const char __pyx_k_jaccard_rows[] = "jaccard_rows";
 static const char __pyx_k_dist_missing2[] = "dist_missing2";
 static const char __pyx_k_pyx_getbuffer[] = "__pyx_getbuffer";
-static const char __pyx_k_euclidean_cols[] = "euclidean_cols";
-static const char __pyx_k_euclidean_rows[] = "euclidean_rows";
 static const char __pyx_k_manhattan_cols[] = "manhattan_cols";
 static const char __pyx_k_manhattan_rows[] = "manhattan_rows";
 static const char __pyx_k_allocate_buffer[] = "allocate_buffer";
 static const char __pyx_k_dtype_is_object[] = "dtype_is_object";
+static const char __pyx_k_fix_euclidean_cols[] = "fix_euclidean_cols";
+static const char __pyx_k_fix_euclidean_rows[] = "fix_euclidean_rows";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
 static const char __pyx_k_strided_and_indirect[] = "<strided and indirect>";
 static const char __pyx_k_contiguous_and_direct[] = "<contiguous and direct>";
 static const char __pyx_k_MemoryView_of_r_object[] = "<MemoryView of %r object>";
 static const char __pyx_k_MemoryView_of_r_at_0x_x[] = "<MemoryView of %r at 0x%x>";
 static const char __pyx_k_contiguous_and_indirect[] = "<contiguous and indirect>";
+static const char __pyx_k_euclidean_rows_discrete[] = "euclidean_rows_discrete";
 static const char __pyx_k_Cannot_index_with_type_s[] = "Cannot index with type '%s'";
 static const char __pyx_k_Invalid_shape_in_axis_d_d[] = "Invalid shape in axis %d: %d.";
 static const char __pyx_k_Orange_distance__distance[] = "Orange.distance._distance";
 static const char __pyx_k_itemsize_0_for_cython_array[] = "itemsize <= 0 for cython.array";
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
+static const char __pyx_k_fix_euclidean_cols_normalized[] = "fix_euclidean_cols_normalized";
+static const char __pyx_k_fix_euclidean_rows_normalized[] = "fix_euclidean_rows_normalized";
 static const char __pyx_k_unable_to_allocate_array_data[] = "unable to allocate array data.";
 static const char __pyx_k_strided_and_direct_or_indirect[] = "<strided and direct or indirect>";
 static const char __pyx_k_Users_janez_Dropbox_orange3_Ora[] = "/Users/janez/Dropbox/orange3/Orange/distance/_distance.pyx";
@@ -1839,7 +1832,6 @@ static const char __pyx_k_Invalid_mode_expected_c_or_fortr[] = "Invalid mode, ex
 static const char __pyx_k_Non_native_byte_order_not_suppor[] = "Non-native byte order not supported";
 static const char __pyx_k_Out_of_bounds_on_buffer_access_a[] = "Out of bounds on buffer access (axis %d)";
 static const char __pyx_k_Unable_to_convert_item_to_object[] = "Unable to convert item to object";
-static const char __pyx_k_cannot_normalize_the_data_has_no[] = "cannot normalize: the data has no variance";
 static const char __pyx_k_got_differing_extents_in_dimensi[] = "got differing extents in dimension %d (got %d and %d)";
 static const char __pyx_k_ndarray_is_not_Fortran_contiguou[] = "ndarray is not Fortran contiguous";
 static const char __pyx_k_unable_to_allocate_shape_and_str[] = "unable to allocate shape and strides.";
@@ -1871,12 +1863,10 @@ static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_abs1;
 static PyObject *__pyx_n_s_abs2;
 static PyObject *__pyx_n_s_abss;
-static PyObject *__pyx_n_s_all;
 static PyObject *__pyx_n_s_allocate_buffer;
 static PyObject *__pyx_n_s_base;
 static PyObject *__pyx_n_s_c;
 static PyObject *__pyx_n_u_c;
-static PyObject *__pyx_kp_s_cannot_normalize_the_data_has_no;
 static PyObject *__pyx_n_s_class;
 static PyObject *__pyx_n_s_col;
 static PyObject *__pyx_n_s_col1;
@@ -1895,9 +1885,12 @@ static PyObject *__pyx_n_s_empty;
 static PyObject *__pyx_n_s_encode;
 static PyObject *__pyx_n_s_enumerate;
 static PyObject *__pyx_n_s_error;
-static PyObject *__pyx_n_s_euclidean_cols;
-static PyObject *__pyx_n_s_euclidean_rows;
+static PyObject *__pyx_n_s_euclidean_rows_discrete;
 static PyObject *__pyx_n_s_fit_params;
+static PyObject *__pyx_n_s_fix_euclidean_cols;
+static PyObject *__pyx_n_s_fix_euclidean_cols_normalized;
+static PyObject *__pyx_n_s_fix_euclidean_rows;
+static PyObject *__pyx_n_s_fix_euclidean_rows_normalized;
 static PyObject *__pyx_n_s_flags;
 static PyObject *__pyx_n_s_format;
 static PyObject *__pyx_n_s_fortran;
@@ -1909,7 +1902,6 @@ static PyObject *__pyx_n_s_in1_unk2;
 static PyObject *__pyx_n_s_in_both;
 static PyObject *__pyx_n_s_in_one;
 static PyObject *__pyx_n_s_intersection;
-static PyObject *__pyx_n_s_isnan;
 static PyObject *__pyx_n_s_itemsize;
 static PyObject *__pyx_kp_s_itemsize_0_for_cython_array;
 static PyObject *__pyx_n_s_ival1;
@@ -1951,7 +1943,6 @@ static PyObject *__pyx_n_s_row1;
 static PyObject *__pyx_n_s_row2;
 static PyObject *__pyx_n_s_shape;
 static PyObject *__pyx_n_s_size;
-static PyObject *__pyx_n_s_sqrt;
 static PyObject *__pyx_n_s_start;
 static PyObject *__pyx_n_s_step;
 static PyObject *__pyx_n_s_stop;
@@ -1977,15 +1968,18 @@ static PyObject *__pyx_n_s_x;
 static PyObject *__pyx_n_s_x1;
 static PyObject *__pyx_n_s_x2;
 static PyObject *__pyx_n_s_zeros;
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows_discrete(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, __Pyx_memviewslice __pyx_v_dist_missing, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_2fix_euclidean_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, PyArrayObject *__pyx_v_means, PyArrayObject *__pyx_v_vars, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_4fix_euclidean_rows_normalized(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, CYTHON_UNUSED PyArrayObject *__pyx_v_means, CYTHON_UNUSED PyArrayObject *__pyx_v_vars, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_6fix_euclidean_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x, __Pyx_memviewslice __pyx_v_means, __Pyx_memviewslice __pyx_v_vars); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_8fix_euclidean_cols_normalized(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x, CYTHON_UNUSED __Pyx_memviewslice __pyx_v_means, CYTHON_UNUSED __Pyx_memviewslice __pyx_v_vars); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_10manhattan_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_12manhattan_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_14p_nonzero(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_16cosine_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_18cosine_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_20jaccard_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params); /* proto */
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_22jaccard_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */
@@ -2028,18 +2022,18 @@ static PyObject *__pyx_float_1_0;
 static PyObject *__pyx_int_0;
 static PyObject *__pyx_int_1;
 static PyObject *__pyx_int_neg_1;
-static PyObject *__pyx_tuple_;
+static PyObject *__pyx_slice_;
 static PyObject *__pyx_slice__2;
-static PyObject *__pyx_slice__3;
+static PyObject *__pyx_tuple__3;
 static PyObject *__pyx_tuple__4;
 static PyObject *__pyx_tuple__5;
 static PyObject *__pyx_tuple__6;
 static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_tuple__8;
 static PyObject *__pyx_tuple__9;
+static PyObject *__pyx_slice__18;
 static PyObject *__pyx_slice__19;
 static PyObject *__pyx_slice__20;
-static PyObject *__pyx_slice__21;
 static PyObject *__pyx_tuple__10;
 static PyObject *__pyx_tuple__11;
 static PyObject *__pyx_tuple__12;
@@ -2048,198 +2042,38 @@ static PyObject *__pyx_tuple__14;
 static PyObject *__pyx_tuple__15;
 static PyObject *__pyx_tuple__16;
 static PyObject *__pyx_tuple__17;
-static PyObject *__pyx_tuple__18;
+static PyObject *__pyx_tuple__21;
 static PyObject *__pyx_tuple__22;
-static PyObject *__pyx_tuple__23;
-static PyObject *__pyx_tuple__25;
-static PyObject *__pyx_tuple__27;
-static PyObject *__pyx_tuple__29;
-static PyObject *__pyx_tuple__31;
-static PyObject *__pyx_tuple__33;
-static PyObject *__pyx_tuple__35;
-static PyObject *__pyx_tuple__37;
-static PyObject *__pyx_tuple__39;
-static PyObject *__pyx_tuple__41;
+static PyObject *__pyx_tuple__24;
+static PyObject *__pyx_tuple__26;
+static PyObject *__pyx_tuple__28;
+static PyObject *__pyx_tuple__30;
+static PyObject *__pyx_tuple__32;
+static PyObject *__pyx_tuple__34;
+static PyObject *__pyx_tuple__36;
+static PyObject *__pyx_tuple__38;
+static PyObject *__pyx_tuple__40;
 static PyObject *__pyx_tuple__42;
-static PyObject *__pyx_tuple__43;
 static PyObject *__pyx_tuple__44;
-static PyObject *__pyx_tuple__45;
-static PyObject *__pyx_codeobj__24;
-static PyObject *__pyx_codeobj__26;
-static PyObject *__pyx_codeobj__28;
-static PyObject *__pyx_codeobj__30;
-static PyObject *__pyx_codeobj__32;
-static PyObject *__pyx_codeobj__34;
-static PyObject *__pyx_codeobj__36;
-static PyObject *__pyx_codeobj__38;
-static PyObject *__pyx_codeobj__40;
+static PyObject *__pyx_tuple__46;
+static PyObject *__pyx_tuple__47;
+static PyObject *__pyx_tuple__48;
+static PyObject *__pyx_tuple__49;
+static PyObject *__pyx_tuple__50;
+static PyObject *__pyx_codeobj__23;
+static PyObject *__pyx_codeobj__25;
+static PyObject *__pyx_codeobj__27;
+static PyObject *__pyx_codeobj__29;
+static PyObject *__pyx_codeobj__31;
+static PyObject *__pyx_codeobj__33;
+static PyObject *__pyx_codeobj__35;
+static PyObject *__pyx_codeobj__37;
+static PyObject *__pyx_codeobj__39;
+static PyObject *__pyx_codeobj__41;
+static PyObject *__pyx_codeobj__43;
+static PyObject *__pyx_codeobj__45;
 
-/* "Orange/distance/_distance.pyx":19
- * 
- * # This function is unused, but kept here for any future use
- * cdef void _check_division_by_zero(double[:, :] x, double[:] dividers):             # <<<<<<<<<<<<<<
- *     cdef int col
- *     for col in range(dividers.shape[0]):
- */
-
-static void __pyx_f_6Orange_8distance_9_distance__check_division_by_zero(__Pyx_memviewslice __pyx_v_x, __Pyx_memviewslice __pyx_v_dividers) {
-  int __pyx_v_col;
-  __Pyx_RefNannyDeclarations
-  Py_ssize_t __pyx_t_1;
-  int __pyx_t_2;
-  int __pyx_t_3;
-  Py_ssize_t __pyx_t_4;
-  int __pyx_t_5;
-  PyObject *__pyx_t_6 = NULL;
-  PyObject *__pyx_t_7 = NULL;
-  __Pyx_memviewslice __pyx_t_8 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  PyObject *__pyx_t_9 = NULL;
-  PyObject *__pyx_t_10 = NULL;
-  int __pyx_t_11;
-  __Pyx_RefNannySetupContext("_check_division_by_zero", 0);
-
-  /* "Orange/distance/_distance.pyx":21
- * cdef void _check_division_by_zero(double[:, :] x, double[:] dividers):
- *     cdef int col
- *     for col in range(dividers.shape[0]):             # <<<<<<<<<<<<<<
- *         if dividers[col] == 0 and not x[:, col].isnan().all():
- *             raise ValueError("cannot normalize: the data has no variance")
- */
-  __pyx_t_1 = (__pyx_v_dividers.shape[0]);
-  for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
-    __pyx_v_col = __pyx_t_2;
-
-    /* "Orange/distance/_distance.pyx":22
- *     cdef int col
- *     for col in range(dividers.shape[0]):
- *         if dividers[col] == 0 and not x[:, col].isnan().all():             # <<<<<<<<<<<<<<
- *             raise ValueError("cannot normalize: the data has no variance")
- * 
- */
-    __pyx_t_4 = __pyx_v_col;
-    __pyx_t_5 = (((*((double *) ( /* dim=0 */ (__pyx_v_dividers.data + __pyx_t_4 * __pyx_v_dividers.strides[0]) ))) == 0.0) != 0);
-    if (__pyx_t_5) {
-    } else {
-      __pyx_t_3 = __pyx_t_5;
-      goto __pyx_L6_bool_binop_done;
-    }
-    __pyx_t_8.data = __pyx_v_x.data;
-    __pyx_t_8.memview = __pyx_v_x.memview;
-    __PYX_INC_MEMVIEW(&__pyx_t_8, 0);
-    __pyx_t_8.shape[0] = __pyx_v_x.shape[0];
-__pyx_t_8.strides[0] = __pyx_v_x.strides[0];
-    __pyx_t_8.suboffsets[0] = -1;
-
-{
-    Py_ssize_t __pyx_tmp_idx = __pyx_v_col;
-    Py_ssize_t __pyx_tmp_shape = __pyx_v_x.shape[1];
-    Py_ssize_t __pyx_tmp_stride = __pyx_v_x.strides[1];
-    if (0 && (__pyx_tmp_idx < 0))
-        __pyx_tmp_idx += __pyx_tmp_shape;
-    if (0 && (__pyx_tmp_idx < 0 || __pyx_tmp_idx >= __pyx_tmp_shape)) {
-        PyErr_SetString(PyExc_IndexError, "Index out of bounds (axis 1)");
-        __PYX_ERR(0, 22, __pyx_L1_error)
-    }
-        __pyx_t_8.data += __pyx_tmp_idx * __pyx_tmp_stride;
-}
-
-__pyx_t_9 = __pyx_memoryview_fromslice(__pyx_t_8, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_9);
-    __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
-    __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_t_9, __pyx_n_s_isnan); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_10);
-    __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    __pyx_t_9 = NULL;
-    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_10))) {
-      __pyx_t_9 = PyMethod_GET_SELF(__pyx_t_10);
-      if (likely(__pyx_t_9)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_10);
-        __Pyx_INCREF(__pyx_t_9);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_10, function);
-      }
-    }
-    if (__pyx_t_9) {
-      __pyx_t_7 = __Pyx_PyObject_CallOneArg(__pyx_t_10, __pyx_t_9); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 22, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
-    } else {
-      __pyx_t_7 = __Pyx_PyObject_CallNoArg(__pyx_t_10); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 22, __pyx_L1_error)
-    }
-    __Pyx_GOTREF(__pyx_t_7);
-    __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
-    __pyx_t_10 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_all); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_10);
-    __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    __pyx_t_7 = NULL;
-    if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_10))) {
-      __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_10);
-      if (likely(__pyx_t_7)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_10);
-        __Pyx_INCREF(__pyx_t_7);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_10, function);
-      }
-    }
-    if (__pyx_t_7) {
-      __pyx_t_6 = __Pyx_PyObject_CallOneArg(__pyx_t_10, __pyx_t_7); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 22, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-    } else {
-      __pyx_t_6 = __Pyx_PyObject_CallNoArg(__pyx_t_10); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 22, __pyx_L1_error)
-    }
-    __Pyx_GOTREF(__pyx_t_6);
-    __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
-    __pyx_t_5 = __Pyx_PyObject_IsTrue(__pyx_t_6); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 22, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-    __pyx_t_11 = ((!__pyx_t_5) != 0);
-    __pyx_t_3 = __pyx_t_11;
-    __pyx_L6_bool_binop_done:;
-    if (__pyx_t_3) {
-
-      /* "Orange/distance/_distance.pyx":23
- *     for col in range(dividers.shape[0]):
- *         if dividers[col] == 0 and not x[:, col].isnan().all():
- *             raise ValueError("cannot normalize: the data has no variance")             # <<<<<<<<<<<<<<
- * 
- * 
- */
-      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 23, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_6);
-      __Pyx_Raise(__pyx_t_6, 0, 0, 0);
-      __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      __PYX_ERR(0, 23, __pyx_L1_error)
-
-      /* "Orange/distance/_distance.pyx":22
- *     cdef int col
- *     for col in range(dividers.shape[0]):
- *         if dividers[col] == 0 and not x[:, col].isnan().all():             # <<<<<<<<<<<<<<
- *             raise ValueError("cannot normalize: the data has no variance")
- * 
- */
-    }
-  }
-
-  /* "Orange/distance/_distance.pyx":19
- * 
- * # This function is unused, but kept here for any future use
- * cdef void _check_division_by_zero(double[:, :] x, double[:] dividers):             # <<<<<<<<<<<<<<
- *     cdef int col
- *     for col in range(dividers.shape[0]):
- */
-
-  /* function exit code */
-  goto __pyx_L0;
-  __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_6);
-  __Pyx_XDECREF(__pyx_t_7);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
-  __Pyx_XDECREF(__pyx_t_9);
-  __Pyx_XDECREF(__pyx_t_10);
-  __Pyx_WriteUnraisable("Orange.distance._distance._check_division_by_zero", __pyx_clineno, __pyx_lineno, __pyx_filename, 0, 0);
-  __pyx_L0:;
-  __Pyx_RefNannyFinishContext();
-}
-
-/* "Orange/distance/_distance.pyx":26
+/* "Orange/distance/_distance.pyx":18
  * 
  * 
  * cdef void _lower_to_symmetric(double [:, :] distances):             # <<<<<<<<<<<<<<
@@ -2261,7 +2095,7 @@ static void __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__Pyx_memvi
   Py_ssize_t __pyx_t_8;
   __Pyx_RefNannySetupContext("_lower_to_symmetric", 0);
 
-  /* "Orange/distance/_distance.pyx":28
+  /* "Orange/distance/_distance.pyx":20
  * cdef void _lower_to_symmetric(double [:, :] distances):
  *     cdef int row1, row2
  *     for row1 in range(distances.shape[0]):             # <<<<<<<<<<<<<<
@@ -2272,7 +2106,7 @@ static void __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__Pyx_memvi
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_row1 = __pyx_t_2;
 
-    /* "Orange/distance/_distance.pyx":29
+    /* "Orange/distance/_distance.pyx":21
  *     cdef int row1, row2
  *     for row1 in range(distances.shape[0]):
  *         for row2 in range(row1):             # <<<<<<<<<<<<<<
@@ -2283,7 +2117,7 @@ static void __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__Pyx_memvi
     for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
       __pyx_v_row2 = __pyx_t_4;
 
-      /* "Orange/distance/_distance.pyx":30
+      /* "Orange/distance/_distance.pyx":22
  *     for row1 in range(distances.shape[0]):
  *         for row2 in range(row1):
  *             distances[row2, row1] = distances[row1, row2]             # <<<<<<<<<<<<<<
@@ -2298,7 +2132,7 @@ static void __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__Pyx_memvi
     }
   }
 
-  /* "Orange/distance/_distance.pyx":26
+  /* "Orange/distance/_distance.pyx":18
  * 
  * 
  * cdef void _lower_to_symmetric(double [:, :] distances):             # <<<<<<<<<<<<<<
@@ -2310,28 +2144,1659 @@ static void __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__Pyx_memvi
   __Pyx_RefNannyFinishContext();
 }
 
-/* "Orange/distance/_distance.pyx":33
+/* "Orange/distance/_distance.pyx":25
  * 
  * 
- * def euclidean_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
- *                    np.ndarray[np.float64_t, ndim=2] x2,
- *                    char two_tables,
+ * def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,             # <<<<<<<<<<<<<<
+ *                             np.ndarray[np.float64_t, ndim=2] x1,
+ *                             np.ndarray[np.float64_t, ndim=2] x2,
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_euclidean_rows[] = "euclidean_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_1euclidean_rows = {"euclidean_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_euclidean_rows};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows_discrete(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_euclidean_rows_discrete[] = "euclidean_rows_discrete(ndarray distances, ndarray x1, ndarray x2, __Pyx_memviewslice dist_missing, ndarray dist_missing2, char two_tables)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_1euclidean_rows_discrete = {"euclidean_rows_discrete", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows_discrete, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_euclidean_rows_discrete};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows_discrete(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyArrayObject *__pyx_v_distances = 0;
   PyArrayObject *__pyx_v_x1 = 0;
   PyArrayObject *__pyx_v_x2 = 0;
+  __Pyx_memviewslice __pyx_v_dist_missing = { 0, 0, { 0 }, { 0 }, { 0 } };
+  PyArrayObject *__pyx_v_dist_missing2 = 0;
   char __pyx_v_two_tables;
-  PyObject *__pyx_v_fit_params = 0;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("euclidean_rows (wrapper)", 0);
+  __Pyx_RefNannySetupContext("euclidean_rows_discrete (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x1,&__pyx_n_s_x2,&__pyx_n_s_two_tables,&__pyx_n_s_fit_params,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_distances,&__pyx_n_s_x1,&__pyx_n_s_x2,&__pyx_n_s_dist_missing,&__pyx_n_s_dist_missing2,&__pyx_n_s_two_tables,0};
+    PyObject* values[6] = {0,0,0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_distances)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        case  1:
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x1)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, 1); __PYX_ERR(0, 25, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, 2); __PYX_ERR(0, 25, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dist_missing)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, 3); __PYX_ERR(0, 25, __pyx_L3_error)
+        }
+        case  4:
+        if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dist_missing2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, 4); __PYX_ERR(0, 25, __pyx_L3_error)
+        }
+        case  5:
+        if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, 5); __PYX_ERR(0, 25, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "euclidean_rows_discrete") < 0)) __PYX_ERR(0, 25, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 6) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+      values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+      values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+    }
+    __pyx_v_distances = ((PyArrayObject *)values[0]);
+    __pyx_v_x1 = ((PyArrayObject *)values[1]);
+    __pyx_v_x2 = ((PyArrayObject *)values[2]);
+    __pyx_v_dist_missing = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[3]); if (unlikely(!__pyx_v_dist_missing.memview)) __PYX_ERR(0, 28, __pyx_L3_error)
+    __pyx_v_dist_missing2 = ((PyArrayObject *)values[4]);
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[5]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 30, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("euclidean_rows_discrete", 1, 6, 6, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 25, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("Orange.distance._distance.euclidean_rows_discrete", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_distances), __pyx_ptype_5numpy_ndarray, 1, "distances", 0))) __PYX_ERR(0, 25, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 26, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 27, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_dist_missing2), __pyx_ptype_5numpy_ndarray, 1, "dist_missing2", 0))) __PYX_ERR(0, 29, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_euclidean_rows_discrete(__pyx_self, __pyx_v_distances, __pyx_v_x1, __pyx_v_x2, __pyx_v_dist_missing, __pyx_v_dist_missing2, __pyx_v_two_tables);
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows_discrete(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, __Pyx_memviewslice __pyx_v_dist_missing, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables) {
+  int __pyx_v_n_rows1;
+  int __pyx_v_n_rows2;
+  int __pyx_v_n_cols;
+  int __pyx_v_row1;
+  int __pyx_v_row2;
+  int __pyx_v_col;
+  double __pyx_v_val1;
+  double __pyx_v_val2;
+  double __pyx_v_d;
+  int __pyx_v_ival1;
+  int __pyx_v_ival2;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_dist_missing2;
+  __Pyx_Buffer __pyx_pybuffer_dist_missing2;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_distances;
+  __Pyx_Buffer __pyx_pybuffer_distances;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x1;
+  __Pyx_Buffer __pyx_pybuffer_x1;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x2;
+  __Pyx_Buffer __pyx_pybuffer_x2;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  npy_intp __pyx_t_1;
+  npy_intp __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  int __pyx_t_7;
+  int __pyx_t_8;
+  Py_ssize_t __pyx_t_9;
+  Py_ssize_t __pyx_t_10;
+  __pyx_t_5numpy_float64_t __pyx_t_11;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  __pyx_t_5numpy_float64_t __pyx_t_14;
+  int __pyx_t_15;
+  Py_ssize_t __pyx_t_16;
+  Py_ssize_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  __Pyx_memviewslice __pyx_t_23 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_RefNannySetupContext("euclidean_rows_discrete", 0);
+  __pyx_pybuffer_distances.pybuffer.buf = NULL;
+  __pyx_pybuffer_distances.refcount = 0;
+  __pyx_pybuffernd_distances.data = NULL;
+  __pyx_pybuffernd_distances.rcbuffer = &__pyx_pybuffer_distances;
+  __pyx_pybuffer_x1.pybuffer.buf = NULL;
+  __pyx_pybuffer_x1.refcount = 0;
+  __pyx_pybuffernd_x1.data = NULL;
+  __pyx_pybuffernd_x1.rcbuffer = &__pyx_pybuffer_x1;
+  __pyx_pybuffer_x2.pybuffer.buf = NULL;
+  __pyx_pybuffer_x2.refcount = 0;
+  __pyx_pybuffernd_x2.data = NULL;
+  __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
+  __pyx_pybuffer_dist_missing2.pybuffer.buf = NULL;
+  __pyx_pybuffer_dist_missing2.refcount = 0;
+  __pyx_pybuffernd_dist_missing2.data = NULL;
+  __pyx_pybuffernd_dist_missing2.rcbuffer = &__pyx_pybuffer_dist_missing2;
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_distances.rcbuffer->pybuffer, (PyObject*)__pyx_v_distances, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 25, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 25, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 25, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer, (PyObject*)__pyx_v_dist_missing2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 25, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_dist_missing2.diminfo[0].strides = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_dist_missing2.diminfo[0].shape = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.shape[0];
+
+  /* "Orange/distance/_distance.pyx":36
+ *         int ival1, ival2
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ */
+  __pyx_t_1 = (__pyx_v_x1->dimensions[0]);
+  __pyx_t_2 = (__pyx_v_x1->dimensions[1]);
+  __pyx_v_n_rows1 = __pyx_t_1;
+  __pyx_v_n_cols = __pyx_t_2;
+
+  /* "Orange/distance/_distance.pyx":37
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ */
+  __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
+
+  /* "Orange/distance/_distance.pyx":38
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      #endif
+      /*try:*/ {
+
+        /* "Orange/distance/_distance.pyx":39
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 d = 0
+ */
+        __pyx_t_3 = __pyx_v_n_rows1;
+        for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+          __pyx_v_row1 = __pyx_t_4;
+
+          /* "Orange/distance/_distance.pyx":40
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
+ *                 d = 0
+ *                 for col in range(n_cols):
+ */
+          if ((__pyx_v_two_tables != 0)) {
+            __pyx_t_5 = __pyx_v_n_rows2;
+          } else {
+            __pyx_t_5 = __pyx_v_row1;
+          }
+          for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+            __pyx_v_row2 = __pyx_t_6;
+
+            /* "Orange/distance/_distance.pyx":41
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 d = 0             # <<<<<<<<<<<<<<
+ *                 for col in range(n_cols):
+ *                     val1, val2 = x1[row1, col], x2[row2, col]
+ */
+            __pyx_v_d = 0.0;
+
+            /* "Orange/distance/_distance.pyx":42
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 d = 0
+ *                 for col in range(n_cols):             # <<<<<<<<<<<<<<
+ *                     val1, val2 = x1[row1, col], x2[row2, col]
+ *                     ival1, ival2 = int(val1), int(val2)
+ */
+            __pyx_t_7 = __pyx_v_n_cols;
+            for (__pyx_t_8 = 0; __pyx_t_8 < __pyx_t_7; __pyx_t_8+=1) {
+              __pyx_v_col = __pyx_t_8;
+
+              /* "Orange/distance/_distance.pyx":43
+ *                 d = 0
+ *                 for col in range(n_cols):
+ *                     val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
+ *                     ival1, ival2 = int(val1), int(val2)
+ *                     if npy_isnan(val1):
+ */
+              __pyx_t_9 = __pyx_v_row1;
+              __pyx_t_10 = __pyx_v_col;
+              __pyx_t_11 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x1.rcbuffer->pybuffer.buf, __pyx_t_9, __pyx_pybuffernd_x1.diminfo[0].strides, __pyx_t_10, __pyx_pybuffernd_x1.diminfo[1].strides));
+              __pyx_t_12 = __pyx_v_row2;
+              __pyx_t_13 = __pyx_v_col;
+              __pyx_t_14 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x2.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_x2.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_x2.diminfo[1].strides));
+              __pyx_v_val1 = __pyx_t_11;
+              __pyx_v_val2 = __pyx_t_14;
+
+              /* "Orange/distance/_distance.pyx":44
+ *                 for col in range(n_cols):
+ *                     val1, val2 = x1[row1, col], x2[row2, col]
+ *                     ival1, ival2 = int(val1), int(val2)             # <<<<<<<<<<<<<<
+ *                     if npy_isnan(val1):
+ *                         if npy_isnan(val2):
+ */
+              __pyx_v_ival1 = ((int)__pyx_v_val1);
+              __pyx_v_ival2 = ((int)__pyx_v_val2);
+
+              /* "Orange/distance/_distance.pyx":45
+ *                     val1, val2 = x1[row1, col], x2[row2, col]
+ *                     ival1, ival2 = int(val1), int(val2)
+ *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                         if npy_isnan(val2):
+ *                             d += dist_missing2[col]
+ */
+              __pyx_t_15 = (npy_isnan(__pyx_v_val1) != 0);
+              if (__pyx_t_15) {
+
+                /* "Orange/distance/_distance.pyx":46
+ *                     ival1, ival2 = int(val1), int(val2)
+ *                     if npy_isnan(val1):
+ *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += dist_missing2[col]
+ *                         else:
+ */
+                __pyx_t_15 = (npy_isnan(__pyx_v_val2) != 0);
+                if (__pyx_t_15) {
+
+                  /* "Orange/distance/_distance.pyx":47
+ *                     if npy_isnan(val1):
+ *                         if npy_isnan(val2):
+ *                             d += dist_missing2[col]             # <<<<<<<<<<<<<<
+ *                         else:
+ *                             d += dist_missing[col, ival2]
+ */
+                  __pyx_t_16 = __pyx_v_col;
+                  __pyx_v_d = (__pyx_v_d + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_dist_missing2.diminfo[0].strides)));
+
+                  /* "Orange/distance/_distance.pyx":46
+ *                     ival1, ival2 = int(val1), int(val2)
+ *                     if npy_isnan(val1):
+ *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += dist_missing2[col]
+ *                         else:
+ */
+                  goto __pyx_L13;
+                }
+
+                /* "Orange/distance/_distance.pyx":49
+ *                             d += dist_missing2[col]
+ *                         else:
+ *                             d += dist_missing[col, ival2]             # <<<<<<<<<<<<<<
+ *                     elif npy_isnan(val2):
+ *                         d += dist_missing[col, ival1]
+ */
+                /*else*/ {
+                  __pyx_t_17 = __pyx_v_col;
+                  __pyx_t_18 = __pyx_v_ival2;
+                  __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_17 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_18 * __pyx_v_dist_missing.strides[1]) ))));
+                }
+                __pyx_L13:;
+
+                /* "Orange/distance/_distance.pyx":45
+ *                     val1, val2 = x1[row1, col], x2[row2, col]
+ *                     ival1, ival2 = int(val1), int(val2)
+ *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                         if npy_isnan(val2):
+ *                             d += dist_missing2[col]
+ */
+                goto __pyx_L12;
+              }
+
+              /* "Orange/distance/_distance.pyx":50
+ *                         else:
+ *                             d += dist_missing[col, ival2]
+ *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                         d += dist_missing[col, ival1]
+ *                     elif ival1 != ival2:
+ */
+              __pyx_t_15 = (npy_isnan(__pyx_v_val2) != 0);
+              if (__pyx_t_15) {
+
+                /* "Orange/distance/_distance.pyx":51
+ *                             d += dist_missing[col, ival2]
+ *                     elif npy_isnan(val2):
+ *                         d += dist_missing[col, ival1]             # <<<<<<<<<<<<<<
+ *                     elif ival1 != ival2:
+ *                         d += 1
+ */
+                __pyx_t_19 = __pyx_v_col;
+                __pyx_t_20 = __pyx_v_ival1;
+                __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_19 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_20 * __pyx_v_dist_missing.strides[1]) ))));
+
+                /* "Orange/distance/_distance.pyx":50
+ *                         else:
+ *                             d += dist_missing[col, ival2]
+ *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                         d += dist_missing[col, ival1]
+ *                     elif ival1 != ival2:
+ */
+                goto __pyx_L12;
+              }
+
+              /* "Orange/distance/_distance.pyx":52
+ *                     elif npy_isnan(val2):
+ *                         d += dist_missing[col, ival1]
+ *                     elif ival1 != ival2:             # <<<<<<<<<<<<<<
+ *                         d += 1
+ *                 distances[row1, row2] += d
+ */
+              __pyx_t_15 = ((__pyx_v_ival1 != __pyx_v_ival2) != 0);
+              if (__pyx_t_15) {
+
+                /* "Orange/distance/_distance.pyx":53
+ *                         d += dist_missing[col, ival1]
+ *                     elif ival1 != ival2:
+ *                         d += 1             # <<<<<<<<<<<<<<
+ *                 distances[row1, row2] += d
+ *     if not two_tables:
+ */
+                __pyx_v_d = (__pyx_v_d + 1.0);
+
+                /* "Orange/distance/_distance.pyx":52
+ *                     elif npy_isnan(val2):
+ *                         d += dist_missing[col, ival1]
+ *                     elif ival1 != ival2:             # <<<<<<<<<<<<<<
+ *                         d += 1
+ *                 distances[row1, row2] += d
+ */
+              }
+              __pyx_L12:;
+            }
+
+            /* "Orange/distance/_distance.pyx":54
+ *                     elif ival1 != ival2:
+ *                         d += 1
+ *                 distances[row1, row2] += d             # <<<<<<<<<<<<<<
+ *     if not two_tables:
+ *         _lower_to_symmetric(distances)
+ */
+            __pyx_t_21 = __pyx_v_row1;
+            __pyx_t_22 = __pyx_v_row2;
+            *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_22, __pyx_pybuffernd_distances.diminfo[1].strides) += __pyx_v_d;
+          }
+        }
+      }
+
+      /* "Orange/distance/_distance.pyx":38
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
+  }
+
+  /* "Orange/distance/_distance.pyx":55
+ *                         d += 1
+ *                 distances[row1, row2] += d
+ *     if not two_tables:             # <<<<<<<<<<<<<<
+ *         _lower_to_symmetric(distances)
+ * 
+ */
+  __pyx_t_15 = ((!(__pyx_v_two_tables != 0)) != 0);
+  if (__pyx_t_15) {
+
+    /* "Orange/distance/_distance.pyx":56
+ *                 distances[row1, row2] += d
+ *     if not two_tables:
+ *         _lower_to_symmetric(distances)             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+    __pyx_t_23 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(((PyObject *)__pyx_v_distances));
+    if (unlikely(!__pyx_t_23.memview)) __PYX_ERR(0, 56, __pyx_L1_error)
+    __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__pyx_t_23);
+    __PYX_XDEC_MEMVIEW(&__pyx_t_23, 1);
+
+    /* "Orange/distance/_distance.pyx":55
+ *                         d += 1
+ *                 distances[row1, row2] += d
+ *     if not two_tables:             # <<<<<<<<<<<<<<
+ *         _lower_to_symmetric(distances)
+ * 
+ */
+  }
+
+  /* "Orange/distance/_distance.pyx":25
+ * 
+ * 
+ * def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,             # <<<<<<<<<<<<<<
+ *                             np.ndarray[np.float64_t, ndim=2] x1,
+ *                             np.ndarray[np.float64_t, ndim=2] x2,
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __PYX_XDEC_MEMVIEW(&__pyx_t_23, 1);
+  { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
+  __Pyx_AddTraceback("Orange.distance._distance.euclidean_rows_discrete", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  goto __pyx_L2;
+  __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __pyx_L2:;
+  __PYX_XDEC_MEMVIEW(&__pyx_v_dist_missing, 1);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "Orange/distance/_distance.pyx":59
+ * 
+ * 
+ * def fix_euclidean_rows(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_3fix_euclidean_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_2fix_euclidean_rows[] = "fix_euclidean_rows(ndarray distances, ndarray x1, ndarray x2, ndarray means, ndarray vars, ndarray dist_missing2, char two_tables)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_3fix_euclidean_rows = {"fix_euclidean_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_3fix_euclidean_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_2fix_euclidean_rows};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_3fix_euclidean_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyArrayObject *__pyx_v_distances = 0;
+  PyArrayObject *__pyx_v_x1 = 0;
+  PyArrayObject *__pyx_v_x2 = 0;
+  PyArrayObject *__pyx_v_means = 0;
+  PyArrayObject *__pyx_v_vars = 0;
+  PyArrayObject *__pyx_v_dist_missing2 = 0;
+  char __pyx_v_two_tables;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("fix_euclidean_rows (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_distances,&__pyx_n_s_x1,&__pyx_n_s_x2,&__pyx_n_s_means,&__pyx_n_s_vars,&__pyx_n_s_dist_missing2,&__pyx_n_s_two_tables,0};
+    PyObject* values[7] = {0,0,0,0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_distances)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        case  1:
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x1)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 1); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 2); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_means)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 3); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+        case  4:
+        if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vars)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 4); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+        case  5:
+        if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dist_missing2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 5); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+        case  6:
+        if (likely((values[6] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, 6); __PYX_ERR(0, 59, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "fix_euclidean_rows") < 0)) __PYX_ERR(0, 59, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+      values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+      values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+      values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+    }
+    __pyx_v_distances = ((PyArrayObject *)values[0]);
+    __pyx_v_x1 = ((PyArrayObject *)values[1]);
+    __pyx_v_x2 = ((PyArrayObject *)values[2]);
+    __pyx_v_means = ((PyArrayObject *)values[3]);
+    __pyx_v_vars = ((PyArrayObject *)values[4]);
+    __pyx_v_dist_missing2 = ((PyArrayObject *)values[5]);
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[6]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 66, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 59, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_distances), __pyx_ptype_5numpy_ndarray, 1, "distances", 0))) __PYX_ERR(0, 60, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 61, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 62, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_means), __pyx_ptype_5numpy_ndarray, 1, "means", 0))) __PYX_ERR(0, 63, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vars), __pyx_ptype_5numpy_ndarray, 1, "vars", 0))) __PYX_ERR(0, 64, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_dist_missing2), __pyx_ptype_5numpy_ndarray, 1, "dist_missing2", 0))) __PYX_ERR(0, 65, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_2fix_euclidean_rows(__pyx_self, __pyx_v_distances, __pyx_v_x1, __pyx_v_x2, __pyx_v_means, __pyx_v_vars, __pyx_v_dist_missing2, __pyx_v_two_tables);
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_2fix_euclidean_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, PyArrayObject *__pyx_v_means, PyArrayObject *__pyx_v_vars, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables) {
+  int __pyx_v_n_rows1;
+  int __pyx_v_n_rows2;
+  int __pyx_v_n_cols;
+  int __pyx_v_row1;
+  int __pyx_v_row2;
+  int __pyx_v_col;
+  double __pyx_v_val1;
+  double __pyx_v_val2;
+  double __pyx_v_d;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_dist_missing2;
+  __Pyx_Buffer __pyx_pybuffer_dist_missing2;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_distances;
+  __Pyx_Buffer __pyx_pybuffer_distances;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_means;
+  __Pyx_Buffer __pyx_pybuffer_means;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_vars;
+  __Pyx_Buffer __pyx_pybuffer_vars;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x1;
+  __Pyx_Buffer __pyx_pybuffer_x1;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x2;
+  __Pyx_Buffer __pyx_pybuffer_x2;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  npy_intp __pyx_t_1;
+  npy_intp __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  Py_ssize_t __pyx_t_7;
+  Py_ssize_t __pyx_t_8;
+  int __pyx_t_9;
+  int __pyx_t_10;
+  int __pyx_t_11;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  __pyx_t_5numpy_float64_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
+  Py_ssize_t __pyx_t_16;
+  __pyx_t_5numpy_float64_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  Py_ssize_t __pyx_t_23;
+  Py_ssize_t __pyx_t_24;
+  Py_ssize_t __pyx_t_25;
+  Py_ssize_t __pyx_t_26;
+  __Pyx_RefNannySetupContext("fix_euclidean_rows", 0);
+  __pyx_pybuffer_distances.pybuffer.buf = NULL;
+  __pyx_pybuffer_distances.refcount = 0;
+  __pyx_pybuffernd_distances.data = NULL;
+  __pyx_pybuffernd_distances.rcbuffer = &__pyx_pybuffer_distances;
+  __pyx_pybuffer_x1.pybuffer.buf = NULL;
+  __pyx_pybuffer_x1.refcount = 0;
+  __pyx_pybuffernd_x1.data = NULL;
+  __pyx_pybuffernd_x1.rcbuffer = &__pyx_pybuffer_x1;
+  __pyx_pybuffer_x2.pybuffer.buf = NULL;
+  __pyx_pybuffer_x2.refcount = 0;
+  __pyx_pybuffernd_x2.data = NULL;
+  __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
+  __pyx_pybuffer_means.pybuffer.buf = NULL;
+  __pyx_pybuffer_means.refcount = 0;
+  __pyx_pybuffernd_means.data = NULL;
+  __pyx_pybuffernd_means.rcbuffer = &__pyx_pybuffer_means;
+  __pyx_pybuffer_vars.pybuffer.buf = NULL;
+  __pyx_pybuffer_vars.refcount = 0;
+  __pyx_pybuffernd_vars.data = NULL;
+  __pyx_pybuffernd_vars.rcbuffer = &__pyx_pybuffer_vars;
+  __pyx_pybuffer_dist_missing2.pybuffer.buf = NULL;
+  __pyx_pybuffer_dist_missing2.refcount = 0;
+  __pyx_pybuffernd_dist_missing2.data = NULL;
+  __pyx_pybuffernd_dist_missing2.rcbuffer = &__pyx_pybuffer_dist_missing2;
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_distances.rcbuffer->pybuffer, (PyObject*)__pyx_v_distances, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_means.rcbuffer->pybuffer, (PyObject*)__pyx_v_means, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_means.diminfo[0].strides = __pyx_pybuffernd_means.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_means.diminfo[0].shape = __pyx_pybuffernd_means.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_vars.rcbuffer->pybuffer, (PyObject*)__pyx_v_vars, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_vars.diminfo[0].strides = __pyx_pybuffernd_vars.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_vars.diminfo[0].shape = __pyx_pybuffernd_vars.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer, (PyObject*)__pyx_v_dist_missing2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 59, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_dist_missing2.diminfo[0].strides = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_dist_missing2.diminfo[0].shape = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.shape[0];
+
+  /* "Orange/distance/_distance.pyx":71
+ *         double val1, val2, d
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ */
+  __pyx_t_1 = (__pyx_v_x1->dimensions[0]);
+  __pyx_t_2 = (__pyx_v_x1->dimensions[1]);
+  __pyx_v_n_rows1 = __pyx_t_1;
+  __pyx_v_n_cols = __pyx_t_2;
+
+  /* "Orange/distance/_distance.pyx":72
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ */
+  __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
+
+  /* "Orange/distance/_distance.pyx":73
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      #endif
+      /*try:*/ {
+
+        /* "Orange/distance/_distance.pyx":74
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):
+ */
+        __pyx_t_3 = __pyx_v_n_rows1;
+        for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+          __pyx_v_row1 = __pyx_t_4;
+
+          /* "Orange/distance/_distance.pyx":75
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0
+ */
+          if ((__pyx_v_two_tables != 0)) {
+            __pyx_t_5 = __pyx_v_n_rows2;
+          } else {
+            __pyx_t_5 = __pyx_v_row1;
+          }
+          for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+            __pyx_v_row2 = __pyx_t_6;
+
+            /* "Orange/distance/_distance.pyx":76
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for col in range(n_cols):
+ */
+            __pyx_t_7 = __pyx_v_row1;
+            __pyx_t_8 = __pyx_v_row2;
+            __pyx_t_9 = (npy_isnan((*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_7, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_8, __pyx_pybuffernd_distances.diminfo[1].strides))) != 0);
+            if (__pyx_t_9) {
+
+              /* "Orange/distance/_distance.pyx":77
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0             # <<<<<<<<<<<<<<
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ */
+              __pyx_v_d = 0.0;
+
+              /* "Orange/distance/_distance.pyx":78
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0
+ *                     for col in range(n_cols):             # <<<<<<<<<<<<<<
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ */
+              __pyx_t_10 = __pyx_v_n_cols;
+              for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
+                __pyx_v_col = __pyx_t_11;
+
+                /* "Orange/distance/_distance.pyx":79
+ *                     d = 0
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ */
+                __pyx_t_12 = __pyx_v_row1;
+                __pyx_t_13 = __pyx_v_col;
+                __pyx_t_14 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x1.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_x1.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_x1.diminfo[1].strides));
+                __pyx_t_15 = __pyx_v_row2;
+                __pyx_t_16 = __pyx_v_col;
+                __pyx_t_17 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x2.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_x2.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_x2.diminfo[1].strides));
+                __pyx_v_val1 = __pyx_t_14;
+                __pyx_v_val2 = __pyx_t_17;
+
+                /* "Orange/distance/_distance.pyx":80
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]
+ */
+                __pyx_t_9 = (npy_isnan(__pyx_v_val1) != 0);
+                if (__pyx_t_9) {
+
+                  /* "Orange/distance/_distance.pyx":81
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += dist_missing2[col]
+ *                             else:
+ */
+                  __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                  if (__pyx_t_9) {
+
+                    /* "Orange/distance/_distance.pyx":82
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]             # <<<<<<<<<<<<<<
+ *                             else:
+ *                                 d += (val2 - means[col]) ** 2 + vars[col]
+ */
+                    __pyx_t_18 = __pyx_v_col;
+                    __pyx_v_d = (__pyx_v_d + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_dist_missing2.diminfo[0].strides)));
+
+                    /* "Orange/distance/_distance.pyx":81
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += dist_missing2[col]
+ *                             else:
+ */
+                    goto __pyx_L14;
+                  }
+
+                  /* "Orange/distance/_distance.pyx":84
+ *                                 d += dist_missing2[col]
+ *                             else:
+ *                                 d += (val2 - means[col]) ** 2 + vars[col]             # <<<<<<<<<<<<<<
+ *                         elif npy_isnan(val2):
+ *                             d += (val1 - means[col]) ** 2 + vars[col]
+ */
+                  /*else*/ {
+                    __pyx_t_19 = __pyx_v_col;
+                    __pyx_t_20 = __pyx_v_col;
+                    __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val2 - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_means.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_means.diminfo[0].strides))), 2.0) + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_vars.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_vars.diminfo[0].strides))));
+                  }
+                  __pyx_L14:;
+
+                  /* "Orange/distance/_distance.pyx":80
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]
+ */
+                  goto __pyx_L13;
+                }
+
+                /* "Orange/distance/_distance.pyx":85
+ *                             else:
+ *                                 d += (val2 - means[col]) ** 2 + vars[col]
+ *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += (val1 - means[col]) ** 2 + vars[col]
+ *                         else:
+ */
+                __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                if (__pyx_t_9) {
+
+                  /* "Orange/distance/_distance.pyx":86
+ *                                 d += (val2 - means[col]) ** 2 + vars[col]
+ *                         elif npy_isnan(val2):
+ *                             d += (val1 - means[col]) ** 2 + vars[col]             # <<<<<<<<<<<<<<
+ *                         else:
+ *                             d += (val1 - val2) ** 2
+ */
+                  __pyx_t_21 = __pyx_v_col;
+                  __pyx_t_22 = __pyx_v_col;
+                  __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val1 - (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_means.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_means.diminfo[0].strides))), 2.0) + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_vars.rcbuffer->pybuffer.buf, __pyx_t_22, __pyx_pybuffernd_vars.diminfo[0].strides))));
+
+                  /* "Orange/distance/_distance.pyx":85
+ *                             else:
+ *                                 d += (val2 - means[col]) ** 2 + vars[col]
+ *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += (val1 - means[col]) ** 2 + vars[col]
+ *                         else:
+ */
+                  goto __pyx_L13;
+                }
+
+                /* "Orange/distance/_distance.pyx":88
+ *                             d += (val1 - means[col]) ** 2 + vars[col]
+ *                         else:
+ *                             d += (val1 - val2) ** 2             # <<<<<<<<<<<<<<
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:
+ */
+                /*else*/ {
+                  __pyx_v_d = (__pyx_v_d + pow((__pyx_v_val1 - __pyx_v_val2), 2.0));
+                }
+                __pyx_L13:;
+              }
+
+              /* "Orange/distance/_distance.pyx":89
+ *                         else:
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d             # <<<<<<<<<<<<<<
+ *                     if not two_tables:
+ *                         distances[row2, row1] = d
+ */
+              __pyx_t_23 = __pyx_v_row1;
+              __pyx_t_24 = __pyx_v_row2;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_23, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_24, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+              /* "Orange/distance/_distance.pyx":90
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:             # <<<<<<<<<<<<<<
+ *                         distances[row2, row1] = d
+ * 
+ */
+              __pyx_t_9 = ((!(__pyx_v_two_tables != 0)) != 0);
+              if (__pyx_t_9) {
+
+                /* "Orange/distance/_distance.pyx":91
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:
+ *                         distances[row2, row1] = d             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+                __pyx_t_25 = __pyx_v_row2;
+                __pyx_t_26 = __pyx_v_row1;
+                *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_25, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_26, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+                /* "Orange/distance/_distance.pyx":90
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:             # <<<<<<<<<<<<<<
+ *                         distances[row2, row1] = d
+ * 
+ */
+              }
+
+              /* "Orange/distance/_distance.pyx":76
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for col in range(n_cols):
+ */
+            }
+          }
+        }
+      }
+
+      /* "Orange/distance/_distance.pyx":73
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
+  }
+
+  /* "Orange/distance/_distance.pyx":59
+ * 
+ * 
+ * def fix_euclidean_rows(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_means.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_vars.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  goto __pyx_L2;
+  __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_means.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_vars.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __pyx_L2:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "Orange/distance/_distance.pyx":94
+ * 
+ * 
+ * def fix_euclidean_rows_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_5fix_euclidean_rows_normalized(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_4fix_euclidean_rows_normalized[] = "fix_euclidean_rows_normalized(ndarray distances, ndarray x1, ndarray x2, ndarray means, ndarray vars, ndarray dist_missing2, char two_tables)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_5fix_euclidean_rows_normalized = {"fix_euclidean_rows_normalized", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_5fix_euclidean_rows_normalized, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_4fix_euclidean_rows_normalized};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_5fix_euclidean_rows_normalized(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyArrayObject *__pyx_v_distances = 0;
+  PyArrayObject *__pyx_v_x1 = 0;
+  PyArrayObject *__pyx_v_x2 = 0;
+  CYTHON_UNUSED PyArrayObject *__pyx_v_means = 0;
+  CYTHON_UNUSED PyArrayObject *__pyx_v_vars = 0;
+  PyArrayObject *__pyx_v_dist_missing2 = 0;
+  char __pyx_v_two_tables;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("fix_euclidean_rows_normalized (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_distances,&__pyx_n_s_x1,&__pyx_n_s_x2,&__pyx_n_s_means,&__pyx_n_s_vars,&__pyx_n_s_dist_missing2,&__pyx_n_s_two_tables,0};
+    PyObject* values[7] = {0,0,0,0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  7: values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+        case  6: values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+        case  5: values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_distances)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        case  1:
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x1)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 1); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 2); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_means)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 3); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+        case  4:
+        if (likely((values[4] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vars)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 4); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+        case  5:
+        if (likely((values[5] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_dist_missing2)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 5); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+        case  6:
+        if (likely((values[6] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, 6); __PYX_ERR(0, 94, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "fix_euclidean_rows_normalized") < 0)) __PYX_ERR(0, 94, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 7) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+      values[4] = PyTuple_GET_ITEM(__pyx_args, 4);
+      values[5] = PyTuple_GET_ITEM(__pyx_args, 5);
+      values[6] = PyTuple_GET_ITEM(__pyx_args, 6);
+    }
+    __pyx_v_distances = ((PyArrayObject *)values[0]);
+    __pyx_v_x1 = ((PyArrayObject *)values[1]);
+    __pyx_v_x2 = ((PyArrayObject *)values[2]);
+    __pyx_v_means = ((PyArrayObject *)values[3]);
+    __pyx_v_vars = ((PyArrayObject *)values[4]);
+    __pyx_v_dist_missing2 = ((PyArrayObject *)values[5]);
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[6]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 101, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("fix_euclidean_rows_normalized", 1, 7, 7, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 94, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_rows_normalized", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_distances), __pyx_ptype_5numpy_ndarray, 1, "distances", 0))) __PYX_ERR(0, 95, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 96, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 97, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_means), __pyx_ptype_5numpy_ndarray, 1, "means", 0))) __PYX_ERR(0, 98, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vars), __pyx_ptype_5numpy_ndarray, 1, "vars", 0))) __PYX_ERR(0, 99, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_dist_missing2), __pyx_ptype_5numpy_ndarray, 1, "dist_missing2", 0))) __PYX_ERR(0, 100, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_4fix_euclidean_rows_normalized(__pyx_self, __pyx_v_distances, __pyx_v_x1, __pyx_v_x2, __pyx_v_means, __pyx_v_vars, __pyx_v_dist_missing2, __pyx_v_two_tables);
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_4fix_euclidean_rows_normalized(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, CYTHON_UNUSED PyArrayObject *__pyx_v_means, CYTHON_UNUSED PyArrayObject *__pyx_v_vars, PyArrayObject *__pyx_v_dist_missing2, char __pyx_v_two_tables) {
+  int __pyx_v_n_rows1;
+  int __pyx_v_n_rows2;
+  int __pyx_v_n_cols;
+  int __pyx_v_row1;
+  int __pyx_v_row2;
+  int __pyx_v_col;
+  double __pyx_v_val1;
+  double __pyx_v_val2;
+  double __pyx_v_d;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_dist_missing2;
+  __Pyx_Buffer __pyx_pybuffer_dist_missing2;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_distances;
+  __Pyx_Buffer __pyx_pybuffer_distances;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_means;
+  __Pyx_Buffer __pyx_pybuffer_means;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_vars;
+  __Pyx_Buffer __pyx_pybuffer_vars;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x1;
+  __Pyx_Buffer __pyx_pybuffer_x1;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x2;
+  __Pyx_Buffer __pyx_pybuffer_x2;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  npy_intp __pyx_t_1;
+  npy_intp __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  Py_ssize_t __pyx_t_7;
+  Py_ssize_t __pyx_t_8;
+  int __pyx_t_9;
+  int __pyx_t_10;
+  int __pyx_t_11;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  __pyx_t_5numpy_float64_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
+  Py_ssize_t __pyx_t_16;
+  __pyx_t_5numpy_float64_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  Py_ssize_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  __Pyx_RefNannySetupContext("fix_euclidean_rows_normalized", 0);
+  __pyx_pybuffer_distances.pybuffer.buf = NULL;
+  __pyx_pybuffer_distances.refcount = 0;
+  __pyx_pybuffernd_distances.data = NULL;
+  __pyx_pybuffernd_distances.rcbuffer = &__pyx_pybuffer_distances;
+  __pyx_pybuffer_x1.pybuffer.buf = NULL;
+  __pyx_pybuffer_x1.refcount = 0;
+  __pyx_pybuffernd_x1.data = NULL;
+  __pyx_pybuffernd_x1.rcbuffer = &__pyx_pybuffer_x1;
+  __pyx_pybuffer_x2.pybuffer.buf = NULL;
+  __pyx_pybuffer_x2.refcount = 0;
+  __pyx_pybuffernd_x2.data = NULL;
+  __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
+  __pyx_pybuffer_means.pybuffer.buf = NULL;
+  __pyx_pybuffer_means.refcount = 0;
+  __pyx_pybuffernd_means.data = NULL;
+  __pyx_pybuffernd_means.rcbuffer = &__pyx_pybuffer_means;
+  __pyx_pybuffer_vars.pybuffer.buf = NULL;
+  __pyx_pybuffer_vars.refcount = 0;
+  __pyx_pybuffernd_vars.data = NULL;
+  __pyx_pybuffernd_vars.rcbuffer = &__pyx_pybuffer_vars;
+  __pyx_pybuffer_dist_missing2.pybuffer.buf = NULL;
+  __pyx_pybuffer_dist_missing2.refcount = 0;
+  __pyx_pybuffernd_dist_missing2.data = NULL;
+  __pyx_pybuffernd_dist_missing2.rcbuffer = &__pyx_pybuffer_dist_missing2;
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_distances.rcbuffer->pybuffer, (PyObject*)__pyx_v_distances, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_means.rcbuffer->pybuffer, (PyObject*)__pyx_v_means, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_means.diminfo[0].strides = __pyx_pybuffernd_means.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_means.diminfo[0].shape = __pyx_pybuffernd_means.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_vars.rcbuffer->pybuffer, (PyObject*)__pyx_v_vars, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_vars.diminfo[0].strides = __pyx_pybuffernd_vars.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_vars.diminfo[0].shape = __pyx_pybuffernd_vars.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer, (PyObject*)__pyx_v_dist_missing2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_dist_missing2.diminfo[0].strides = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_dist_missing2.diminfo[0].shape = __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.shape[0];
+
+  /* "Orange/distance/_distance.pyx":106
+ *         double val1, val2, d
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ */
+  __pyx_t_1 = (__pyx_v_x1->dimensions[0]);
+  __pyx_t_2 = (__pyx_v_x1->dimensions[1]);
+  __pyx_v_n_rows1 = __pyx_t_1;
+  __pyx_v_n_cols = __pyx_t_2;
+
+  /* "Orange/distance/_distance.pyx":107
+ * 
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ */
+  __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
+
+  /* "Orange/distance/_distance.pyx":108
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      #endif
+      /*try:*/ {
+
+        /* "Orange/distance/_distance.pyx":109
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:
+ *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):
+ */
+        __pyx_t_3 = __pyx_v_n_rows1;
+        for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+          __pyx_v_row1 = __pyx_t_4;
+
+          /* "Orange/distance/_distance.pyx":110
+ *     with nogil:
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0
+ */
+          if ((__pyx_v_two_tables != 0)) {
+            __pyx_t_5 = __pyx_v_n_rows2;
+          } else {
+            __pyx_t_5 = __pyx_v_row1;
+          }
+          for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+            __pyx_v_row2 = __pyx_t_6;
+
+            /* "Orange/distance/_distance.pyx":111
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for col in range(n_cols):
+ */
+            __pyx_t_7 = __pyx_v_row1;
+            __pyx_t_8 = __pyx_v_row2;
+            __pyx_t_9 = (npy_isnan((*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_7, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_8, __pyx_pybuffernd_distances.diminfo[1].strides))) != 0);
+            if (__pyx_t_9) {
+
+              /* "Orange/distance/_distance.pyx":112
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0             # <<<<<<<<<<<<<<
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ */
+              __pyx_v_d = 0.0;
+
+              /* "Orange/distance/_distance.pyx":113
+ *                 if npy_isnan(distances[row1, row2]):
+ *                     d = 0
+ *                     for col in range(n_cols):             # <<<<<<<<<<<<<<
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ */
+              __pyx_t_10 = __pyx_v_n_cols;
+              for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
+                __pyx_v_col = __pyx_t_11;
+
+                /* "Orange/distance/_distance.pyx":114
+ *                     d = 0
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ */
+                __pyx_t_12 = __pyx_v_row1;
+                __pyx_t_13 = __pyx_v_col;
+                __pyx_t_14 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x1.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_x1.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_x1.diminfo[1].strides));
+                __pyx_t_15 = __pyx_v_row2;
+                __pyx_t_16 = __pyx_v_col;
+                __pyx_t_17 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x2.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_x2.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_x2.diminfo[1].strides));
+                __pyx_v_val1 = __pyx_t_14;
+                __pyx_v_val2 = __pyx_t_17;
+
+                /* "Orange/distance/_distance.pyx":115
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]
+ */
+                __pyx_t_9 = (npy_isnan(__pyx_v_val1) != 0);
+                if (__pyx_t_9) {
+
+                  /* "Orange/distance/_distance.pyx":116
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += dist_missing2[col]
+ *                             else:
+ */
+                  __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                  if (__pyx_t_9) {
+
+                    /* "Orange/distance/_distance.pyx":117
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]             # <<<<<<<<<<<<<<
+ *                             else:
+ *                                 d += val2 ** 2 + 0.5
+ */
+                    __pyx_t_18 = __pyx_v_col;
+                    __pyx_v_d = (__pyx_v_d + (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_dist_missing2.diminfo[0].strides)));
+
+                    /* "Orange/distance/_distance.pyx":116
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += dist_missing2[col]
+ *                             else:
+ */
+                    goto __pyx_L14;
+                  }
+
+                  /* "Orange/distance/_distance.pyx":119
+ *                                 d += dist_missing2[col]
+ *                             else:
+ *                                 d += val2 ** 2 + 0.5             # <<<<<<<<<<<<<<
+ *                         elif npy_isnan(val2):
+ *                             d += val1 ** 2 + 0.5
+ */
+                  /*else*/ {
+                    __pyx_v_d = (__pyx_v_d + (pow(__pyx_v_val2, 2.0) + 0.5));
+                  }
+                  __pyx_L14:;
+
+                  /* "Orange/distance/_distance.pyx":115
+ *                     for col in range(n_cols):
+ *                         val1, val2 = x1[row1, col], x2[row2, col]
+ *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                             if npy_isnan(val2):
+ *                                 d += dist_missing2[col]
+ */
+                  goto __pyx_L13;
+                }
+
+                /* "Orange/distance/_distance.pyx":120
+ *                             else:
+ *                                 d += val2 ** 2 + 0.5
+ *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += val1 ** 2 + 0.5
+ *                         else:
+ */
+                __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                if (__pyx_t_9) {
+
+                  /* "Orange/distance/_distance.pyx":121
+ *                                 d += val2 ** 2 + 0.5
+ *                         elif npy_isnan(val2):
+ *                             d += val1 ** 2 + 0.5             # <<<<<<<<<<<<<<
+ *                         else:
+ *                             d += (val1 - val2) ** 2
+ */
+                  __pyx_v_d = (__pyx_v_d + (pow(__pyx_v_val1, 2.0) + 0.5));
+
+                  /* "Orange/distance/_distance.pyx":120
+ *                             else:
+ *                                 d += val2 ** 2 + 0.5
+ *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                             d += val1 ** 2 + 0.5
+ *                         else:
+ */
+                  goto __pyx_L13;
+                }
+
+                /* "Orange/distance/_distance.pyx":123
+ *                             d += val1 ** 2 + 0.5
+ *                         else:
+ *                             d += (val1 - val2) ** 2             # <<<<<<<<<<<<<<
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:
+ */
+                /*else*/ {
+                  __pyx_v_d = (__pyx_v_d + pow((__pyx_v_val1 - __pyx_v_val2), 2.0));
+                }
+                __pyx_L13:;
+              }
+
+              /* "Orange/distance/_distance.pyx":124
+ *                         else:
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d             # <<<<<<<<<<<<<<
+ *                     if not two_tables:
+ *                         distances[row2, row1] = d
+ */
+              __pyx_t_19 = __pyx_v_row1;
+              __pyx_t_20 = __pyx_v_row2;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_20, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+              /* "Orange/distance/_distance.pyx":125
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:             # <<<<<<<<<<<<<<
+ *                         distances[row2, row1] = d
+ * 
+ */
+              __pyx_t_9 = ((!(__pyx_v_two_tables != 0)) != 0);
+              if (__pyx_t_9) {
+
+                /* "Orange/distance/_distance.pyx":126
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:
+ *                         distances[row2, row1] = d             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+                __pyx_t_21 = __pyx_v_row2;
+                __pyx_t_22 = __pyx_v_row1;
+                *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_21, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_22, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+                /* "Orange/distance/_distance.pyx":125
+ *                             d += (val1 - val2) ** 2
+ *                     distances[row1, row2] = d
+ *                     if not two_tables:             # <<<<<<<<<<<<<<
+ *                         distances[row2, row1] = d
+ * 
+ */
+              }
+
+              /* "Orange/distance/_distance.pyx":111
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ *                 if npy_isnan(distances[row1, row2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for col in range(n_cols):
+ */
+            }
+          }
+        }
+      }
+
+      /* "Orange/distance/_distance.pyx":108
+ *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
+ *     n_rows2 = x2.shape[0]
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for row1 in range(n_rows1):
+ *             for row2 in range(n_rows2 if two_tables else row1):
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
+  }
+
+  /* "Orange/distance/_distance.pyx":94
+ * 
+ * 
+ * def fix_euclidean_rows_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_means.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_vars.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_rows_normalized", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  goto __pyx_L2;
+  __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_dist_missing2.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_means.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_vars.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __pyx_L2:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "Orange/distance/_distance.pyx":129
+ * 
+ * 
+ * def fix_euclidean_cols(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_7fix_euclidean_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_6fix_euclidean_cols[] = "fix_euclidean_cols(ndarray distances, ndarray x, __Pyx_memviewslice means, __Pyx_memviewslice vars)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_7fix_euclidean_cols = {"fix_euclidean_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_7fix_euclidean_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_6fix_euclidean_cols};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_7fix_euclidean_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyArrayObject *__pyx_v_distances = 0;
+  PyArrayObject *__pyx_v_x = 0;
+  __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("fix_euclidean_cols (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_distances,&__pyx_n_s_x,&__pyx_n_s_means,&__pyx_n_s_vars,0};
     PyObject* values[4] = {0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
@@ -2347,26 +3812,26 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows(PyObject 
       kw_args = PyDict_Size(__pyx_kwds);
       switch (pos_args) {
         case  0:
-        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x1)) != 0)) kw_args--;
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_distances)) != 0)) kw_args--;
         else goto __pyx_L5_argtuple_error;
         case  1:
-        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("euclidean_rows", 1, 4, 4, 1); __PYX_ERR(0, 33, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols", 1, 4, 4, 1); __PYX_ERR(0, 129, __pyx_L3_error)
         }
         case  2:
-        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_means)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("euclidean_rows", 1, 4, 4, 2); __PYX_ERR(0, 33, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols", 1, 4, 4, 2); __PYX_ERR(0, 129, __pyx_L3_error)
         }
         case  3:
-        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vars)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("euclidean_rows", 1, 4, 4, 3); __PYX_ERR(0, 33, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols", 1, 4, 4, 3); __PYX_ERR(0, 129, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "euclidean_rows") < 0)) __PYX_ERR(0, 33, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "fix_euclidean_cols") < 0)) __PYX_ERR(0, 129, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -2376,22 +3841,22 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows(PyObject 
       values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
       values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
     }
-    __pyx_v_x1 = ((PyArrayObject *)values[0]);
-    __pyx_v_x2 = ((PyArrayObject *)values[1]);
-    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 35, __pyx_L3_error)
-    __pyx_v_fit_params = values[3];
+    __pyx_v_distances = ((PyArrayObject *)values[0]);
+    __pyx_v_x = ((PyArrayObject *)values[1]);
+    __pyx_v_means = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[2]); if (unlikely(!__pyx_v_means.memview)) __PYX_ERR(0, 132, __pyx_L3_error)
+    __pyx_v_vars = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[3]); if (unlikely(!__pyx_v_vars.memview)) __PYX_ERR(0, 133, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("euclidean_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 33, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 129, __pyx_L3_error)
   __pyx_L3_error:;
-  __Pyx_AddTraceback("Orange.distance._distance.euclidean_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 33, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 34, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_euclidean_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_distances), __pyx_ptype_5numpy_ndarray, 1, "distances", 0))) __PYX_ERR(0, 130, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 131, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_6fix_euclidean_cols(__pyx_self, __pyx_v_distances, __pyx_v_x, __pyx_v_means, __pyx_v_vars);
 
   /* function exit code */
   goto __pyx_L0;
@@ -2402,305 +3867,88 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_1euclidean_rows(PyObject 
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
-  __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_v_dist_missing = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_v_dist_missing2 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  char __pyx_v_normalize;
-  int __pyx_v_n_rows1;
-  int __pyx_v_n_rows2;
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_6fix_euclidean_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x, __Pyx_memviewslice __pyx_v_means, __Pyx_memviewslice __pyx_v_vars) {
+  int __pyx_v_n_rows;
   int __pyx_v_n_cols;
-  int __pyx_v_row1;
-  int __pyx_v_row2;
-  int __pyx_v_col;
+  int __pyx_v_col1;
+  int __pyx_v_col2;
+  int __pyx_v_row;
   double __pyx_v_val1;
   double __pyx_v_val2;
   double __pyx_v_d;
-  int __pyx_v_ival1;
-  int __pyx_v_ival2;
-  __Pyx_memviewslice __pyx_v_distances = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_LocalBuf_ND __pyx_pybuffernd_x1;
-  __Pyx_Buffer __pyx_pybuffer_x1;
-  __Pyx_LocalBuf_ND __pyx_pybuffernd_x2;
-  __Pyx_Buffer __pyx_pybuffer_x2;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_distances;
+  __Pyx_Buffer __pyx_pybuffer_distances;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_x;
+  __Pyx_Buffer __pyx_pybuffer_x;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  __Pyx_memviewslice __pyx_t_2 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_t_3 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  char __pyx_t_4;
-  npy_intp __pyx_t_5;
-  npy_intp __pyx_t_6;
-  int __pyx_t_7;
+  npy_intp __pyx_t_1;
+  npy_intp __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  Py_ssize_t __pyx_t_7;
   Py_ssize_t __pyx_t_8;
-  Py_ssize_t __pyx_t_9;
-  Py_ssize_t __pyx_t_10;
-  Py_ssize_t __pyx_t_11;
-  PyObject *__pyx_t_12 = NULL;
-  PyObject *__pyx_t_13 = NULL;
-  PyObject *__pyx_t_14 = NULL;
-  int __pyx_t_15;
-  int __pyx_t_16;
-  int __pyx_t_17;
-  int __pyx_t_18;
-  int __pyx_t_19;
-  int __pyx_t_20;
+  int __pyx_t_9;
+  int __pyx_t_10;
+  int __pyx_t_11;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  __pyx_t_5numpy_float64_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
+  Py_ssize_t __pyx_t_16;
+  __pyx_t_5numpy_float64_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
   Py_ssize_t __pyx_t_21;
   Py_ssize_t __pyx_t_22;
   Py_ssize_t __pyx_t_23;
-  __pyx_t_5numpy_float64_t __pyx_t_24;
+  Py_ssize_t __pyx_t_24;
   Py_ssize_t __pyx_t_25;
   Py_ssize_t __pyx_t_26;
-  __pyx_t_5numpy_float64_t __pyx_t_27;
-  int __pyx_t_28;
+  Py_ssize_t __pyx_t_27;
+  Py_ssize_t __pyx_t_28;
   Py_ssize_t __pyx_t_29;
-  Py_ssize_t __pyx_t_30;
-  Py_ssize_t __pyx_t_31;
-  Py_ssize_t __pyx_t_32;
-  Py_ssize_t __pyx_t_33;
-  Py_ssize_t __pyx_t_34;
-  Py_ssize_t __pyx_t_35;
-  Py_ssize_t __pyx_t_36;
-  Py_ssize_t __pyx_t_37;
-  Py_ssize_t __pyx_t_38;
-  Py_ssize_t __pyx_t_39;
-  Py_ssize_t __pyx_t_40;
-  Py_ssize_t __pyx_t_41;
-  Py_ssize_t __pyx_t_42;
-  Py_ssize_t __pyx_t_43;
-  Py_ssize_t __pyx_t_44;
-  Py_ssize_t __pyx_t_45;
-  PyObject *__pyx_t_46 = NULL;
-  __Pyx_RefNannySetupContext("euclidean_rows", 0);
-  __pyx_pybuffer_x1.pybuffer.buf = NULL;
-  __pyx_pybuffer_x1.refcount = 0;
-  __pyx_pybuffernd_x1.data = NULL;
-  __pyx_pybuffernd_x1.rcbuffer = &__pyx_pybuffer_x1;
-  __pyx_pybuffer_x2.pybuffer.buf = NULL;
-  __pyx_pybuffer_x2.refcount = 0;
-  __pyx_pybuffernd_x2.data = NULL;
-  __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
+  __Pyx_RefNannySetupContext("fix_euclidean_cols", 0);
+  __pyx_pybuffer_distances.pybuffer.buf = NULL;
+  __pyx_pybuffer_distances.refcount = 0;
+  __pyx_pybuffernd_distances.data = NULL;
+  __pyx_pybuffernd_distances.rcbuffer = &__pyx_pybuffer_distances;
+  __pyx_pybuffer_x.pybuffer.buf = NULL;
+  __pyx_pybuffer_x.refcount = 0;
+  __pyx_pybuffernd_x.data = NULL;
+  __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 33, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_distances.rcbuffer->pybuffer, (PyObject*)__pyx_v_distances, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 129, __pyx_L1_error)
   }
-  __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
+  __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 33, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 129, __pyx_L1_error)
   }
-  __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
+  __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x.diminfo[1].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x.diminfo[1].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":38
- *                    fit_params):
- *     cdef:
- *         double [:] vars = fit_params["vars"]             # <<<<<<<<<<<<<<
- *         double [:] means = fit_params["means"]
- *         double [:, :] dist_missing = fit_params["dist_missing"]
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 38, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 38, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_vars = __pyx_t_2;
-  __pyx_t_2.memview = NULL;
-  __pyx_t_2.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":39
- *     cdef:
- *         double [:] vars = fit_params["vars"]
- *         double [:] means = fit_params["means"]             # <<<<<<<<<<<<<<
- *         double [:, :] dist_missing = fit_params["dist_missing"]
- *         double [:] dist_missing2 = fit_params["dist_missing2"]
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 39, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 39, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_means = __pyx_t_2;
-  __pyx_t_2.memview = NULL;
-  __pyx_t_2.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":40
- *         double [:] vars = fit_params["vars"]
- *         double [:] means = fit_params["means"]
- *         double [:, :] dist_missing = fit_params["dist_missing"]             # <<<<<<<<<<<<<<
- *         double [:] dist_missing2 = fit_params["dist_missing2"]
- *         char normalize = fit_params["normalize"]
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 40, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 40, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_dist_missing = __pyx_t_3;
-  __pyx_t_3.memview = NULL;
-  __pyx_t_3.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":41
- *         double [:] means = fit_params["means"]
- *         double [:, :] dist_missing = fit_params["dist_missing"]
- *         double [:] dist_missing2 = fit_params["dist_missing2"]             # <<<<<<<<<<<<<<
- *         char normalize = fit_params["normalize"]
+  /* "Orange/distance/_distance.pyx":138
+ *         double val1, val2, d
  * 
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 41, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 41, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_dist_missing2 = __pyx_t_2;
-  __pyx_t_2.memview = NULL;
-  __pyx_t_2.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":42
- *         double [:, :] dist_missing = fit_params["dist_missing"]
- *         double [:] dist_missing2 = fit_params["dist_missing2"]
- *         char normalize = fit_params["normalize"]             # <<<<<<<<<<<<<<
- * 
- *         int n_rows1, n_rows2, n_cols, row1, row2, col
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 42, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_4 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 42, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_normalize = __pyx_t_4;
-
-  /* "Orange/distance/_distance.pyx":49
- *         double [:, :] distances
- * 
- *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
- *     n_rows2 = x2.shape[0]
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
- */
-  __pyx_t_5 = (__pyx_v_x1->dimensions[0]);
-  __pyx_t_6 = (__pyx_v_x1->dimensions[1]);
-  __pyx_v_n_rows1 = __pyx_t_5;
-  __pyx_v_n_cols = __pyx_t_6;
-
-  /* "Orange/distance/_distance.pyx":50
- * 
- *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
- *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
- *             == len(dist_missing) == len(dist_missing2)
- */
-  __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
-
-  /* "Orange/distance/_distance.pyx":51
- *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
- *     n_rows2 = x2.shape[0]
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \             # <<<<<<<<<<<<<<
- *             == len(dist_missing) == len(dist_missing2)
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
- */
-  #ifndef CYTHON_WITHOUT_ASSERTIONS
-  if (unlikely(!Py_OptimizeFlag)) {
-    __pyx_t_7 = (__pyx_v_n_cols == (__pyx_v_x2->dimensions[1]));
-    if (__pyx_t_7) {
-      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_vars, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_8 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_8 == -1)) __PYX_ERR(0, 51, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-      __pyx_t_7 = ((__pyx_v_x2->dimensions[1]) == __pyx_t_8);
-      if (__pyx_t_7) {
-        __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_means, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 51, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_9 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(0, 51, __pyx_L1_error)
-        __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-        __pyx_t_7 = (__pyx_t_8 == __pyx_t_9);
-        if (__pyx_t_7) {
-
-          /* "Orange/distance/_distance.pyx":52
- *     n_rows2 = x2.shape[0]
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
- *             == len(dist_missing) == len(dist_missing2)             # <<<<<<<<<<<<<<
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
- * 
- */
-          __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
-          __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_10 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 52, __pyx_L1_error)
-          __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-          __pyx_t_7 = (__pyx_t_9 == __pyx_t_10);
-          if (__pyx_t_7) {
-            __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing2, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 52, __pyx_L1_error)
-            __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_11 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_11 == -1)) __PYX_ERR(0, 52, __pyx_L1_error)
-            __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-            __pyx_t_7 = (__pyx_t_10 == __pyx_t_11);
-          }
-        }
-      }
-    }
-
-    /* "Orange/distance/_distance.pyx":51
- *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
- *     n_rows2 = x2.shape[0]
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \             # <<<<<<<<<<<<<<
- *             == len(dist_missing) == len(dist_missing2)
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
- */
-    if (unlikely(!(__pyx_t_7 != 0))) {
-      PyErr_SetNone(PyExc_AssertionError);
-      __PYX_ERR(0, 51, __pyx_L1_error)
-    }
-  }
-  #endif
-
-  /* "Orange/distance/_distance.pyx":53
- *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
- *             == len(dist_missing) == len(dist_missing2)
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)             # <<<<<<<<<<<<<<
- * 
+ *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
  *     with nogil:
+ *         for col1 in range(n_cols):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_12);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_13 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_13);
-  __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_14);
-  __Pyx_GIVEREF(__pyx_t_1);
-  PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_1);
-  __Pyx_GIVEREF(__pyx_t_13);
-  PyTuple_SET_ITEM(__pyx_t_14, 1, __pyx_t_13);
-  __pyx_t_1 = 0;
-  __pyx_t_13 = 0;
-  __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_13);
-  __Pyx_GIVEREF(__pyx_t_14);
-  PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_14);
-  __pyx_t_14 = 0;
-  __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_14);
-  if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 53, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-  __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-  __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-  __pyx_t_3 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 53, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_distances = __pyx_t_3;
-  __pyx_t_3.memview = NULL;
-  __pyx_t_3.data = NULL;
+  __pyx_t_1 = (__pyx_v_x->dimensions[0]);
+  __pyx_t_2 = (__pyx_v_x->dimensions[1]);
+  __pyx_v_n_rows = __pyx_t_1;
+  __pyx_v_n_cols = __pyx_t_2;
 
-  /* "Orange/distance/_distance.pyx":55
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
+  /* "Orange/distance/_distance.pyx":139
  * 
+ *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     with nogil:             # <<<<<<<<<<<<<<
- *         for row1 in range(n_rows1):
- *             for row2 in range(n_rows2 if two_tables else row1):
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):
  */
   {
       #ifdef WITH_THREAD
@@ -2709,451 +3957,235 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows(CYTHON_UNU
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":56
- * 
+        /* "Orange/distance/_distance.pyx":140
+ *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     with nogil:
- *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
- *             for row2 in range(n_rows2 if two_tables else row1):
- *                 d = 0
+ *         for col1 in range(n_cols):             # <<<<<<<<<<<<<<
+ *             for col2 in range(col1):
+ *                 if npy_isnan(distances[col1, col2]):
  */
-        __pyx_t_15 = __pyx_v_n_rows1;
-        for (__pyx_t_16 = 0; __pyx_t_16 < __pyx_t_15; __pyx_t_16+=1) {
-          __pyx_v_row1 = __pyx_t_16;
+        __pyx_t_3 = __pyx_v_n_cols;
+        for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+          __pyx_v_col1 = __pyx_t_4;
 
-          /* "Orange/distance/_distance.pyx":57
+          /* "Orange/distance/_distance.pyx":141
  *     with nogil:
- *         for row1 in range(n_rows1):
- *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
- *                 d = 0
- *                 for col in range(n_cols):
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):             # <<<<<<<<<<<<<<
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0
  */
-          if ((__pyx_v_two_tables != 0)) {
-            __pyx_t_17 = __pyx_v_n_rows2;
-          } else {
-            __pyx_t_17 = __pyx_v_row1;
-          }
-          for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
-            __pyx_v_row2 = __pyx_t_18;
+          __pyx_t_5 = __pyx_v_col1;
+          for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+            __pyx_v_col2 = __pyx_t_6;
 
-            /* "Orange/distance/_distance.pyx":58
- *         for row1 in range(n_rows1):
- *             for row2 in range(n_rows2 if two_tables else row1):
- *                 d = 0             # <<<<<<<<<<<<<<
- *                 for col in range(n_cols):
- *                     if vars[col] == -2:
+            /* "Orange/distance/_distance.pyx":142
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):
+ *                 if npy_isnan(distances[col1, col2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for row in range(n_rows):
  */
-            __pyx_v_d = 0.0;
+            __pyx_t_7 = __pyx_v_col1;
+            __pyx_t_8 = __pyx_v_col2;
+            __pyx_t_9 = (npy_isnan((*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_7, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_8, __pyx_pybuffernd_distances.diminfo[1].strides))) != 0);
+            if (__pyx_t_9) {
 
-            /* "Orange/distance/_distance.pyx":59
- *             for row2 in range(n_rows2 if two_tables else row1):
- *                 d = 0
- *                 for col in range(n_cols):             # <<<<<<<<<<<<<<
- *                     if vars[col] == -2:
- *                         continue
+              /* "Orange/distance/_distance.pyx":143
+ *             for col2 in range(col1):
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0             # <<<<<<<<<<<<<<
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
  */
-            __pyx_t_19 = __pyx_v_n_cols;
-            for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_19; __pyx_t_20+=1) {
-              __pyx_v_col = __pyx_t_20;
+              __pyx_v_d = 0.0;
 
-              /* "Orange/distance/_distance.pyx":60
- *                 d = 0
- *                 for col in range(n_cols):
- *                     if vars[col] == -2:             # <<<<<<<<<<<<<<
- *                         continue
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- */
-              __pyx_t_21 = __pyx_v_col;
-              __pyx_t_7 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_21 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
-              if (__pyx_t_7) {
-
-                /* "Orange/distance/_distance.pyx":61
- *                 for col in range(n_cols):
- *                     if vars[col] == -2:
- *                         continue             # <<<<<<<<<<<<<<
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- *                     if npy_isnan(val1) and npy_isnan(val2):
- */
-                goto __pyx_L10_continue;
-
-                /* "Orange/distance/_distance.pyx":60
- *                 d = 0
- *                 for col in range(n_cols):
- *                     if vars[col] == -2:             # <<<<<<<<<<<<<<
- *                         continue
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- */
-              }
-
-              /* "Orange/distance/_distance.pyx":62
- *                     if vars[col] == -2:
- *                         continue
- *                     val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
- *                     if npy_isnan(val1) and npy_isnan(val2):
- *                         d += dist_missing2[col]
- */
-              __pyx_t_22 = __pyx_v_row1;
-              __pyx_t_23 = __pyx_v_col;
-              __pyx_t_24 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x1.rcbuffer->pybuffer.buf, __pyx_t_22, __pyx_pybuffernd_x1.diminfo[0].strides, __pyx_t_23, __pyx_pybuffernd_x1.diminfo[1].strides));
-              __pyx_t_25 = __pyx_v_row2;
-              __pyx_t_26 = __pyx_v_col;
-              __pyx_t_27 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x2.rcbuffer->pybuffer.buf, __pyx_t_25, __pyx_pybuffernd_x2.diminfo[0].strides, __pyx_t_26, __pyx_pybuffernd_x2.diminfo[1].strides));
-              __pyx_v_val1 = __pyx_t_24;
-              __pyx_v_val2 = __pyx_t_27;
-
-              /* "Orange/distance/_distance.pyx":63
- *                         continue
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                         d += dist_missing2[col]
- *                     elif vars[col] == -1:
- */
-              __pyx_t_28 = (npy_isnan(__pyx_v_val1) != 0);
-              if (__pyx_t_28) {
-              } else {
-                __pyx_t_7 = __pyx_t_28;
-                goto __pyx_L14_bool_binop_done;
-              }
-              __pyx_t_28 = (npy_isnan(__pyx_v_val2) != 0);
-              __pyx_t_7 = __pyx_t_28;
-              __pyx_L14_bool_binop_done:;
-              if (__pyx_t_7) {
-
-                /* "Orange/distance/_distance.pyx":64
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- *                     if npy_isnan(val1) and npy_isnan(val2):
- *                         d += dist_missing2[col]             # <<<<<<<<<<<<<<
- *                     elif vars[col] == -1:
- *                         ival1, ival2 = int(val1), int(val2)
- */
-                __pyx_t_29 = __pyx_v_col;
-                __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=0 */ (__pyx_v_dist_missing2.data + __pyx_t_29 * __pyx_v_dist_missing2.strides[0]) ))));
-
-                /* "Orange/distance/_distance.pyx":63
- *                         continue
- *                     val1, val2 = x1[row1, col], x2[row2, col]
- *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                         d += dist_missing2[col]
- *                     elif vars[col] == -1:
- */
-                goto __pyx_L13;
-              }
-
-              /* "Orange/distance/_distance.pyx":65
- *                     if npy_isnan(val1) and npy_isnan(val2):
- *                         d += dist_missing2[col]
- *                     elif vars[col] == -1:             # <<<<<<<<<<<<<<
- *                         ival1, ival2 = int(val1), int(val2)
+              /* "Orange/distance/_distance.pyx":144
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0
+ *                     for row in range(n_rows):             # <<<<<<<<<<<<<<
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):
  */
-              __pyx_t_30 = __pyx_v_col;
-              __pyx_t_7 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_30 * __pyx_v_vars.strides[0]) ))) == -1.0) != 0);
-              if (__pyx_t_7) {
+              __pyx_t_10 = __pyx_v_n_rows;
+              for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
+                __pyx_v_row = __pyx_t_11;
 
-                /* "Orange/distance/_distance.pyx":66
- *                         d += dist_missing2[col]
- *                     elif vars[col] == -1:
- *                         ival1, ival2 = int(val1), int(val2)             # <<<<<<<<<<<<<<
+                /* "Orange/distance/_distance.pyx":145
+ *                     d = 0
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
  *                         if npy_isnan(val1):
- *                             d += dist_missing[col, ival2]
+ *                             if npy_isnan(val2):
  */
-                __pyx_v_ival1 = ((int)__pyx_v_val1);
-                __pyx_v_ival2 = ((int)__pyx_v_val2);
+                __pyx_t_12 = __pyx_v_row;
+                __pyx_t_13 = __pyx_v_col1;
+                __pyx_t_14 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_x.diminfo[1].strides));
+                __pyx_t_15 = __pyx_v_row;
+                __pyx_t_16 = __pyx_v_col2;
+                __pyx_t_17 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_x.diminfo[1].strides));
+                __pyx_v_val1 = __pyx_t_14;
+                __pyx_v_val2 = __pyx_t_17;
 
-                /* "Orange/distance/_distance.pyx":67
- *                     elif vars[col] == -1:
- *                         ival1, ival2 = int(val1), int(val2)
+                /* "Orange/distance/_distance.pyx":146
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += dist_missing[col, ival2]
- *                         elif npy_isnan(val2):
+ *                             if npy_isnan(val2):
+ *                                 d += vars[col1] + vars[col2] \
  */
-                __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
-                if (__pyx_t_7) {
+                __pyx_t_9 = (npy_isnan(__pyx_v_val1) != 0);
+                if (__pyx_t_9) {
 
-                  /* "Orange/distance/_distance.pyx":68
- *                         ival1, ival2 = int(val1), int(val2)
+                  /* "Orange/distance/_distance.pyx":147
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):
- *                             d += dist_missing[col, ival2]             # <<<<<<<<<<<<<<
- *                         elif npy_isnan(val2):
- *                             d += dist_missing[col, ival1]
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += vars[col1] + vars[col2] \
+ *                                      + (means[col1] - means[col2]) ** 2
  */
-                  __pyx_t_31 = __pyx_v_col;
-                  __pyx_t_32 = __pyx_v_ival2;
-                  __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_31 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_32 * __pyx_v_dist_missing.strides[1]) ))));
+                  __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                  if (__pyx_t_9) {
 
-                  /* "Orange/distance/_distance.pyx":67
- *                     elif vars[col] == -1:
- *                         ival1, ival2 = int(val1), int(val2)
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += dist_missing[col, ival2]
- *                         elif npy_isnan(val2):
+                    /* "Orange/distance/_distance.pyx":148
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ *                                 d += vars[col1] + vars[col2] \             # <<<<<<<<<<<<<<
+ *                                      + (means[col1] - means[col2]) ** 2
+ *                             else:
  */
-                  goto __pyx_L16;
+                    __pyx_t_18 = __pyx_v_col1;
+                    __pyx_t_19 = __pyx_v_col2;
+
+                    /* "Orange/distance/_distance.pyx":149
+ *                             if npy_isnan(val2):
+ *                                 d += vars[col1] + vars[col2] \
+ *                                      + (means[col1] - means[col2]) ** 2             # <<<<<<<<<<<<<<
+ *                             else:
+ *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
+ */
+                    __pyx_t_20 = __pyx_v_col1;
+                    __pyx_t_21 = __pyx_v_col2;
+
+                    /* "Orange/distance/_distance.pyx":148
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):
+ *                                 d += vars[col1] + vars[col2] \             # <<<<<<<<<<<<<<
+ *                                      + (means[col1] - means[col2]) ** 2
+ *                             else:
+ */
+                    __pyx_v_d = (__pyx_v_d + (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_18 * __pyx_v_vars.strides[0]) ))) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_19 * __pyx_v_vars.strides[0]) )))) + pow(((*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_20 * __pyx_v_means.strides[0]) ))) - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_21 * __pyx_v_means.strides[0]) )))), 2.0)));
+
+                    /* "Orange/distance/_distance.pyx":147
+ *                         val1, val2 = x[row, col1], x[row, col2]
+ *                         if npy_isnan(val1):
+ *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
+ *                                 d += vars[col1] + vars[col2] \
+ *                                      + (means[col1] - means[col2]) ** 2
+ */
+                    goto __pyx_L14;
+                  }
+
+                  /* "Orange/distance/_distance.pyx":151
+ *                                      + (means[col1] - means[col2]) ** 2
+ *                             else:
+ *                                 d += (val2 - means[col1]) ** 2 + vars[col1]             # <<<<<<<<<<<<<<
+ *                         elif npy_isnan(val2):
+ *                             d += (val1 - means[col2]) ** 2 + vars[col2]
+ */
+                  /*else*/ {
+                    __pyx_t_22 = __pyx_v_col1;
+                    __pyx_t_23 = __pyx_v_col1;
+                    __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_22 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_23 * __pyx_v_vars.strides[0]) )))));
+                  }
+                  __pyx_L14:;
+
+                  /* "Orange/distance/_distance.pyx":146
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
+ *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
+ *                             if npy_isnan(val2):
+ *                                 d += vars[col1] + vars[col2] \
+ */
+                  goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":69
- *                         if npy_isnan(val1):
- *                             d += dist_missing[col, ival2]
+                /* "Orange/distance/_distance.pyx":152
+ *                             else:
+ *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += dist_missing[col, ival1]
- *                         elif ival1 != ival2:
- */
-                __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
-                if (__pyx_t_7) {
-
-                  /* "Orange/distance/_distance.pyx":70
- *                             d += dist_missing[col, ival2]
- *                         elif npy_isnan(val2):
- *                             d += dist_missing[col, ival1]             # <<<<<<<<<<<<<<
- *                         elif ival1 != ival2:
- *                             d += 1
- */
-                  __pyx_t_33 = __pyx_v_col;
-                  __pyx_t_34 = __pyx_v_ival1;
-                  __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_33 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_34 * __pyx_v_dist_missing.strides[1]) ))));
-
-                  /* "Orange/distance/_distance.pyx":69
- *                         if npy_isnan(val1):
- *                             d += dist_missing[col, ival2]
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += dist_missing[col, ival1]
- *                         elif ival1 != ival2:
- */
-                  goto __pyx_L16;
-                }
-
-                /* "Orange/distance/_distance.pyx":71
- *                         elif npy_isnan(val2):
- *                             d += dist_missing[col, ival1]
- *                         elif ival1 != ival2:             # <<<<<<<<<<<<<<
- *                             d += 1
- *                     elif normalize:
- */
-                __pyx_t_7 = ((__pyx_v_ival1 != __pyx_v_ival2) != 0);
-                if (__pyx_t_7) {
-
-                  /* "Orange/distance/_distance.pyx":72
- *                             d += dist_missing[col, ival1]
- *                         elif ival1 != ival2:
- *                             d += 1             # <<<<<<<<<<<<<<
- *                     elif normalize:
- *                         if npy_isnan(val1):
- */
-                  __pyx_v_d = (__pyx_v_d + 1.0);
-
-                  /* "Orange/distance/_distance.pyx":71
- *                         elif npy_isnan(val2):
- *                             d += dist_missing[col, ival1]
- *                         elif ival1 != ival2:             # <<<<<<<<<<<<<<
- *                             d += 1
- *                     elif normalize:
- */
-                }
-                __pyx_L16:;
-
-                /* "Orange/distance/_distance.pyx":65
- *                     if npy_isnan(val1) and npy_isnan(val2):
- *                         d += dist_missing2[col]
- *                     elif vars[col] == -1:             # <<<<<<<<<<<<<<
- *                         ival1, ival2 = int(val1), int(val2)
- *                         if npy_isnan(val1):
- */
-                goto __pyx_L13;
-              }
-
-              /* "Orange/distance/_distance.pyx":73
- *                         elif ival1 != ival2:
- *                             d += 1
- *                     elif normalize:             # <<<<<<<<<<<<<<
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- */
-              __pyx_t_7 = (__pyx_v_normalize != 0);
-              if (__pyx_t_7) {
-
-                /* "Orange/distance/_distance.pyx":74
- *                             d += 1
- *                     elif normalize:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         elif npy_isnan(val2):
- */
-                __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
-                if (__pyx_t_7) {
-
-                  /* "Orange/distance/_distance.pyx":75
- *                     elif normalize:
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5             # <<<<<<<<<<<<<<
- *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5
- */
-                  __pyx_t_35 = __pyx_v_col;
-                  __pyx_t_36 = __pyx_v_col;
-                  __pyx_v_d = (__pyx_v_d + (((pow((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_35 * __pyx_v_means.strides[0]) )))), 2.0) / (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_36 * __pyx_v_vars.strides[0]) )))) / 2.0) + 0.5));
-
-                  /* "Orange/distance/_distance.pyx":74
- *                             d += 1
- *                     elif normalize:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         elif npy_isnan(val2):
- */
-                  goto __pyx_L17;
-                }
-
-                /* "Orange/distance/_distance.pyx":76
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5
+ *                             d += (val1 - means[col2]) ** 2 + vars[col2]
  *                         else:
  */
-                __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
-                if (__pyx_t_7) {
+                __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                if (__pyx_t_9) {
 
-                  /* "Orange/distance/_distance.pyx":77
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
+                  /* "Orange/distance/_distance.pyx":153
+ *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
  *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5             # <<<<<<<<<<<<<<
- *                         else:
- *                             d += ((val1 - val2) ** 2 / vars[col]) / 2
- */
-                  __pyx_t_37 = __pyx_v_col;
-                  __pyx_t_38 = __pyx_v_col;
-                  __pyx_v_d = (__pyx_v_d + (((pow((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_37 * __pyx_v_means.strides[0]) )))), 2.0) / (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_38 * __pyx_v_vars.strides[0]) )))) / 2.0) + 0.5));
-
-                  /* "Orange/distance/_distance.pyx":76
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         else:
- */
-                  goto __pyx_L17;
-                }
-
-                /* "Orange/distance/_distance.pyx":79
- *                             d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5
- *                         else:
- *                             d += ((val1 - val2) ** 2 / vars[col]) / 2             # <<<<<<<<<<<<<<
- *                     else:
- *                         if npy_isnan(val1):
- */
-                /*else*/ {
-                  __pyx_t_39 = __pyx_v_col;
-                  __pyx_v_d = (__pyx_v_d + ((pow((__pyx_v_val1 - __pyx_v_val2), 2.0) / (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_39 * __pyx_v_vars.strides[0]) )))) / 2.0));
-                }
-                __pyx_L17:;
-
-                /* "Orange/distance/_distance.pyx":73
- *                         elif ival1 != ival2:
- *                             d += 1
- *                     elif normalize:             # <<<<<<<<<<<<<<
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
- */
-                goto __pyx_L13;
-              }
-
-              /* "Orange/distance/_distance.pyx":81
- *                             d += ((val1 - val2) ** 2 / vars[col]) / 2
- *                     else:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += (val2 - means[col]) ** 2 + vars[col]
- *                         elif npy_isnan(val2):
- */
-              /*else*/ {
-                __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
-                if (__pyx_t_7) {
-
-                  /* "Orange/distance/_distance.pyx":82
- *                     else:
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 + vars[col]             # <<<<<<<<<<<<<<
- *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col]) ** 2 + vars[col]
- */
-                  __pyx_t_40 = __pyx_v_col;
-                  __pyx_t_41 = __pyx_v_col;
-                  __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_40 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_41 * __pyx_v_vars.strides[0]) )))));
-
-                  /* "Orange/distance/_distance.pyx":81
- *                             d += ((val1 - val2) ** 2 / vars[col]) / 2
- *                     else:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             d += (val2 - means[col]) ** 2 + vars[col]
- *                         elif npy_isnan(val2):
- */
-                  goto __pyx_L18;
-                }
-
-                /* "Orange/distance/_distance.pyx":83
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 + vars[col]
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col]) ** 2 + vars[col]
- *                         else:
- */
-                __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
-                if (__pyx_t_7) {
-
-                  /* "Orange/distance/_distance.pyx":84
- *                             d += (val2 - means[col]) ** 2 + vars[col]
- *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col]) ** 2 + vars[col]             # <<<<<<<<<<<<<<
+ *                             d += (val1 - means[col2]) ** 2 + vars[col2]             # <<<<<<<<<<<<<<
  *                         else:
  *                             d += (val1 - val2) ** 2
  */
-                  __pyx_t_42 = __pyx_v_col;
-                  __pyx_t_43 = __pyx_v_col;
-                  __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_42 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_43 * __pyx_v_vars.strides[0]) )))));
+                  __pyx_t_24 = __pyx_v_col2;
+                  __pyx_t_25 = __pyx_v_col2;
+                  __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_24 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_25 * __pyx_v_vars.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":83
- *                         if npy_isnan(val1):
- *                             d += (val2 - means[col]) ** 2 + vars[col]
+                  /* "Orange/distance/_distance.pyx":152
+ *                             else:
+ *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col]) ** 2 + vars[col]
+ *                             d += (val1 - means[col2]) ** 2 + vars[col2]
  *                         else:
  */
-                  goto __pyx_L18;
+                  goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":86
- *                             d += (val1 - means[col]) ** 2 + vars[col]
+                /* "Orange/distance/_distance.pyx":155
+ *                             d += (val1 - means[col2]) ** 2 + vars[col2]
  *                         else:
  *                             d += (val1 - val2) ** 2             # <<<<<<<<<<<<<<
- *                 distances[row1, row2] = d
- *     if not two_tables:
+ *                     distances[col1, col2] = distances[col2, col1] = d
+ * 
  */
                 /*else*/ {
                   __pyx_v_d = (__pyx_v_d + pow((__pyx_v_val1 - __pyx_v_val2), 2.0));
                 }
-                __pyx_L18:;
+                __pyx_L13:;
               }
-              __pyx_L13:;
-              __pyx_L10_continue:;
-            }
 
-            /* "Orange/distance/_distance.pyx":87
+              /* "Orange/distance/_distance.pyx":156
  *                         else:
  *                             d += (val1 - val2) ** 2
- *                 distances[row1, row2] = d             # <<<<<<<<<<<<<<
- *     if not two_tables:
- *         _lower_to_symmetric(distances)
+ *                     distances[col1, col2] = distances[col2, col1] = d             # <<<<<<<<<<<<<<
+ * 
+ * 
  */
-            __pyx_t_44 = __pyx_v_row1;
-            __pyx_t_45 = __pyx_v_row2;
-            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_distances.data + __pyx_t_44 * __pyx_v_distances.strides[0]) ) + __pyx_t_45 * __pyx_v_distances.strides[1]) )) = __pyx_v_d;
+              __pyx_t_26 = __pyx_v_col1;
+              __pyx_t_27 = __pyx_v_col2;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_26, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_27, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+              __pyx_t_28 = __pyx_v_col2;
+              __pyx_t_29 = __pyx_v_col1;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_28, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_29, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+              /* "Orange/distance/_distance.pyx":142
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):
+ *                 if npy_isnan(distances[col1, col2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for row in range(n_rows):
+ */
+            }
           }
         }
       }
 
-      /* "Orange/distance/_distance.pyx":55
- *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
+      /* "Orange/distance/_distance.pyx":139
  * 
+ *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     with nogil:             # <<<<<<<<<<<<<<
- *         for row1 in range(n_rows1):
- *             for row2 in range(n_rows2 if two_tables else row1):
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):
  */
       /*finally:*/ {
         /*normal exit:*/{
@@ -3166,145 +4198,68 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_euclidean_rows(CYTHON_UNU
       }
   }
 
-  /* "Orange/distance/_distance.pyx":88
- *                             d += (val1 - val2) ** 2
- *                 distances[row1, row2] = d
- *     if not two_tables:             # <<<<<<<<<<<<<<
- *         _lower_to_symmetric(distances)
- *     return np.sqrt(distances)
- */
-  __pyx_t_7 = ((!(__pyx_v_two_tables != 0)) != 0);
-  if (__pyx_t_7) {
-
-    /* "Orange/distance/_distance.pyx":89
- *                 distances[row1, row2] = d
- *     if not two_tables:
- *         _lower_to_symmetric(distances)             # <<<<<<<<<<<<<<
- *     return np.sqrt(distances)
- * 
- */
-    __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__pyx_v_distances);
-
-    /* "Orange/distance/_distance.pyx":88
- *                             d += (val1 - val2) ** 2
- *                 distances[row1, row2] = d
- *     if not two_tables:             # <<<<<<<<<<<<<<
- *         _lower_to_symmetric(distances)
- *     return np.sqrt(distances)
- */
-  }
-
-  /* "Orange/distance/_distance.pyx":90
- *     if not two_tables:
- *         _lower_to_symmetric(distances)
- *     return np.sqrt(distances)             # <<<<<<<<<<<<<<
+  /* "Orange/distance/_distance.pyx":129
  * 
  * 
- */
-  __Pyx_XDECREF(__pyx_r);
-  __pyx_t_14 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 90, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_14);
-  __pyx_t_13 = __Pyx_PyObject_GetAttrStr(__pyx_t_14, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 90, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_13);
-  __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-  __pyx_t_14 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 90, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_14);
-  __pyx_t_12 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_13))) {
-    __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_13);
-    if (likely(__pyx_t_12)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_13);
-      __Pyx_INCREF(__pyx_t_12);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_13, function);
-    }
-  }
-  if (!__pyx_t_12) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
-    __Pyx_GOTREF(__pyx_t_1);
-  } else {
-    __pyx_t_46 = PyTuple_New(1+1); if (unlikely(!__pyx_t_46)) __PYX_ERR(0, 90, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_46);
-    __Pyx_GIVEREF(__pyx_t_12); PyTuple_SET_ITEM(__pyx_t_46, 0, __pyx_t_12); __pyx_t_12 = NULL;
-    __Pyx_GIVEREF(__pyx_t_14);
-    PyTuple_SET_ITEM(__pyx_t_46, 0+1, __pyx_t_14);
-    __pyx_t_14 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_13, __pyx_t_46, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 90, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_46); __pyx_t_46 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
-  __pyx_r = __pyx_t_1;
-  __pyx_t_1 = 0;
-  goto __pyx_L0;
-
-  /* "Orange/distance/_distance.pyx":33
- * 
- * 
- * def euclidean_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
- *                    np.ndarray[np.float64_t, ndim=2] x2,
- *                    char two_tables,
+ * def fix_euclidean_cols(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
  */
 
   /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_2, 1);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_3, 1);
-  __Pyx_XDECREF(__pyx_t_12);
-  __Pyx_XDECREF(__pyx_t_13);
-  __Pyx_XDECREF(__pyx_t_14);
-  __Pyx_XDECREF(__pyx_t_46);
   { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
     __Pyx_PyThreadState_declare
     __Pyx_PyThreadState_assign
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
-    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
-    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("Orange.distance._distance.euclidean_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
-  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x1.rcbuffer->pybuffer);
-  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x2.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x.rcbuffer->pybuffer);
   __pyx_L2:;
-  __PYX_XDEC_MEMVIEW(&__pyx_v_vars, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_means, 1);
-  __PYX_XDEC_MEMVIEW(&__pyx_v_dist_missing, 1);
-  __PYX_XDEC_MEMVIEW(&__pyx_v_dist_missing2, 1);
-  __PYX_XDEC_MEMVIEW(&__pyx_v_distances, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_vars, 1);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":93
+/* "Orange/distance/_distance.pyx":159
  * 
  * 
- * def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
- *     cdef:
- *         double [:] means = fit_params["means"]
+ * def fix_euclidean_cols_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_3euclidean_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_2euclidean_cols[] = "euclidean_cols(ndarray x, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_3euclidean_cols = {"euclidean_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_3euclidean_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_2euclidean_cols};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_3euclidean_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_9fix_euclidean_cols_normalized(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_8fix_euclidean_cols_normalized[] = "fix_euclidean_cols_normalized(ndarray distances, ndarray x, __Pyx_memviewslice means, __Pyx_memviewslice vars)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_9fix_euclidean_cols_normalized = {"fix_euclidean_cols_normalized", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_9fix_euclidean_cols_normalized, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_8fix_euclidean_cols_normalized};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_9fix_euclidean_cols_normalized(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyArrayObject *__pyx_v_distances = 0;
   PyArrayObject *__pyx_v_x = 0;
-  PyObject *__pyx_v_fit_params = 0;
+  CYTHON_UNUSED __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
+  CYTHON_UNUSED __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("euclidean_cols (wrapper)", 0);
+  __Pyx_RefNannySetupContext("fix_euclidean_cols_normalized (wrapper)", 0);
   {
-    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x,&__pyx_n_s_fit_params,0};
-    PyObject* values[2] = {0,0};
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_distances,&__pyx_n_s_x,&__pyx_n_s_means,&__pyx_n_s_vars,0};
+    PyObject* values[4] = {0,0,0,0};
     if (unlikely(__pyx_kwds)) {
       Py_ssize_t kw_args;
       const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
       switch (pos_args) {
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
         case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
         case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
         case  0: break;
@@ -3313,36 +4268,51 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_3euclidean_cols(PyObject 
       kw_args = PyDict_Size(__pyx_kwds);
       switch (pos_args) {
         case  0:
-        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x)) != 0)) kw_args--;
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_distances)) != 0)) kw_args--;
         else goto __pyx_L5_argtuple_error;
         case  1:
-        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("euclidean_cols", 1, 2, 2, 1); __PYX_ERR(0, 93, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols_normalized", 1, 4, 4, 1); __PYX_ERR(0, 159, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_means)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols_normalized", 1, 4, 4, 2); __PYX_ERR(0, 159, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vars)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols_normalized", 1, 4, 4, 3); __PYX_ERR(0, 159, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "euclidean_cols") < 0)) __PYX_ERR(0, 93, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "fix_euclidean_cols_normalized") < 0)) __PYX_ERR(0, 159, __pyx_L3_error)
       }
-    } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
     } else {
       values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
     }
-    __pyx_v_x = ((PyArrayObject *)values[0]);
-    __pyx_v_fit_params = values[1];
+    __pyx_v_distances = ((PyArrayObject *)values[0]);
+    __pyx_v_x = ((PyArrayObject *)values[1]);
+    __pyx_v_means = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[2]); if (unlikely(!__pyx_v_means.memview)) __PYX_ERR(0, 162, __pyx_L3_error)
+    __pyx_v_vars = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[3]); if (unlikely(!__pyx_v_vars.memview)) __PYX_ERR(0, 163, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("euclidean_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 93, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("fix_euclidean_cols_normalized", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 159, __pyx_L3_error)
   __pyx_L3_error:;
-  __Pyx_AddTraceback("Orange.distance._distance.euclidean_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_cols_normalized", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 93, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_distances), __pyx_ptype_5numpy_ndarray, 1, "distances", 0))) __PYX_ERR(0, 160, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 161, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_8fix_euclidean_cols_normalized(__pyx_self, __pyx_v_distances, __pyx_v_x, __pyx_v_means, __pyx_v_vars);
 
   /* function exit code */
   goto __pyx_L0;
@@ -3353,10 +4323,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_3euclidean_cols(PyObject 
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
-  __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
-  __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
-  char __pyx_v_normalize;
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_8fix_euclidean_cols_normalized(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_distances, PyArrayObject *__pyx_v_x, CYTHON_UNUSED __Pyx_memviewslice __pyx_v_means, CYTHON_UNUSED __Pyx_memviewslice __pyx_v_vars) {
   int __pyx_v_n_rows;
   int __pyx_v_n_cols;
   int __pyx_v_col1;
@@ -3365,165 +4332,68 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
   double __pyx_v_val1;
   double __pyx_v_val2;
   double __pyx_v_d;
-  __Pyx_memviewslice __pyx_v_distances = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_distances;
+  __Pyx_Buffer __pyx_pybuffer_distances;
   __Pyx_LocalBuf_ND __pyx_pybuffernd_x;
   __Pyx_Buffer __pyx_pybuffer_x;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  PyObject *__pyx_t_1 = NULL;
-  __Pyx_memviewslice __pyx_t_2 = { 0, 0, { 0 }, { 0 }, { 0 } };
-  char __pyx_t_3;
-  npy_intp __pyx_t_4;
-  npy_intp __pyx_t_5;
-  PyObject *__pyx_t_6 = NULL;
-  PyObject *__pyx_t_7 = NULL;
-  PyObject *__pyx_t_8 = NULL;
-  __Pyx_memviewslice __pyx_t_9 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  npy_intp __pyx_t_1;
+  npy_intp __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  int __pyx_t_5;
+  int __pyx_t_6;
+  Py_ssize_t __pyx_t_7;
+  Py_ssize_t __pyx_t_8;
+  int __pyx_t_9;
   int __pyx_t_10;
   int __pyx_t_11;
-  int __pyx_t_12;
-  int __pyx_t_13;
-  int __pyx_t_14;
-  int __pyx_t_15;
+  Py_ssize_t __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  __pyx_t_5numpy_float64_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
   Py_ssize_t __pyx_t_16;
-  Py_ssize_t __pyx_t_17;
-  __pyx_t_5numpy_float64_t __pyx_t_18;
+  __pyx_t_5numpy_float64_t __pyx_t_17;
+  Py_ssize_t __pyx_t_18;
   Py_ssize_t __pyx_t_19;
   Py_ssize_t __pyx_t_20;
-  __pyx_t_5numpy_float64_t __pyx_t_21;
-  int __pyx_t_22;
-  Py_ssize_t __pyx_t_23;
-  Py_ssize_t __pyx_t_24;
-  Py_ssize_t __pyx_t_25;
-  Py_ssize_t __pyx_t_26;
-  Py_ssize_t __pyx_t_27;
-  Py_ssize_t __pyx_t_28;
-  Py_ssize_t __pyx_t_29;
-  Py_ssize_t __pyx_t_30;
-  Py_ssize_t __pyx_t_31;
-  Py_ssize_t __pyx_t_32;
-  Py_ssize_t __pyx_t_33;
-  Py_ssize_t __pyx_t_34;
-  Py_ssize_t __pyx_t_35;
-  Py_ssize_t __pyx_t_36;
-  Py_ssize_t __pyx_t_37;
-  Py_ssize_t __pyx_t_38;
-  PyObject *__pyx_t_39 = NULL;
-  __Pyx_RefNannySetupContext("euclidean_cols", 0);
+  Py_ssize_t __pyx_t_21;
+  __Pyx_RefNannySetupContext("fix_euclidean_cols_normalized", 0);
+  __pyx_pybuffer_distances.pybuffer.buf = NULL;
+  __pyx_pybuffer_distances.refcount = 0;
+  __pyx_pybuffernd_distances.data = NULL;
+  __pyx_pybuffernd_distances.rcbuffer = &__pyx_pybuffer_distances;
   __pyx_pybuffer_x.pybuffer.buf = NULL;
   __pyx_pybuffer_x.refcount = 0;
   __pyx_pybuffernd_x.data = NULL;
   __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 93, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_distances.rcbuffer->pybuffer, (PyObject*)__pyx_v_distances, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES| PyBUF_WRITABLE, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 159, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x.diminfo[1].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x.diminfo[1].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":95
- * def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
- *     cdef:
- *         double [:] means = fit_params["means"]             # <<<<<<<<<<<<<<
- *         double [:] vars = fit_params["vars"]
- *         char normalize = fit_params["normalize"]
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 95, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 95, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_means = __pyx_t_2;
-  __pyx_t_2.memview = NULL;
-  __pyx_t_2.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":96
- *     cdef:
- *         double [:] means = fit_params["means"]
- *         double [:] vars = fit_params["vars"]             # <<<<<<<<<<<<<<
- *         char normalize = fit_params["normalize"]
- * 
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 96, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 96, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_vars = __pyx_t_2;
-  __pyx_t_2.memview = NULL;
-  __pyx_t_2.data = NULL;
-
-  /* "Orange/distance/_distance.pyx":97
- *         double [:] means = fit_params["means"]
- *         double [:] vars = fit_params["vars"]
- *         char normalize = fit_params["normalize"]             # <<<<<<<<<<<<<<
- * 
- *         int n_rows, n_cols, col1, col2, row
- */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 97, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_3 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 97, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_normalize = __pyx_t_3;
-
-  /* "Orange/distance/_distance.pyx":103
- *         double [:, :] distances
+  /* "Orange/distance/_distance.pyx":168
+ *         double val1, val2, d
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
- *     distances = np.zeros((n_cols, n_cols), dtype=float)
- *     with nogil:
- */
-  __pyx_t_4 = (__pyx_v_x->dimensions[0]);
-  __pyx_t_5 = (__pyx_v_x->dimensions[1]);
-  __pyx_v_n_rows = __pyx_t_4;
-  __pyx_v_n_cols = __pyx_t_5;
-
-  /* "Orange/distance/_distance.pyx":104
- * 
- *     n_rows, n_cols = x.shape[0], x.shape[1]
- *     distances = np.zeros((n_cols, n_cols), dtype=float)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for col1 in range(n_cols):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_8);
-  __Pyx_GIVEREF(__pyx_t_1);
-  PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_1);
-  __Pyx_GIVEREF(__pyx_t_7);
-  PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_7);
-  __pyx_t_1 = 0;
-  __pyx_t_7 = 0;
-  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_7);
-  __Pyx_GIVEREF(__pyx_t_8);
-  PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_8);
-  __pyx_t_8 = 0;
-  __pyx_t_8 = PyDict_New(); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 104, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 104, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_v_distances = __pyx_t_9;
-  __pyx_t_9.memview = NULL;
-  __pyx_t_9.data = NULL;
+  __pyx_t_1 = (__pyx_v_x->dimensions[0]);
+  __pyx_t_2 = (__pyx_v_x->dimensions[1]);
+  __pyx_v_n_rows = __pyx_t_1;
+  __pyx_v_n_cols = __pyx_t_2;
 
-  /* "Orange/distance/_distance.pyx":105
+  /* "Orange/distance/_distance.pyx":169
+ * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
- *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):
@@ -3535,117 +4405,97 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":106
- *     distances = np.zeros((n_cols, n_cols), dtype=float)
+        /* "Orange/distance/_distance.pyx":170
+ *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     with nogil:
  *         for col1 in range(n_cols):             # <<<<<<<<<<<<<<
  *             for col2 in range(col1):
- *                 d = 0
+ *                 if npy_isnan(distances[col1, col2]):
  */
-        __pyx_t_10 = __pyx_v_n_cols;
-        for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
-          __pyx_v_col1 = __pyx_t_11;
+        __pyx_t_3 = __pyx_v_n_cols;
+        for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+          __pyx_v_col1 = __pyx_t_4;
 
-          /* "Orange/distance/_distance.pyx":107
+          /* "Orange/distance/_distance.pyx":171
  *     with nogil:
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):             # <<<<<<<<<<<<<<
- *                 d = 0
- *                 for row in range(n_rows):
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0
  */
-          __pyx_t_12 = __pyx_v_col1;
-          for (__pyx_t_13 = 0; __pyx_t_13 < __pyx_t_12; __pyx_t_13+=1) {
-            __pyx_v_col2 = __pyx_t_13;
+          __pyx_t_5 = __pyx_v_col1;
+          for (__pyx_t_6 = 0; __pyx_t_6 < __pyx_t_5; __pyx_t_6+=1) {
+            __pyx_v_col2 = __pyx_t_6;
 
-            /* "Orange/distance/_distance.pyx":108
+            /* "Orange/distance/_distance.pyx":172
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):
- *                 d = 0             # <<<<<<<<<<<<<<
- *                 for row in range(n_rows):
- *                     val1, val2 = x[row, col1], x[row, col2]
+ *                 if npy_isnan(distances[col1, col2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for row in range(n_rows):
  */
-            __pyx_v_d = 0.0;
+            __pyx_t_7 = __pyx_v_col1;
+            __pyx_t_8 = __pyx_v_col2;
+            __pyx_t_9 = (npy_isnan((*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_7, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_8, __pyx_pybuffernd_distances.diminfo[1].strides))) != 0);
+            if (__pyx_t_9) {
 
-            /* "Orange/distance/_distance.pyx":109
+              /* "Orange/distance/_distance.pyx":173
  *             for col2 in range(col1):
- *                 d = 0
- *                 for row in range(n_rows):             # <<<<<<<<<<<<<<
- *                     val1, val2 = x[row, col1], x[row, col2]
- *                     if normalize:
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0             # <<<<<<<<<<<<<<
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
  */
-            __pyx_t_14 = __pyx_v_n_rows;
-            for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
-              __pyx_v_row = __pyx_t_15;
+              __pyx_v_d = 0.0;
 
-              /* "Orange/distance/_distance.pyx":110
- *                 d = 0
- *                 for row in range(n_rows):
- *                     val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
- *                     if normalize:
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- */
-              __pyx_t_16 = __pyx_v_row;
-              __pyx_t_17 = __pyx_v_col1;
-              __pyx_t_18 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_16, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_17, __pyx_pybuffernd_x.diminfo[1].strides));
-              __pyx_t_19 = __pyx_v_row;
-              __pyx_t_20 = __pyx_v_col2;
-              __pyx_t_21 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_19, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_20, __pyx_pybuffernd_x.diminfo[1].strides));
-              __pyx_v_val1 = __pyx_t_18;
-              __pyx_v_val2 = __pyx_t_21;
-
-              /* "Orange/distance/_distance.pyx":111
- *                 for row in range(n_rows):
- *                     val1, val2 = x[row, col1], x[row, col2]
- *                     if normalize:             # <<<<<<<<<<<<<<
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
- */
-              __pyx_t_22 = (__pyx_v_normalize != 0);
-              if (__pyx_t_22) {
-
-                /* "Orange/distance/_distance.pyx":112
- *                     val1, val2 = x[row, col1], x[row, col2]
- *                     if normalize:
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])             # <<<<<<<<<<<<<<
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+              /* "Orange/distance/_distance.pyx":174
+ *                 if npy_isnan(distances[col1, col2]):
+ *                     d = 0
+ *                     for row in range(n_rows):             # <<<<<<<<<<<<<<
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):
  */
-                __pyx_t_23 = __pyx_v_col1;
-                __pyx_t_24 = __pyx_v_col1;
-                __pyx_v_val1 = ((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_23 * __pyx_v_means.strides[0]) )))) / sqrt((2.0 * (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_24 * __pyx_v_vars.strides[0]) ))))));
+              __pyx_t_10 = __pyx_v_n_rows;
+              for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
+                __pyx_v_row = __pyx_t_11;
 
-                /* "Orange/distance/_distance.pyx":113
- *                     if normalize:
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])             # <<<<<<<<<<<<<<
+                /* "Orange/distance/_distance.pyx":175
+ *                     d = 0
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):
  */
-                __pyx_t_25 = __pyx_v_col2;
-                __pyx_t_26 = __pyx_v_col2;
-                __pyx_v_val2 = ((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_25 * __pyx_v_means.strides[0]) )))) / sqrt((2.0 * (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_26 * __pyx_v_vars.strides[0]) ))))));
+                __pyx_t_12 = __pyx_v_row;
+                __pyx_t_13 = __pyx_v_col1;
+                __pyx_t_14 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_12, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_13, __pyx_pybuffernd_x.diminfo[1].strides));
+                __pyx_t_15 = __pyx_v_row;
+                __pyx_t_16 = __pyx_v_col2;
+                __pyx_t_17 = (*__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_15, __pyx_pybuffernd_x.diminfo[0].strides, __pyx_t_16, __pyx_pybuffernd_x.diminfo[1].strides));
+                __pyx_v_val1 = __pyx_t_14;
+                __pyx_v_val2 = __pyx_t_17;
 
-                /* "Orange/distance/_distance.pyx":114
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+                /* "Orange/distance/_distance.pyx":176
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
  *                             if npy_isnan(val2):
  *                                 d += 1
  */
-                __pyx_t_22 = (npy_isnan(__pyx_v_val1) != 0);
-                if (__pyx_t_22) {
+                __pyx_t_9 = (npy_isnan(__pyx_v_val1) != 0);
+                if (__pyx_t_9) {
 
-                  /* "Orange/distance/_distance.pyx":115
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+                  /* "Orange/distance/_distance.pyx":177
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
  *                                 d += 1
  *                             else:
  */
-                  __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
-                  if (__pyx_t_22) {
+                  __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                  if (__pyx_t_9) {
 
-                    /* "Orange/distance/_distance.pyx":116
+                    /* "Orange/distance/_distance.pyx":178
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):
  *                                 d += 1             # <<<<<<<<<<<<<<
@@ -3654,8 +4504,8 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
  */
                     __pyx_v_d = (__pyx_v_d + 1.0);
 
-                    /* "Orange/distance/_distance.pyx":115
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+                    /* "Orange/distance/_distance.pyx":177
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
  *                                 d += 1
@@ -3664,7 +4514,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
                     goto __pyx_L14;
                   }
 
-                  /* "Orange/distance/_distance.pyx":118
+                  /* "Orange/distance/_distance.pyx":180
  *                                 d += 1
  *                             else:
  *                                 d += val2 ** 2 + 0.5             # <<<<<<<<<<<<<<
@@ -3676,9 +4526,9 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
                   }
                   __pyx_L14:;
 
-                  /* "Orange/distance/_distance.pyx":114
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+                  /* "Orange/distance/_distance.pyx":176
+ *                     for row in range(n_rows):
+ *                         val1, val2 = x[row, col1], x[row, col2]
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
  *                             if npy_isnan(val2):
  *                                 d += 1
@@ -3686,17 +4536,17 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":119
+                /* "Orange/distance/_distance.pyx":181
  *                             else:
  *                                 d += val2 ** 2 + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
  *                             d += val1 ** 2 + 0.5
  *                         else:
  */
-                __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
-                if (__pyx_t_22) {
+                __pyx_t_9 = (npy_isnan(__pyx_v_val2) != 0);
+                if (__pyx_t_9) {
 
-                  /* "Orange/distance/_distance.pyx":120
+                  /* "Orange/distance/_distance.pyx":182
  *                                 d += val2 ** 2 + 0.5
  *                         elif npy_isnan(val2):
  *                             d += val1 ** 2 + 0.5             # <<<<<<<<<<<<<<
@@ -3705,7 +4555,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
  */
                   __pyx_v_d = (__pyx_v_d + (pow(__pyx_v_val1, 2.0) + 0.5));
 
-                  /* "Orange/distance/_distance.pyx":119
+                  /* "Orange/distance/_distance.pyx":181
  *                             else:
  *                                 d += val2 ** 2 + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -3715,178 +4565,48 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":122
+                /* "Orange/distance/_distance.pyx":184
  *                             d += val1 ** 2 + 0.5
  *                         else:
  *                             d += (val1 - val2) ** 2             # <<<<<<<<<<<<<<
- *                     else:
- *                         if npy_isnan(val1):
+ *                     distances[col1, col2] = distances[col2, col1] = d
+ * 
  */
                 /*else*/ {
                   __pyx_v_d = (__pyx_v_d + pow((__pyx_v_val1 - __pyx_v_val2), 2.0));
                 }
                 __pyx_L13:;
-
-                /* "Orange/distance/_distance.pyx":111
- *                 for row in range(n_rows):
- *                     val1, val2 = x[row, col1], x[row, col2]
- *                     if normalize:             # <<<<<<<<<<<<<<
- *                         val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
- *                         val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
- */
-                goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":124
- *                             d += (val1 - val2) ** 2
- *                     else:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             if npy_isnan(val2):
- *                                 d += vars[col1] + vars[col2] \
- */
-              /*else*/ {
-                __pyx_t_22 = (npy_isnan(__pyx_v_val1) != 0);
-                if (__pyx_t_22) {
-
-                  /* "Orange/distance/_distance.pyx":125
- *                     else:
- *                         if npy_isnan(val1):
- *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                                 d += vars[col1] + vars[col2] \
- *                                      + (means[col1] - means[col2]) ** 2
- */
-                  __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
-                  if (__pyx_t_22) {
-
-                    /* "Orange/distance/_distance.pyx":126
- *                         if npy_isnan(val1):
- *                             if npy_isnan(val2):
- *                                 d += vars[col1] + vars[col2] \             # <<<<<<<<<<<<<<
- *                                      + (means[col1] - means[col2]) ** 2
- *                             else:
- */
-                    __pyx_t_27 = __pyx_v_col1;
-                    __pyx_t_28 = __pyx_v_col2;
-
-                    /* "Orange/distance/_distance.pyx":127
- *                             if npy_isnan(val2):
- *                                 d += vars[col1] + vars[col2] \
- *                                      + (means[col1] - means[col2]) ** 2             # <<<<<<<<<<<<<<
- *                             else:
- *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
- */
-                    __pyx_t_29 = __pyx_v_col1;
-                    __pyx_t_30 = __pyx_v_col2;
-
-                    /* "Orange/distance/_distance.pyx":126
- *                         if npy_isnan(val1):
- *                             if npy_isnan(val2):
- *                                 d += vars[col1] + vars[col2] \             # <<<<<<<<<<<<<<
- *                                      + (means[col1] - means[col2]) ** 2
- *                             else:
- */
-                    __pyx_v_d = (__pyx_v_d + (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_27 * __pyx_v_vars.strides[0]) ))) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_28 * __pyx_v_vars.strides[0]) )))) + pow(((*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_29 * __pyx_v_means.strides[0]) ))) - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_30 * __pyx_v_means.strides[0]) )))), 2.0)));
-
-                    /* "Orange/distance/_distance.pyx":125
- *                     else:
- *                         if npy_isnan(val1):
- *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                                 d += vars[col1] + vars[col2] \
- *                                      + (means[col1] - means[col2]) ** 2
- */
-                    goto __pyx_L16;
-                  }
-
-                  /* "Orange/distance/_distance.pyx":129
- *                                      + (means[col1] - means[col2]) ** 2
- *                             else:
- *                                 d += (val2 - means[col1]) ** 2 + vars[col1]             # <<<<<<<<<<<<<<
- *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col2]) ** 2 + vars[col2]
- */
-                  /*else*/ {
-                    __pyx_t_31 = __pyx_v_col1;
-                    __pyx_t_32 = __pyx_v_col1;
-                    __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_31 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_32 * __pyx_v_vars.strides[0]) )))));
-                  }
-                  __pyx_L16:;
-
-                  /* "Orange/distance/_distance.pyx":124
- *                             d += (val1 - val2) ** 2
- *                     else:
- *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
- *                             if npy_isnan(val2):
- *                                 d += vars[col1] + vars[col2] \
- */
-                  goto __pyx_L15;
-                }
-
-                /* "Orange/distance/_distance.pyx":130
- *                             else:
- *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col2]) ** 2 + vars[col2]
- *                         else:
- */
-                __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
-                if (__pyx_t_22) {
-
-                  /* "Orange/distance/_distance.pyx":131
- *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
- *                         elif npy_isnan(val2):
- *                             d += (val1 - means[col2]) ** 2 + vars[col2]             # <<<<<<<<<<<<<<
+              /* "Orange/distance/_distance.pyx":185
  *                         else:
  *                             d += (val1 - val2) ** 2
- */
-                  __pyx_t_33 = __pyx_v_col2;
-                  __pyx_t_34 = __pyx_v_col2;
-                  __pyx_v_d = (__pyx_v_d + (pow((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_33 * __pyx_v_means.strides[0]) )))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_34 * __pyx_v_vars.strides[0]) )))));
-
-                  /* "Orange/distance/_distance.pyx":130
- *                             else:
- *                                 d += (val2 - means[col1]) ** 2 + vars[col1]
- *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
- *                             d += (val1 - means[col2]) ** 2 + vars[col2]
- *                         else:
- */
-                  goto __pyx_L15;
-                }
-
-                /* "Orange/distance/_distance.pyx":133
- *                             d += (val1 - means[col2]) ** 2 + vars[col2]
- *                         else:
- *                             d += (val1 - val2) ** 2             # <<<<<<<<<<<<<<
- *                 distances[col1, col2] = distances[col2, col1] = d
- *     return np.sqrt(distances)
- */
-                /*else*/ {
-                  __pyx_v_d = (__pyx_v_d + pow((__pyx_v_val1 - __pyx_v_val2), 2.0));
-                }
-                __pyx_L15:;
-              }
-              __pyx_L12:;
-            }
-
-            /* "Orange/distance/_distance.pyx":134
- *                         else:
- *                             d += (val1 - val2) ** 2
- *                 distances[col1, col2] = distances[col2, col1] = d             # <<<<<<<<<<<<<<
- *     return np.sqrt(distances)
+ *                     distances[col1, col2] = distances[col2, col1] = d             # <<<<<<<<<<<<<<
+ * 
  * 
  */
-            __pyx_t_35 = __pyx_v_col1;
-            __pyx_t_36 = __pyx_v_col2;
-            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_distances.data + __pyx_t_35 * __pyx_v_distances.strides[0]) ) + __pyx_t_36 * __pyx_v_distances.strides[1]) )) = __pyx_v_d;
-            __pyx_t_37 = __pyx_v_col2;
-            __pyx_t_38 = __pyx_v_col1;
-            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_distances.data + __pyx_t_37 * __pyx_v_distances.strides[0]) ) + __pyx_t_38 * __pyx_v_distances.strides[1]) )) = __pyx_v_d;
+              __pyx_t_18 = __pyx_v_col1;
+              __pyx_t_19 = __pyx_v_col2;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_18, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_19, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+              __pyx_t_20 = __pyx_v_col2;
+              __pyx_t_21 = __pyx_v_col1;
+              *__Pyx_BufPtrStrided2d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_distances.rcbuffer->pybuffer.buf, __pyx_t_20, __pyx_pybuffernd_distances.diminfo[0].strides, __pyx_t_21, __pyx_pybuffernd_distances.diminfo[1].strides) = __pyx_v_d;
+
+              /* "Orange/distance/_distance.pyx":172
+ *         for col1 in range(n_cols):
+ *             for col2 in range(col1):
+ *                 if npy_isnan(distances[col1, col2]):             # <<<<<<<<<<<<<<
+ *                     d = 0
+ *                     for row in range(n_rows):
+ */
+            }
           }
         }
       }
 
-      /* "Orange/distance/_distance.pyx":105
+      /* "Orange/distance/_distance.pyx":169
+ * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
- *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):
@@ -3902,89 +4622,40 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
       }
   }
 
-  /* "Orange/distance/_distance.pyx":135
- *                             d += (val1 - val2) ** 2
- *                 distances[col1, col2] = distances[col2, col1] = d
- *     return np.sqrt(distances)             # <<<<<<<<<<<<<<
+  /* "Orange/distance/_distance.pyx":159
  * 
  * 
- */
-  __Pyx_XDECREF(__pyx_r);
-  __pyx_t_8 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 135, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_7 = __Pyx_PyObject_GetAttrStr(__pyx_t_8, __pyx_n_s_sqrt); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 135, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_7);
-  __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-  __pyx_t_8 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 135, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_8);
-  __pyx_t_6 = NULL;
-  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_7))) {
-    __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_7);
-    if (likely(__pyx_t_6)) {
-      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_7);
-      __Pyx_INCREF(__pyx_t_6);
-      __Pyx_INCREF(function);
-      __Pyx_DECREF_SET(__pyx_t_7, function);
-    }
-  }
-  if (!__pyx_t_6) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 135, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
-    __Pyx_GOTREF(__pyx_t_1);
-  } else {
-    __pyx_t_39 = PyTuple_New(1+1); if (unlikely(!__pyx_t_39)) __PYX_ERR(0, 135, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_39);
-    __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_39, 0, __pyx_t_6); __pyx_t_6 = NULL;
-    __Pyx_GIVEREF(__pyx_t_8);
-    PyTuple_SET_ITEM(__pyx_t_39, 0+1, __pyx_t_8);
-    __pyx_t_8 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_7, __pyx_t_39, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 135, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_1);
-    __Pyx_DECREF(__pyx_t_39); __pyx_t_39 = 0;
-  }
-  __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-  __pyx_r = __pyx_t_1;
-  __pyx_t_1 = 0;
-  goto __pyx_L0;
-
-  /* "Orange/distance/_distance.pyx":93
- * 
- * 
- * def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
- *     cdef:
- *         double [:] means = fit_params["means"]
+ * def fix_euclidean_cols_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
  */
 
   /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_1);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_2, 1);
-  __Pyx_XDECREF(__pyx_t_6);
-  __Pyx_XDECREF(__pyx_t_7);
-  __Pyx_XDECREF(__pyx_t_8);
-  __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
-  __Pyx_XDECREF(__pyx_t_39);
   { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
     __Pyx_PyThreadState_declare
     __Pyx_PyThreadState_assign
     __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
     __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x.rcbuffer->pybuffer);
   __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
-  __Pyx_AddTraceback("Orange.distance._distance.euclidean_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_AddTraceback("Orange.distance._distance.fix_euclidean_cols_normalized", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   goto __pyx_L2;
   __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_distances.rcbuffer->pybuffer);
   __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_x.rcbuffer->pybuffer);
   __pyx_L2:;
   __PYX_XDEC_MEMVIEW(&__pyx_v_means, 1);
   __PYX_XDEC_MEMVIEW(&__pyx_v_vars, 1);
-  __PYX_XDEC_MEMVIEW(&__pyx_v_distances, 1);
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":138
+/* "Orange/distance/_distance.pyx":188
  * 
  * 
  * def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -3993,10 +4664,10 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_2euclidean_cols(CYTHON_UN
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_4manhattan_rows[] = "manhattan_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_5manhattan_rows = {"manhattan_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_4manhattan_rows};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_11manhattan_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_10manhattan_rows[] = "manhattan_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_11manhattan_rows = {"manhattan_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_11manhattan_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_10manhattan_rows};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_11manhattan_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x1 = 0;
   PyArrayObject *__pyx_v_x2 = 0;
   char __pyx_v_two_tables;
@@ -4026,21 +4697,21 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows(PyObject 
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 1); __PYX_ERR(0, 138, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 1); __PYX_ERR(0, 188, __pyx_L3_error)
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 2); __PYX_ERR(0, 138, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 2); __PYX_ERR(0, 188, __pyx_L3_error)
         }
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 3); __PYX_ERR(0, 138, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, 3); __PYX_ERR(0, 188, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "manhattan_rows") < 0)) __PYX_ERR(0, 138, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "manhattan_rows") < 0)) __PYX_ERR(0, 188, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -4052,20 +4723,20 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows(PyObject 
     }
     __pyx_v_x1 = ((PyArrayObject *)values[0]);
     __pyx_v_x2 = ((PyArrayObject *)values[1]);
-    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 140, __pyx_L3_error)
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 190, __pyx_L3_error)
     __pyx_v_fit_params = values[3];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 138, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("manhattan_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 188, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.manhattan_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 138, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 139, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 188, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 189, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_10manhattan_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -4076,7 +4747,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_5manhattan_rows(PyObject 
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_10manhattan_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_medians = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_mads = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_dist_missing = { 0, 0, { 0 }, { 0 }, { 0 } };
@@ -4156,93 +4827,93 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 138, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 188, __pyx_L1_error)
   }
   __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 138, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 188, __pyx_L1_error)
   }
   __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":143
+  /* "Orange/distance/_distance.pyx":193
  *                    fit_params):
  *     cdef:
  *         double [:] medians = fit_params["medians"]             # <<<<<<<<<<<<<<
  *         double [:] mads = fit_params["mads"]
  *         double [:, :] dist_missing = fit_params["dist_missing"]
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_medians); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 143, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_medians); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 143, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 193, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_medians = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":144
+  /* "Orange/distance/_distance.pyx":194
  *     cdef:
  *         double [:] medians = fit_params["medians"]
  *         double [:] mads = fit_params["mads"]             # <<<<<<<<<<<<<<
  *         double [:, :] dist_missing = fit_params["dist_missing"]
  *         double [:] dist_missing2 = fit_params["dist_missing2"]
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_mads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 144, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_mads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 144, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 194, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_mads = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":145
+  /* "Orange/distance/_distance.pyx":195
  *         double [:] medians = fit_params["medians"]
  *         double [:] mads = fit_params["mads"]
  *         double [:, :] dist_missing = fit_params["dist_missing"]             # <<<<<<<<<<<<<<
  *         double [:] dist_missing2 = fit_params["dist_missing2"]
  *         char normalize = fit_params["normalize"]
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_3 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 145, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 195, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_dist_missing = __pyx_t_3;
   __pyx_t_3.memview = NULL;
   __pyx_t_3.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":146
+  /* "Orange/distance/_distance.pyx":196
  *         double [:] mads = fit_params["mads"]
  *         double [:, :] dist_missing = fit_params["dist_missing"]
  *         double [:] dist_missing2 = fit_params["dist_missing2"]             # <<<<<<<<<<<<<<
  *         char normalize = fit_params["normalize"]
  * 
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 196, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 146, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 196, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_dist_missing2 = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":147
+  /* "Orange/distance/_distance.pyx":197
  *         double [:, :] dist_missing = fit_params["dist_missing"]
  *         double [:] dist_missing2 = fit_params["dist_missing2"]
  *         char normalize = fit_params["normalize"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows1, n_rows2, n_cols, row1, row2, col
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_4 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 147, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_4 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 197, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_normalize = __pyx_t_4;
 
-  /* "Orange/distance/_distance.pyx":154
+  /* "Orange/distance/_distance.pyx":204
  *         double [:, :] distances
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
@@ -4254,7 +4925,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   __pyx_v_n_rows1 = __pyx_t_5;
   __pyx_v_n_cols = __pyx_t_6;
 
-  /* "Orange/distance/_distance.pyx":155
+  /* "Orange/distance/_distance.pyx":205
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
@@ -4263,7 +4934,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
   __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
 
-  /* "Orange/distance/_distance.pyx":156
+  /* "Orange/distance/_distance.pyx":206
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(mads) == len(medians) \             # <<<<<<<<<<<<<<
@@ -4274,35 +4945,35 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   if (unlikely(!Py_OptimizeFlag)) {
     __pyx_t_7 = (__pyx_v_n_cols == (__pyx_v_x2->dimensions[1]));
     if (__pyx_t_7) {
-      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_mads, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 156, __pyx_L1_error)
+      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_mads, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 206, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_8 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_8 == -1)) __PYX_ERR(0, 156, __pyx_L1_error)
+      __pyx_t_8 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_8 == -1)) __PYX_ERR(0, 206, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_7 = ((__pyx_v_x2->dimensions[1]) == __pyx_t_8);
       if (__pyx_t_7) {
-        __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_medians, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 156, __pyx_L1_error)
+        __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_medians, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 206, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_9 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(0, 156, __pyx_L1_error)
+        __pyx_t_9 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(0, 206, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_t_7 = (__pyx_t_8 == __pyx_t_9);
         if (__pyx_t_7) {
 
-          /* "Orange/distance/_distance.pyx":157
+          /* "Orange/distance/_distance.pyx":207
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(mads) == len(medians) \
  *             == len(dist_missing) == len(dist_missing2)             # <<<<<<<<<<<<<<
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  */
-          __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 157, __pyx_L1_error)
+          __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 207, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_10 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 157, __pyx_L1_error)
+          __pyx_t_10 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_10 == -1)) __PYX_ERR(0, 207, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __pyx_t_7 = (__pyx_t_9 == __pyx_t_10);
           if (__pyx_t_7) {
-            __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing2, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 157, __pyx_L1_error)
+            __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing2, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 207, __pyx_L1_error)
             __Pyx_GOTREF(__pyx_t_1);
-            __pyx_t_11 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_11 == -1)) __PYX_ERR(0, 157, __pyx_L1_error)
+            __pyx_t_11 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_11 == -1)) __PYX_ERR(0, 207, __pyx_L1_error)
             __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
             __pyx_t_7 = (__pyx_t_10 == __pyx_t_11);
           }
@@ -4310,7 +4981,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
       }
     }
 
-    /* "Orange/distance/_distance.pyx":156
+    /* "Orange/distance/_distance.pyx":206
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(mads) == len(medians) \             # <<<<<<<<<<<<<<
@@ -4319,28 +4990,28 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
     if (unlikely(!(__pyx_t_7 != 0))) {
       PyErr_SetNone(PyExc_AssertionError);
-      __PYX_ERR(0, 156, __pyx_L1_error)
+      __PYX_ERR(0, 206, __pyx_L1_error)
     }
   }
   #endif
 
-  /* "Orange/distance/_distance.pyx":159
+  /* "Orange/distance/_distance.pyx":209
  *             == len(dist_missing) == len(dist_missing2)
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for row1 in range(n_rows1):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_12);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_13 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_13 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_13);
-  __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_14 = PyTuple_New(2); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_14);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_14, 0, __pyx_t_1);
@@ -4348,27 +5019,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   PyTuple_SET_ITEM(__pyx_t_14, 1, __pyx_t_13);
   __pyx_t_1 = 0;
   __pyx_t_13 = 0;
-  __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_13 = PyTuple_New(1); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_13);
   __Pyx_GIVEREF(__pyx_t_14);
   PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_14);
   __pyx_t_14 = 0;
-  __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __pyx_t_14 = PyDict_New(); if (unlikely(!__pyx_t_14)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_14);
-  if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_14, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 209, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_12, __pyx_t_13, __pyx_t_14); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
   __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
   __Pyx_DECREF(__pyx_t_14); __pyx_t_14 = 0;
   __pyx_t_3 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 159, __pyx_L1_error)
+  if (unlikely(!__pyx_t_3.memview)) __PYX_ERR(0, 209, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_distances = __pyx_t_3;
   __pyx_t_3.memview = NULL;
   __pyx_t_3.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":160
+  /* "Orange/distance/_distance.pyx":210
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -4382,7 +5053,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":161
+        /* "Orange/distance/_distance.pyx":211
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:
  *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
@@ -4393,7 +5064,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
         for (__pyx_t_16 = 0; __pyx_t_16 < __pyx_t_15; __pyx_t_16+=1) {
           __pyx_v_row1 = __pyx_t_16;
 
-          /* "Orange/distance/_distance.pyx":162
+          /* "Orange/distance/_distance.pyx":212
  *     with nogil:
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
@@ -4408,7 +5079,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
           for (__pyx_t_18 = 0; __pyx_t_18 < __pyx_t_17; __pyx_t_18+=1) {
             __pyx_v_row2 = __pyx_t_18;
 
-            /* "Orange/distance/_distance.pyx":163
+            /* "Orange/distance/_distance.pyx":213
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 d = 0             # <<<<<<<<<<<<<<
@@ -4417,7 +5088,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
             __pyx_v_d = 0.0;
 
-            /* "Orange/distance/_distance.pyx":164
+            /* "Orange/distance/_distance.pyx":214
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 d = 0
  *                 for col in range(n_cols):             # <<<<<<<<<<<<<<
@@ -4428,7 +5099,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
             for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_19; __pyx_t_20+=1) {
               __pyx_v_col = __pyx_t_20;
 
-              /* "Orange/distance/_distance.pyx":165
+              /* "Orange/distance/_distance.pyx":215
  *                 d = 0
  *                 for col in range(n_cols):
  *                     if mads[col] == -2:             # <<<<<<<<<<<<<<
@@ -4439,7 +5110,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_t_7 = (((*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_21 * __pyx_v_mads.strides[0]) ))) == -2.0) != 0);
               if (__pyx_t_7) {
 
-                /* "Orange/distance/_distance.pyx":166
+                /* "Orange/distance/_distance.pyx":216
  *                 for col in range(n_cols):
  *                     if mads[col] == -2:
  *                         continue             # <<<<<<<<<<<<<<
@@ -4448,7 +5119,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
                 goto __pyx_L10_continue;
 
-                /* "Orange/distance/_distance.pyx":165
+                /* "Orange/distance/_distance.pyx":215
  *                 d = 0
  *                 for col in range(n_cols):
  *                     if mads[col] == -2:             # <<<<<<<<<<<<<<
@@ -4457,7 +5128,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
               }
 
-              /* "Orange/distance/_distance.pyx":168
+              /* "Orange/distance/_distance.pyx":218
  *                         continue
  * 
  *                     val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
@@ -4473,7 +5144,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_v_val1 = __pyx_t_24;
               __pyx_v_val2 = __pyx_t_27;
 
-              /* "Orange/distance/_distance.pyx":169
+              /* "Orange/distance/_distance.pyx":219
  * 
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4491,7 +5162,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_L14_bool_binop_done:;
               if (__pyx_t_7) {
 
-                /* "Orange/distance/_distance.pyx":170
+                /* "Orange/distance/_distance.pyx":220
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]             # <<<<<<<<<<<<<<
@@ -4501,7 +5172,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_29 = __pyx_v_col;
                 __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=0 */ (__pyx_v_dist_missing2.data + __pyx_t_29 * __pyx_v_dist_missing2.strides[0]) ))));
 
-                /* "Orange/distance/_distance.pyx":169
+                /* "Orange/distance/_distance.pyx":219
  * 
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4511,7 +5182,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":171
+              /* "Orange/distance/_distance.pyx":221
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]
  *                     elif mads[col] == -1:             # <<<<<<<<<<<<<<
@@ -4522,7 +5193,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_t_7 = (((*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_30 * __pyx_v_mads.strides[0]) ))) == -1.0) != 0);
               if (__pyx_t_7) {
 
-                /* "Orange/distance/_distance.pyx":172
+                /* "Orange/distance/_distance.pyx":222
  *                         d += dist_missing2[col]
  *                     elif mads[col] == -1:
  *                         ival1, ival2 = int(val1), int(val2)             # <<<<<<<<<<<<<<
@@ -4532,7 +5203,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_v_ival1 = ((int)__pyx_v_val1);
                 __pyx_v_ival2 = ((int)__pyx_v_val2);
 
-                /* "Orange/distance/_distance.pyx":173
+                /* "Orange/distance/_distance.pyx":223
  *                     elif mads[col] == -1:
  *                         ival1, ival2 = int(val1), int(val2)
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4542,7 +5213,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":174
+                  /* "Orange/distance/_distance.pyx":224
  *                         ival1, ival2 = int(val1), int(val2)
  *                         if npy_isnan(val1):
  *                             d += dist_missing[col, ival2]             # <<<<<<<<<<<<<<
@@ -4553,7 +5224,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_32 = __pyx_v_ival2;
                   __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_31 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_32 * __pyx_v_dist_missing.strides[1]) ))));
 
-                  /* "Orange/distance/_distance.pyx":173
+                  /* "Orange/distance/_distance.pyx":223
  *                     elif mads[col] == -1:
  *                         ival1, ival2 = int(val1), int(val2)
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4563,7 +5234,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L16;
                 }
 
-                /* "Orange/distance/_distance.pyx":175
+                /* "Orange/distance/_distance.pyx":225
  *                         if npy_isnan(val1):
  *                             d += dist_missing[col, ival2]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4573,7 +5244,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":176
+                  /* "Orange/distance/_distance.pyx":226
  *                             d += dist_missing[col, ival2]
  *                         elif npy_isnan(val2):
  *                             d += dist_missing[col, ival1]             # <<<<<<<<<<<<<<
@@ -4584,7 +5255,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_34 = __pyx_v_ival1;
                   __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_dist_missing.data + __pyx_t_33 * __pyx_v_dist_missing.strides[0]) ) + __pyx_t_34 * __pyx_v_dist_missing.strides[1]) ))));
 
-                  /* "Orange/distance/_distance.pyx":175
+                  /* "Orange/distance/_distance.pyx":225
  *                         if npy_isnan(val1):
  *                             d += dist_missing[col, ival2]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4594,7 +5265,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L16;
                 }
 
-                /* "Orange/distance/_distance.pyx":177
+                /* "Orange/distance/_distance.pyx":227
  *                         elif npy_isnan(val2):
  *                             d += dist_missing[col, ival1]
  *                         elif ival1 != ival2:             # <<<<<<<<<<<<<<
@@ -4604,7 +5275,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = ((__pyx_v_ival1 != __pyx_v_ival2) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":178
+                  /* "Orange/distance/_distance.pyx":228
  *                             d += dist_missing[col, ival1]
  *                         elif ival1 != ival2:
  *                             d += 1             # <<<<<<<<<<<<<<
@@ -4613,7 +5284,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
                   __pyx_v_d = (__pyx_v_d + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":177
+                  /* "Orange/distance/_distance.pyx":227
  *                         elif npy_isnan(val2):
  *                             d += dist_missing[col, ival1]
  *                         elif ival1 != ival2:             # <<<<<<<<<<<<<<
@@ -4623,7 +5294,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 }
                 __pyx_L16:;
 
-                /* "Orange/distance/_distance.pyx":171
+                /* "Orange/distance/_distance.pyx":221
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]
  *                     elif mads[col] == -1:             # <<<<<<<<<<<<<<
@@ -4633,7 +5304,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":179
+              /* "Orange/distance/_distance.pyx":229
  *                         elif ival1 != ival2:
  *                             d += 1
  *                     elif normalize:             # <<<<<<<<<<<<<<
@@ -4643,7 +5314,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_t_7 = (__pyx_v_normalize != 0);
               if (__pyx_t_7) {
 
-                /* "Orange/distance/_distance.pyx":180
+                /* "Orange/distance/_distance.pyx":230
  *                             d += 1
  *                     elif normalize:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4653,7 +5324,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":181
+                  /* "Orange/distance/_distance.pyx":231
  *                     elif normalize:
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5             # <<<<<<<<<<<<<<
@@ -4664,7 +5335,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_36 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (((fabs((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_35 * __pyx_v_medians.strides[0]) ))))) / (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_36 * __pyx_v_mads.strides[0]) )))) / 2.0) + 0.5));
 
-                  /* "Orange/distance/_distance.pyx":180
+                  /* "Orange/distance/_distance.pyx":230
  *                             d += 1
  *                     elif normalize:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4674,7 +5345,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L17;
                 }
 
-                /* "Orange/distance/_distance.pyx":182
+                /* "Orange/distance/_distance.pyx":232
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4684,7 +5355,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":183
+                  /* "Orange/distance/_distance.pyx":233
  *                             d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5
  *                         elif npy_isnan(val2):
  *                             d += fabs(val1 - medians[col]) / mads[col] / 2 + 0.5             # <<<<<<<<<<<<<<
@@ -4695,7 +5366,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_38 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (((fabs((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_37 * __pyx_v_medians.strides[0]) ))))) / (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_38 * __pyx_v_mads.strides[0]) )))) / 2.0) + 0.5));
 
-                  /* "Orange/distance/_distance.pyx":182
+                  /* "Orange/distance/_distance.pyx":232
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) / mads[col] / 2 + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4705,7 +5376,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L17;
                 }
 
-                /* "Orange/distance/_distance.pyx":185
+                /* "Orange/distance/_distance.pyx":235
  *                             d += fabs(val1 - medians[col]) / mads[col] / 2 + 0.5
  *                         else:
  *                             d += fabs(val1 - val2) / mads[col] / 2             # <<<<<<<<<<<<<<
@@ -4718,7 +5389,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 }
                 __pyx_L17:;
 
-                /* "Orange/distance/_distance.pyx":179
+                /* "Orange/distance/_distance.pyx":229
  *                         elif ival1 != ival2:
  *                             d += 1
  *                     elif normalize:             # <<<<<<<<<<<<<<
@@ -4728,7 +5399,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":187
+              /* "Orange/distance/_distance.pyx":237
  *                             d += fabs(val1 - val2) / mads[col] / 2
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4739,7 +5410,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":188
+                  /* "Orange/distance/_distance.pyx":238
  *                     else:
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) + mads[col]             # <<<<<<<<<<<<<<
@@ -4750,7 +5421,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_41 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (fabs((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_40 * __pyx_v_medians.strides[0]) ))))) + (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_41 * __pyx_v_mads.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":187
+                  /* "Orange/distance/_distance.pyx":237
  *                             d += fabs(val1 - val2) / mads[col] / 2
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -4760,7 +5431,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L18;
                 }
 
-                /* "Orange/distance/_distance.pyx":189
+                /* "Orange/distance/_distance.pyx":239
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) + mads[col]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4770,7 +5441,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                 __pyx_t_7 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_7) {
 
-                  /* "Orange/distance/_distance.pyx":190
+                  /* "Orange/distance/_distance.pyx":240
  *                             d += fabs(val2 - medians[col]) + mads[col]
  *                         elif npy_isnan(val2):
  *                             d += fabs(val1 - medians[col]) + mads[col]             # <<<<<<<<<<<<<<
@@ -4781,7 +5452,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   __pyx_t_43 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (fabs((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_42 * __pyx_v_medians.strides[0]) ))))) + (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_43 * __pyx_v_mads.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":189
+                  /* "Orange/distance/_distance.pyx":239
  *                         if npy_isnan(val1):
  *                             d += fabs(val2 - medians[col]) + mads[col]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -4791,7 +5462,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
                   goto __pyx_L18;
                 }
 
-                /* "Orange/distance/_distance.pyx":192
+                /* "Orange/distance/_distance.pyx":242
  *                             d += fabs(val1 - medians[col]) + mads[col]
  *                         else:
  *                             d += fabs(val1 - val2)             # <<<<<<<<<<<<<<
@@ -4807,7 +5478,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
               __pyx_L10_continue:;
             }
 
-            /* "Orange/distance/_distance.pyx":194
+            /* "Orange/distance/_distance.pyx":244
  *                             d += fabs(val1 - val2)
  * 
  *                 distances[row1, row2] = d             # <<<<<<<<<<<<<<
@@ -4821,7 +5492,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
         }
       }
 
-      /* "Orange/distance/_distance.pyx":160
+      /* "Orange/distance/_distance.pyx":210
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -4839,7 +5510,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
       }
   }
 
-  /* "Orange/distance/_distance.pyx":196
+  /* "Orange/distance/_distance.pyx":246
  *                 distances[row1, row2] = d
  * 
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -4849,7 +5520,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   __pyx_t_7 = ((!(__pyx_v_two_tables != 0)) != 0);
   if (__pyx_t_7) {
 
-    /* "Orange/distance/_distance.pyx":197
+    /* "Orange/distance/_distance.pyx":247
  * 
  *     if not two_tables:
  *         _lower_to_symmetric(distances)             # <<<<<<<<<<<<<<
@@ -4858,7 +5529,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
     __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__pyx_v_distances);
 
-    /* "Orange/distance/_distance.pyx":196
+    /* "Orange/distance/_distance.pyx":246
  *                 distances[row1, row2] = d
  * 
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -4867,7 +5538,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
   }
 
-  /* "Orange/distance/_distance.pyx":198
+  /* "Orange/distance/_distance.pyx":248
  *     if not two_tables:
  *         _lower_to_symmetric(distances)
  *     return distances             # <<<<<<<<<<<<<<
@@ -4875,13 +5546,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 198, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 248, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":138
+  /* "Orange/distance/_distance.pyx":188
  * 
  * 
  * def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -4921,7 +5592,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":201
+/* "Orange/distance/_distance.pyx":251
  * 
  * 
  * def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -4930,10 +5601,10 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_4manhattan_rows(CYTHON_UN
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_6manhattan_cols[] = "manhattan_cols(ndarray x, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_7manhattan_cols = {"manhattan_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_6manhattan_cols};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_13manhattan_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_12manhattan_cols[] = "manhattan_cols(ndarray x, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_13manhattan_cols = {"manhattan_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_13manhattan_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_12manhattan_cols};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_13manhattan_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x = 0;
   PyObject *__pyx_v_fit_params = 0;
   PyObject *__pyx_r = 0;
@@ -4959,11 +5630,11 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols(PyObject 
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("manhattan_cols", 1, 2, 2, 1); __PYX_ERR(0, 201, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("manhattan_cols", 1, 2, 2, 1); __PYX_ERR(0, 251, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "manhattan_cols") < 0)) __PYX_ERR(0, 201, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "manhattan_cols") < 0)) __PYX_ERR(0, 251, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -4976,14 +5647,14 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols(PyObject 
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("manhattan_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 201, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("manhattan_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 251, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.manhattan_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 201, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 251, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_12manhattan_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -4994,7 +5665,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_7manhattan_cols(PyObject 
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_12manhattan_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_medians = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_mads = { 0, 0, { 0 }, { 0 }, { 0 } };
   char __pyx_v_normalize;
@@ -5056,56 +5727,56 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
   __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 201, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 251, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x.diminfo[1].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x.diminfo[1].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":203
+  /* "Orange/distance/_distance.pyx":253
  * def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
  *     cdef:
  *         double [:] medians = fit_params["medians"]             # <<<<<<<<<<<<<<
  *         double [:] mads = fit_params["mads"]
  *         char normalize = fit_params["normalize"]
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_medians); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 203, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_medians); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 253, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 203, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 253, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_medians = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":204
+  /* "Orange/distance/_distance.pyx":254
  *     cdef:
  *         double [:] medians = fit_params["medians"]
  *         double [:] mads = fit_params["mads"]             # <<<<<<<<<<<<<<
  *         char normalize = fit_params["normalize"]
  * 
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_mads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 204, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_mads); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 254, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 204, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 254, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_mads = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":205
+  /* "Orange/distance/_distance.pyx":255
  *         double [:] medians = fit_params["medians"]
  *         double [:] mads = fit_params["mads"]
  *         char normalize = fit_params["normalize"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows, n_cols, col1, col2, row
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_normalize); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 255, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_3 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_3 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 205, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_As_char(__pyx_t_1); if (unlikely((__pyx_t_3 == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 255, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_normalize = __pyx_t_3;
 
-  /* "Orange/distance/_distance.pyx":211
+  /* "Orange/distance/_distance.pyx":261
  *         double [:, :] distances
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
@@ -5117,23 +5788,23 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
   __pyx_v_n_rows = __pyx_t_4;
   __pyx_v_n_cols = __pyx_t_5;
 
-  /* "Orange/distance/_distance.pyx":212
+  /* "Orange/distance/_distance.pyx":262
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for col1 in range(n_cols):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_1);
@@ -5141,27 +5812,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
   PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_7);
   __pyx_t_1 = 0;
   __pyx_t_7 = 0;
-  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_GIVEREF(__pyx_t_8);
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_8);
   __pyx_t_8 = 0;
-  __pyx_t_8 = PyDict_New(); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __pyx_t_8 = PyDict_New(); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 212, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 212, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 262, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 212, __pyx_L1_error)
+  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 262, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_distances = __pyx_t_9;
   __pyx_t_9.memview = NULL;
   __pyx_t_9.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":213
+  /* "Orange/distance/_distance.pyx":263
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -5175,7 +5846,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":214
+        /* "Orange/distance/_distance.pyx":264
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:
  *         for col1 in range(n_cols):             # <<<<<<<<<<<<<<
@@ -5186,7 +5857,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
         for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
           __pyx_v_col1 = __pyx_t_11;
 
-          /* "Orange/distance/_distance.pyx":215
+          /* "Orange/distance/_distance.pyx":265
  *     with nogil:
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):             # <<<<<<<<<<<<<<
@@ -5197,7 +5868,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
           for (__pyx_t_13 = 0; __pyx_t_13 < __pyx_t_12; __pyx_t_13+=1) {
             __pyx_v_col2 = __pyx_t_13;
 
-            /* "Orange/distance/_distance.pyx":216
+            /* "Orange/distance/_distance.pyx":266
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):
  *                 d = 0             # <<<<<<<<<<<<<<
@@ -5206,7 +5877,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  */
             __pyx_v_d = 0.0;
 
-            /* "Orange/distance/_distance.pyx":217
+            /* "Orange/distance/_distance.pyx":267
  *             for col2 in range(col1):
  *                 d = 0
  *                 for row in range(n_rows):             # <<<<<<<<<<<<<<
@@ -5217,7 +5888,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
             for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
               __pyx_v_row = __pyx_t_15;
 
-              /* "Orange/distance/_distance.pyx":218
+              /* "Orange/distance/_distance.pyx":268
  *                 d = 0
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
@@ -5233,7 +5904,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
               __pyx_v_val1 = __pyx_t_18;
               __pyx_v_val2 = __pyx_t_21;
 
-              /* "Orange/distance/_distance.pyx":219
+              /* "Orange/distance/_distance.pyx":269
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if normalize:             # <<<<<<<<<<<<<<
@@ -5243,7 +5914,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
               __pyx_t_22 = (__pyx_v_normalize != 0);
               if (__pyx_t_22) {
 
-                /* "Orange/distance/_distance.pyx":220
+                /* "Orange/distance/_distance.pyx":270
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if normalize:
  *                         val1 = (val1 - medians[col1]) / (2 * mads[col1])             # <<<<<<<<<<<<<<
@@ -5254,7 +5925,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_24 = __pyx_v_col1;
                 __pyx_v_val1 = ((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_23 * __pyx_v_medians.strides[0]) )))) / (2.0 * (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_24 * __pyx_v_mads.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":221
+                /* "Orange/distance/_distance.pyx":271
  *                     if normalize:
  *                         val1 = (val1 - medians[col1]) / (2 * mads[col1])
  *                         val2 = (val2 - medians[col2]) / (2 * mads[col2])             # <<<<<<<<<<<<<<
@@ -5265,7 +5936,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_26 = __pyx_v_col2;
                 __pyx_v_val2 = ((__pyx_v_val2 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_25 * __pyx_v_medians.strides[0]) )))) / (2.0 * (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_26 * __pyx_v_mads.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":222
+                /* "Orange/distance/_distance.pyx":272
  *                         val1 = (val1 - medians[col1]) / (2 * mads[col1])
  *                         val2 = (val2 - medians[col2]) / (2 * mads[col2])
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -5275,7 +5946,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_22 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_22) {
 
-                  /* "Orange/distance/_distance.pyx":223
+                  /* "Orange/distance/_distance.pyx":273
  *                         val2 = (val2 - medians[col2]) / (2 * mads[col2])
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5285,7 +5956,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
                   if (__pyx_t_22) {
 
-                    /* "Orange/distance/_distance.pyx":224
+                    /* "Orange/distance/_distance.pyx":274
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):
  *                                 d += 1             # <<<<<<<<<<<<<<
@@ -5294,7 +5965,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  */
                     __pyx_v_d = (__pyx_v_d + 1.0);
 
-                    /* "Orange/distance/_distance.pyx":223
+                    /* "Orange/distance/_distance.pyx":273
  *                         val2 = (val2 - medians[col2]) / (2 * mads[col2])
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5304,7 +5975,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                     goto __pyx_L14;
                   }
 
-                  /* "Orange/distance/_distance.pyx":226
+                  /* "Orange/distance/_distance.pyx":276
  *                                 d += 1
  *                             else:
  *                                 d += fabs(val2) + 0.5             # <<<<<<<<<<<<<<
@@ -5316,7 +5987,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   }
                   __pyx_L14:;
 
-                  /* "Orange/distance/_distance.pyx":222
+                  /* "Orange/distance/_distance.pyx":272
  *                         val1 = (val1 - medians[col1]) / (2 * mads[col1])
  *                         val2 = (val2 - medians[col2]) / (2 * mads[col2])
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -5326,7 +5997,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":227
+                /* "Orange/distance/_distance.pyx":277
  *                             else:
  *                                 d += fabs(val2) + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5336,7 +6007,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_22) {
 
-                  /* "Orange/distance/_distance.pyx":228
+                  /* "Orange/distance/_distance.pyx":278
  *                                 d += fabs(val2) + 0.5
  *                         elif npy_isnan(val2):
  *                             d += fabs(val1) + 0.5             # <<<<<<<<<<<<<<
@@ -5345,7 +6016,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  */
                   __pyx_v_d = (__pyx_v_d + (fabs(__pyx_v_val1) + 0.5));
 
-                  /* "Orange/distance/_distance.pyx":227
+                  /* "Orange/distance/_distance.pyx":277
  *                             else:
  *                                 d += fabs(val2) + 0.5
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5355,7 +6026,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":230
+                /* "Orange/distance/_distance.pyx":280
  *                             d += fabs(val1) + 0.5
  *                         else:
  *                             d += fabs(val1 - val2)             # <<<<<<<<<<<<<<
@@ -5367,7 +6038,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 }
                 __pyx_L13:;
 
-                /* "Orange/distance/_distance.pyx":219
+                /* "Orange/distance/_distance.pyx":269
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if normalize:             # <<<<<<<<<<<<<<
@@ -5377,7 +6048,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":232
+              /* "Orange/distance/_distance.pyx":282
  *                             d += fabs(val1 - val2)
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -5388,7 +6059,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_22 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_22) {
 
-                  /* "Orange/distance/_distance.pyx":233
+                  /* "Orange/distance/_distance.pyx":283
  *                     else:
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5398,7 +6069,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
                   if (__pyx_t_22) {
 
-                    /* "Orange/distance/_distance.pyx":234
+                    /* "Orange/distance/_distance.pyx":284
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):
  *                                 d += mads[col1] + mads[col2] \             # <<<<<<<<<<<<<<
@@ -5408,7 +6079,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                     __pyx_t_27 = __pyx_v_col1;
                     __pyx_t_28 = __pyx_v_col2;
 
-                    /* "Orange/distance/_distance.pyx":235
+                    /* "Orange/distance/_distance.pyx":285
  *                             if npy_isnan(val2):
  *                                 d += mads[col1] + mads[col2] \
  *                                      + fabs(medians[col1] - medians[col2])             # <<<<<<<<<<<<<<
@@ -5418,7 +6089,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                     __pyx_t_29 = __pyx_v_col1;
                     __pyx_t_30 = __pyx_v_col2;
 
-                    /* "Orange/distance/_distance.pyx":234
+                    /* "Orange/distance/_distance.pyx":284
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):
  *                                 d += mads[col1] + mads[col2] \             # <<<<<<<<<<<<<<
@@ -5427,7 +6098,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  */
                     __pyx_v_d = (__pyx_v_d + (((*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_27 * __pyx_v_mads.strides[0]) ))) + (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_28 * __pyx_v_mads.strides[0]) )))) + fabs(((*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_29 * __pyx_v_medians.strides[0]) ))) - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_30 * __pyx_v_medians.strides[0]) )))))));
 
-                    /* "Orange/distance/_distance.pyx":233
+                    /* "Orange/distance/_distance.pyx":283
  *                     else:
  *                         if npy_isnan(val1):
  *                             if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5437,7 +6108,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                     goto __pyx_L16;
                   }
 
-                  /* "Orange/distance/_distance.pyx":237
+                  /* "Orange/distance/_distance.pyx":287
  *                                      + fabs(medians[col1] - medians[col2])
  *                             else:
  *                                 d += fabs(val2 - medians[col1]) + mads[col1]             # <<<<<<<<<<<<<<
@@ -5451,7 +6122,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   }
                   __pyx_L16:;
 
-                  /* "Orange/distance/_distance.pyx":232
+                  /* "Orange/distance/_distance.pyx":282
  *                             d += fabs(val1 - val2)
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -5461,7 +6132,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   goto __pyx_L15;
                 }
 
-                /* "Orange/distance/_distance.pyx":238
+                /* "Orange/distance/_distance.pyx":288
  *                             else:
  *                                 d += fabs(val2 - medians[col1]) + mads[col1]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5471,7 +6142,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                 __pyx_t_22 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_22) {
 
-                  /* "Orange/distance/_distance.pyx":239
+                  /* "Orange/distance/_distance.pyx":289
  *                                 d += fabs(val2 - medians[col1]) + mads[col1]
  *                         elif npy_isnan(val2):
  *                             d += fabs(val1 - medians[col2]) + mads[col2]             # <<<<<<<<<<<<<<
@@ -5482,7 +6153,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   __pyx_t_34 = __pyx_v_col2;
                   __pyx_v_d = (__pyx_v_d + (fabs((__pyx_v_val1 - (*((double *) ( /* dim=0 */ (__pyx_v_medians.data + __pyx_t_33 * __pyx_v_medians.strides[0]) ))))) + (*((double *) ( /* dim=0 */ (__pyx_v_mads.data + __pyx_t_34 * __pyx_v_mads.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":238
+                  /* "Orange/distance/_distance.pyx":288
  *                             else:
  *                                 d += fabs(val2 - medians[col1]) + mads[col1]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -5492,7 +6163,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
                   goto __pyx_L15;
                 }
 
-                /* "Orange/distance/_distance.pyx":241
+                /* "Orange/distance/_distance.pyx":291
  *                             d += fabs(val1 - medians[col2]) + mads[col2]
  *                         else:
  *                             d += fabs(val1 - val2)             # <<<<<<<<<<<<<<
@@ -5507,7 +6178,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
               __pyx_L12:;
             }
 
-            /* "Orange/distance/_distance.pyx":242
+            /* "Orange/distance/_distance.pyx":292
  *                         else:
  *                             d += fabs(val1 - val2)
  *                 distances[col1, col2] = distances[col2, col1] = d             # <<<<<<<<<<<<<<
@@ -5524,7 +6195,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
         }
       }
 
-      /* "Orange/distance/_distance.pyx":213
+      /* "Orange/distance/_distance.pyx":263
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -5542,7 +6213,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
       }
   }
 
-  /* "Orange/distance/_distance.pyx":243
+  /* "Orange/distance/_distance.pyx":293
  *                             d += fabs(val1 - val2)
  *                 distances[col1, col2] = distances[col2, col1] = d
  *     return distances             # <<<<<<<<<<<<<<
@@ -5550,13 +6221,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 243, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 293, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":201
+  /* "Orange/distance/_distance.pyx":251
  * 
  * 
  * def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -5592,7 +6263,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":246
+/* "Orange/distance/_distance.pyx":296
  * 
  * 
  * def p_nonzero(np.ndarray[np.float64_t, ndim=1] x):             # <<<<<<<<<<<<<<
@@ -5601,15 +6272,15 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_6manhattan_cols(CYTHON_UN
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_9p_nonzero(PyObject *__pyx_self, PyObject *__pyx_v_x); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_8p_nonzero[] = "p_nonzero(ndarray x)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_9p_nonzero = {"p_nonzero", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_9p_nonzero, METH_O, __pyx_doc_6Orange_8distance_9_distance_8p_nonzero};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_9p_nonzero(PyObject *__pyx_self, PyObject *__pyx_v_x) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_15p_nonzero(PyObject *__pyx_self, PyObject *__pyx_v_x); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_14p_nonzero[] = "p_nonzero(ndarray x)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_15p_nonzero = {"p_nonzero", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_15p_nonzero, METH_O, __pyx_doc_6Orange_8distance_9_distance_14p_nonzero};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_15p_nonzero(PyObject *__pyx_self, PyObject *__pyx_v_x) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("p_nonzero (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 246, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_8p_nonzero(__pyx_self, ((PyArrayObject *)__pyx_v_x));
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_14p_nonzero(__pyx_self, ((PyArrayObject *)__pyx_v_x));
 
   /* function exit code */
   goto __pyx_L0;
@@ -5620,7 +6291,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_9p_nonzero(PyObject *__py
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_14p_nonzero(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x) {
   int __pyx_v_row;
   int __pyx_v_nonzeros;
   int __pyx_v_nonnans;
@@ -5641,11 +6312,11 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
   __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 246, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 296, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0];
 
-  /* "Orange/distance/_distance.pyx":251
+  /* "Orange/distance/_distance.pyx":301
  *         double val
  * 
  *     nonzeros = nonnans = 0             # <<<<<<<<<<<<<<
@@ -5655,18 +6326,18 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
   __pyx_v_nonzeros = 0;
   __pyx_v_nonnans = 0;
 
-  /* "Orange/distance/_distance.pyx":252
+  /* "Orange/distance/_distance.pyx":302
  * 
  *     nonzeros = nonnans = 0
  *     for row in range(len(x)):             # <<<<<<<<<<<<<<
  *         val = x[row]
  *         if not npy_isnan(val):
  */
-  __pyx_t_1 = PyObject_Length(((PyObject *)__pyx_v_x)); if (unlikely(__pyx_t_1 == -1)) __PYX_ERR(0, 252, __pyx_L1_error)
+  __pyx_t_1 = PyObject_Length(((PyObject *)__pyx_v_x)); if (unlikely(__pyx_t_1 == -1)) __PYX_ERR(0, 302, __pyx_L1_error)
   for (__pyx_t_2 = 0; __pyx_t_2 < __pyx_t_1; __pyx_t_2+=1) {
     __pyx_v_row = __pyx_t_2;
 
-    /* "Orange/distance/_distance.pyx":253
+    /* "Orange/distance/_distance.pyx":303
  *     nonzeros = nonnans = 0
  *     for row in range(len(x)):
  *         val = x[row]             # <<<<<<<<<<<<<<
@@ -5676,7 +6347,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
     __pyx_t_3 = __pyx_v_row;
     __pyx_v_val = (*__Pyx_BufPtrStrided1d(__pyx_t_5numpy_float64_t *, __pyx_pybuffernd_x.rcbuffer->pybuffer.buf, __pyx_t_3, __pyx_pybuffernd_x.diminfo[0].strides));
 
-    /* "Orange/distance/_distance.pyx":254
+    /* "Orange/distance/_distance.pyx":304
  *     for row in range(len(x)):
  *         val = x[row]
  *         if not npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -5686,7 +6357,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
     __pyx_t_4 = ((!(npy_isnan(__pyx_v_val) != 0)) != 0);
     if (__pyx_t_4) {
 
-      /* "Orange/distance/_distance.pyx":255
+      /* "Orange/distance/_distance.pyx":305
  *         val = x[row]
  *         if not npy_isnan(val):
  *             nonnans += 1             # <<<<<<<<<<<<<<
@@ -5695,7 +6366,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
  */
       __pyx_v_nonnans = (__pyx_v_nonnans + 1);
 
-      /* "Orange/distance/_distance.pyx":256
+      /* "Orange/distance/_distance.pyx":306
  *         if not npy_isnan(val):
  *             nonnans += 1
  *             if val != 0:             # <<<<<<<<<<<<<<
@@ -5705,7 +6376,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
       __pyx_t_4 = ((__pyx_v_val != 0.0) != 0);
       if (__pyx_t_4) {
 
-        /* "Orange/distance/_distance.pyx":257
+        /* "Orange/distance/_distance.pyx":307
  *             nonnans += 1
  *             if val != 0:
  *                 nonzeros += 1             # <<<<<<<<<<<<<<
@@ -5714,7 +6385,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
  */
         __pyx_v_nonzeros = (__pyx_v_nonzeros + 1);
 
-        /* "Orange/distance/_distance.pyx":256
+        /* "Orange/distance/_distance.pyx":306
  *         if not npy_isnan(val):
  *             nonnans += 1
  *             if val != 0:             # <<<<<<<<<<<<<<
@@ -5723,7 +6394,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
  */
       }
 
-      /* "Orange/distance/_distance.pyx":254
+      /* "Orange/distance/_distance.pyx":304
  *     for row in range(len(x)):
  *         val = x[row]
  *         if not npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -5733,7 +6404,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
     }
   }
 
-  /* "Orange/distance/_distance.pyx":258
+  /* "Orange/distance/_distance.pyx":308
  *             if val != 0:
  *                 nonzeros += 1
  *     return float(nonzeros) / nonnans             # <<<<<<<<<<<<<<
@@ -5741,13 +6412,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_5 = PyFloat_FromDouble((((double)__pyx_v_nonzeros) / __pyx_v_nonnans)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 258, __pyx_L1_error)
+  __pyx_t_5 = PyFloat_FromDouble((((double)__pyx_v_nonzeros) / __pyx_v_nonnans)); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 308, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __pyx_r = __pyx_t_5;
   __pyx_t_5 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":246
+  /* "Orange/distance/_distance.pyx":296
  * 
  * 
  * def p_nonzero(np.ndarray[np.float64_t, ndim=1] x):             # <<<<<<<<<<<<<<
@@ -5775,7 +6446,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_8p_nonzero(CYTHON_UNUSED 
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":261
+/* "Orange/distance/_distance.pyx":311
  * 
  * 
  * cdef _abs_rows(double [:, :] x, double[:] means, double[:] vars):             # <<<<<<<<<<<<<<
@@ -5816,7 +6487,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
   Py_ssize_t __pyx_t_21;
   __Pyx_RefNannySetupContext("_abs_rows", 0);
 
-  /* "Orange/distance/_distance.pyx":267
+  /* "Orange/distance/_distance.pyx":317
  *         int row, col, n_rows, n_cols
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
@@ -5828,19 +6499,19 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
   __pyx_v_n_rows = __pyx_t_1;
   __pyx_v_n_cols = __pyx_t_2;
 
-  /* "Orange/distance/_distance.pyx":268
+  /* "Orange/distance/_distance.pyx":318
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_rows)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for row in range(n_rows):
  */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 318, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 318, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_rows); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 268, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_rows); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 318, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_6 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_5))) {
@@ -5853,29 +6524,29 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
     }
   }
   if (!__pyx_t_6) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 268, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 318, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
   } else {
-    __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 268, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 318, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6); __pyx_t_6 = NULL;
     __Pyx_GIVEREF(__pyx_t_4);
     PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_t_4);
     __pyx_t_4 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 268, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 318, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_3);
-  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 268, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 318, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_abss = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":269
+  /* "Orange/distance/_distance.pyx":319
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_rows)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -5889,7 +6560,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":270
+        /* "Orange/distance/_distance.pyx":320
  *     abss = np.empty(n_rows)
  *     with nogil:
  *         for row in range(n_rows):             # <<<<<<<<<<<<<<
@@ -5900,7 +6571,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
         for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
           __pyx_v_row = __pyx_t_10;
 
-          /* "Orange/distance/_distance.pyx":271
+          /* "Orange/distance/_distance.pyx":321
  *     with nogil:
  *         for row in range(n_rows):
  *             d = 0             # <<<<<<<<<<<<<<
@@ -5909,7 +6580,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  */
           __pyx_v_d = 0.0;
 
-          /* "Orange/distance/_distance.pyx":272
+          /* "Orange/distance/_distance.pyx":322
  *         for row in range(n_rows):
  *             d = 0
  *             for col in range(n_cols):             # <<<<<<<<<<<<<<
@@ -5920,7 +6591,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
           for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
             __pyx_v_col = __pyx_t_12;
 
-            /* "Orange/distance/_distance.pyx":273
+            /* "Orange/distance/_distance.pyx":323
  *             d = 0
  *             for col in range(n_cols):
  *                 if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -5931,7 +6602,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
             __pyx_t_14 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_13 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
             if (__pyx_t_14) {
 
-              /* "Orange/distance/_distance.pyx":274
+              /* "Orange/distance/_distance.pyx":324
  *             for col in range(n_cols):
  *                 if vars[col] == -2:
  *                     continue             # <<<<<<<<<<<<<<
@@ -5940,7 +6611,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  */
               goto __pyx_L8_continue;
 
-              /* "Orange/distance/_distance.pyx":273
+              /* "Orange/distance/_distance.pyx":323
  *             d = 0
  *             for col in range(n_cols):
  *                 if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -5949,7 +6620,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  */
             }
 
-            /* "Orange/distance/_distance.pyx":275
+            /* "Orange/distance/_distance.pyx":325
  *                 if vars[col] == -2:
  *                     continue
  *                 val = x[row, col]             # <<<<<<<<<<<<<<
@@ -5960,7 +6631,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
             __pyx_t_16 = __pyx_v_col;
             __pyx_v_val = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_x.data + __pyx_t_15 * __pyx_v_x.strides[0]) ) + __pyx_t_16 * __pyx_v_x.strides[1]) )));
 
-            /* "Orange/distance/_distance.pyx":276
+            /* "Orange/distance/_distance.pyx":326
  *                     continue
  *                 val = x[row, col]
  *                 if vars[col] == -1:             # <<<<<<<<<<<<<<
@@ -5971,7 +6642,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
             __pyx_t_14 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_17 * __pyx_v_vars.strides[0]) ))) == -1.0) != 0);
             if (__pyx_t_14) {
 
-              /* "Orange/distance/_distance.pyx":277
+              /* "Orange/distance/_distance.pyx":327
  *                 val = x[row, col]
  *                 if vars[col] == -1:
  *                     if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -5981,7 +6652,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
               __pyx_t_14 = (npy_isnan(__pyx_v_val) != 0);
               if (__pyx_t_14) {
 
-                /* "Orange/distance/_distance.pyx":278
+                /* "Orange/distance/_distance.pyx":328
  *                 if vars[col] == -1:
  *                     if npy_isnan(val):
  *                         d += means[col]             # <<<<<<<<<<<<<<
@@ -5991,7 +6662,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
                 __pyx_t_18 = __pyx_v_col;
                 __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_18 * __pyx_v_means.strides[0]) ))));
 
-                /* "Orange/distance/_distance.pyx":277
+                /* "Orange/distance/_distance.pyx":327
  *                 val = x[row, col]
  *                 if vars[col] == -1:
  *                     if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -6001,7 +6672,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":279
+              /* "Orange/distance/_distance.pyx":329
  *                     if npy_isnan(val):
  *                         d += means[col]
  *                     elif val != 0:             # <<<<<<<<<<<<<<
@@ -6011,7 +6682,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
               __pyx_t_14 = ((__pyx_v_val != 0.0) != 0);
               if (__pyx_t_14) {
 
-                /* "Orange/distance/_distance.pyx":280
+                /* "Orange/distance/_distance.pyx":330
  *                         d += means[col]
  *                     elif val != 0:
  *                         d += 1             # <<<<<<<<<<<<<<
@@ -6020,7 +6691,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  */
                 __pyx_v_d = (__pyx_v_d + 1.0);
 
-                /* "Orange/distance/_distance.pyx":279
+                /* "Orange/distance/_distance.pyx":329
  *                     if npy_isnan(val):
  *                         d += means[col]
  *                     elif val != 0:             # <<<<<<<<<<<<<<
@@ -6030,7 +6701,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
               }
               __pyx_L12:;
 
-              /* "Orange/distance/_distance.pyx":276
+              /* "Orange/distance/_distance.pyx":326
  *                     continue
  *                 val = x[row, col]
  *                 if vars[col] == -1:             # <<<<<<<<<<<<<<
@@ -6040,7 +6711,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
               goto __pyx_L11;
             }
 
-            /* "Orange/distance/_distance.pyx":282
+            /* "Orange/distance/_distance.pyx":332
  *                         d += 1
  *                 else:
  *                     if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -6051,7 +6722,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
               __pyx_t_14 = (npy_isnan(__pyx_v_val) != 0);
               if (__pyx_t_14) {
 
-                /* "Orange/distance/_distance.pyx":283
+                /* "Orange/distance/_distance.pyx":333
  *                 else:
  *                     if npy_isnan(val):
  *                         d += means[col] ** 2 + vars[col]             # <<<<<<<<<<<<<<
@@ -6062,7 +6733,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
                 __pyx_t_20 = __pyx_v_col;
                 __pyx_v_d = (__pyx_v_d + (pow((*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_19 * __pyx_v_means.strides[0]) ))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_20 * __pyx_v_vars.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":282
+                /* "Orange/distance/_distance.pyx":332
  *                         d += 1
  *                 else:
  *                     if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -6072,7 +6743,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":285
+              /* "Orange/distance/_distance.pyx":335
  *                         d += means[col] ** 2 + vars[col]
  *                     else:
  *                         d += val ** 2             # <<<<<<<<<<<<<<
@@ -6088,7 +6759,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
             __pyx_L8_continue:;
           }
 
-          /* "Orange/distance/_distance.pyx":286
+          /* "Orange/distance/_distance.pyx":336
  *                     else:
  *                         d += val ** 2
  *             abss[row] = sqrt(d)             # <<<<<<<<<<<<<<
@@ -6100,7 +6771,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
         }
       }
 
-      /* "Orange/distance/_distance.pyx":269
+      /* "Orange/distance/_distance.pyx":319
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_rows)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -6118,7 +6789,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
       }
   }
 
-  /* "Orange/distance/_distance.pyx":287
+  /* "Orange/distance/_distance.pyx":337
  *                         d += val ** 2
  *             abss[row] = sqrt(d)
  *     return abss             # <<<<<<<<<<<<<<
@@ -6126,13 +6797,13 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_3 = __pyx_memoryview_fromslice(__pyx_v_abss, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 287, __pyx_L1_error)
+  __pyx_t_3 = __pyx_memoryview_fromslice(__pyx_v_abss, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 337, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":261
+  /* "Orange/distance/_distance.pyx":311
  * 
  * 
  * cdef _abs_rows(double [:, :] x, double[:] means, double[:] vars):             # <<<<<<<<<<<<<<
@@ -6157,7 +6828,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":290
+/* "Orange/distance/_distance.pyx":340
  * 
  * 
  * def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -6166,10 +6837,10 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_rows(__Pyx_memviewsli
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_11cosine_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_10cosine_rows[] = "cosine_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_11cosine_rows = {"cosine_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_11cosine_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_10cosine_rows};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_11cosine_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_17cosine_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_16cosine_rows[] = "cosine_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_17cosine_rows = {"cosine_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_17cosine_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_16cosine_rows};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_17cosine_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x1 = 0;
   PyArrayObject *__pyx_v_x2 = 0;
   char __pyx_v_two_tables;
@@ -6199,21 +6870,21 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_11cosine_rows(PyObject *_
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 1); __PYX_ERR(0, 290, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 1); __PYX_ERR(0, 340, __pyx_L3_error)
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 2); __PYX_ERR(0, 290, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 2); __PYX_ERR(0, 340, __pyx_L3_error)
         }
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 3); __PYX_ERR(0, 290, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, 3); __PYX_ERR(0, 340, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cosine_rows") < 0)) __PYX_ERR(0, 290, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cosine_rows") < 0)) __PYX_ERR(0, 340, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -6225,20 +6896,20 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_11cosine_rows(PyObject *_
     }
     __pyx_v_x1 = ((PyArrayObject *)values[0]);
     __pyx_v_x2 = ((PyArrayObject *)values[1]);
-    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 292, __pyx_L3_error)
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 342, __pyx_L3_error)
     __pyx_v_fit_params = values[3];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 290, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("cosine_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 340, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.cosine_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 290, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 291, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_10cosine_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 340, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 341, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_16cosine_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -6249,7 +6920,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_11cosine_rows(PyObject *_
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_16cosine_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_dist_missing2 = { 0, 0, { 0 }, { 0 }, { 0 } };
@@ -6318,64 +6989,64 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 290, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 340, __pyx_L1_error)
   }
   __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 290, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 340, __pyx_L1_error)
   }
   __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":295
+  /* "Orange/distance/_distance.pyx":345
  *                 fit_params):
  *     cdef:
  *         double [:] vars = fit_params["vars"]             # <<<<<<<<<<<<<<
  *         double [:] means = fit_params["means"]
  *         double [:] dist_missing2 = fit_params["dist_missing2"]
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 295, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 345, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 295, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 345, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_vars = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":296
+  /* "Orange/distance/_distance.pyx":346
  *     cdef:
  *         double [:] vars = fit_params["vars"]
  *         double [:] means = fit_params["means"]             # <<<<<<<<<<<<<<
  *         double [:] dist_missing2 = fit_params["dist_missing2"]
  * 
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 346, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 296, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 346, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_means = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":297
+  /* "Orange/distance/_distance.pyx":347
  *         double [:] vars = fit_params["vars"]
  *         double [:] means = fit_params["means"]
  *         double [:] dist_missing2 = fit_params["dist_missing2"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows1, n_rows2, n_cols, row1, row2, col
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 297, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_dist_missing2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 347, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 297, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 347, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_dist_missing2 = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":304
+  /* "Orange/distance/_distance.pyx":354
  *         double [:, :] distances
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
@@ -6387,7 +7058,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   __pyx_v_n_rows1 = __pyx_t_3;
   __pyx_v_n_cols = __pyx_t_4;
 
-  /* "Orange/distance/_distance.pyx":305
+  /* "Orange/distance/_distance.pyx":355
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
@@ -6396,7 +7067,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
   __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
 
-  /* "Orange/distance/_distance.pyx":306
+  /* "Orange/distance/_distance.pyx":356
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(vars) == len(means) \             # <<<<<<<<<<<<<<
@@ -6407,36 +7078,36 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   if (unlikely(!Py_OptimizeFlag)) {
     __pyx_t_5 = (__pyx_v_n_cols == (__pyx_v_x2->dimensions[1]));
     if (__pyx_t_5) {
-      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_vars, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 306, __pyx_L1_error)
+      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_vars, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_6 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 306, __pyx_L1_error)
+      __pyx_t_6 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 356, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_5 = ((__pyx_v_x2->dimensions[1]) == __pyx_t_6);
       if (__pyx_t_5) {
-        __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_means, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 306, __pyx_L1_error)
+        __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_means, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 356, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_1);
-        __pyx_t_7 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 306, __pyx_L1_error)
+        __pyx_t_7 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 356, __pyx_L1_error)
         __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
         __pyx_t_5 = (__pyx_t_6 == __pyx_t_7);
         if (__pyx_t_5) {
 
-          /* "Orange/distance/_distance.pyx":307
+          /* "Orange/distance/_distance.pyx":357
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
  *         == len(dist_missing2)             # <<<<<<<<<<<<<<
  *     abs1 = _abs_rows(x1, means, vars)
  *     abs2 = _abs_rows(x2, means, vars) if two_tables else abs1
  */
-          __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing2, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
+          __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_dist_missing2, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 357, __pyx_L1_error)
           __Pyx_GOTREF(__pyx_t_1);
-          __pyx_t_8 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_8 == -1)) __PYX_ERR(0, 307, __pyx_L1_error)
+          __pyx_t_8 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_8 == -1)) __PYX_ERR(0, 357, __pyx_L1_error)
           __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
           __pyx_t_5 = (__pyx_t_7 == __pyx_t_8);
         }
       }
     }
 
-    /* "Orange/distance/_distance.pyx":306
+    /* "Orange/distance/_distance.pyx":356
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == len(vars) == len(means) \             # <<<<<<<<<<<<<<
@@ -6445,12 +7116,12 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
     if (unlikely(!(__pyx_t_5 != 0))) {
       PyErr_SetNone(PyExc_AssertionError);
-      __PYX_ERR(0, 306, __pyx_L1_error)
+      __PYX_ERR(0, 356, __pyx_L1_error)
     }
   }
   #endif
 
-  /* "Orange/distance/_distance.pyx":308
+  /* "Orange/distance/_distance.pyx":358
  *     assert n_cols == x2.shape[1] == len(vars) == len(means) \
  *         == len(dist_missing2)
  *     abs1 = _abs_rows(x1, means, vars)             # <<<<<<<<<<<<<<
@@ -6458,18 +7129,18 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  */
   __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(((PyObject *)__pyx_v_x1));
-  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 308, __pyx_L1_error)
-  __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_rows(__pyx_t_9, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 308, __pyx_L1_error)
+  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 358, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_rows(__pyx_t_9, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 358, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 308, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 358, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_abs1 = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":309
+  /* "Orange/distance/_distance.pyx":359
  *         == len(dist_missing2)
  *     abs1 = _abs_rows(x1, means, vars)
  *     abs2 = _abs_rows(x2, means, vars) if two_tables else abs1             # <<<<<<<<<<<<<<
@@ -6478,21 +7149,21 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
   if ((__pyx_v_two_tables != 0)) {
     __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(((PyObject *)__pyx_v_x2));
-    if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 309, __pyx_L1_error)
-    __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_rows(__pyx_t_9, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 309, __pyx_L1_error)
+    if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 359, __pyx_L1_error)
+    __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_rows(__pyx_t_9, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 359, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __PYX_XDEC_MEMVIEW(&__pyx_t_9, 1);
     __pyx_t_10 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-    if (unlikely(!__pyx_t_10.memview)) __PYX_ERR(0, 309, __pyx_L1_error)
+    if (unlikely(!__pyx_t_10.memview)) __PYX_ERR(0, 359, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_2 = __pyx_t_10;
     __pyx_t_10.memview = NULL;
     __pyx_t_10.data = NULL;
   } else {
-    __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_abs1, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 309, __pyx_L1_error)
+    __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_abs1, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 359, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __pyx_t_10 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-    if (unlikely(!__pyx_t_10.memview)) __PYX_ERR(0, 309, __pyx_L1_error)
+    if (unlikely(!__pyx_t_10.memview)) __PYX_ERR(0, 359, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_2 = __pyx_t_10;
     __pyx_t_10.memview = NULL;
@@ -6502,23 +7173,23 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":310
+  /* "Orange/distance/_distance.pyx":360
  *     abs1 = _abs_rows(x1, means, vars)
  *     abs2 = _abs_rows(x2, means, vars) if two_tables else abs1
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)             # <<<<<<<<<<<<<<
  * 
  *     with nogil:
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_11 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_12);
-  __pyx_t_13 = PyTuple_New(2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_13 = PyTuple_New(2); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_13);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_13, 0, __pyx_t_1);
@@ -6526,27 +7197,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   PyTuple_SET_ITEM(__pyx_t_13, 1, __pyx_t_12);
   __pyx_t_1 = 0;
   __pyx_t_12 = 0;
-  __pyx_t_12 = PyTuple_New(1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_12 = PyTuple_New(1); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_12);
   __Pyx_GIVEREF(__pyx_t_13);
   PyTuple_SET_ITEM(__pyx_t_12, 0, __pyx_t_13);
   __pyx_t_13 = 0;
-  __pyx_t_13 = PyDict_New(); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 310, __pyx_L1_error)
+  __pyx_t_13 = PyDict_New(); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_13);
-  if (PyDict_SetItem(__pyx_t_13, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 310, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_12, __pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_13, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 360, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_11, __pyx_t_12, __pyx_t_13); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
   __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
   __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
   __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 310, __pyx_L1_error)
+  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 360, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_distances = __pyx_t_9;
   __pyx_t_9.memview = NULL;
   __pyx_t_9.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":312
+  /* "Orange/distance/_distance.pyx":362
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  * 
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -6560,7 +7231,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":313
+        /* "Orange/distance/_distance.pyx":363
  * 
  *     with nogil:
  *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
@@ -6571,7 +7242,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
         for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
           __pyx_v_row1 = __pyx_t_15;
 
-          /* "Orange/distance/_distance.pyx":314
+          /* "Orange/distance/_distance.pyx":364
  *     with nogil:
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
@@ -6586,7 +7257,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
           for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_16; __pyx_t_17+=1) {
             __pyx_v_row2 = __pyx_t_17;
 
-            /* "Orange/distance/_distance.pyx":315
+            /* "Orange/distance/_distance.pyx":365
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 d = 0             # <<<<<<<<<<<<<<
@@ -6595,7 +7266,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
             __pyx_v_d = 0.0;
 
-            /* "Orange/distance/_distance.pyx":316
+            /* "Orange/distance/_distance.pyx":366
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 d = 0
  *                 for col in range(n_cols):             # <<<<<<<<<<<<<<
@@ -6606,7 +7277,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
             for (__pyx_t_19 = 0; __pyx_t_19 < __pyx_t_18; __pyx_t_19+=1) {
               __pyx_v_col = __pyx_t_19;
 
-              /* "Orange/distance/_distance.pyx":317
+              /* "Orange/distance/_distance.pyx":367
  *                 d = 0
  *                 for col in range(n_cols):
  *                     if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -6617,7 +7288,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               __pyx_t_5 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_20 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
               if (__pyx_t_5) {
 
-                /* "Orange/distance/_distance.pyx":318
+                /* "Orange/distance/_distance.pyx":368
  *                 for col in range(n_cols):
  *                     if vars[col] == -2:
  *                         continue             # <<<<<<<<<<<<<<
@@ -6626,7 +7297,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
                 goto __pyx_L10_continue;
 
-                /* "Orange/distance/_distance.pyx":317
+                /* "Orange/distance/_distance.pyx":367
  *                 d = 0
  *                 for col in range(n_cols):
  *                     if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -6635,7 +7306,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
               }
 
-              /* "Orange/distance/_distance.pyx":319
+              /* "Orange/distance/_distance.pyx":369
  *                     if vars[col] == -2:
  *                         continue
  *                     val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
@@ -6651,7 +7322,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               __pyx_v_val1 = __pyx_t_23;
               __pyx_v_val2 = __pyx_t_26;
 
-              /* "Orange/distance/_distance.pyx":320
+              /* "Orange/distance/_distance.pyx":370
  *                         continue
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -6669,7 +7340,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               __pyx_L14_bool_binop_done:;
               if (__pyx_t_5) {
 
-                /* "Orange/distance/_distance.pyx":321
+                /* "Orange/distance/_distance.pyx":371
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]             # <<<<<<<<<<<<<<
@@ -6679,7 +7350,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 __pyx_t_28 = __pyx_v_col;
                 __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=0 */ (__pyx_v_dist_missing2.data + __pyx_t_28 * __pyx_v_dist_missing2.strides[0]) ))));
 
-                /* "Orange/distance/_distance.pyx":320
+                /* "Orange/distance/_distance.pyx":370
  *                         continue
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -6689,7 +7360,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":322
+              /* "Orange/distance/_distance.pyx":372
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]
  *                     elif vars[col] == -1:             # <<<<<<<<<<<<<<
@@ -6700,7 +7371,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               __pyx_t_5 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_29 * __pyx_v_vars.strides[0]) ))) == -1.0) != 0);
               if (__pyx_t_5) {
 
-                /* "Orange/distance/_distance.pyx":323
+                /* "Orange/distance/_distance.pyx":373
  *                         d += dist_missing2[col]
  *                     elif vars[col] == -1:
  *                         if npy_isnan(val1) and val2 != 0 \             # <<<<<<<<<<<<<<
@@ -6720,7 +7391,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 }
                 __pyx_L18_next_or:;
 
-                /* "Orange/distance/_distance.pyx":324
+                /* "Orange/distance/_distance.pyx":374
  *                     elif vars[col] == -1:
  *                         if npy_isnan(val1) and val2 != 0 \
  *                             or npy_isnan(val2) and val1 != 0:             # <<<<<<<<<<<<<<
@@ -6737,7 +7408,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 __pyx_t_5 = __pyx_t_27;
                 __pyx_L17_bool_binop_done:;
 
-                /* "Orange/distance/_distance.pyx":323
+                /* "Orange/distance/_distance.pyx":373
  *                         d += dist_missing2[col]
  *                     elif vars[col] == -1:
  *                         if npy_isnan(val1) and val2 != 0 \             # <<<<<<<<<<<<<<
@@ -6746,7 +7417,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":325
+                  /* "Orange/distance/_distance.pyx":375
  *                         if npy_isnan(val1) and val2 != 0 \
  *                             or npy_isnan(val2) and val1 != 0:
  *                                 d += means[col]             # <<<<<<<<<<<<<<
@@ -6756,7 +7427,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   __pyx_t_30 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_30 * __pyx_v_means.strides[0]) ))));
 
-                  /* "Orange/distance/_distance.pyx":323
+                  /* "Orange/distance/_distance.pyx":373
  *                         d += dist_missing2[col]
  *                     elif vars[col] == -1:
  *                         if npy_isnan(val1) and val2 != 0 \             # <<<<<<<<<<<<<<
@@ -6766,7 +7437,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   goto __pyx_L16;
                 }
 
-                /* "Orange/distance/_distance.pyx":326
+                /* "Orange/distance/_distance.pyx":376
  *                             or npy_isnan(val2) and val1 != 0:
  *                                 d += means[col]
  *                         elif val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -6784,7 +7455,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 __pyx_L21_bool_binop_done:;
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":327
+                  /* "Orange/distance/_distance.pyx":377
  *                                 d += means[col]
  *                         elif val1 != 0 and val2 != 0:
  *                             d += 1             # <<<<<<<<<<<<<<
@@ -6793,7 +7464,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
                   __pyx_v_d = (__pyx_v_d + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":326
+                  /* "Orange/distance/_distance.pyx":376
  *                             or npy_isnan(val2) and val1 != 0:
  *                                 d += means[col]
  *                         elif val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -6803,7 +7474,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 }
                 __pyx_L16:;
 
-                /* "Orange/distance/_distance.pyx":322
+                /* "Orange/distance/_distance.pyx":372
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += dist_missing2[col]
  *                     elif vars[col] == -1:             # <<<<<<<<<<<<<<
@@ -6813,7 +7484,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 goto __pyx_L13;
               }
 
-              /* "Orange/distance/_distance.pyx":329
+              /* "Orange/distance/_distance.pyx":379
  *                             d += 1
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -6824,7 +7495,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 __pyx_t_5 = (npy_isnan(__pyx_v_val1) != 0);
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":330
+                  /* "Orange/distance/_distance.pyx":380
  *                     else:
  *                         if npy_isnan(val1):
  *                             d += val2 * means[col]             # <<<<<<<<<<<<<<
@@ -6834,7 +7505,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   __pyx_t_31 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (__pyx_v_val2 * (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_31 * __pyx_v_means.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":329
+                  /* "Orange/distance/_distance.pyx":379
  *                             d += 1
  *                     else:
  *                         if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -6844,7 +7515,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   goto __pyx_L23;
                 }
 
-                /* "Orange/distance/_distance.pyx":331
+                /* "Orange/distance/_distance.pyx":381
  *                         if npy_isnan(val1):
  *                             d += val2 * means[col]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -6854,7 +7525,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                 __pyx_t_5 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":332
+                  /* "Orange/distance/_distance.pyx":382
  *                             d += val2 * means[col]
  *                         elif npy_isnan(val2):
  *                             d += val1 * means[col]             # <<<<<<<<<<<<<<
@@ -6864,7 +7535,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   __pyx_t_32 = __pyx_v_col;
                   __pyx_v_d = (__pyx_v_d + (__pyx_v_val1 * (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_32 * __pyx_v_means.strides[0]) )))));
 
-                  /* "Orange/distance/_distance.pyx":331
+                  /* "Orange/distance/_distance.pyx":381
  *                         if npy_isnan(val1):
  *                             d += val2 * means[col]
  *                         elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -6874,7 +7545,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
                   goto __pyx_L23;
                 }
 
-                /* "Orange/distance/_distance.pyx":334
+                /* "Orange/distance/_distance.pyx":384
  *                             d += val1 * means[col]
  *                         else:
  *                             d += val1 * val2             # <<<<<<<<<<<<<<
@@ -6890,7 +7561,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               __pyx_L10_continue:;
             }
 
-            /* "Orange/distance/_distance.pyx":335
+            /* "Orange/distance/_distance.pyx":385
  *                         else:
  *                             d += val1 * val2
  *                 d = 1 - d / abs1[row1] / abs2[row2]             # <<<<<<<<<<<<<<
@@ -6901,7 +7572,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
             __pyx_t_34 = __pyx_v_row2;
             __pyx_v_d = (1.0 - ((__pyx_v_d / (*((double *) ( /* dim=0 */ (__pyx_v_abs1.data + __pyx_t_33 * __pyx_v_abs1.strides[0]) )))) / (*((double *) ( /* dim=0 */ (__pyx_v_abs2.data + __pyx_t_34 * __pyx_v_abs2.strides[0]) )))));
 
-            /* "Orange/distance/_distance.pyx":336
+            /* "Orange/distance/_distance.pyx":386
  *                             d += val1 * val2
  *                 d = 1 - d / abs1[row1] / abs2[row2]
  *                 if d < 0:   # clip off any numeric errors             # <<<<<<<<<<<<<<
@@ -6911,7 +7582,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
             __pyx_t_5 = ((__pyx_v_d < 0.0) != 0);
             if (__pyx_t_5) {
 
-              /* "Orange/distance/_distance.pyx":337
+              /* "Orange/distance/_distance.pyx":387
  *                 d = 1 - d / abs1[row1] / abs2[row2]
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0             # <<<<<<<<<<<<<<
@@ -6920,7 +7591,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
               __pyx_v_d = 0.0;
 
-              /* "Orange/distance/_distance.pyx":336
+              /* "Orange/distance/_distance.pyx":386
  *                             d += val1 * val2
  *                 d = 1 - d / abs1[row1] / abs2[row2]
  *                 if d < 0:   # clip off any numeric errors             # <<<<<<<<<<<<<<
@@ -6930,7 +7601,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
               goto __pyx_L24;
             }
 
-            /* "Orange/distance/_distance.pyx":338
+            /* "Orange/distance/_distance.pyx":388
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0
  *                 elif d > 1:             # <<<<<<<<<<<<<<
@@ -6940,7 +7611,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
             __pyx_t_5 = ((__pyx_v_d > 1.0) != 0);
             if (__pyx_t_5) {
 
-              /* "Orange/distance/_distance.pyx":339
+              /* "Orange/distance/_distance.pyx":389
  *                     d = 0
  *                 elif d > 1:
  *                     d = 1             # <<<<<<<<<<<<<<
@@ -6949,7 +7620,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
               __pyx_v_d = 1.0;
 
-              /* "Orange/distance/_distance.pyx":338
+              /* "Orange/distance/_distance.pyx":388
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0
  *                 elif d > 1:             # <<<<<<<<<<<<<<
@@ -6959,7 +7630,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
             }
             __pyx_L24:;
 
-            /* "Orange/distance/_distance.pyx":340
+            /* "Orange/distance/_distance.pyx":390
  *                 elif d > 1:
  *                     d = 1
  *                 distances[row1, row2] = d             # <<<<<<<<<<<<<<
@@ -6973,7 +7644,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
         }
       }
 
-      /* "Orange/distance/_distance.pyx":312
+      /* "Orange/distance/_distance.pyx":362
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  * 
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -6991,7 +7662,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
       }
   }
 
-  /* "Orange/distance/_distance.pyx":341
+  /* "Orange/distance/_distance.pyx":391
  *                     d = 1
  *                 distances[row1, row2] = d
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -7001,7 +7672,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   __pyx_t_5 = ((!(__pyx_v_two_tables != 0)) != 0);
   if (__pyx_t_5) {
 
-    /* "Orange/distance/_distance.pyx":342
+    /* "Orange/distance/_distance.pyx":392
  *                 distances[row1, row2] = d
  *     if not two_tables:
  *         _lower_to_symmetric(distances)             # <<<<<<<<<<<<<<
@@ -7010,7 +7681,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
     __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__pyx_v_distances);
 
-    /* "Orange/distance/_distance.pyx":341
+    /* "Orange/distance/_distance.pyx":391
  *                     d = 1
  *                 distances[row1, row2] = d
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -7019,7 +7690,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  */
   }
 
-  /* "Orange/distance/_distance.pyx":343
+  /* "Orange/distance/_distance.pyx":393
  *     if not two_tables:
  *         _lower_to_symmetric(distances)
  *     return distances             # <<<<<<<<<<<<<<
@@ -7027,13 +7698,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 343, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 393, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":290
+  /* "Orange/distance/_distance.pyx":340
  * 
  * 
  * def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -7075,7 +7746,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_10cosine_rows(CYTHON_UNUS
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":346
+/* "Orange/distance/_distance.pyx":396
  * 
  * 
  * cdef _abs_cols(double [:, :] x, double[:] means, double[:] vars):             # <<<<<<<<<<<<<<
@@ -7116,7 +7787,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
   Py_ssize_t __pyx_t_20;
   __Pyx_RefNannySetupContext("_abs_cols", 0);
 
-  /* "Orange/distance/_distance.pyx":352
+  /* "Orange/distance/_distance.pyx":402
  *         int row, col, n_rows, n_cols, nan_cont
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
@@ -7128,19 +7799,19 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
   __pyx_v_n_rows = __pyx_t_1;
   __pyx_v_n_cols = __pyx_t_2;
 
-  /* "Orange/distance/_distance.pyx":353
+  /* "Orange/distance/_distance.pyx":403
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_cols)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for col in range(n_cols):
  */
-  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 353, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 403, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 353, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_empty); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 403, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 353, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 403, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __pyx_t_6 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_5))) {
@@ -7153,29 +7824,29 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
     }
   }
   if (!__pyx_t_6) {
-    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 353, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_t_4); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 403, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_GOTREF(__pyx_t_3);
   } else {
-    __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 353, __pyx_L1_error)
+    __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 403, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_7);
     __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6); __pyx_t_6 = NULL;
     __Pyx_GIVEREF(__pyx_t_4);
     PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_t_4);
     __pyx_t_4 = 0;
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 353, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 403, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   }
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_3);
-  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 353, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 403, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   __pyx_v_abss = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":354
+  /* "Orange/distance/_distance.pyx":404
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_cols)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -7189,7 +7860,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":355
+        /* "Orange/distance/_distance.pyx":405
  *     abss = np.empty(n_cols)
  *     with nogil:
  *         for col in range(n_cols):             # <<<<<<<<<<<<<<
@@ -7200,7 +7871,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
         for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
           __pyx_v_col = __pyx_t_10;
 
-          /* "Orange/distance/_distance.pyx":356
+          /* "Orange/distance/_distance.pyx":406
  *     with nogil:
  *         for col in range(n_cols):
  *             if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -7211,7 +7882,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
           __pyx_t_12 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_11 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
           if (__pyx_t_12) {
 
-            /* "Orange/distance/_distance.pyx":357
+            /* "Orange/distance/_distance.pyx":407
  *         for col in range(n_cols):
  *             if vars[col] == -2:
  *                 abss[col] = 1             # <<<<<<<<<<<<<<
@@ -7221,7 +7892,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
             __pyx_t_13 = __pyx_v_col;
             *((double *) ( /* dim=0 */ (__pyx_v_abss.data + __pyx_t_13 * __pyx_v_abss.strides[0]) )) = 1.0;
 
-            /* "Orange/distance/_distance.pyx":358
+            /* "Orange/distance/_distance.pyx":408
  *             if vars[col] == -2:
  *                 abss[col] = 1
  *                 continue             # <<<<<<<<<<<<<<
@@ -7230,7 +7901,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
             goto __pyx_L6_continue;
 
-            /* "Orange/distance/_distance.pyx":356
+            /* "Orange/distance/_distance.pyx":406
  *     with nogil:
  *         for col in range(n_cols):
  *             if vars[col] == -2:             # <<<<<<<<<<<<<<
@@ -7239,7 +7910,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
           }
 
-          /* "Orange/distance/_distance.pyx":359
+          /* "Orange/distance/_distance.pyx":409
  *                 abss[col] = 1
  *                 continue
  *             d = 0             # <<<<<<<<<<<<<<
@@ -7248,7 +7919,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
           __pyx_v_d = 0.0;
 
-          /* "Orange/distance/_distance.pyx":360
+          /* "Orange/distance/_distance.pyx":410
  *                 continue
  *             d = 0
  *             nan_cont = 0             # <<<<<<<<<<<<<<
@@ -7257,7 +7928,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
           __pyx_v_nan_cont = 0;
 
-          /* "Orange/distance/_distance.pyx":361
+          /* "Orange/distance/_distance.pyx":411
  *             d = 0
  *             nan_cont = 0
  *             for row in range(n_rows):             # <<<<<<<<<<<<<<
@@ -7268,7 +7939,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
           for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
             __pyx_v_row = __pyx_t_15;
 
-            /* "Orange/distance/_distance.pyx":362
+            /* "Orange/distance/_distance.pyx":412
  *             nan_cont = 0
  *             for row in range(n_rows):
  *                 val = x[row, col]             # <<<<<<<<<<<<<<
@@ -7279,7 +7950,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
             __pyx_t_17 = __pyx_v_col;
             __pyx_v_val = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_x.data + __pyx_t_16 * __pyx_v_x.strides[0]) ) + __pyx_t_17 * __pyx_v_x.strides[1]) )));
 
-            /* "Orange/distance/_distance.pyx":363
+            /* "Orange/distance/_distance.pyx":413
  *             for row in range(n_rows):
  *                 val = x[row, col]
  *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -7289,7 +7960,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
             __pyx_t_12 = (npy_isnan(__pyx_v_val) != 0);
             if (__pyx_t_12) {
 
-              /* "Orange/distance/_distance.pyx":364
+              /* "Orange/distance/_distance.pyx":414
  *                 val = x[row, col]
  *                 if npy_isnan(val):
  *                     nan_cont += 1             # <<<<<<<<<<<<<<
@@ -7298,7 +7969,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
               __pyx_v_nan_cont = (__pyx_v_nan_cont + 1);
 
-              /* "Orange/distance/_distance.pyx":363
+              /* "Orange/distance/_distance.pyx":413
  *             for row in range(n_rows):
  *                 val = x[row, col]
  *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
@@ -7308,7 +7979,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
               goto __pyx_L11;
             }
 
-            /* "Orange/distance/_distance.pyx":366
+            /* "Orange/distance/_distance.pyx":416
  *                     nan_cont += 1
  *                 else:
  *                     d += val ** 2             # <<<<<<<<<<<<<<
@@ -7321,7 +7992,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
             __pyx_L11:;
           }
 
-          /* "Orange/distance/_distance.pyx":367
+          /* "Orange/distance/_distance.pyx":417
  *                 else:
  *                     d += val ** 2
  *             d += nan_cont * (means[col] ** 2 + vars[col])             # <<<<<<<<<<<<<<
@@ -7332,7 +8003,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
           __pyx_t_19 = __pyx_v_col;
           __pyx_v_d = (__pyx_v_d + (__pyx_v_nan_cont * (pow((*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_18 * __pyx_v_means.strides[0]) ))), 2.0) + (*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_19 * __pyx_v_vars.strides[0]) ))))));
 
-          /* "Orange/distance/_distance.pyx":368
+          /* "Orange/distance/_distance.pyx":418
  *                     d += val ** 2
  *             d += nan_cont * (means[col] ** 2 + vars[col])
  *             abss[col] = sqrt(d)             # <<<<<<<<<<<<<<
@@ -7345,7 +8016,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
         }
       }
 
-      /* "Orange/distance/_distance.pyx":354
+      /* "Orange/distance/_distance.pyx":404
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     abss = np.empty(n_cols)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -7363,7 +8034,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
       }
   }
 
-  /* "Orange/distance/_distance.pyx":369
+  /* "Orange/distance/_distance.pyx":419
  *             d += nan_cont * (means[col] ** 2 + vars[col])
  *             abss[col] = sqrt(d)
  *     return abss             # <<<<<<<<<<<<<<
@@ -7371,13 +8042,13 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_3 = __pyx_memoryview_fromslice(__pyx_v_abss, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 369, __pyx_L1_error)
+  __pyx_t_3 = __pyx_memoryview_fromslice(__pyx_v_abss, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 419, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":346
+  /* "Orange/distance/_distance.pyx":396
  * 
  * 
  * cdef _abs_cols(double [:, :] x, double[:] means, double[:] vars):             # <<<<<<<<<<<<<<
@@ -7402,7 +8073,7 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":372
+/* "Orange/distance/_distance.pyx":422
  * 
  * 
  * def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -7411,10 +8082,10 @@ static PyObject *__pyx_f_6Orange_8distance_9_distance__abs_cols(__Pyx_memviewsli
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_13cosine_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_12cosine_cols[] = "cosine_cols(ndarray x, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_13cosine_cols = {"cosine_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_13cosine_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_12cosine_cols};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_13cosine_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_19cosine_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_18cosine_cols[] = "cosine_cols(ndarray x, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_19cosine_cols = {"cosine_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_19cosine_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_18cosine_cols};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_19cosine_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x = 0;
   PyObject *__pyx_v_fit_params = 0;
   PyObject *__pyx_r = 0;
@@ -7440,11 +8111,11 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_13cosine_cols(PyObject *_
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("cosine_cols", 1, 2, 2, 1); __PYX_ERR(0, 372, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("cosine_cols", 1, 2, 2, 1); __PYX_ERR(0, 422, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cosine_cols") < 0)) __PYX_ERR(0, 372, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "cosine_cols") < 0)) __PYX_ERR(0, 422, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -7457,14 +8128,14 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_13cosine_cols(PyObject *_
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("cosine_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 372, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("cosine_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 422, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.cosine_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 372, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_12cosine_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 422, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_18cosine_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -7475,7 +8146,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_13cosine_cols(PyObject *_
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_18cosine_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_vars = { 0, 0, { 0 }, { 0 }, { 0 } };
   __Pyx_memviewslice __pyx_v_means = { 0, 0, { 0 }, { 0 }, { 0 } };
   int __pyx_v_n_rows;
@@ -7545,43 +8216,43 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 372, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 422, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x.diminfo[1].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x.diminfo[1].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":374
+  /* "Orange/distance/_distance.pyx":424
  * def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
  *     cdef:
  *         double [:] vars = fit_params["vars"]             # <<<<<<<<<<<<<<
  *         double [:] means = fit_params["means"]
  * 
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 374, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 424, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 374, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 424, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_vars = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":375
+  /* "Orange/distance/_distance.pyx":425
  *     cdef:
  *         double [:] vars = fit_params["vars"]
  *         double [:] means = fit_params["means"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows, n_cols, row, col1, col2
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 375, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_means); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 425, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 375, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 425, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_means = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":384
+  /* "Orange/distance/_distance.pyx":434
  *         np.ndarray[np.float64_t, ndim=2] distances
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
@@ -7593,7 +8264,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   __pyx_v_n_rows = __pyx_t_3;
   __pyx_v_n_cols = __pyx_t_4;
 
-  /* "Orange/distance/_distance.pyx":385
+  /* "Orange/distance/_distance.pyx":435
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     assert n_cols == len(vars) == len(means)             # <<<<<<<<<<<<<<
@@ -7602,26 +8273,26 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
   #ifndef CYTHON_WITHOUT_ASSERTIONS
   if (unlikely(!Py_OptimizeFlag)) {
-    __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_vars, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 385, __pyx_L1_error)
+    __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_vars, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 435, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_5 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_5 == -1)) __PYX_ERR(0, 385, __pyx_L1_error)
+    __pyx_t_5 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_5 == -1)) __PYX_ERR(0, 435, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __pyx_t_6 = (__pyx_v_n_cols == __pyx_t_5);
     if (__pyx_t_6) {
-      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_means, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 385, __pyx_L1_error)
+      __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_means, 1, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 435, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_7 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 385, __pyx_L1_error)
+      __pyx_t_7 = PyObject_Length(__pyx_t_1); if (unlikely(__pyx_t_7 == -1)) __PYX_ERR(0, 435, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
       __pyx_t_6 = (__pyx_t_5 == __pyx_t_7);
     }
     if (unlikely(!(__pyx_t_6 != 0))) {
       PyErr_SetNone(PyExc_AssertionError);
-      __PYX_ERR(0, 385, __pyx_L1_error)
+      __PYX_ERR(0, 435, __pyx_L1_error)
     }
   }
   #endif
 
-  /* "Orange/distance/_distance.pyx":386
+  /* "Orange/distance/_distance.pyx":436
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     assert n_cols == len(vars) == len(means)
  *     abss = _abs_cols(x, means, vars)             # <<<<<<<<<<<<<<
@@ -7629,34 +8300,34 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  *     for col1 in range(n_cols):
  */
   __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(((PyObject *)__pyx_v_x));
-  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 386, __pyx_L1_error)
-  __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_cols(__pyx_t_8, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 386, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 436, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_6Orange_8distance_9_distance__abs_cols(__pyx_t_8, __pyx_v_means, __pyx_v_vars); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 386, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 436, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_abss = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":387
+  /* "Orange/distance/_distance.pyx":437
  *     assert n_cols == len(vars) == len(means)
  *     abss = _abs_cols(x, means, vars)
  *     distances = np.zeros((n_cols, n_cols), dtype=float)             # <<<<<<<<<<<<<<
  *     for col1 in range(n_cols):
  *         if vars[col1] == -2:
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_9)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_9);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_10 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_10 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_10);
-  __pyx_t_11 = PyTuple_New(2); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_11 = PyTuple_New(2); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_1);
@@ -7664,20 +8335,20 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   PyTuple_SET_ITEM(__pyx_t_11, 1, __pyx_t_10);
   __pyx_t_1 = 0;
   __pyx_t_10 = 0;
-  __pyx_t_10 = PyTuple_New(1); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_10 = PyTuple_New(1); if (unlikely(!__pyx_t_10)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_10);
   __Pyx_GIVEREF(__pyx_t_11);
   PyTuple_SET_ITEM(__pyx_t_10, 0, __pyx_t_11);
   __pyx_t_11 = 0;
-  __pyx_t_11 = PyDict_New(); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 387, __pyx_L1_error)
+  __pyx_t_11 = PyDict_New(); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_11);
-  if (PyDict_SetItem(__pyx_t_11, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 387, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_10, __pyx_t_11); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 387, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_11, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 437, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_9, __pyx_t_10, __pyx_t_11); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 437, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_9); __pyx_t_9 = 0;
   __Pyx_DECREF(__pyx_t_10); __pyx_t_10 = 0;
   __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 387, __pyx_L1_error)
+  if (!(likely(((__pyx_t_1) == Py_None) || likely(__Pyx_TypeTest(__pyx_t_1, __pyx_ptype_5numpy_ndarray))))) __PYX_ERR(0, 437, __pyx_L1_error)
   __pyx_t_12 = ((PyArrayObject *)__pyx_t_1);
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
@@ -7693,13 +8364,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
       }
     }
     __pyx_pybuffernd_distances.diminfo[0].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_distances.diminfo[0].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_distances.diminfo[1].strides = __pyx_pybuffernd_distances.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_distances.diminfo[1].shape = __pyx_pybuffernd_distances.rcbuffer->pybuffer.shape[1];
-    if (unlikely(__pyx_t_13 < 0)) __PYX_ERR(0, 387, __pyx_L1_error)
+    if (unlikely(__pyx_t_13 < 0)) __PYX_ERR(0, 437, __pyx_L1_error)
   }
   __pyx_t_12 = 0;
   __pyx_v_distances = ((PyArrayObject *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":388
+  /* "Orange/distance/_distance.pyx":438
  *     abss = _abs_cols(x, means, vars)
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     for col1 in range(n_cols):             # <<<<<<<<<<<<<<
@@ -7710,7 +8381,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   for (__pyx_t_17 = 0; __pyx_t_17 < __pyx_t_13; __pyx_t_17+=1) {
     __pyx_v_col1 = __pyx_t_17;
 
-    /* "Orange/distance/_distance.pyx":389
+    /* "Orange/distance/_distance.pyx":439
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     for col1 in range(n_cols):
  *         if vars[col1] == -2:             # <<<<<<<<<<<<<<
@@ -7721,39 +8392,39 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
     __pyx_t_6 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_18 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
     if (__pyx_t_6) {
 
-      /* "Orange/distance/_distance.pyx":390
+      /* "Orange/distance/_distance.pyx":440
  *     for col1 in range(n_cols):
  *         if vars[col1] == -2:
  *             distances[col1, :] = distances[:, col1] = 1.0             # <<<<<<<<<<<<<<
  *             continue
  *         with nogil:
  */
-      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_col1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 390, __pyx_L1_error)
+      __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_col1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 440, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_1);
-      __pyx_t_11 = PyTuple_New(2); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 390, __pyx_L1_error)
+      __pyx_t_11 = PyTuple_New(2); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 440, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_11);
       __Pyx_GIVEREF(__pyx_t_1);
       PyTuple_SET_ITEM(__pyx_t_11, 0, __pyx_t_1);
+      __Pyx_INCREF(__pyx_slice_);
+      __Pyx_GIVEREF(__pyx_slice_);
+      PyTuple_SET_ITEM(__pyx_t_11, 1, __pyx_slice_);
+      __pyx_t_1 = 0;
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_distances), __pyx_t_11, __pyx_float_1_0) < 0)) __PYX_ERR(0, 440, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
+      __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_col1); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 440, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_11);
+      __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 440, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
       __Pyx_INCREF(__pyx_slice__2);
       __Pyx_GIVEREF(__pyx_slice__2);
-      PyTuple_SET_ITEM(__pyx_t_11, 1, __pyx_slice__2);
-      __pyx_t_1 = 0;
-      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_distances), __pyx_t_11, __pyx_float_1_0) < 0)) __PYX_ERR(0, 390, __pyx_L1_error)
-      __Pyx_DECREF(__pyx_t_11); __pyx_t_11 = 0;
-      __pyx_t_11 = __Pyx_PyInt_From_int(__pyx_v_col1); if (unlikely(!__pyx_t_11)) __PYX_ERR(0, 390, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_11);
-      __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 390, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_1);
-      __Pyx_INCREF(__pyx_slice__3);
-      __Pyx_GIVEREF(__pyx_slice__3);
-      PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_slice__3);
+      PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_slice__2);
       __Pyx_GIVEREF(__pyx_t_11);
       PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_t_11);
       __pyx_t_11 = 0;
-      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_distances), __pyx_t_1, __pyx_float_1_0) < 0)) __PYX_ERR(0, 390, __pyx_L1_error)
+      if (unlikely(PyObject_SetItem(((PyObject *)__pyx_v_distances), __pyx_t_1, __pyx_float_1_0) < 0)) __PYX_ERR(0, 440, __pyx_L1_error)
       __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-      /* "Orange/distance/_distance.pyx":391
+      /* "Orange/distance/_distance.pyx":441
  *         if vars[col1] == -2:
  *             distances[col1, :] = distances[:, col1] = 1.0
  *             continue             # <<<<<<<<<<<<<<
@@ -7762,7 +8433,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
       goto __pyx_L3_continue;
 
-      /* "Orange/distance/_distance.pyx":389
+      /* "Orange/distance/_distance.pyx":439
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     for col1 in range(n_cols):
  *         if vars[col1] == -2:             # <<<<<<<<<<<<<<
@@ -7771,7 +8442,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
     }
 
-    /* "Orange/distance/_distance.pyx":392
+    /* "Orange/distance/_distance.pyx":442
  *             distances[col1, :] = distances[:, col1] = 1.0
  *             continue
  *         with nogil:             # <<<<<<<<<<<<<<
@@ -7785,7 +8456,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
         #endif
         /*try:*/ {
 
-          /* "Orange/distance/_distance.pyx":393
+          /* "Orange/distance/_distance.pyx":443
  *             continue
  *         with nogil:
  *             for col2 in range(col1):             # <<<<<<<<<<<<<<
@@ -7796,7 +8467,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
           for (__pyx_t_20 = 0; __pyx_t_20 < __pyx_t_19; __pyx_t_20+=1) {
             __pyx_v_col2 = __pyx_t_20;
 
-            /* "Orange/distance/_distance.pyx":394
+            /* "Orange/distance/_distance.pyx":444
  *         with nogil:
  *             for col2 in range(col1):
  *                 if vars[col2] == -2:             # <<<<<<<<<<<<<<
@@ -7807,7 +8478,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             __pyx_t_6 = (((*((double *) ( /* dim=0 */ (__pyx_v_vars.data + __pyx_t_21 * __pyx_v_vars.strides[0]) ))) == -2.0) != 0);
             if (__pyx_t_6) {
 
-              /* "Orange/distance/_distance.pyx":395
+              /* "Orange/distance/_distance.pyx":445
  *             for col2 in range(col1):
  *                 if vars[col2] == -2:
  *                     continue             # <<<<<<<<<<<<<<
@@ -7816,7 +8487,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
               goto __pyx_L11_continue;
 
-              /* "Orange/distance/_distance.pyx":394
+              /* "Orange/distance/_distance.pyx":444
  *         with nogil:
  *             for col2 in range(col1):
  *                 if vars[col2] == -2:             # <<<<<<<<<<<<<<
@@ -7825,7 +8496,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
             }
 
-            /* "Orange/distance/_distance.pyx":396
+            /* "Orange/distance/_distance.pyx":446
  *                 if vars[col2] == -2:
  *                     continue
  *                 d = 0             # <<<<<<<<<<<<<<
@@ -7834,7 +8505,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
             __pyx_v_d = 0.0;
 
-            /* "Orange/distance/_distance.pyx":397
+            /* "Orange/distance/_distance.pyx":447
  *                     continue
  *                 d = 0
  *                 for row in range(n_rows):             # <<<<<<<<<<<<<<
@@ -7845,7 +8516,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             for (__pyx_t_23 = 0; __pyx_t_23 < __pyx_t_22; __pyx_t_23+=1) {
               __pyx_v_row = __pyx_t_23;
 
-              /* "Orange/distance/_distance.pyx":398
+              /* "Orange/distance/_distance.pyx":448
  *                 d = 0
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
@@ -7861,7 +8532,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               __pyx_v_val1 = __pyx_t_26;
               __pyx_v_val2 = __pyx_t_29;
 
-              /* "Orange/distance/_distance.pyx":399
+              /* "Orange/distance/_distance.pyx":449
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -7879,7 +8550,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               __pyx_L17_bool_binop_done:;
               if (__pyx_t_6) {
 
-                /* "Orange/distance/_distance.pyx":400
+                /* "Orange/distance/_distance.pyx":450
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += means[col1] * means[col2]             # <<<<<<<<<<<<<<
@@ -7890,7 +8561,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 __pyx_t_32 = __pyx_v_col2;
                 __pyx_v_d = (__pyx_v_d + ((*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_31 * __pyx_v_means.strides[0]) ))) * (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_32 * __pyx_v_means.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":399
+                /* "Orange/distance/_distance.pyx":449
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1) and npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -7900,7 +8571,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 goto __pyx_L16;
               }
 
-              /* "Orange/distance/_distance.pyx":401
+              /* "Orange/distance/_distance.pyx":451
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += means[col1] * means[col2]
  *                     elif npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -7910,7 +8581,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               __pyx_t_6 = (npy_isnan(__pyx_v_val1) != 0);
               if (__pyx_t_6) {
 
-                /* "Orange/distance/_distance.pyx":402
+                /* "Orange/distance/_distance.pyx":452
  *                         d += means[col1] * means[col2]
  *                     elif npy_isnan(val1):
  *                         d += val2 * means[col1]             # <<<<<<<<<<<<<<
@@ -7920,7 +8591,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 __pyx_t_33 = __pyx_v_col1;
                 __pyx_v_d = (__pyx_v_d + (__pyx_v_val2 * (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_33 * __pyx_v_means.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":401
+                /* "Orange/distance/_distance.pyx":451
  *                     if npy_isnan(val1) and npy_isnan(val2):
  *                         d += means[col1] * means[col2]
  *                     elif npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -7930,7 +8601,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 goto __pyx_L16;
               }
 
-              /* "Orange/distance/_distance.pyx":403
+              /* "Orange/distance/_distance.pyx":453
  *                     elif npy_isnan(val1):
  *                         d += val2 * means[col1]
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -7940,7 +8611,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               __pyx_t_6 = (npy_isnan(__pyx_v_val2) != 0);
               if (__pyx_t_6) {
 
-                /* "Orange/distance/_distance.pyx":404
+                /* "Orange/distance/_distance.pyx":454
  *                         d += val2 * means[col1]
  *                     elif npy_isnan(val2):
  *                         d += val1 * means[col2]             # <<<<<<<<<<<<<<
@@ -7950,7 +8621,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 __pyx_t_34 = __pyx_v_col2;
                 __pyx_v_d = (__pyx_v_d + (__pyx_v_val1 * (*((double *) ( /* dim=0 */ (__pyx_v_means.data + __pyx_t_34 * __pyx_v_means.strides[0]) )))));
 
-                /* "Orange/distance/_distance.pyx":403
+                /* "Orange/distance/_distance.pyx":453
  *                     elif npy_isnan(val1):
  *                         d += val2 * means[col1]
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -7960,7 +8631,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
                 goto __pyx_L16;
               }
 
-              /* "Orange/distance/_distance.pyx":406
+              /* "Orange/distance/_distance.pyx":456
  *                         d += val1 * means[col2]
  *                     else:
  *                         d += val1 * val2             # <<<<<<<<<<<<<<
@@ -7973,7 +8644,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               __pyx_L16:;
             }
 
-            /* "Orange/distance/_distance.pyx":408
+            /* "Orange/distance/_distance.pyx":458
  *                         d += val1 * val2
  * 
  *                 d = 1 - d / abss[col1] / abss[col2]             # <<<<<<<<<<<<<<
@@ -7984,7 +8655,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             __pyx_t_36 = __pyx_v_col2;
             __pyx_v_d = (1.0 - ((__pyx_v_d / (*((double *) ( /* dim=0 */ (__pyx_v_abss.data + __pyx_t_35 * __pyx_v_abss.strides[0]) )))) / (*((double *) ( /* dim=0 */ (__pyx_v_abss.data + __pyx_t_36 * __pyx_v_abss.strides[0]) )))));
 
-            /* "Orange/distance/_distance.pyx":409
+            /* "Orange/distance/_distance.pyx":459
  * 
  *                 d = 1 - d / abss[col1] / abss[col2]
  *                 if d < 0:   # clip off any numeric errors             # <<<<<<<<<<<<<<
@@ -7994,7 +8665,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             __pyx_t_6 = ((__pyx_v_d < 0.0) != 0);
             if (__pyx_t_6) {
 
-              /* "Orange/distance/_distance.pyx":410
+              /* "Orange/distance/_distance.pyx":460
  *                 d = 1 - d / abss[col1] / abss[col2]
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0             # <<<<<<<<<<<<<<
@@ -8003,7 +8674,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
               __pyx_v_d = 0.0;
 
-              /* "Orange/distance/_distance.pyx":409
+              /* "Orange/distance/_distance.pyx":459
  * 
  *                 d = 1 - d / abss[col1] / abss[col2]
  *                 if d < 0:   # clip off any numeric errors             # <<<<<<<<<<<<<<
@@ -8013,7 +8684,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
               goto __pyx_L19;
             }
 
-            /* "Orange/distance/_distance.pyx":411
+            /* "Orange/distance/_distance.pyx":461
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0
  *                 elif d > 1:             # <<<<<<<<<<<<<<
@@ -8023,7 +8694,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             __pyx_t_6 = ((__pyx_v_d > 1.0) != 0);
             if (__pyx_t_6) {
 
-              /* "Orange/distance/_distance.pyx":412
+              /* "Orange/distance/_distance.pyx":462
  *                     d = 0
  *                 elif d > 1:
  *                     d = 1             # <<<<<<<<<<<<<<
@@ -8032,7 +8703,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
               __pyx_v_d = 1.0;
 
-              /* "Orange/distance/_distance.pyx":411
+              /* "Orange/distance/_distance.pyx":461
  *                 if d < 0:   # clip off any numeric errors
  *                     d = 0
  *                 elif d > 1:             # <<<<<<<<<<<<<<
@@ -8042,7 +8713,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
             }
             __pyx_L19:;
 
-            /* "Orange/distance/_distance.pyx":413
+            /* "Orange/distance/_distance.pyx":463
  *                 elif d > 1:
  *                     d = 1
  *                 distances[col1, col2] = distances[col2, col1] = d             # <<<<<<<<<<<<<<
@@ -8059,7 +8730,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
           }
         }
 
-        /* "Orange/distance/_distance.pyx":392
+        /* "Orange/distance/_distance.pyx":442
  *             distances[col1, :] = distances[:, col1] = 1.0
  *             continue
  *         with nogil:             # <<<<<<<<<<<<<<
@@ -8079,7 +8750,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
     __pyx_L3_continue:;
   }
 
-  /* "Orange/distance/_distance.pyx":414
+  /* "Orange/distance/_distance.pyx":464
  *                     d = 1
  *                 distances[col1, col2] = distances[col2, col1] = d
  *     return distances             # <<<<<<<<<<<<<<
@@ -8091,7 +8762,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   __pyx_r = ((PyObject *)__pyx_v_distances);
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":372
+  /* "Orange/distance/_distance.pyx":422
  * 
  * 
  * def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -8130,7 +8801,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":417
+/* "Orange/distance/_distance.pyx":467
  * 
  * 
  * def jaccard_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -8139,10 +8810,10 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_12cosine_cols(CYTHON_UNUS
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_14jaccard_rows[] = "jaccard_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_15jaccard_rows = {"jaccard_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_14jaccard_rows};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_21jaccard_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_20jaccard_rows[] = "jaccard_rows(ndarray x1, ndarray x2, char two_tables, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_21jaccard_rows = {"jaccard_rows", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_21jaccard_rows, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_20jaccard_rows};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_21jaccard_rows(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x1 = 0;
   PyArrayObject *__pyx_v_x2 = 0;
   char __pyx_v_two_tables;
@@ -8172,21 +8843,21 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows(PyObject *
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_x2)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 1); __PYX_ERR(0, 417, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 1); __PYX_ERR(0, 467, __pyx_L3_error)
         }
         case  2:
         if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_two_tables)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 2); __PYX_ERR(0, 417, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 2); __PYX_ERR(0, 467, __pyx_L3_error)
         }
         case  3:
         if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 3); __PYX_ERR(0, 417, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, 3); __PYX_ERR(0, 467, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "jaccard_rows") < 0)) __PYX_ERR(0, 417, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "jaccard_rows") < 0)) __PYX_ERR(0, 467, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
       goto __pyx_L5_argtuple_error;
@@ -8198,20 +8869,20 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows(PyObject *
     }
     __pyx_v_x1 = ((PyArrayObject *)values[0]);
     __pyx_v_x2 = ((PyArrayObject *)values[1]);
-    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 419, __pyx_L3_error)
+    __pyx_v_two_tables = __Pyx_PyInt_As_char(values[2]); if (unlikely((__pyx_v_two_tables == (char)-1) && PyErr_Occurred())) __PYX_ERR(0, 469, __pyx_L3_error)
     __pyx_v_fit_params = values[3];
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 417, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("jaccard_rows", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 467, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.jaccard_rows", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 417, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 418, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x1), __pyx_ptype_5numpy_ndarray, 1, "x1", 0))) __PYX_ERR(0, 467, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x2), __pyx_ptype_5numpy_ndarray, 1, "x2", 0))) __PYX_ERR(0, 468, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_20jaccard_rows(__pyx_self, __pyx_v_x1, __pyx_v_x2, __pyx_v_two_tables, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -8222,7 +8893,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_15jaccard_rows(PyObject *
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_20jaccard_rows(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x1, PyArrayObject *__pyx_v_x2, char __pyx_v_two_tables, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_ps = { 0, 0, { 0 }, { 0 }, { 0 } };
   int __pyx_v_n_rows1;
   int __pyx_v_n_rows2;
@@ -8282,32 +8953,32 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
   __pyx_pybuffernd_x2.rcbuffer = &__pyx_pybuffer_x2;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 417, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x1.rcbuffer->pybuffer, (PyObject*)__pyx_v_x1, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 467, __pyx_L1_error)
   }
   __pyx_pybuffernd_x1.diminfo[0].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x1.diminfo[0].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x1.diminfo[1].strides = __pyx_pybuffernd_x1.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x1.diminfo[1].shape = __pyx_pybuffernd_x1.rcbuffer->pybuffer.shape[1];
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 417, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x2.rcbuffer->pybuffer, (PyObject*)__pyx_v_x2, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 467, __pyx_L1_error)
   }
   __pyx_pybuffernd_x2.diminfo[0].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x2.diminfo[0].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x2.diminfo[1].strides = __pyx_pybuffernd_x2.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x2.diminfo[1].shape = __pyx_pybuffernd_x2.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":422
+  /* "Orange/distance/_distance.pyx":472
  *                  fit_params):
  *     cdef:
  *         double [:] ps = fit_params["ps"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows1, n_rows2, n_cols, row1, row2, col
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_ps); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 422, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_ps); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 472, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 422, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 472, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_ps = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":429
+  /* "Orange/distance/_distance.pyx":479
  *         double [:, :] distances
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]             # <<<<<<<<<<<<<<
@@ -8319,7 +8990,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
   __pyx_v_n_rows1 = __pyx_t_3;
   __pyx_v_n_cols = __pyx_t_4;
 
-  /* "Orange/distance/_distance.pyx":430
+  /* "Orange/distance/_distance.pyx":480
  * 
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]             # <<<<<<<<<<<<<<
@@ -8328,7 +8999,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
   __pyx_v_n_rows2 = (__pyx_v_x2->dimensions[0]);
 
-  /* "Orange/distance/_distance.pyx":431
+  /* "Orange/distance/_distance.pyx":481
  *     n_rows1, n_cols = x1.shape[0], x1.shape[1]
  *     n_rows2 = x2.shape[0]
  *     assert n_cols == x2.shape[1] == ps.shape[0]             # <<<<<<<<<<<<<<
@@ -8343,28 +9014,28 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
     }
     if (unlikely(!(__pyx_t_5 != 0))) {
       PyErr_SetNone(PyExc_AssertionError);
-      __PYX_ERR(0, 431, __pyx_L1_error)
+      __PYX_ERR(0, 481, __pyx_L1_error)
     }
   }
   #endif
 
-  /* "Orange/distance/_distance.pyx":433
+  /* "Orange/distance/_distance.pyx":483
  *     assert n_cols == x2.shape[1] == ps.shape[0]
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for row1 in range(n_rows1):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_rows1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_From_int(__pyx_v_n_rows2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_8 = PyTuple_New(2); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_8, 0, __pyx_t_1);
@@ -8372,27 +9043,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
   PyTuple_SET_ITEM(__pyx_t_8, 1, __pyx_t_7);
   __pyx_t_1 = 0;
   __pyx_t_7 = 0;
-  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_GIVEREF(__pyx_t_8);
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_8);
   __pyx_t_8 = 0;
-  __pyx_t_8 = PyDict_New(); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __pyx_t_8 = PyDict_New(); if (unlikely(!__pyx_t_8)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_8);
-  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 433, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 433, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_8, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 483, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_6, __pyx_t_7, __pyx_t_8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __Pyx_DECREF(__pyx_t_8); __pyx_t_8 = 0;
   __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 433, __pyx_L1_error)
+  if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 483, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_distances = __pyx_t_9;
   __pyx_t_9.memview = NULL;
   __pyx_t_9.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":434
+  /* "Orange/distance/_distance.pyx":484
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -8406,7 +9077,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":435
+        /* "Orange/distance/_distance.pyx":485
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:
  *         for row1 in range(n_rows1):             # <<<<<<<<<<<<<<
@@ -8417,7 +9088,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
         for (__pyx_t_11 = 0; __pyx_t_11 < __pyx_t_10; __pyx_t_11+=1) {
           __pyx_v_row1 = __pyx_t_11;
 
-          /* "Orange/distance/_distance.pyx":436
+          /* "Orange/distance/_distance.pyx":486
  *     with nogil:
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):             # <<<<<<<<<<<<<<
@@ -8432,7 +9103,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
           for (__pyx_t_13 = 0; __pyx_t_13 < __pyx_t_12; __pyx_t_13+=1) {
             __pyx_v_row2 = __pyx_t_13;
 
-            /* "Orange/distance/_distance.pyx":437
+            /* "Orange/distance/_distance.pyx":487
  *         for row1 in range(n_rows1):
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 intersection = union = 0             # <<<<<<<<<<<<<<
@@ -8442,7 +9113,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
             __pyx_v_intersection = 0.0;
             __pyx_v_union = 0.0;
 
-            /* "Orange/distance/_distance.pyx":438
+            /* "Orange/distance/_distance.pyx":488
  *             for row2 in range(n_rows2 if two_tables else row1):
  *                 intersection = union = 0
  *                 for col in range(n_cols):             # <<<<<<<<<<<<<<
@@ -8453,7 +9124,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
             for (__pyx_t_15 = 0; __pyx_t_15 < __pyx_t_14; __pyx_t_15+=1) {
               __pyx_v_col = __pyx_t_15;
 
-              /* "Orange/distance/_distance.pyx":439
+              /* "Orange/distance/_distance.pyx":489
  *                 intersection = union = 0
  *                 for col in range(n_cols):
  *                     val1, val2 = x1[row1, col], x2[row2, col]             # <<<<<<<<<<<<<<
@@ -8469,7 +9140,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
               __pyx_v_val1 = __pyx_t_18;
               __pyx_v_val2 = __pyx_t_21;
 
-              /* "Orange/distance/_distance.pyx":440
+              /* "Orange/distance/_distance.pyx":490
  *                 for col in range(n_cols):
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -8479,7 +9150,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
               __pyx_t_5 = (npy_isnan(__pyx_v_val1) != 0);
               if (__pyx_t_5) {
 
-                /* "Orange/distance/_distance.pyx":441
+                /* "Orange/distance/_distance.pyx":491
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -8489,7 +9160,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 __pyx_t_5 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":442
+                  /* "Orange/distance/_distance.pyx":492
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):
  *                             intersection += ps[col] ** 2             # <<<<<<<<<<<<<<
@@ -8499,7 +9170,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   __pyx_t_22 = __pyx_v_col;
                   __pyx_v_intersection = (__pyx_v_intersection + pow((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_22 * __pyx_v_ps.strides[0]) ))), 2.0));
 
-                  /* "Orange/distance/_distance.pyx":443
+                  /* "Orange/distance/_distance.pyx":493
  *                         if npy_isnan(val2):
  *                             intersection += ps[col] ** 2
  *                             union += 1 - (1 - ps[col]) ** 2             # <<<<<<<<<<<<<<
@@ -8509,7 +9180,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   __pyx_t_23 = __pyx_v_col;
                   __pyx_v_union = (__pyx_v_union + (1.0 - pow((1.0 - (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_23 * __pyx_v_ps.strides[0]) )))), 2.0)));
 
-                  /* "Orange/distance/_distance.pyx":441
+                  /* "Orange/distance/_distance.pyx":491
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -8519,7 +9190,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":444
+                /* "Orange/distance/_distance.pyx":494
  *                             intersection += ps[col] ** 2
  *                             union += 1 - (1 - ps[col]) ** 2
  *                         elif val2 != 0:             # <<<<<<<<<<<<<<
@@ -8529,7 +9200,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 __pyx_t_5 = ((__pyx_v_val2 != 0.0) != 0);
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":445
+                  /* "Orange/distance/_distance.pyx":495
  *                             union += 1 - (1 - ps[col]) ** 2
  *                         elif val2 != 0:
  *                             intersection += ps[col]             # <<<<<<<<<<<<<<
@@ -8539,7 +9210,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   __pyx_t_24 = __pyx_v_col;
                   __pyx_v_intersection = (__pyx_v_intersection + (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_24 * __pyx_v_ps.strides[0]) ))));
 
-                  /* "Orange/distance/_distance.pyx":446
+                  /* "Orange/distance/_distance.pyx":496
  *                         elif val2 != 0:
  *                             intersection += ps[col]
  *                             union += 1             # <<<<<<<<<<<<<<
@@ -8548,7 +9219,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
                   __pyx_v_union = (__pyx_v_union + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":444
+                  /* "Orange/distance/_distance.pyx":494
  *                             intersection += ps[col] ** 2
  *                             union += 1 - (1 - ps[col]) ** 2
  *                         elif val2 != 0:             # <<<<<<<<<<<<<<
@@ -8558,7 +9229,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":448
+                /* "Orange/distance/_distance.pyx":498
  *                             union += 1
  *                         else:
  *                             union += ps[col]             # <<<<<<<<<<<<<<
@@ -8571,7 +9242,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 }
                 __pyx_L13:;
 
-                /* "Orange/distance/_distance.pyx":440
+                /* "Orange/distance/_distance.pyx":490
  *                 for col in range(n_cols):
  *                     val1, val2 = x1[row1, col], x2[row2, col]
  *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -8581,7 +9252,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":449
+              /* "Orange/distance/_distance.pyx":499
  *                         else:
  *                             union += ps[col]
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -8591,7 +9262,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
               __pyx_t_5 = (npy_isnan(__pyx_v_val2) != 0);
               if (__pyx_t_5) {
 
-                /* "Orange/distance/_distance.pyx":450
+                /* "Orange/distance/_distance.pyx":500
  *                             union += ps[col]
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:             # <<<<<<<<<<<<<<
@@ -8601,7 +9272,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 __pyx_t_5 = ((__pyx_v_val1 != 0.0) != 0);
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":451
+                  /* "Orange/distance/_distance.pyx":501
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:
  *                             intersection += ps[col]             # <<<<<<<<<<<<<<
@@ -8611,7 +9282,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   __pyx_t_26 = __pyx_v_col;
                   __pyx_v_intersection = (__pyx_v_intersection + (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_26 * __pyx_v_ps.strides[0]) ))));
 
-                  /* "Orange/distance/_distance.pyx":452
+                  /* "Orange/distance/_distance.pyx":502
  *                         if val1 != 0:
  *                             intersection += ps[col]
  *                             union += 1             # <<<<<<<<<<<<<<
@@ -8620,7 +9291,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
                   __pyx_v_union = (__pyx_v_union + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":450
+                  /* "Orange/distance/_distance.pyx":500
  *                             union += ps[col]
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:             # <<<<<<<<<<<<<<
@@ -8630,7 +9301,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                   goto __pyx_L14;
                 }
 
-                /* "Orange/distance/_distance.pyx":454
+                /* "Orange/distance/_distance.pyx":504
  *                             union += 1
  *                         else:
  *                             union += ps[col]             # <<<<<<<<<<<<<<
@@ -8643,7 +9314,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 }
                 __pyx_L14:;
 
-                /* "Orange/distance/_distance.pyx":449
+                /* "Orange/distance/_distance.pyx":499
  *                         else:
  *                             union += ps[col]
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -8653,7 +9324,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":456
+              /* "Orange/distance/_distance.pyx":506
  *                             union += ps[col]
  *                     else:
  *                         if val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -8672,7 +9343,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 __pyx_L16_bool_binop_done:;
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":457
+                  /* "Orange/distance/_distance.pyx":507
  *                     else:
  *                         if val1 != 0 and val2 != 0:
  *                             intersection += 1             # <<<<<<<<<<<<<<
@@ -8681,7 +9352,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
                   __pyx_v_intersection = (__pyx_v_intersection + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":456
+                  /* "Orange/distance/_distance.pyx":506
  *                             union += ps[col]
  *                     else:
  *                         if val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -8690,7 +9361,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
                 }
 
-                /* "Orange/distance/_distance.pyx":458
+                /* "Orange/distance/_distance.pyx":508
  *                         if val1 != 0 and val2 != 0:
  *                             intersection += 1
  *                         if val1 != 0 or val2 != 0:             # <<<<<<<<<<<<<<
@@ -8708,7 +9379,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
                 __pyx_L19_bool_binop_done:;
                 if (__pyx_t_5) {
 
-                  /* "Orange/distance/_distance.pyx":459
+                  /* "Orange/distance/_distance.pyx":509
  *                             intersection += 1
  *                         if val1 != 0 or val2 != 0:
  *                             union += 1             # <<<<<<<<<<<<<<
@@ -8717,7 +9388,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
                   __pyx_v_union = (__pyx_v_union + 1.0);
 
-                  /* "Orange/distance/_distance.pyx":458
+                  /* "Orange/distance/_distance.pyx":508
  *                         if val1 != 0 and val2 != 0:
  *                             intersection += 1
  *                         if val1 != 0 or val2 != 0:             # <<<<<<<<<<<<<<
@@ -8729,7 +9400,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
               __pyx_L12:;
             }
 
-            /* "Orange/distance/_distance.pyx":460
+            /* "Orange/distance/_distance.pyx":510
  *                         if val1 != 0 or val2 != 0:
  *                             union += 1
  *                 if union != 0:             # <<<<<<<<<<<<<<
@@ -8739,7 +9410,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
             __pyx_t_5 = ((__pyx_v_union != 0.0) != 0);
             if (__pyx_t_5) {
 
-              /* "Orange/distance/_distance.pyx":461
+              /* "Orange/distance/_distance.pyx":511
  *                             union += 1
  *                 if union != 0:
  *                     distances[row1, row2] = 1 - intersection / union             # <<<<<<<<<<<<<<
@@ -8750,7 +9421,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
               __pyx_t_30 = __pyx_v_row2;
               *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_distances.data + __pyx_t_29 * __pyx_v_distances.strides[0]) ) + __pyx_t_30 * __pyx_v_distances.strides[1]) )) = (1.0 - (__pyx_v_intersection / __pyx_v_union));
 
-              /* "Orange/distance/_distance.pyx":460
+              /* "Orange/distance/_distance.pyx":510
  *                         if val1 != 0 or val2 != 0:
  *                             union += 1
  *                 if union != 0:             # <<<<<<<<<<<<<<
@@ -8762,7 +9433,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
         }
       }
 
-      /* "Orange/distance/_distance.pyx":434
+      /* "Orange/distance/_distance.pyx":484
  * 
  *     distances = np.zeros((n_rows1, n_rows2), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -8780,7 +9451,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
       }
   }
 
-  /* "Orange/distance/_distance.pyx":463
+  /* "Orange/distance/_distance.pyx":513
  *                     distances[row1, row2] = 1 - intersection / union
  * 
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -8790,7 +9461,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
   __pyx_t_5 = ((!(__pyx_v_two_tables != 0)) != 0);
   if (__pyx_t_5) {
 
-    /* "Orange/distance/_distance.pyx":464
+    /* "Orange/distance/_distance.pyx":514
  * 
  *     if not two_tables:
  *         _lower_to_symmetric(distances)             # <<<<<<<<<<<<<<
@@ -8799,7 +9470,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
     __pyx_f_6Orange_8distance_9_distance__lower_to_symmetric(__pyx_v_distances);
 
-    /* "Orange/distance/_distance.pyx":463
+    /* "Orange/distance/_distance.pyx":513
  *                     distances[row1, row2] = 1 - intersection / union
  * 
  *     if not two_tables:             # <<<<<<<<<<<<<<
@@ -8808,7 +9479,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
   }
 
-  /* "Orange/distance/_distance.pyx":465
+  /* "Orange/distance/_distance.pyx":515
  *     if not two_tables:
  *         _lower_to_symmetric(distances)
  *     return distances             # <<<<<<<<<<<<<<
@@ -8816,13 +9487,13 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 465, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 515, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":417
+  /* "Orange/distance/_distance.pyx":467
  * 
  * 
  * def jaccard_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
@@ -8859,7 +9530,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
   return __pyx_r;
 }
 
-/* "Orange/distance/_distance.pyx":468
+/* "Orange/distance/_distance.pyx":518
  * 
  * 
  * def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -8868,10 +9539,10 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_14jaccard_rows(CYTHON_UNU
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static char __pyx_doc_6Orange_8distance_9_distance_16jaccard_cols[] = "jaccard_cols(ndarray x, fit_params)";
-static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_17jaccard_cols = {"jaccard_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_16jaccard_cols};
-static PyObject *__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_23jaccard_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_8distance_9_distance_22jaccard_cols[] = "jaccard_cols(ndarray x, fit_params)";
+static PyMethodDef __pyx_mdef_6Orange_8distance_9_distance_23jaccard_cols = {"jaccard_cols", (PyCFunction)__pyx_pw_6Orange_8distance_9_distance_23jaccard_cols, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_8distance_9_distance_22jaccard_cols};
+static PyObject *__pyx_pw_6Orange_8distance_9_distance_23jaccard_cols(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyArrayObject *__pyx_v_x = 0;
   PyObject *__pyx_v_fit_params = 0;
   PyObject *__pyx_r = 0;
@@ -8897,11 +9568,11 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols(PyObject *
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_fit_params)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("jaccard_cols", 1, 2, 2, 1); __PYX_ERR(0, 468, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("jaccard_cols", 1, 2, 2, 1); __PYX_ERR(0, 518, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "jaccard_cols") < 0)) __PYX_ERR(0, 468, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "jaccard_cols") < 0)) __PYX_ERR(0, 518, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -8914,14 +9585,14 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols(PyObject *
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("jaccard_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 468, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("jaccard_cols", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 518, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("Orange.distance._distance.jaccard_cols", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 468, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_x), __pyx_ptype_5numpy_ndarray, 1, "x", 0))) __PYX_ERR(0, 518, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6Orange_8distance_9_distance_22jaccard_cols(__pyx_self, __pyx_v_x, __pyx_v_fit_params);
 
   /* function exit code */
   goto __pyx_L0;
@@ -8932,7 +9603,7 @@ static PyObject *__pyx_pw_6Orange_8distance_9_distance_17jaccard_cols(PyObject *
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
+static PyObject *__pyx_pf_6Orange_8distance_9_distance_22jaccard_cols(CYTHON_UNUSED PyObject *__pyx_self, PyArrayObject *__pyx_v_x, PyObject *__pyx_v_fit_params) {
   __Pyx_memviewslice __pyx_v_ps = { 0, 0, { 0 }, { 0 }, { 0 } };
   int __pyx_v_n_rows;
   int __pyx_v_n_cols;
@@ -8995,27 +9666,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
   __pyx_pybuffernd_x.rcbuffer = &__pyx_pybuffer_x;
   {
     __Pyx_BufFmt_StackElem __pyx_stack[1];
-    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 468, __pyx_L1_error)
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_x, &__Pyx_TypeInfo_nn___pyx_t_5numpy_float64_t, PyBUF_FORMAT| PyBUF_STRIDES, 2, 0, __pyx_stack) == -1)) __PYX_ERR(0, 518, __pyx_L1_error)
   }
   __pyx_pybuffernd_x.diminfo[0].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_x.diminfo[0].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[0]; __pyx_pybuffernd_x.diminfo[1].strides = __pyx_pybuffernd_x.rcbuffer->pybuffer.strides[1]; __pyx_pybuffernd_x.diminfo[1].shape = __pyx_pybuffernd_x.rcbuffer->pybuffer.shape[1];
 
-  /* "Orange/distance/_distance.pyx":470
+  /* "Orange/distance/_distance.pyx":520
  * def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
  *     cdef:
  *         double [:] ps = fit_params["ps"]             # <<<<<<<<<<<<<<
  * 
  *         int n_rows, n_cols, col1, col2, row
  */
-  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_ps); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 470, __pyx_L1_error)
+  __pyx_t_1 = PyObject_GetItem(__pyx_v_fit_params, __pyx_n_s_ps); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 520, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_t_2 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 470, __pyx_L1_error)
+  if (unlikely(!__pyx_t_2.memview)) __PYX_ERR(0, 520, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_ps = __pyx_t_2;
   __pyx_t_2.memview = NULL;
   __pyx_t_2.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":477
+  /* "Orange/distance/_distance.pyx":527
  *         double [:, :] distances
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]             # <<<<<<<<<<<<<<
@@ -9027,23 +9698,23 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
   __pyx_v_n_rows = __pyx_t_3;
   __pyx_v_n_cols = __pyx_t_4;
 
-  /* "Orange/distance/_distance.pyx":478
+  /* "Orange/distance/_distance.pyx":528
  * 
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)             # <<<<<<<<<<<<<<
  *     with nogil:
  *         for col1 in range(n_cols):
  */
-  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_zeros); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_5);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_From_int(__pyx_v_n_cols); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
-  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_7 = PyTuple_New(2); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
   __Pyx_GIVEREF(__pyx_t_1);
   PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_1);
@@ -9051,27 +9722,27 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
   PyTuple_SET_ITEM(__pyx_t_7, 1, __pyx_t_6);
   __pyx_t_1 = 0;
   __pyx_t_6 = 0;
-  __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_6 = PyTuple_New(1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_6);
   __Pyx_GIVEREF(__pyx_t_7);
   PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_7);
   __pyx_t_7 = 0;
-  __pyx_t_7 = PyDict_New(); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __pyx_t_7 = PyDict_New(); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 478, __pyx_L1_error)
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 478, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_t_7, __pyx_n_s_dtype, ((PyObject *)(&PyFloat_Type))) < 0) __PYX_ERR(0, 528, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, __pyx_t_7); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_1);
-  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 478, __pyx_L1_error)
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 528, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_distances = __pyx_t_8;
   __pyx_t_8.memview = NULL;
   __pyx_t_8.data = NULL;
 
-  /* "Orange/distance/_distance.pyx":479
+  /* "Orange/distance/_distance.pyx":529
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -9085,7 +9756,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
       #endif
       /*try:*/ {
 
-        /* "Orange/distance/_distance.pyx":480
+        /* "Orange/distance/_distance.pyx":530
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:
  *         for col1 in range(n_cols):             # <<<<<<<<<<<<<<
@@ -9096,7 +9767,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
         for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
           __pyx_v_col1 = __pyx_t_10;
 
-          /* "Orange/distance/_distance.pyx":481
+          /* "Orange/distance/_distance.pyx":531
  *     with nogil:
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):             # <<<<<<<<<<<<<<
@@ -9107,7 +9778,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
           for (__pyx_t_12 = 0; __pyx_t_12 < __pyx_t_11; __pyx_t_12+=1) {
             __pyx_v_col2 = __pyx_t_12;
 
-            /* "Orange/distance/_distance.pyx":482
+            /* "Orange/distance/_distance.pyx":532
  *         for col1 in range(n_cols):
  *             for col2 in range(col1):
  *                 in_both = in_one = 0             # <<<<<<<<<<<<<<
@@ -9117,7 +9788,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
             __pyx_v_in_both = 0;
             __pyx_v_in_one = 0;
 
-            /* "Orange/distance/_distance.pyx":483
+            /* "Orange/distance/_distance.pyx":533
  *             for col2 in range(col1):
  *                 in_both = in_one = 0
  *                 in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0             # <<<<<<<<<<<<<<
@@ -9130,7 +9801,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
             __pyx_v_unk1_not2 = 0;
             __pyx_v_not1_unk2 = 0;
 
-            /* "Orange/distance/_distance.pyx":484
+            /* "Orange/distance/_distance.pyx":534
  *                 in_both = in_one = 0
  *                 in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
  *                 for row in range(n_rows):             # <<<<<<<<<<<<<<
@@ -9141,7 +9812,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
             for (__pyx_t_14 = 0; __pyx_t_14 < __pyx_t_13; __pyx_t_14+=1) {
               __pyx_v_row = __pyx_t_14;
 
-              /* "Orange/distance/_distance.pyx":485
+              /* "Orange/distance/_distance.pyx":535
  *                 in1_unk2 = unk1_in2 = unk1_unk2 = unk1_not2 = not1_unk2 = 0
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]             # <<<<<<<<<<<<<<
@@ -9157,7 +9828,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
               __pyx_v_val1 = __pyx_t_17;
               __pyx_v_val2 = __pyx_t_20;
 
-              /* "Orange/distance/_distance.pyx":486
+              /* "Orange/distance/_distance.pyx":536
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -9167,7 +9838,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
               __pyx_t_21 = (npy_isnan(__pyx_v_val1) != 0);
               if (__pyx_t_21) {
 
-                /* "Orange/distance/_distance.pyx":487
+                /* "Orange/distance/_distance.pyx":537
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -9177,7 +9848,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 __pyx_t_21 = (npy_isnan(__pyx_v_val2) != 0);
                 if (__pyx_t_21) {
 
-                  /* "Orange/distance/_distance.pyx":488
+                  /* "Orange/distance/_distance.pyx":538
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):
  *                             unk1_unk2 += 1             # <<<<<<<<<<<<<<
@@ -9186,7 +9857,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
                   __pyx_v_unk1_unk2 = (__pyx_v_unk1_unk2 + 1);
 
-                  /* "Orange/distance/_distance.pyx":487
+                  /* "Orange/distance/_distance.pyx":537
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1):
  *                         if npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -9196,7 +9867,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":489
+                /* "Orange/distance/_distance.pyx":539
  *                         if npy_isnan(val2):
  *                             unk1_unk2 += 1
  *                         elif val2 != 0:             # <<<<<<<<<<<<<<
@@ -9206,7 +9877,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 __pyx_t_21 = ((__pyx_v_val2 != 0.0) != 0);
                 if (__pyx_t_21) {
 
-                  /* "Orange/distance/_distance.pyx":490
+                  /* "Orange/distance/_distance.pyx":540
  *                             unk1_unk2 += 1
  *                         elif val2 != 0:
  *                             unk1_in2 += 1             # <<<<<<<<<<<<<<
@@ -9215,7 +9886,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
                   __pyx_v_unk1_in2 = (__pyx_v_unk1_in2 + 1);
 
-                  /* "Orange/distance/_distance.pyx":489
+                  /* "Orange/distance/_distance.pyx":539
  *                         if npy_isnan(val2):
  *                             unk1_unk2 += 1
  *                         elif val2 != 0:             # <<<<<<<<<<<<<<
@@ -9225,7 +9896,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                   goto __pyx_L13;
                 }
 
-                /* "Orange/distance/_distance.pyx":492
+                /* "Orange/distance/_distance.pyx":542
  *                             unk1_in2 += 1
  *                         else:
  *                             unk1_not2 += 1             # <<<<<<<<<<<<<<
@@ -9237,7 +9908,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 }
                 __pyx_L13:;
 
-                /* "Orange/distance/_distance.pyx":486
+                /* "Orange/distance/_distance.pyx":536
  *                 for row in range(n_rows):
  *                     val1, val2 = x[row, col1], x[row, col2]
  *                     if npy_isnan(val1):             # <<<<<<<<<<<<<<
@@ -9247,7 +9918,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":493
+              /* "Orange/distance/_distance.pyx":543
  *                         else:
  *                             unk1_not2 += 1
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -9257,7 +9928,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
               __pyx_t_21 = (npy_isnan(__pyx_v_val2) != 0);
               if (__pyx_t_21) {
 
-                /* "Orange/distance/_distance.pyx":494
+                /* "Orange/distance/_distance.pyx":544
  *                             unk1_not2 += 1
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:             # <<<<<<<<<<<<<<
@@ -9267,7 +9938,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 __pyx_t_21 = ((__pyx_v_val1 != 0.0) != 0);
                 if (__pyx_t_21) {
 
-                  /* "Orange/distance/_distance.pyx":495
+                  /* "Orange/distance/_distance.pyx":545
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:
  *                             in1_unk2 += 1             # <<<<<<<<<<<<<<
@@ -9276,7 +9947,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
                   __pyx_v_in1_unk2 = (__pyx_v_in1_unk2 + 1);
 
-                  /* "Orange/distance/_distance.pyx":494
+                  /* "Orange/distance/_distance.pyx":544
  *                             unk1_not2 += 1
  *                     elif npy_isnan(val2):
  *                         if val1 != 0:             # <<<<<<<<<<<<<<
@@ -9286,7 +9957,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                   goto __pyx_L14;
                 }
 
-                /* "Orange/distance/_distance.pyx":497
+                /* "Orange/distance/_distance.pyx":547
  *                             in1_unk2 += 1
  *                         else:
  *                             not1_unk2 += 1             # <<<<<<<<<<<<<<
@@ -9298,7 +9969,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 }
                 __pyx_L14:;
 
-                /* "Orange/distance/_distance.pyx":493
+                /* "Orange/distance/_distance.pyx":543
  *                         else:
  *                             unk1_not2 += 1
  *                     elif npy_isnan(val2):             # <<<<<<<<<<<<<<
@@ -9308,7 +9979,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 goto __pyx_L12;
               }
 
-              /* "Orange/distance/_distance.pyx":499
+              /* "Orange/distance/_distance.pyx":549
  *                             not1_unk2 += 1
  *                     else:
  *                         if val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -9327,7 +9998,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 __pyx_L16_bool_binop_done:;
                 if (__pyx_t_21) {
 
-                  /* "Orange/distance/_distance.pyx":500
+                  /* "Orange/distance/_distance.pyx":550
  *                     else:
  *                         if val1 != 0 and val2 != 0:
  *                             in_both += 1             # <<<<<<<<<<<<<<
@@ -9336,7 +10007,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
                   __pyx_v_in_both = (__pyx_v_in_both + 1);
 
-                  /* "Orange/distance/_distance.pyx":499
+                  /* "Orange/distance/_distance.pyx":549
  *                             not1_unk2 += 1
  *                     else:
  *                         if val1 != 0 and val2 != 0:             # <<<<<<<<<<<<<<
@@ -9346,7 +10017,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                   goto __pyx_L15;
                 }
 
-                /* "Orange/distance/_distance.pyx":501
+                /* "Orange/distance/_distance.pyx":551
  *                         if val1 != 0 and val2 != 0:
  *                             in_both += 1
  *                         elif val1 != 0 or val2 != 0:             # <<<<<<<<<<<<<<
@@ -9364,7 +10035,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
                 __pyx_L18_bool_binop_done:;
                 if (__pyx_t_21) {
 
-                  /* "Orange/distance/_distance.pyx":502
+                  /* "Orange/distance/_distance.pyx":552
  *                             in_both += 1
  *                         elif val1 != 0 or val2 != 0:
  *                             in_one += 1             # <<<<<<<<<<<<<<
@@ -9373,7 +10044,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
                   __pyx_v_in_one = (__pyx_v_in_one + 1);
 
-                  /* "Orange/distance/_distance.pyx":501
+                  /* "Orange/distance/_distance.pyx":551
  *                         if val1 != 0 and val2 != 0:
  *                             in_both += 1
  *                         elif val1 != 0 or val2 != 0:             # <<<<<<<<<<<<<<
@@ -9386,7 +10057,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
               __pyx_L12:;
             }
 
-            /* "Orange/distance/_distance.pyx":505
+            /* "Orange/distance/_distance.pyx":555
  *                 distances[col1, col2] = distances[col2, col1] = \
  *                     1 - float(in_both
  *                               + ps[col1] * unk1_in2 +             # <<<<<<<<<<<<<<
@@ -9395,7 +10066,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
             __pyx_t_23 = __pyx_v_col1;
 
-            /* "Orange/distance/_distance.pyx":506
+            /* "Orange/distance/_distance.pyx":556
  *                     1 - float(in_both
  *                               + ps[col1] * unk1_in2 +
  *                               + ps[col2] * in1_unk2 +             # <<<<<<<<<<<<<<
@@ -9404,7 +10075,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
             __pyx_t_24 = __pyx_v_col2;
 
-            /* "Orange/distance/_distance.pyx":507
+            /* "Orange/distance/_distance.pyx":557
  *                               + ps[col1] * unk1_in2 +
  *                               + ps[col2] * in1_unk2 +
  *                               + ps[col1] * ps[col2] * unk1_unk2) / \             # <<<<<<<<<<<<<<
@@ -9414,7 +10085,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
             __pyx_t_25 = __pyx_v_col1;
             __pyx_t_26 = __pyx_v_col2;
 
-            /* "Orange/distance/_distance.pyx":509
+            /* "Orange/distance/_distance.pyx":559
  *                               + ps[col1] * ps[col2] * unk1_unk2) / \
  *                     (in_both + in_one + unk1_in2 + in1_unk2 +
  *                      + ps[col1] * unk1_not2             # <<<<<<<<<<<<<<
@@ -9423,7 +10094,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
             __pyx_t_27 = __pyx_v_col1;
 
-            /* "Orange/distance/_distance.pyx":510
+            /* "Orange/distance/_distance.pyx":560
  *                     (in_both + in_one + unk1_in2 + in1_unk2 +
  *                      + ps[col1] * unk1_not2
  *                      + ps[col2] * not1_unk2             # <<<<<<<<<<<<<<
@@ -9432,7 +10103,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
             __pyx_t_28 = __pyx_v_col2;
 
-            /* "Orange/distance/_distance.pyx":511
+            /* "Orange/distance/_distance.pyx":561
  *                      + ps[col1] * unk1_not2
  *                      + ps[col2] * not1_unk2
  *                      + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)             # <<<<<<<<<<<<<<
@@ -9441,7 +10112,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
             __pyx_t_29 = __pyx_v_col1;
             __pyx_t_30 = __pyx_v_col2;
 
-            /* "Orange/distance/_distance.pyx":504
+            /* "Orange/distance/_distance.pyx":554
  *                             in_one += 1
  *                 distances[col1, col2] = distances[col2, col1] = \
  *                     1 - float(in_both             # <<<<<<<<<<<<<<
@@ -9450,7 +10121,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
  */
             __pyx_t_31 = (1.0 - ((((__pyx_v_in_both + ((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_23 * __pyx_v_ps.strides[0]) ))) * __pyx_v_unk1_in2)) + ((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_24 * __pyx_v_ps.strides[0]) ))) * __pyx_v_in1_unk2)) + (((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_25 * __pyx_v_ps.strides[0]) ))) * (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_26 * __pyx_v_ps.strides[0]) )))) * __pyx_v_unk1_unk2)) / ((((((__pyx_v_in_both + __pyx_v_in_one) + __pyx_v_unk1_in2) + __pyx_v_in1_unk2) + ((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_27 * __pyx_v_ps.strides[0]) ))) * __pyx_v_unk1_not2)) + ((*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_28 * __pyx_v_ps.strides[0]) ))) * __pyx_v_not1_unk2)) + ((1.0 - ((1.0 - (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_29 * __pyx_v_ps.strides[0]) )))) * (1.0 - (*((double *) ( /* dim=0 */ (__pyx_v_ps.data + __pyx_t_30 * __pyx_v_ps.strides[0]) )))))) * __pyx_v_unk1_unk2))));
 
-            /* "Orange/distance/_distance.pyx":503
+            /* "Orange/distance/_distance.pyx":553
  *                         elif val1 != 0 or val2 != 0:
  *                             in_one += 1
  *                 distances[col1, col2] = distances[col2, col1] = \             # <<<<<<<<<<<<<<
@@ -9467,7 +10138,7 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
         }
       }
 
-      /* "Orange/distance/_distance.pyx":479
+      /* "Orange/distance/_distance.pyx":529
  *     n_rows, n_cols = x.shape[0], x.shape[1]
  *     distances = np.zeros((n_cols, n_cols), dtype=float)
  *     with nogil:             # <<<<<<<<<<<<<<
@@ -9485,19 +10156,19 @@ static PyObject *__pyx_pf_6Orange_8distance_9_distance_16jaccard_cols(CYTHON_UNU
       }
   }
 
-  /* "Orange/distance/_distance.pyx":512
+  /* "Orange/distance/_distance.pyx":562
  *                      + ps[col2] * not1_unk2
  *                      + (1 - (1 - ps[col1]) * (1 - ps[col2])) * unk1_unk2)
  *     return distances             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 512, __pyx_L1_error)
+  __pyx_t_1 = __pyx_memoryview_fromslice(__pyx_v_distances, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 562, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "Orange/distance/_distance.pyx":468
+  /* "Orange/distance/_distance.pyx":518
  * 
  * 
  * def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
@@ -9701,7 +10372,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 218, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 218, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -9757,7 +10428,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  * 
  *             info.buf = PyArray_DATA(self)
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 222, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 222, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -10066,7 +10737,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 259, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 259, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -10881,7 +11552,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  * 
  *         if ((child.byteorder == c'>' and little_endian) or
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 799, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 799, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -10949,7 +11620,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  *             # One could encode it in the format string and have Cython
  *             # complain instead, BUT: < and > in format strings also imply
  */
-      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 803, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(1, 803, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -11058,7 +11729,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  * 
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  */
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 823, __pyx_L1_error)
+        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_builtin_RuntimeError, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 823, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_4);
         __Pyx_Raise(__pyx_t_4, 0, 0, 0);
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -11839,7 +12510,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __
  * 
  *         if itemsize <= 0:
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 131, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 131, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -11871,7 +12542,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __
  * 
  *         if not isinstance(format, bytes):
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 134, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 134, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -11906,7 +12577,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __
  */
     __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_v_format, __pyx_n_s_encode); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 137, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 137, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 137, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF_SET(__pyx_v_format, __pyx_t_5);
@@ -11982,7 +12653,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __
  * 
  * 
  */
-    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 146, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 146, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_Raise(__pyx_t_5, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -12266,7 +12937,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __
  * 
  *             if self.dtype_is_object:
  */
-      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__14, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 174, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_MemoryError, __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 174, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_Raise(__pyx_t_5, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -12504,7 +13175,7 @@ static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array_2__getbuffer__(stru
  *         info.buf = self.data
  *         info.len = self.len
  */
-    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 190, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__14, NULL); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 190, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_Raise(__pyx_t_3, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -15451,7 +16122,7 @@ static PyObject *__pyx_memoryview_convert_item_to_object(struct __pyx_memoryview
  *         else:
  *             if len(self.view.format) == 1:
  */
-      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__16, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(2, 484, __pyx_L5_except_error)
+      __pyx_t_6 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_6)) __PYX_ERR(2, 484, __pyx_L5_except_error)
       __Pyx_GOTREF(__pyx_t_6);
       __Pyx_Raise(__pyx_t_6, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
@@ -16271,7 +16942,7 @@ static PyObject *__pyx_pf_15View_dot_MemoryView_10memoryview_7strides___get__(st
  * 
  *         return tuple([stride for stride in self.view.strides[:self.view.ndim]])
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__17, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(2, 556, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__16, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(2, 556, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -16385,7 +17056,7 @@ static PyObject *__pyx_pf_15View_dot_MemoryView_10memoryview_10suboffsets___get_
     __Pyx_XDECREF(__pyx_r);
     __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_v_self->view.ndim); if (unlikely(!__pyx_t_2)) __PYX_ERR(2, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = PyNumber_Multiply(__pyx_tuple__18, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 563, __pyx_L1_error)
+    __pyx_t_3 = PyNumber_Multiply(__pyx_tuple__17, __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(2, 563, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __pyx_r = __pyx_t_3;
@@ -17689,9 +18360,9 @@ static PyObject *_unellipsify(PyObject *__pyx_v_index, int __pyx_v_ndim) {
         __Pyx_GOTREF(__pyx_t_7);
         { Py_ssize_t __pyx_temp;
           for (__pyx_temp=0; __pyx_temp < ((__pyx_v_ndim - __pyx_t_8) + 1); __pyx_temp++) {
-            __Pyx_INCREF(__pyx_slice__19);
-            __Pyx_GIVEREF(__pyx_slice__19);
-            PyList_SET_ITEM(__pyx_t_7, __pyx_temp, __pyx_slice__19);
+            __Pyx_INCREF(__pyx_slice__18);
+            __Pyx_GIVEREF(__pyx_slice__18);
+            PyList_SET_ITEM(__pyx_t_7, __pyx_temp, __pyx_slice__18);
           }
         }
         __pyx_t_9 = __Pyx_PyList_Extend(__pyx_v_result, __pyx_t_7); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(2, 668, __pyx_L1_error)
@@ -17724,7 +18395,7 @@ static PyObject *_unellipsify(PyObject *__pyx_v_index, int __pyx_v_ndim) {
  *         else:
  */
       /*else*/ {
-        __pyx_t_9 = __Pyx_PyList_Append(__pyx_v_result, __pyx_slice__20); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(2, 671, __pyx_L1_error)
+        __pyx_t_9 = __Pyx_PyList_Append(__pyx_v_result, __pyx_slice__19); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(2, 671, __pyx_L1_error)
       }
       __pyx_L7:;
 
@@ -17869,9 +18540,9 @@ static PyObject *_unellipsify(PyObject *__pyx_v_index, int __pyx_v_ndim) {
     __Pyx_GOTREF(__pyx_t_3);
     { Py_ssize_t __pyx_temp;
       for (__pyx_temp=0; __pyx_temp < __pyx_v_nslices; __pyx_temp++) {
-        __Pyx_INCREF(__pyx_slice__21);
-        __Pyx_GIVEREF(__pyx_slice__21);
-        PyList_SET_ITEM(__pyx_t_3, __pyx_temp, __pyx_slice__21);
+        __Pyx_INCREF(__pyx_slice__20);
+        __Pyx_GIVEREF(__pyx_slice__20);
+        PyList_SET_ITEM(__pyx_t_3, __pyx_temp, __pyx_slice__20);
       }
     }
     __pyx_t_9 = __Pyx_PyList_Extend(__pyx_v_result, __pyx_t_3); if (unlikely(__pyx_t_9 == -1)) __PYX_ERR(2, 682, __pyx_L1_error)
@@ -17995,7 +18666,7 @@ static PyObject *assert_direct_dimensions(Py_ssize_t *__pyx_v_suboffsets, int __
  * 
  * 
  */
-      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__22, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 689, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyObject_Call(__pyx_builtin_ValueError, __pyx_tuple__21, NULL); if (unlikely(!__pyx_t_5)) __PYX_ERR(2, 689, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __Pyx_Raise(__pyx_t_5, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
@@ -23941,12 +24612,10 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_abs1, __pyx_k_abs1, sizeof(__pyx_k_abs1), 0, 0, 1, 1},
   {&__pyx_n_s_abs2, __pyx_k_abs2, sizeof(__pyx_k_abs2), 0, 0, 1, 1},
   {&__pyx_n_s_abss, __pyx_k_abss, sizeof(__pyx_k_abss), 0, 0, 1, 1},
-  {&__pyx_n_s_all, __pyx_k_all, sizeof(__pyx_k_all), 0, 0, 1, 1},
   {&__pyx_n_s_allocate_buffer, __pyx_k_allocate_buffer, sizeof(__pyx_k_allocate_buffer), 0, 0, 1, 1},
   {&__pyx_n_s_base, __pyx_k_base, sizeof(__pyx_k_base), 0, 0, 1, 1},
   {&__pyx_n_s_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 0, 1, 1},
   {&__pyx_n_u_c, __pyx_k_c, sizeof(__pyx_k_c), 0, 1, 0, 1},
-  {&__pyx_kp_s_cannot_normalize_the_data_has_no, __pyx_k_cannot_normalize_the_data_has_no, sizeof(__pyx_k_cannot_normalize_the_data_has_no), 0, 0, 1, 0},
   {&__pyx_n_s_class, __pyx_k_class, sizeof(__pyx_k_class), 0, 0, 1, 1},
   {&__pyx_n_s_col, __pyx_k_col, sizeof(__pyx_k_col), 0, 0, 1, 1},
   {&__pyx_n_s_col1, __pyx_k_col1, sizeof(__pyx_k_col1), 0, 0, 1, 1},
@@ -23965,9 +24634,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_encode, __pyx_k_encode, sizeof(__pyx_k_encode), 0, 0, 1, 1},
   {&__pyx_n_s_enumerate, __pyx_k_enumerate, sizeof(__pyx_k_enumerate), 0, 0, 1, 1},
   {&__pyx_n_s_error, __pyx_k_error, sizeof(__pyx_k_error), 0, 0, 1, 1},
-  {&__pyx_n_s_euclidean_cols, __pyx_k_euclidean_cols, sizeof(__pyx_k_euclidean_cols), 0, 0, 1, 1},
-  {&__pyx_n_s_euclidean_rows, __pyx_k_euclidean_rows, sizeof(__pyx_k_euclidean_rows), 0, 0, 1, 1},
+  {&__pyx_n_s_euclidean_rows_discrete, __pyx_k_euclidean_rows_discrete, sizeof(__pyx_k_euclidean_rows_discrete), 0, 0, 1, 1},
   {&__pyx_n_s_fit_params, __pyx_k_fit_params, sizeof(__pyx_k_fit_params), 0, 0, 1, 1},
+  {&__pyx_n_s_fix_euclidean_cols, __pyx_k_fix_euclidean_cols, sizeof(__pyx_k_fix_euclidean_cols), 0, 0, 1, 1},
+  {&__pyx_n_s_fix_euclidean_cols_normalized, __pyx_k_fix_euclidean_cols_normalized, sizeof(__pyx_k_fix_euclidean_cols_normalized), 0, 0, 1, 1},
+  {&__pyx_n_s_fix_euclidean_rows, __pyx_k_fix_euclidean_rows, sizeof(__pyx_k_fix_euclidean_rows), 0, 0, 1, 1},
+  {&__pyx_n_s_fix_euclidean_rows_normalized, __pyx_k_fix_euclidean_rows_normalized, sizeof(__pyx_k_fix_euclidean_rows_normalized), 0, 0, 1, 1},
   {&__pyx_n_s_flags, __pyx_k_flags, sizeof(__pyx_k_flags), 0, 0, 1, 1},
   {&__pyx_n_s_format, __pyx_k_format, sizeof(__pyx_k_format), 0, 0, 1, 1},
   {&__pyx_n_s_fortran, __pyx_k_fortran, sizeof(__pyx_k_fortran), 0, 0, 1, 1},
@@ -23979,7 +24651,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_in_both, __pyx_k_in_both, sizeof(__pyx_k_in_both), 0, 0, 1, 1},
   {&__pyx_n_s_in_one, __pyx_k_in_one, sizeof(__pyx_k_in_one), 0, 0, 1, 1},
   {&__pyx_n_s_intersection, __pyx_k_intersection, sizeof(__pyx_k_intersection), 0, 0, 1, 1},
-  {&__pyx_n_s_isnan, __pyx_k_isnan, sizeof(__pyx_k_isnan), 0, 0, 1, 1},
   {&__pyx_n_s_itemsize, __pyx_k_itemsize, sizeof(__pyx_k_itemsize), 0, 0, 1, 1},
   {&__pyx_kp_s_itemsize_0_for_cython_array, __pyx_k_itemsize_0_for_cython_array, sizeof(__pyx_k_itemsize_0_for_cython_array), 0, 0, 1, 0},
   {&__pyx_n_s_ival1, __pyx_k_ival1, sizeof(__pyx_k_ival1), 0, 0, 1, 1},
@@ -24021,7 +24692,6 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_row2, __pyx_k_row2, sizeof(__pyx_k_row2), 0, 0, 1, 1},
   {&__pyx_n_s_shape, __pyx_k_shape, sizeof(__pyx_k_shape), 0, 0, 1, 1},
   {&__pyx_n_s_size, __pyx_k_size, sizeof(__pyx_k_size), 0, 0, 1, 1},
-  {&__pyx_n_s_sqrt, __pyx_k_sqrt, sizeof(__pyx_k_sqrt), 0, 0, 1, 1},
   {&__pyx_n_s_start, __pyx_k_start, sizeof(__pyx_k_start), 0, 0, 1, 1},
   {&__pyx_n_s_step, __pyx_k_step, sizeof(__pyx_k_step), 0, 0, 1, 1},
   {&__pyx_n_s_stop, __pyx_k_stop, sizeof(__pyx_k_stop), 0, 0, 1, 1},
@@ -24050,8 +24720,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 21, __pyx_L1_error)
-  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(0, 23, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 20, __pyx_L1_error)
+  __pyx_builtin_ValueError = __Pyx_GetBuiltinName(__pyx_n_s_ValueError); if (!__pyx_builtin_ValueError) __PYX_ERR(1, 218, __pyx_L1_error)
   __pyx_builtin_RuntimeError = __Pyx_GetBuiltinName(__pyx_n_s_RuntimeError); if (!__pyx_builtin_RuntimeError) __PYX_ERR(1, 799, __pyx_L1_error)
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(2, 146, __pyx_L1_error)
   __pyx_builtin_enumerate = __Pyx_GetBuiltinName(__pyx_n_s_enumerate); if (!__pyx_builtin_enumerate) __PYX_ERR(2, 149, __pyx_L1_error)
@@ -24068,30 +24738,19 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "Orange/distance/_distance.pyx":23
- *     for col in range(dividers.shape[0]):
- *         if dividers[col] == 0 and not x[:, col].isnan().all():
- *             raise ValueError("cannot normalize: the data has no variance")             # <<<<<<<<<<<<<<
- * 
- * 
- */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_kp_s_cannot_normalize_the_data_has_no); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 23, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple_);
-  __Pyx_GIVEREF(__pyx_tuple_);
-
-  /* "Orange/distance/_distance.pyx":390
+  /* "Orange/distance/_distance.pyx":440
  *     for col1 in range(n_cols):
  *         if vars[col1] == -2:
  *             distances[col1, :] = distances[:, col1] = 1.0             # <<<<<<<<<<<<<<
  *             continue
  *         with nogil:
  */
-  __pyx_slice__2 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__2)) __PYX_ERR(0, 390, __pyx_L1_error)
+  __pyx_slice_ = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice_)) __PYX_ERR(0, 440, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_slice_);
+  __Pyx_GIVEREF(__pyx_slice_);
+  __pyx_slice__2 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__2)) __PYX_ERR(0, 440, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_slice__2);
   __Pyx_GIVEREF(__pyx_slice__2);
-  __pyx_slice__3 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__3)) __PYX_ERR(0, 390, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_slice__3);
-  __Pyx_GIVEREF(__pyx_slice__3);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)
@@ -24100,9 +24759,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  */
-  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_C_contiguous); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(1, 218, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__4);
-  __Pyx_GIVEREF(__pyx_tuple__4);
+  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_C_contiguous); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(1, 218, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__3);
+  __Pyx_GIVEREF(__pyx_tuple__3);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
@@ -24111,9 +24770,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             info.buf = PyArray_DATA(self)
  */
-  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_Fortran_contiguou); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 222, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__5);
-  __Pyx_GIVEREF(__pyx_tuple__5);
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_u_ndarray_is_not_Fortran_contiguou); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(1, 222, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
  *                 if ((descr.byteorder == c'>' and little_endian) or
@@ -24122,9 +24781,9 @@ static int __Pyx_InitCachedConstants(void) {
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"
  */
-  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(1, 259, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__6);
-  __Pyx_GIVEREF(__pyx_tuple__6);
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(1, 259, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__5);
+  __Pyx_GIVEREF(__pyx_tuple__5);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
  * 
@@ -24133,9 +24792,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         if ((child.byteorder == c'>' and little_endian) or
  */
-  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 799, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__7);
-  __Pyx_GIVEREF(__pyx_tuple__7);
+  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(1, 799, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
  *         if ((child.byteorder == c'>' and little_endian) or
@@ -24144,9 +24803,9 @@ static int __Pyx_InitCachedConstants(void) {
  *             # One could encode it in the format string and have Cython
  *             # complain instead, BUT: < and > in format strings also imply
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(1, 803, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__8);
-  __Pyx_GIVEREF(__pyx_tuple__8);
+  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_kp_u_Non_native_byte_order_not_suppor); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(1, 803, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__7);
+  __Pyx_GIVEREF(__pyx_tuple__7);
 
   /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
  *             t = child.type_num
@@ -24155,9 +24814,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor_2); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(1, 823, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__9);
-  __Pyx_GIVEREF(__pyx_tuple__9);
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_kp_u_Format_string_allocated_too_shor_2); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(1, 823, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__8);
+  __Pyx_GIVEREF(__pyx_tuple__8);
 
   /* "View.MemoryView":131
  * 
@@ -24166,9 +24825,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         if itemsize <= 0:
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_Empty_shape_tuple_for_cython_arr); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(2, 131, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__10);
-  __Pyx_GIVEREF(__pyx_tuple__10);
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_kp_s_Empty_shape_tuple_for_cython_arr); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(2, 131, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
 
   /* "View.MemoryView":134
  * 
@@ -24177,9 +24836,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         if not isinstance(format, bytes):
  */
-  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_kp_s_itemsize_0_for_cython_array); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(2, 134, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__11);
-  __Pyx_GIVEREF(__pyx_tuple__11);
+  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_kp_s_itemsize_0_for_cython_array); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(2, 134, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__10);
+  __Pyx_GIVEREF(__pyx_tuple__10);
 
   /* "View.MemoryView":137
  * 
@@ -24188,9 +24847,9 @@ static int __Pyx_InitCachedConstants(void) {
  *         self._format = format  # keep a reference to the byte string
  *         self.format = self._format
  */
-  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_n_s_ASCII); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(2, 137, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__12);
-  __Pyx_GIVEREF(__pyx_tuple__12);
+  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_s_ASCII); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(2, 137, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__11);
+  __Pyx_GIVEREF(__pyx_tuple__11);
 
   /* "View.MemoryView":146
  * 
@@ -24199,9 +24858,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_kp_s_unable_to_allocate_shape_and_str); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(2, 146, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__13);
-  __Pyx_GIVEREF(__pyx_tuple__13);
+  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_kp_s_unable_to_allocate_shape_and_str); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(2, 146, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__12);
+  __Pyx_GIVEREF(__pyx_tuple__12);
 
   /* "View.MemoryView":174
  *             self.data = <char *>malloc(self.len)
@@ -24210,9 +24869,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *             if self.dtype_is_object:
  */
-  __pyx_tuple__14 = PyTuple_Pack(1, __pyx_kp_s_unable_to_allocate_array_data); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(2, 174, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__14);
-  __Pyx_GIVEREF(__pyx_tuple__14);
+  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_kp_s_unable_to_allocate_array_data); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(2, 174, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__13);
+  __Pyx_GIVEREF(__pyx_tuple__13);
 
   /* "View.MemoryView":190
  *             bufmode = PyBUF_F_CONTIGUOUS | PyBUF_ANY_CONTIGUOUS
@@ -24221,9 +24880,9 @@ static int __Pyx_InitCachedConstants(void) {
  *         info.buf = self.data
  *         info.len = self.len
  */
-  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_kp_s_Can_only_create_a_buffer_that_is); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(2, 190, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__15);
-  __Pyx_GIVEREF(__pyx_tuple__15);
+  __pyx_tuple__14 = PyTuple_Pack(1, __pyx_kp_s_Can_only_create_a_buffer_that_is); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(2, 190, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__14);
+  __Pyx_GIVEREF(__pyx_tuple__14);
 
   /* "View.MemoryView":484
  *             result = struct.unpack(self.view.format, bytesitem)
@@ -24232,9 +24891,9 @@ static int __Pyx_InitCachedConstants(void) {
  *         else:
  *             if len(self.view.format) == 1:
  */
-  __pyx_tuple__16 = PyTuple_Pack(1, __pyx_kp_s_Unable_to_convert_item_to_object); if (unlikely(!__pyx_tuple__16)) __PYX_ERR(2, 484, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__16);
-  __Pyx_GIVEREF(__pyx_tuple__16);
+  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_kp_s_Unable_to_convert_item_to_object); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(2, 484, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__15);
+  __Pyx_GIVEREF(__pyx_tuple__15);
 
   /* "View.MemoryView":556
  *         if self.view.strides == NULL:
@@ -24243,9 +24902,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         return tuple([stride for stride in self.view.strides[:self.view.ndim]])
  */
-  __pyx_tuple__17 = PyTuple_Pack(1, __pyx_kp_s_Buffer_view_does_not_expose_stri); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(2, 556, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__17);
-  __Pyx_GIVEREF(__pyx_tuple__17);
+  __pyx_tuple__16 = PyTuple_Pack(1, __pyx_kp_s_Buffer_view_does_not_expose_stri); if (unlikely(!__pyx_tuple__16)) __PYX_ERR(2, 556, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__16);
+  __Pyx_GIVEREF(__pyx_tuple__16);
 
   /* "View.MemoryView":563
  *     def suboffsets(self):
@@ -24254,12 +24913,12 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *         return tuple([suboffset for suboffset in self.view.suboffsets[:self.view.ndim]])
  */
-  __pyx_tuple__18 = PyTuple_New(1); if (unlikely(!__pyx_tuple__18)) __PYX_ERR(2, 563, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__18);
+  __pyx_tuple__17 = PyTuple_New(1); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(2, 563, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__17);
   __Pyx_INCREF(__pyx_int_neg_1);
   __Pyx_GIVEREF(__pyx_int_neg_1);
-  PyTuple_SET_ITEM(__pyx_tuple__18, 0, __pyx_int_neg_1);
-  __Pyx_GIVEREF(__pyx_tuple__18);
+  PyTuple_SET_ITEM(__pyx_tuple__17, 0, __pyx_int_neg_1);
+  __Pyx_GIVEREF(__pyx_tuple__17);
 
   /* "View.MemoryView":668
  *         if item is Ellipsis:
@@ -24268,9 +24927,9 @@ static int __Pyx_InitCachedConstants(void) {
  *                 seen_ellipsis = True
  *             else:
  */
-  __pyx_slice__19 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__19)) __PYX_ERR(2, 668, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_slice__19);
-  __Pyx_GIVEREF(__pyx_slice__19);
+  __pyx_slice__18 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__18)) __PYX_ERR(2, 668, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_slice__18);
+  __Pyx_GIVEREF(__pyx_slice__18);
 
   /* "View.MemoryView":671
  *                 seen_ellipsis = True
@@ -24279,9 +24938,9 @@ static int __Pyx_InitCachedConstants(void) {
  *             have_slices = True
  *         else:
  */
-  __pyx_slice__20 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__20)) __PYX_ERR(2, 671, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_slice__20);
-  __Pyx_GIVEREF(__pyx_slice__20);
+  __pyx_slice__19 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__19)) __PYX_ERR(2, 671, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_slice__19);
+  __Pyx_GIVEREF(__pyx_slice__19);
 
   /* "View.MemoryView":682
  *     nslices = ndim - len(result)
@@ -24290,9 +24949,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  *     return have_slices or nslices, tuple(result)
  */
-  __pyx_slice__21 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__21)) __PYX_ERR(2, 682, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_slice__21);
-  __Pyx_GIVEREF(__pyx_slice__21);
+  __pyx_slice__20 = PySlice_New(Py_None, Py_None, Py_None); if (unlikely(!__pyx_slice__20)) __PYX_ERR(2, 682, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_slice__20);
+  __Pyx_GIVEREF(__pyx_slice__20);
 
   /* "View.MemoryView":689
  *     for suboffset in suboffsets[:ndim]:
@@ -24301,117 +24960,153 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__22 = PyTuple_Pack(1, __pyx_kp_s_Indirect_dimensions_not_supporte); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(2, 689, __pyx_L1_error)
+  __pyx_tuple__21 = PyTuple_Pack(1, __pyx_kp_s_Indirect_dimensions_not_supporte); if (unlikely(!__pyx_tuple__21)) __PYX_ERR(2, 689, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__21);
+  __Pyx_GIVEREF(__pyx_tuple__21);
+
+  /* "Orange/distance/_distance.pyx":25
+ * 
+ * 
+ * def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,             # <<<<<<<<<<<<<<
+ *                             np.ndarray[np.float64_t, ndim=2] x1,
+ *                             np.ndarray[np.float64_t, ndim=2] x2,
+ */
+  __pyx_tuple__22 = PyTuple_Pack(17, __pyx_n_s_distances, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_dist_missing, __pyx_n_s_dist_missing2, __pyx_n_s_two_tables, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_ival1, __pyx_n_s_ival2); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__22);
   __Pyx_GIVEREF(__pyx_tuple__22);
+  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(6, 0, 17, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_euclidean_rows_discrete, 25, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 25, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":33
+  /* "Orange/distance/_distance.pyx":59
  * 
  * 
- * def euclidean_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
- *                    np.ndarray[np.float64_t, ndim=2] x2,
- *                    char two_tables,
+ * def fix_euclidean_rows(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
  */
-  __pyx_tuple__23 = PyTuple_Pack(21, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_vars, __pyx_n_s_means, __pyx_n_s_dist_missing, __pyx_n_s_dist_missing2, __pyx_n_s_normalize, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_ival1, __pyx_n_s_ival2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__23)) __PYX_ERR(0, 33, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__23);
-  __Pyx_GIVEREF(__pyx_tuple__23);
-  __pyx_codeobj__24 = (PyObject*)__Pyx_PyCode_New(4, 0, 21, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__23, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_euclidean_rows, 33, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__24)) __PYX_ERR(0, 33, __pyx_L1_error)
+  __pyx_tuple__24 = PyTuple_Pack(16, __pyx_n_s_distances, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_means, __pyx_n_s_vars, __pyx_n_s_dist_missing2, __pyx_n_s_two_tables, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__24);
+  __Pyx_GIVEREF(__pyx_tuple__24);
+  __pyx_codeobj__25 = (PyObject*)__Pyx_PyCode_New(7, 0, 16, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_fix_euclidean_rows, 59, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__25)) __PYX_ERR(0, 59, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":93
+  /* "Orange/distance/_distance.pyx":94
  * 
  * 
- * def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
- *     cdef:
- *         double [:] means = fit_params["means"]
+ * def fix_euclidean_rows_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
  */
-  __pyx_tuple__25 = PyTuple_Pack(14, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_means, __pyx_n_s_vars, __pyx_n_s_normalize, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 93, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__25);
-  __Pyx_GIVEREF(__pyx_tuple__25);
-  __pyx_codeobj__26 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_euclidean_cols, 93, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__26)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __pyx_tuple__26 = PyTuple_Pack(16, __pyx_n_s_distances, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_means, __pyx_n_s_vars, __pyx_n_s_dist_missing2, __pyx_n_s_two_tables, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 94, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__26);
+  __Pyx_GIVEREF(__pyx_tuple__26);
+  __pyx_codeobj__27 = (PyObject*)__Pyx_PyCode_New(7, 0, 16, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_fix_euclidean_rows_normalized, 94, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__27)) __PYX_ERR(0, 94, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":138
+  /* "Orange/distance/_distance.pyx":129
+ * 
+ * 
+ * def fix_euclidean_cols(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
+ */
+  __pyx_tuple__28 = PyTuple_Pack(12, __pyx_n_s_distances, __pyx_n_s_x, __pyx_n_s_means, __pyx_n_s_vars, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__28);
+  __Pyx_GIVEREF(__pyx_tuple__28);
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_fix_euclidean_cols, 129, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 129, __pyx_L1_error)
+
+  /* "Orange/distance/_distance.pyx":159
+ * 
+ * 
+ * def fix_euclidean_cols_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
+ */
+  __pyx_tuple__30 = PyTuple_Pack(12, __pyx_n_s_distances, __pyx_n_s_x, __pyx_n_s_means, __pyx_n_s_vars, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__30);
+  __Pyx_GIVEREF(__pyx_tuple__30);
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_fix_euclidean_cols_normalized, 159, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 159, __pyx_L1_error)
+
+  /* "Orange/distance/_distance.pyx":188
  * 
  * 
  * def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                    np.ndarray[np.float64_t, ndim=2] x2,
  *                    char two_tables,
  */
-  __pyx_tuple__27 = PyTuple_Pack(21, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_medians, __pyx_n_s_mads, __pyx_n_s_dist_missing, __pyx_n_s_dist_missing2, __pyx_n_s_normalize, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_ival1, __pyx_n_s_ival2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 138, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__27);
-  __Pyx_GIVEREF(__pyx_tuple__27);
-  __pyx_codeobj__28 = (PyObject*)__Pyx_PyCode_New(4, 0, 21, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_manhattan_rows, 138, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__28)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_tuple__32 = PyTuple_Pack(21, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_medians, __pyx_n_s_mads, __pyx_n_s_dist_missing, __pyx_n_s_dist_missing2, __pyx_n_s_normalize, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_ival1, __pyx_n_s_ival2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__32)) __PYX_ERR(0, 188, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__32);
+  __Pyx_GIVEREF(__pyx_tuple__32);
+  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(4, 0, 21, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__32, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_manhattan_rows, 188, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 188, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":201
+  /* "Orange/distance/_distance.pyx":251
  * 
  * 
  * def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] medians = fit_params["medians"]
  */
-  __pyx_tuple__29 = PyTuple_Pack(14, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_medians, __pyx_n_s_mads, __pyx_n_s_normalize, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 201, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__29);
-  __Pyx_GIVEREF(__pyx_tuple__29);
-  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_manhattan_cols, 201, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 201, __pyx_L1_error)
+  __pyx_tuple__34 = PyTuple_Pack(14, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_medians, __pyx_n_s_mads, __pyx_n_s_normalize, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(0, 251, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__34);
+  __Pyx_GIVEREF(__pyx_tuple__34);
+  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_manhattan_cols, 251, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(0, 251, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":246
+  /* "Orange/distance/_distance.pyx":296
  * 
  * 
  * def p_nonzero(np.ndarray[np.float64_t, ndim=1] x):             # <<<<<<<<<<<<<<
  *     cdef:
  *         int row, nonzeros, nonnans
  */
-  __pyx_tuple__31 = PyTuple_Pack(5, __pyx_n_s_x, __pyx_n_s_row, __pyx_n_s_nonzeros, __pyx_n_s_nonnans, __pyx_n_s_val); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 246, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__31);
-  __Pyx_GIVEREF(__pyx_tuple__31);
-  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(1, 0, 5, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_p_nonzero, 246, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_tuple__36 = PyTuple_Pack(5, __pyx_n_s_x, __pyx_n_s_row, __pyx_n_s_nonzeros, __pyx_n_s_nonnans, __pyx_n_s_val); if (unlikely(!__pyx_tuple__36)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__36);
+  __Pyx_GIVEREF(__pyx_tuple__36);
+  __pyx_codeobj__37 = (PyObject*)__Pyx_PyCode_New(1, 0, 5, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__36, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_p_nonzero, 296, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__37)) __PYX_ERR(0, 296, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":290
+  /* "Orange/distance/_distance.pyx":340
  * 
  * 
  * def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                 np.ndarray[np.float64_t, ndim=2] x2,
  *                 char two_tables,
  */
-  __pyx_tuple__33 = PyTuple_Pack(19, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_vars, __pyx_n_s_means, __pyx_n_s_dist_missing2, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_abs1, __pyx_n_s_abs2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__33)) __PYX_ERR(0, 290, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__33);
-  __Pyx_GIVEREF(__pyx_tuple__33);
-  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(4, 0, 19, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_cosine_rows, 290, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(0, 290, __pyx_L1_error)
+  __pyx_tuple__38 = PyTuple_Pack(19, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_vars, __pyx_n_s_means, __pyx_n_s_dist_missing2, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_abs1, __pyx_n_s_abs2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__38)) __PYX_ERR(0, 340, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__38);
+  __Pyx_GIVEREF(__pyx_tuple__38);
+  __pyx_codeobj__39 = (PyObject*)__Pyx_PyCode_New(4, 0, 19, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__38, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_cosine_rows, 340, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__39)) __PYX_ERR(0, 340, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":372
+  /* "Orange/distance/_distance.pyx":422
  * 
  * 
  * def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] vars = fit_params["vars"]
  */
-  __pyx_tuple__35 = PyTuple_Pack(14, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_vars, __pyx_n_s_means, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_row, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_abss, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__35)) __PYX_ERR(0, 372, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__35);
-  __Pyx_GIVEREF(__pyx_tuple__35);
-  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__35, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_cosine_cols, 372, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(0, 372, __pyx_L1_error)
+  __pyx_tuple__40 = PyTuple_Pack(14, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_vars, __pyx_n_s_means, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_row, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_d, __pyx_n_s_abss, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__40)) __PYX_ERR(0, 422, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__40);
+  __Pyx_GIVEREF(__pyx_tuple__40);
+  __pyx_codeobj__41 = (PyObject*)__Pyx_PyCode_New(2, 0, 14, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__40, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_cosine_cols, 422, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__41)) __PYX_ERR(0, 422, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":417
+  /* "Orange/distance/_distance.pyx":467
  * 
  * 
  * def jaccard_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                  np.ndarray[np.float64_t, ndim=2] x2,
  *                  char two_tables,
  */
-  __pyx_tuple__37 = PyTuple_Pack(18, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_ps, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_intersection, __pyx_n_s_union, __pyx_n_s_ival1, __pyx_n_s_ival2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 417, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__37);
-  __Pyx_GIVEREF(__pyx_tuple__37);
-  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(4, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_jaccard_rows, 417, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 417, __pyx_L1_error)
+  __pyx_tuple__42 = PyTuple_Pack(18, __pyx_n_s_x1, __pyx_n_s_x2, __pyx_n_s_two_tables, __pyx_n_s_fit_params, __pyx_n_s_ps, __pyx_n_s_n_rows1, __pyx_n_s_n_rows2, __pyx_n_s_n_cols, __pyx_n_s_row1, __pyx_n_s_row2, __pyx_n_s_col, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_intersection, __pyx_n_s_union, __pyx_n_s_ival1, __pyx_n_s_ival2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__42)) __PYX_ERR(0, 467, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__42);
+  __Pyx_GIVEREF(__pyx_tuple__42);
+  __pyx_codeobj__43 = (PyObject*)__Pyx_PyCode_New(4, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__42, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_jaccard_rows, 467, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__43)) __PYX_ERR(0, 467, __pyx_L1_error)
 
-  /* "Orange/distance/_distance.pyx":468
+  /* "Orange/distance/_distance.pyx":518
  * 
  * 
  * def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] ps = fit_params["ps"]
  */
-  __pyx_tuple__39 = PyTuple_Pack(18, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_ps, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_in_both, __pyx_n_s_in_one, __pyx_n_s_in1_unk2, __pyx_n_s_unk1_in2, __pyx_n_s_unk1_unk2, __pyx_n_s_unk1_not2, __pyx_n_s_not1_unk2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__39)) __PYX_ERR(0, 468, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__39);
-  __Pyx_GIVEREF(__pyx_tuple__39);
-  __pyx_codeobj__40 = (PyObject*)__Pyx_PyCode_New(2, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__39, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_jaccard_cols, 468, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__40)) __PYX_ERR(0, 468, __pyx_L1_error)
+  __pyx_tuple__44 = PyTuple_Pack(18, __pyx_n_s_x, __pyx_n_s_fit_params, __pyx_n_s_ps, __pyx_n_s_n_rows, __pyx_n_s_n_cols, __pyx_n_s_col1, __pyx_n_s_col2, __pyx_n_s_row, __pyx_n_s_val1, __pyx_n_s_val2, __pyx_n_s_in_both, __pyx_n_s_in_one, __pyx_n_s_in1_unk2, __pyx_n_s_unk1_in2, __pyx_n_s_unk1_unk2, __pyx_n_s_unk1_not2, __pyx_n_s_not1_unk2, __pyx_n_s_distances); if (unlikely(!__pyx_tuple__44)) __PYX_ERR(0, 518, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__44);
+  __Pyx_GIVEREF(__pyx_tuple__44);
+  __pyx_codeobj__45 = (PyObject*)__Pyx_PyCode_New(2, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__44, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_jaccard_cols, 518, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__45)) __PYX_ERR(0, 518, __pyx_L1_error)
 
   /* "View.MemoryView":282
  *         return self.name
@@ -24420,9 +25115,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef strided = Enum("<strided and direct>") # default
  * cdef indirect = Enum("<strided and indirect>")
  */
-  __pyx_tuple__41 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct_or_indirect); if (unlikely(!__pyx_tuple__41)) __PYX_ERR(2, 282, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__41);
-  __Pyx_GIVEREF(__pyx_tuple__41);
+  __pyx_tuple__46 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct_or_indirect); if (unlikely(!__pyx_tuple__46)) __PYX_ERR(2, 282, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__46);
+  __Pyx_GIVEREF(__pyx_tuple__46);
 
   /* "View.MemoryView":283
  * 
@@ -24431,9 +25126,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef indirect = Enum("<strided and indirect>")
  * 
  */
-  __pyx_tuple__42 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct); if (unlikely(!__pyx_tuple__42)) __PYX_ERR(2, 283, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__42);
-  __Pyx_GIVEREF(__pyx_tuple__42);
+  __pyx_tuple__47 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct); if (unlikely(!__pyx_tuple__47)) __PYX_ERR(2, 283, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__47);
+  __Pyx_GIVEREF(__pyx_tuple__47);
 
   /* "View.MemoryView":284
  * cdef generic = Enum("<strided and direct or indirect>")
@@ -24442,9 +25137,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__43 = PyTuple_Pack(1, __pyx_kp_s_strided_and_indirect); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(2, 284, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__43);
-  __Pyx_GIVEREF(__pyx_tuple__43);
+  __pyx_tuple__48 = PyTuple_Pack(1, __pyx_kp_s_strided_and_indirect); if (unlikely(!__pyx_tuple__48)) __PYX_ERR(2, 284, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__48);
+  __Pyx_GIVEREF(__pyx_tuple__48);
 
   /* "View.MemoryView":287
  * 
@@ -24453,9 +25148,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef indirect_contiguous = Enum("<contiguous and indirect>")
  * 
  */
-  __pyx_tuple__44 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_direct); if (unlikely(!__pyx_tuple__44)) __PYX_ERR(2, 287, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__44);
-  __Pyx_GIVEREF(__pyx_tuple__44);
+  __pyx_tuple__49 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_direct); if (unlikely(!__pyx_tuple__49)) __PYX_ERR(2, 287, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__49);
+  __Pyx_GIVEREF(__pyx_tuple__49);
 
   /* "View.MemoryView":288
  * 
@@ -24464,9 +25159,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__45 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_indirect); if (unlikely(!__pyx_tuple__45)) __PYX_ERR(2, 288, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__45);
-  __Pyx_GIVEREF(__pyx_tuple__45);
+  __pyx_tuple__50 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_indirect); if (unlikely(!__pyx_tuple__50)) __PYX_ERR(2, 288, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__50);
+  __Pyx_GIVEREF(__pyx_tuple__50);
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -24637,112 +25332,148 @@ PyMODINIT_FUNC PyInit__distance(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_np, __pyx_t_1) < 0) __PYX_ERR(0, 7, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":33
+  /* "Orange/distance/_distance.pyx":25
  * 
  * 
- * def euclidean_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
- *                    np.ndarray[np.float64_t, ndim=2] x2,
- *                    char two_tables,
+ * def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,             # <<<<<<<<<<<<<<
+ *                             np.ndarray[np.float64_t, ndim=2] x1,
+ *                             np.ndarray[np.float64_t, ndim=2] x2,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_1euclidean_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 33, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_1euclidean_rows_discrete, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_euclidean_rows, __pyx_t_1) < 0) __PYX_ERR(0, 33, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_euclidean_rows_discrete, __pyx_t_1) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":93
+  /* "Orange/distance/_distance.pyx":59
  * 
  * 
- * def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
- *     cdef:
- *         double [:] means = fit_params["means"]
+ * def fix_euclidean_rows(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_3euclidean_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_3fix_euclidean_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_euclidean_cols, __pyx_t_1) < 0) __PYX_ERR(0, 93, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_fix_euclidean_rows, __pyx_t_1) < 0) __PYX_ERR(0, 59, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":138
+  /* "Orange/distance/_distance.pyx":94
+ * 
+ * 
+ * def fix_euclidean_rows_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x1,
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_5fix_euclidean_rows_normalized, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 94, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_fix_euclidean_rows_normalized, __pyx_t_1) < 0) __PYX_ERR(0, 94, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/distance/_distance.pyx":129
+ * 
+ * 
+ * def fix_euclidean_cols(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_7fix_euclidean_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_fix_euclidean_cols, __pyx_t_1) < 0) __PYX_ERR(0, 129, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/distance/_distance.pyx":159
+ * 
+ * 
+ * def fix_euclidean_cols_normalized(             # <<<<<<<<<<<<<<
+ *     np.ndarray[np.float64_t, ndim=2] distances,
+ *     np.ndarray[np.float64_t, ndim=2] x,
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_9fix_euclidean_cols_normalized, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 159, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_fix_euclidean_cols_normalized, __pyx_t_1) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/distance/_distance.pyx":188
  * 
  * 
  * def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                    np.ndarray[np.float64_t, ndim=2] x2,
  *                    char two_tables,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_5manhattan_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 138, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_11manhattan_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_manhattan_rows, __pyx_t_1) < 0) __PYX_ERR(0, 138, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_manhattan_rows, __pyx_t_1) < 0) __PYX_ERR(0, 188, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":201
+  /* "Orange/distance/_distance.pyx":251
  * 
  * 
  * def manhattan_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] medians = fit_params["medians"]
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_7manhattan_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 201, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_13manhattan_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 251, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_manhattan_cols, __pyx_t_1) < 0) __PYX_ERR(0, 201, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_manhattan_cols, __pyx_t_1) < 0) __PYX_ERR(0, 251, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":246
+  /* "Orange/distance/_distance.pyx":296
  * 
  * 
  * def p_nonzero(np.ndarray[np.float64_t, ndim=1] x):             # <<<<<<<<<<<<<<
  *     cdef:
  *         int row, nonzeros, nonnans
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_9p_nonzero, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 246, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_15p_nonzero, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_p_nonzero, __pyx_t_1) < 0) __PYX_ERR(0, 246, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_p_nonzero, __pyx_t_1) < 0) __PYX_ERR(0, 296, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":290
+  /* "Orange/distance/_distance.pyx":340
  * 
  * 
  * def cosine_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                 np.ndarray[np.float64_t, ndim=2] x2,
  *                 char two_tables,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_11cosine_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 290, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_17cosine_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cosine_rows, __pyx_t_1) < 0) __PYX_ERR(0, 290, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cosine_rows, __pyx_t_1) < 0) __PYX_ERR(0, 340, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":372
+  /* "Orange/distance/_distance.pyx":422
  * 
  * 
  * def cosine_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] vars = fit_params["vars"]
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_13cosine_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 372, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_19cosine_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 422, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cosine_cols, __pyx_t_1) < 0) __PYX_ERR(0, 372, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_cosine_cols, __pyx_t_1) < 0) __PYX_ERR(0, 422, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":417
+  /* "Orange/distance/_distance.pyx":467
  * 
  * 
  * def jaccard_rows(np.ndarray[np.float64_t, ndim=2] x1,             # <<<<<<<<<<<<<<
  *                  np.ndarray[np.float64_t, ndim=2] x2,
  *                  char two_tables,
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_15jaccard_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 417, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_21jaccard_rows, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 467, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_jaccard_rows, __pyx_t_1) < 0) __PYX_ERR(0, 417, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_jaccard_rows, __pyx_t_1) < 0) __PYX_ERR(0, 467, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "Orange/distance/_distance.pyx":468
+  /* "Orange/distance/_distance.pyx":518
  * 
  * 
  * def jaccard_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):             # <<<<<<<<<<<<<<
  *     cdef:
  *         double [:] ps = fit_params["ps"]
  */
-  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_17jaccard_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 468, __pyx_L1_error)
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_8distance_9_distance_23jaccard_cols, NULL, __pyx_n_s_Orange_distance__distance); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 518, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_jaccard_cols, __pyx_t_1) < 0) __PYX_ERR(0, 468, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_jaccard_cols, __pyx_t_1) < 0) __PYX_ERR(0, 518, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "Orange/distance/_distance.pyx":1
@@ -24775,7 +25506,7 @@ PyMODINIT_FUNC PyInit__distance(void)
  * cdef strided = Enum("<strided and direct>") # default
  * cdef indirect = Enum("<strided and indirect>")
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__41, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 282, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__46, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(generic);
   __Pyx_DECREF_SET(generic, __pyx_t_1);
@@ -24789,7 +25520,7 @@ PyMODINIT_FUNC PyInit__distance(void)
  * cdef indirect = Enum("<strided and indirect>")
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__42, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 283, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__47, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(strided);
   __Pyx_DECREF_SET(strided, __pyx_t_1);
@@ -24803,7 +25534,7 @@ PyMODINIT_FUNC PyInit__distance(void)
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__43, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__48, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 284, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(indirect);
   __Pyx_DECREF_SET(indirect, __pyx_t_1);
@@ -24817,7 +25548,7 @@ PyMODINIT_FUNC PyInit__distance(void)
  * cdef indirect_contiguous = Enum("<contiguous and indirect>")
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__44, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 287, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__49, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 287, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(contiguous);
   __Pyx_DECREF_SET(contiguous, __pyx_t_1);
@@ -24831,7 +25562,7 @@ PyMODINIT_FUNC PyInit__distance(void)
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__45, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 288, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__50, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 288, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(indirect_contiguous);
   __Pyx_DECREF_SET(indirect_contiguous, __pyx_t_1);
@@ -24950,6 +25681,175 @@ static PyObject *__Pyx_GetBuiltinName(PyObject *name) {
 #endif
     }
     return result;
+}
+
+/* RaiseArgTupleInvalid */
+static void __Pyx_RaiseArgtupleInvalid(
+    const char* func_name,
+    int exact,
+    Py_ssize_t num_min,
+    Py_ssize_t num_max,
+    Py_ssize_t num_found)
+{
+    Py_ssize_t num_expected;
+    const char *more_or_less;
+    if (num_found < num_min) {
+        num_expected = num_min;
+        more_or_less = "at least";
+    } else {
+        num_expected = num_max;
+        more_or_less = "at most";
+    }
+    if (exact) {
+        more_or_less = "exactly";
+    }
+    PyErr_Format(PyExc_TypeError,
+                 "%.200s() takes %.8s %" CYTHON_FORMAT_SSIZE_T "d positional argument%.1s (%" CYTHON_FORMAT_SSIZE_T "d given)",
+                 func_name, more_or_less, num_expected,
+                 (num_expected == 1) ? "" : "s", num_found);
+}
+
+/* RaiseDoubleKeywords */
+static void __Pyx_RaiseDoubleKeywordsError(
+    const char* func_name,
+    PyObject* kw_name)
+{
+    PyErr_Format(PyExc_TypeError,
+        #if PY_MAJOR_VERSION >= 3
+        "%s() got multiple values for keyword argument '%U'", func_name, kw_name);
+        #else
+        "%s() got multiple values for keyword argument '%s'", func_name,
+        PyString_AsString(kw_name));
+        #endif
+}
+
+/* ParseKeywords */
+static int __Pyx_ParseOptionalKeywords(
+    PyObject *kwds,
+    PyObject **argnames[],
+    PyObject *kwds2,
+    PyObject *values[],
+    Py_ssize_t num_pos_args,
+    const char* function_name)
+{
+    PyObject *key = 0, *value = 0;
+    Py_ssize_t pos = 0;
+    PyObject*** name;
+    PyObject*** first_kw_arg = argnames + num_pos_args;
+    while (PyDict_Next(kwds, &pos, &key, &value)) {
+        name = first_kw_arg;
+        while (*name && (**name != key)) name++;
+        if (*name) {
+            values[name-argnames] = value;
+            continue;
+        }
+        name = first_kw_arg;
+        #if PY_MAJOR_VERSION < 3
+        if (likely(PyString_CheckExact(key)) || likely(PyString_Check(key))) {
+            while (*name) {
+                if ((CYTHON_COMPILING_IN_PYPY || PyString_GET_SIZE(**name) == PyString_GET_SIZE(key))
+                        && _PyString_Eq(**name, key)) {
+                    values[name-argnames] = value;
+                    break;
+                }
+                name++;
+            }
+            if (*name) continue;
+            else {
+                PyObject*** argname = argnames;
+                while (argname != first_kw_arg) {
+                    if ((**argname == key) || (
+                            (CYTHON_COMPILING_IN_PYPY || PyString_GET_SIZE(**argname) == PyString_GET_SIZE(key))
+                             && _PyString_Eq(**argname, key))) {
+                        goto arg_passed_twice;
+                    }
+                    argname++;
+                }
+            }
+        } else
+        #endif
+        if (likely(PyUnicode_Check(key))) {
+            while (*name) {
+                int cmp = (**name == key) ? 0 :
+                #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION >= 3
+                    (PyUnicode_GET_SIZE(**name) != PyUnicode_GET_SIZE(key)) ? 1 :
+                #endif
+                    PyUnicode_Compare(**name, key);
+                if (cmp < 0 && unlikely(PyErr_Occurred())) goto bad;
+                if (cmp == 0) {
+                    values[name-argnames] = value;
+                    break;
+                }
+                name++;
+            }
+            if (*name) continue;
+            else {
+                PyObject*** argname = argnames;
+                while (argname != first_kw_arg) {
+                    int cmp = (**argname == key) ? 0 :
+                    #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION >= 3
+                        (PyUnicode_GET_SIZE(**argname) != PyUnicode_GET_SIZE(key)) ? 1 :
+                    #endif
+                        PyUnicode_Compare(**argname, key);
+                    if (cmp < 0 && unlikely(PyErr_Occurred())) goto bad;
+                    if (cmp == 0) goto arg_passed_twice;
+                    argname++;
+                }
+            }
+        } else
+            goto invalid_keyword_type;
+        if (kwds2) {
+            if (unlikely(PyDict_SetItem(kwds2, key, value))) goto bad;
+        } else {
+            goto invalid_keyword;
+        }
+    }
+    return 0;
+arg_passed_twice:
+    __Pyx_RaiseDoubleKeywordsError(function_name, key);
+    goto bad;
+invalid_keyword_type:
+    PyErr_Format(PyExc_TypeError,
+        "%.200s() keywords must be strings", function_name);
+    goto bad;
+invalid_keyword:
+    PyErr_Format(PyExc_TypeError,
+    #if PY_MAJOR_VERSION < 3
+        "%.200s() got an unexpected keyword argument '%.200s'",
+        function_name, PyString_AsString(key));
+    #else
+        "%s() got an unexpected keyword argument '%U'",
+        function_name, key);
+    #endif
+bad:
+    return -1;
+}
+
+/* ArgTypeTest */
+static void __Pyx_RaiseArgumentTypeInvalid(const char* name, PyObject *obj, PyTypeObject *type) {
+    PyErr_Format(PyExc_TypeError,
+        "Argument '%.200s' has incorrect type (expected %.200s, got %.200s)",
+        name, type->tp_name, Py_TYPE(obj)->tp_name);
+}
+static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
+    const char *name, int exact)
+{
+    if (unlikely(!type)) {
+        PyErr_SetString(PyExc_SystemError, "Missing type object");
+        return 0;
+    }
+    if (none_allowed && obj == Py_None) return 1;
+    else if (exact) {
+        if (likely(Py_TYPE(obj) == type)) return 1;
+        #if PY_MAJOR_VERSION == 2
+        else if ((type == &PyBaseString_Type) && likely(__Pyx_PyBaseString_CheckExact(obj))) return 1;
+        #endif
+    }
+    else {
+        if (likely(PyObject_TypeCheck(obj, type))) return 1;
+    }
+    __Pyx_RaiseArgumentTypeInvalid(name, obj, type);
+    return 0;
 }
 
 /* BufferFormatCheck */
@@ -25637,8 +26537,50 @@ static CYTHON_INLINE void __Pyx_XDEC_MEMVIEW(__Pyx_memviewslice *memslice,
     }
 }
 
-/* PyObjectCall */
+/* PyErrFetchRestore */
   #if CYTHON_COMPILING_IN_CPYTHON
+static CYTHON_INLINE void __Pyx_ErrRestoreInState(PyThreadState *tstate, PyObject *type, PyObject *value, PyObject *tb) {
+    PyObject *tmp_type, *tmp_value, *tmp_tb;
+    tmp_type = tstate->curexc_type;
+    tmp_value = tstate->curexc_value;
+    tmp_tb = tstate->curexc_traceback;
+    tstate->curexc_type = type;
+    tstate->curexc_value = value;
+    tstate->curexc_traceback = tb;
+    Py_XDECREF(tmp_type);
+    Py_XDECREF(tmp_value);
+    Py_XDECREF(tmp_tb);
+}
+static CYTHON_INLINE void __Pyx_ErrFetchInState(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb) {
+    *type = tstate->curexc_type;
+    *value = tstate->curexc_value;
+    *tb = tstate->curexc_traceback;
+    tstate->curexc_type = 0;
+    tstate->curexc_value = 0;
+    tstate->curexc_traceback = 0;
+}
+#endif
+
+/* GetModuleGlobalName */
+  static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
+    PyObject *result;
+#if CYTHON_COMPILING_IN_CPYTHON
+    result = PyDict_GetItem(__pyx_d, name);
+    if (likely(result)) {
+        Py_INCREF(result);
+    } else {
+#else
+    result = PyObject_GetItem(__pyx_d, name);
+    if (!result) {
+        PyErr_Clear();
+#endif
+        result = __Pyx_GetBuiltinName(name);
+    }
+    return result;
+}
+
+/* PyObjectCall */
+    #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg, PyObject *kw) {
     PyObject *result;
     ternaryfunc call = func->ob_type->tp_call;
@@ -25658,7 +26600,7 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_Call(PyObject *func, PyObject *arg
 #endif
 
 /* PyObjectCallMethO */
-  #if CYTHON_COMPILING_IN_CPYTHON
+    #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject *arg) {
     PyObject *self, *result;
     PyCFunction cfunc;
@@ -25678,7 +26620,7 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject
 #endif
 
 /* PyObjectCallOneArg */
-  #if CYTHON_COMPILING_IN_CPYTHON
+    #if CYTHON_COMPILING_IN_CPYTHON
 static PyObject* __Pyx__PyObject_CallOneArg(PyObject *func, PyObject *arg) {
     PyObject *result;
     PyObject *args = PyTuple_New(1);
@@ -25712,45 +26654,24 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObjec
 }
 #endif
 
-/* PyObjectCallNoArg */
-    #if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE PyObject* __Pyx_PyObject_CallNoArg(PyObject *func) {
-#ifdef __Pyx_CyFunction_USED
-    if (likely(PyCFunction_Check(func) || PyObject_TypeCheck(func, __pyx_CyFunctionType))) {
-#else
-    if (likely(PyCFunction_Check(func))) {
-#endif
-        if (likely(PyCFunction_GET_FLAGS(func) & METH_NOARGS)) {
-            return __Pyx_PyObject_CallMethO(func, NULL);
-        }
+/* ExtTypeTest */
+      static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type) {
+    if (unlikely(!type)) {
+        PyErr_SetString(PyExc_SystemError, "Missing type object");
+        return 0;
     }
-    return __Pyx_PyObject_Call(func, __pyx_empty_tuple, NULL);
+    if (likely(PyObject_TypeCheck(obj, type)))
+        return 1;
+    PyErr_Format(PyExc_TypeError, "Cannot convert %.200s to %.200s",
+                 Py_TYPE(obj)->tp_name, type->tp_name);
+    return 0;
 }
-#endif
 
-/* PyErrFetchRestore */
-      #if CYTHON_COMPILING_IN_CPYTHON
-static CYTHON_INLINE void __Pyx_ErrRestoreInState(PyThreadState *tstate, PyObject *type, PyObject *value, PyObject *tb) {
-    PyObject *tmp_type, *tmp_value, *tmp_tb;
-    tmp_type = tstate->curexc_type;
-    tmp_value = tstate->curexc_value;
-    tmp_tb = tstate->curexc_traceback;
-    tstate->curexc_type = type;
-    tstate->curexc_value = value;
-    tstate->curexc_traceback = tb;
-    Py_XDECREF(tmp_type);
-    Py_XDECREF(tmp_value);
-    Py_XDECREF(tmp_tb);
+/* BufferFallbackError */
+      static void __Pyx_RaiseBufferFallbackError(void) {
+  PyErr_SetString(PyExc_ValueError,
+     "Buffer acquisition failed on assignment; and then reacquiring the old buffer failed too!");
 }
-static CYTHON_INLINE void __Pyx_ErrFetchInState(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb) {
-    *type = tstate->curexc_type;
-    *value = tstate->curexc_value;
-    *tb = tstate->curexc_traceback;
-    tstate->curexc_type = 0;
-    tstate->curexc_value = 0;
-    tstate->curexc_traceback = 0;
-}
-#endif
 
 /* RaiseException */
       #if PY_MAJOR_VERSION < 3
@@ -25915,274 +26836,26 @@ bad:
 }
 #endif
 
-/* WriteUnraisableException */
-        static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
-                                  CYTHON_UNUSED int lineno, CYTHON_UNUSED const char *filename,
-                                  int full_traceback, CYTHON_UNUSED int nogil) {
-    PyObject *old_exc, *old_val, *old_tb;
-    PyObject *ctx;
-    __Pyx_PyThreadState_declare
-#ifdef WITH_THREAD
-    PyGILState_STATE state;
-    if (nogil)
-        state = PyGILState_Ensure();
-#ifdef _MSC_VER
-    else state = (PyGILState_STATE)-1;
-#endif
-#endif
-    __Pyx_PyThreadState_assign
-    __Pyx_ErrFetch(&old_exc, &old_val, &old_tb);
-    if (full_traceback) {
-        Py_XINCREF(old_exc);
-        Py_XINCREF(old_val);
-        Py_XINCREF(old_tb);
-        __Pyx_ErrRestore(old_exc, old_val, old_tb);
-        PyErr_PrintEx(1);
-    }
-    #if PY_MAJOR_VERSION < 3
-    ctx = PyString_FromString(name);
-    #else
-    ctx = PyUnicode_FromString(name);
-    #endif
-    __Pyx_ErrRestore(old_exc, old_val, old_tb);
-    if (!ctx) {
-        PyErr_WriteUnraisable(Py_None);
-    } else {
-        PyErr_WriteUnraisable(ctx);
-        Py_DECREF(ctx);
-    }
-#ifdef WITH_THREAD
-    if (nogil)
-        PyGILState_Release(state);
-#endif
-}
-
-/* RaiseArgTupleInvalid */
-        static void __Pyx_RaiseArgtupleInvalid(
-    const char* func_name,
-    int exact,
-    Py_ssize_t num_min,
-    Py_ssize_t num_max,
-    Py_ssize_t num_found)
-{
-    Py_ssize_t num_expected;
-    const char *more_or_less;
-    if (num_found < num_min) {
-        num_expected = num_min;
-        more_or_less = "at least";
-    } else {
-        num_expected = num_max;
-        more_or_less = "at most";
-    }
-    if (exact) {
-        more_or_less = "exactly";
-    }
-    PyErr_Format(PyExc_TypeError,
-                 "%.200s() takes %.8s %" CYTHON_FORMAT_SSIZE_T "d positional argument%.1s (%" CYTHON_FORMAT_SSIZE_T "d given)",
-                 func_name, more_or_less, num_expected,
-                 (num_expected == 1) ? "" : "s", num_found);
-}
-
-/* RaiseDoubleKeywords */
-        static void __Pyx_RaiseDoubleKeywordsError(
-    const char* func_name,
-    PyObject* kw_name)
-{
-    PyErr_Format(PyExc_TypeError,
-        #if PY_MAJOR_VERSION >= 3
-        "%s() got multiple values for keyword argument '%U'", func_name, kw_name);
-        #else
-        "%s() got multiple values for keyword argument '%s'", func_name,
-        PyString_AsString(kw_name));
-        #endif
-}
-
-/* ParseKeywords */
-        static int __Pyx_ParseOptionalKeywords(
-    PyObject *kwds,
-    PyObject **argnames[],
-    PyObject *kwds2,
-    PyObject *values[],
-    Py_ssize_t num_pos_args,
-    const char* function_name)
-{
-    PyObject *key = 0, *value = 0;
-    Py_ssize_t pos = 0;
-    PyObject*** name;
-    PyObject*** first_kw_arg = argnames + num_pos_args;
-    while (PyDict_Next(kwds, &pos, &key, &value)) {
-        name = first_kw_arg;
-        while (*name && (**name != key)) name++;
-        if (*name) {
-            values[name-argnames] = value;
-            continue;
-        }
-        name = first_kw_arg;
-        #if PY_MAJOR_VERSION < 3
-        if (likely(PyString_CheckExact(key)) || likely(PyString_Check(key))) {
-            while (*name) {
-                if ((CYTHON_COMPILING_IN_PYPY || PyString_GET_SIZE(**name) == PyString_GET_SIZE(key))
-                        && _PyString_Eq(**name, key)) {
-                    values[name-argnames] = value;
-                    break;
-                }
-                name++;
-            }
-            if (*name) continue;
-            else {
-                PyObject*** argname = argnames;
-                while (argname != first_kw_arg) {
-                    if ((**argname == key) || (
-                            (CYTHON_COMPILING_IN_PYPY || PyString_GET_SIZE(**argname) == PyString_GET_SIZE(key))
-                             && _PyString_Eq(**argname, key))) {
-                        goto arg_passed_twice;
-                    }
-                    argname++;
-                }
-            }
-        } else
-        #endif
-        if (likely(PyUnicode_Check(key))) {
-            while (*name) {
-                int cmp = (**name == key) ? 0 :
-                #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION >= 3
-                    (PyUnicode_GET_SIZE(**name) != PyUnicode_GET_SIZE(key)) ? 1 :
-                #endif
-                    PyUnicode_Compare(**name, key);
-                if (cmp < 0 && unlikely(PyErr_Occurred())) goto bad;
-                if (cmp == 0) {
-                    values[name-argnames] = value;
-                    break;
-                }
-                name++;
-            }
-            if (*name) continue;
-            else {
-                PyObject*** argname = argnames;
-                while (argname != first_kw_arg) {
-                    int cmp = (**argname == key) ? 0 :
-                    #if !CYTHON_COMPILING_IN_PYPY && PY_MAJOR_VERSION >= 3
-                        (PyUnicode_GET_SIZE(**argname) != PyUnicode_GET_SIZE(key)) ? 1 :
-                    #endif
-                        PyUnicode_Compare(**argname, key);
-                    if (cmp < 0 && unlikely(PyErr_Occurred())) goto bad;
-                    if (cmp == 0) goto arg_passed_twice;
-                    argname++;
-                }
-            }
-        } else
-            goto invalid_keyword_type;
-        if (kwds2) {
-            if (unlikely(PyDict_SetItem(kwds2, key, value))) goto bad;
-        } else {
-            goto invalid_keyword;
-        }
-    }
-    return 0;
-arg_passed_twice:
-    __Pyx_RaiseDoubleKeywordsError(function_name, key);
-    goto bad;
-invalid_keyword_type:
-    PyErr_Format(PyExc_TypeError,
-        "%.200s() keywords must be strings", function_name);
-    goto bad;
-invalid_keyword:
-    PyErr_Format(PyExc_TypeError,
-    #if PY_MAJOR_VERSION < 3
-        "%.200s() got an unexpected keyword argument '%.200s'",
-        function_name, PyString_AsString(key));
-    #else
-        "%s() got an unexpected keyword argument '%U'",
-        function_name, key);
-    #endif
-bad:
-    return -1;
-}
-
-/* ArgTypeTest */
-        static void __Pyx_RaiseArgumentTypeInvalid(const char* name, PyObject *obj, PyTypeObject *type) {
-    PyErr_Format(PyExc_TypeError,
-        "Argument '%.200s' has incorrect type (expected %.200s, got %.200s)",
-        name, type->tp_name, Py_TYPE(obj)->tp_name);
-}
-static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, int none_allowed,
-    const char *name, int exact)
-{
-    if (unlikely(!type)) {
-        PyErr_SetString(PyExc_SystemError, "Missing type object");
-        return 0;
-    }
-    if (none_allowed && obj == Py_None) return 1;
-    else if (exact) {
-        if (likely(Py_TYPE(obj) == type)) return 1;
-        #if PY_MAJOR_VERSION == 2
-        else if ((type == &PyBaseString_Type) && likely(__Pyx_PyBaseString_CheckExact(obj))) return 1;
-        #endif
-    }
-    else {
-        if (likely(PyObject_TypeCheck(obj, type))) return 1;
-    }
-    __Pyx_RaiseArgumentTypeInvalid(name, obj, type);
-    return 0;
-}
-
-/* GetModuleGlobalName */
-        static CYTHON_INLINE PyObject *__Pyx_GetModuleGlobalName(PyObject *name) {
-    PyObject *result;
-#if CYTHON_COMPILING_IN_CPYTHON
-    result = PyDict_GetItem(__pyx_d, name);
-    if (likely(result)) {
-        Py_INCREF(result);
-    } else {
-#else
-    result = PyObject_GetItem(__pyx_d, name);
-    if (!result) {
-        PyErr_Clear();
-#endif
-        result = __Pyx_GetBuiltinName(name);
-    }
-    return result;
-}
-
-/* ExtTypeTest */
-          static CYTHON_INLINE int __Pyx_TypeTest(PyObject *obj, PyTypeObject *type) {
-    if (unlikely(!type)) {
-        PyErr_SetString(PyExc_SystemError, "Missing type object");
-        return 0;
-    }
-    if (likely(PyObject_TypeCheck(obj, type)))
-        return 1;
-    PyErr_Format(PyExc_TypeError, "Cannot convert %.200s to %.200s",
-                 Py_TYPE(obj)->tp_name, type->tp_name);
-    return 0;
-}
-
-/* BufferFallbackError */
-          static void __Pyx_RaiseBufferFallbackError(void) {
-  PyErr_SetString(PyExc_ValueError,
-     "Buffer acquisition failed on assignment; and then reacquiring the old buffer failed too!");
-}
-
 /* RaiseTooManyValuesToUnpack */
-          static CYTHON_INLINE void __Pyx_RaiseTooManyValuesError(Py_ssize_t expected) {
+        static CYTHON_INLINE void __Pyx_RaiseTooManyValuesError(Py_ssize_t expected) {
     PyErr_Format(PyExc_ValueError,
                  "too many values to unpack (expected %" CYTHON_FORMAT_SSIZE_T "d)", expected);
 }
 
 /* RaiseNeedMoreValuesToUnpack */
-          static CYTHON_INLINE void __Pyx_RaiseNeedMoreValuesError(Py_ssize_t index) {
+        static CYTHON_INLINE void __Pyx_RaiseNeedMoreValuesError(Py_ssize_t index) {
     PyErr_Format(PyExc_ValueError,
                  "need more than %" CYTHON_FORMAT_SSIZE_T "d value%.1s to unpack",
                  index, (index == 1) ? "" : "s");
 }
 
 /* RaiseNoneIterError */
-          static CYTHON_INLINE void __Pyx_RaiseNoneNotIterableError(void) {
+        static CYTHON_INLINE void __Pyx_RaiseNoneNotIterableError(void) {
     PyErr_SetString(PyExc_TypeError, "'NoneType' object is not iterable");
 }
 
 /* BytesEquals */
-          static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals) {
+        static CYTHON_INLINE int __Pyx_PyBytes_Equals(PyObject* s1, PyObject* s2, int equals) {
 #if CYTHON_COMPILING_IN_PYPY
     return PyObject_RichCompareBool(s1, s2, equals);
 #else
@@ -26220,7 +26893,7 @@ static CYTHON_INLINE int __Pyx_ArgTypeTest(PyObject *obj, PyTypeObject *type, in
 }
 
 /* UnicodeEquals */
-          static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals) {
+        static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int equals) {
 #if CYTHON_COMPILING_IN_PYPY
     return PyObject_RichCompareBool(s1, s2, equals);
 #else
@@ -26304,7 +26977,7 @@ return_ne:
 }
 
 /* GetAttr */
-          static CYTHON_INLINE PyObject *__Pyx_GetAttr(PyObject *o, PyObject *n) {
+        static CYTHON_INLINE PyObject *__Pyx_GetAttr(PyObject *o, PyObject *n) {
 #if CYTHON_COMPILING_IN_CPYTHON
 #if PY_MAJOR_VERSION >= 3
     if (likely(PyUnicode_Check(n)))
@@ -26317,7 +26990,7 @@ return_ne:
 }
 
 /* decode_c_string */
-          static CYTHON_INLINE PyObject* __Pyx_decode_c_string(
+        static CYTHON_INLINE PyObject* __Pyx_decode_c_string(
          const char* cstring, Py_ssize_t start, Py_ssize_t stop,
          const char* encoding, const char* errors,
          PyObject* (*decode_func)(const char *s, Py_ssize_t size, const char *errors)) {
@@ -26350,7 +27023,7 @@ return_ne:
 }
 
 /* SaveResetException */
-          #if CYTHON_COMPILING_IN_CPYTHON
+        #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE void __Pyx__ExceptionSave(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb) {
     *type = tstate->exc_type;
     *value = tstate->exc_value;
@@ -26374,7 +27047,7 @@ static CYTHON_INLINE void __Pyx__ExceptionReset(PyThreadState *tstate, PyObject 
 #endif
 
 /* PyErrExceptionMatches */
-          #if CYTHON_COMPILING_IN_CPYTHON
+        #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE int __Pyx_PyErr_ExceptionMatchesInState(PyThreadState* tstate, PyObject* err) {
     PyObject *exc_type = tstate->curexc_type;
     if (exc_type == err) return 1;
@@ -26384,7 +27057,7 @@ static CYTHON_INLINE int __Pyx_PyErr_ExceptionMatchesInState(PyThreadState* tsta
 #endif
 
 /* GetException */
-          #if CYTHON_COMPILING_IN_CPYTHON
+        #if CYTHON_COMPILING_IN_CPYTHON
 static int __Pyx__GetException(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb) {
 #else
 static int __Pyx_GetException(PyObject **type, PyObject **value, PyObject **tb) {
@@ -26445,7 +27118,7 @@ bad:
 }
 
 /* SwapException */
-            #if CYTHON_COMPILING_IN_CPYTHON
+          #if CYTHON_COMPILING_IN_CPYTHON
 static CYTHON_INLINE void __Pyx__ExceptionSwap(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb) {
     PyObject *tmp_type, *tmp_value, *tmp_tb;
     tmp_type = tstate->exc_type;
@@ -26470,7 +27143,7 @@ static CYTHON_INLINE void __Pyx_ExceptionSwap(PyObject **type, PyObject **value,
 #endif
 
 /* Import */
-            static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level) {
+          static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level) {
     PyObject *empty_list = 0;
     PyObject *module = 0;
     PyObject *global_dict = 0;
@@ -26544,7 +27217,7 @@ bad:
 }
 
 /* GetItemInt */
-            static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
+          static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
     PyObject *r;
     if (!j) return NULL;
     r = PyObject_GetItem(o, j);
@@ -26625,7 +27298,7 @@ static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, 
 }
 
 /* PyIntBinop */
-            #if CYTHON_COMPILING_IN_CPYTHON
+          #if CYTHON_COMPILING_IN_CPYTHON
 static PyObject* __Pyx_PyInt_AddObjC(PyObject *op1, PyObject *op2, CYTHON_UNUSED long intval, CYTHON_UNUSED int inplace) {
     #if PY_MAJOR_VERSION < 3
     if (likely(PyInt_CheckExact(op1))) {
@@ -26723,12 +27396,54 @@ static PyObject* __Pyx_PyInt_AddObjC(PyObject *op1, PyObject *op2, CYTHON_UNUSED
 #endif
 
 /* None */
-            static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
+          static CYTHON_INLINE void __Pyx_RaiseUnboundLocalError(const char *varname) {
     PyErr_Format(PyExc_UnboundLocalError, "local variable '%s' referenced before assignment", varname);
 }
 
+/* WriteUnraisableException */
+          static void __Pyx_WriteUnraisable(const char *name, CYTHON_UNUSED int clineno,
+                                  CYTHON_UNUSED int lineno, CYTHON_UNUSED const char *filename,
+                                  int full_traceback, CYTHON_UNUSED int nogil) {
+    PyObject *old_exc, *old_val, *old_tb;
+    PyObject *ctx;
+    __Pyx_PyThreadState_declare
+#ifdef WITH_THREAD
+    PyGILState_STATE state;
+    if (nogil)
+        state = PyGILState_Ensure();
+#ifdef _MSC_VER
+    else state = (PyGILState_STATE)-1;
+#endif
+#endif
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&old_exc, &old_val, &old_tb);
+    if (full_traceback) {
+        Py_XINCREF(old_exc);
+        Py_XINCREF(old_val);
+        Py_XINCREF(old_tb);
+        __Pyx_ErrRestore(old_exc, old_val, old_tb);
+        PyErr_PrintEx(1);
+    }
+    #if PY_MAJOR_VERSION < 3
+    ctx = PyString_FromString(name);
+    #else
+    ctx = PyUnicode_FromString(name);
+    #endif
+    __Pyx_ErrRestore(old_exc, old_val, old_tb);
+    if (!ctx) {
+        PyErr_WriteUnraisable(Py_None);
+    } else {
+        PyErr_WriteUnraisable(ctx);
+        Py_DECREF(ctx);
+    }
+#ifdef WITH_THREAD
+    if (nogil)
+        PyGILState_Release(state);
+#endif
+}
+
 /* SetVTable */
-            static int __Pyx_SetVtable(PyObject *dict, void *vtable) {
+          static int __Pyx_SetVtable(PyObject *dict, void *vtable) {
 #if PY_VERSION_HEX >= 0x02070000
     PyObject *ob = PyCapsule_New(vtable, 0, 0);
 #else
@@ -26746,7 +27461,7 @@ bad:
 }
 
 /* CodeObjectCache */
-            static int __pyx_bisect_code_objects(__Pyx_CodeObjectCacheEntry* entries, int count, int code_line) {
+          static int __pyx_bisect_code_objects(__Pyx_CodeObjectCacheEntry* entries, int count, int code_line) {
     int start = 0, mid = 0, end = count - 1;
     if (end >= 0 && code_line > entries[end].code_line) {
         return count;
@@ -26826,7 +27541,7 @@ static void __pyx_insert_code_object(int code_line, PyCodeObject* code_object) {
 }
 
 /* AddTraceback */
-            #include "compile.h"
+          #include "compile.h"
 #include "frameobject.h"
 #include "traceback.h"
 static PyCodeObject* __Pyx_CreateCodeObjectForTraceback(
@@ -26929,8 +27644,8 @@ static void __Pyx_ReleaseBuffer(Py_buffer *view) {
 #endif
 
 
-            /* MemviewSliceIsContig */
-            static int
+          /* MemviewSliceIsContig */
+          static int
 __pyx_memviewslice_is_contig(const __Pyx_memviewslice mvs,
                              char order, int ndim)
 {
@@ -26953,7 +27668,7 @@ __pyx_memviewslice_is_contig(const __Pyx_memviewslice mvs,
 }
 
 /* OverlappingSlices */
-            static void
+          static void
 __pyx_get_array_memory_extents(__Pyx_memviewslice *slice,
                                void **out_start, void **out_end,
                                int ndim, size_t itemsize)
@@ -26989,7 +27704,7 @@ __pyx_slices_overlap(__Pyx_memviewslice *slice1,
 }
 
 /* Capsule */
-            static CYTHON_INLINE PyObject *
+          static CYTHON_INLINE PyObject *
 __pyx_capsule_create(void *p, CYTHON_UNUSED const char *sig)
 {
     PyObject *cobj;
@@ -27001,8 +27716,254 @@ __pyx_capsule_create(void *p, CYTHON_UNUSED const char *sig)
     return cobj;
 }
 
+/* TypeInfoCompare */
+          static int
+__pyx_typeinfo_cmp(__Pyx_TypeInfo *a, __Pyx_TypeInfo *b)
+{
+    int i;
+    if (!a || !b)
+        return 0;
+    if (a == b)
+        return 1;
+    if (a->size != b->size || a->typegroup != b->typegroup ||
+            a->is_unsigned != b->is_unsigned || a->ndim != b->ndim) {
+        if (a->typegroup == 'H' || b->typegroup == 'H') {
+            return a->size == b->size;
+        } else {
+            return 0;
+        }
+    }
+    if (a->ndim) {
+        for (i = 0; i < a->ndim; i++)
+            if (a->arraysize[i] != b->arraysize[i])
+                return 0;
+    }
+    if (a->typegroup == 'S') {
+        if (a->flags != b->flags)
+            return 0;
+        if (a->fields || b->fields) {
+            if (!(a->fields && b->fields))
+                return 0;
+            for (i = 0; a->fields[i].type && b->fields[i].type; i++) {
+                __Pyx_StructField *field_a = a->fields + i;
+                __Pyx_StructField *field_b = b->fields + i;
+                if (field_a->offset != field_b->offset ||
+                    !__pyx_typeinfo_cmp(field_a->type, field_b->type))
+                    return 0;
+            }
+            return !a->fields[i].type && !b->fields[i].type;
+        }
+    }
+    return 1;
+}
+
+/* MemviewSliceValidateAndInit */
+          static int
+__pyx_check_strides(Py_buffer *buf, int dim, int ndim, int spec)
+{
+    if (buf->shape[dim] <= 1)
+        return 1;
+    if (buf->strides) {
+        if (spec & __Pyx_MEMVIEW_CONTIG) {
+            if (spec & (__Pyx_MEMVIEW_PTR|__Pyx_MEMVIEW_FULL)) {
+                if (buf->strides[dim] != sizeof(void *)) {
+                    PyErr_Format(PyExc_ValueError,
+                                 "Buffer is not indirectly contiguous "
+                                 "in dimension %d.", dim);
+                    goto fail;
+                }
+            } else if (buf->strides[dim] != buf->itemsize) {
+                PyErr_SetString(PyExc_ValueError,
+                                "Buffer and memoryview are not contiguous "
+                                "in the same dimension.");
+                goto fail;
+            }
+        }
+        if (spec & __Pyx_MEMVIEW_FOLLOW) {
+            Py_ssize_t stride = buf->strides[dim];
+            if (stride < 0)
+                stride = -stride;
+            if (stride < buf->itemsize) {
+                PyErr_SetString(PyExc_ValueError,
+                                "Buffer and memoryview are not contiguous "
+                                "in the same dimension.");
+                goto fail;
+            }
+        }
+    } else {
+        if (spec & __Pyx_MEMVIEW_CONTIG && dim != ndim - 1) {
+            PyErr_Format(PyExc_ValueError,
+                         "C-contiguous buffer is not contiguous in "
+                         "dimension %d", dim);
+            goto fail;
+        } else if (spec & (__Pyx_MEMVIEW_PTR)) {
+            PyErr_Format(PyExc_ValueError,
+                         "C-contiguous buffer is not indirect in "
+                         "dimension %d", dim);
+            goto fail;
+        } else if (buf->suboffsets) {
+            PyErr_SetString(PyExc_ValueError,
+                            "Buffer exposes suboffsets but no strides");
+            goto fail;
+        }
+    }
+    return 1;
+fail:
+    return 0;
+}
+static int
+__pyx_check_suboffsets(Py_buffer *buf, int dim, CYTHON_UNUSED int ndim, int spec)
+{
+    if (spec & __Pyx_MEMVIEW_DIRECT) {
+        if (buf->suboffsets && buf->suboffsets[dim] >= 0) {
+            PyErr_Format(PyExc_ValueError,
+                         "Buffer not compatible with direct access "
+                         "in dimension %d.", dim);
+            goto fail;
+        }
+    }
+    if (spec & __Pyx_MEMVIEW_PTR) {
+        if (!buf->suboffsets || (buf->suboffsets && buf->suboffsets[dim] < 0)) {
+            PyErr_Format(PyExc_ValueError,
+                         "Buffer is not indirectly accessible "
+                         "in dimension %d.", dim);
+            goto fail;
+        }
+    }
+    return 1;
+fail:
+    return 0;
+}
+static int
+__pyx_verify_contig(Py_buffer *buf, int ndim, int c_or_f_flag)
+{
+    int i;
+    if (c_or_f_flag & __Pyx_IS_F_CONTIG) {
+        Py_ssize_t stride = 1;
+        for (i = 0; i < ndim; i++) {
+            if (stride * buf->itemsize != buf->strides[i] &&
+                    buf->shape[i] > 1)
+            {
+                PyErr_SetString(PyExc_ValueError,
+                    "Buffer not fortran contiguous.");
+                goto fail;
+            }
+            stride = stride * buf->shape[i];
+        }
+    } else if (c_or_f_flag & __Pyx_IS_C_CONTIG) {
+        Py_ssize_t stride = 1;
+        for (i = ndim - 1; i >- 1; i--) {
+            if (stride * buf->itemsize != buf->strides[i] &&
+                    buf->shape[i] > 1) {
+                PyErr_SetString(PyExc_ValueError,
+                    "Buffer not C contiguous.");
+                goto fail;
+            }
+            stride = stride * buf->shape[i];
+        }
+    }
+    return 1;
+fail:
+    return 0;
+}
+static int __Pyx_ValidateAndInit_memviewslice(
+                int *axes_specs,
+                int c_or_f_flag,
+                int buf_flags,
+                int ndim,
+                __Pyx_TypeInfo *dtype,
+                __Pyx_BufFmt_StackElem stack[],
+                __Pyx_memviewslice *memviewslice,
+                PyObject *original_obj)
+{
+    struct __pyx_memoryview_obj *memview, *new_memview;
+    __Pyx_RefNannyDeclarations
+    Py_buffer *buf;
+    int i, spec = 0, retval = -1;
+    __Pyx_BufFmt_Context ctx;
+    int from_memoryview = __pyx_memoryview_check(original_obj);
+    __Pyx_RefNannySetupContext("ValidateAndInit_memviewslice", 0);
+    if (from_memoryview && __pyx_typeinfo_cmp(dtype, ((struct __pyx_memoryview_obj *)
+                                                            original_obj)->typeinfo)) {
+        memview = (struct __pyx_memoryview_obj *) original_obj;
+        new_memview = NULL;
+    } else {
+        memview = (struct __pyx_memoryview_obj *) __pyx_memoryview_new(
+                                            original_obj, buf_flags, 0, dtype);
+        new_memview = memview;
+        if (unlikely(!memview))
+            goto fail;
+    }
+    buf = &memview->view;
+    if (buf->ndim != ndim) {
+        PyErr_Format(PyExc_ValueError,
+                "Buffer has wrong number of dimensions (expected %d, got %d)",
+                ndim, buf->ndim);
+        goto fail;
+    }
+    if (new_memview) {
+        __Pyx_BufFmt_Init(&ctx, stack, dtype);
+        if (!__Pyx_BufFmt_CheckString(&ctx, buf->format)) goto fail;
+    }
+    if ((unsigned) buf->itemsize != dtype->size) {
+        PyErr_Format(PyExc_ValueError,
+                     "Item size of buffer (%" CYTHON_FORMAT_SSIZE_T "u byte%s) "
+                     "does not match size of '%s' (%" CYTHON_FORMAT_SSIZE_T "u byte%s)",
+                     buf->itemsize,
+                     (buf->itemsize > 1) ? "s" : "",
+                     dtype->name,
+                     dtype->size,
+                     (dtype->size > 1) ? "s" : "");
+        goto fail;
+    }
+    for (i = 0; i < ndim; i++) {
+        spec = axes_specs[i];
+        if (!__pyx_check_strides(buf, i, ndim, spec))
+            goto fail;
+        if (!__pyx_check_suboffsets(buf, i, ndim, spec))
+            goto fail;
+    }
+    if (buf->strides && !__pyx_verify_contig(buf, ndim, c_or_f_flag))
+        goto fail;
+    if (unlikely(__Pyx_init_memviewslice(memview, ndim, memviewslice,
+                                         new_memview != NULL) == -1)) {
+        goto fail;
+    }
+    retval = 0;
+    goto no_fail;
+fail:
+    Py_XDECREF(new_memview);
+    retval = -1;
+no_fail:
+    __Pyx_RefNannyFinishContext();
+    return retval;
+}
+
+/* ObjectToMemviewSlice */
+          static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_dsds_double(PyObject *obj) {
+    __Pyx_memviewslice result = { 0, 0, { 0 }, { 0 }, { 0 } };
+    __Pyx_BufFmt_StackElem stack[1];
+    int axes_specs[] = { (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED), (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED) };
+    int retcode;
+    if (obj == Py_None) {
+        result.memview = (struct __pyx_memoryview_obj *) Py_None;
+        return result;
+    }
+    retcode = __Pyx_ValidateAndInit_memviewslice(axes_specs, 0,
+                                                 PyBUF_RECORDS, 2,
+                                                 &__Pyx_TypeInfo_double, stack,
+                                                 &result, obj);
+    if (unlikely(retcode == -1))
+        goto __pyx_fail;
+    return result;
+__pyx_fail:
+    result.memview = NULL;
+    result.data = NULL;
+    return result;
+}
+
 /* CIntFromPyVerify */
-            #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
+          #define __PYX_VERIFY_RETURN_INT(target_type, func_type, func_value)\
     __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 0)
 #define __PYX_VERIFY_RETURN_INT_EXC(target_type, func_type, func_value)\
     __PYX__VERIFY_RETURN_INT(target_type, func_type, func_value, 1)
@@ -27023,20 +27984,31 @@ __pyx_capsule_create(void *p, CYTHON_UNUSED const char *sig)
         return (target_type) value;\
     }
 
-/* MemviewDtypeToObject */
-            static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp) {
-    return (PyObject *) PyFloat_FromDouble(*(double *) itemp);
-}
-static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj) {
-    double value = __pyx_PyFloat_AsDouble(obj);
-    if ((value == (double)-1) && PyErr_Occurred())
-        return 0;
-    *(double *) itemp = value;
-    return 1;
+/* ObjectToMemviewSlice */
+          static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_ds_double(PyObject *obj) {
+    __Pyx_memviewslice result = { 0, 0, { 0 }, { 0 }, { 0 } };
+    __Pyx_BufFmt_StackElem stack[1];
+    int axes_specs[] = { (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED) };
+    int retcode;
+    if (obj == Py_None) {
+        result.memview = (struct __pyx_memoryview_obj *) Py_None;
+        return result;
+    }
+    retcode = __Pyx_ValidateAndInit_memviewslice(axes_specs, 0,
+                                                 PyBUF_RECORDS, 1,
+                                                 &__Pyx_TypeInfo_double, stack,
+                                                 &result, obj);
+    if (unlikely(retcode == -1))
+        goto __pyx_fail;
+    return result;
+__pyx_fail:
+    result.memview = NULL;
+    result.data = NULL;
+    return result;
 }
 
 /* CIntToPy */
-            static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
+          static CYTHON_INLINE PyObject* __Pyx_PyInt_From_int(int value) {
     const int neg_one = (int) -1, const_zero = (int) 0;
     const int is_unsigned = neg_one > const_zero;
     if (is_unsigned) {
@@ -27062,8 +28034,20 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
     }
 }
 
+/* MemviewDtypeToObject */
+          static CYTHON_INLINE PyObject *__pyx_memview_get_double(const char *itemp) {
+    return (PyObject *) PyFloat_FromDouble(*(double *) itemp);
+}
+static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *obj) {
+    double value = __pyx_PyFloat_AsDouble(obj);
+    if ((value == (double)-1) && PyErr_Occurred())
+        return 0;
+    *(double *) itemp = value;
+    return 1;
+}
+
 /* None */
-            #if CYTHON_CCOMPLEX
+          #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
     static CYTHON_INLINE __pyx_t_float_complex __pyx_t_float_complex_from_parts(float x, float y) {
       return ::std::complex< float >(x, y);
@@ -27083,7 +28067,7 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
 #endif
 
 /* None */
-            #if CYTHON_CCOMPLEX
+          #if CYTHON_CCOMPLEX
 #else
     static CYTHON_INLINE int __Pyx_c_eqf(__pyx_t_float_complex a, __pyx_t_float_complex b) {
        return (a.real == b.real) && (a.imag == b.imag);
@@ -27185,7 +28169,7 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
 #endif
 
 /* None */
-            #if CYTHON_CCOMPLEX
+          #if CYTHON_CCOMPLEX
   #ifdef __cplusplus
     static CYTHON_INLINE __pyx_t_double_complex __pyx_t_double_complex_from_parts(double x, double y) {
       return ::std::complex< double >(x, y);
@@ -27205,7 +28189,7 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
 #endif
 
 /* None */
-            #if CYTHON_CCOMPLEX
+          #if CYTHON_CCOMPLEX
 #else
     static CYTHON_INLINE int __Pyx_c_eq(__pyx_t_double_complex a, __pyx_t_double_complex b) {
        return (a.real == b.real) && (a.imag == b.imag);
@@ -27307,7 +28291,7 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
 #endif
 
 /* CIntToPy */
-            static CYTHON_INLINE PyObject* __Pyx_PyInt_From_enum__NPY_TYPES(enum NPY_TYPES value) {
+          static CYTHON_INLINE PyObject* __Pyx_PyInt_From_enum__NPY_TYPES(enum NPY_TYPES value) {
     const enum NPY_TYPES neg_one = (enum NPY_TYPES) -1, const_zero = (enum NPY_TYPES) 0;
     const int is_unsigned = neg_one > const_zero;
     if (is_unsigned) {
@@ -27334,7 +28318,7 @@ static CYTHON_INLINE int __pyx_memview_set_double(const char *itemp, PyObject *o
 }
 
 /* MemviewSliceCopyTemplate */
-            static __Pyx_memviewslice
+          static __Pyx_memviewslice
 __pyx_memoryview_copy_new_contig(const __Pyx_memviewslice *from_mvs,
                                  const char *mode, int ndim,
                                  size_t sizeof_dtype, int contig_flag,
@@ -27401,7 +28385,7 @@ no_fail:
 }
 
 /* CIntFromPy */
-            static CYTHON_INLINE char __Pyx_PyInt_As_char(PyObject *x) {
+          static CYTHON_INLINE char __Pyx_PyInt_As_char(PyObject *x) {
     const char neg_one = (char) -1, const_zero = (char) 0;
     const int is_unsigned = neg_one > const_zero;
 #if PY_MAJOR_VERSION < 3
@@ -27586,7 +28570,7 @@ raise_neg_overflow:
 }
 
 /* CIntFromPy */
-            static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {
+          static CYTHON_INLINE int __Pyx_PyInt_As_int(PyObject *x) {
     const int neg_one = (int) -1, const_zero = (int) 0;
     const int is_unsigned = neg_one > const_zero;
 #if PY_MAJOR_VERSION < 3
@@ -27771,7 +28755,7 @@ raise_neg_overflow:
 }
 
 /* CIntToPy */
-            static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
+          static CYTHON_INLINE PyObject* __Pyx_PyInt_From_long(long value) {
     const long neg_one = (long) -1, const_zero = (long) 0;
     const int is_unsigned = neg_one > const_zero;
     if (is_unsigned) {
@@ -27798,7 +28782,7 @@ raise_neg_overflow:
 }
 
 /* CIntFromPy */
-            static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
+          static CYTHON_INLINE long __Pyx_PyInt_As_long(PyObject *x) {
     const long neg_one = (long) -1, const_zero = (long) 0;
     const int is_unsigned = neg_one > const_zero;
 #if PY_MAJOR_VERSION < 3
@@ -27982,277 +28966,8 @@ raise_neg_overflow:
     return (long) -1;
 }
 
-/* TypeInfoCompare */
-            static int
-__pyx_typeinfo_cmp(__Pyx_TypeInfo *a, __Pyx_TypeInfo *b)
-{
-    int i;
-    if (!a || !b)
-        return 0;
-    if (a == b)
-        return 1;
-    if (a->size != b->size || a->typegroup != b->typegroup ||
-            a->is_unsigned != b->is_unsigned || a->ndim != b->ndim) {
-        if (a->typegroup == 'H' || b->typegroup == 'H') {
-            return a->size == b->size;
-        } else {
-            return 0;
-        }
-    }
-    if (a->ndim) {
-        for (i = 0; i < a->ndim; i++)
-            if (a->arraysize[i] != b->arraysize[i])
-                return 0;
-    }
-    if (a->typegroup == 'S') {
-        if (a->flags != b->flags)
-            return 0;
-        if (a->fields || b->fields) {
-            if (!(a->fields && b->fields))
-                return 0;
-            for (i = 0; a->fields[i].type && b->fields[i].type; i++) {
-                __Pyx_StructField *field_a = a->fields + i;
-                __Pyx_StructField *field_b = b->fields + i;
-                if (field_a->offset != field_b->offset ||
-                    !__pyx_typeinfo_cmp(field_a->type, field_b->type))
-                    return 0;
-            }
-            return !a->fields[i].type && !b->fields[i].type;
-        }
-    }
-    return 1;
-}
-
-/* MemviewSliceValidateAndInit */
-            static int
-__pyx_check_strides(Py_buffer *buf, int dim, int ndim, int spec)
-{
-    if (buf->shape[dim] <= 1)
-        return 1;
-    if (buf->strides) {
-        if (spec & __Pyx_MEMVIEW_CONTIG) {
-            if (spec & (__Pyx_MEMVIEW_PTR|__Pyx_MEMVIEW_FULL)) {
-                if (buf->strides[dim] != sizeof(void *)) {
-                    PyErr_Format(PyExc_ValueError,
-                                 "Buffer is not indirectly contiguous "
-                                 "in dimension %d.", dim);
-                    goto fail;
-                }
-            } else if (buf->strides[dim] != buf->itemsize) {
-                PyErr_SetString(PyExc_ValueError,
-                                "Buffer and memoryview are not contiguous "
-                                "in the same dimension.");
-                goto fail;
-            }
-        }
-        if (spec & __Pyx_MEMVIEW_FOLLOW) {
-            Py_ssize_t stride = buf->strides[dim];
-            if (stride < 0)
-                stride = -stride;
-            if (stride < buf->itemsize) {
-                PyErr_SetString(PyExc_ValueError,
-                                "Buffer and memoryview are not contiguous "
-                                "in the same dimension.");
-                goto fail;
-            }
-        }
-    } else {
-        if (spec & __Pyx_MEMVIEW_CONTIG && dim != ndim - 1) {
-            PyErr_Format(PyExc_ValueError,
-                         "C-contiguous buffer is not contiguous in "
-                         "dimension %d", dim);
-            goto fail;
-        } else if (spec & (__Pyx_MEMVIEW_PTR)) {
-            PyErr_Format(PyExc_ValueError,
-                         "C-contiguous buffer is not indirect in "
-                         "dimension %d", dim);
-            goto fail;
-        } else if (buf->suboffsets) {
-            PyErr_SetString(PyExc_ValueError,
-                            "Buffer exposes suboffsets but no strides");
-            goto fail;
-        }
-    }
-    return 1;
-fail:
-    return 0;
-}
-static int
-__pyx_check_suboffsets(Py_buffer *buf, int dim, CYTHON_UNUSED int ndim, int spec)
-{
-    if (spec & __Pyx_MEMVIEW_DIRECT) {
-        if (buf->suboffsets && buf->suboffsets[dim] >= 0) {
-            PyErr_Format(PyExc_ValueError,
-                         "Buffer not compatible with direct access "
-                         "in dimension %d.", dim);
-            goto fail;
-        }
-    }
-    if (spec & __Pyx_MEMVIEW_PTR) {
-        if (!buf->suboffsets || (buf->suboffsets && buf->suboffsets[dim] < 0)) {
-            PyErr_Format(PyExc_ValueError,
-                         "Buffer is not indirectly accessible "
-                         "in dimension %d.", dim);
-            goto fail;
-        }
-    }
-    return 1;
-fail:
-    return 0;
-}
-static int
-__pyx_verify_contig(Py_buffer *buf, int ndim, int c_or_f_flag)
-{
-    int i;
-    if (c_or_f_flag & __Pyx_IS_F_CONTIG) {
-        Py_ssize_t stride = 1;
-        for (i = 0; i < ndim; i++) {
-            if (stride * buf->itemsize != buf->strides[i] &&
-                    buf->shape[i] > 1)
-            {
-                PyErr_SetString(PyExc_ValueError,
-                    "Buffer not fortran contiguous.");
-                goto fail;
-            }
-            stride = stride * buf->shape[i];
-        }
-    } else if (c_or_f_flag & __Pyx_IS_C_CONTIG) {
-        Py_ssize_t stride = 1;
-        for (i = ndim - 1; i >- 1; i--) {
-            if (stride * buf->itemsize != buf->strides[i] &&
-                    buf->shape[i] > 1) {
-                PyErr_SetString(PyExc_ValueError,
-                    "Buffer not C contiguous.");
-                goto fail;
-            }
-            stride = stride * buf->shape[i];
-        }
-    }
-    return 1;
-fail:
-    return 0;
-}
-static int __Pyx_ValidateAndInit_memviewslice(
-                int *axes_specs,
-                int c_or_f_flag,
-                int buf_flags,
-                int ndim,
-                __Pyx_TypeInfo *dtype,
-                __Pyx_BufFmt_StackElem stack[],
-                __Pyx_memviewslice *memviewslice,
-                PyObject *original_obj)
-{
-    struct __pyx_memoryview_obj *memview, *new_memview;
-    __Pyx_RefNannyDeclarations
-    Py_buffer *buf;
-    int i, spec = 0, retval = -1;
-    __Pyx_BufFmt_Context ctx;
-    int from_memoryview = __pyx_memoryview_check(original_obj);
-    __Pyx_RefNannySetupContext("ValidateAndInit_memviewslice", 0);
-    if (from_memoryview && __pyx_typeinfo_cmp(dtype, ((struct __pyx_memoryview_obj *)
-                                                            original_obj)->typeinfo)) {
-        memview = (struct __pyx_memoryview_obj *) original_obj;
-        new_memview = NULL;
-    } else {
-        memview = (struct __pyx_memoryview_obj *) __pyx_memoryview_new(
-                                            original_obj, buf_flags, 0, dtype);
-        new_memview = memview;
-        if (unlikely(!memview))
-            goto fail;
-    }
-    buf = &memview->view;
-    if (buf->ndim != ndim) {
-        PyErr_Format(PyExc_ValueError,
-                "Buffer has wrong number of dimensions (expected %d, got %d)",
-                ndim, buf->ndim);
-        goto fail;
-    }
-    if (new_memview) {
-        __Pyx_BufFmt_Init(&ctx, stack, dtype);
-        if (!__Pyx_BufFmt_CheckString(&ctx, buf->format)) goto fail;
-    }
-    if ((unsigned) buf->itemsize != dtype->size) {
-        PyErr_Format(PyExc_ValueError,
-                     "Item size of buffer (%" CYTHON_FORMAT_SSIZE_T "u byte%s) "
-                     "does not match size of '%s' (%" CYTHON_FORMAT_SSIZE_T "u byte%s)",
-                     buf->itemsize,
-                     (buf->itemsize > 1) ? "s" : "",
-                     dtype->name,
-                     dtype->size,
-                     (dtype->size > 1) ? "s" : "");
-        goto fail;
-    }
-    for (i = 0; i < ndim; i++) {
-        spec = axes_specs[i];
-        if (!__pyx_check_strides(buf, i, ndim, spec))
-            goto fail;
-        if (!__pyx_check_suboffsets(buf, i, ndim, spec))
-            goto fail;
-    }
-    if (buf->strides && !__pyx_verify_contig(buf, ndim, c_or_f_flag))
-        goto fail;
-    if (unlikely(__Pyx_init_memviewslice(memview, ndim, memviewslice,
-                                         new_memview != NULL) == -1)) {
-        goto fail;
-    }
-    retval = 0;
-    goto no_fail;
-fail:
-    Py_XDECREF(new_memview);
-    retval = -1;
-no_fail:
-    __Pyx_RefNannyFinishContext();
-    return retval;
-}
-
-/* ObjectToMemviewSlice */
-            static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_ds_double(PyObject *obj) {
-    __Pyx_memviewslice result = { 0, 0, { 0 }, { 0 }, { 0 } };
-    __Pyx_BufFmt_StackElem stack[1];
-    int axes_specs[] = { (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED) };
-    int retcode;
-    if (obj == Py_None) {
-        result.memview = (struct __pyx_memoryview_obj *) Py_None;
-        return result;
-    }
-    retcode = __Pyx_ValidateAndInit_memviewslice(axes_specs, 0,
-                                                 PyBUF_RECORDS, 1,
-                                                 &__Pyx_TypeInfo_double, stack,
-                                                 &result, obj);
-    if (unlikely(retcode == -1))
-        goto __pyx_fail;
-    return result;
-__pyx_fail:
-    result.memview = NULL;
-    result.data = NULL;
-    return result;
-}
-
-/* ObjectToMemviewSlice */
-            static CYTHON_INLINE __Pyx_memviewslice __Pyx_PyObject_to_MemoryviewSlice_dsds_double(PyObject *obj) {
-    __Pyx_memviewslice result = { 0, 0, { 0 }, { 0 }, { 0 } };
-    __Pyx_BufFmt_StackElem stack[1];
-    int axes_specs[] = { (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED), (__Pyx_MEMVIEW_DIRECT | __Pyx_MEMVIEW_STRIDED) };
-    int retcode;
-    if (obj == Py_None) {
-        result.memview = (struct __pyx_memoryview_obj *) Py_None;
-        return result;
-    }
-    retcode = __Pyx_ValidateAndInit_memviewslice(axes_specs, 0,
-                                                 PyBUF_RECORDS, 2,
-                                                 &__Pyx_TypeInfo_double, stack,
-                                                 &result, obj);
-    if (unlikely(retcode == -1))
-        goto __pyx_fail;
-    return result;
-__pyx_fail:
-    result.memview = NULL;
-    result.data = NULL;
-    return result;
-}
-
 /* CheckBinaryVersion */
-            static int __Pyx_check_binary_version(void) {
+          static int __Pyx_check_binary_version(void) {
     char ctversion[4], rtversion[4];
     PyOS_snprintf(ctversion, 4, "%d.%d", PY_MAJOR_VERSION, PY_MINOR_VERSION);
     PyOS_snprintf(rtversion, 4, "%s", Py_GetVersion());
@@ -28268,7 +28983,7 @@ __pyx_fail:
 }
 
 /* ModuleImport */
-            #ifndef __PYX_HAVE_RT_ImportModule
+          #ifndef __PYX_HAVE_RT_ImportModule
 #define __PYX_HAVE_RT_ImportModule
 static PyObject *__Pyx_ImportModule(const char *name) {
     PyObject *py_name = 0;
@@ -28286,7 +29001,7 @@ bad:
 #endif
 
 /* TypeImport */
-            #ifndef __PYX_HAVE_RT_ImportType
+          #ifndef __PYX_HAVE_RT_ImportType
 #define __PYX_HAVE_RT_ImportType
 static PyTypeObject *__Pyx_ImportType(const char *module_name, const char *class_name,
     size_t size, int strict)
@@ -28351,7 +29066,7 @@ bad:
 #endif
 
 /* InitStrings */
-            static int __Pyx_InitStrings(__Pyx_StringTabEntry *t) {
+          static int __Pyx_InitStrings(__Pyx_StringTabEntry *t) {
     while (t->p) {
         #if PY_MAJOR_VERSION < 3
         if (t->is_unicode) {

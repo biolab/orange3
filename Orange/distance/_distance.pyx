@@ -15,14 +15,6 @@ cdef extern from "math.h":
     double sqrt(double x) nogil
 
 
-# This function is unused, but kept here for any future use
-cdef void _check_division_by_zero(double[:, :] x, double[:] dividers):
-    cdef int col
-    for col in range(dividers.shape[0]):
-        if dividers[col] == 0 and not x[:, col].isnan().all():
-            raise ValueError("cannot normalize: the data has no variance")
-
-
 cdef void _lower_to_symmetric(double [:, :] distances):
     cdef int row1, row2
     for row1 in range(distances.shape[0]):
@@ -30,97 +22,127 @@ cdef void _lower_to_symmetric(double [:, :] distances):
             distances[row2, row1] = distances[row1, row2]
 
 
-def euclidean_rows(np.ndarray[np.float64_t, ndim=2] x1,
-                   np.ndarray[np.float64_t, ndim=2] x2,
-                   char two_tables,
-                   fit_params):
+def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,
+                            np.ndarray[np.float64_t, ndim=2] x1,
+                            np.ndarray[np.float64_t, ndim=2] x2,
+                            double[:, :] dist_missing,
+                            np.ndarray[np.float64_t, ndim=1] dist_missing2,
+                            char two_tables):
     cdef:
-        double [:] vars = fit_params["vars"]
-        double [:] means = fit_params["means"]
-        double [:, :] dist_missing = fit_params["dist_missing"]
-        double [:] dist_missing2 = fit_params["dist_missing2"]
-        char normalize = fit_params["normalize"]
-
         int n_rows1, n_rows2, n_cols, row1, row2, col
         double val1, val2, d
         int ival1, ival2
-        double [:, :] distances
 
     n_rows1, n_cols = x1.shape[0], x1.shape[1]
     n_rows2 = x2.shape[0]
-    assert n_cols == x2.shape[1] == len(vars) == len(means) \
-            == len(dist_missing) == len(dist_missing2)
-    distances = np.zeros((n_rows1, n_rows2), dtype=float)
-
     with nogil:
         for row1 in range(n_rows1):
             for row2 in range(n_rows2 if two_tables else row1):
                 d = 0
                 for col in range(n_cols):
-                    if vars[col] == -2:
-                        continue
                     val1, val2 = x1[row1, col], x2[row2, col]
-                    if npy_isnan(val1) and npy_isnan(val2):
-                        d += dist_missing2[col]
-                    elif vars[col] == -1:
-                        ival1, ival2 = int(val1), int(val2)
-                        if npy_isnan(val1):
-                            d += dist_missing[col, ival2]
-                        elif npy_isnan(val2):
-                            d += dist_missing[col, ival1]
-                        elif ival1 != ival2:
-                            d += 1
-                    elif normalize:
-                        if npy_isnan(val1):
-                            d += (val2 - means[col]) ** 2 / vars[col] / 2 + 0.5
-                        elif npy_isnan(val2):
-                            d += (val1 - means[col]) ** 2 / vars[col] / 2 + 0.5
+                    ival1, ival2 = int(val1), int(val2)
+                    if npy_isnan(val1):
+                        if npy_isnan(val2):
+                            d += dist_missing2[col]
                         else:
-                            d += ((val1 - val2) ** 2 / vars[col]) / 2
-                    else:
+                            d += dist_missing[col, ival2]
+                    elif npy_isnan(val2):
+                        d += dist_missing[col, ival1]
+                    elif ival1 != ival2:
+                        d += 1
+                distances[row1, row2] += d
+    if not two_tables:
+        _lower_to_symmetric(distances)
+
+
+def fix_euclidean_rows(
+    np.ndarray[np.float64_t, ndim=2] distances,
+    np.ndarray[np.float64_t, ndim=2] x1,
+    np.ndarray[np.float64_t, ndim=2] x2,
+    np.ndarray[np.float64_t, ndim=1] means,
+    np.ndarray[np.float64_t, ndim=1] vars,
+    np.ndarray[np.float64_t, ndim=1] dist_missing2,
+    char two_tables):
+    cdef:
+        int n_rows1, n_rows2, n_cols, row1, row2, col
+        double val1, val2, d
+
+    n_rows1, n_cols = x1.shape[0], x1.shape[1]
+    n_rows2 = x2.shape[0]
+    with nogil:
+        for row1 in range(n_rows1):
+            for row2 in range(n_rows2 if two_tables else row1):
+                if npy_isnan(distances[row1, row2]):
+                    d = 0
+                    for col in range(n_cols):
+                        val1, val2 = x1[row1, col], x2[row2, col]
                         if npy_isnan(val1):
-                            d += (val2 - means[col]) ** 2 + vars[col]
+                            if npy_isnan(val2):
+                                d += dist_missing2[col]
+                            else:
+                                d += (val2 - means[col]) ** 2 + vars[col]
                         elif npy_isnan(val2):
                             d += (val1 - means[col]) ** 2 + vars[col]
                         else:
                             d += (val1 - val2) ** 2
-                distances[row1, row2] = d
-    if not two_tables:
-        _lower_to_symmetric(distances)
-    return np.sqrt(distances)
+                    distances[row1, row2] = d
+                    if not two_tables:
+                        distances[row2, row1] = d
 
 
-def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
+def fix_euclidean_rows_normalized(
+    np.ndarray[np.float64_t, ndim=2] distances,
+    np.ndarray[np.float64_t, ndim=2] x1,
+    np.ndarray[np.float64_t, ndim=2] x2,
+    np.ndarray[np.float64_t, ndim=1] means,
+    np.ndarray[np.float64_t, ndim=1] vars,
+    np.ndarray[np.float64_t, ndim=1] dist_missing2,
+    char two_tables):
     cdef:
-        double [:] means = fit_params["means"]
-        double [:] vars = fit_params["vars"]
-        char normalize = fit_params["normalize"]
-
-        int n_rows, n_cols, col1, col2, row
+        int n_rows1, n_rows2, n_cols, row1, row2, col
         double val1, val2, d
-        double [:, :] distances
 
-    n_rows, n_cols = x.shape[0], x.shape[1]
-    distances = np.zeros((n_cols, n_cols), dtype=float)
+    n_rows1, n_cols = x1.shape[0], x1.shape[1]
+    n_rows2 = x2.shape[0]
     with nogil:
-        for col1 in range(n_cols):
-            for col2 in range(col1):
-                d = 0
-                for row in range(n_rows):
-                    val1, val2 = x[row, col1], x[row, col2]
-                    if normalize:
-                        val1 = (val1 - means[col1]) / sqrt(2 * vars[col1])
-                        val2 = (val2 - means[col2]) / sqrt(2 * vars[col2])
+        for row1 in range(n_rows1):
+            for row2 in range(n_rows2 if two_tables else row1):
+                if npy_isnan(distances[row1, row2]):
+                    d = 0
+                    for col in range(n_cols):
+                        val1, val2 = x1[row1, col], x2[row2, col]
                         if npy_isnan(val1):
                             if npy_isnan(val2):
-                                d += 1
+                                d += dist_missing2[col]
                             else:
                                 d += val2 ** 2 + 0.5
                         elif npy_isnan(val2):
                             d += val1 ** 2 + 0.5
                         else:
                             d += (val1 - val2) ** 2
-                    else:
+                    distances[row1, row2] = d
+                    if not two_tables:
+                        distances[row2, row1] = d
+
+
+def fix_euclidean_cols(
+    np.ndarray[np.float64_t, ndim=2] distances,
+    np.ndarray[np.float64_t, ndim=2] x,
+    double[:] means,
+    double[:] vars):
+    cdef:
+        int n_rows, n_cols, col1, col2, row
+        double val1, val2, d
+
+    n_rows, n_cols = x.shape[0], x.shape[1]
+    with nogil:
+        for col1 in range(n_cols):
+            for col2 in range(col1):
+                if npy_isnan(distances[col1, col2]):
+                    d = 0
+                    for row in range(n_rows):
+                        val1, val2 = x[row, col1], x[row, col2]
                         if npy_isnan(val1):
                             if npy_isnan(val2):
                                 d += vars[col1] + vars[col2] \
@@ -131,8 +153,36 @@ def euclidean_cols(np.ndarray[np.float64_t, ndim=2] x, fit_params):
                             d += (val1 - means[col2]) ** 2 + vars[col2]
                         else:
                             d += (val1 - val2) ** 2
-                distances[col1, col2] = distances[col2, col1] = d
-    return np.sqrt(distances)
+                    distances[col1, col2] = distances[col2, col1] = d
+
+
+def fix_euclidean_cols_normalized(
+    np.ndarray[np.float64_t, ndim=2] distances,
+    np.ndarray[np.float64_t, ndim=2] x,
+    double[:] means,
+    double[:] vars):
+    cdef:
+        int n_rows, n_cols, col1, col2, row
+        double val1, val2, d
+
+    n_rows, n_cols = x.shape[0], x.shape[1]
+    with nogil:
+        for col1 in range(n_cols):
+            for col2 in range(col1):
+                if npy_isnan(distances[col1, col2]):
+                    d = 0
+                    for row in range(n_rows):
+                        val1, val2 = x[row, col1], x[row, col2]
+                        if npy_isnan(val1):
+                            if npy_isnan(val2):
+                                d += 1
+                            else:
+                                d += val2 ** 2 + 0.5
+                        elif npy_isnan(val2):
+                            d += val1 ** 2 + 0.5
+                        else:
+                            d += (val1 - val2) ** 2
+                    distances[col1, col2] = distances[col2, col1] = d
 
 
 def manhattan_rows(np.ndarray[np.float64_t, ndim=2] x1,
