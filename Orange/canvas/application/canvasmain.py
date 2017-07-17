@@ -663,7 +663,8 @@ class CanvasMainWindow(QMainWindow):
 
         # Widget menu
         menu_bar.addMenu(self.widget_menu)
-
+        
+        
         if sys.platform == "darwin":
             # Mac OS X native look and feel.
             self.window_menu = QMenu(self.tr("Window"), self)
@@ -681,8 +682,30 @@ class CanvasMainWindow(QMainWindow):
         self.help_menu.addAction(self.examples_action)
         menu_bar.addMenu(self.help_menu)
 
+
+
+        self.set_working_directory= \
+                QAction(self.tr("Set-Working-Directory"), self,
+                        objectName="cwd-action",
+                        toolTip=self.tr("Chose directory where workflows will be launched."),
+                        triggered=self.CWD,
+                )
+
+        
+        menu_bar.addAction(self.set_working_directory)
+
+
+
+        
         self.setMenuBar(menu_bar)
 
+    def CWD(self):
+        filename = os.getcwd()
+        filename = QFileDialog.getExistingDirectory(None,  "select" , filename)
+        if len(str(filename)):
+            os.chdir(str(filename))
+        
+        
     def restore(self):
         """Restore the main window state from saved settings.
         """
