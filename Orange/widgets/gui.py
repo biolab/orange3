@@ -1024,9 +1024,9 @@ class __AttributeIconDict(dict):
     def __getitem__(self, key):
         if not self:
             for tpe, char, col in ((vartype(ContinuousVariable()),
-                                    "C", (202, 0, 32)),
+                                    "N", (202, 0, 32)),
                                    (vartype(DiscreteVariable()),
-                                    "D", (26, 150, 65)),
+                                    "C", (26, 150, 65)),
                                    (vartype(StringVariable()),
                                     "S", (0, 0, 0)),
                                    (vartype(TimeVariable()),

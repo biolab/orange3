@@ -631,6 +631,8 @@ class VariableListModel(PyListModel):
     def variable_tooltip(self, var):
         if var.is_discrete:
             return self.discrete_variable_tooltip(var)
+        elif var.is_time:
+            return self.time_variable_toltip(var)
         elif var.is_continuous:
             return self.continuous_variable_toltip(var)
         elif var.is_string:
@@ -647,14 +649,19 @@ class VariableListModel(PyListModel):
         return text
 
     def discrete_variable_tooltip(self, var):
-        text = "<b>%s</b><br/>Discrete with %i values: " %\
+        text = "<b>%s</b><br/>Categorical with %i values: " %\
                (safe_text(var.name), len(var.values))
         text += ", ".join("%r" % safe_text(v) for v in var.values)
         text += self.variable_labels_tooltip(var)
         return text
 
+    def time_variable_toltip(self, var):
+        text = "<b>%s</b><br/>Time" % safe_text(var.name)
+        text += self.variable_labels_tooltip(var)
+        return text
+
     def continuous_variable_toltip(self, var):
-        text = "<b>%s</b><br/>Continuous" % safe_text(var.name)
+        text = "<b>%s</b><br/>Numeric" % safe_text(var.name)
         text += self.variable_labels_tooltip(var)
         return text
 
