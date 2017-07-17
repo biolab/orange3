@@ -362,11 +362,10 @@ class Worker(QObject):
                 if score is not None:
                     pos = bisect_left(self.obj.scores, score)
                     row_items = self.obj.row_for_state(score, state)
-                    if self.obj._has_bars:
-                        bar = self.obj.bar_length(score)
-                        if bar is not None:
-                            row_items[0].setData(bar,
-                                                 gui.TableBarItem.BarRole)
+                    bar_length = self.obj.bar_length(score)
+                    if bar_length is not None:
+                        row_items[0].setData(bar_length,
+                                             gui.TableBarItem.BarRole)
                     self.obj.rank_model.insertRow(pos, row_items)
                     self.obj.scores.insert(pos, score)
             except Exception:  # ignore current state in case of any problem
