@@ -11,7 +11,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from Orange.data import (
-    ContinuousVariable, DiscreteVariable,  StringVariable, TimeVariable,
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
     Variable, Domain, Table, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
@@ -165,7 +165,8 @@ class TestDomainInit(unittest.TestCase):
                                             (0, 2, DiscreteVariable),
                                             (18, 23, ContinuousVariable)]:
             n_rows, n_cols, = aran_max - aran_min, 1
-            d = Domain.from_numpy(np.zeros((1, 1)), np.arange(aran_min, aran_max).reshape(n_rows, n_cols))
+            d = Domain.from_numpy(np.zeros((1, 1)),
+                                  np.arange(aran_min, aran_max).reshape(n_rows, n_cols))
             self.assertTrue(d.anonymous)
             self.assertIsInstance(d.class_var, vartype)
             if isinstance(vartype, DiscreteVariable):
@@ -402,14 +403,14 @@ class TestDomainInit(unittest.TestCase):
         assert_array_equal(y, np.array([0]))
         metas_exp = [gender.Unknown, education.Unknown, ssn.Unknown]
 
-        def eq(a, b):
+        def equal(a, b):
             if isinstance(a, Real) and isinstance(b, Real) and \
                     np.isnan(a) and np.isnan(b):
                 return True
             else:
                 return a == b
 
-        self.assertTrue(all(starmap(eq, zip(metas, metas_exp))))
+        self.assertTrue(all(starmap(equal, zip(metas, metas_exp))))
 
         x, y, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
         assert_array_equal(x, np.array([42, 13]))

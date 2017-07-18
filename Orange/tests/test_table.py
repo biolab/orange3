@@ -1777,7 +1777,7 @@ class CreateTableWithDomainAndTable(TableTests):
                 new_table, self.table, rows=slice_)
 
     def test_can_use_attributes_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         order = [random.randrange(a) for _ in self.domain.attributes]
         new_attributes = [self.domain.attributes[i] for i in order]
         new_domain = self.create_domain(
@@ -1788,7 +1788,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
     def test_can_use_class_vars_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        a, c, _ = column_sizes(self.table)
         order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
         new_classes = [self.domain.class_vars[i - a] for i in order]
         new_domain = self.create_domain(new_classes, new_classes, new_classes)
@@ -1798,7 +1798,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
     def test_can_use_metas_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        _, _, m = column_sizes(self.table)
         order = [random.randrange(-m + 1, 0) for _ in self.domain.metas]
         new_metas = [self.domain.metas[::-1][i] for i in order]
         new_domain = self.create_domain(new_metas, new_metas, new_metas)
@@ -2049,7 +2049,7 @@ class TableElementAssignmentTest(TableTests):
         self.assertAlmostEqual(self.table.X[0, 0], 42.)
 
     def test_can_assign_values_to_classes(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         self.table[0, a] = 42.
         self.assertAlmostEqual(self.table.Y[0], 42.)
 
@@ -2067,7 +2067,7 @@ class TableElementAssignmentTest(TableTests):
             self.table.metas[0], self.table.metas[1])
 
     def test_can_assign_lists(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         new_example = [float(i)
                        for i in range(len(self.attributes + self.class_vars))]
         self.table[0] = new_example
@@ -2077,7 +2077,7 @@ class TableElementAssignmentTest(TableTests):
             self.table.Y[0], np.array(new_example[a:]))
 
     def test_can_assign_np_array(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         new_example = \
             np.array([float(i)
                       for i in range(len(self.attributes + self.class_vars))])
@@ -2199,7 +2199,7 @@ class InterfaceTest(unittest.TestCase):
     def test_clear(self):
         self.table.clear()
         self.assertEqual(len(self.table), 0)
-        for i in self.table:
+        for _ in self.table:
             self.fail("Table should not contain any rows.")
 
     def test_subclasses(self):

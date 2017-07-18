@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.data import DiscreteVariable, Domain, Table
+from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution, contingency

@@ -9,6 +9,7 @@ from Orange.data import Table
 from Orange.preprocess import Remove
 from Orange.tests import test_filename
 
+
 class TestRemover(unittest.TestCase):
 
     @classmethod
