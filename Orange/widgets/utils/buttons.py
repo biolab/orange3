@@ -1,8 +1,8 @@
 from AnyQt.QtWidgets import (
     QPushButton, QAbstractButton, QFocusFrame, QStyle, QStylePainter,
     QStyleOptionButton
-
 )
+from AnyQt.QtGui import QPalette, QIcon
 from AnyQt.QtCore import Qt, QSize
 
 
@@ -76,14 +76,21 @@ class SimpleButton(QAbstractButton):
     def focusInEvent(self, event):
         # reimplemented
         event.accept()
-        self.__focusframe = QFocusFrame(self)
-        self.__focusframe.setWidget(self)
+        if self.__focusframe is None:
+            self.__focusframe = QFocusFrame(self)
+            self.__focusframe.setWidget(self)
+            palette = self.palette()
+            palette.setColor(QPalette.Foreground,
+                             palette.color(QPalette.Highlight))
+            self.__focusframe.setPalette(palette)
 
     def focusOutEvent(self, event):
         # reimplemented
         event.accept()
-        self.__focusframe.deleteLater()
-        self.__focusframe = None
+        if self.__focusframe is not None:
+            self.__focusframe.hide()
+            self.__focusframe.deleteLater()
+            self.__focusframe = None
 
     def sizeHint(self):
         # reimplemented
@@ -108,4 +115,16 @@ class SimpleButton(QAbstractButton):
         option.features = QStyleOptionButton.Flat
         if self.isDown():
             option.state |= QStyle.State_Sunken
-        painter.drawControl(QStyle.CE_PushButton, option)
+            painter.drawPrimitive(QStyle.PE_PanelButtonBevel, option)
+
+        if not option.icon.isNull():
+            if option.state & QStyle.State_Active:
+                mode = (QIcon.Normal if option.state & QStyle.State_MouseOver
+                        else QIcon.Active)
+            else:
+                mode = QIcon.Disabled
+            if self.isChecked():
+                state = QIcon.On
+            else:
+                state = QIcon.Off
+            option.icon.paint(painter, option.rect, Qt.AlignCenter, mode, state)
