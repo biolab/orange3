@@ -623,13 +623,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         domain = data.domain
         all_attrs = domain.variables + domain.metas
         attrs = list(set(all_attrs) & attrs)
-        selected_data = data[:, attrs]
-        if sp.issparse(selected_data.X):
-            selected_data.X = selected_data.X.toarray()
-        if sp.issparse(selected_data.Y):
-            selected_data.Y = selected_data.Y.toarray()
-        if sp.issparse(selected_data.metas):
-            selected_data.metas = selected_data.metas.toarray()
+        selected_data = data[:, attrs].to_dense()
         return selected_data
 
     def _clear_plot_widget(self):

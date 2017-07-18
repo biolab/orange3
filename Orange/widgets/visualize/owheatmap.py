@@ -663,8 +663,7 @@ class OWHeatMap(widget.OWWidget):
 
         if data is not None and sp.issparse(data.X):
             try:
-                data = data.copy()
-                data.X = data.X.toarray()
+                data = data.to_dense()
             except MemoryError:
                 data = None
                 self.Error.not_enough_memory()

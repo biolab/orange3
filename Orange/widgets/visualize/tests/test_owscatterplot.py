@@ -317,11 +317,8 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2152
         GH-2157
         """
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
-        self.assertTrue(sp.issparse(table.X))
-        table.Y = sp.csr_matrix(table._Y)  # pylint: disable=protected-access
-        self.assertTrue(sp.issparse(table.Y))
+        table = Table("iris").to_sparse(sparse_attributes=True,
+                                        sparse_class=True)
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.set_subset_data(table[:30])
         data = self.get_output("Data")

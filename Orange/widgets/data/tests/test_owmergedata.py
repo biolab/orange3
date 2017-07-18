@@ -435,8 +435,7 @@ class TestOWMergeData(WidgetTest):
         """
         data = Table("iris")[::25]
         data_ed_dense = Table("titanic")[::300]
-        data_ed_sparse = Table("titanic")[::300]
-        data_ed_sparse.X = sp.csr_matrix(data_ed_sparse.X)
+        data_ed_sparse = Table("titanic")[::300].to_sparse()
         self.send_signal("Data", data)
 
         self.send_signal("Extra Data", data_ed_dense)

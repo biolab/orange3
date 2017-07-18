@@ -66,8 +66,7 @@ class TestOWManifoldLearning(WidgetTest):
         np.testing.assert_array_equal(self.iris.metas, _output.metas)
 
     def test_sparse_data(self):
-        data = Table("iris")
-        data.X = sparse.csr_matrix(data.X)
+        data = Table("iris").to_sparse()
         self.assertTrue(sparse.issparse(data.X))
         self.widget.manifold_method_index = 2
         self.send_signal(self.widget.Inputs.data, data)
