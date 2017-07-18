@@ -1704,7 +1704,7 @@ def _check_arrays(*arrays, dtype=None):
 
         if ninstances(array) != shape_1:
             raise ValueError("Leading dimension mismatch (%d != %d)"
-                             % (len(array), shape_1))
+                             % (ninstances(array), shape_1))
 
         if sp.issparse(array):
             array.data = np.asarray(array.data)
