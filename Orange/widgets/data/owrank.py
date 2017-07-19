@@ -42,14 +42,14 @@ def table(shape, fill=None):
 ScoreMeta = namedtuple("score_meta", ["name", "shortname", "score"])
 
 # Default scores.
-SCORES = [ScoreMeta("Information Gain", "Inf. gain", score.InfoGain),
-          ScoreMeta("Gain Ratio", "Gain Ratio", score.GainRatio),
+SCORES = [ScoreMeta("Information Gain", "Info. gain", score.InfoGain),
+          ScoreMeta("Information Gain Ratio", "Gain ratio", score.GainRatio),
           ScoreMeta("Gini Decrease", "Gini", score.Gini),
           ScoreMeta("ANOVA", "ANOVA", score.ANOVA),
-          ScoreMeta("Chi2", "Chi2", score.Chi2),
+          ScoreMeta("χ²", "χ²", score.Chi2),
           ScoreMeta("ReliefF", "ReliefF", score.ReliefF),
           ScoreMeta("FCBF", "FCBF", score.FCBF),
-          ScoreMeta("Univariate Linear Regression", "Univar. Lin. Reg.",
+          ScoreMeta("Univariate Regression", "Univar. reg.",
                     score.UnivariateLinearRegression),
           ScoreMeta("RReliefF", "RReliefF", score.RReliefF)]
 
