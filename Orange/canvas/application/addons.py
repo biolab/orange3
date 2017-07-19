@@ -588,7 +588,7 @@ class AddonManagerDialog(QDialog):
             if path.endswith(self.ADDON_EXTENSIONS):
                 name, vers, summary, descr = (get_meta_from_archive(path) or
                                               (os.path.basename(path), '', '', ''))
-                names.append(name)
+                names.append(cleanup(name))
                 packages.append(
                     Installable(name, vers, summary,
                                 descr or summary, path, [path]))
