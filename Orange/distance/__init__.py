@@ -53,7 +53,7 @@ def _orange_to_numpy(x):
     """
     Return :class:`numpy.ndarray` (dense or sparse) with attribute data
     from the given instance of :class:`Orange.data.Table`,
-    :class:`Orange.data.RowInstance` or :class:`Orange.data.Instance`.    .
+    :class:`Orange.data.RowInstance` or :class:`Orange.data.Instance`.
     """
     if isinstance(x, Table):
         return x.X
@@ -171,21 +171,17 @@ class Distance:
         return model(e1, e2)
 
     def fit(self, e1):
-        """
-        Return a :obj:`DistanceModel` fit to the data. Must be implemented in
-        subclasses.
-
-        Args:
-            e1 (:obj:`~Orange.data.Table` or :obj:`~Orange.data.Instance` or
-                :obj:`np.ndarray` or `None`:
-                data on which to train the model and compute the distances
-
-        Returns: `DistanceModel`
-        """
+        """Abstract method returning :obj:`DistanceModel` fit to the data"""
         pass
 
     @staticmethod
     def check_no_discrete(n_vals):
+        """
+        Raise an exception if there are any discrete attributes.
+
+        Args:
+            n_vals (list of int): number of attributes values, 0 for continuous
+        """
         if any(n_vals):
             raise ValueError("columns with discrete values are incommensurable")
 
@@ -252,32 +248,20 @@ class DistanceModel:
 
     def compute_distances(self, x1, x2):
         """
-        Compute the distance between rows or colums of `x1`, or between rows
-        of `x1` and `x2`. This method must be implement by subclasses. Do not
-        call directly."""
+        Abstract method for computation of distances between rows or colums of
+        `x1`, or between rows of `x1` and `x2`. Do not call directly."""
         pass
 
 
 class FittedDistanceModel(DistanceModel):
     """
-    Convenient common parent class for distance models with separate methods
-    for fitting and for computation of distances across rows and columns.
-
-    Results of fitting are packed into a dictionary for easier passing to
-    Cython function that do the heavy lifting in these classes.
+    Base class for models that store attribute-related data for normalization
+    and imputation, and that treat discrete and continuous columns separately.
 
     Attributes:
         attributes (list of `Variable`): attributes on which the model was fit
         discrete (np.ndarray): bool array indicating discrete attributes
         continuous (np.ndarray): bool array indicating continuous attributes
-
-    Class attributes:
-        distance_by_cols: a function that accepts a numpy array and parameters
-            and returns distances by columns. Usually a Cython function.
-        distance_by_rows: a function that accepts one or two numpy arrays,
-            an indicator whether the distances are to be computed within
-            a single array or between two arrays, and parameters; and
-            returns distances by columns. Usually a Cython function.
     """
     def __init__(self, attributes, axis=1, impute=False):
         super().__init__(axis, impute)
@@ -290,6 +274,22 @@ class FittedDistanceModel(DistanceModel):
         return super().__call__(e1, e2)
 
     def continuous_columns(self, x1, x2, offset, scale):
+        """
+        Extract and scale continuous columns from data tables.
+        If the second table is None, it defaults to the first table.
+
+        Values are scaled if `self.normalize` is `True`.
+
+        Args:
+            x1 (np.ndarray): first table
+            x2 (np.ndarray or None): second table
+            offset (float): a constant (e.g. mean, median) subtracted from data
+            scale: (float): divider (e.g. deviation)
+
+        Returns:
+            data1 (np.ndarray): scaled continuous columns from `x1`
+            data2 (np.ndarray): scaled continuous columns from `x2` or `x1`
+        """
         if self.continuous.all() and not self.normalize:
             data1, data2 = x1, x2
         else:
@@ -309,6 +309,10 @@ class FittedDistanceModel(DistanceModel):
         return data1, data2
 
     def discrete_columns(self, x1, x2):
+        """
+        Return discrete columns from the given tables.
+        If the second table is None, it defaults to the first table.
+        """
         if self.discrete.all():
             data1, data2 = x1, x1 if x2 is None else x2
         else:
@@ -319,21 +323,26 @@ class FittedDistanceModel(DistanceModel):
 
 class FittedDistance(Distance):
     """
-    Convenient common parent class for distancess with separate methods for
-    fitting and for computation of distances across rows and columns.
-    Results of fitting are packed into a dictionary for easier passing to
-    Cython function that do the heavy lifting in these classes.
+    Base class for fitting models that store attribute-related data for
+    normalization and imputation, and that treat discrete and continuous
+    columns separately.
 
     The class implements a method `fit` that calls either `fit_columns`
     or `fit_rows` with the data and the number of values for discrete
-    attributes.
+    attributes. The provided method `fit_rows` calls methods
+    `get_discrete_stats` and `get_continuous_stats` that can be implemented
+    in derived classes.
 
-    Class attribute `ModelType` contains the type of the model returned by
-    `fit`.
+    Class attribute `rows_model_type` contains the type of the model returned by
+    `fit_rows`.
     """
     rows_model_type = None  #: Option[FittedDistanceModel]
 
     def fit(self, data):
+        """
+        Prepare the data on attributes, call `fit_cols` or `fit_rows` and
+        return the resulting model.
+        """
         attributes = data.domain.attributes
         x = _orange_to_numpy(data)
         n_vals = np.fromiter(
@@ -342,24 +351,41 @@ class FittedDistance(Distance):
             dtype=np.int32, count=len(attributes))
         return [self.fit_cols, self.fit_rows][self.axis](attributes, x, n_vals)
 
+    def fit_cols(self, attributes, x, n_vals):
+        """
+        Return DistanceModel for computation of distances between columns.
+        Derived classes must define this method.
+
+        Args:
+            attributes (list of Orange.data.Variable): list of attributes
+            x (np.ndarray): data
+            n_vals (np.ndarray): number of attribute values, 0 for continuous
+        """
+        pass
+
     def fit_rows(self, attributes, x, n_vals):
         """
-        Compute statistics needed for normalization and for handling
-        missing data for row distances. Returns a dictionary with the
-        following keys:
+        Return a DistanceModel for computation of distances between rows.
 
-        - means: a means of numeric columns; undefined for discrete
-        - vars: variances of numeric columns, -1 for discrete, -2 to ignore
-        - dist_missing: a 2d-array; dist_missing[col, value] is the distance
-            added for the given `value` in discrete column `col` if the value
-            for the other row is missing; undefined for numeric columns
-        - dist_missing2: the value used for distance if both values are missing;
-            used for discrete and numeric columns
-        - normalize: set to `self.normalize`, so it is passed to the Cython
-            function
+        The model type is `self.row_distance_model`. It stores the data for
+        imputation of discrete and continuous values, and for normalization
+        of continuous values. Typical examples are the Euclidean and Manhattan
+        distance, for which the following data is stored:
 
-        A column is marked to be ignored if all its values are nan or if
-        `self.normalize` is `True` and the variance of the column is 0.
+        For continuous columns:
+
+        - offsets[col] is the number subtracted from values in column `col`
+        - scales[col] is the divisor for values in columns `col`
+        - dist_missing2_cont[col]: the value used for distance between two
+            missing values in column `col`
+
+        For discrete values:
+
+        - dist_missing_disc[col, value] is the distance added for the given
+            `value` in the column `col` if the value for the other row is
+            missing
+        - dist_missing2_disc[col]: the distance between two missing values in
+            column `col`
         """
         n_cols = len(n_vals)
 
@@ -403,16 +429,44 @@ class FittedDistance(Distance):
             dist_missing_disc, dist_missing2_disc)
 
     def get_discrete_stats(self, column, n_bins):
+        """
+        Return tables used computing distance between missing discrete values.
+
+        Args:
+            column (np.ndarray): column data
+            n_bins (int): maximal number of bins in the data set
+
+        Returns:
+            dist_missing_disc (np.ndarray): `dist_missing_disc[value]` is
+                1 - probability of `value`, which is used as the distance added
+                for the given `value` in the column `col` if the value for the
+                other row is missing
+            dist_missing2_disc (float): the distance between two missing
+                values in this columns
+        """
         dist = util.bincount(column, minlength=n_bins)[0]
         dist /= max(1, sum(dist))
         return 1 - dist, 1 - np.sum(dist ** 2)
 
     def get_continuous_stats(self, column):
+        """
+        Compute statistics for imputation and normalization of continuous data.
+        Derived classes must define this method.
+
+        Args:
+            column (np.ndarray): column data
+
+        Returns:
+            offset (float): the number subtracted from values in column
+            scales (float): the divisor for values in column
+            dist_missing2_cont (float): the value used for distance between two
+                missing values in column
+        """
         pass
 
 
 # Fallbacks for distances in sparse data
-# To be removed as the corresponding functionality is implemented above
+# To be removed as the corresponding functionality is implemented properly
 
 class SklDistance:
     """
@@ -443,6 +497,12 @@ class SklDistance:
 
 
 class EuclideanRowsModel(FittedDistanceModel):
+    """
+    Model for computation of Euclidean distances between rows.
+
+    Means are used as offsets for normalization, and two deviations are
+    used for scaling.
+    """
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
                  means, vars, dist_missing2_cont,
@@ -458,6 +518,16 @@ class EuclideanRowsModel(FittedDistanceModel):
         self.dist_missing2_disc = dist_missing2_disc
 
     def compute_distances(self, x1, x2=None):
+        """
+        The method
+        - extracts normalized continuous attributes and then uses `row_norms`
+          and `safe_sparse_do`t to compute the distance as x^2 - 2xy - y^2
+          (the trick from sklearn);
+        - calls a function in Cython that recomputes the distances between pairs
+          of rows that yielded nan
+        - calls a function in Cython that adds the contributions of discrete
+          columns
+        """
         if self.continuous.any():
             data1, data2 = self.continuous_columns(
                 x1, x2, self.means, np.sqrt(2 * self.vars))
@@ -494,6 +564,12 @@ class EuclideanRowsModel(FittedDistanceModel):
 
 
 class EuclideanColumnsModel(FittedDistanceModel):
+    """
+    Model for computation of Euclidean distances between columns.
+
+    Means are used as offsets for normalization, and two deviations are
+    used for scaling.
+    """
     def __init__(self, attributes, impute, normalize, means, vars):
         super().__init__(attributes, 0, impute)
         self.normalize = normalize
@@ -502,8 +578,6 @@ class EuclideanColumnsModel(FittedDistanceModel):
 
     def compute_distances(self, x1, x2=None):
         """
-        Compute distances between columns of x1.
-
         The method
         - extracts normalized continuous attributes and then uses `row_norms`
           and `safe_sparse_do`t to compute the distance as x^2 - 2xy - y^2
@@ -541,6 +615,11 @@ class Euclidean(FittedDistance):
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
+        """
+        Return mean, variance and distance betwwen pairs of missing values
+        for the given columns. The method is called by inherited `fit_rows`
+        to construct a row-distance model
+        """
         mean = util.nanmean(column)
         var = util.nanvar(column)
         if self.normalize:
@@ -555,14 +634,8 @@ class Euclidean(FittedDistance):
 
     def fit_cols(self, attributes, x, n_vals):
         """
-        Compute statistics needed for normalization and for handling
-        missing data for columns. Returns a dictionary with the
-        following keys:
-
-        - means: column means
-        - vars: column variances
-        - normalize: set to self.normalize, so it is passed to the Cython
-            function
+        Return `EuclideanColumnsModel` with stored means and variances
+        for normalization and imputation.
         """
         self.check_no_discrete(n_vals)
         means = np.nanmean(x, axis=0)
@@ -574,6 +647,12 @@ class Euclidean(FittedDistance):
 
 
 class ManhattanRowsModel(FittedDistanceModel):
+    """
+    Model for computation of Euclidean distances between rows.
+
+    Means are used as offsets for normalization, and two deviations are
+    used for scaling.
+    """
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
                  medians, mads, dist_missing2_cont,
@@ -589,6 +668,14 @@ class ManhattanRowsModel(FittedDistanceModel):
         self.dist_missing2_disc = dist_missing2_disc
 
     def compute_distances(self, x1, x2):
+        """
+        The method
+        - extracts normalized continuous attributes and computes distances
+          ignoring the possibility of nans
+        - recomputes the distances between pairs of rows that yielded nans
+        - adds the contributions of discrete columns using the same function as
+          the Euclidean distance
+        """
         if self.continuous.any():
             data1, data2 = self.continuous_columns(
                 x1, x2, self.medians, 2 * self.mads)
@@ -617,7 +704,12 @@ class ManhattanRowsModel(FittedDistanceModel):
 
 
 class ManhattanColumnsModel(FittedDistanceModel):
-    distance_by_cols = _distance.manhattan_cols
+    """
+    Model for computation of Manhattan distances between columns.
+
+    Medians are used as offsets for normalization, and two MADS are
+    used for scaling.
+    """
 
     def __init__(self, attributes, impute, normalize, medians, mads):
         super().__init__(attributes, 0, impute)
@@ -644,6 +736,11 @@ class Manhattan(FittedDistance):
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
+        """
+        Return median, MAD and distance betwwen pairs of missing values
+        for the given columns. The method is called by inherited `fit_rows`
+        to construct a row-distance model
+        """
         median = np.nanmedian(column)
         mad = np.nanmedian(np.abs(column - median))
         if self.normalize:
@@ -658,14 +755,8 @@ class Manhattan(FittedDistance):
 
     def fit_cols(self, attributes, x, n_vals):
         """
-        Compute statistics needed for normalization and for handling
-        missing data for columns. Returns a dictionary with the
-        following keys:
-
-        - medians: column medians
-        - mads: medians of absolute distances from medians
-        - normalize: set to self.normalize, so it is passed to the Cython
-            function
+        Return `ManhattanColumnsModel` with stored medians and MADs
+        for normalization and imputation.
         """
         self.check_no_discrete(n_vals)
         medians = np.nanmedian(x, axis=0)
@@ -685,6 +776,7 @@ class Cosine(FittedDistance):
 
     @staticmethod
     def discrete_to_indicators(x, discrete):
+        """Change non-zero values of discrete attributes to 1."""
         if discrete.any():
             x = x.copy()
             for col, disc in enumerate(discrete):
@@ -693,6 +785,8 @@ class Cosine(FittedDistance):
         return x
 
     def fit_rows(self, attributes, x, n_vals):
+        """Return a model for cosine distances with stored means for imputation
+        """
         discrete = n_vals > 0
         x = self.discrete_to_indicators(x, discrete)
         means = util.nanmean(x, axis=0)
@@ -703,12 +797,21 @@ class Cosine(FittedDistance):
     fit_cols = fit_rows
 
     class CosineModel(FittedDistanceModel):
+        """Model for computation of cosine distances across rows and columns.
+        All non-zero discrete values are treated as 1."""
         def __init__(self, attributes, axis, impute, discrete, means):
             super().__init__(attributes, axis, impute)
             self.discrete = discrete
             self.means = means
 
         def compute_distances(self, x1, x2):
+            """
+            The method imputes the missing values as means and calls
+            safe_sparse_dot. Imputation simplifies computation at a cost of
+            (theoretically) slightly wrong distance between pairs of missing
+             values.
+            """
+
             def prepare_data(x):
                 if self.discrete.any():
                     data = Cosine.discrete_to_indicators(x, self.discrete)
@@ -732,11 +835,25 @@ class Cosine(FittedDistance):
 
 
 class JaccardModel(FittedDistanceModel):
+    """
+    Model for computation of cosine distances across rows and columns.
+    All non-zero values are treated as 1.
+    """
     def __init__(self, attributes, axis, impute, ps):
         super().__init__(attributes, axis, impute)
         self.ps = ps
 
     def compute_distances(self, x1, x2):
+        """
+        The method uses a function implemented in Cython. Data (`x1` and `x2`)
+        is accompanied by two tables. One is a 2-d table in which elements of
+        `x1` (`x2`) are replaced by 0's and 1's. The other is a vector
+        indicating rows (or column) with nan values.
+
+        The function in Cython uses a fast loop without any conditions to
+        compute distances between rows without missing values, and a slower
+        loop for those with missing values.
+        """
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
             nans1 = _distance.any_nan_row(x1)
@@ -764,15 +881,9 @@ class Jaccard(FittedDistance):
 
     def fit_rows(self, attributes, x, n_vals):
         """
-        Compute statistics needed for normalization and for handling
-        missing data for row and column based distances. Although the
-        computation is asymmetric, the same statistics are needed in both cases.
-
-        Returns a dictionary with the following key:
-
-        - ps: relative frequencies of non-zero values
+        Return a model for computation of Jaccard values. The model stores
+        frequencies of non-zero values per each column.
         """
-
         ps = np.fromiter(
             (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
             dtype=np.double, count=len(n_vals))
