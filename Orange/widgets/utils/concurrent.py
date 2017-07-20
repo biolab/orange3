@@ -570,10 +570,11 @@ class FutureSetWatcher(QObject):
     doneAll = Signal()
 
     def __init__(self, futures=None, *args, **kwargs):
+        # type: (List[Future], ...) -> None
         super().__init__(*args, **kwargs)
         self.__futures = None
         self.__countdone = 0
-        if futures:
+        if futures is not None:
             self.setFutures(futures)
 
     def setFutures(self, futures):
@@ -608,6 +609,9 @@ class FutureSetWatcher(QObject):
                     pass
 
             future.add_done_callback(partial(on_done, i))
+        if not self.__futures:
+            # `futures` was an empty sequence.
+            methodinvoke(self, "doneAll", ())()
 
     @Slot(int, Future)
     def __emitpending(self, index, future):
@@ -643,6 +647,10 @@ class FutureSetWatcher(QObject):
         """
         assert QThread.currentThread() is self.thread()
         QCoreApplication.sendPostedEvents(self, QEvent.MetaCall)
+
+    def wait(self):
+        assert self.__futures is not None
+        concurrent.futures.wait(self.__futures)
 
 
 class methodinvoke(object):
