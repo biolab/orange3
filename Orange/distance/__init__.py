@@ -60,10 +60,12 @@ def _orange_to_numpy(x):
     elif isinstance(x, np.ndarray):
         return np.atleast_2d(x)
     else:
-        return x    # e.g. None
+        return x  # e.g. None
 
 
 class Distance:
+    # Argument types in docstrings must be in a single line(?), hence
+    # pylint: disable=line-too-long
     """
     Base class for construction of distances models (:obj:`DistanceModel`).
 
@@ -101,6 +103,9 @@ class Distance:
         axis (int):
             axis over which the distances are computed, 1 (default) for
             rows, 0 for columns
+        impute (bool):
+            if `True` (default is `False`), nans in the computed distances
+            are replaced with zeros, and infs with very large numbers.
 
     Attributes:
         axis (int):
@@ -392,6 +397,7 @@ class FittedDistance(Distance):
                     curr_cont += 1
                 else:
                     continuous[col] = False
+        # pylint: disable=not-callable
         return self.rows_model_type(
             attributes, impute, getattr(self, "normalize", False),
             continuous, discrete,
@@ -764,8 +770,8 @@ class Jaccard(FittedDistance):
         """
 
         ps = np.fromiter(
-                        (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
-                        dtype=np.double, count=len(n_vals))
+            (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
+            dtype=np.double, count=len(n_vals))
         return JaccardModel(attributes, self.axis, self.impute, ps)
 
     fit_cols = fit_rows
