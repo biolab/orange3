@@ -13,6 +13,8 @@ __all__ = ['Euclidean', 'Manhattan', 'Cosine', 'Jaccard', 'SpearmanR',
            'SpearmanRAbsolute', 'PearsonR', 'PearsonRAbsolute', 'Mahalanobis',
            'MahalanobisDistance']
 
+# TODO: When we upgrade to numpy 1.13, change use argument copy=False in
+# nan_to_num instead of assignment
 
 # TODO this *private* function is called from several widgets to prepare
 # data for calling the below classes. After we (mostly) stopped relying
@@ -254,11 +256,6 @@ class DistanceModel:
         of `x1` and `x2`. This method must be implement by subclasses. Do not
         call directly."""
         pass
-
-    @staticmethod
-    def check_no_two_tables(x2):
-        if x2 is not None:
-            raise ValueError("columns of two tables cannot be compared")
 
 
 class FittedDistanceModel(DistanceModel):
@@ -504,7 +501,16 @@ class EuclideanColumnsModel(FittedDistanceModel):
         self.vars = vars
 
     def compute_distances(self, x1, x2=None):
-        self.check_no_two_tables(x2)
+        """
+        Compute distances between columns of x1.
+
+        The method
+        - extracts normalized continuous attributes and then uses `row_norms`
+          and `safe_sparse_do`t to compute the distance as x^2 - 2xy - y^2
+          (the trick from sklearn);
+        - calls a function in Cython that adds the contributions of discrete
+          columns
+        """
         if self.normalize:
             x1 = x1 - self.means
             x1 /= np.sqrt(2 * self.vars)
@@ -620,7 +626,6 @@ class ManhattanColumnsModel(FittedDistanceModel):
         self.mads = mads
 
     def compute_distances(self, x1, x2=None):
-        self.check_no_two_tables(x2)
         if self.normalize:
             x1 = x1 - self.medians
             x1 /= 2
@@ -691,7 +696,7 @@ class Cosine(FittedDistance):
         discrete = n_vals > 0
         x = self.discrete_to_indicators(x, discrete)
         means = util.nanmean(x, axis=0)
-        np.nan_to_num(means, copy=False)
+        means = np.nan_to_num(means)
         return self.CosineModel(attributes, self.axis, self.impute,
                                 discrete, means)
 
@@ -748,7 +753,6 @@ class JaccardModel(FittedDistanceModel):
                 x2 is not None)
         else:
             nans1 = _distance.any_nan_row(x1.T)
-            self.check_no_two_tables(x2)
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
