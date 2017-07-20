@@ -146,14 +146,14 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.disc_data
 
         model = distance.Euclidean().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/3, 2/3, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 5/9, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2, 3],
                                               [2, 0, 2],
@@ -161,15 +161,15 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[1, 0] = np.nan
         model = distance.Euclidean().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/2, 1/2, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]
                             ])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 2/4, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2.5, 3],
                                               [2.5, 0, 1.5],
@@ -177,14 +177,14 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[0, 0] = np.nan
         model = distance.Euclidean().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1, 0, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 1, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2, 2],
                                               [2, 0, 1],
@@ -193,14 +193,15 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.disc_data4
         data.X[:2, 0] = np.nan
         model = distance.Euclidean().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/2, 1/2, 1, 1],
                              [3/4, 2/4, 1, 3/4],
                              [3/4, 1/4, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 2/4, 1 - 6/16, 1 - 10/16])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             np.sqrt(np.array([[0, 2.5, 2.5, 2.5],
                                               [2.5, 0, 0.5, 1.5],
@@ -243,11 +244,10 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.cont_data
 
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [2, 2.75, 1.5])
-        assert_almost_equal(params["vars"], [9, 2.1875, 1.25])
-        assert_almost_equal(params["dist_missing"], np.zeros((3, 0)))
-        assert_almost_equal(params["dist_missing2"], [1, 1, 1])
+        assert_almost_equal(model.means, [2, 2.75, 1.5])
+        assert_almost_equal(model.vars, [9, 2.1875, 1.25])
+        assert_almost_equal(model.dist_missing2_cont, [1, 1, 1])
+        return
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -349,18 +349,16 @@ class EuclideanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.mixed_data
 
         model = distance.Euclidean(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [1/3, 3, 1, 0, 0, 0])
-        assert_almost_equal(params["vars"], [8/9, 8/3, 2/3, -1, -1, -1])
-        assert_almost_equal(params["dist_missing"],
-                            [[0, 0, 0, 0],
-                             [0, 0, 0, 0],
-                             [0, 0, 0, 0],
-                             [1/3, 2/3, 1, 1],
+
+        assert_almost_equal(model.means, [1/3, 3, 1])
+        assert_almost_equal(model.vars, [8/9, 8/3, 2/3])
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1/3, 2/3, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
-                            [1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9])
+        assert_almost_equal(model.dist_missing2_cont, [1, 1, 1])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 5/9, 1 - 3/9, 1 - 5/9])
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -426,14 +424,13 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.disc_data
 
         model = distance.Manhattan().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/3, 2/3, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 5/9, 1 - 3/9, 1 - 5/9])
+        dist = model(data)
         assert_almost_equal(dist,
                             [[0, 2, 3],
                              [2, 0, 2],
@@ -441,14 +438,14 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[1, 0] = np.nan
         model = distance.Manhattan().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/2, 1/2, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1 ]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 2/4, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             [[0, 2.5, 3],
                              [2.5, 0, 1.5],
@@ -456,14 +453,14 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[0, 0] = np.nan
         model = distance.Manhattan().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1, 0, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 1, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             [[0, 2, 2],
                              [2, 0, 1],
@@ -472,14 +469,14 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.disc_data4
         data.X[:2, 0] = np.nan
         model = distance.Manhattan().fit(data)
-        dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["dist_missing"],
+        assert_almost_equal(model.dist_missing_disc,
                             [[1/2, 1/2, 1, 1],
                              [3/4, 2/4, 1, 3/4],
                              [3/4, 1/4, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
+        assert_almost_equal(model.dist_missing2_disc,
                             [1 - 2/4, 1 - 6/16, 1 - 10/16])
+
+        dist = model(data)
         assert_almost_equal(dist,
                             [[0, 2.5, 2.5, 2.5],
                              [2.5, 0, 0.5, 1.5],
@@ -521,11 +518,10 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
         data = self.cont_data
 
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["medians"], [1.5, 4.5, 1.5])
-        assert_almost_equal(params["mads"], [1.5, 2, 1])
-        assert_almost_equal(params["dist_missing"], np.zeros((3, 0)))
-        assert_almost_equal(params["dist_missing2"], np.ones(3))
+        assert_almost_equal(model.medians, [1.5, 4.5, 1.5])
+        assert_almost_equal(model.mads, [1.5, 2, 1])
+        assert_almost_equal(model.dist_missing2_cont, np.ones(3))
+
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -544,9 +540,9 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[1, 0] = np.nan
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["medians"], [2, 4.5, 1.5])
-        assert_almost_equal(params["mads"], [1, 2, 1])
+        assert_almost_equal(model.medians, [2, 4.5, 1.5])
+        assert_almost_equal(model.mads, [1, 2, 1])
+
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -557,9 +553,9 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[0, 0] = np.nan
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["medians"], [4.5, 4.5, 1.5])
-        assert_almost_equal(params["mads"], [2.5, 2, 1])
+        assert_almost_equal(model.medians, [4.5, 4.5, 1.5])
+        assert_almost_equal(model.mads, [2.5, 2, 1])
+
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -629,18 +625,15 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
         data.X[2, 0] = 2  # prevent mads[0] = 0
         model = distance.Manhattan(axis=1, normalize=True).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["medians"], [1, 3, 1, 0, 0, 0])
-        assert_almost_equal(params["mads"], [1, 2, 1, -1, -1, -1])
-        assert_almost_equal(params["dist_missing"],
-                            [[0, 0, 0, 0],
-                             [0, 0, 0, 0],
-                             [0, 0, 0, 0],
-                             [1/3, 2/3, 1, 1],
+        assert_almost_equal(model.medians, [1, 3, 1])
+        assert_almost_equal(model.mads, [1, 2, 1])
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1/3, 2/3, 1, 1],
                              [2/3, 2/3, 1, 2/3],
                              [2/3, 1/3, 1, 1]])
-        assert_almost_equal(params["dist_missing2"],
-                            [1, 1, 1, 1 - 5/9, 1 - 3/9, 1 - 5/9])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 5/9, 1 - 3/9, 1 - 5/9])
+
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -690,27 +683,22 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 3, 0]], dtype=float)
 
         model = distance.Cosine().fit(data)
+        assert_almost_equal(model.means, [2 / 3, 2 / 3, 1 / 3])
+
         dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [2 / 3, 2 / 3, 1 / 3])
-        assert_almost_equal(params["vars"], [-1, -1, -1])
-        assert_almost_equal(params["dist_missing2"], [2 / 3, 2/ 3, 1 / 3])
         assert_almost_equal(dist, 1 - np.array([[1, 0, 1 / sqrt(2)],
                                                 [0, 1, 0.5],
                                                 [1 / sqrt(2), 0.5, 1]]))
 
         data.X[1, 1] = np.nan
         model = distance.Cosine().fit(data)
+        assert_almost_equal(model.means, [2 / 3, 1 / 2, 1 / 3])
         dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [2 / 3, 1 / 2, 1 / 3])
-        assert_almost_equal(params["vars"], [-1, -1, -1])
-        assert_almost_equal(params["dist_missing2"], [2 / 3, 1 / 2, 1 / 3])
         assert_almost_equal(
             dist,
             1 - np.array([[1, 0, 1 / sqrt(2)],
-                          [0, 1, 0.5 / sqrt(1.5) / sqrt(2)],
-                          [1 / sqrt(2), 0.5 / sqrt(1.5) / sqrt(2), 1]]))
+                          [0, 1, 0.5 / sqrt(1.25) / sqrt(2)],
+                          [1 / sqrt(2), 0.5 / sqrt(1.25) / sqrt(2), 1]]))
 
         data.X = np.array([[1, 0, 0],
                            [0, np.nan, 1],
@@ -718,12 +706,11 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 3, 1]])
         model = distance.Cosine().fit(data)
         dist = model(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [0.75, 0.5, 0.75])
-        assert_almost_equal(dist, [[0, 1, 0.367544468, 0.422649731],
-                                   [1, 0, 0.225403331, 0.292893219],
-                                   [0.367544468, 0.225403331, 0, 0.087129071],
-                                   [0.422649731, 0.292893219, 0.087129071, 0]])
+        assert_almost_equal(model.means, [0.75, 0.5, 0.75])
+        assert_almost_equal(dist, [[0, 1, 0.333333333, 0.422649731],
+                                   [1, 0, 0.254644008, 0.225403331],
+                                   [0.333333333, 0.254644008, 0, 0.037749551],
+                                   [0.422649731, 0.225403331, 0.037749551, 0]])
 
     def test_cosine_cont(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -742,19 +729,19 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
         dist = distance.Cosine(data, axis=1)
         assert_almost_equal(
             dist,
-            [[0, 0.257692511, 0.0741799, 0.35509797],
-             [0.257692511, 0, 0.287303355, 0.392507104],
-             [0.0741799, 0.287303355, 0, 0.12011731],
-             [0.355097978, 0.392507104, 0.12011731, 0]])
+            [[0, 0.174971353, 0.0741799, 0.355097978],
+             [0.174971353, 0, 0.207881966, 0.324809395],
+             [0.0741799, 0.207881966, 0, 0.12011731],
+             [0.355097978, 0.324809395, 0.12011731, 0]])
 
         data.X[0, 0] = np.nan
         dist = distance.Cosine(data, axis=1)
         assert_almost_equal(
             dist,
-            [[0, 0.288811225, 0.15707277, 0.175914357],
-             [0.288811225, 0, 0.265153077, 0.317499852],
-             [0.15707277, 0.265153077, 0, 0.12011731],
-             [0.175914357, 0.317499852, 0.12011731, 0]])
+            [[0, 0.100977075, 0.035098719, 0.056666739],
+             [0.100977075, 0, 0.188497329, 0.246304671],
+             [0.035098719, 0.188497329, 0, 0.12011731],
+             [0.056666739, 0.246304671, 0.12011731, 0]])
 
     def test_cosine_mixed(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -764,11 +751,7 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
                            [1, 1, 1, 1, 3, 0]], dtype=float)
 
         model = distance.Cosine(axis=1).fit(data)
-        params = model.fit_params
-        assert_almost_equal(params["means"], [1/3, 3, 1, 2/3, 2/3, 1/3])
-        assert_almost_equal(params["vars"], [8/9, 8/3, 2/3, -1, -1, -1])
-        assert_almost_equal(params["dist_missing2"],
-                            [1/9, 9, 1, 2/3, 2/3, 1/3])
+        assert_almost_equal(model.means, [1/3, 3, 1, 2/3, 2/3, 1/3])
         dist = model(data)
         assert_almost_equal(
             dist,
@@ -784,23 +767,22 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
         dist = distance.Cosine(self.cont_data, self.cont_data2)
         assert_almost_equal(
             dist,
-            [[0.2142857, 0.3051208],
-             [0.5463676, 0.4136473],
-             [0.0741799, 0.1917096],
-             [0.1514447, 0.2125992]])
+            [[0.2142857, 0.1573352],
+             [0.4958158, 0.2097042],
+             [0.0741799, 0.0198039],
+             [0.1514447, 0.0451363]])
 
         model = distance.Cosine().fit(self.cont_data)
         dist = model(self.cont_data, self.cont_data2)
         assert_almost_equal(
             dist,
-            [[0.2142857, 0.3051208],
-             [0.5463676, 0.4136473],
-             [0.0741799, 0.1917096],
-             [0.1514447, 0.2125992]])
+            [[0.2142857, 0.1573352],
+             [0.4958158, 0.2097042],
+             [0.0741799, 0.0198039],
+             [0.1514447, 0.0451363]])
 
         dist = model(self.cont_data2)
-        assert_almost_equal(dist, [[0, 0.251668523], [0.251668523, 0]])
-
+        assert_almost_equal(dist, [[0, 0.092514787], [0.092514787, 0]])
 
     def test_cosine_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -817,18 +799,18 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
         dist = distance.Cosine(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            [[0, 0.486447409, 0.11050082],
-            [0.486447409, 0, 0.195833554],
-            [0.11050082, 0.195833554, 0]])
+            [[0, 0.47702364, 0.11050082],
+            [0.47702364, 0, 0.181076975],
+            [0.11050082, 0.181076975, 0]])
 
         data.X[1, 0] = np.nan
         data.X[1, 2] = 2
         dist = distance.Cosine(data, axis=0, normalize=False)
         assert_almost_equal(
             dist,
-            [[0, 0.32636693, 0.142507074],
-             [0.32636693, 0, 0.072573966],
-             [0.142507074, 0.072573966, 0]])
+            [[0, 0.269703257, 0.087129071],
+             [0.269703257, 0, 0.055555556],
+             [0.087129071, 0.055555556, 0]])
 
 
 class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
@@ -847,7 +829,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         assert_almost_equal = np.testing.assert_almost_equal
 
         model = distance.Jaccard().fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], [0.75, 0.5, 0.75])
+        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[1, 2/3, 1/3, 0],
@@ -858,7 +840,8 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         X = self.data.X
         X[1, 0] = X[2, 0] = X[3, 1] = np.nan
         model = distance.Jaccard().fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], np.array([0.5, 2/3, 0.75]))
+        assert_almost_equal(model.ps, np.array([0.5, 2/3, 0.75]))
+
         assert_almost_equal(
             model(self.data),
             1 - np.array([[      1,        2 / 2.5,        1 / 2.5,        2/3 / 3],
@@ -869,7 +852,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
     def test_jaccard_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
         model = distance.Jaccard(axis=0).fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], [0.75, 0.5, 0.75])
+        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[1, 1/4, 1/2],
@@ -881,7 +864,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                                 [np.nan, 0, 1],
                                 [1, 1, 0]])
         model = distance.Jaccard(axis=0).fit(self.data)
-        assert_almost_equal(model.fit_params["ps"], [0.5, 2/3, 0.75])
+        assert_almost_equal(model.ps, [0.5, 2/3, 0.75])
         assert_almost_equal(
             model(self.data),
             1 - np.array([[1, 0.4, 0.25],

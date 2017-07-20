@@ -28,7 +28,7 @@ Normalized values thus have a mean of $\mu'=0$ and a variance of $\sigma'^2 = 1/
 
 If one value (denoted by $v$) is known and one missing, the expected difference along this dimension is
 
-$$\int_{-\infty}^{\infty}(v - x)^2p(x)dx = \\ 
+$$\int_{-\infty}^{\infty}(v - x)^2p(x)dx = \\
 v^2\int_{-\infty}^{\infty}p(x)dx- 2v\int_{-\infty}^{\infty}xp(x) + \int_{-\infty}^{\infty}x^2p(x) = \\
 v^2 - 2v\mu + (\sigma^2 + \mu^2) = \\
 (v - \mu)^2 + \sigma^2.$$
@@ -41,7 +41,7 @@ $$\int_{-\infty}^{\infty}\int_{-\infty}^{\infty}(x - y)^2p(x)p(y)dxdy = \\
  - 2\int_{-\infty}^{\infty}\int_{-\infty}^{\infty}xyp(x)p(y)dxdy = \\
  (\sigma^2 + \mu^2) + (\sigma^2 + \mu^2) - 2\int_{-\infty}^{\infty}xp(x)dx\int_{-\infty}^{\infty}yp(y)dxdy = \\
  (\sigma^2 + \mu^2) + (\sigma^2 + \mu^2) - 2\mu\mu = \\
- 2\sigma^2.$$ 
+ 2\sigma^2.$$
 
 When computing the difference between columns, the derivation is similar except that the two distributions are not the same. For one missing value we get
 
@@ -109,9 +109,11 @@ $$\int_{-\infty}^{\infty}xp(x)yp(y)dxdy=\mu_x^2$$
 
 For discrete values, we compute the probabilities $p(x=0)$ and $p_x(x\ne 0)$. The product of known value $v$ and a missing value is 0 if v=0 and $p(x \ne 1)$ otherwise. The product of two missing values is $p(x\ne 1)^2$.
 
-When computing the absolute value of a row, a missing value of continuous variable contributes 
+When computing the absolute value of a row, a missing value of continuous variable theoretically contributes
 
 $$\int_{-infty}^{\infty}x^2p(x)dx = \mu_x^2 + \sigma_x^2$$
+
+However, since we essentially impute the mean in the dot product, the actual contribution of the missing value is $\mu_x^2$. We therefore use this value, which also simplifies the computation which is reduced to simple imputation of means.
 
 A missing value of discrete variable contributes
 
