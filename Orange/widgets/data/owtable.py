@@ -775,9 +775,12 @@ class OWDataTable(widget.OWWidget):
 
         indexes = selection.indexes()
 
-        rows = list(set(ind.row() for ind in indexes))
+        rows = numpy.unique([ind.row() for ind in indexes])
         # map the rows through the applied sorting (if any)
-        rows = sorted(model.mapToTableRows(rows))
+        rows = model.mapToSourceRows(rows)
+        rows.sort()
+        rows = rows.tolist()
+
         cols = sorted(set(ind.column() for ind in indexes))
         return rows, cols
 

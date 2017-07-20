@@ -7,6 +7,7 @@ from collections import namedtuple, Sequence, defaultdict
 from contextlib import contextmanager
 from functools import reduce, partial, lru_cache
 from itertools import chain
+from warnings import warn
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
@@ -63,7 +64,155 @@ def _as_contiguous_range(the_slice, length):
     return start, stop, step
 
 
-class PyTableModel(QAbstractTableModel):
+class AbstractSortTableModel(QAbstractTableModel):
+    """
+    A sorting proxy table model that sorts its rows in fast numpy,
+    avoiding potentially thousands of calls into
+    ``QSortFilterProxyModel.lessThan()`` or any potentially costly
+    reordering of original data.
+
+    Override ``sortColumnData()``, adapting it to your underlying model.
+
+    Make sure to use ``mapToSourceRows()``/``mapFromSourceRows()``
+    whenever fetching or manipulating table data, such as in ``data()``.
+
+    When updating the model (inserting, removing rows), the sort order
+    needs to be accounted for (e.g. reset and re-applied).
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.__sortInd = None     #: Indices sorting the source table
+        self.__sortIndInv = None  #: The inverse of __sortInd
+        self.__sortColumn = -1    #: Sort key column, or -1
+        self.__sortOrder = Qt.AscendingOrder
+
+    def sortColumnData(self, column):
+        """Return raw, sortable data for column"""
+        raise NotImplementedError
+
+    def _sortColumnData(self, column):
+        try:
+            # Call the overridden implementation if available
+            data = numpy.asarray(self.sortColumnData(column))
+        except NotImplementedError:
+            # Fallback to slow implementation
+            data = numpy.array([self.index(row, column).data()
+                                for row in range(self.rowCount())])
+
+        data = data[self.mapToSourceRows(Ellipsis)]
+        return data
+
+    def sortColumn(self):
+        """The column currently used for sorting (-1 if no sorting is applied)"""
+        return self.__sortColumn
+
+    def sortOrder(self):
+        """The current sort order"""
+        return self.__sortOrder
+
+    def mapToSourceRows(self, rows):
+        """Return array of row indices in the source table for given model rows
+
+        Parameters
+        ----------
+        rows : int or list of int or numpy.ndarray or Ellipsis
+            View (sorted) rows.
+
+        Returns
+        -------
+        numpy.ndarray
+            Source rows matching input rows. If they are the same,
+            simply input `rows` is returned.
+        """
+        if self.__sortInd is not None:
+            new_rows = self.__sortInd[rows]
+            if rows is Ellipsis:
+                new_rows.setflags(write=False)
+            rows = new_rows
+        return rows
+
+    def mapFromSourceRows(self, rows):
+        """Return array of row indices in the model for given source table rows
+
+        Parameters
+        ----------
+        rows : int or list of int or numpy.ndarray or Ellipsis
+            Source model rows.
+
+        Returns
+        -------
+        numpy.ndarray
+            ModelIndex (sorted) rows matching input source rows.
+            If they are the same, simply input `rows` is returned.
+        """
+        if self.__sortIndInv is not None:
+            new_rows = self.__sortIndInv[rows]
+            if rows is Ellipsis:
+                new_rows.setflags(write=False)
+            rows = new_rows
+        return rows
+
+    def resetSorting(self):
+        """Invalidates the current sorting"""
+        return self.sort(-1)
+
+    def sort(self, column: int, order: Qt.SortOrder=Qt.AscendingOrder):
+        """
+        Sort the data by `column` into `order`.
+
+        To reset the order, pass column=-1.
+
+        Reimplemented from QAbstractItemModel.sort().
+
+        Notes
+        -----
+        This only affects the model's data presentation. The underlying
+        data table is left unmodified. Use mapToSourceRows()/mapFromSourceRows()
+        when accessing data by row indexes.
+        """
+        self.layoutAboutToBeChanged.emit()
+
+        # Store persistent indices as well as their (actual) rows in the
+        # source data table.
+        persistent = self.persistentIndexList()
+        persistent_rows = self.mapToSourceRows([i.row() for i in persistent])
+
+        self.__sortColumn = -1 if column < 0 else column
+        self.__sortOrder = order
+
+        indices = None
+        if column >= 0:
+            data = numpy.asarray(self._sortColumnData(column))
+            if data is not None:
+                if data.dtype == object:
+                    data = data.astype(str)
+                indices = numpy.argsort(data, kind="mergesort")
+            else:
+                indices = numpy.arange(self.rowCount())
+
+            if order == Qt.DescendingOrder:
+                indices = indices[::-1]
+
+            indices = self.mapToSourceRows(indices)
+
+        if indices is not None:
+            self.__sortInd = indices
+            self.__sortIndInv = numpy.argsort(indices)
+        else:
+            self.__sortInd = None
+            self.__sortIndInv = None
+
+        persistent_rows = self.mapFromSourceRows(persistent_rows)
+
+        self.changePersistentIndexList(
+            persistent,
+            [self.index(row, pind.column())
+             for row, pind in zip(persistent_rows, persistent)])
+        self.layoutChanged.emit()
+
+
+class PyTableModel(AbstractSortTableModel):
     """ A model for displaying python tables (sequences of sequences) in
     QTableView objects.
 
@@ -115,26 +264,26 @@ class PyTableModel(QAbstractTableModel):
         return flags | Qt.ItemIsEditable
 
     def setData(self, index, value, role):
+        row = self.mapFromSourceRows(index.row())
         if role == Qt.EditRole:
-            self[index.row()][index.column()] = value
+            self[row][index.column()] = value
             self.dataChanged.emit(index, index)
         else:
-            self._roleData[index.row()][index.column()][role] = value
+            self._roleData[row][index.column()][role] = value
         return True
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return
 
-        role_value = (self._roleData
-                      .get(index.row(), {})
-                      .get(index.column(), {})
-                      .get(role))
+        row, column = self.mapToSourceRows(index.row()), index.column()
+
+        role_value = self._roleData.get(row, {}).get(column, {}).get(role)
         if role_value is not None:
             return role_value
 
         try:
-            value = self[index.row()][index.column()]
+            value = self[row][column]
         except IndexError:
             return
         if role == Qt.EditRole:
@@ -162,25 +311,8 @@ class PyTableModel(QAbstractTableModel):
         if role == Qt.ToolTipRole:
             return str(value)
 
-    def sort(self, column, order=Qt.AscendingOrder):
-        self.beginResetModel()
-        indices = sorted(range(len(self._table)),
-                         key=lambda i: self._table[i][column],
-                         reverse=order != Qt.AscendingOrder)
-        self._table[:] = [self._table[i] for i in indices]
-
-        rd = self._roleData
-        self._roleData = self._RoleData()
-        self._roleData.update((i, rd.get(row))
-                              for i, row in enumerate(indices)
-                              if rd.get(row))
-
-        vheaders = self._headers.get(Qt.Vertical, ())
-        if vheaders:
-            vheaders = tuple(vheaders) + ('',) * max(0, (len(self._table) - len(vheaders)))
-            vheaders = [vheaders[i] for i in indices]
-            self._headers[Qt.Vertical] = vheaders
-        self.endResetModel()
+    def sortColumnData(self, column):
+        return [row[column] for row in self._table]
 
     def setHorizontalHeaderLabels(self, labels):
         self._headers[Qt.Horizontal] = labels
@@ -191,6 +323,7 @@ class PyTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             headers = self._headers.get(orientation)
+            section = self.mapToSource(section)
             return headers[section] if headers and section < len(headers) else str(section)
 
     def removeRows(self, row, count, parent=QModelIndex()):
@@ -243,6 +376,7 @@ class PyTableModel(QAbstractTableModel):
             stop -= 1
         else:
             start = stop = i = i if i >= 0 else len(self) + i
+        self._check_sort_order()
         self.beginRemoveRows(QModelIndex(), start, stop)
         del self._table[i]
         self.endRemoveRows()
@@ -253,19 +387,28 @@ class PyTableModel(QAbstractTableModel):
             stop -= 1
         else:
             start = stop = i = i if i >= 0 else len(self) + i
+        self._check_sort_order()
         self._table[i] = value
         self.dataChanged.emit(self.index(start, 0),
                               self.index(stop, self.columnCount() - 1))
+
+    def _check_sort_order(self):
+        if self.mapToSourceRows(Ellipsis) is not Ellipsis:
+            warn("Can't modify PyTableModel when it's sorted",
+                 RuntimeWarning, stacklevel=3)
+            raise RuntimeError("Can't modify PyTableModel when it's sorted")
 
     def wrap(self, table):
         self.beginResetModel()
         self._table = table
         self._roleData = self._RoleData()
+        self.resetSorting()
         self.endResetModel()
 
     def clear(self):
         self.beginResetModel()
         self._table.clear()
+        self.resetSorting()
         self._roleData.clear()
         self.endResetModel()
 
@@ -826,7 +969,7 @@ class ModelActionsWidget(QWidget):
         return self.insertAction(-1, action, *args)
 
 
-class TableModel(QAbstractTableModel):
+class TableModel(AbstractSortTableModel):
     """
     An adapter for using Orange.data.Table within Qt's Item View Framework.
 
@@ -957,78 +1100,13 @@ class TableModel(QAbstractTableModel):
         if self.__rowCount > (2 ** 31 - 1):
             raise ValueError("len(sourcedata) > 2 ** 31 - 1")
 
-        self.__sortColumn = -1
-        self.__sortOrder = Qt.AscendingOrder
-        # Indices sorting the source table
-        self.__sortInd = None
-        # The inverse of __sortInd
-        self.__sortIndInv = None
+    def sortColumnData(self, column):
+        return self._columnSortKeyData(column, TableModel.ValueRole)
 
-    def sort(self, column, order):
+    def _columnSortKeyData(self, column, role):
         """
-        Sort the data by `column` index into `order`
-
-        To reset the sort order pass -1 as the column.
-
-        :type column: int
-        :type order: Qt.SortOrder
-
-        Reimplemented from QAbstractItemModel.sort
-
-        .. note::
-            This only affects the model's data presentation, the
-            underlying data table is left unmodified.
-
-        """
-        self.layoutAboutToBeChanged.emit()
-
-        # Store persistent indices as well as their (actual) rows in the
-        # source data table.
-        persistent = self.persistentIndexList()
-        persistent_rows = numpy.array([ind.row() for ind in persistent], int)
-        if self.__sortInd is not None:
-            persistent_rows = self.__sortInd[persistent_rows]
-
-        self.__sortColumn = column
-        self.__sortOrder = order
-
-        if column < 0:
-            indices = None
-        else:
-            keydata = self.columnSortKeyData(column, TableModel.ValueRole)
-            if keydata is not None:
-                if keydata.dtype == object:
-                    indices = sorted(range(self.__rowCount),
-                                     key=lambda i: str(keydata[i]))
-                    indices = numpy.array(indices)
-                else:
-                    indices = numpy.argsort(keydata, kind="mergesort")
-            else:
-                indices = numpy.arange(0, self.__rowCount)
-
-            if order == Qt.DescendingOrder:
-                indices = indices[::-1]
-
-            if self.__sortInd is not None:
-                indices = self.__sortInd[indices]
-
-        if indices is not None:
-            self.__sortInd = indices
-            self.__sortIndInv = numpy.argsort(indices)
-        else:
-            self.__sortInd = None
-            self.__sortIndInv = None
-
-        if self.__sortInd is not None:
-            persistent_rows = self.__sortIndInv[persistent_rows]
-
-        for pind, row in zip(persistent, persistent_rows):
-            self.changePersistentIndex(pind, self.index(row, pind.column()))
-        self.layoutChanged.emit()
-
-    def columnSortKeyData(self, column, role):
-        """
-        Return a sequence of objects which can be used as `keys` for sorting.
+        Return a sequence of source table objects which can be used as
+        `keys` for sorting.
 
         :param int column: Sort column.
         :param Qt.ItemRole role: Sort item role.
@@ -1037,51 +1115,15 @@ class TableModel(QAbstractTableModel):
         coldesc = self.columns[column]
         if isinstance(coldesc, TableModel.Column) \
                 and role == TableModel.ValueRole:
-            col_view, _ = self.source.get_column_view(coldesc.var)
-            col_data = numpy.asarray(col_view)
+            col_data = numpy.asarray(self.source.get_column_view(coldesc.var)[0])
+
             if coldesc.var.is_continuous:
                 # continuous from metas have dtype object; cast it to float
                 col_data = col_data.astype(float)
-            if self.__sortInd is not None:
-                col_data = col_data[self.__sortInd]
             return col_data
         else:
-            if self.__sortInd is not None:
-                indices = self.__sortInd
-            else:
-                indices = range(self.rowCount())
             return numpy.asarray([self.index(i, column).data(role)
-                                  for i in indices])
-
-    def sortColumn(self):
-        """
-        The column currently used for sorting (-1 if no sorting is applied).
-        """
-        return self.__sortColumn
-
-    def sortOrder(self):
-        """
-        The current sort order.
-        """
-        return self.__sortOrder
-
-    def mapToTableRows(self, modelrows):
-        """
-        Return the row indices in the source table for the given model rows.
-        """
-        if self.__sortColumn < 0:
-            return modelrows
-        else:
-            return self.__sortInd[modelrows].tolist()
-
-    def mapFromTableRows(self, tablerows):
-        """
-        Return the row indices in the model for the given source table rows.
-        """
-        if self.__sortColumn < 0:
-            return tablerows
-        else:
-            return self.__sortIndInv[tablerows].tolist()
+                                  for i in range(self.rowCount())])
 
     def data(self, index, role,
              # For optimizing out LOAD_GLOBAL byte code instructions in
@@ -1116,8 +1158,7 @@ class TableModel(QAbstractTableModel):
         if  not 0 <= row <= self.__rowCount:
             return None
 
-        if self.__sortInd is not None:
-            row = self.__sortInd[row]
+        row = self.mapToSourceRows(row)
 
         try:
             instance = self._row_instance(row)
@@ -1154,10 +1195,10 @@ class TableModel(QAbstractTableModel):
             return None
 
     def setData(self, index, value, role):
-        row, col = self.__sortIndInv[index.row()], index.column()
+        row = self.mapFromSourceRows(index.row())
         if role == Qt.EditRole:
             try:
-                self.source[row, col] = value
+                self.source[row, index.column()] = value
             except (TypeError, IndexError):
                 return False
             else:
@@ -1182,12 +1223,8 @@ class TableModel(QAbstractTableModel):
         """Reimplemented from `QAbstractTableModel.headerData`."""
         if orientation == Qt.Vertical:
             if role == Qt.DisplayRole:
-                if self.__sortInd is not None:
-                    return int(self.__sortInd[section] + 1)
-                else:
-                    return int(section + 1)
-            else:
-                return None
+                return int(self.mapToSourceRows(section) + 1)
+            return None
 
         coldesc = self.columns[section]
         if role == Qt.DisplayRole:
