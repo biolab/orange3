@@ -27,10 +27,13 @@ canvas.
 
 Clearing messages work analogously.
 """
-
+import sys
+import traceback
 from operator import attrgetter
 from warnings import warn
 from inspect import getattr_static
+# pylint: disable=unused-import
+from typing import Optional
 
 from AnyQt.QtWidgets import QStyle, QSizePolicy
 
@@ -54,7 +57,7 @@ class UnboundMsg(str):
 
     # The method is implemented in _BoundMsg
     # pylint: disable=unused-variable
-    def __call__(self, *args, shown=True, **kwargs):
+    def __call__(self, *args, shown=True, exc_info=None, **kwargs):
         """
         Show the message, or hide it if `show` is set `False`
         `*args` and `**kwargs` are passed to the `format` method.
@@ -62,6 +65,10 @@ class UnboundMsg(str):
         Args:
             shown (bool): keyword-only argument that can be set to `False` to
                 hide the message
+            exc_info (Union[BaseException, bool, None]): Optional exception
+                instance whose traceback to store in the message. Can also be
+                a `True` value in which case the exception is retrieved from
+                sys.exc_info()
             *args: arguments for `format`
             **kwargs: keyword arguments for `format`
         """
@@ -106,13 +113,23 @@ class _BoundMsg(UnboundMsg):
         self = UnboundMsg.__new__(cls, unbound_msg)
         self.group = group
         self.formatted = ""
+        self.tb = None  # type: Optional[str]
         return self
 
-    def __call__(self, *args, shown=True, **kwargs):
+    def __call__(self, *args, shown=True, exc_info=None, **kwargs):
+        self.tb = None
         if not shown:
             self.clear()
         else:
             self.formatted = self.format(*args, **kwargs)
+            if exc_info:
+                if isinstance(exc_info, BaseException):
+                    exc_info = (type(exc_info), exc_info,
+                                exc_info.__traceback__)
+                elif not isinstance(exc_info, tuple):
+                    exc_info = sys.exc_info()
+                if exc_info is not None:
+                    self.tb = "".join(traceback.format_exception(*exc_info))
             self.group.activate_msg(self)
 
     def clear(self):
@@ -329,10 +346,14 @@ class WidgetMessagesMixin(MessagesMixin):
         """
         if self.message_bar is None:
             return
+        assert isinstance(self.message_bar, MessagesWidget)
 
         def msg(m):
+            # type: (_BoundMsg) -> MessagesWidget.Message
             return MessagesWidget.Message(
-                MessagesWidget.Severity(m.group.severity), text=str(m))
+                MessagesWidget.Severity(m.group.severity),
+                text=str(m), detailedText=m.tb if m.tb else ""
+            )
 
         messages = [msg
                     for group in self.message_groups
