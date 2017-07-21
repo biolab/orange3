@@ -118,31 +118,43 @@ class MosaicVizRankTests(WidgetTest):
         """MosaicVizrank correctly computes the number of combinations"""
         widget = self.widget
         vizrank = self.vizrank
-        widget.set_data(self.iris)
 
-        widget.interior_coloring = widget.PEARSON
-        vizrank.max_attrs = 2
-        self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
-        vizrank.max_attrs = 3
-        self.assertEqual(vizrank.state_count(), 20)  # above + 5x4x3 / 2x3
-        vizrank.max_attrs = 4
-        self.assertEqual(vizrank.state_count(), 25)  # above + 5x4x3x2 / 2x3x4
+        data = self.iris
+        attributes = [v for v in data.domain.attributes[1:]]
+        metas = [data.domain.attributes[0]]
+        domain = Domain(attributes, data.domain.class_var, metas)
+        new_data = data.from_table(domain, data)
+        widget.set_data(new_data)
 
-        widget.interior_coloring = widget.CLASS_DISTRIBUTION
-        vizrank.max_attrs = 2
-        self.assertEqual(vizrank.state_count(), 10)  # 4 + 4x3 / 2
-        vizrank.max_attrs = 3
-        self.assertEqual(vizrank.state_count(), 14)  # above + 4x3x2 / 3x2
-        vizrank.max_attrs = 4
-        self.assertEqual(vizrank.state_count(), 15)  # above + 4x3x2x1 / 2x3x4
+        for data in [self.iris, new_data]:
+            widget.set_data(data)
 
-        widget.set_data(self.iris_no_class)
-        vizrank.max_attrs = 2
-        self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
-        vizrank.max_attrs = 3
-        self.assertEqual(vizrank.state_count(), 10)  # above + 4x3x2 / 3x2
-        vizrank.max_attrs = 4
-        self.assertEqual(vizrank.state_count(), 11)  # above + 4x3x2x1 / 2x3x4
+            simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
+            self.assertTrue(widget.interior_coloring == widget.PEARSON)
+            vizrank.max_attrs = 2
+            self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
+            vizrank.max_attrs = 3
+            self.assertEqual(vizrank.state_count(), 20)  # above + 5x4x3 / 2x3
+            vizrank.max_attrs = 4
+            self.assertEqual(vizrank.state_count(), 25)  # above + 5x4x3x2 / 2x3x4
+
+            simulate.combobox_activate_index(self.widget.controls.variable_color, 2, 0)
+            self.assertTrue(widget.interior_coloring == widget.CLASS_DISTRIBUTION)
+            vizrank.max_attrs = 2
+            self.assertEqual(vizrank.state_count(), 10)  # 4 + 4x3 / 2
+            vizrank.max_attrs = 3
+            self.assertEqual(vizrank.state_count(), 14)  # above + 4x3x2 / 3x2
+            vizrank.max_attrs = 4
+            self.assertEqual(vizrank.state_count(), 15)  # above + 4x3x2x1 / 2x3x4
+
+            widget.set_data(self.iris_no_class)
+            simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
+            vizrank.max_attrs = 2
+            self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
+            vizrank.max_attrs = 3
+            self.assertEqual(vizrank.state_count(), 10)  # above + 4x3x2 / 3x2
+            vizrank.max_attrs = 4
+            self.assertEqual(vizrank.state_count(), 11)  # above + 4x3x2x1 / 2x3x4
 
     def test_iteration(self):
         """MosaicVizrank correctly iterates through states"""

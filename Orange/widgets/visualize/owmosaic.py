@@ -137,12 +137,6 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                 attrs = sorted(zip(weights, data.domain.attributes),
                                key=lambda x: (-x[0], x[1].name))
                 self.attr_ordering = [a for _, a in attrs]
-        if class_var is not None:
-            if self._compute_class_dists():
-                if self.attr_ordering[0] is class_var:
-                    del self.attr_ordering[0]
-            elif self.attr_ordering[0] is not class_var:
-                self.attr_ordering.insert(0, class_var)
 
     def _compute_class_dists(self):
         return self.master.interior_coloring == self.master.CLASS_DISTRIBUTION
@@ -152,8 +146,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         Return the number of combinations, starting with a single attribute
         if Mosaic is colored by class distributions, and two if by Pearson
         """
-        self.compute_attr_order()
-        n_attrs = len(self.attr_ordering)
+        n_attrs = len(self.master.discrete_data.domain.attributes)
         min_attrs = 1 if self._compute_class_dists() else 2
         max_attrs = min(n_attrs, self.max_attrs)
         return sum(comb(n_attrs, k, exact=True)
@@ -498,9 +491,9 @@ class OWMosaicDisplay(OWWidget):
             color_var = self.data.domain[self.cb_attr_color.currentText()]
             self.interior_coloring = self.CLASS_DISTRIBUTION
             self.bar_button.setEnabled(True)
-        attributes = [v for v in self.data.domain if v != color_var]
-        metas = [v for v in self.data.domain.metas if v != color_var]
-        domain = Domain(attributes, color_var, metas)
+        attributes = [v for v in self.data.domain.attributes + self.data.domain.class_vars
+                      + self.data.domain.metas if v != color_var and v.is_primitive()]
+        domain = Domain(attributes, color_var, None)
         self.color_data = color_data = self.data.from_table(domain, self.data)
         self.discrete_data = self._get_discrete_data(color_data)
         self.vizrank.stop_and_reset()
