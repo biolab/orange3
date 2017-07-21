@@ -109,13 +109,8 @@ class TestOWPCA(WidgetTest):
         self.widget.ncomponents = 2
         self.assertTrue(self.widget.normalize)
         self.widget.set_data(data)
-        norm1 = self.get_output(self.widget.Outputs.transformed_data)
+        varnorm = self.widget.variance_covered
         self.widget.controls.normalize.toggle()
-        nonnorm1 = self.get_output(self.widget.Outputs.transformed_data)
-        self.widget.controls.normalize.toggle()
-        norm2 = self.get_output(self.widget.Outputs.transformed_data)
-        self.widget.controls.normalize.toggle()
-        nonnorm2 = self.get_output(self.widget.Outputs.transformed_data)
-        np.testing.assert_equal(nonnorm1.X, nonnorm2.X)
-        np.testing.assert_equal(norm1.X, norm2.X)
-        self.assertTrue(np.any(norm1.X - nonnorm1.X))  # nonnorm and norm are different
+        varnonnorm = self.widget.variance_covered
+        # normalized data will have lower covered variance
+        self.assertLess(varnorm, varnonnorm)
