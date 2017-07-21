@@ -521,7 +521,7 @@ class OWPythonScript(widget.OWWidget):
             del dic[id]
 
     @Inputs.in_data
-    def setExampleTable(self, et, id=None):
+    def set_data(self, et, id=None):
         self._set_dict(self.in_datas, et, id)
 
     # @Inputs.in_distance
@@ -529,15 +529,15 @@ class OWPythonScript(widget.OWWidget):
         self._set_dict(self.in_distances, dm, id)
 
     @Inputs.in_learner
-    def setLearner(self, learner, id=None):
+    def set_learner(self, learner, id=None):
         self._set_dict(self.in_learners, learner, id)
 
     @Inputs.in_classifier
-    def setClassifier(self, classifier, id=None):
+    def set_classifier(self, classifier, id=None):
         self._set_dict(self.in_classifiers, classifier, id)
 
     @Inputs.in_object
-    def setObject(self, obj, id=None):
+    def set_object(self, obj, id=None):
         self._set_dict(self.in_objects, obj, id)
 
     def handleNewSignals(self):
@@ -647,7 +647,6 @@ class OWPythonScript(widget.OWWidget):
         )
 
         if filename:
-            fn = ""
             head, tail = os.path.splitext(filename)
             if not tail:
                 fn = head + ".py"
