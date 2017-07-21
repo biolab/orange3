@@ -1,9 +1,11 @@
 from collections import namedtuple
+
 import numpy as np
 
-from .preprocess import Preprocess
 from Orange.data import Domain, DiscreteVariable, Table
 from Orange.preprocess.transformation import Lookup
+from Orange.statistics.util import nanunique
+from .preprocess import Preprocess
 
 __all__ = ["Remove"]
 
@@ -24,14 +26,14 @@ class Remove(Preprocess):
     attr_flags : int (default: 0)
         If SortValues, values of discrete attributes are sorted.
         If RemoveConstant, unused attributes are removed.
-        If RemoveUnusedValues, unused values are removed from descrete
+        If RemoveUnusedValues, unused values are removed from discrete
         attributes.
         It is possible to merge operations in one by summing several types.
 
     class_flags: int (default: 0)
         If SortValues, values of discrete class attributes are sorted.
         If RemoveConstant, unused class attributes are removed.
-        If RemoveUnusedValues, unused values are removed from descrete
+        If RemoveUnusedValues, unused values are removed from discrete
         class attributes.
         It is possible to merge operations in one by summing several types.
 
@@ -234,10 +236,7 @@ def remove_unused_values(var, data):
         Domain([var]),
         data
     )
-    array = column_data.X.ravel()
-    mask = np.isfinite(array)
-    unique = np.array(np.unique(array[mask]), dtype=int)
-
+    unique = nanunique(column_data.X).astype(int)
     if len(unique) == len(var.values):
         return var
 

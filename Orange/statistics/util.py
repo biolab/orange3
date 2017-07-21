@@ -283,6 +283,7 @@ def mean(x):
              'you meant nanmean?', stacklevel=2)
     return m
 
+
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     def nanmean_sparse(x):
@@ -299,6 +300,7 @@ def nanmean(x, axis=None):
         return np.array([nanmean_sparse(row) for row in arr])
     else:
         raise NotImplementedError
+
 
 def unique(x, return_counts=False):
     """ Equivalent of np.unique that supports sparse or dense matrices. """
@@ -319,6 +321,13 @@ def unique(x, return_counts=False):
         if explicit_zeros:
             return r
         return np.insert(r, 0, 0)
+
+
+def nanunique(x):
+    """ Return unique values while disregarding missing (np.nan) values.
+    Supports sparse or dense matrices. """
+    r = unique(x)
+    return r[~np.isnan(r)]
 
 
 def digitize(x, bins, right=False):
