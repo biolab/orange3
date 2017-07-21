@@ -637,6 +637,8 @@ class TestPearsonRAbsolute(TestCase):
                                                  [0.42682613]]))
 
 
+# Pylint doesn't get magic __new__ operators
+# pylint: disable=not-callable
 class TestMahalanobis(TestCase):
     def setUp(self):
         self.n, self.m = 10, 5
