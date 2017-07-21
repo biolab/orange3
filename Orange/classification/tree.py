@@ -1,5 +1,6 @@
 """Tree inducers: SKL and Orange's own inducer"""
 import numpy as np
+import scipy.sparse as sp
 import sklearn.tree as skl_tree
 
 from Orange.base import TreeModel as TreeModelInterface
@@ -76,6 +77,7 @@ class TreeLearner(Learner):
         """
         # Prevent false warnings by pylint
         attr = attr_no = None
+        col_x = None
         REJECT_ATTRIBUTE = 0, None, None, 0
 
         def _score_disc():
@@ -89,8 +91,7 @@ class TreeLearner(Learner):
             if n_values < 2:
                 return REJECT_ATTRIBUTE
 
-            x = data.X[:, attr_no].flatten()
-            cont = _tree_scorers.contingency(x, len(data.domain.attributes[attr_no].values),
+            cont = _tree_scorers.contingency(col_x, len(data.domain.attributes[attr_no].values),
                                              data.Y, len(data.domain.class_var.values))
             attr_distr = np.sum(cont, axis=0)
             null_nodes = attr_distr <= self.min_samples_leaf
@@ -111,7 +112,7 @@ class TreeLearner(Learner):
             cont_entr = np.sum(cont * np.log(cont))
             score = (class_entr - attr_entr + cont_entr) / n / np.log(2)
             score *= n / len(data)  # punishment for missing values
-            branches = x
+            branches = col_x
             branches[np.isnan(branches)] = -1
             if score == 0:
                 return REJECT_ATTRIBUTE
@@ -135,13 +136,12 @@ class TreeLearner(Learner):
                 return REJECT_ATTRIBUTE
             best_score *= 1 - np.sum(cont.unknowns) / len(data)
             mapping, branches = MappedDiscreteNode.branches_from_mapping(
-                data.X[:, attr_no], best_mapping, n_values)
+                col_x, best_mapping, n_values)
             node = MappedDiscreteNode(attr, attr_no, mapping, None)
             return best_score, node, branches, 2
 
         def _score_cont():
             """Scoring for numeric attributes"""
-            col_x = data.X[:, attr_no]
             nans = np.sum(np.isnan(col_x))
             non_nans = len(col_x) - nans
             arginds = np.argsort(col_x)[:non_nans]
@@ -159,12 +159,17 @@ class TreeLearner(Learner):
 
         #######################################
         # The real _select_attr starts here
+        is_sparse = sp.issparse(data.X)
         domain = data.domain
         class_var = domain.class_var
         best_score, *best_res = REJECT_ATTRIBUTE
         best_res = [Node(None, None, None)] + best_res[1:]
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
+            col_x = data.X[:, attr_no]
+            if is_sparse:
+                col_x = col_x.toarray()
+                col_x = col_x.flatten()
             sc, *res = disc_scorer() if attr.is_discrete else _score_cont()
             if res[0] is not None and sc > best_score:
                 best_score, best_res = sc, res
