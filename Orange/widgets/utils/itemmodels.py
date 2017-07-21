@@ -315,16 +315,40 @@ class PyTableModel(AbstractSortTableModel):
         return [row[column] for row in self._table]
 
     def setHorizontalHeaderLabels(self, labels):
-        self._headers[Qt.Horizontal] = labels
+        """
+        Parameters
+        ----------
+        labels : list of str or list of Variable
+        """
+        self._headers[Qt.Horizontal] = tuple(labels)
 
     def setVerticalHeaderLabels(self, labels):
-        self._headers[Qt.Vertical] = labels
+        """
+        Parameters
+        ----------
+        labels : list of str or list of Variable
+        """
+        self._headers[Qt.Vertical] = tuple(labels)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
-            headers = self._headers.get(orientation)
-            section = self.mapToSource(section)
-            return headers[section] if headers and section < len(headers) else str(section)
+        headers = self._headers.get(orientation)
+
+        if headers and section < len(headers):
+            section = self.mapToSourceRows(section) if orientation == Qt.Vertical else section
+            value = headers[section]
+
+            if role == Qt.ToolTipRole:
+                role = Qt.DisplayRole
+
+            if role == Qt.DisplayRole:
+                return value.name if isinstance(value, Variable) else value
+
+            if role == Qt.DecorationRole:
+                if isinstance(value, Variable):
+                    return gui.attributeIconDict[value]
+
+        # Use QAbstractItemModel default for non-existent header/sections
+        return super().headerData(section, orientation, role)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
