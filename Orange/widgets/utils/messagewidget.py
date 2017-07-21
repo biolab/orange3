@@ -117,14 +117,14 @@ class Message(
             return image_data(pm)
 
         parts = [
-            '<div class="message {}">'.format(self.severity.name.lower()),
-            '<img src="{}" width="12" height="12" />'.format(iconsrc(self)),
-            '<nobr class="field-text">',
-            '{}'.format(render(self.text)),
-            '</nobr>',
+            ('<div style="white-space:pre" class="message {}">'
+             .format(self.severity.name.lower())),
+            ('<div class="field-text">'
+             '<img src="{iconurl}" width="12" height="12" />{text}</div>'
+             .format(iconurl=iconsrc(self), text=render(self.text)))
         ]
         if self.informativeText:
-            parts += ['<br/><span class="field-informative-text">{}</span>'
+            parts += ['<div class="field-informative-text">{}</div>'
                       .format(render(self.informativeText))]
         if self.detailedText:
             parts += ['<blockquote class="field-detailed-text">{}</blockquote>'
