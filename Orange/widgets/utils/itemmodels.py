@@ -429,6 +429,9 @@ class PyTableModel(AbstractSortTableModel):
         self.resetSorting()
         self.endResetModel()
 
+    def tolist(self):
+        return self._table
+
     def clear(self):
         self.beginResetModel()
         self._table.clear()

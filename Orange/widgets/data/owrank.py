@@ -11,14 +11,14 @@ from collections import namedtuple
 import numpy as np
 from scipy.sparse import issparse
 
+from AnyQt.QtGui import QFontMetrics
 from AnyQt.QtWidgets import (
     QTableView, QRadioButton, QButtonGroup, QGridLayout, QSizePolicy,
-    QStackedLayout, QStackedWidget, QWidget
+    QStackedLayout, QStackedWidget, QWidget, QHeaderView,
 )
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
     Qt, QItemSelection, QItemSelectionRange, QItemSelectionModel,
-    QSortFilterProxyModel
+    QSize,
 )
 
 from Orange.base import Learner
@@ -29,6 +29,7 @@ from Orange.canvas import report
 from Orange.widgets import gui
 from Orange.widgets.settings import (DomainContextHandler, Setting,
                                      ContextSetting)
+from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
@@ -36,7 +37,7 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 def table(shape, fill=None):
     """ Return a 2D table with shape filed with ``fill``
     """
-    return [[fill for j in range(shape[1])] for i in range(shape[0])]
+    return np.full(shape, fill).tolist()
 
 
 ScoreMeta = namedtuple("score_meta", ["name", "shortname", "score"])
@@ -52,6 +53,72 @@ SCORES = [ScoreMeta("Information Gain", "Info. gain", score.InfoGain),
           ScoreMeta("Univariate Regression", "Univar. reg.",
                     score.UnivariateLinearRegression),
           ScoreMeta("RReliefF", "RReliefF", score.RReliefF)]
+
+
+class TableView(QTableView):
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent=parent,
+                         selectionBehavior=QTableView.SelectRows,
+                         selectionMode=QTableView.ExtendedSelection,
+                         sortingEnabled=True,
+                         showGrid=False,
+                         cornerButtonEnabled=False,
+                         alternatingRowColors=True,
+                         **kwargs)
+
+        header = self.verticalHeader()
+        header.setSectionResizeMode(header.Fixed)
+        header.setFixedWidth(50)
+        header.setDefaultSectionSize(22)
+        header.setTextElideMode(Qt.ElideMiddle)  # Note: https://bugreports.qt.io/browse/QTBUG-62091
+
+        header = self.horizontalHeader()
+        header.setSectionResizeMode(header.Fixed)
+        header.setFixedHeight(24)
+        header.setDefaultSectionSize(80)
+        header.setTextElideMode(Qt.ElideMiddle)
+
+    def setVHeaderFixedWidthFromLabel(self, max_label):
+        header = self.verticalHeader()
+        width = QFontMetrics(header.font()).width(max_label)
+        header.setFixedWidth(min(width + 40, 400))
+
+
+class TableModel(PyTableModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._extremes = {}
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role == gui.BarRatioRole and index.isValid():
+            value = super().data(index, Qt.EditRole)
+            if not isinstance(value, float):
+                return None
+            vmin, vmax = self._extremes.get(index.column(), (-np.inf, np.inf))
+            value = (value - vmin) / ((vmax - vmin) or 1)
+            return value
+
+        if role == Qt.DisplayRole:
+            role = Qt.EditRole
+
+        return super().data(index, role)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role == Qt.InitialSortOrderRole:
+            return Qt.DescendingOrder
+        return super().headerData(section, orientation, role)
+
+    def setExtremesFrom(self, column, values):
+        """Set extremes for columnn's ratio bars from values"""
+        try:
+            vmin = np.nanmin(values)
+            if np.isnan(vmin):
+                raise TypeError
+        except TypeError:
+            vmin, vmax = -np.inf, np.inf
+        else:
+            vmax = np.nanmax(values)
+        self._extremes[column] = (vmin, vmax)
 
 
 class OWRank(OWWidget):
@@ -100,23 +167,21 @@ class OWRank(OWWidget):
         super().__init__()
         self.measure_scores = None
         self.update_scores = True
-        self.usefulAttributes = []
         self.learners = {}
         self.labels = []
         self.out_domain_desc = None
 
-        self.all_measures = SCORES
-
-        self.selectedMeasures = dict([(m.name, True) for m
-                                      in self.all_measures])
+        self.selectedMeasures = dict([(m.name, True) for m in SCORES])
         # Discrete (0) or continuous (1) class mode
         self.rankMode = 0
+        self.ranksModel = None  # type: TableModel
+        self.ranksView = None  # type: TableView
 
         self.data = None
 
-        self.discMeasures = [m for m in self.all_measures if
+        self.discMeasures = [m for m in SCORES if
                              issubclass(DiscreteVariable, m.score.class_type)]
-        self.contMeasures = [m for m in self.all_measures if
+        self.contMeasures = [m for m in SCORES if
                              issubclass(ContinuousVariable, m.score.class_type)]
 
         self.score_checks = []
@@ -172,99 +237,47 @@ class OWRank(OWWidget):
 
         gui.auto_commit(selMethBox, self, "auto_apply", "Send", box=False)
 
-        # Discrete, continuous and no_class table views are stacked
-        self.ranksViewStack = QStackedLayout()
-        self.mainArea.layout().addLayout(self.ranksViewStack)
-
-        self.discRanksView = QTableView()
-        self.ranksViewStack.addWidget(self.discRanksView)
-        self.discRanksView.setSelectionBehavior(QTableView.SelectRows)
-        self.discRanksView.setSelectionMode(QTableView.MultiSelection)
-        self.discRanksView.setSortingEnabled(True)
+        # Discrete, continuous and no_class table views and models
 
         self.discRanksLabels = ["#"] + [m.shortname for m in self.discMeasures]
-        self.discRanksModel = QStandardItemModel(self)
+        self.discRanksModel = TableModel(parent=self)
         self.discRanksModel.setHorizontalHeaderLabels(self.discRanksLabels)
 
-        self.discRanksProxyModel = MySortProxyModel(self)
-        self.discRanksProxyModel.setSourceModel(self.discRanksModel)
-        self.discRanksView.setModel(self.discRanksProxyModel)
-
-        self.discRanksView.setColumnWidth(0, 20)
-        self.discRanksView.selectionModel().selectionChanged.connect(
-            self.commit
-        )
-        self.discRanksView.pressed.connect(self.onSelectItem)
-        self.discRanksView.horizontalHeader().sectionClicked.connect(
-            self.headerClick
-        )
-        self.discRanksView.verticalHeader().sectionClicked.connect(
-            self.onSelectItem
-        )
-
-        if self.headerState[0] is not None:
-            self.discRanksView.horizontalHeader().restoreState(
-                self.headerState[0])
-
-        self.contRanksView = QTableView()
-        self.ranksViewStack.addWidget(self.contRanksView)
-        self.contRanksView.setSelectionBehavior(QTableView.SelectRows)
-        self.contRanksView.setSelectionMode(QTableView.MultiSelection)
-        self.contRanksView.setSortingEnabled(True)
+        self.discRanksView = TableView(self)
+        self.discRanksView.setModel(self.discRanksModel)
 
         self.contRanksLabels = ["#"] + [m.shortname for m in self.contMeasures]
-        self.contRanksModel = QStandardItemModel(self)
+        self.contRanksModel = TableModel(parent=self)
         self.contRanksModel.setHorizontalHeaderLabels(self.contRanksLabels)
 
-        self.contRanksProxyModel = MySortProxyModel(self)
-        self.contRanksProxyModel.setSourceModel(self.contRanksModel)
-        self.contRanksView.setModel(self.contRanksProxyModel)
-
-        self.contRanksView.setColumnWidth(0, 20)
-        self.contRanksView.selectionModel().selectionChanged.connect(
-            self.commit
-        )
-        self.contRanksView.pressed.connect(self.onSelectItem)
-        self.contRanksView.horizontalHeader().sectionClicked.connect(
-            self.headerClick
-        )
-        self.contRanksView.verticalHeader().sectionClicked.connect(
-            self.onSelectItem
-        )
-
-        if self.headerState[1] is not None:
-            self.contRanksView.horizontalHeader().restoreState(
-                self.headerState[1])
-
-        self.noClassRanksView = QTableView()
-        self.ranksViewStack.addWidget(self.noClassRanksView)
-        self.noClassRanksView.setSelectionBehavior(QTableView.SelectRows)
-        self.noClassRanksView.setSelectionMode(QTableView.MultiSelection)
-        self.noClassRanksView.setSortingEnabled(True)
+        self.contRanksView = TableView(self)
+        self.contRanksView.setModel(self.contRanksModel)
 
         self.noClassRanksLabels = ["#"]
-        self.noClassRanksModel = QStandardItemModel(self)
+        self.noClassRanksModel = TableModel(parent=self)
         self.noClassRanksModel.setHorizontalHeaderLabels(self.noClassRanksLabels)
 
-        self.noClassRanksProxyModel = MySortProxyModel(self)
-        self.noClassRanksProxyModel.setSourceModel(self.noClassRanksModel)
-        self.noClassRanksView.setModel(self.noClassRanksProxyModel)
+        self.noClassRanksView = TableView()
+        self.noClassRanksView.setModel(self.noClassRanksModel)
 
-        self.noClassRanksView.setColumnWidth(0, 20)
-        self.noClassRanksView.selectionModel().selectionChanged.connect(
-            self.commit
-        )
-        self.noClassRanksView.pressed.connect(self.onSelectItem)
-        self.noClassRanksView.horizontalHeader().sectionClicked.connect(
-            self.headerClick
-        )
-        self.noClassRanksView.verticalHeader().sectionClicked.connect(
-            self.onSelectItem
-        )
+        for i, view in enumerate((self.discRanksView,
+                                  self.contRanksView,
+                                  self.noClassRanksView)):
+            view.setColumnWidth(0, 30)
+            view.selectionModel().selectionChanged.connect(self.commit)
+            view.pressed.connect(self.onSelectItem)
+            view.horizontalHeader().sectionClicked.connect(self.headerClick)
+            view.verticalHeader().sectionClicked.connect(self.onSelectItem)
 
-        if self.headerState[2] is not None:
-            self.noClassRanksView.horizontalHeader().restoreState(
-                self.headerState[2])
+            if self.headerState[i] is not None:
+                view.horizontalHeader().restoreState(self.headerState[i])
+
+        # Discrete, continuous and no_class table views are stacked
+        self.ranksViewStack = QStackedLayout()
+        self.ranksViewStack.addWidget(self.discRanksView)
+        self.ranksViewStack.addWidget(self.contRanksView)
+        self.ranksViewStack.addWidget(self.noClassRanksView)
+        self.mainArea.layout().addLayout(self.ranksViewStack)
 
         # Switch the current view to Discrete
         self.switchRanksMode(0)
@@ -286,7 +299,6 @@ class OWRank(OWWidget):
         if index == 0:
             self.ranksView = self.discRanksView
             self.ranksModel = self.discRanksModel
-            self.ranksProxyModel = self.discRanksProxyModel
             self.measures = self.discMeasures
             self.selected_checks = self.cls_default_selected
             self.reg_scoring_box.setSizePolicy(QSizePolicy.Ignored,
@@ -296,7 +308,6 @@ class OWRank(OWWidget):
         elif index == 1:
             self.ranksView = self.contRanksView
             self.ranksModel = self.contRanksModel
-            self.ranksProxyModel = self.contRanksProxyModel
             self.measures = self.contMeasures
             self.selected_checks = self.reg_default_selected
             self.cls_scoring_box.setSizePolicy(QSizePolicy.Ignored,
@@ -306,7 +317,6 @@ class OWRank(OWWidget):
         else:
             self.ranksView = self.noClassRanksView
             self.ranksModel = self.noClassRanksModel
-            self.ranksProxyModel = self.noClassRanksProxyModel
             self.measures = []
             self.selected_checks = set()
             self.reg_scoring_box.setSizePolicy(QSizePolicy.Ignored,
@@ -327,6 +337,7 @@ class OWRank(OWWidget):
     @check_sql_input
     def setData(self, data):
         self.closeContext()
+        self.selected_rows = []
         self.clear_messages()
         self.resetInternals()
 
@@ -334,9 +345,7 @@ class OWRank(OWWidget):
         self.switchRanksMode(0)
         if self.data is not None:
             domain = self.data.domain
-            attrs = domain.attributes
-            self.usefulAttributes = [attr for attr in attrs
-                                     if attr.is_discrete or attr.is_continuous]
+            attrs = [attr for attr in domain.attributes if attr.is_primitive()]
 
             if domain.has_continuous_class:
                 self.switchRanksMode(1)
@@ -350,18 +359,17 @@ class OWRank(OWWidget):
                 self.measures = [m for m in self.measures
                                  if m.score.supports_sparse_data]
 
-            self.ranksModel.setRowCount(len(attrs))
-            for i, a in enumerate(attrs):
-                if a.is_discrete:
-                    v = len(a.values)
-                else:
-                    v = "C"
-                item = ScoreValueItem()
-                item.setData(v, Qt.DisplayRole)
-                self.ranksModel.setItem(i, 0, item)
-                item = QStandardItem(a.name)
-                item.setData(gui.attributeIconDict[a], Qt.DecorationRole)
-                self.ranksModel.setVerticalHeaderItem(i, item)
+            model_list = [
+                [len(a.values) if a.is_discrete else '']
+                for a in attrs
+            ]
+            self.ranksModel.wrap(model_list)
+            self.ranksModel.setVerticalHeaderLabels(attrs)
+
+            max_label = max((a.name for a in attrs), key=len)
+            self.contRanksView.setVHeaderFixedWidthFromLabel(max_label)
+            self.discRanksView.setVHeaderFixedWidthFromLabel(max_label)
+            self.noClassRanksView.setVHeaderFixedWidthFromLabel(max_label)
 
             shape = (len(self.measures) + len(self.learners), len(attrs))
             self.measure_scores = table(shape, None)
@@ -373,10 +381,6 @@ class OWRank(OWWidget):
         self.openContext(data)
         self.selectMethodChanged()
         self.commit()
-
-    def get_selection(self):
-        selection = self.ranksView.selectionModel().selection()
-        return list(set(ind.row() for ind in selection.indexes()))
 
     @Inputs.scorer
     def set_learner(self, learner, lid=None):
@@ -394,8 +398,7 @@ class OWRank(OWWidget):
         self.measure_scores += table(shape, None)
         self.contRanksModel.setHorizontalHeaderLabels(self.contRanksLabels)
         self.discRanksModel.setHorizontalHeaderLabels(self.discRanksLabels)
-        self.noClassRanksModel.setHorizontalHeaderLabels(
-            self.noClassRanksLabels)
+        self.noClassRanksModel.setHorizontalHeaderLabels(self.noClassRanksLabels)
         measures_mask = [False] * len(self.measures)
         measures_mask += [True for _ in self.learners]
         self.updateScores(measures_mask)
@@ -431,7 +434,7 @@ class OWRank(OWWidget):
 
         self.setStatusMessage("Running")
         with self.progressBar():
-            n_measure_update = len([x for x in measuresMask if x is not False])
+            n_measure_update = sum(measuresMask)
             count = 0
             for index, (meas, mask) in enumerate(zip(measures, measuresMask)):
                 if not mask:
@@ -449,7 +452,7 @@ class OWRank(OWWidget):
                                 self.measure_scores[index].append(
                                     estimator(data, attr))
                             except ValueError:
-                                self.measure_scores[index].append(None)
+                                self.measure_scores[index].append(np.nan)
                 else:
                     learner = meas.score
                     if isinstance(learner, Learner) and \
@@ -467,18 +470,12 @@ class OWRank(OWWidget):
                             self.measure_scores.append(row)
                         learner_col += 1
             self.progressBarSet(90)
-        self.contRanksModel.setHorizontalHeaderLabels(
-            self.contRanksLabels + self.labels
-        )
-        self.discRanksModel.setHorizontalHeaderLabels(
-            self.discRanksLabels + self.labels
-        )
-        self.noClassRanksModel.setHorizontalHeaderLabels(
-            self.noClassRanksLabels + self.labels
-        )
+        self.contRanksModel.setHorizontalHeaderLabels(self.contRanksLabels + self.labels)
+        self.discRanksModel.setHorizontalHeaderLabels(self.discRanksLabels + self.labels)
+        self.noClassRanksModel.setHorizontalHeaderLabels(self.noClassRanksLabels + self.labels)
         self.updateRankModel(measuresMask)
-        self.ranksProxyModel.invalidate()
-        self.selectMethodChanged()
+        self.ranksModel.invalidate()
+        self.autoSelection()
         self.Outputs.scores.send(self.create_scores_table(self.labels))
         self.setStatusMessage("")
 
@@ -486,47 +483,31 @@ class OWRank(OWWidget):
         """
         Update the rankModel.
         """
+        model = self.ranksModel
+
         values = []
         diff = len(self.measure_scores) - len(measuresMask)
         if len(measuresMask):
             measuresMask += [measuresMask[-1]] * diff
-        for i in range(self.ranksModel.columnCount() - 1,
-                       len(self.measure_scores), -1):
-            self.ranksModel.removeColumn(i)
+
+        table = [[row[0]] for row in self.ranksModel.tolist()]
+        model.wrap(table)
 
         for i, (scores, m) in enumerate(zip(self.measure_scores, measuresMask)):
-            if not m and self.ranksModel.item(0, i + 1):
-                values.append([])
-                continue
-            values_one = []
             for j, _score in enumerate(scores):
-                values_one.append(_score)
-                item = self.ranksModel.item(j, i + 1)
-                if not item:
-                    item = ScoreValueItem()
-                    self.ranksModel.setItem(j, i + 1, item)
-                item.setData(_score, Qt.DisplayRole)
-            values.append(values_one)
-        for i, (vals, m) in enumerate(zip(values, measuresMask)):
-            if not m:
-                continue
-            valid_vals = [v for v in vals if v is not None]
-            if valid_vals:
-                vmin, vmax = min(valid_vals), max(valid_vals)
-                for j, v in enumerate(vals):
-                    if v is not None:
-                        # Set the bar ratio role for i-th measure.
-                        ratio = float((v - vmin) / ((vmax - vmin) or 1))
-                        item = self.ranksModel.item(j, i + 1)
-                        item.setData(ratio, gui.BarRatioRole)
+                table[j].append(_score)
+            values.append(scores)
 
-        self.ranksView.setColumnWidth(0, 20)
-        self.ranksView.resizeRowsToContents()
+        for i, (vals, m) in enumerate(zip(values, measuresMask)):
+            if not any(vals):
+                continue
+            model.setExtremesFrom(i + 1, vals)
+
+        self.ranksView.setColumnWidth(0, 30)
 
     def resetInternals(self):
         self.data = None
-        self.usefulAttributes = []
-        self.ranksModel.setRowCount(0)
+        self.ranksModel.clear()
 
     def onSelectItem(self, index):
         """
@@ -553,9 +534,9 @@ class OWRank(OWWidget):
 
     def autoSelection(self):
         selModel = self.ranksView.selectionModel()
-        rowCount = self.ranksModel.rowCount()
-        columnCount = self.ranksModel.columnCount()
-        model = self.ranksProxyModel
+        model = self.ranksModel
+        rowCount = model.rowCount()
+        columnCount = model.columnCount()
 
         if self.selectMethod == OWRank.SelectNone:
             selection = QItemSelection()
@@ -574,7 +555,7 @@ class OWRank(OWWidget):
             selection = QItemSelection()
             if len(self.selected_rows):
                 selection = QItemSelection()
-                for row in self.selected_rows:
+                for row in self.ranksModel.mapFromSource(self.selected_rows):
                     selection.append(QItemSelectionRange(
                         model.index(row, 0), model.index(row, columnCount - 1)))
 
@@ -618,20 +599,19 @@ class OWRank(OWWidget):
         for i, measure in enumerate(self.measures):
             shown = self.selectedMeasures.get(measure.name)
             self.ranksView.setColumnHidden(i + 1, not shown)
-            self.ranksView.setColumnWidth(i + 1, 100)
 
-        index = self.ranksView.horizontalHeader().sortIndicatorSection()
+        header = self.ranksView.horizontalHeader()
+        index = header.sortIndicatorSection()
         if self.ranksView.isColumnHidden(index):
             self.headerState[self.rankMode] = None
+        # else:
+        #     self.ranksView.sortByColumn(index, header.sortIndicatorOrder())
+        #     self.autoSelection()
 
         if self.headerState[self.rankMode] is None:
-            def get_sort_by_col(measures, selected_measures):
-                cols = [i + 1 for i, m in enumerate(measures) if
-                        m.name in selected_measures]
-                return cols[0] if cols else len(measures) + 1
-
-            col = get_sort_by_col(self.measures, self.selected_checks)
-            self.ranksView.sortByColumn(col, Qt.DescendingOrder)
+            index = 1 + next((i for i, m in enumerate(self.measures)
+                              if m.name in self.selected_checks), len(self.measures))
+            self.ranksView.sortByColumn(index, Qt.DescendingOrder)
             self.autoSelection()
 
     def updateDelegates(self):
@@ -648,31 +628,26 @@ class OWRank(OWWidget):
             self.report_items("Output", self.out_domain_desc)
 
     def commit(self):
-        self.selected_rows = self.get_selection()
-        if self.data and len(self.data.domain.attributes) == len(
-                self.selected_rows):
+        self.selected_rows = self.ranksModel.mapToSource([
+            i.row() for i in self.ranksView.selectionModel().selectedRows(0)])
+        if self.data and len(self.data.domain.attributes) == len(self.selected_rows):
             self.selectMethod = OWRank.SelectAll
             self.selectButtons.button(self.selectMethod).setChecked(True)
-        selected = self.selectedAttrs()
-        if not self.data or not selected:
+
+        selected_attrs = []
+        if self.data:
+            selected_attrs = [self.data.domain.attributes[i]
+                              for i in self.selected_rows]
+
+        if not self.data or not selected_attrs:
             self.Outputs.reduced_data.send(None)
             self.out_domain_desc = None
         else:
             reduced_domain = Domain(
-                selected, self.data.domain.class_var, self.data.domain.metas)
+                selected_attrs, self.data.domain.class_var, self.data.domain.metas)
             data = self.data.transform(reduced_domain)
             self.Outputs.reduced_data.send(data)
             self.out_domain_desc = report.describe_domain(data.domain)
-
-    def selectedAttrs(self):
-        if self.data:
-            inds = self.ranksView.selectionModel().selectedRows(0)
-            source = self.ranksProxyModel.mapToSource
-            inds = map(source, inds)
-            inds = [ind.row() for ind in inds]
-            return [self.data.domain.attributes[i] for i in inds]
-        else:
-            return []
 
     def create_scores_table(self, labels):
         indices = [i for i, m in enumerate(self.measures)
@@ -707,47 +682,6 @@ class OWRank(OWWidget):
                     len(headerState) < 3:
                 headerState = (list(headerState) + [None] * 3)[:3]
                 settings["headerState"] = headerState
-
-
-class ScoreValueItem(QStandardItem):
-    """A StandardItem subclass for python objects.
-    """
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-    def __lt__(self, other):
-        model = self.model()
-        if model is not None:
-            role = model.sortRole()
-        else:
-            role = Qt.DisplayRole
-        my = self.data(role)
-        other = other.data(role)
-        if my is None:
-            return True
-        return my < other
-
-
-class MySortProxyModel(QSortFilterProxyModel):
-
-    @staticmethod
-    def comparable(val):
-        return val is not None and \
-               (isinstance(val, str) or float('-inf') < val < float('inf'))
-
-    def lessThan(self, left, right):
-        role = self.sortRole()
-        left_data = left.data(role)
-        if not self.comparable(left_data):
-            left_data = float('-inf')
-        right_data = right.data(role)
-        if not self.comparable(right_data):
-            right_data = float('-inf')
-        try:
-            return left_data < right_data
-        except TypeError:
-            return str(left_data) < str(right_data)
 
 
 if __name__ == "__main__":
