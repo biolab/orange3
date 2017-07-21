@@ -350,9 +350,15 @@ class WidgetMessagesMixin(MessagesMixin):
 
         def msg(m):
             # type: (_BoundMsg) -> MessagesWidget.Message
+            text = str(m)
+            extra = ""
+            if "\n" in text:
+                text, extra = text.split("\n", 1)
+
             return MessagesWidget.Message(
                 MessagesWidget.Severity(m.group.severity),
-                text=str(m), detailedText=m.tb if m.tb else ""
+                text=text, informativeText=extra,
+                detailedText=m.tb if m.tb else ""
             )
 
         messages = [msg
