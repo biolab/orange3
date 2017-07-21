@@ -103,3 +103,19 @@ class TestOWPCA(WidgetTest):
         self.assertTrue(all(type(a) is ContinuousVariable   # pylint: disable=unidiomatic-typecheck
                             for a in components.domain.attributes),
                         "Some variables aren't of type ContinuousVariable")
+
+    def test_normalization(self):
+        data = Table("iris.tab")
+        self.widget.ncomponents = 2
+        self.assertTrue(self.widget.normalize)
+        self.widget.set_data(data)
+        norm1 = self.get_output(self.widget.Outputs.transformed_data)
+        self.widget.controls.normalize.toggle()
+        nonnorm1 = self.get_output(self.widget.Outputs.transformed_data)
+        self.widget.controls.normalize.toggle()
+        norm2 = self.get_output(self.widget.Outputs.transformed_data)
+        self.widget.controls.normalize.toggle()
+        nonnorm2 = self.get_output(self.widget.Outputs.transformed_data)
+        np.testing.assert_equal(nonnorm1.X, nonnorm2.X)
+        np.testing.assert_equal(norm1.X, norm2.X)
+        self.assertTrue(np.any(norm1.X - nonnorm1.X))  # nonnorm and norm are different

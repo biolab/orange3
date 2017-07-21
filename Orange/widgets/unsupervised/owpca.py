@@ -257,6 +257,8 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         data = self.data
+        self._pca_projector.preprocessors = \
+            self._pca_preprocessors + ([Normalize()] if self.normalize else [])
         if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
@@ -407,11 +409,6 @@ class OWPCA(widget.OWWidget):
         self._invalidate_selection()
 
     def _update_normalize(self):
-        if self.normalize:
-            pp = self._pca_preprocessors + [Normalize()]
-        else:
-            pp = self._pca_preprocessors
-        self._pca_projector.preprocessors = pp
         self.fit()
         if self.data is None:
             self._invalidate_selection()
