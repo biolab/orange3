@@ -322,13 +322,17 @@ class OWRuleLearner(OWBaseLearner):
         """
         Reimplemented from OWBaseLearner.
         """
+        self.Error.out_of_memory.clear()
+        self.model = None
         if self.check_data():
-            self.model = self.learner(self.data)
-            self.model.name = self.learner_name
-            self.model.instances = self.data
-            self.valid_data = True
-        else:
-            self.model = None
+            try:
+                self.model = self.learner(self.data)
+            except MemoryError:
+                self.Error.out_of_memory()
+            else:
+                self.model.name = self.learner_name
+                self.model.instances = self.data
+                self.valid_data = True
         self.send(self.OUTPUT_MODEL_NAME, self.model)
 
     def create_learner(self):

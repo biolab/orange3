@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
+
 from scipy import sparse
 
 from AnyQt.QtWidgets import (
@@ -116,3 +118,18 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal("Data", None)
         self.widget.apply_button.button.click()
         self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
+
+    def test_out_of_memory(self):
+        """
+        Handling memory error.
+        GH-2397
+        """
+        data = Table("iris")[::3]
+        self.assertFalse(self.widget.Error.out_of_memory.is_shown())
+        with unittest.mock.patch(
+            "Orange.widgets.model.owrules.CustomRuleLearner.__call__",
+            side_effect=MemoryError):
+            self.send_signal("Data", data)
+            self.assertTrue(self.widget.Error.out_of_memory.is_shown())
+        self.send_signal("Data", None)
+        self.assertFalse(self.widget.Error.out_of_memory.is_shown())
