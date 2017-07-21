@@ -361,7 +361,7 @@ class SchemeEditWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        scene = CanvasScene()
+        scene = CanvasScene(self)
         scene.setItemIndexMethod(CanvasScene.NoIndex)
         self.__setupScene(scene)
 
@@ -628,7 +628,7 @@ class SchemeEditWidget(QWidget):
 
             self.__undoStack.clear()
 
-            self.__scene = CanvasScene()
+            self.__scene = CanvasScene(self)
             self.__scene.setItemIndexMethod(CanvasScene.NoIndex)
             self.__setupScene(self.__scene)
 
