@@ -361,7 +361,7 @@ class SchemeEditWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        scene = CanvasScene()
+        scene = CanvasScene(self)
         scene.setItemIndexMethod(CanvasScene.NoIndex)
         self.__setupScene(scene)
 
@@ -628,16 +628,31 @@ class SchemeEditWidget(QWidget):
 
             self.__undoStack.clear()
 
-            self.__scene = CanvasScene()
+            self.__scene = CanvasScene(self)
             self.__scene.setItemIndexMethod(CanvasScene.NoIndex)
             self.__setupScene(self.__scene)
 
-            self.__view.setScene(self.__scene)
-
             self.__scene.set_scheme(scheme)
+            self.__view.setScene(self.__scene)
 
             if self.__scheme:
                 self.__scheme.installEventFilter(self)
+                nodes = self.__scheme.nodes
+                if nodes:
+                    self.ensureVisible(nodes[0])
+
+    def ensureVisible(self, node):
+        """
+        Scroll the contents of the viewport so that `node` is visible.
+
+        Parameters
+        ----------
+        node: SchemeNode
+        """
+        if self.__scheme is None:
+            return
+        item = self.__scene.item_for_node(node)
+        self.__view.ensureVisible(item)
 
     def scheme(self):
         """
