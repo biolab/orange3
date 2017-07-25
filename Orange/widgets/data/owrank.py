@@ -225,6 +225,7 @@ class OWRank(OWWidget):
             for method in scoring_methods:
                 box.layout().addWidget(QCheckBox(
                     method.name, self,
+                    objectName=method.shortname,  # To be easily found in tests
                     checked=method.name in self.selected_methods,
                     stateChanged=partial(self.methodSelectionChanged, method_name=method.name)))
             gui.rubber(box)
