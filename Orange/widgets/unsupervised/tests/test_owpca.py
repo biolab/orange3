@@ -114,3 +114,11 @@ class TestOWPCA(WidgetTest):
         varnonnorm = self.widget.variance_covered
         # normalized data will have lower covered variance
         self.assertLess(varnorm, varnonnorm)
+
+    def test_do_not_mask_features(self):
+        # the widget used to replace cached variables when creating the
+        # components output (until 20170726)
+        data = Table("iris.tab")
+        self.widget.set_data(data)
+        ndata = Table("iris.tab")
+        self.assertIs(data.domain[0], ndata.domain[0])
