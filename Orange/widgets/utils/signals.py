@@ -62,12 +62,16 @@ class Input(InputSignal, _Signal):
     explicit (bool, optional):
         if set, this signal is only used when it is the only option or when
         explicitly connected in the dialog (default: `False`)
+    _seq_id : int
+        An explicit "priority" for forcing signal order position.
+        E.g. set to negative to sort the signal before all signals inited
+        without this.
     """
     def __init__(self, name, type, id=None, doc=None, replaces=None, *,
-                 multiple=False, default=False, explicit=False):
+                 multiple=False, default=False, explicit=False, _seq_id=None):
         flags = self.get_flags(multiple, default, explicit, False)
         super().__init__(name, type, "", flags, id, doc, replaces or [])
-        self._seq_id = next(_counter)
+        self._seq_id = _seq_id or next(_counter)
 
     def __call__(self, method):
         """
@@ -119,13 +123,17 @@ class Output(OutputSignal, _Signal):
         of the declared type and that the output can be connected to any input
         signal which can accept a subtype of the declared output type
         (default: `True`)
+    _seq_id : int
+        An explicit "priority" for forcing signal order position.
+        E.g. set to negative to sort the signal before all signals inited
+        without this.
     """
     def __init__(self, name, type, id=None, doc=None, replaces=None, *,
-                 default=False, explicit=False, dynamic=True):
+                 default=False, explicit=False, dynamic=True, _seq_id=None):
         flags = self.get_flags(False, default, explicit, dynamic)
         super().__init__(name, type, flags, id, doc, replaces or [])
         self.widget = None
-        self._seq_id = next(_counter)
+        self._seq_id = _seq_id or next(_counter)
 
     def bound_signal(self, widget):
         """
@@ -170,7 +178,9 @@ class WidgetSignalsMixin:
         An output with `signalName` must be defined in the class ``outputs``
         list.
         """
-        if not any(s.name == signalName for s in self.outputs):
+        if not any(s.name == signalName
+                   for s in itertools.chain(self.Outputs.__dict__.values(),
+                                            self.outputs)):
             raise ValueError('{} is not a valid output signal for widget {}'.format(
                 signalName, self.name))
         if self.signalManager is not None:

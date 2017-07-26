@@ -1,6 +1,7 @@
 import numpy as np
 from AnyQt.QtCore import QTimer, Qt
 
+from Orange.canvas.registry import InputSignal, OutputSignal
 from Orange.classification.base_classification import LearnerClassification
 from Orange.data import Table
 from Orange.modelling import Fitter
@@ -10,7 +11,7 @@ from Orange.widgets import gui
 from Orange.widgets import widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
+from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg, Input, Output
 
 
 class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
@@ -28,17 +29,24 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
                     "'{}' must have '{}' attributes"
                     .format(name, "', '".join(mcls.REQUIRED_ATTRIBUTES)))
 
-            attrib['outputs'] = mcls.update_channel(
-                mcls.default_outputs(attrib),
-                attrib.get('outputs', [])
-            )
+            outputs = ()
+            if 'Outputs' in attrib and isinstance(attrib['Outputs'], type):
+                outputs = attrib.pop('Outputs')
+            elif 'outputs' in attrib and isinstance(attrib['outputs'], (list, tuple)):
+                outputs = attrib.pop('outputs')
 
-            attrib['inputs'] = mcls.update_channel(
-                mcls.default_inputs(attrib),
-                attrib.get('inputs', [])
-            )
+            inputs = ()
+            if isinstance(attrib.get('Inputs'), type):
+                inputs = attrib.pop('Inputs')
+            elif isinstance(attrib.get('inputs'), (list, tuple)):
+                inputs = attrib.pop('inputs')
 
-            mcls.add_extra_attributes(name, attrib)
+            attrib['Outputs'] = mcls._merge_signals(
+                mcls.default_outputs(attrib), outputs, attrib, Output)
+            attrib['Inputs'] = mcls._merge_signals(
+                mcls.default_inputs(attrib), inputs, attrib, Input)
+
+            mcls.add_extra_attributes(name, bases, attrib)
 
         return super().__new__(mcls, name, bases, attrib)
 
@@ -51,19 +59,54 @@ class DefaultWidgetChannelsMetaClass(WidgetMetaClass):
         return []
 
     @classmethod
-    def update_channel(cls, channel, items):
-        item_names = set(item[0] if isinstance(item, tuple) else item.name
-                         for item in channel)
+    def _merge_signals(cls, existing, signals, attrib, sigcls):
+        # signals DON'T override existing with same names
+        default_names = set(sig.name for _, sig in existing)
 
-        for item in items:
-            if item[0] not in item_names:
-                channel.append(item)
+        # If signals is Inputs or Outputs class, just add the default signals
+        # as attributes. They will be sorted first because of forced _seq_id-s.
+        if isinstance(signals, type):
+            for name, sig in existing:
+                setattr(signals, name, sig)
+            existing = signals
 
-        return channel
+        else:
+            # Otherwise, old-style signal spec can be a sequence of
+            # raw *Signal specifications or of 2- or 3-tuples.
+            # Handle all these cases in an arbitrarily mixed manner.
+            assert isinstance(signals, (list, tuple))
+            SIGNAL_TYPE = (InputSignal, OutputSignal, Input, Output)
+            normed = lambda name: name.lower().replace(' ', '_')
+
+            for sig in signals:
+                if isinstance(sig, SIGNAL_TYPE):
+                    if sig.name not in default_names:
+                        existing.append((normed(sig.name), sig))
+                else:
+                    assert isinstance(sig, (tuple, list))
+                    if sig[0] not in default_names:
+                        sig_obj = sigcls(sig[0], sig[1])
+                        existing.append((normed(sig[0]), sig_obj))
+
+                        # New-style-decorate the handler method
+                        try:
+                            handler_name = sig[2]
+                        except IndexError:
+                            pass  # Output signal; no handler
+                        else:
+                            assert isinstance(handler_name, str)
+                            attrib[handler_name] = sig_obj(attrib[handler_name])
+
+            # Finally, make this a new-style type
+            existing = type('Inputs' if sigcls == Input else
+                            'Outputs' if sigcls == Output else None,
+                            (), dict(existing))
+
+        return existing
 
     @classmethod
-    def add_extra_attributes(cls, name, attrib):
-        return attrib
+    def add_extra_attributes(cls, name, bases, attrib):
+        pass
 
 
 class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
@@ -75,32 +118,34 @@ class OWBaseLearnerMeta(DefaultWidgetChannelsMetaClass):
 
     @classmethod
     def default_inputs(cls, attrib):
-        return [("Data", Table, "set_data"),
-                ("Preprocessor", Preprocess, "set_preprocessor")]
+        return [('data', Input("Data", Table, default=True, _seq_id=-2)),
+                ('preprocessor', Input("Preprocessor", Preprocess, _seq_id=-1))]
 
     @classmethod
     def default_outputs(cls, attrib):
         learner_class = attrib['LEARNER']
-        replaces = []
-        if issubclass(learner_class, LearnerClassification):
-            model_name = 'Classifier'
-        elif issubclass(learner_class, LearnerRegression):
-            model_name = 'Predictor'
-        else:
-            model_name = 'Model'
-            replaces = ['Classifier', 'Predictor']
+        model_name, replaces = (
+            ('Classifier', ()) if issubclass(learner_class, LearnerClassification) else
+            ('Predictor', ()) if issubclass(learner_class, LearnerRegression) else
+            ('Model', ('Classifier', 'Predictor')))
 
+        # Compat for old-style out-signals, e.g. self.send(self.OUTPUT_MODEL_NAME, model)
         attrib['OUTPUT_MODEL_NAME'] = model_name
 
-        return [widget.OutputSignal("Learner", learner_class),
-                widget.OutputSignal(model_name, learner_class.__returns__,
-                                    replaces=replaces)]
+        return [('learner', Output('Learner', learner_class, _seq_id=-2)),
+                ('model', Output(model_name, learner_class.__returns__,
+                                 replaces=replaces, _seq_id=-1))]
 
     @classmethod
-    def add_extra_attributes(cls, name, attrib):
+    def add_extra_attributes(cls, name, bases, attrib):
         if 'learner_name' not in attrib:
             attrib['learner_name'] = Setting(attrib['name'])
-        return attrib
+
+        # Decorate default input handlers with associated Input signals
+        attr_dicts = [attrib] + [base.__dict__ for base in bases]
+        handler = lambda name: next(d[name] for d in attr_dicts if name in d)
+        attrib['set_data'] = attrib['Inputs'].data(handler('set_data'))
+        attrib['set_preprocessor'] = attrib['Inputs'].preprocessor(handler('set_preprocessor'))
 
 
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
@@ -186,7 +231,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             self.learner.use_default_preprocessors = True
         if self.learner is not None:
             self.learner.name = self.learner_name
-        self.send("Learner", self.learner)
+        self.Outputs.learner.send(self.learner)
         self.outdated_settings = False
         self.Warning.outdated_learner.clear()
 
@@ -206,7 +251,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             else:
                 self.model.name = self.learner_name
                 self.model.instances = self.data
-        self.send(self.OUTPUT_MODEL_NAME, self.model)
+        self.Outputs.model.send(self.model)
 
     def check_data(self):
         self.valid_data = False
@@ -232,15 +277,15 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.Warning.outdated_learner(shown=not self.auto_apply)
         self.apply()
 
-    def _change_name(self, instance, signal_name):
+    def _change_name(self, instance, signal):
         if instance:
             instance.name = self.learner_name
             if self.auto_apply:
-                self.send(signal_name, instance)
+                signal.send(instance)
 
     def learner_name_changed(self):
-        self._change_name(self.learner, "Learner")
-        self._change_name(self.model, self.OUTPUT_MODEL_NAME)
+        self._change_name(self.learner, self.Outputs.learner)
+        self._change_name(self.model, self.Outputs.model)
 
     def send_report(self):
         self.report_items((("Name", self.learner_name),))
