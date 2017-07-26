@@ -55,3 +55,18 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         model_sparse = self.get_output("Model")
         self.assertTrue(np.array_equal(model_dense._code, model_sparse._code))
         self.assertTrue(np.array_equal(model_dense._values, model_sparse._values))
+
+    def test_sparse_data_regression(self):
+        """
+        Regression Tree can handle sparse data.
+        GH-2497
+        """
+        table1 = Table("housing")
+        self.send_signal("Data", table1)
+        model_dense = self.get_output("Model")
+        table2 = Table("housing")
+        table2.X = sp.csr_matrix(table2.X)
+        self.send_signal("Data", table2)
+        model_sparse = self.get_output("Model")
+        self.assertTrue(np.array_equal(model_dense._code, model_sparse._code))
+        self.assertTrue(np.array_equal(model_dense._values, model_sparse._values))

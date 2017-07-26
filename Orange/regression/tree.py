@@ -1,6 +1,7 @@
 """Tree inducers: SKL and Orange's own inducer"""
 
 import numpy as np
+import scipy.sparse as sp
 import sklearn.tree as skl_tree
 
 from Orange.base import TreeModel as TreeModelInterface
@@ -96,7 +97,7 @@ class TreeLearner(Learner):
             if score == 0:
                 return REJECT_ATTRIBUTE
             mapping, branches = MappedDiscreteNode.branches_from_mapping(
-                data.X[:, attr_no], mapping, len(attr.values))
+                col_x, mapping, len(attr.values))
             node = MappedDiscreteNode(attr, attr_no, mapping, None)
             return score, node, branches, 2
 
@@ -118,13 +119,17 @@ class TreeLearner(Learner):
 
         #######################################
         # The real _select_attr starts here
+        is_sparse = sp.issparse(data.X)
         domain = data.domain
         col_y = data.Y
         best_score, *best_res = REJECT_ATTRIBUTE
         best_res = [Node(None, 0, None), ] + best_res[1:]
         disc_scorer = _score_disc_bin if self.binarize else _score_disc
         for attr_no, attr in enumerate(domain.attributes):
-            col_x = data[:, attr_no].X.reshape((len(data),))
+            col_x = data[:, attr_no].X
+            if is_sparse:
+                col_x = col_x.toarray()
+            col_x = col_x.reshape((len(data),))
             sc, *res = disc_scorer() if attr.is_discrete else _score_cont()
             if res[0] is not None and sc > best_score:
                 best_score, best_res = sc, res
