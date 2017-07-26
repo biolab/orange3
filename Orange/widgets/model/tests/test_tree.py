@@ -41,9 +41,9 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
                            for par, val in zip(self.parameters, (None, 2, 1))]
         self.test_parameters()
 
-    def test_sparse_data(self):
+    def test_sparse_data_classification(self):
         """
-        Tree can handle sparse data.
+        Classification Tree can handle sparse data.
         GH-2430
         """
         table1 = Table("iris")
@@ -51,7 +51,7 @@ class TestOWClassificationTree(WidgetTest, WidgetLearnerTestMixin):
         model_dense = self.get_output("Model")
         table2 = Table("iris")
         table2.X = sp.csr_matrix(table2.X)
+        self.send_signal("Data", table2)
         model_sparse = self.get_output("Model")
         self.assertTrue(np.array_equal(model_dense._code, model_sparse._code))
-        self.assertTrue(np.array_equal(model_dense._thresholds, model_sparse._thresholds))
         self.assertTrue(np.array_equal(model_dense._values, model_sparse._values))
