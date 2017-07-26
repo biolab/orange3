@@ -5,10 +5,11 @@ from AnyQt.QtCore import Qt
 from Orange.canvas.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
 from Orange.modelling.linear import SGDLearner
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.model.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.signals import Output
 
 MAXINT = 2 ** 31 - 1
 
@@ -25,7 +26,8 @@ class OWSGD(OWBaseLearner):
 
     LEARNER = SGDLearner
 
-    outputs = [("Coefficients", Table, widget.Explicit)]
+    class Outputs(OWBaseLearner.Outputs):
+        coefficients = Output("Coefficients", Table)
 
     reg_losses = (
         ('Squared Loss', 'squared_loss'),
@@ -302,7 +304,7 @@ class OWSGD(OWBaseLearner):
                         [attr.name for attr in self.model.domain.attributes]
                 coeffs = Table(domain, list(zip(cfs, names)))
                 coeffs.name = "coefficients"
-        self.send("Coefficients", coeffs)
+        self.Outputs.coefficients.send(coeffs)
 
 
 if __name__ == '__main__':

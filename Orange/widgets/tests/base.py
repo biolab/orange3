@@ -453,7 +453,7 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
@@ -509,12 +509,12 @@ class WidgetLearnerTestMixin:
 
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.widget.apply_button.button.click()
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
         self.widget.apply_button.button.click()
-        model = self.get_output(self.model_name)
+        model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)
         self.assertIsInstance(model, self.widget.LEARNER.__returns__)
         self.assertIsInstance(model, self.model_class)
@@ -535,7 +535,7 @@ class WidgetLearnerTestMixin:
         self.widget.name_line_edit.setText(new_name)
         self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
-        self.assertEqual(self.get_output(self.model_name).name, new_name)
+        self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
     def _get_param_value(self, learner, param):
         if isinstance(learner, Fitter):
@@ -592,7 +592,7 @@ class WidgetLearnerTestMixin:
                         "Mismatching setting for parameter '%s'" % parameter)
 
                     if issubclass(self.widget.LEARNER, SklModel):
-                        model = self.get_output(self.model_name)
+                        model = self.get_output(self.widget.Outputs.model)
                         if model is not None:
                             self.assertEqual(self._get_param_value(model, parameter), value)
                             self.assertFalse(self.widget.Error.active)

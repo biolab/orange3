@@ -1,3 +1,4 @@
+import inspect
 import sys
 
 from AnyQt.QtCore import QObject
@@ -70,3 +71,18 @@ def dumpObjectTree(obj, _indent=0):
           file=sys.stderr)
     for child in obj.children():
         dumpObjectTree(child, _indent + 1)
+
+
+def getmembers(obj, predicate=None):
+    """Return all the members of an object in a list of (name, value) pairs sorted by name.
+
+    Behaves like inspect.getmembers. If a type object is passed as a predicate,
+    only members of that type are returned.
+    """
+
+    if isinstance(predicate, type):
+        def mypredicate(x):
+            return isinstance(x, predicate)
+    else:
+        mypredicate = predicate
+    return inspect.getmembers(obj, mypredicate)

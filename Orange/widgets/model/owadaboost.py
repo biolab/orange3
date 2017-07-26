@@ -22,7 +22,7 @@ class OWAdaBoost(OWBaseLearner):
 
     LEARNER = SklAdaBoostLearner
 
-    class Inputs:
+    class Inputs(OWBaseLearner.Inputs):
         learner = Input("Learner", Learner)
 
     #: Algorithms for classification problems

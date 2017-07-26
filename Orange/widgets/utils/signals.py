@@ -1,8 +1,8 @@
 import copy
-import inspect
 import itertools
 
 from Orange.canvas.registry.description import InputSignal, OutputSignal
+from Orange.widgets.utils import getmembers
 
 # increasing counter for ensuring the order of Input/Output definitions
 # is preserved when going through the unordered class namespace of
@@ -146,12 +146,6 @@ class Output(OutputSignal, _Signal):
             signal_manager.send(self.widget, self.name, value, id)
 
 
-def _get_members(obj, member_type):
-    def is_member_type(member):
-        return isinstance(member, member_type)
-    return inspect.getmembers(obj, is_member_type)
-
-
 class WidgetSignalsMixin:
     """Mixin for managing widget's input and output signals"""
     class Inputs:
@@ -165,7 +159,7 @@ class WidgetSignalsMixin:
 
     def _bind_outputs(self):
         bound_cls = self.Outputs()
-        for name, signal in _get_members(bound_cls, Output):
+        for name, signal in getmembers(bound_cls, Output):
             setattr(bound_cls, name, signal.bound_signal(self))
         setattr(self, "Outputs", bound_cls)
 
@@ -217,7 +211,7 @@ class WidgetSignalsMixin:
     @classmethod
     def _check_input_handlers(cls):
         unbound = [signal.name
-                   for _, signal in _get_members(cls.Inputs, Input)
+                   for _, signal in getmembers(cls.Inputs, Input)
                    if not signal.handler]
         if unbound:
             raise ValueError("unbound signal(s) in {}: {}".
@@ -249,7 +243,7 @@ class WidgetSignalsMixin:
             return old_style
 
         signal_class = getattr(cls, direction.title())
-        signals = [signal for _, signal in _get_members(signal_class, _Signal)]
+        signals = [signal for _, signal in getmembers(signal_class, _Signal)]
         return list(sorted(signals, key=lambda s: s._seq_id))
 
 

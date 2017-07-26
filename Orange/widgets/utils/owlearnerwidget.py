@@ -1,5 +1,5 @@
-import numpy as np
 from copy import deepcopy
+import numpy as np
 
 from AnyQt.QtCore import QTimer, Qt
 
@@ -8,6 +8,7 @@ from Orange.modelling import Fitter, Learner, Model
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils import getmembers
 from Orange.widgets.utils.signals import Output, Input
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
@@ -15,20 +16,38 @@ from Orange.widgets.widget import OWWidget, WidgetMetaClass, Msg
 
 class OWBaseLearnerMeta(WidgetMetaClass):
     """ Meta class for learner widgets
+
+    OWBaseLearner declares two outputs, learner and model with
+    generic type (Learner and Model).
+
+    This metaclass ensures that each of the subclasses gets
+    its own Outputs class with output that match the corresponding
+    learner.
     """
-    def __new__(mcls, name, bases, attributes):
-        learner = attributes.get("LEARNER", None)
-        # classes with empty names are considered abstract
-        if attributes.get(name):
-            if learner is None:
-                raise AttributeError(
-                    "'{}' must declare attribute LEARNER".format(name))
+    def __new__(cls, name, bases, attributes):
+        def abstract_widget():
+            return not attributes.get("name")
 
-            outputs = attributes["Outputs"] = deepcopy(attributes["Outputs"])
-            outputs.learner.type = learner
-            outputs.model.type = learner.__returns__
+        def copy_outputs(template):
+            result = type("Outputs", (), {})
+            for name, signal in getmembers(template, Output):
+                setattr(result, name, deepcopy(signal))
+            return result
 
-        return super().__new__(mcls, name, bases, attributes)
+        obj = super().__new__(cls, name, bases, attributes)
+        if abstract_widget():
+            return obj
+
+        learner = attributes.get("LEARNER")
+        if not learner:
+            raise AttributeError(
+                "'{}' must declare attribute LEARNER".format(name))
+
+        outputs = obj.Outputs = copy_outputs(obj.Outputs)
+        outputs.learner.type = learner
+        outputs.model.type = learner.__returns__
+
+        return obj
 
 
 class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
@@ -64,8 +83,6 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         preprocessor = Input("Preprocessor", Preprocess)
 
     class Outputs:
-        # Exact output types for each learner widget are set in
-        # OWBaseLearnerMeta meta class
         learner = Output("Learner", Learner, dynamic=False)
         model = Output("Model", Model, dynamic=False,
                        replaces=["Classifier", "Predictor"])
@@ -75,7 +92,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.data = None
         self.valid_data = False
         self.learner = None
-        self.learner_name = self.LEARNER.name
+        self.learner_name = self.name
         self.model = None
         self.preprocessors = None
         self.outdated_settings = False
