@@ -188,6 +188,7 @@ class OWManifoldLearning(OWWidget):
         sparse_methods = Msg('Only t-SNE method supported on sparse data')
         sparse_tsne_distance = Msg('Chebyshev, Jaccard, and Mahalanobis '
                                    'distances not supported with sparse data.')
+        out_of_memory = Msg("Out of memory")
 
     def __init__(self):
         self.data = None
@@ -271,6 +272,8 @@ class OWManifoldLearning(OWWidget):
                     self.Error.n_neighbors_too_small("{}".format(n))
                 else:
                     self.Error.manifold_error(e.args[0])
+            except MemoryError:
+                self.Error.out_of_memory()
             except np.linalg.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
         self.Outputs.transformed_data.send(out)
