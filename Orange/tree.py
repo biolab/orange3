@@ -3,6 +3,7 @@
 from collections import OrderedDict
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.base import Model, TreeModel as TreeModelInterface
 
@@ -191,8 +192,14 @@ class TreeModel(TreeModelInterface):
 
     def get_values(self, X):
         from Orange.classification import _tree_scorers
-        return _tree_scorers.compute_predictions(
-            X, self._code, self._values, self._thresholds)
+        if sp.isspmatrix_csc(X):
+            func = _tree_scorers.compute_predictions_csc
+        elif sp.issparse(X):
+            func = _tree_scorers.compute_predictions_csr
+            X = X.tocsr()
+        else:
+            func = _tree_scorers.compute_predictions
+        return func(X, self._code, self._values, self._thresholds)
 
     def predict(self, X):
         predictions = self.get_values(X)

@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.classification.tree import \
@@ -401,3 +402,48 @@ class TestTreeModel(unittest.TestCase):
              [ 6 42]     v3 f
              [ 7 42]     v3 d or e
 """)
+
+    def test_compile_and_run_cont_sparse(self):
+        # pylint: disable=protected-access
+        model = TreeModel(self.data, self.root)
+        expected_values = np.vstack((np.arange(8), [42] * 8)).T
+        np.testing.assert_equal(model._values, expected_values)
+        self.assertEqual(model._thresholds[0], 13)
+        self.assertEqual(model._thresholds.shape, (8,))
+
+        nan = float("nan")
+        x = sp.csr_matrix(np.array(
+            [[nan, 0, 0],
+             [13, nan, 0],
+             [13, 0, 0],
+             [13, 1, 0],
+             [13, 2, 0],
+             [14, 2, nan],
+             [14, 2, 2],
+             [14, 2, 1]], dtype=float
+        ))
+        np.testing.assert_equal(model.get_values(x), expected_values)
+
+        x = sp.csc_matrix(np.array(
+            [[nan, 0, 0],
+             [13, nan, 0],
+             [13, 0, 0],
+             [13, 1, 0],
+             [13, 2, 0],
+             [14, 2, nan],
+             [14, 2, 2],
+             [14, 2, 1]], dtype=float
+        ))
+        np.testing.assert_equal(model.get_values(x), expected_values)
+
+        x = sp.lil_matrix(np.array(
+            [[nan, 0, 0],
+             [13, nan, 0],
+             [13, 0, 0],
+             [13, 1, 0],
+             [13, 2, 0],
+             [14, 2, nan],
+             [14, 2, 2],
+             [14, 2, 1]], dtype=float
+        ))
+        np.testing.assert_equal(model.get_values(x), expected_values)
