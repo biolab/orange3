@@ -189,7 +189,7 @@ class OWSilhouettePlot(widget.OWWidget):
                 data = None
                 error_msg = "No continuous columns"
             elif ncont < len(data.domain.attributes):
-                warning_msg = "{0} discrete columns will not be used for " \
+                warning_msg = "{0} categorical columns will not be used for " \
                               "distance computation".format(ndiscrete)
 
         self.data = data

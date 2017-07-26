@@ -46,7 +46,7 @@ class OWDistances(OWWidget):
     buttons_area_orientation = Qt.Vertical
 
     class Error(OWWidget.Error):
-        no_continuous_features = Msg("No continuous features")
+        no_continuous_features = Msg("No numeric features")
         dense_metric_sparse_data = Msg("Selected metric does not support sparse data")
         empty_data = Msg("Empty data set")
         mahalanobis_error = Msg("{}")
@@ -54,7 +54,7 @@ class OWDistances(OWWidget):
         distances_value_error = Msg("Error occurred while calculating distances\n{}")
 
     class Warning(OWWidget.Warning):
-        ignoring_discrete = Msg("Ignoring discrete features")
+        ignoring_discrete = Msg("Ignoring categorical features")
         imputing_data = Msg("Imputing missing values")
 
     def __init__(self):

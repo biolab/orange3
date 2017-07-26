@@ -618,7 +618,7 @@ class OWFeatureConstructor(OWWidget):
         items = OrderedDict()
         for feature in self.featuremodel:
             if isinstance(feature, DiscreteDescriptor):
-                items[feature.name] = "{} (discrete with values {}{})".format(
+                items[feature.name] = "{} (categorical with values {}{})".format(
                     feature.expression, feature.values,
                     "; ordered" * feature.ordered)
             elif isinstance(feature, ContinuousDescriptor):

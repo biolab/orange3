@@ -146,7 +146,7 @@ class OWDistributions(widget.OWWidget):
             gui.indentedBox(box, sep=4),
             self, "disc_cont", "Bin continuous variables",
             callback=self._on_groupvar_idx_changed,
-            tooltip="Show continuous variables as discrete.")
+            tooltip="Show numeric variables as categorical.")
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict

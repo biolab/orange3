@@ -67,7 +67,7 @@ class DiscretizeEditor(BaseEditor):
         NoDisc: "None",
         EqualWidth: "Equal width discretization",
         EqualFreq: "Equal frequency discretization",
-        Drop: "Remove continuous attributes",
+        Drop: "Remove numeric features",
         EntropyMDL: "Entropy-MDL discretization"
     }
 
@@ -194,9 +194,9 @@ class ContinuizeEditor(BaseEditor):
 
     Continuizers = OrderedDict([
         (Continuize.FrequentAsBase, "Most frequent is base"),
-        (Continuize.Indicators, "One attribute per value"),
-        (Continuize.RemoveMultinomial, "Remove multinomial attributes"),
-        (Continuize.Remove, "Remove all discrete attributes"),
+        (Continuize.Indicators, "One feature per value"),
+        (Continuize.RemoveMultinomial, "Remove non-binary features"),
+        (Continuize.Remove, "Remove categorical features"),
         (Continuize.AsOrdinal, "Treat as ordinal"),
         (Continuize.AsNormalizedOrdinal, "Divide by number of values")
     ])

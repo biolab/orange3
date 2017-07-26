@@ -430,7 +430,7 @@ class OWHeatMap(widget.OWWidget):
 
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
-        discrete_ignored = Msg("{} discrete column{} ignored")
+        discrete_ignored = Msg("{} categorical feature{} ignored")
         row_clust = Msg("{}")
         col_clust = Msg("{}")
         sparse_densified = Msg("Showing this data may require a lot of memory")
