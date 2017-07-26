@@ -1064,12 +1064,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not self.legend:
             self.create_legend()
         shape_var = self.domain[shape_index]
-        color = self.plot_widget.palette().color(OWPalette.Data)
-        pen = QPen(color.darker(self.DarkerValue))
+        color = QColor(0, 0, 0)
         color.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
-                ScatterPlotItem(pen=pen, brush=color, size=10,
+                ScatterPlotItem(pen=color, brush=color, size=10,
                                 symbol=self.CurveSymbols[i]), escape(value))
 
     def zoom_button_clicked(self):
