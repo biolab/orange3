@@ -413,7 +413,7 @@ class OWDataTable(widget.OWWidget):
             callback=self._on_show_variable_labels_changed)
 
         gui.checkBox(box, self, "show_distributions",
-                     'Visualize continuous values',
+                     'Visualize numeric values',
                      callback=self._on_distribution_color_changed)
         gui.checkBox(box, self, "color_by_class", 'Color by instance classes',
                      callback=self._on_distribution_color_changed)

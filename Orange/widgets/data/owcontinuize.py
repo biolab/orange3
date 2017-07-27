@@ -20,8 +20,8 @@ from Orange.widgets.widget import Input, Output
 
 class OWContinuize(widget.OWWidget):
     name = "Continuize"
-    description = ("Transform discrete attributes into continuous and, " +
-                   "optionally, normalize the continuous values.")
+    description = ("Transform categorical attributes into numeric and, " +
+                   "optionally, normalize numeric values.")
     icon = "icons/Continuize.svg"
     category = "Data"
     keywords = ["data", "continuize"]
@@ -50,7 +50,7 @@ class OWContinuize(widget.OWWidget):
         ("Most frequent value as base", Continuize.FrequentAsBase),
         ("One attribute per value", Continuize.Indicators),
         ("Ignore multinomial attributes", Continuize.RemoveMultinomial),
-        ("Remove all discrete attributes", Continuize.Remove),
+        ("Remove categorical attributes", Continuize.Remove),
         ("Treat as ordinal", Continuize.AsOrdinal),
         ("Divide by number of values", Continuize.AsNormalizedOrdinal))
 
@@ -71,19 +71,19 @@ class OWContinuize(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        box = gui.vBox(self.controlArea, "Multinomial Attributes")
+        box = gui.vBox(self.controlArea, "Categorical Features")
         gui.radioButtonsInBox(
             box, self, "multinomial_treatment",
             btnLabels=[x[0] for x in self.multinomial_treats],
             callback=self.settings_changed)
 
-        box = gui.vBox(self.controlArea, "Continuous Attributes")
+        box = gui.vBox(self.controlArea, "Numeric Features")
         gui.radioButtonsInBox(
             box, self, "continuous_treatment",
             btnLabels=[x[0] for x in self.continuous_treats],
             callback=self.settings_changed)
 
-        box = gui.vBox(self.controlArea, "Discrete Class Attribute")
+        box = gui.vBox(self.controlArea, "Categorical Outcomes")
         gui.radioButtonsInBox(
             box, self, "class_treatment",
             btnLabels=[t[0] for t in self.class_treats],
@@ -141,9 +141,9 @@ class OWContinuize(widget.OWWidget):
     def send_report(self):
         self.report_items(
             "Settings",
-            [("Multinominal attributes",
+            [("Categorical features",
               self.multinomial_treats[self.multinomial_treatment][0]),
-             ("Continuous attributes",
+             ("Numeric features",
               self.continuous_treats[self.continuous_treatment][0]),
              ("Class", self.class_treats[self.class_treatment][0]),
              ("Value range", self.value_ranges[self.zero_based])])

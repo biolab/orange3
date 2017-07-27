@@ -35,11 +35,11 @@ class OWPurgeDomain(widget.OWWidget):
     resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
 
-    feature_options = (('sortValues', 'Sort discrete feature values'),
+    feature_options = (('sortValues', 'Sort categorical feature values'),
                        ('removeValues', 'Remove unused feature values'),
                        ('removeAttributes', 'Remove constant features'))
 
-    class_options = (('sortClasses', 'Sort discrete class variable values'),
+    class_options = (('sortClasses', 'Sort categorical class values'),
                      ('removeClasses', 'Remove unused class variable values'),
                      ('removeClassAttribute', 'Remove constant class variables'))
 

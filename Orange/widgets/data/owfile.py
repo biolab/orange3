@@ -371,7 +371,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if domain.has_continuous_class:
             text += "<br/>Regression; numerical class."
         elif domain.has_discrete_class:
-            text += "<br/>Classification; discrete class with {} values.".\
+            text += "<br/>Classification; categorical class with {} values.".\
                 format(len(domain.class_var.values))
         elif table.domain.class_vars:
             text += "<br/>Multi-target; {} target variables.".format(

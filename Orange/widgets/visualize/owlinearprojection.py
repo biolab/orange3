@@ -589,7 +589,7 @@ class OWLinearProjection(widget.OWWidget):
         # Initialize the GUI controls from data's domain.
         cont_vars = [var for var in data.domain.variables
                      if var.is_continuous]
-        self.warning("Plotting requires continuous features.",
+        self.warning("Plotting requires numeric features.",
                      shown=not len(cont_vars))
         self.varmodel_selected[:] = cont_vars[:3]
         self.varmodel_other[:] = cont_vars[3:]

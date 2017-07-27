@@ -341,7 +341,7 @@ class OWFeatureConstructor(OWWidget):
     ]
 
     class Error(OWWidget.Error):
-        more_values_needed = Msg("Discrete feature {} needs more values.")
+        more_values_needed = Msg("Categorical feature {} needs more values.")
         invalid_expressions = Msg("Invalid expressions: {}.")
 
     def __init__(self):
@@ -618,7 +618,7 @@ class OWFeatureConstructor(OWWidget):
         items = OrderedDict()
         for feature in self.featuremodel:
             if isinstance(feature, DiscreteDescriptor):
-                items[feature.name] = "{} (discrete with values {}{})".format(
+                items[feature.name] = "{} (categorical with values {}{})".format(
                     feature.expression, feature.values,
                     "; ordered" * feature.ordered)
             elif isinstance(feature, ContinuousDescriptor):

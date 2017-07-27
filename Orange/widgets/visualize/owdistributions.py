@@ -144,9 +144,9 @@ class OWDistributions(widget.OWWidget):
 
         self.cb_disc_cont = gui.checkBox(
             gui.indentedBox(box, sep=4),
-            self, "disc_cont", "Bin continuous variables",
+            self, "disc_cont", "Bin numeric variables",
             callback=self._on_groupvar_idx_changed,
-            tooltip="Show continuous variables as discrete.")
+            tooltip="Show numeric variables as categorical.")
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -262,11 +262,11 @@ class OWDistributions(widget.OWWidget):
 
     def _setup_smoothing(self):
         if not self.disc_cont and self.var and self.var.is_continuous:
-            self.cb_disc_cont.setText("Bin continuous variables")
+            self.cb_disc_cont.setText("Bin numeric variables")
             self.l_smoothing_l.setText("Smooth")
             self.l_smoothing_r.setText("Precise")
         else:
-            self.cb_disc_cont.setText("Bin continuous variables into {} bins".
+            self.cb_disc_cont.setText("Bin numeric variables into {} bins".
                                       format(self.bins[self.smoothing_index]))
             self.l_smoothing_l.setText(" " + str(self.bins[0]))
             self.l_smoothing_r.setText(" " + str(self.bins[-1]))

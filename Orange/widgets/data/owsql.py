@@ -159,7 +159,7 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.custom_sql)
 
         gui.checkBox(box, self, "guess_values",
-                     "Auto-discover discrete variables",
+                     "Auto-discover categorical variables",
                      callback=self.open_table)
 
         gui.checkBox(box, self, "download",
