@@ -333,7 +333,7 @@ class OWRuleLearner(OWBaseLearner):
                 self.model.name = self.learner_name
                 self.model.instances = self.data
                 self.valid_data = True
-        self.send(self.OUTPUT_MODEL_NAME, self.model)
+        self.Outputs.model.send(self.model)
 
     def create_learner(self):
         """

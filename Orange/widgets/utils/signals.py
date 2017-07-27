@@ -2,6 +2,7 @@ import copy
 import itertools
 
 from Orange.canvas.registry.description import InputSignal, OutputSignal
+from Orange.widgets.utils import getmembers
 
 # increasing counter for ensuring the order of Input/Output definitions
 # is preserved when going through the unordered class namespace of
@@ -158,9 +159,8 @@ class WidgetSignalsMixin:
 
     def _bind_outputs(self):
         bound_cls = self.Outputs()
-        for name, signal in self.Outputs.__dict__.items():
-            if isinstance(signal, Output):
-                bound_cls.__dict__[name] = signal.bound_signal(self)
+        for name, signal in getmembers(bound_cls, Output):
+            setattr(bound_cls, name, signal.bound_signal(self))
         setattr(self, "Outputs", bound_cls)
 
     def send(self, signalName, value, id=None):
@@ -210,8 +210,9 @@ class WidgetSignalsMixin:
 
     @classmethod
     def _check_input_handlers(cls):
-        unbound = [signal.name for signal in cls.Inputs.__dict__.values()
-                   if isinstance(signal, Input) and not signal.handler]
+        unbound = [signal.name
+                   for _, signal in getmembers(cls.Inputs, Input)
+                   if not signal.handler]
         if unbound:
             raise ValueError("unbound signal(s) in {}: {}".
                              format(cls.__name__, ", ".join(unbound)))
@@ -223,7 +224,7 @@ class WidgetSignalsMixin:
                              format(cls.__name__, ", ".join(missing_handlers)))
 
     @classmethod
-    def get_signals(cls, direction):
+    def get_signals(cls, direction, ignore_old_style=False):
         """
         Return a list of `InputSignal` or `OutputSignal` needed for the
         widget description. For old-style signals, the method returns the
@@ -238,12 +239,11 @@ class WidgetSignalsMixin:
         list of `InputSignal` or `OutputSignal`
         """
         old_style = cls.__dict__.get(direction, None)
-        if old_style:
+        if old_style and not ignore_old_style:
             return old_style
 
         signal_class = getattr(cls, direction.title())
-        signals = [signal for signal in signal_class.__dict__.values()
-                   if isinstance(signal, _Signal)]
+        signals = [signal for _, signal in getmembers(signal_class, _Signal)]
         return list(sorted(signals, key=lambda s: s._seq_id))
 
 

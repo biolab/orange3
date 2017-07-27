@@ -72,7 +72,7 @@ disable=
     parameter-unpacking,long-suffix,cmp-method,using-cmp-argument,
     useless-suppression,import-error,
     empty-docstring,missing-docstring,redefined-outer-name,redefined-builtin,
-    attribute-defined-outside-init, no-else-return, len-as-condition
+    attribute-defined-outside-init, no-else-return, len-as-condition, invalid-sequence-index
 
 
 [REPORTS]
