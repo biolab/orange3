@@ -48,6 +48,8 @@ class DummySignalManager:
         self.outputs = {}
 
     def send(self, widget, signal_name, value, id):
+        if not isinstance(signal_name, str):
+            signal_name = signal_name.name
         self.outputs[(widget, signal_name)] = value
 
 
@@ -202,7 +204,7 @@ class WidgetTest(GuiTest):
 
         Parameters
         ----------
-        input_name : str
+        input : str
         value : Object
         id : int
             channel id, used for inputs with flag Multiple
@@ -224,7 +226,8 @@ class WidgetTest(GuiTest):
         if widget.isBlocking():
             raise RuntimeError("'send_signal' called but the widget is in "
                                "blocking state and does not accept inputs.")
-        getattr(widget, input.handler)(value, *args)
+        handler = getattr(widget, input.handler)
+        handler(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
             spy = QSignalSpy(widget.blockingStateChanged)
