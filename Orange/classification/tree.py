@@ -94,7 +94,7 @@ class TreeLearner(Learner):
             cont = _tree_scorers.contingency(col_x, len(data.domain.attributes[attr_no].values),
                                              data.Y, len(data.domain.class_var.values))
             attr_distr = np.sum(cont, axis=0)
-            null_nodes = attr_distr <= self.min_samples_leaf
+            null_nodes = attr_distr < self.min_samples_leaf
             # This is just for speed. If there is only a single non-null-node,
             # entropy wouldn't decrease anyway.
             if sum(null_nodes) >= n_values - 1:
