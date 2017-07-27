@@ -6,6 +6,49 @@ Change Log
 * ...
 
 
+[3.4.5] - 2017-07-27
+--------------------
+##### Enhancements
+* OWMDS, OWLinearProjection: Save selection in workflow ([#2301](../../pull/2301))
+* SQL: Save user name and password via credentials manager ([#2403](../../pull/2403))
+* Canvas Annotations: Text markup editing ([#2422](../../pull/2422))
+* New windows installer scripts ([#2338](../../pull/2338))
+
+##### Bugfixes
+* Tree: Fix min_samples_leaf check ([#2507](../../pull/2507))
+* Tree: Support classification on sparse data ([#2430](../../pull/2430))
+* Trees: Support regression on sparse data ([#2497](../../pull/2497))
+* Trees: Fix predictions on sparse data ([#2496](../../pull/2496))
+* Change Variable Icons: Discrete -> Categorical, Continuous -> Numeric ([#2477](../../pull/2477))
+* Distributions: Show probabilities upon selection ([#2428](../../pull/2428))
+* Manifold Learning: Handling out of memory error ([#2441](../../pull/2441))
+* CN2 Rule Induction: Handling out of memory error ([#2397](../../pull/2397))
+* Hierarchical Clustering: Explicit geometry transform ([#2465](../../pull/2465))
+* Scatter Plot Graph: Legend symbols color ([#2487](../../pull/2487))
+* Table: Fix printing data with sparse Y ([#2457](../../pull/2457))
+* Ensure visible nodes after opening a workflow. ([#2490](../../pull/2490))
+* Select Rows: Removing Unused Values for Discrete Variables in Sparse Data ([#2452](../../pull/2452))
+* simple_tree.c: Fix mingw compiler compatibility ([#2479](../../pull/2479))
+* Add-ons: Fix Installation of Official Add-ons Through Drag & Drop ([#2481](../../pull/2481))
+* Mosaic: Clear when data is disconnected ([#2462](../../pull/2462))
+* Create Class: Class name cannot be empty ([#2440](../../pull/2440))
+* WidgetSignalsMixin: Fix input/output ordering for 'newstyle' signals ([#2469](../../pull/2469))
+* Table: Update `ids` in `Table.__del__` ([#2470](../../pull/2470))
+* Preprocess: Fix RemoveNaNClasses / Use existing HasClass ([#2450](../../pull/2450))
+* SQL: Fixes for Custom SQL option ([#2456](../../pull/2456))
+* OWColor: Fix propagating changes to the output ([#2379](../../pull/2379))
+* Distances: Prevent inf numbers ([#2380](../../pull/2380))
+* Test and Score: Show default columns ([#2437](../../pull/2437))
+* Silhouette Plot: Now setting axis range properly ([#2377](../../pull/2377))
+* Logistic Regression: Impute ([#2392](../../pull/2392))
+* schemeedit: Clear edit focus before removing items ([#2427](../../pull/2427))
+* Disable menu and mouse zoom in all evaluate's plotting widgets. ([#2429](../../pull/2429))
+* canvas: Fix proposed connection scoring for dynamic signals ([#2431](../../pull/2431))
+* ROC Analysis: Color support for more than 9 evaluation learners ([#2394](../../pull/2394))
+* Scatter Plot: Two minor errors ([#2381](../../pull/2381))
+* Feature Constructor: No fail when no values ([#2417](../../pull/2417))
+
+
 [3.4.4] - 2017-06-16
 --------------------
 ##### Enhancements
@@ -546,7 +589,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.4...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.4.5...HEAD
+[3.4.5]: https://github.com/biolab/orange3/compare/3.4.4...3.4.5
 [3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
 [3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
 [3.4.2]: https://github.com/biolab/orange3/compare/3.4.1...3.4.2
