@@ -113,6 +113,8 @@ class OWMDS(OWWidget):
     output_embedding_role = settings.Setting(2)
     autocommit = settings.Setting(True)
 
+    selection_indices = settings.Setting(None, schema_only=True)
+
     color_value = settings.ContextSetting("")
     shape_value = settings.ContextSetting("")
     size_value = settings.ContextSetting("")
@@ -523,6 +525,7 @@ class OWMDS(OWWidget):
 
         self.update_controls()
         self.openContext(self.data)
+        self.select_indices(self.selection_indices)
 
     def _toggle_run(self):
         if self.__state == OWMDS.Running:
@@ -1013,8 +1016,9 @@ class OWMDS(OWWidget):
         if output is not None and self._selection_mask is not None and \
                 numpy.any(self._selection_mask):
             subset = output[self._selection_mask]
+            self.selection_indices = numpy.flatnonzero(self._selection_mask)
         else:
-            subset = None
+            self.selection_indices = subset = None
         self.Outputs.selected_data.send(subset)
         self.Outputs.annotated_data.send(create_annotated_table(output, self._selection_mask))
 
@@ -1045,7 +1049,7 @@ class OWMDS(OWWidget):
         self.select_indices(indices, QApplication.keyboardModifiers())
 
     def select_indices(self, indices, modifiers=Qt.NoModifier):
-        if self.data is None:
+        if self.data is None or indices is None:
             return
 
         if self._selection_mask is None or \
