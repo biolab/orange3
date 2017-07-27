@@ -224,7 +224,7 @@ class WidgetSignalsMixin:
                              format(cls.__name__, ", ".join(missing_handlers)))
 
     @classmethod
-    def get_signals(cls, direction):
+    def get_signals(cls, direction, ignore_old_style=False):
         """
         Return a list of `InputSignal` or `OutputSignal` needed for the
         widget description. For old-style signals, the method returns the
@@ -239,7 +239,7 @@ class WidgetSignalsMixin:
         list of `InputSignal` or `OutputSignal`
         """
         old_style = cls.__dict__.get(direction, None)
-        if old_style:
+        if old_style and not ignore_old_style:
             return old_style
 
         signal_class = getattr(cls, direction.title())

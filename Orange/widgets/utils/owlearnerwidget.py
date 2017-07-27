@@ -1,4 +1,6 @@
 from copy import deepcopy
+
+import itertools
 import numpy as np
 
 from AnyQt.QtCore import QTimer, Qt
@@ -86,6 +88,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         learner = Output("Learner", Learner, dynamic=False)
         model = Output("Model", Model, dynamic=False,
                        replaces=["Classifier", "Predictor"])
+
+    OUTPUT_MODEL_NAME = Outputs.model.name  # Attr for backcompat w/ self.send() code
 
     def __init__(self):
         super().__init__()
@@ -268,3 +272,25 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         gui.separator(box, 15)
         self.apply_button = gui.auto_commit(box, self, 'auto_apply', '&Apply',
                                             box=False, commit=self.apply)
+
+    def send(self, signalName, value, id=None):
+        # A subclass might still use the old syntax to send outputs
+        # defined on this class
+        for _, output in getmembers(self.Outputs, Output):
+            if output.name == signalName or signalName in output.replaces:
+                output.send(value, id=id)
+                return
+
+        super().send(signalName, value, id)
+
+    @classmethod
+    def get_widget_description(cls):
+        # When a subclass defines defines old-style signals, those override
+        # the new-style ones, so we add them manually
+        desc = super().get_widget_description()
+
+        if cls.outputs:
+            desc["outputs"].extend(cls.get_signals("outputs", True))
+        if cls.inputs:
+            desc["inputs"].extend(cls.get_signals("inputs", True))
+        return desc
