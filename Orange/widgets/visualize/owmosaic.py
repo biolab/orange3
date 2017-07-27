@@ -303,7 +303,7 @@ class OWMosaicDisplay(OWWidget):
         incompatible_subset = Msg("Data subset is incompatible with Data")
         no_valid_data = Msg("No valid data")
         no_cont_selection_sql = \
-            Msg("Selection of continuous variables on SQL is not supported")
+            Msg("Selection of numeric features on SQL is not supported")
 
     def __init__(self):
         super().__init__()

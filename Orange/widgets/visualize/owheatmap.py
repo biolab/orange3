@@ -436,7 +436,7 @@ class OWHeatMap(widget.OWWidget):
         sparse_densified = Msg("Showing this data may require a lot of memory")
 
     class Error(widget.OWWidget.Error):
-        no_continuous = Msg("No continuous feature columns")
+        no_continuous = Msg("No numeric features")
         not_enough_features = Msg("Not enough features for column clustering")
         not_enough_instances = Msg("Not enough instances for clustering")
         not_enough_instances_k_means = Msg(

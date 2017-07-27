@@ -1191,7 +1191,7 @@ class Mdsplotutils(plotutils):
                 color_data = plotutils.continuous_colors(
                     col, palette=plotstyle.continuous_palette)
         else:
-            raise TypeError("Discrete/Continuous variable or None expected.")
+            raise TypeError("Categorical/Numeric variable or None expected.")
 
         return color_data
 

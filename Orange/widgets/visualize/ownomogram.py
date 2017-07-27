@@ -650,7 +650,7 @@ class OWNomogram(OWWidget):
             orientation=Qt.Horizontal, callback=self.update_scene)
 
         self.cont_feature_dim_combo = gui.comboBox(
-            box, self, "cont_feature_dim_index", label="Continuous features: ",
+            box, self, "cont_feature_dim_index", label="Numeric features: ",
             items=["1D projection", "2D curve"], orientation=Qt.Horizontal,
             callback=self.update_scene)
 

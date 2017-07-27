@@ -141,9 +141,9 @@ class OWContinuize(widget.OWWidget):
     def send_report(self):
         self.report_items(
             "Settings",
-            [("Multinominal attributes",
+            [("Categorical features",
               self.multinomial_treats[self.multinomial_treatment][0]),
-             ("Continuous attributes",
+             ("Numeric features",
               self.continuous_treats[self.continuous_treatment][0]),
              ("Class", self.class_treats[self.class_treatment][0]),
              ("Value range", self.value_ranges[self.zero_based])])
