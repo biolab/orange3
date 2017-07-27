@@ -1973,7 +1973,7 @@ def auto_commit(widget, master, value, label, auto_label=None, box=True,
     :param label: The button label
     :type label: str
     :param auto_label: The label used when auto-commit is on; default is
-        `"Auto " + label`
+        `label + " Automatically"`
     :type auto_label: str
     :param commit: master's method to override ('commit' by default)
     :type commit: function
