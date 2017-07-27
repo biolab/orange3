@@ -467,7 +467,8 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
-            dom = Domain([ContinuousVariable(a.name)
+            # prevent caching new features by defining compute_value
+            dom = Domain([ContinuousVariable(a.name, compute_value=lambda _: None)
                           for a in self._pca.orig_domain.attributes],
                          metas=[StringVariable(name='component')])
             metas = numpy.array([['PC{}'.format(i + 1)
