@@ -27,7 +27,7 @@ class OWSGD(OWBaseLearner):
     LEARNER = SGDLearner
 
     class Outputs(OWBaseLearner.Outputs):
-        coefficients = Output("Coefficients", Table)
+        coefficients = Output("Coefficients", Table, explicit=True)
 
     reg_losses = (
         ('Squared Loss', 'squared_loss'),
