@@ -25,7 +25,7 @@ class OWSVM(OWBaseLearner):
     LEARNER = SVMLearner
 
     class Outputs(OWBaseLearner.Outputs):
-        support_vectors = Output("Support vectors", Table)
+        support_vectors = Output("Support vectors", Table, explicit=True)
 
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
