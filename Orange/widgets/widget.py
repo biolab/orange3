@@ -1,6 +1,7 @@
 import sys
 import os
 import types
+import textwrap
 from operator import attrgetter
 
 from AnyQt.QtWidgets import (
@@ -426,7 +427,15 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 )
                 b.clicked.connect(self.show_report)
                 sb.addWidget(b)
-            self.message_bar = MessagesWidget(self)
+            self.message_bar = MessagesWidget(
+                defaultStyleSheet=textwrap.dedent("""
+                div.field-detailed-text {
+                    margin-top: 0.5em;
+                    margin-bottom: 0.5em;
+                    margin-left: 1em;
+                    margin-right: 1em;
+                }""")
+            )
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
             self.__progressBar = pb = QProgressBar(

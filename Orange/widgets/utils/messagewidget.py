@@ -126,7 +126,7 @@ class Message(
             parts += ['<div class="field-informative-text">{}</div>'
                       .format(render(self.informativeText))]
         if self.detailedText:
-            parts += ['<blockquote class="field-detailed-text">{}</blockquote>'
+            parts += ['<div class="field-detailed-text">{}</div>'
                       .format(render(self.detailedText))]
         parts += ['</div>']
         return "\n".join(parts)
@@ -292,7 +292,8 @@ class MessagesWidget(QWidget):
 
     Message = Message
 
-    def __init__(self, parent=None, openExternalLinks=False, **kwargs):
+    def __init__(self, parent=None, openExternalLinks=False,
+                 defaultStyleSheet="", **kwargs):
         kwargs.setdefault(
             "sizePolicy",
             QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -334,6 +335,7 @@ class MessagesWidget(QWidget):
         self.layout().addWidget(self.__textlabel)
         self.layout().addWidget(self.__popupicon)
         self.__textlabel.setAttribute(Qt.WA_MacSmallSize)
+        self.__defaultStyleSheet = defaultStyleSheet
 
     def sizeHint(self):
         sh = super().sizeHint()
@@ -356,6 +358,37 @@ class MessagesWidget(QWidget):
         # TODO: update popup if open
         self.__openExternalLinks = state
         self.__textlabel.setOpenExternalLinks(state)
+
+    def setDefaultStyleSheet(self, css):
+        # type: (str) -> None
+        """
+        Set a default css to apply to the rendered text.
+
+        Parameters
+        ----------
+        css : str
+            A css style sheet as supported by Qt's Rich Text support.
+
+        Note
+        ----
+        Not to be confused with `QWidget.styleSheet`
+
+        See Also
+        --------
+        http://doc.qt.io/qt-5/richtext-html-subset.html
+        """
+        if self.__defaultStyleSheet != css:
+            self.__defaultStyleSheet = css
+            self.__update()
+
+    def defaultStyleSheet(self):
+        """
+        Returns
+        -------
+        css : str
+            The current style sheet
+        """
+        return self.__defaultStyleSheet
 
     def setMessage(self, message_id, message):
         # type: (Hashable, Message) -> None
@@ -417,6 +450,14 @@ class MessagesWidget(QWidget):
         else:
             return Message()
 
+    @staticmethod
+    def __styled(css, html):
+        # Prepend css style sheet before a html fragment.
+        if css.strip():
+            return "<style>\n" + escape(css) + "\n</style>\n" + html
+        else:
+            return html
+
     def __update(self):
         """
         Update the current display state.
@@ -436,7 +477,7 @@ class MessagesWidget(QWidget):
         else:
             fulltext = ""
         self.__fulltext = fulltext
-        self.setToolTip(fulltext)
+        self.setToolTip(self.__styled(self.__defaultStyleSheet, fulltext))
 
         def is_short(m):
             return not (m.informativeText or m.detailedText)
@@ -455,8 +496,10 @@ class MessagesWidget(QWidget):
                 label = QLabel(
                     self, textInteractionFlags=Qt.TextBrowserInteraction,
                     openExternalLinks=self.__openExternalLinks,
-                    text=self.__popuptext
                 )
+                label.setText(self.__styled(self.__defaultStyleSheet,
+                                            self.__popuptext))
+
                 label.linkActivated.connect(self.linkActivated)
                 label.linkHovered.connect(self.linkHovered)
                 action = QWidgetAction(popup)
