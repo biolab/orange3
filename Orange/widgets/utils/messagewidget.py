@@ -469,6 +469,7 @@ class MessagesWidget(QWidget):
         self.__iconwidget.setVisible(not (summary.isEmpty() or icon.isNull()))
         self.__textlabel.setTextFormat(summary.textFormat)
         self.__textlabel.setText(summary.text)
+        self.__textlabel.setVisible(bool(summary.text))
         messages = [m for m in self.__messages.values() if not m.isEmpty()]
         if messages:
             messages = sorted(messages, key=attrgetter("severity"),
