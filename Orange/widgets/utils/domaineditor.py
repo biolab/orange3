@@ -255,6 +255,10 @@ class DomainEditor(QTableView):
 
             col_data = self._get_column(data, orig_var, orig_plc)
             is_sparse = sp.issparse(col_data)
+
+            cont_ints = type(orig_var) == ContinuousVariable and \
+                        all(x.is_integer() for x in self._iter_vals(col_data) if not np.isnan(x))
+
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == type(orig_var):
@@ -263,14 +267,21 @@ class DomainEditor(QTableView):
                 var = orig_var
             elif tpe == DiscreteVariable:
                 values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
-                var = tpe(name, values)
                 col_data = [np.nan if self._is_missing(x) else values.index(str(x))
                             for x in self._iter_vals(col_data)]
+                if cont_ints:
+                    values = [str(int(float(v))) for v in values]
+                var = tpe(name, values)
                 col_data = self._to_column(col_data, is_sparse)
-            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
+            elif tpe == StringVariable:
                 var = tpe(name)
-                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
-                            for x in self._iter_vals(col_data)]
+                if type(orig_var) == DiscreteVariable:
+                    col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
+                                for x in self._iter_vals(col_data)]
+                elif type(orig_var) == ContinuousVariable:
+                    col_data = [str(int(x)) if cont_ints else orig_var.repr_val(x)
+                                if not np.isnan(x) else ""
+                                for x in self._iter_vals(col_data)]
                 # don't obey sparsity for StringVariable since they are
                 # in metas which are transformed to dense below
                 col_data = self._to_column(col_data, False, dtype=object)
