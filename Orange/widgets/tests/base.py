@@ -224,7 +224,7 @@ class WidgetTest(GuiTest):
             spy = QSignalSpy(widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout=wait))
 
-    def get_output(self, output, widget=None):
+    def get_output(self, output, widget=None, wait=5000):
         """Return the last output that has been sent from the widget.
 
         Parameters
@@ -232,6 +232,8 @@ class WidgetTest(GuiTest):
         output_name : str
         widget : Optional[OWWidget]
             widget whose output is returned. If not set, self.widget is used
+        wait : int
+            The amount of time (in milliseconds) to wait for widget to complete.
 
         Returns
         -------
@@ -239,9 +241,15 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
+
+        if widget.isBlocking() and wait >= 0:
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(wait),
+                            "Failed to get output in the specified timeout")
         if not isinstance(output, str):
             output = output.name
         return self.signal_manager.outputs.get((widget, output), None)
+
 
     @contextmanager
     def modifiers(self, modifiers):
