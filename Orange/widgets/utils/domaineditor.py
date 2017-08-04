@@ -274,6 +274,11 @@ class DomainEditor(QTableView):
                 # don't obey sparsity for StringVariable since they are
                 # in metas which are transformed to dense below
                 col_data = self._to_column(col_data, False, dtype=object)
+            elif tpe == ContinuousVariable and type(orig_var) == DiscreteVariable:
+                var = tpe(name)
+                col_data = [np.nan if self._is_missing(x) else float(orig_var.values[int(x)])
+                            for x in self._iter_vals(col_data)]
+                col_data = self._to_column(col_data, is_sparse)
             else:
                 var = tpe(name)
             places[place].append(var)
