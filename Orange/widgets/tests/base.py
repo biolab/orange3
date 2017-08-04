@@ -3,6 +3,8 @@ import os
 import time
 import unittest
 from unittest.mock import Mock
+# pylint: disable=unused-import
+from typing import List, Optional, Type, TypeVar
 
 import numpy as np
 import sip
@@ -28,6 +30,7 @@ from Orange.regression.base_regression import (
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
+from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 sip.setdestroyonexit(False)
@@ -35,6 +38,9 @@ sip.setdestroyonexit(False)
 app = None
 
 DEFAULT_TIMEOUT = 5000
+
+# pylint: disable=invalid-name
+T = TypeVar("T")
 
 
 class DummySignalManager:
@@ -70,8 +76,7 @@ class WidgetTest(GuiTest):
     will ensure they are created correctly.
     """
 
-    #: list[OwWidget]
-    widgets = []
+    widgets = []  # type: List[OWWidget]
 
     @classmethod
     def setUpClass(cls):
@@ -95,6 +100,7 @@ class WidgetTest(GuiTest):
         self.process_events()
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
+        # type: (Type[T], Optional[dict], bool) -> T
         """Create a widget instance using mock signal_manager.
 
         When used with default parameters, it also overrides settings stored
