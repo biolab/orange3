@@ -1,7 +1,9 @@
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QSize
 
 from Orange.widgets.tests.base import GuiTest
-from Orange.widgets.utils.messagewidget import MessagesWidget, Message
+from Orange.widgets.utils.messagewidget import (
+    MessagesWidget, Message, IconWidget
+)
 
 
 class TestMessageWidget(GuiTest):
@@ -36,3 +38,17 @@ class TestMessageWidget(GuiTest):
         assert w.openExternalLinks()
         self.assertEqual(len(w.messages()), 0)
         self.assertTrue(w.summarize().isEmpty())
+
+
+class TestIconWidget(GuiTest):
+    def test_widget(self):
+        w = IconWidget()
+        s = w.style()
+        icon = s.standardIcon(s.SP_BrowserStop)
+        w.setIcon(icon)
+        self.assertEqual(w.icon().cacheKey(), icon.cacheKey())
+        w.setIconSize(QSize(42, 42))
+        self.assertEqual(w.iconSize(), QSize(42, 42))
+        self.assertGreaterEqual(w.sizeHint().width(), 42)
+        self.assertGreaterEqual(w.sizeHint().height(), 42)
+        w.setIconSize(QSize())

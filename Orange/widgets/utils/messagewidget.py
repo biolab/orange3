@@ -16,7 +16,7 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtWidgets import (
     QWidget, QLabel, QSizePolicy, QStyle, QHBoxLayout, QMessageBox,
-    QMenu, QWidgetAction, QStyleOption, QApplication
+    QMenu, QWidgetAction, QStyleOption, QStylePainter, QApplication
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -308,8 +308,8 @@ class MessagesWidget(QWidget):
         #: short
         self.__popuptext = ""
         #: Leading icon
-        self.__iconlabel = QLabel(
-            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed),
+        self.__iconwidget = IconWidget(
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         )
         #: Inline  message text
         self.__textlabel = QLabel(
@@ -330,7 +330,7 @@ class MessagesWidget(QWidget):
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(2, 1, 2, 1)
         self.layout().setSpacing(0)
-        self.layout().addWidget(self.__iconlabel)
+        self.layout().addWidget(self.__iconwidget)
         self.layout().addSpacing(4)
         self.layout().addWidget(self.__textlabel)
         self.layout().addWidget(self.__popupicon)
@@ -423,16 +423,10 @@ class MessagesWidget(QWidget):
         Update the current display state.
         """
         self.ensurePolished()
-        style = self.style()
         summary = self.summarize()
         icon = message_icon(summary)
-        if not summary.isEmpty() and not icon.isNull():
-            size = style.pixelMetric(QStyle.PM_SmallIconSize)
-            pm = icon.pixmap(size, size)
-        else:
-            pm = QPixmap()
-        self.__iconlabel.setPixmap(pm)
-        self.__iconlabel.setVisible(not pm.isNull())
+        self.__iconwidget.setIcon(icon)
+        self.__iconwidget.setVisible(not (summary.isEmpty() or icon.isNull()))
         self.__textlabel.setTextFormat(summary.textFormat)
         self.__textlabel.setText(summary.text)
         messages = [m for m in self.__messages.values() if not m.isEmpty()]
@@ -453,6 +447,7 @@ class MessagesWidget(QWidget):
         else:
             self.__popuptext = fulltext
         self.__popupicon.setVisible(bool(self.__popuptext))
+        self.layout().activate()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -519,6 +514,65 @@ class MessagesWidget(QWidget):
         p.setBrush(brush)
         p.setPen(pen)
         p.drawRect(opt.rect.adjusted(0, 0, -1, -1))
+
+
+class IconWidget(QWidget):
+    """
+    A widget displaying an `QIcon`
+    """
+    def __init__(self, parent=None, icon=QIcon(), iconSize=QSize(), **kwargs):
+        sizePolicy = kwargs.pop("sizePolicy", QSizePolicy(QSizePolicy.Fixed,
+                                                          QSizePolicy.Fixed))
+        super().__init__(parent, **kwargs)
+        self.__icon = QIcon(icon)
+        self.__iconSize = QSize(iconSize)
+        self.setSizePolicy(sizePolicy)
+
+    def setIcon(self, icon):
+        # type: (QIcon) -> None
+        if self.__icon != icon:
+            self.__icon = QIcon(icon)
+            self.updateGeometry()
+            self.update()
+
+    def icon(self):
+        # type: () -> QIcon
+        return QIcon(self.__icon)
+
+    def iconSize(self):
+        # type: () -> QSize
+        if not self.__iconSize.isValid():
+            size = self.style().pixelMetric(QStyle.PM_ButtonIconSize)
+            return QSize(size, size)
+        else:
+            return QSize(self.__iconSize)
+
+    def setIconSize(self, iconSize):
+        # type: (QSize) -> None
+        if self.__iconSize != iconSize:
+            self.__iconSize = QSize(iconSize)
+            self.updateGeometry()
+            self.update()
+
+    def sizeHint(self):
+        sh = self.iconSize()
+        m = self.contentsMargins()
+        return QSize(sh.width() + m.left() + m.right(),
+                     sh.height() + m.top() + m.bottom())
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        opt = QStyleOption()
+        opt.initFrom(self)
+        painter.drawPrimitive(QStyle.PE_Widget, opt)
+        if not self.__icon.isNull():
+            rect = self.contentsRect()
+            if opt.state & QStyle.State_Active:
+                mode = QIcon.Active
+            else:
+                mode = QIcon.Disabled
+            self.__icon.paint(painter, rect, Qt.AlignCenter, mode, QIcon.Off)
+        painter.end()
 
 
 def main(argv=None):  # pragma: no cover
