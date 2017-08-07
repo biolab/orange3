@@ -2,6 +2,7 @@
 Utility classes for visualization widgets
 """
 
+import queue
 from bisect import bisect_left
 from operator import attrgetter
 
@@ -98,10 +99,11 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
+        self.add_to_model = queue.Queue()
 
-        self.progress_timer = QTimer(self)
-        self.progress_timer.timeout.connect(self._update_progress)
-        self.progress_timer.setInterval(200)
+        self.update_timer = QTimer(self)
+        self.update_timer.timeout.connect(self._update)
+        self.update_timer.setInterval(200)
 
         self._thread = None
         self._worker = None
@@ -209,9 +211,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
-        self.progress_timer.stop()
+        self.update_timer.stop()
         self.progressBarFinished()
         self.scores = []
+        self._update_model()  # empty queue
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
@@ -311,14 +314,27 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_state = None
 
     def _stopped(self):
-        self.progress_timer.stop()
+        self.update_timer.stop()
         self.progressBarFinished()
+        self._update_model()
         self.stopped()
         if self.scheduled_call:
             self.scheduled_call()
 
+    def _update(self):
+        self._update_model()
+        self._update_progress()
+
     def _update_progress(self):
         self.progressBarSet(int(self.saved_progress * 100 / max(1, self.state_count())))
+
+    def _update_model(self):
+        try:
+            while True:
+                pos, row_items = self.add_to_model.get_nowait()
+                self.rank_model.insertRow(pos, row_items)
+        except queue.Empty:
+            pass
 
     def toggle(self):
         """Start or pause the computation."""
@@ -326,7 +342,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         if self.keep_running:
             self.button.setText("Pause")
             self.progressBarInit()
-            self.progress_timer.start()
+            self.update_timer.start()
             self.before_running()
             self._thread.start()
         else:
@@ -366,7 +382,7 @@ class Worker(QObject):
                     if bar_length is not None:
                         row_items[0].setData(bar_length,
                                              gui.TableBarItem.BarRole)
-                    self.obj.rank_model.insertRow(pos, row_items)
+                    self.obj.add_to_model.put((pos, row_items))
                     self.obj.scores.insert(pos, score)
             except Exception:  # ignore current state in case of any problem
                 pass
