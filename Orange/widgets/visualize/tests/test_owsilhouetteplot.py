@@ -96,17 +96,23 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         """
         Handling memory error.
         GH-2336
+        Handling value error as well. This value error is in a relation with memory error.
+        GH-2521
         """
-        data = Orange.data.Table("iris")[::3]
-        self.assertFalse(self.widget.Error.memory_error.is_shown())
-        with unittest.mock.patch(
-            "numpy.asarray",
-            side_effect=MemoryError):
-            self.widget._matrix = None
-            self.widget.data = data
-            self.widget._effective_data = data
-            self.widget._update()
-            self.assertTrue(self.widget.Error.memory_error.is_shown())
+        for i, side_effect in enumerate([MemoryError, ValueError]):
+            data = Orange.data.Table("iris")[::3]
+            self.send_signal(self.widget.Inputs.data, data)
+            self.assertFalse(self.widget.Error.memory_error.is_shown())
+            self.assertFalse(self.widget.Error.value_error.is_shown())
+            with unittest.mock.patch(
+                "numpy.asarray",
+                side_effect=side_effect):
+                self.widget._matrix = None
+                self.widget.data = data
+                self.widget._effective_data = data
+                self.widget._update()
+                self.assertTrue(self.widget.Error.memory_error.is_shown() != i)
+                self.assertTrue(self.widget.Error.value_error.is_shown() == i)
 
     def test_bad_data_range(self):
         """

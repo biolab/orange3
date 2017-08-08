@@ -84,6 +84,7 @@ class OWSilhouettePlot(widget.OWWidget):
         need_two_clusters = Msg("Need at least two non-empty clusters")
         singleton_clusters_all = Msg("All clusters are singletons")
         memory_error = Msg("Not enough memory")
+        value_error = Msg("Distances could not be computed: '{}'")
 
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
@@ -267,6 +268,9 @@ class OWSilhouettePlot(widget.OWWidget):
             except MemoryError:
                 self.Error.memory_error()
                 return
+            except ValueError as err:
+                self.Error.value_error(str(err))
+                return
 
         self._update_labels()
 
@@ -278,9 +282,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._clear_scene()
 
     def _clear_messages(self):
-        self.Error.memory_error.clear()
-        self.Error.singleton_clusters_all.clear()
-        self.Error.need_two_clusters.clear()
+        self.Error.clear()
         self.Warning.missing_cluster_assignment.clear()
 
     def _update_labels(self):
