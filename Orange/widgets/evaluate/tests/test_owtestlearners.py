@@ -26,24 +26,28 @@ class TestOWTestLearners(WidgetTest):
         super().setUp()
         self.widget = self.create_widget(OWTestLearners)  # type: OWTestLearners
 
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
+
     def test_basic(self):
-        data = Table("iris")[::3]
+        data = Table("iris")[::15]
         self.send_signal(self.widget.Inputs.train_data, data)
-        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=5000)
-        res = self.get_output(self.widget.Outputs.evaluations_results)
+        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0)
+        res = self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
         self.assertIsNotNone(res.probabilities)
 
-        self.send_signal(self.widget.Inputs.learner, None, 0, wait=5000)
-        res = self.get_output(self.widget.Outputs.evaluations_results)
+        self.send_signal(self.widget.Inputs.learner, None, 0)
+        res = self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertIsNone(res)
 
         data = Table("housing")[::10]
         self.send_signal(self.widget.Inputs.train_data, data)
-        self.send_signal(self.widget.Inputs.learner, MeanLearner(), 0, wait=5000)
-        res = self.get_output(self.widget.Outputs.evaluations_results)
+        self.send_signal(self.widget.Inputs.learner, MeanLearner(), 0)
+        res = self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
         self.assertIsInstance(res, Results)
         self.assertIsNotNone(res.domain)
         self.assertIsNotNone(res.data)
@@ -65,6 +69,7 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal(self.widget.Inputs.train_data, data)
         self.assertFalse(rb.isEnabled())
         self.assertFalse(self.widget.features_combo.isEnabled())
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
 
         self.send_signal(self.widget.Inputs.train_data, data_with_disc_metas)
         self.assertTrue(rb.isEnabled())
@@ -73,6 +78,7 @@ class TestOWTestLearners(WidgetTest):
         self.assertTrue(self.widget.features_combo.isEnabled())
         self.assertEqual(self.widget.features_combo.currentText(), "iris")
         self.assertEqual(len(self.widget.features_combo.model()), 1)
+        self.get_output(self.widget.Outputs.evaluations_results, wait=5000)
 
         self.send_signal(self.widget.Inputs.train_data, None)
         self.assertFalse(rb.isEnabled())
@@ -148,7 +154,7 @@ class TestOWTestLearners(WidgetTest):
         Handling memory error.
         GH-2316
         """
-        data = Table("iris")[::3]
+        data = Table("iris")[::15]
         self.send_signal(self.widget.Inputs.train_data, data)
         self.assertFalse(self.widget.Error.memory_error.is_shown())
 
@@ -216,6 +222,7 @@ class TestOWTestLearners(WidgetTest):
             del Score.registry["NewScore"]
             del Score.registry["NewClassificationScore"]
             del Score.registry["NewRegressionScore"]
+
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):

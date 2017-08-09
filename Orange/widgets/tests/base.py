@@ -3,6 +3,8 @@ import os
 import time
 import unittest
 from unittest.mock import Mock
+# pylint: disable=unused-import
+from typing import List, Optional, Type, TypeVar
 
 import numpy as np
 import sip
@@ -28,6 +30,7 @@ from Orange.regression.base_regression import (
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
+from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 sip.setdestroyonexit(False)
@@ -35,6 +38,9 @@ sip.setdestroyonexit(False)
 app = None
 
 DEFAULT_TIMEOUT = 5000
+
+# pylint: disable=invalid-name
+T = TypeVar("T")
 
 
 class DummySignalManager:
@@ -70,8 +76,7 @@ class WidgetTest(GuiTest):
     will ensure they are created correctly.
     """
 
-    #: list[OwWidget]
-    widgets = []
+    widgets = []  # type: List[OWWidget]
 
     @classmethod
     def setUpClass(cls):
@@ -95,6 +100,7 @@ class WidgetTest(GuiTest):
         self.process_events()
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
+        # type: (Type[T], Optional[dict], bool) -> T
         """Create a widget instance using mock signal_manager.
 
         When used with default parameters, it also overrides settings stored
@@ -215,13 +221,16 @@ class WidgetTest(GuiTest):
             else:
                 raise ValueError("'{}' is not an input name for widget {}"
                                  .format(input, type(widget).__name__))
+        if widget.isBlocking():
+            raise RuntimeError("'send_signal' called but the widget is in "
+                               "blocking state and does not accept inputs.")
         getattr(widget, input.handler)(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
             spy = QSignalSpy(widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout=wait))
 
-    def get_output(self, output, widget=None):
+    def get_output(self, output, widget=None, wait=5000):
         """Return the last output that has been sent from the widget.
 
         Parameters
@@ -229,6 +238,8 @@ class WidgetTest(GuiTest):
         output_name : str
         widget : Optional[OWWidget]
             widget whose output is returned. If not set, self.widget is used
+        wait : int
+            The amount of time (in milliseconds) to wait for widget to complete.
 
         Returns
         -------
@@ -236,9 +247,15 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
+
+        if widget.isBlocking() and wait >= 0:
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(wait),
+                            "Failed to get output in the specified timeout")
         if not isinstance(output, str):
             output = output.name
         return self.signal_manager.outputs.get((widget, output), None)
+
 
     @contextmanager
     def modifiers(self, modifiers):
