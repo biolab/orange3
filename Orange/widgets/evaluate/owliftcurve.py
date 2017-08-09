@@ -155,8 +155,10 @@ class OWLiftCurve(widget.OWWidget):
         if names is None:
             names = ["#{}".format(i + 1) for i in range(N)]
 
-        self.colors = colorpalette.ColorPaletteGenerator(
-            N, colorbrewer.colorSchemes["qualitative"]["Dark2"])
+        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
+        if N > len(scheme):
+            scheme = colorpalette.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(N, scheme)
 
         self.classifier_names = names
         self.selected_classifiers = list(range(N))

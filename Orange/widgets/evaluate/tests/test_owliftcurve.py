@@ -6,12 +6,13 @@ import Orange.data
 import Orange.evaluation
 import Orange.classification
 
+from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 
 
-class TestOWLiftCurve(WidgetTest):
+class TestOWLiftCurve(WidgetTest, EvaluateTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
