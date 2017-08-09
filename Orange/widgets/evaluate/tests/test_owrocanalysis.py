@@ -8,6 +8,7 @@ import Orange.classification
 
 from Orange.widgets.evaluate import owrocanalysis
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
+from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -62,7 +63,7 @@ class TestROC(unittest.TestCase):
                 self.assertFalse(rocdata.avg_threshold.is_valid)
 
 
-class TestOWROCAnalysis(WidgetTest):
+class TestOWROCAnalysis(WidgetTest, EvaluateTest):
 
     @classmethod
     def setUpClass(cls):
@@ -153,23 +154,3 @@ class TestOWROCAnalysis(WidgetTest):
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
         self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
-    def test_many_evaluation_results(self):
-        """
-        Now works with more than 9 evaluation results.
-        GH-2394
-        """
-        data = Orange.data.Table("iris")
-        learners = [
-            Orange.classification.MajorityLearner(),
-            Orange.classification.LogisticRegressionLearner(),
-            Orange.classification.TreeLearner(),
-            Orange.classification.SVMLearner(),
-            Orange.classification.KNNLearner(),
-            Orange.classification.CN2Learner(),
-            Orange.classification.SGDClassificationLearner(),
-            Orange.classification.RandomForestLearner(),
-            Orange.classification.NaiveBayesLearner(),
-            Orange.classification.SGDClassificationLearner()
-        ]
-        res = Orange.evaluation.CrossValidation(data, learners, k=2, store_data=True)
-        self.send_signal("Evaluation Results", res)
