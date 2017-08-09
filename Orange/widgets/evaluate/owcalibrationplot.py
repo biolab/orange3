@@ -122,8 +122,10 @@ class OWCalibrationPlot(widget.OWWidget):
             names = ["#{}".format(i + 1) for i in range(N)]
 
         self.classifier_names = names
-        self.colors = colorpalette.ColorPaletteGenerator(
-            N, colorbrewer.colorSchemes["qualitative"]["Dark2"])
+        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
+        if N > len(scheme):
+            scheme = colorpalette.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(N, scheme)
 
         for i in range(N):
             item = self.classifiers_list_box.item(i)
