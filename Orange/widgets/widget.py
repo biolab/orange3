@@ -224,6 +224,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         )
         self.addAction(self.__help_action)
         self.__statusbar = None  # type: Optional[QStatusBar]
+        self.__statusbar_action = None  # type: Optional[QAction]
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
@@ -466,7 +467,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             c.setWidget(self)
             c.setLayout(QVBoxLayout())
             c.layout().setContentsMargins(0, 0, 0, 0)
-            statusbar = _StatusBar(
+            self.__statusbar = statusbar = _StatusBar(
                 c, objectName="owwidget-status-bar"
             )
             statusbar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
@@ -478,19 +479,33 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             margins = self.contentsMargins()
             margins.setBottom(statusbar.sizeHint().height())
             self.setContentsMargins(margins)
-            statusbar.change.connect(self.__updateStatusBarMargins)
-            self.__statusbar = statusbar
+            statusbar.change.connect(self.__updateStatusBarOnChange)
+
+            # Toggle status bar visibility. This action is not visible and
+            # enabled by default. Client classes can inspect self.actions
+            # and enable it if necessary.
+            self.__statusbar_action = statusbar_action = QAction(
+                "Show status bar", self, objectName="action-show-status-bar",
+                toolTip="Show status bar", checkable=True,
+                enabled=False, visible=False,
+                shortcut=QKeySequence(
+                    Qt.ShiftModifier | Qt.ControlModifier | Qt.Key_Backslash)
+            )
+            statusbar_action.toggled[bool].connect(statusbar.setVisible)
+            self.addAction(statusbar_action)
         return statusbar
 
-    def __updateStatusBarMargins(self):
+    def __updateStatusBarOnChange(self):
         statusbar = self.__statusbar
-        if statusbar.isVisibleTo(self):
+        visible = statusbar.isVisibleTo(self)
+        if visible:
             height = statusbar.height()
         else:
             height = 0
         margins = self.contentsMargins()
         margins.setBottom(height)
         self.setContentsMargins(margins)
+        self.__statusbar_action.setChecked(visible)
 
     def __processingStateChanged(self):
         # Update the progress bar in the widget's status bar

@@ -178,6 +178,18 @@ class WidgetTestCase(WidgetTest):
             w = MyWidget()
         self._status_bar_visible_test(w)
 
+    def test_status_bar_action(self):
+        w = MyWidget()
+        action = w.findChild(QAction, "action-show-status-bar")  # type: QAction
+        self.assertIsNotNone(action)
+        action.setEnabled(True)
+        action.setChecked(True)
+        self.assertTrue(w.statusBar().isVisibleTo(w))
+        action.setChecked(False)
+        self.assertFalse(w.statusBar().isVisibleTo(w))
+        w.statusBar().hide()
+        self.assertFalse(action.isChecked())
+
 
 class WidgetMsgTestCase(WidgetTest):
 
