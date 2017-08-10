@@ -256,7 +256,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 """Resize on left button"""
                 if event.button() == Qt.LeftButton:
                     splitter = self.splitter()
-                    splitter.setSizes([int(splitter.sizes()[0] == 0), 1000])
+                    splitter.setSizes([int(splitter.sizes()[0] == 0), 100000])
                 super().mouseReleaseEvent(event)
 
             def mouseMoveEvent(self, event):
