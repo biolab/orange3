@@ -303,8 +303,8 @@ class OWMosaicDisplay(OWWidget):
 
         self.data = None
         self.discrete_data = None
-        self.unprocessed_subset_data = None
         self.subset_data = None
+        self.subset_indices = None
 
         self.color_data = None
 
@@ -379,6 +379,7 @@ class OWMosaicDisplay(OWWidget):
         if data is None:
             self.color_model.set_domain(None)
             return
+        self.color_model.set_domain(self.data.domain)
         for combo in self.attr_combos[1:]:
             combo.addItem("(None)")
 
@@ -438,33 +439,28 @@ class OWMosaicDisplay(OWWidget):
             self.init_combos(None)
             return
 
-        self.color_model.set_domain(self.data.domain)
         self.init_combos(self.data)
 
         self.openContext(self.data)
 
-        # if we first received subset we now call setSubsetData to process it
-        if self.unprocessed_subset_data:
-            self.set_subset_data(self.unprocessed_subset_data)
-            self.unprocessed_subset_data = None
-
-        self.set_color_data()
-
     @Inputs.data_subset
     def set_subset_data(self, data):
-        self.Warning.incompatible_subset.clear()
-        if self.data is None:
-            self.unprocessed_subset_data = data
-            return
-        try:
-            self.subset_data = data.transform(self.data.domain)
-        except:
-            self.subset_data = None
-            self.Warning.incompatible_subset(shown=data is not None)
+        self.subset_data = data
 
     # this is called by widget after setData and setSubsetData are called.
     # this way the graph is updated only once
     def handleNewSignals(self):
+        self.Warning.incompatible_subset.clear()
+        self.subset_indices = None
+        if self.data is not None and self.subset_data:
+            try:
+                indices = {e.id for e in self.subset_data.transform(self.data.domain)}
+            except:
+                self.Warning.incompatible_subset(shown=self.subset_indices is not None)
+            finally:
+                self.subset_indices = [ex.id in indices for ex in self.data]
+
+        self.set_color_data()
         self.reset_graph()
 
     def clear_selection(self):
@@ -837,8 +833,8 @@ class OWMosaicDisplay(OWWidget):
                         if sum(counts) == 1:
                             rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
                                  colors[counts.index(1)], Qt.white,
-                                 penWidth=2, penStyle=Qt.DashLine)
-                        if self.subset_data is not None:
+                                 pen_width=5, pen_style=Qt.DashLine)
+                        if self.subset_indices is not None:
                             line(x1 - bar_width, y0, x1 - bar_width, y1)
                             total = 0
                             n = conditionalsubsetdict[attr_vals]
@@ -918,7 +914,6 @@ class OWMosaicDisplay(OWWidget):
         data = self.discrete_data
         if data is None:
             return
-        subset = self.subset_data
         attr_list = self.get_attr_list()
         class_var = data.domain.class_var
         if class_var:
@@ -991,9 +986,9 @@ class OWMosaicDisplay(OWWidget):
         conditionaldict, distributiondict = \
             get_conditional_distribution(data, attr_list)
         conditionalsubsetdict = None
-        if subset:
+        if self.subset_indices:
             conditionalsubsetdict, _ = \
-                get_conditional_distribution(subset, attr_list)
+                get_conditional_distribution(self.discrete_data[self.subset_indices], attr_list)
 
         # draw rectangles
         draw_data(
@@ -1050,6 +1045,7 @@ def main():
     ow.show()
     data = Table("zoo.tab")
     ow.set_data(data)
+    ow.set_subset_data(data[::10])
     ow.handleNewSignals()
     a.exec_()
 
