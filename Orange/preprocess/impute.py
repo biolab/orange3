@@ -82,8 +82,8 @@ class DropInstances(BaseImputeMethod):
     description = ""
 
     def __call__(self, data, variable):
-        index = data.domain.index(variable)
-        return np.isnan(data[:, index]).reshape(-1)
+        col, _ = data.get_column_view(variable)
+        return np.isnan(col)
 
 
 class Average(BaseImputeMethod):
