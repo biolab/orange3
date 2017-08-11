@@ -858,8 +858,8 @@ class SchemeEditWidget(QWidget):
         """
         Print widget settings to log.
         """
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
+        from Orange.widgets.settings import SettingsPrinter
+        pp = SettingsPrinter(indent=4)
         selected = self.scene().selectedItems()
         for item in selected:
             node = self.__scene.node_for_item(item)
