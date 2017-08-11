@@ -135,7 +135,8 @@ def check_for_updates():
                 try:
                     self.resultReady.emit(
                         urlopen('https://orange.biolab.si/version/', timeout=10).read().decode())
-                except OSError:
+                # Nothing that this fails with should make Orange crash
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to check for updates')
 
         def compare_versions(latest):
