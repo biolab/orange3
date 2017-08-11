@@ -247,6 +247,30 @@ a
         formats = dialog_formats()
         self.assertTrue(".123" in formats)
 
-
-class TestDomainEditor(TestCase):
-    pass
+    def test_domain_editor_conversions(self):
+        dat = """V0\tV1\tV2\tV3\tV4\tV5
+                 c\tc\td\td\tc\td
+                  \t \t \t \t \t
+                 3.0\t1.0\t4\ta\t0.0\tx
+                 1.0\t2.0\t4\tb\t0.0\ty
+                 2.0\t1.0\t7\ta\t0.0\ty
+                 0.0\t2.0\t7\ta\t0.0\tz"""
+        with named_file(dat, suffix=".tab") as filename:
+            self.open_dataset(filename)
+            data1 = self.get_output(self.widget.Outputs.data)
+            model = self.widget.domain_editor.model()
+            # check the ordering of attributes
+            for i, a in enumerate(data1.domain.attributes):
+                self.assertEqual(str(a), model.data(model.createIndex(i, 0), Qt.DisplayRole))
+            # make conversions
+            model.setData(model.createIndex(0, 1), "categorical", Qt.EditRole)
+            model.setData(model.createIndex(1, 1), "string", Qt.EditRole)
+            model.setData(model.createIndex(2, 1), "numeric", Qt.EditRole)
+            model.setData(model.createIndex(3, 1), "numeric", Qt.EditRole)
+            self.widget.apply_button.click()
+            data2 = self.get_output(self.widget.Outputs.data)
+            # round continuous values should be converted to integers (3.0 -> 3, "3")
+            self.assertEqual(len(data2.domain.attributes[0].values[0]), 1)
+            self.assertEqual(len(data2[0].metas[0]), 1)
+            # discrete integer values should stay the same after conversion to continuous
+            self.assertAlmostEqual(float(data1[0][2].value), data2[0][1])
