@@ -160,6 +160,9 @@ class SchemeEditWidget(QWidget):
         self.__widgetMenu.addAction(self.__removeSelectedAction)
         self.__widgetMenu.addSeparator()
         self.__widgetMenu.addAction(self.__helpAction)
+        if log.isEnabledFor(logging.DEBUG):
+            self.__widgetMenu.addSeparator()
+            self.__widgetMenu.addAction(self.__showSettingsAction)
 
         self.__linkMenu = QMenu(self.tr("Link"), self)
         self.__linkMenu.addAction(self.__linkEnableAction)
@@ -284,6 +287,13 @@ class SchemeEditWidget(QWidget):
                     triggered=self.removeSelected,
                     enabled=False
                     )
+
+        self.__showSettingsAction = \
+            QAction(self.tr("Show settings"), self,
+                    objectName="show-settings",
+                    toolTip=self.tr("Show widget settings"),
+                    triggered=self.showSettings,
+                    enabled=False)
 
         shortcuts = [Qt.Key_Delete,
                      Qt.ControlModifier + Qt.Key_Backspace]
@@ -844,6 +854,18 @@ class SchemeEditWidget(QWidget):
                 )
         self.__undoStack.endMacro()
 
+    def showSettings(self):
+        """
+        Print widget settings to log.
+        """
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+        selected = self.scene().selectedItems()
+        for item in selected:
+            node = self.__scene.node_for_item(item)
+            widget = self.scheme().widget_for_node(node)
+            pp.pprint(widget.settingsHandler.pack_data(widget))
+
     def selectAll(self):
         """
         Select all selectable items in the scheme.
@@ -1264,6 +1286,7 @@ class SchemeEditWidget(QWidget):
         self.__helpAction.setEnabled(len(nodes) == 1)
         self.__renameAction.setEnabled(len(nodes) == 1)
         self.__duplicateSelectedAction.setEnabled(bool(nodes))
+        self.__showSettingsAction.setEnabled(len(nodes) == 1)
 
         if len(nodes) > 1:
             self.__openSelectedAction.setText(self.tr("Open All"))
