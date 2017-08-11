@@ -241,6 +241,9 @@ class DomainEditor(QTableView):
         -------
         (new_domain, [attribute_columns, class_var_columns, meta_columns])
         """
+        # Allow type-checking with type() instead of isinstance() for exact comparison
+        # pylint: disable=unidiomatic-typecheck
+
         variables = self.model().variables
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols

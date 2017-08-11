@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 from os import path, remove
 from unittest.mock import Mock
+from unittest import TestCase
 import pickle
 import tempfile
 
@@ -245,3 +246,7 @@ a
         # test adding file formats after registering the widget
         formats = dialog_formats()
         self.assertTrue(".123" in formats)
+
+
+class TestDomainEditor(TestCase):
+    pass
