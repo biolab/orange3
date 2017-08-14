@@ -18,12 +18,13 @@ pushd
 try {
     cd build/testdir
 
-    # Install numpy/scipy from staging index (contains numpy and scipy
+    # Install scipy from staging index (contains scipy
     # extracted form the legacy superpack installers (sse2 builds))
 
     python -m pip install `
-        --index-url "$env:STAGING_INDEX" `
-        --only-binary "numpy,scipy" numpy scipy
+        --extra-index-url "$env:STAGING_INDEX" `
+        --only-binary "numpy,scipy,scikit-learn,bottleneck" `
+        numpy~=1.12.1 scipy scikit-learn==0.18.1
 
     if ($LastExitCode -ne 0) { throw "Last command exited with non-zero code." }
 
