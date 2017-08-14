@@ -856,15 +856,12 @@ class SchemeEditWidget(QWidget):
 
     def showSettings(self):
         """
-        Print widget settings to log.
+        Dump settings of selected items to the standard output.
         """
-        from Orange.widgets.settings import SettingsPrinter
-        pp = SettingsPrinter(indent=4)
         selected = self.scene().selectedItems()
         for item in selected:
-            node = self.__scene.node_for_item(item)
-            widget = self.scheme().widget_for_node(node)
-            pp.pprint(widget.settingsHandler.pack_data(widget))
+            node = self.scene().node_for_item(item)
+            self.scheme().dump_settings(node)
 
     def selectAll(self):
         """

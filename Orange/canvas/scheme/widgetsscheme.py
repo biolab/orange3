@@ -101,6 +101,13 @@ class WidgetsScheme(Scheme):
         inst.show()
         inst.raise_()
 
+    def dump_settings(self, node: SchemeNode):
+        from Orange.widgets.settings import SettingsPrinter
+        widget = self.widget_for_node(node)
+
+        pp = SettingsPrinter(indent=4)
+        pp.pprint(widget.settingsHandler.pack_data(widget))
+
 
 class WidgetManager(QObject):
     """
