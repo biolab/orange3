@@ -30,11 +30,13 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         np.random.seed(0)
         stump_estimator = SklTreeLearner(max_depth=1)
         tree_estimator = SklTreeLearner()
-        stump = SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
-        tree = SklAdaBoostClassificationLearner(base_estimator=tree_estimator)
+        stump = SklAdaBoostClassificationLearner(
+            base_estimator=stump_estimator, n_estimators=5)
+        tree = SklAdaBoostClassificationLearner(
+            base_estimator=tree_estimator, n_estimators=5)
         results = CrossValidation(self.iris, [stump, tree], k=4)
         ca = CA(results)
-        self.assertLess(ca[0], ca[1])
+        self.assertLessEqual(ca[0], ca[1])
 
     def test_predict_single_instance(self):
         learn = SklAdaBoostClassificationLearner()
