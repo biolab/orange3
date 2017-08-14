@@ -7,9 +7,8 @@ import cython
 cdef extern from "numpy/npy_math.h":
     bint npy_isnan(double x)
 
-@cython.boundscheck(False)
 @cython.wraparound(False)
-def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray[np.int8_t, ndim=1] classes, n_rows, np.ndarray[np.float64_t, ndim=1] W = None):
+def contingency_floatarray(np.ndarray[np.float64_t, ndim=1] col_data, np.ndarray[np.intp_t, ndim=1] classes, np.intp_t n_rows, np.ndarray[np.float64_t, ndim=1] W = None):
     """ 
     Given column values and class values, return
     - an array with the sorted list of values,
