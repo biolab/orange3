@@ -150,6 +150,10 @@ class OverlayWidget(QWidget):
         hpolicy = policy.horizontalPolicy()
         vpolicy = policy.verticalPolicy()
 
+        if not effectivesh.isValid():
+            effectivesh = QSize(0, 0)
+            vpolicy = hpolicy = QSizePolicy.Ignored
+
         def getsize(hint, minimum, maximum, policy):
             if policy == QSizePolicy.Ignored:
                 return maximum
