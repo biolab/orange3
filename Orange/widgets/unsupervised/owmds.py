@@ -10,7 +10,7 @@ import scipy.spatial.distance
 
 from AnyQt.QtWidgets import (
     QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction,
-    QApplication, QGraphicsLineItem
+    QApplication
 )
 from AnyQt.QtGui import (
     QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
@@ -909,22 +909,22 @@ class OWMDS(OWWidget):
                 self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
                 fpairs[::2] = indcs[0][sorted]
                 fpairs[1::2] = indcs[1][sorted]
-            for i in range(int(len(emb_x[self._similar_pairs]) / 2)):
-                item = QGraphicsLineItem(
-                    emb_x[self._similar_pairs][i * 2],
-                    emb_y[self._similar_pairs][i * 2],
-                    emb_x[self._similar_pairs][i * 2 + 1],
-                    emb_y[self._similar_pairs][i * 2 + 1]
-                )
-                if item.line().isNull():
-                    # Null (zero length) line causes bad rendering artifacts
-                    # in Qt when using the raster graphics system
-                    # (see gh-issue: 1668).
-                    continue
-                pen = QPen(QBrush(QColor(204, 204, 204)), 2)
-                pen.setCosmetic(True)
-                item.setPen(pen)
-                self.plot.addItem(item)
+            emb_x_pairs = emb_x[self._similar_pairs].reshape((-1, 2))
+            emb_y_pairs = emb_y[self._similar_pairs].reshape((-1, 2))
+
+            # Filter out zero distance lines (in embedding coords).
+            # Null (zero length) line causes bad rendering artifacts
+            # in Qt when using the raster graphics system (see gh-issue: 1668).
+            (x1, x2), (y1, y2) = (emb_x_pairs.T, emb_y_pairs.T)
+            pairs_mask = ~(numpy.isclose(x1, x2) & numpy.isclose(y1, y2))
+            emb_x_pairs = emb_x_pairs[pairs_mask, :]
+            emb_y_pairs = emb_y_pairs[pairs_mask, :]
+
+            curve = pg.PlotCurveItem(
+                emb_x_pairs.ravel(), emb_y_pairs.ravel(),
+                pen=pg.mkPen(0.8, width=2, cosmetic=True),
+                connect="pairs", antialias=True)
+            self.plot.addItem(curve)
 
         data = numpy.arange(size)
         self._scatter_item = item = ScatterPlotItem(
