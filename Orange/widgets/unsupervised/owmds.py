@@ -62,6 +62,8 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
         super().paint(painter, option, widget)
 
+#: Maximum number of displayed closest pairs.
+MAX_N_PAIRS = 10000
 
 class OWMDS(OWWidget):
     name = "MDS"
@@ -123,6 +125,7 @@ class OWMDS(OWWidget):
 
     symbol_size = settings.Setting(8)
     symbol_opacity = settings.Setting(230)
+    #: Percentage of all pairs displayed (ranges from 0 to 20)
     connected_pairs = settings.Setting(5)
     jitter = settings.Setting(0)
 
@@ -903,7 +906,8 @@ class OWMDS(OWWidget):
                 # become an issue, I preferred using simpler code.
                 m = self._effective_matrix
                 n = len(m)
-                p = (n * (n - 1) // 2 * self.connected_pairs) // 100
+                p = min(n * (n - 1) // 2 * self.connected_pairs // 100,
+                        MAX_N_PAIRS * self.connected_pairs // 20)
                 indcs = numpy.triu_indices(n, 1)
                 sorted = numpy.argsort(m[indcs])[:p]
                 self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
