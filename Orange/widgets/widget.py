@@ -437,6 +437,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             )
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
+            self.message_bar.hide()
             self.__progressBar = pb = QProgressBar(
                 maximumWidth=120, minimum=0, maximum=100
             )
