@@ -15,6 +15,7 @@ from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets.utils.messagewidget import MessagesWidget
 
 
 class DummyComponent(OWComponent):
@@ -309,3 +310,64 @@ class DestroyedSignalSpy(QSignalSpy):
         self.__mapper = DestroyedSignalSpy.Mapper()
         obj.destroyed.connect(self.__mapper.destroyed_)
         super().__init__(self.__mapper.destroyed_)
+
+
+class WidgetTestInfoSummary(WidgetTest):
+    def test_info_set_warn(self):
+        test = self
+
+        class TestW(OWWidget):
+            name = "a"
+            def __init__(self):
+                super().__init__()
+                with test.assertWarns(DeprecationWarning):
+                    self.info = 4
+        TestW()
+
+    def test_io_summaries(self):
+        w = MyWidget()
+        info = w.info  # type: StateInfo
+        inmsg = w.findChild(MessagesWidget, "input-summary")  # type: MessagesWidget
+        outmsg = w.findChild(MessagesWidget, "output-summary")  # type: MessagesWidget
+        self.assertEqual(len(inmsg.messages()), 0)
+        self.assertEqual(len(outmsg.messages()), 0)
+
+        w.info.set_input_summary(w.info.NoInput)
+        w.info.set_output_summary(w.info.NoOutput)
+
+        self.assertEqual(len(inmsg.messages()), 1)
+        self.assertFalse(inmsg.summarize().isEmpty())
+        self.assertEqual(len(outmsg.messages()), 1)
+        self.assertFalse(outmsg.summarize().isEmpty())
+
+        info.set_input_summary("Foo")
+
+        self.assertEqual(len(inmsg.messages()), 1)
+        self.assertEqual(inmsg.summarize().text, "Foo")
+        self.assertFalse(inmsg.summarize().icon.isNull())
+
+        info.set_input_summary("Foo", "A foo that bars",)
+
+        info.set_input_summary(None)
+        info.set_output_summary(None)
+
+        self.assertTrue(inmsg.summarize().isEmpty())
+        self.assertTrue(outmsg.summarize().isEmpty())
+
+        info.set_output_summary("Foobar", "42")
+
+        self.assertEqual(len(outmsg.messages()), 1)
+        self.assertEqual(outmsg.summarize().text, "Foobar")
+        self.assertFalse(outmsg.summarize().icon.isNull())
+
+        with self.assertRaises(TypeError):
+            info.set_input_summary(None, "a")
+
+        with self.assertRaises(TypeError):
+            info.set_input_summary(info.NoInput, "a")
+
+        with self.assertRaises(TypeError):
+            info.set_output_summary(None, "a")
+
+        with self.assertRaises(TypeError):
+            info.set_output_summary(info.NoOutput, "a")
