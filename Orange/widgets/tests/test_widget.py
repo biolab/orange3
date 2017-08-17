@@ -150,6 +150,34 @@ class WidgetTestCase(WidgetTest):
         self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
         self.assertIsNone(ref())
 
+    def _status_bar_visible_test(self, widget):
+        # type: (OWWidget) -> None
+        # Test that statusBar().setVisible collapses/expands the bottom margins
+        sb = widget.statusBar()
+        m1 = widget.contentsMargins().bottom()
+        sb.setVisible(False)
+        m2 = widget.contentsMargins().bottom()
+        self.assertLess(m2, m1)
+        self.assertEqual(m2, 0)
+        sb.setVisible(True)
+        m3 = widget.contentsMargins().bottom()
+        self.assertEqual(sb.height(), m3)
+        self.assertNotEqual(m3, 0)
+
+    def test_status_bar(self):
+        # Test that statusBar().setVisible collapses/expands the bottom margins
+        w = MyWidget()
+        self._status_bar_visible_test(w)
+        # run through drawing code (for coverage)
+        w.statusBar().grab()
+
+    def test_status_bar_no_basic_layout(self):
+        # Test that statusBar() works when widget defines
+        # want_basic_layout=False
+        with patch.object(MyWidget, "want_basic_layout", False):
+            w = MyWidget()
+        self._status_bar_visible_test(w)
+
 
 class WidgetMsgTestCase(WidgetTest):
 

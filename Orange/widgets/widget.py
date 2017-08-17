@@ -4,13 +4,15 @@ import types
 import textwrap
 from operator import attrgetter
 
+from typing import Optional
+
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
     QProgressBar, QAction, QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
-    Qt, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
+    Qt, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
     QUrl, QThread, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
@@ -221,6 +223,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             enabled=False, visible=False, shortcut=QKeySequence(Qt.Key_F1)
         )
         self.addAction(self.__help_action)
+        self.__statusbar = None  # type: Optional[QStatusBar]
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
@@ -384,17 +387,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self._insert_main_area()
 
         if self.want_message_bar:
-            # Use a OverlayWidget for status bar positioning.
-            c = OverlayWidget(self, alignment=Qt.AlignBottom)
-            c.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            c.setWidget(self)
-            c.setLayout(QVBoxLayout())
-            c.layout().setContentsMargins(0, 0, 0, 0)
-            sb = QStatusBar()
-            sb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-            sb.setSizeGripEnabled(self.resizing_enabled)
-            c.layout().addWidget(sb)
-
+            sb = self.statusBar()
             help = self.__help_action
             icon = QIcon(gui.resource_filename("icons/help.svg"))
             icon.addFile(gui.resource_filename("icons/help-hover.svg"), mode=QIcon.Active)
@@ -452,10 +445,52 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.blockingStateChanged.connect(self.__processingStateChanged)
             self.progressBarValueChanged.connect(lambda v: pb.setValue(int(v)))
 
+    def statusBar(self):
+        # type: () -> QStatusBar
+        """
+        Return the widget's status bar.
+
+        The status bar can be hidden/shown (`self.statusBar().setVisible()`).
+
+        Note
+        ----
+        The status bar takes control of the widget's bottom margin
+        (`contentsMargins`) to layout itself in the OWWidget.
+        """
+        statusbar = self.__statusbar
+
+        if statusbar is None:
+            # Use a OverlayWidget for status bar positioning.
+            c = OverlayWidget(self, alignment=Qt.AlignBottom)
+            c.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            c.setWidget(self)
+            c.setLayout(QVBoxLayout())
+            c.layout().setContentsMargins(0, 0, 0, 0)
+            statusbar = _StatusBar(
+                c, objectName="owwidget-status-bar"
+            )
+            statusbar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+            statusbar.setSizeGripEnabled(self.resizing_enabled)
+            statusbar.ensurePolished()
+            c.layout().addWidget(statusbar)
+
             # Reserve the bottom margins for the status bar
-            margins = self.layout().contentsMargins()
-            margins.setBottom(sb.sizeHint().height())
+            margins = self.contentsMargins()
+            margins.setBottom(statusbar.sizeHint().height())
             self.setContentsMargins(margins)
+            statusbar.change.connect(self.__updateStatusBarMargins)
+            self.__statusbar = statusbar
+        return statusbar
+
+    def __updateStatusBarMargins(self):
+        statusbar = self.__statusbar
+        if statusbar.isVisibleTo(self):
+            height = statusbar.height()
+        else:
+            height = 0
+        margins = self.contentsMargins()
+        margins.setBottom(height)
+        self.setContentsMargins(margins)
 
     def __processingStateChanged(self):
         # Update the progress bar in the widget's status bar
@@ -1037,6 +1072,18 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             version of the saved context
             or None if context was created before migrations
         """
+
+
+class _StatusBar(QStatusBar):
+    #: Emitted on a change of geometry or visibility (explicit hide/show)
+    change = Signal()
+
+    def event(self, event):
+        # type: (QEvent) ->bool
+        if event.type() in {QEvent.Resize, QEvent.ShowToParent,
+                            QEvent.HideToParent}:
+            self.change.emit()
+        return super().event(event)
 
 
 class Message(object):
