@@ -1,19 +1,23 @@
+# Module imports Input, Output and AttributeList to be used in widgets
+# pylint: disable=too-many-lines
+
 import sys
 import os
 import types
+import warnings
 import textwrap
 from operator import attrgetter
 
-from typing import Optional
+from typing import Optional, Union
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction, QWIDGETSIZE_MAX
+    QProgressBar, QAction, QFrame, QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
-    Qt, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
-    QUrl, QThread, pyqtSignal as Signal
+    Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
+    QSettings, QUrl, QThread, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
@@ -225,6 +229,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.addAction(self.__help_action)
         self.__statusbar = None  # type: Optional[QStatusBar]
         self.__statusbar_action = None  # type: Optional[QAction]
+        self.__info_ns = None  # type: Optional[StateInfo]
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
@@ -517,6 +522,71 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             pb.setRange(0, 0)  # indeterminate pb
         elif self.processingState:
             pb.setRange(0, 100)  # determinate pb
+
+    def __info(self):
+        # Create and return the StateInfo object
+        if self.__info_ns is None:
+            self.__info_ns = info = StateInfo(self)
+            sb = self.statusBar()
+            if sb is not None:
+                in_msg = MessagesWidget(objectName="input-summary")
+                in_msg.setVisible(False)
+                out_msg = MessagesWidget(objectName="output-summary")
+                out_msg.setVisible(False)
+                # Insert a separator if these are not the first elements
+                # TODO: This needs a better check.
+                if sb.findChildren(SimpleButton):
+                    sb.addWidget(QFrame(frameShape=QFrame.VLine))
+                sb.addWidget(in_msg)
+                sb.addWidget(out_msg)
+
+                def set_message(msgwidget, m):
+                    # type: (MessagesWidget, StateInfo.Summary) -> None
+                    message = MessagesWidget.Message(
+                        icon=m.icon, text=m.brief, informativeText=m.details,
+                        textFormat=m.format
+                    )
+                    msgwidget.setMessage(0, message)
+                    msgwidget.setVisible(not message.isEmpty())
+
+                info.input_summary_changed.connect(
+                    lambda m: set_message(in_msg, m)
+                )
+                info.output_summary_changed.connect(
+                    lambda m: set_message(out_msg, m)
+                )
+        else:
+            info = self.__info_ns
+        return info
+
+    @property
+    def info(self):
+        # type: () -> StateInfo
+        """
+        A namespace for reporting I/O, state ... related messages.
+
+        .. versionadded:: 3.19
+
+        Returns
+        -------
+        namespace : StateInfo
+        """
+        # back-compatibility; subclasses were free to assign self.info =
+        # to any value. Preserve this.
+        try:
+            return self.__dict__["info"]
+        except KeyError:
+            pass
+        return self.__info()
+
+    @info.setter
+    def info(self, val):
+        warnings.warn(
+            "'OWWidget.info' is a property since 3.19 and will be made read "
+            "only in v4.0.",
+            DeprecationWarning, stacklevel=3
+        )
+        self.__dict__["info"] = val
 
     def __toggleControlArea(self):
         if self.__splitter is None or self.__splitter.count() < 2:
@@ -1155,3 +1225,241 @@ Explicit = widget_description.Explicit
 #: to any input signal which can accept a subtype of the declared output
 #: type.
 Dynamic = widget_description.Dynamic
+
+
+class StateInfo(QObject):
+    """
+    A namespace for OWWidget's detailed input/output/state summary reporting.
+
+    See Also
+    --------
+    OWWidget.info
+    """
+    class Summary:
+        """
+        Input/output summary description.
+
+        This class is used to hold and report detailed I/O summaries.
+
+        Attributes
+        ----------
+        brief: str
+            A brief (inline) description.
+        details: str
+            A richer detailed description.
+        icon: QIcon
+            An custom icon. If not set a default set will be used to indicate
+            special states (i.e. empty input ...)
+        format: Qt.TextFormat
+            Qt.PlainText if `brief` and `details` are to be rendered as plain
+            text or Qt.RichText if they are HTML.
+
+        See also
+        --------
+        :func:`StateInfo.set_input_summary`,
+        :func:`StateInfo.set_output_summary`,
+        :class:`StateInfo.Empty`,
+        :class:`StateInfo.Partial`,
+        `Supported HTML Subset`_
+
+        .. _`Supported HTML Subset`:
+            http://doc.qt.io/qt-5/richtext-html-subset.html
+
+        """
+        def __init__(self, brief="", details="", icon=QIcon(),
+                     format=Qt.PlainText):
+            # type: (str, str, QIcon, Qt.TextFormat) -> None
+            super().__init__()
+            self.__brief = brief
+            self.__details = details
+            self.__icon = QIcon(icon)
+            self.__format = format
+
+        @property
+        def brief(self) -> str:
+            return self.__brief
+
+        @property
+        def details(self) -> str:
+            return self.__details
+
+        @property
+        def icon(self) -> QIcon:
+            return QIcon(self.__icon)
+
+        @property
+        def format(self) -> Qt.TextFormat:
+            return self.__format
+
+        def __eq__(self, other):
+            return (isinstance(other, StateInfo.Summary) and
+                    self.brief == other.brief and
+                    self.details == other.details and
+                    self.icon.cacheKey() == other.icon.cacheKey() and
+                    self.format == other.format)
+
+        def as_dict(self):
+            return dict(brief=self.brief, details=self.details, icon=self.icon,
+                        format=self.format)
+
+        def updated(self, **kwargs):
+            state = self.as_dict()
+            state.update(**kwargs)
+            return type(self)(**state)
+
+        @classmethod
+        def default_icon(cls, role):
+            # type: (str) -> QIcon
+            """
+            Return a default icon for input/output role.
+
+            Parameters
+            ----------
+            role: str
+                "input" or "output"
+
+            Returns
+            -------
+            icon: QIcon
+            """
+            return QIcon(gui.resource_filename("icons/{}.svg".format(role)))
+
+    class Empty(Summary):
+        """
+        Input/output summary description indicating empty I/O state.
+        """
+        @classmethod
+        def default_icon(cls, role):
+            return QIcon(gui.resource_filename("icons/{}-empty.svg".format(role)))
+
+    class Partial(Summary):
+        """
+        Input summary indicating partial input.
+
+        This state indicates that some inputs are present but more are needed
+        in order for the widget to proceed.
+        """
+        @classmethod
+        def default_icon(cls, role):
+            return QIcon(gui.resource_filename("icons/{}-partial.svg".format(role)))
+
+    #: Signal emitted when the input summary changes
+    input_summary_changed = Signal(Summary)
+    #: Signal emitted when the output summary changes
+    output_summary_changed = Signal(Summary)
+
+    #: A default message displayed to indicate no inputs.
+    NoInput = Empty()
+
+    #: A default message displayed to indicate no output.
+    NoOutput = Empty()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__input_summary = StateInfo.Summary()   # type: StateInfo.Summary
+        self.__output_summary = StateInfo.Summary()  # type: StateInfo.Summary
+
+    def set_input_summary(self, summary, details="", icon=QIcon(),
+                          format=Qt.PlainText):
+        # type: (Union[StateInfo.Summary, str, None], str, QIcon, Qt.TextFormat) -> None
+        """
+        Set the input summary description.
+
+        This method has two overloads
+
+        .. function:: set_input_summary(summary: Optional[StateInfo.Summary]])
+
+        .. function:: set_input_summary(summary:str, detailed:str="", icon:QIcon)
+
+        Note
+        ----
+        `set_input_summary(None)` clears/resets the current summary. Use
+        `set_input_summary(StateInfo.NoInput)` to indicate no input state.
+
+        Parameters
+        ----------
+        summary : Union[Optional[StateInfo.Message], str]
+            A populated `StateInfo.Message` instance or
+            a short text description (should not exceed 16 characters).
+        details : str
+            A detailed description (only applicable if summary is a string).
+        icon : QIcon
+            An icon. If not specified a default icon will be used (only
+            applicable if `summary` is a string).
+        format : Qt.TextFormat
+            Specify how the `short` and `details` text should be interpreted.
+            Can be `Qt.PlainText` or `Qt.RichText` (only applicable if
+            `summary` is a string).
+        """
+        def assert_single_arg():
+            if not (details == "" and icon.isNull() and format == Qt.PlainText):
+                raise TypeError("No extra arguments expected when `summary` "
+                                "is `None` or `Message`")
+
+        if summary is None:
+            assert_single_arg()
+            summary = StateInfo.Summary()
+        elif isinstance(summary, StateInfo.Summary):
+            assert_single_arg()
+            if summary.icon.isNull():
+                summary = summary.updated(icon=summary.default_icon("input"))
+        elif isinstance(summary, str):
+            summary = StateInfo.Summary(summary, details, icon, format=format)
+            if summary.icon.isNull():
+                summary = summary.updated(icon=summary.default_icon("input"))
+        else:
+            raise TypeError("'None', 'str' or 'Message' instance expected, "
+                            "got '{}'" .format(type(summary).__name__))
+
+        if self.__input_summary != summary:
+            self.__input_summary = summary
+            self.input_summary_changed.emit(summary)
+
+    def set_output_summary(self, summary, details="", icon=QIcon(),
+                           format=Qt.PlainText):
+        # type: (Union[StateInfo.Summary, str, None], str, QIcon, Qt.TextFormat) -> None
+        """
+        Set the output summary description.
+
+        Note
+        ----
+        `set_output_summary(None)` clears/resets the current summary. Use
+        `set_output_summary(StateInfo.NoOutput)` to indicate no output state.
+
+        Parameters
+        ----------
+        summary : Union[StateInfo.Summary, str, None]
+            A populated `StateInfo.Summary` instance or a short text
+            description (should not exceed 16 characters).
+        details : str
+            A detailed description (only applicable if `summary` is a string).
+        icon : QIcon
+            An icon. If not specified a default icon will be used
+            (only applicable if `summary` is a string)
+        format : Qt.TextFormat
+            Specify how the `summary` and `details` text should be interpreted.
+            Can be `Qt.PlainText` or `Qt.RichText` (only applicable if
+            `summary` is a string).
+        """
+        def assert_single_arg():
+            if not (details == "" and icon.isNull() and format == Qt.PlainText):
+                raise TypeError("No extra arguments expected when `summary` "
+                                "is `None` or `Message`")
+        if summary is None:
+            assert_single_arg()
+            summary = StateInfo.Summary()
+        elif isinstance(summary, StateInfo.Summary):
+            assert_single_arg()
+            if summary.icon.isNull():
+                summary = summary.updated(icon=summary.default_icon("output"))
+        elif isinstance(summary, str):
+            summary = StateInfo.Summary(summary, details, icon, format=format)
+            if summary.icon.isNull():
+                summary = summary.updated(icon=summary.default_icon("output"))
+        else:
+            raise TypeError("'None', 'str' or 'Message' instance expected, "
+                            "got '{}'" .format(type(summary).__name__))
+
+        if self.__output_summary != summary:
+            self.__output_summary = summary
+            self.output_summary_changed.emit(summary)
