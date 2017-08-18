@@ -263,7 +263,8 @@ class _RemoveNaNRows(preprocess.preprocess.Preprocess):
 
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
-     Model, Random, DropRows, DropColumns) = 0, 1, 2, 3, 4, 5, 6
+     Model, Random, DropRows, DropColumns,
+     ForwardFill, BackwardFill) = 0, 1, 2, 3, 4, 5, 6, 7, 8
 
     Imputers = {
         NoImputation: (None, {}),
@@ -271,7 +272,9 @@ class ImputeEditor(BaseEditor):
         Average: (preprocess.impute.Average(), {}),
         #         Model: (preprocess.impute.Model, {}),
         Random: (preprocess.impute.Random(), {}),
-        DropRows: (None, {})
+        DropRows: (None, {}),
+        ForwardFill: (preprocess.impute.FillForward(), {}),
+        BackwardFill: (preprocess.impute.FillBackward(), {})
     }
     Names = {
         NoImputation: "Don't impute.",
@@ -280,6 +283,8 @@ class ImputeEditor(BaseEditor):
         Model: "Model based imputer",
         Random: "Replace with random value",
         DropRows: "Remove rows with missing values.",
+        ForwardFill: preprocess.impute.FillForward.description,
+        BackwardFill: preprocess.impute.FillBackward.description
     }
 
     def __init__(self, parent=None, **kwargs):
@@ -290,7 +295,7 @@ class ImputeEditor(BaseEditor):
         self.__group = group = QButtonGroup(self, exclusive=True)
         group.buttonClicked.connect(self.__on_buttonClicked)
 
-        for methodid in [self.Average, self.Random, self.DropRows]:
+        for methodid in [self.Average, self.Random, self.DropRows, self.ForwardFill, self.BackwardFill]:
             text = self.Names[methodid]
             rb = QRadioButton(text=text, checked=self.__method == methodid)
             group.addButton(rb, methodid)
