@@ -15,6 +15,7 @@ import pickle
 import shlex
 import shutil
 from unittest.mock import patch
+import multiprocessing as mp
 
 import pkg_resources
 
@@ -45,6 +46,13 @@ log = logging.getLogger(__name__)
 # Allow termination with CTRL + C
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+
+# In widgets, we default algorithms to n_jobs=-1 for performance.
+# Avoids lock-ups on incompatible libraries.
+# http://scikit-learn.org/stable/faq.html#why-do-i-sometime-get-a-crash-freeze-with-n-jobs-1-under-osx-or-linux
+if not sys.platform.startswith('win'):
+    mp.set_start_method('forkserver')
 
 
 def fix_osx_10_9_private_font():

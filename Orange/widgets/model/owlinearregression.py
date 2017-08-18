@@ -117,7 +117,7 @@ class OWLinearRegression(OWBaseLearner):
         preprocessors = self.preprocessors
         args = {"preprocessors": preprocessors}
         if self.reg_type == OWLinearRegression.OLS:
-            learner = LinearRegressionLearner(**args)
+            learner = LinearRegressionLearner(n_jobs=-1, **args)
         elif self.reg_type == OWLinearRegression.Ridge:
             learner = RidgeRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
