@@ -736,6 +736,15 @@ def _env_with_proxies():
 Install, Upgrade, Uninstall = 1, 2, 3
 
 
+class CommandFailed(Exception):
+    def __init__(self, cmd, retcode, output):
+        if not isinstance(cmd, str):
+            cmd = " ".join(map(shlex.quote, cmd))
+        self.cmd = cmd
+        self.retcode = retcode
+        self.output = output
+
+
 class Installer(QObject):
     installStatusChanged = Signal(str)
     started = Signal()
@@ -746,7 +755,7 @@ class Installer(QObject):
         QObject.__init__(self, parent)
         self.__interupt = False
         self.__queue = deque(steps)
-        self.__user_install = user_install
+        self.pip = PipInstaller(user_install)
 
     def start(self):
         QTimer.singleShot(0, self._next)
@@ -760,124 +769,117 @@ class Installer(QObject):
 
     @Slot()
     def _next(self):
-        def fmt_cmd(cmd):
-            return "Command failed: python " + " ".join(map(shlex.quote, cmd))
-
         command, pkg = self.__queue.popleft()
-        if command == Install:
-            inst = pkg.installable
-            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
-            self.setStatusMessage("Installing {}".format(inst.name))
-
-            cmd = (["-m", "pip", "install"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-        elif command == Upgrade:
-            inst = pkg.installable
-            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
-            self.setStatusMessage("Upgrading {}".format(inst.name))
-
-            cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-            # Why is this here twice??
-            cmd = (["-m", "pip", "install"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-        elif command == Uninstall:
-            dist = pkg.local
-            self.setStatusMessage("Uninstalling {}".format(dist.project_name))
-
-            cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if self.__user_install:
-                # Remove the package forcefully; pip doesn't (yet) uninstall
-                # --user packages (or any package outside sys.prefix?)
-                # google: pip "Not uninstalling ?" "outside environment"
-                install_path = os.path.join(
-                    USER_SITE, re.sub('[^\w]', '_', dist.project_name))
-                pip_record = next(iglob(install_path + '*.dist-info/RECORD'),
-                                  None)
-                if pip_record:
-                    with open(pip_record) as f:
-                        files = [line.rsplit(',', 2)[0] for line in f]
-                else:
-                    files = [os.path.join(
-                        USER_SITE, 'orangecontrib',
-                        dist.project_name.split('-')[-1].lower()),]
-                for match in itertools.chain(files, iglob(install_path + '*')):
-                    print('rm -rf', match)
-                    if os.path.isdir(match):
-                        shutil.rmtree(match)
-                    elif os.path.exists(match):
-                        os.unlink(match)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
+        try:
+            if command == Install:
+                self.setStatusMessage(
+                    "Installing {}".format(pkg.installable.name))
+                self.pip.install(pkg.installable)
+            elif command == Upgrade:
+                self.setStatusMessage(
+                    "Upgrading {}".format(pkg.installable.name))
+                self.pip.upgrade(pkg.installable)
+            elif command == Uninstall:
+                self.setStatusMessage(
+                    "Uninstalling {}".format(pkg.local.project_name))
+                self.pip.uninstall(pkg.local)
+        except CommandFailed as ex:
+            self.error.emit(
+                "Command failed: python {}".format(ex.cmd),
+                pkg, ex.retcode, ex.output
+            )
+            return
 
         if self.__queue:
             QTimer.singleShot(0, self._next)
         else:
             self.finished.emit()
 
-    def __subprocessrun(self, process):
-        output = []
-        while process.poll() is None:
-            try:
-                line = process.stdout.readline()
-            except IOError as ex:
-                if ex.errno != errno.EINTR:
-                    raise
-            else:
-                output.append(line)
-                print(line, end="")
-        # Read remaining output if any
-        line = process.stdout.read()
-        if line:
+
+class PipInstaller:
+    def __init__(self, user_install=False):
+        self.user_install = user_install
+
+    def install(self, pkg):
+        cmd = ["-m", "pip", "install"]
+        if self.user_install:
+            cmd.append("--user")
+        cmd.append(pkg.name)
+
+        run_command(cmd)
+
+    def upgrade(self, package):
+        # This is done in two steps to avoid upgrading
+        # all of the dependencies - faster
+        self.upgrade_no_deps(package)
+        self.install(package)
+
+    def upgrade_no_deps(self, package):
+        cmd = ["-m", "pip", "install", "--upgrade", "--no-deps"]
+        if self.user_install:
+            cmd.append("--user")
+        cmd.append(package.name)
+
+        run_command(cmd)
+
+    def uninstall(self, dist):
+        cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
+        run_command(cmd)
+
+        if self.user_install:
+            # Remove the package forcefully; pip doesn't (yet) uninstall
+            # --user packages (or any package outside sys.prefix?)-
+            # google: pip "Not uninstalling ?" "outside environment"
+            self.manual_uninstall(dist)
+
+    def manual_uninstall(self, dist):
+        install_path = os.path.join(
+            USER_SITE, re.sub('[^\w]', '_', dist.project_name))
+        pip_record = next(iglob(install_path + '*.dist-info/RECORD'),
+                          None)
+        if pip_record:
+            with open(pip_record) as f:
+                files = [line.rsplit(',', 2)[0] for line in f]
+        else:
+            files = [os.path.join(
+                USER_SITE, 'orangecontrib',
+                dist.project_name.split('-')[-1].lower()), ]
+        for match in itertools.chain(files, iglob(install_path + '*')):
+            print('rm -rf', match)
+            if os.path.isdir(match):
+                shutil.rmtree(match)
+            elif os.path.exists(match):
+                os.unlink(match)
+
+
+def run_command(command, raise_on_fail=True):
+    """Run command in a subprocess.
+
+    Return `process` return code and output once it completes.
+    """
+    process = python_process(command, bufsize=-1, universal_newlines=True,
+                             env=_env_with_proxies())
+
+    output = []
+    while process.poll() is None:
+        try:
+            line = process.stdout.readline()
+        except IOError as ex:
+            if ex.errno != errno.EINTR:
+                raise
+        else:
             output.append(line)
             print(line, end="")
+    # Read remaining output if any
+    line = process.stdout.read()
+    if line:
+        output.append(line)
+        print(line, end="")
 
-        return process.returncode, output
+    if raise_on_fail and process.returncode != 0:
+        raise CommandFailed(command, process.returncode, output)
+
+    return process.returncode, output
 
 
 def python_process(args, script_name=None, cwd=None, env=None, **kwargs):
