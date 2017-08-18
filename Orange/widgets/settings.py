@@ -34,8 +34,10 @@ import itertools
 import os
 import logging
 import pickle
+import pprint
 import time
 import warnings
+from operator import itemgetter
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
@@ -1207,6 +1209,30 @@ class PerfectDomainContextHandler(DomainContextHandler):
             return value, -1
         else:
             return super().encode_setting(context, setting, value)
+
+
+class SettingsPrinter(pprint.PrettyPrinter):
+    """Pretty Printer that knows how to properly format Contexts."""
+
+    def _format(self, obj, stream, indent, allowance, context, level):
+        if not isinstance(obj, Context):
+            return super()._format(obj, stream, indent,
+                                   allowance, context, level)
+
+        stream.write("Context(")
+        for key, value in sorted(obj.__dict__.items(), key=itemgetter(0)):
+            if key == "values":
+                continue
+            stream.write(key)
+            stream.write("=")
+            stream.write(self._repr(value, context, level + 1))
+            stream.write(",\n")
+            stream.write(" " * (indent + 8))
+        stream.write("values=")
+        stream.write(" ")
+        self._format(obj.values, stream, indent+15,
+                     allowance+1, context, level + 1)
+        stream.write(")")
 
 
 def rename_setting(settings, old_name, new_name):

@@ -3,7 +3,10 @@ from copy import copy, deepcopy
 from io import BytesIO
 from unittest import TestCase
 from unittest.mock import Mock, patch, call
-from Orange.widgets.settings import ContextHandler, Setting, ContextSetting, Context, VERSION_KEY
+from Orange.widgets.settings import (
+    ContextHandler, ContextSetting, Context, Setting, SettingsPrinter,
+    VERSION_KEY
+)
 
 __author__ = 'anze'
 
@@ -159,3 +162,24 @@ class TestContextHandler(TestCase):
         self.assertIn("context_settings", settings)
         for c in settings["context_settings"]:
             self.assertIn(VERSION_KEY, c.values)
+
+
+class TestSettingsPrinter(TestCase):
+    def test_formats_contexts(self):
+        settings = dict(key1=1, key2=2,
+                        context_settings=[
+                            Context(param1=1, param2=2,
+                                    values=dict(value1=1,
+                                                value2=2)),
+                            Context(param1=3, param2=4,
+                                    values=dict(value1=5,
+                                                value2=6))
+                        ])
+        pp = SettingsPrinter()
+
+        output = pp.pformat(settings)
+        # parameter of all contexts should be visible in the output
+        self.assertIn("param1=1", output)
+        self.assertIn("param2=2", output)
+        self.assertIn("param1=3", output)
+        self.assertIn("param2=4", output)
