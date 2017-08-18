@@ -98,6 +98,10 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 class PythonScriptEditor(QPlainTextEdit):
     INDENT = 4
 
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+
     def lastLine(self):
         text = str(self.toPlainText())
         pos = self.textCursor().position()
@@ -106,7 +110,12 @@ class PythonScriptEditor(QPlainTextEdit):
         return text
 
     def keyPressEvent(self, event):
+        self.widget.enable_execute()
         if event.key() == Qt.Key_Return:
+            if event.modifiers() & (
+                    Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
+                self.widget.unconditional_commit()
+                return
             text = self.lastLine()
             indent = len(text) - len(text.lstrip())
             if text.strip() == "pass" or text.strip().startswith("return "):
@@ -467,8 +476,8 @@ class OWPythonScript(widget.OWWidget):
         self.controlBox.layout().addWidget(w)
 
         self.execute_button = gui.auto_commit(
-            self.controlArea, self, "auto_execute", "Execute",
-            auto_label="Auto Execute")
+            self.controlArea, self, "auto_execute", "Run",
+            checkbox_label="Autorun on new data").button
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -509,6 +518,9 @@ class OWPythonScript(widget.OWWidget):
         self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
+
+    def enable_execute(self):
+        self.execute_button.setEnabled(True)
 
     def handle_input(self, obj, id, signal):
         id = id[0]
@@ -664,6 +676,8 @@ class OWPythonScript(widget.OWWidget):
         return d
 
     def commit(self):
+        if self.auto_execute:
+           self.execute_button.setEnabled(False)
         self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()
