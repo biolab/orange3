@@ -124,6 +124,27 @@ class WidgetMsgTestCase(WidgetTest):
         w.Information.hello.clear()
         self.assertEqual(len(messages), 0)
 
+    def test_message_exc_info(self):
+        w = WidgetMsgTestCase.TestWidget()
+        w.Error.add_message("error")
+        messages = set([])
+        w.messageActivated.connect(messages.add)
+        w.messageDeactivated.connect(messages.remove)
+        try:
+            _ = 1 / 0
+        except ZeroDivisionError:
+            w.Error.error("AA", exc_info=True)
+
+        self.assertEqual(len(messages), 1)
+        m = list(messages).pop()
+        self.assertIsNotNone(m.tb)
+        self.assertIn("ZeroDivisionError", m.tb)
+
+        w.Error.error("BB", exc_info=Exception("foobar"))
+        self.assertIn("foobar", m.tb)
+        w.Error.error("BB")
+        self.assertIsNone(m.tb)
+
     def test_old_style_messages(self):
         w = WidgetMsgTestCase.TestWidget()
         w.Information.clear()

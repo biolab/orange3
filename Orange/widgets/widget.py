@@ -7,10 +7,12 @@ import types
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
-    QShortcut, QSplitter, QSplitterHandle, QPushButton
+    QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
+    QProgressBar
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal)
+    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
+)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
@@ -26,10 +28,10 @@ from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
-    WidgetMessagesMixin, UnboundMsg
+    WidgetMessagesMixin, UnboundMsg, MessagesWidget
 from Orange.widgets.utils.signals import \
     WidgetSignalsMixin, Input, Output, AttributeList
-from .utils.overlay import MessageOverlayWidget
+from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 
 # Msg is imported and renamed, so widgets can import it from this module rather
 # than the one with the mixin (Orange.widgets.utils.messages). Assignment is
@@ -323,20 +325,60 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         """
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(2, 2, 2, 2)
+
         if not self.resizing_enabled:
             self.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
 
         self.want_main_area = self.want_main_area or self.graph_name
         self._create_default_buttons()
 
-        if self.want_message_bar:
-            self.insert_message_bar()
-
         self._insert_splitter()
         if self.want_control_area:
             self._insert_control_area()
         if self.want_main_area:
             self._insert_main_area()
+
+        if self.want_message_bar:
+            # Use a OverlayWidget for status bar positioning.
+            c = OverlayWidget(self, alignment=Qt.AlignBottom)
+            c.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            c.setWidget(self)
+            c.setLayout(QVBoxLayout())
+            c.layout().setContentsMargins(0, 0, 0, 0)
+            sb = QStatusBar()
+            sb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+            sb.setSizeGripEnabled(self.resizing_enabled)
+            c.layout().addWidget(sb)
+
+            self.message_bar = MessagesWidget(self)
+            self.message_bar.setSizePolicy(QSizePolicy.Preferred,
+                                           QSizePolicy.Preferred)
+            pb = QProgressBar(maximumWidth=120, minimum=0, maximum=100)
+            pb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored)
+            pb.setAttribute(Qt.WA_LayoutUsesWidgetRect)
+            pb.setAttribute(Qt.WA_MacMiniSize)
+            pb.hide()
+            sb.addPermanentWidget(pb)
+            sb.addPermanentWidget(self.message_bar)
+
+            def statechanged():
+                pb.setVisible(bool(self.processingState) or self.isBlocking())
+                if self.isBlocking() and not self.processingState:
+                    pb.setRange(0, 0)  # indeterminate pb
+                elif self.processingState:
+                    pb.setRange(0, 100)  # determinate pb
+
+            self.processingStateChanged.connect(statechanged)
+            self.blockingStateChanged.connect(statechanged)
+
+            @self.progressBarValueChanged.connect
+            def _(val):
+                pb.setValue(int(val))
+
+            # Reserve the bottom margins for the status bar
+            margins = self.layout().contentsMargins()
+            margins.setBottom(sb.sizeHint().height())
+            self.setContentsMargins(margins)
 
     def save_graph(self):
         """Save the graph with the name given in class attribute `graph_name`.

@@ -2,7 +2,7 @@
 Overlay Message Widget
 ----------------------
 
-A Widget to display a temporary dismissable message over another widget.
+A Widget to display a temporary dismissible message over another widget.
 
 """
 
@@ -17,7 +17,7 @@ from AnyQt.QtWidgets import (
     QStyleOptionButton, QStylePainter, QFocusFrame, QWidget, QStyleOption
 )
 from AnyQt.QtGui import QIcon, QPixmap, QPainter
-from AnyQt.QtCore import Qt, QSize, QRect, QPoint, QEvent, QTimer
+from AnyQt.QtCore import Qt, QSize, QRect, QPoint, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
@@ -102,8 +102,14 @@ class OverlayWidget(QWidget):
         painter = QPainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, painter, self)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Force immediate re-layout on show
+        self.__layout()
+
     def __layout(self):
         # position itself over `widget`
+        # pylint: disable=too-many-branches
         widget = self.__widget
         if widget is None:
             return
@@ -111,17 +117,26 @@ class OverlayWidget(QWidget):
         alignment = self.__alignment
         policy = self.sizePolicy()
 
-        if widget.isWindow():
-            bounds = widget.geometry()
+        if widget.window() is self.window() and not self.isWindow():
+            if widget.isWindow():
+                bounds = widget.rect()
+            else:
+                bounds = QRect(widget.mapTo(widget.window(), QPoint(0, 0)),
+                               widget.size())
+            tl = self.parent().mapFrom(widget.window(), bounds.topLeft())
+            bounds = QRect(tl, widget.size())
         else:
+            if widget.isWindow():
+                bounds = widget.geometry()
+            else:
+                bounds = QRect(widget.mapToGlobal(QPoint(0, 0)),
+                               widget.size())
 
-            bounds = QRect(widget.mapToGlobal(QPoint(0, 0)),
-                           widget.size())
-        if self.isWindow():
-            bounds = bounds
-        else:
-            bounds = QRect(self.parent().mapFromGlobal(bounds.topLeft()),
-                           bounds.size())
+            if self.isWindow():
+                bounds = bounds
+            else:
+                bounds = QRect(self.parent().mapFromGlobal(bounds.topLeft()),
+                               bounds.size())
 
         sh = self.sizeHint()
         minsh = self.minimumSizeHint()
@@ -134,6 +149,10 @@ class OverlayWidget(QWidget):
 
         hpolicy = policy.horizontalPolicy()
         vpolicy = policy.verticalPolicy()
+
+        if not effectivesh.isValid():
+            effectivesh = QSize(0, 0)
+            vpolicy = hpolicy = QSizePolicy.Ignored
 
         def getsize(hint, minimum, maximum, policy):
             if policy == QSizePolicy.Ignored:
@@ -158,14 +177,14 @@ class OverlayWidget(QWidget):
         if alignment & Qt.AlignLeft:
             x = bounds.x()
         elif alignment & Qt.AlignRight:
-            x = bounds.right() - size.width()
+            x = bounds.x() + bounds.width() - size.width()
         else:
             x = bounds.x() + max(0, bounds.width() - size.width()) // 2
 
         if alignment & Qt.AlignTop:
             y = bounds.y()
         elif alignment & Qt.AlignBottom:
-            y = bounds.bottom() - size.height()
+            y = bounds.y() + bounds.height() - size.height()
         else:
             y = bounds.y() + max(0, bounds.height() - size.height()) // 2
 
@@ -459,7 +478,7 @@ class MessageWidget(QWidget):
         """
         Return the ButtonRole for button
 
-        :type button: QAbsstractButton
+        :type button: QAbstractButton
         """
         for slot in self.__buttons:
             if slot.button is button:
@@ -591,51 +610,3 @@ class MessageOverlayWidget(OverlayWidget):
     @proxydoc(MessageWidget.button)
     def button(self, standardButton):
         return self.__msgwidget.button(standardButton)
-
-
-import unittest
-
-
-class TestOverlay(unittest.TestCase):
-    def setUp(self):
-        from AnyQt.QtWidgets import QApplication
-        app = QApplication.instance()
-        if app is None:
-            app = QApplication([])
-        self.app = app
-
-    def _exec(self, timeout):
-        QTimer.singleShot(timeout, self.app.quit)
-        return self.app.exec_()
-
-    def tearDown(self):
-        del self.app
-
-    def test_overlay(self):
-        container = QWidget()
-        overlay = MessageOverlayWidget(parent=container)
-        overlay.setWidget(container)
-        overlay.setIcon(QStyle.SP_MessageBoxInformation)
-        container.show()
-        container.raise_()
-        self._exec(500)
-        self.assertTrue(overlay.isVisible())
-
-        overlay.setText("Hello world! It's so nice here")
-        self._exec(500)
-        button_ok = overlay.addButton(MessageOverlayWidget.Ok)
-        button_close = overlay.addButton(MessageOverlayWidget.Close)
-        button_help = overlay.addButton(MessageOverlayWidget.Help)
-
-        self.assertTrue(all([button_ok, button_close, button_help]))
-        self.assertIs(overlay.button(MessageOverlayWidget.Ok), button_ok)
-        self.assertIs(overlay.button(MessageOverlayWidget.Close), button_close)
-        self.assertIs(overlay.button(MessageOverlayWidget.Help), button_help)
-
-        button = overlay.addButton("Click Me!",
-                                   MessageOverlayWidget.AcceptRole)
-        self.assertIsNot(button, None)
-        self.assertTrue(overlay.buttonRole(button),
-                        MessageOverlayWidget.AcceptRole)
-
-        self._exec(10000)

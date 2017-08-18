@@ -27,14 +27,18 @@ canvas.
 
 Clearing messages work analogously.
 """
-
+import sys
+import traceback
 from operator import attrgetter
 from warnings import warn
 from inspect import getattr_static
+# pylint: disable=unused-import
+from typing import Optional
 
-from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
+from AnyQt.QtWidgets import QStyle, QSizePolicy
 
 from Orange.widgets import gui
+from Orange.widgets.utils.messagewidget import MessagesWidget
 
 
 class UnboundMsg(str):
@@ -53,7 +57,7 @@ class UnboundMsg(str):
 
     # The method is implemented in _BoundMsg
     # pylint: disable=unused-variable
-    def __call__(self, *args, shown=True, **kwargs):
+    def __call__(self, *args, shown=True, exc_info=None, **kwargs):
         """
         Show the message, or hide it if `show` is set `False`
         `*args` and `**kwargs` are passed to the `format` method.
@@ -61,6 +65,10 @@ class UnboundMsg(str):
         Args:
             shown (bool): keyword-only argument that can be set to `False` to
                 hide the message
+            exc_info (Union[BaseException, bool, None]): Optional exception
+                instance whose traceback to store in the message. Can also be
+                a `True` value in which case the exception is retrieved from
+                sys.exc_info()
             *args: arguments for `format`
             **kwargs: keyword arguments for `format`
         """
@@ -105,13 +113,23 @@ class _BoundMsg(UnboundMsg):
         self = UnboundMsg.__new__(cls, unbound_msg)
         self.group = group
         self.formatted = ""
+        self.tb = None  # type: Optional[str]
         return self
 
-    def __call__(self, *args, shown=True, **kwargs):
+    def __call__(self, *args, shown=True, exc_info=None, **kwargs):
+        self.tb = None
         if not shown:
             self.clear()
         else:
             self.formatted = self.format(*args, **kwargs)
+            if exc_info:
+                if isinstance(exc_info, BaseException):
+                    exc_info = (type(exc_info), exc_info,
+                                exc_info.__traceback__)
+                elif not isinstance(exc_info, tuple):
+                    exc_info = sys.exc_info()
+                if exc_info is not None:
+                    self.tb = "".join(traceback.format_exception(*exc_info))
             self.group.activate_msg(self)
 
     def clear(self):
@@ -311,7 +329,7 @@ class WidgetMessagesMixin(MessagesMixin):
 
     def __init__(self):
         super().__init__()
-        self.message_bar = self.message_label = self.message_icon = None
+        self.message_bar = None
         self.messageActivated.connect(self.update_message_state)
         self.messageDeactivated.connect(self.update_message_state)
 
@@ -326,72 +344,40 @@ class WidgetMessagesMixin(MessagesMixin):
         The method is connected to widget's signals `messageActivated` and
         `messageDeactivated`.
         """
+        if self.message_bar is None:
+            return
+        assert isinstance(self.message_bar, MessagesWidget)
+
+        def msg(m):
+            # type: (_BoundMsg) -> MessagesWidget.Message
+            text = str(m)
+            extra = ""
+            if "\n" in text:
+                text, extra = text.split("\n", 1)
+
+            return MessagesWidget.Message(
+                MessagesWidget.Severity(m.group.severity),
+                text=text, informativeText=extra,
+                detailedText=m.tb if m.tb else ""
+            )
+
         messages = [msg
                     for group in self.message_groups
                     for msg in group.active]
-        if not messages:
-            self._hide_message_bar()
-            return
-        elif self.message_bar is not None:
-            font_size = self.message_bar.fontInfo().pixelSize()
-            group = messages[0].group
-            text = str(messages[0]).split("\n")[0] if len(messages) == 1 \
-                else "{} problems during execution".format(len(messages))
-            # TODO: fix tooltip background color - it is not white
-            tooltip = ''.join(
-                '''<p style="background-color: {}; margin: 0;">
-                <span style="font-size:9pt"><br></span>
-                <nobr style="font-size: {}px;">&nbsp;&nbsp;&nbsp;
-                {}
-                &nbsp;&nbsp;&nbsp;</nobr>
-                <span style="font-size:9pt"><br></span>
-                </p>'''.
-                format(msg.group.bar_background, font_size,
-                       str(msg).replace("\n", "<br/>&nbsp;&nbsp;&nbsp; "))
-                for msg in messages)
-            self._set_message_bar(group, text, tooltip)
+
+        self.message_bar.clear()
+        if messages:
+            self.message_bar.setMessages((m, msg(m)) for m in messages)
 
     def insert_message_bar(self):
         """Insert message bar into the widget.
 
         This method must be called at the appropriate place in the widget
         layout setup by any widget that is using this mixin."""
-        self.message_bar = gui.hBox(self, spacing=0)
-        self.message_icon = gui.widgetLabel(self.message_bar, "")
-        self.message_label = gui.widgetLabel(self.message_bar, "")
-        self.message_label.setStyleSheet("padding-top: 5px")
+        self.message_bar = MessagesWidget(self)
         self.message_bar.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
-        gui.rubber(self.message_bar)
+        self.layout().addWidget(self.message_bar)
         self.message_bar.setVisible(False)
-
-    def _hide_message_bar(self):
-        if self.message_bar is None:
-            return
-
-        if not self.message_bar.isHidden():
-            new_height = self.height() - self.message_bar.height()
-            self.message_bar.setVisible(False)
-            self.resize(self.width(), new_height)
-
-    def _set_message_bar(self, group, text=None, tooltip=None):
-        if self.message_bar is None:
-            return
-
-        current_height = self.height()
-        style = QApplication.instance().style()
-        self.message_icon.setPixmap(
-            style.standardIcon(group.bar_icon).pixmap(14, 14))
-        self.message_bar.setStyleSheet(
-            "QWidget {{ background-color: {}; color: black;"
-            "padding: 3px; padding-left: 6px; vertical-align: center }}\n"
-            "QToolTip {{ background-color: white; }}".
-            format(group.bar_background))
-        self.message_label.setText(text)
-        self.message_bar.setToolTip(tooltip)
-        if self.message_bar.isHidden():
-            self.message_bar.setVisible(True)
-            new_height = current_height + self.message_bar.height()
-            self.resize(self.width(), new_height)
 
     # pylint doesn't know that Information, Error and Warning are instantiated
     # and thus the methods are bound
