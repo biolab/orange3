@@ -13,11 +13,13 @@ import builtins
 import math
 import random
 import logging
-import numpy as np
+import ast
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
+
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
@@ -631,7 +633,6 @@ class OWFeatureConstructor(OWWidget):
 
 
 
-import ast
 
 
 def freevars(exp, env):
