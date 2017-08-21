@@ -1,6 +1,8 @@
+# pylint: disable=protected-access
+
 import unittest
 import copy
-import numpy
+import numpy as np
 
 import Orange.data
 import Orange.evaluation
@@ -33,7 +35,7 @@ class TestROC(unittest.TestCase):
 
         # fixed random seed because otherwise it could happen that data sample
         # contained only instances of two classes (and the test then fails)
-        data = data[numpy.random.RandomState(0).choice(len(data), size=20)]
+        data = data[np.random.RandomState(0).choice(len(data), size=20)]
         res = Orange.evaluation.LeaveOneOut(data, learners)
 
         for i, _ in enumerate(learners):
@@ -110,10 +112,10 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
     def test_empty_input(self):
         res = Orange.evaluation.Results(
             data=self.lenses[:0], nmethods=2, store_data=True)
-        res.row_indices = numpy.array([], dtype=int)
-        res.actual = numpy.array([])
-        res.predicted = numpy.zeros((2, 0))
-        res.probabilities = numpy.zeros((2, 0, 3))
+        res.row_indices = np.array([], dtype=int)
+        res.actual = np.array([])
+        res.predicted = np.zeros((2, 0))
+        res.probabilities = np.zeros((2, 0, 3))
 
         self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
@@ -125,10 +127,10 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         self.widget.roc_averaging = OWROCAnalysis.NoAveraging
         self.widget._replot()
 
-        res.row_indices = numpy.array([1], dtype=int)
-        res.actual = numpy.array([0.0])
-        res.predicted = numpy.zeros((2, 1))
-        res.probabilities = numpy.zeros((2, 1, 3))
+        res.row_indices = np.array([1], dtype=int)
+        res.actual = np.array([0.0])
+        res.predicted = np.zeros((2, 1))
+        res.probabilities = np.zeros((2, 1, 3))
 
         self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.widget.roc_averaging = OWROCAnalysis.Merge
@@ -146,9 +148,9 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         res.predicted = res.predicted.copy()
         res.probabilities = res.probabilities.copy()
 
-        res.actual[0] = numpy.nan
-        res.predicted[:, 1] = numpy.nan
-        res.probabilities[0, 1, :] = numpy.nan
+        res.actual[0] = np.nan
+        res.predicted[:, 1] = np.nan
+        res.probabilities[0, 1, :] = np.nan
 
         self.send_signal(self.widget.Inputs.evaluation_results, res)
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
