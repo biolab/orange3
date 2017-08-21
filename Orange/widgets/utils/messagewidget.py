@@ -139,6 +139,17 @@ class Message(
         return (not self.text and self.icon.isNull() and
                 not self.informativeText and not self.detailedText)
 
+    def __eq__(self, other):
+        if isinstance(other, Message):
+            return (self.severity == other.severity and
+                    self.icon.cacheKey() == other.icon.cacheKey() and
+                    self.text == other.text and
+                    self.informativeText == other.informativeText and
+                    self.detailedText == other.detailedText and
+                    self.textFormat == other.textFormat)
+        else:
+            return False
+
 
 def standard_pixmap(severity):
     # type: (Severity) -> QStyle.StandardPixmap
