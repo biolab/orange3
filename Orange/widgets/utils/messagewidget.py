@@ -354,7 +354,18 @@ class MessagesWidget(QWidget):
     def sizeHint(self):
         sh = super().sizeHint()
         h = self.style().pixelMetric(QStyle.PM_SmallIconSize)
+        if all(m.isEmpty() for m in self.messages()):
+            sh.setWidth(0)
         return sh.expandedTo(QSize(0, h + 2))
+
+    def minimumSizeHint(self):
+        msh = super().minimumSizeHint()
+        h = self.style().pixelMetric(QStyle.PM_SmallIconSize)
+        if all(m.isEmpty() for m in self.messages()):
+            msh.setWidth(0)
+        else:
+            msh.setWidth(h + 2)
+        return msh.expandedTo(QSize(0, h + 2))
 
     def openExternalLinks(self):
         # type: () -> bool
