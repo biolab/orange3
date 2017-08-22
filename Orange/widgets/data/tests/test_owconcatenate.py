@@ -21,6 +21,12 @@ class TestOWConcatenate(WidgetTest):
         self.iris = Table("iris")
         self.titanic = Table("titanic")
 
+    def test_no_input(self):
+        self.widget.apply()
+        self.widget.controls.append_source_column.toggle()
+        self.widget.apply()
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
     def test_single_input(self):
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
         self.send_signal(self.widget.Inputs.primary_data, self.iris)
