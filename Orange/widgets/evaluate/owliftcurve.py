@@ -5,7 +5,7 @@ Lift Curve Widget
 """
 from collections import namedtuple
 
-import numpy
+import numpy as np
 import sklearn.metrics as skl_metrics
 
 from AnyQt import QtWidgets
@@ -19,7 +19,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
-from Orange.widgets.io import FileFormat
 from Orange.widgets.widget import Input
 from Orange.canvas import report
 
@@ -37,7 +36,7 @@ LiftCurve = namedtuple(
 LiftCurve.is_valid = property(lambda self: self.points.is_valid)
 
 
-def LiftCurve_from_results(results, clf_index, target):
+def liftCurve_from_results(results, clf_index, target):
     x, y, thresholds = lift_curve_from_results(results, target, clf_index)
 
     points = CurvePoints(x, y, thresholds)
@@ -155,8 +154,10 @@ class OWLiftCurve(widget.OWWidget):
         if names is None:
             names = ["#{}".format(i + 1) for i in range(N)]
 
-        self.colors = colorpalette.ColorPaletteGenerator(
-            N, colorbrewer.colorSchemes["qualitative"]["Dark2"])
+        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
+        if N > len(scheme):
+            scheme = colorpalette.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(N, scheme)
 
         self.classifier_names = names
         self.selected_classifiers = list(range(N))
@@ -168,7 +169,7 @@ class OWLiftCurve(widget.OWWidget):
 
     def plot_curves(self, target, clf_idx):
         if (target, clf_idx) not in self._curve_data:
-            curve = LiftCurve_from_results(self.results, clf_idx, target)
+            curve = liftCurve_from_results(self.results, clf_idx, target)
             color = self.colors[clf_idx]
             pen = QPen(color, 1)
             pen.setCosmetic(True)
@@ -182,7 +183,7 @@ class OWLiftCurve(widget.OWWidget):
             )
             hull_item = pg.PlotDataItem(
                 curve.hull[0], curve.hull[1],
-                pen=pen,  antialias=True
+                pen=pen, antialias=True
             )
             self._curve_data[target, clf_idx] = \
                 PlotCurve(curve, item, hull_item)
@@ -243,12 +244,12 @@ def lift_curve_from_results(results, target, clf_idx, subset=slice(0, -1)):
 
 
 def lift_curve(ytrue, ypred, target=1):
-    P = numpy.sum(ytrue == target)
+    P = np.sum(ytrue == target)
     N = ytrue.size - P
 
     if P == 0 or N == 0:
         # Undefined TP and FP rate
-        return numpy.array([]), numpy.array([]), numpy.array([])
+        return np.array([]), np.array([]), np.array([])
 
     fpr, tpr, thresholds = skl_metrics.roc_curve(ytrue, ypred, target)
     rpp = fpr * (N / (P + N)) + tpr * (P / (P + N))
@@ -273,7 +274,7 @@ def main():
          LogisticRegressionLearner(penalty="l1"),
          SVMLearner(probability=True),
          NuSVMLearner(probability=True)
-         ],
+        ],
         store_data=True
     )
     results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]

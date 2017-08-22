@@ -5,6 +5,8 @@ Calibration Plot Widget
 """
 from collections import namedtuple
 
+import numpy as np
+
 from AnyQt.QtWidgets import QListWidget
 
 import pyqtgraph as pg
@@ -13,7 +15,6 @@ import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
-from Orange.widgets.io import FileFormat
 from Orange.widgets.widget import Input
 from Orange.canvas import report
 
@@ -122,8 +123,10 @@ class OWCalibrationPlot(widget.OWWidget):
             names = ["#{}".format(i + 1) for i in range(N)]
 
         self.classifier_names = names
-        self.colors = colorpalette.ColorPaletteGenerator(
-            N, colorbrewer.colorSchemes["qualitative"]["Dark2"])
+        scheme = colorbrewer.colorSchemes["qualitative"]["Dark2"]
+        if N > len(scheme):
+            scheme = colorpalette.DefaultRGBColors
+        self.colors = colorpalette.ColorPaletteGenerator(N, scheme)
 
         for i in range(N):
             item = self.classifiers_list_box.item(i)
@@ -138,17 +141,17 @@ class OWCalibrationPlot(widget.OWWidget):
 
         ytrue = self.results.actual == target
         probs = self.results.probabilities[clf_idx, :, target]
-        sortind = numpy.argsort(probs)
+        sortind = np.argsort(probs)
         probs = probs[sortind]
         ytrue = ytrue[sortind]
         if probs.size:
             xmin, xmax = probs.min(), probs.max()
-            x = numpy.linspace(xmin, xmax, 100)
+            x = np.linspace(xmin, xmax, 100)
             f = gaussian_smoother(probs, ytrue, sigma=0.15 * (xmax - xmin))
             observed = f(x)
         else:
-            x = numpy.array([])
-            observed = numpy.array([])
+            x = np.array([])
+            observed = np.array([])
 
         curve = Curve(x, observed)
         curve_item = pg.PlotDataItem(
@@ -159,13 +162,13 @@ class OWCalibrationPlot(widget.OWWidget):
         )
 
         rh = 0.025
-        rug_x = numpy.c_[probs, probs]
+        rug_x = np.c_[probs, probs]
         rug_x_true = rug_x[ytrue].ravel()
         rug_x_false = rug_x[~ytrue].ravel()
 
-        rug_y_true = numpy.ones_like(rug_x_true)
+        rug_y_true = np.ones_like(rug_x_true)
         rug_y_true[1::2] = 1 - rh
-        rug_y_false = numpy.zeros_like(rug_x_false)
+        rug_y_false = np.zeros_like(rug_x_false)
         rug_y_false[1::2] = rh
 
         rug1 = pg.PlotDataItem(
@@ -210,24 +213,21 @@ class OWCalibrationPlot(widget.OWWidget):
         self.report_caption(caption)
 
 
-import numpy
-
-
 def gaussian_smoother(x, y, sigma=1.0):
-    x = numpy.asarray(x)
-    y = numpy.asarray(y)
+    x = np.asarray(x)
+    y = np.asarray(y)
 
     gamma = 1. / (2 * sigma ** 2)
-    a = 1. / (sigma * numpy.sqrt(2 * numpy.pi))
+    a = 1. / (sigma * np.sqrt(2 * np.pi))
 
     if x.shape != y.shape:
         raise ValueError
 
     def smoother(xs):
-        W = a * numpy.exp(-gamma * ((xs - x) ** 2))
-        return numpy.average(y, weights=W)
+        W = a * np.exp(-gamma * ((xs - x) ** 2))
+        return np.average(y, weights=W)
 
-    return numpy.vectorize(smoother, otypes=[numpy.float])
+    return np.vectorize(smoother, otypes=[np.float])
 
 
 def main():
@@ -248,7 +248,7 @@ def main():
          LogisticRegressionLearner(penalty="l1"),
          SVMLearner(probability=True),
          NuSVMLearner(probability=True)
-         ],
+        ],
         store_data=True
     )
     results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
