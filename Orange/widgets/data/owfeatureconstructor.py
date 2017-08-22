@@ -13,10 +13,13 @@ import builtins
 import math
 import random
 import logging
+import ast
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
+
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
@@ -630,7 +633,6 @@ class OWFeatureConstructor(OWWidget):
 
 
 
-import ast
 
 
 def freevars(exp, env):
@@ -883,9 +885,9 @@ __ALLOWED = [
     "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
     "divmod", "enumerate", "filter", "float", "format", "frozenset",
     "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
-    "list", "map", "max", "memoryview", "min", "next", "object",
+    "list", "map", "memoryview", "next", "object",
     "oct", "ord", "pow", "range", "repr", "reversed", "round",
-    "set", "slice", "sorted", "str", "sum", "tuple", "type",
+    "set", "slice", "sorted", "str", "tuple", "type",
     "zip"
 ]
 
@@ -906,8 +908,29 @@ __GLOBALS.update({
     "vonmisesvariate": random.vonmisesvariate,
     "weibullvariate": random.weibullvariate,
     "triangular": random.triangular,
-    "uniform": random.uniform}
-                )
+    "uniform": random.uniform,
+    "nanmean": lambda *args: np.nanmean(args),
+    "nanmin": lambda *args: np.nanmin(args),
+    "nanmax": lambda *args: np.nanmax(args),
+    "nansum": lambda *args: np.nansum(args),
+    "nanstd": lambda *args: np.nanstd(args),
+    "nanmedian": lambda *args: np.nanmedian(args),
+    "nancumsum": lambda *args: np.nancumsum(args),
+    "nancumprod": lambda *args: np.nancumprod(args),
+    "nanargmax": lambda *args: np.nanargmax(args),
+    "nanargmin": lambda *args: np.nanargmin(args),
+    "nanvar": lambda *args: np.nanvar(args),
+    "mean": lambda *args: np.mean(args),
+    "min": lambda *args: np.min(args),
+    "max": lambda *args: np.max(args),
+    "sum": lambda *args: np.sum(args),
+    "std": lambda *args: np.std(args),
+    "median": lambda *args: np.median(args),
+    "cumsum": lambda *args: np.cumsum(args),
+    "cumprod": lambda *args: np.cumprod(args),
+    "argmax": lambda *args: np.argmax(args),
+    "argmin": lambda *args: np.argmin(args),
+    "var": lambda *args: np.var(args)})
 
 
 class FeatureFunc:
