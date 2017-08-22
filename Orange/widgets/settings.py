@@ -862,6 +862,29 @@ class ContextHandler(SettingsHandler):
         return value
 
 
+class DataHashContextHandler(ContextHandler):
+    NO_MATCH = 0
+    MATCH = 1
+    def new_context(self, data):
+        """Create a new context."""
+        context = super().new_context()
+        if data and data.domain:
+            context.data_hash = data.checksum()
+            context.domain_hash = data.domain.checksum()
+        else:
+            context.data_hash = None
+            context.domain_hash = None
+        return context
+
+    def match(self, context, data):
+        if data and data.domain and \
+                context.data_hash == data.checksum() \
+                and context.domain_hash == data.domain.checksum():
+            return self.MATCH
+        else:
+            return self.NO_MATCH
+
+
 class DomainContextHandler(ContextHandler):
     """Context handler for widgets with settings that depend on
     the input dataset. Suitable settings are selected based on the
