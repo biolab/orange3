@@ -349,3 +349,16 @@ class MosaicVizRankTests(WidgetTest):
         table_housing = Table("housing")
         self.send_signal(self.widget.Inputs.data, table_housing)
         self.send_signal(self.widget.Inputs.data_subset, table_housing[::20])
+
+    def test_incompatible_subset(self):
+        """
+        Show warning when subset data is not compatible with data.
+        GH-2528
+        """
+        table_titanic = Table("titanic")
+        self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data_subset, table_titanic)
+        self.assertTrue(self.widget.Warning.incompatible_subset.is_shown())
+        self.send_signal(self.widget.Inputs.data_subset, self.iris)
+        self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())

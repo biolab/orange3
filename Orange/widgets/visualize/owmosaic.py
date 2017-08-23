@@ -4,6 +4,7 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul, attrgetter
 
+import numpy as np
 from scipy.stats import distributions
 from scipy.misc import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
@@ -451,13 +452,13 @@ class OWMosaicDisplay(OWWidget):
     # this way the graph is updated only once
     def handleNewSignals(self):
         self.Warning.incompatible_subset.clear()
-        self.subset_indices = None
+        self.subset_indices = indices = None
         if self.data is not None and self.subset_data:
-            try:
-                indices = {e.id for e in self.subset_data.transform(self.data.domain)}
-            except:
-                self.Warning.incompatible_subset(shown=self.subset_indices is not None)
-            finally:
+            transformed = self.subset_data.transform(self.data.domain)
+            if np.all(np.isnan(transformed.X)) and np.all(np.isnan(transformed.Y)):
+                self.Warning.incompatible_subset()
+            else:
+                indices = {e.id for e in transformed}
                 self.subset_indices = [ex.id in indices for ex in self.data]
 
         self.set_color_data()
