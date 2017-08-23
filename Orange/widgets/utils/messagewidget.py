@@ -114,21 +114,25 @@ class Message(
             render = lambda t: ('<span style="white-space: pre">{}</span>'
                                 .format(escape(t)))
 
-        def iconsrc(message):
+        def iconsrc(message, size=12):
             # type: (Message) -> str
             """
             Return an image src url for message icon.
             """
             icon = message_icon(message)
-            pm = icon.pixmap(12, 12)
+            pm = icon.pixmap(size, size)
             return image_data(pm)
 
+        imgsize = 12
         parts = [
             ('<div style="white-space:pre" class="message {}">'
              .format(self.severity.name.lower())),
             ('<div class="field-text">'
-             '<img src="{iconurl}" width="12" height="12" />{text}</div>'
-             .format(iconurl=iconsrc(self), text=render(self.text)))
+             '<img src="{iconurl}" width="{imgsize}" height="{imgsize}" />'
+             '{text}'
+             '</div>'
+             .format(iconurl=iconsrc(self, size=imgsize * 2), imgsize=imgsize,
+                     text=render(self.text)))
         ]
         if self.informativeText:
             parts += ['<div class="field-informative-text">{}</div>'
