@@ -47,10 +47,13 @@ def image_data(pm):
 
 class Severity(enum.IntEnum):
     """
-    Message severity level.
+    An enum defining a severity level.
     """
+    #: General informative message.
     Information = QMessageBox.Information
+    #: A warning message severity.
     Warning = QMessageBox.Warning
+    #: An error message severity.
     Error = QMessageBox.Critical
 
 
@@ -69,8 +72,8 @@ class Message(
 
     Parameters
     ----------
-    severity : Message.Severity
-        Severity level (default: Information).
+    severity : `Severity`
+        Severity level (default: :attr:`Severity.Information`).
     icon : QIcon
         Associated icon. If empty the `QStyle.standardIcon` will be used based
         on severity.
@@ -85,9 +88,14 @@ class Message(
         `detailedText` will be rendered as html instead of plain text.
 
     """
+    #: Alias for :class:`.Severity`
     Severity = Severity
-    Warning = Severity.Warning
+
+    #: Alias for :attr:`Severity.Information`
     Information = Severity.Information
+    #: Alias for :attr:`Severity.Warning`
+    Warning = Severity.Warning
+    #: Alias for :attr:`Severity.Error`
     Error = Severity.Error
 
     def __new__(cls, severity=Severity.Information, icon=QIcon(), text="",
@@ -367,22 +375,22 @@ class MessagesWidget(QWidget):
             msh.setWidth(h + 2)
         return msh.expandedTo(QSize(0, h + 2))
 
-    def openExternalLinks(self):
-        # type: () -> bool
-        """
-        If True then linkActivated signal will be emitted when the user
-        clicks on an html link in a message, otherwise links are opened
-        using `QDesktopServices.openUrl`
-        """
-        return self.__openExternalLinks
-
     def setOpenExternalLinks(self, state):
         # type: (bool) -> None
         """
+        If `True` then `linkActivated` signal will be emitted when the user
+        clicks on an html link in a message, otherwise links are opened
+        using `QDesktopServices.openUrl`
         """
         # TODO: update popup if open
         self.__openExternalLinks = state
         self.__textlabel.setOpenExternalLinks(state)
+
+    def openExternalLinks(self):
+        # type: () -> bool
+        """
+        """
+        return self.__openExternalLinks
 
     def setDefaultStyleSheet(self, css):
         # type: (str) -> None
@@ -400,7 +408,10 @@ class MessagesWidget(QWidget):
 
         See Also
         --------
-        http://doc.qt.io/qt-5/richtext-html-subset.html
+        `Supported HTML Subset`_
+
+        .. _`Supported HTML Subset`:
+            http://doc.qt.io/qt-5/richtext-html-subset.html
         """
         if self.__defaultStyleSheet != css:
             self.__defaultStyleSheet = css
@@ -462,6 +473,13 @@ class MessagesWidget(QWidget):
 
     def messages(self):
         # type: () -> List[Message]
+        """
+        Return all set messages.
+
+        Returns
+        -------
+        messages: `List[Message]`
+        """
         return list(self.__messages.values())
 
     def summarize(self):
