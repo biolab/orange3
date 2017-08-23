@@ -828,12 +828,6 @@ class OWMosaicDisplay(OWWidget):
 
                 if conditionalsubsetdict:
                     if conditionalsubsetdict[attr_vals]:
-                        counts = [conditionalsubsetdict[attr_vals + "-" + val]
-                                  for val in cls_values]
-                        if sum(counts) == 1:
-                            rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
-                                 colors[counts.index(1)], Qt.white,
-                                 pen_width=5, pen_style=Qt.DashLine)
                         if self.subset_indices is not None:
                             line(x1 - bar_width, y0, x1 - bar_width, y1)
                             total = 0
