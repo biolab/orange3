@@ -1,4 +1,5 @@
 import itertools
+import textwrap
 
 from os import path
 
@@ -199,20 +200,32 @@ class OWParallelCoordinates(widget.OWWidget):
                            ticktext=ticktext)
             dimensions.append(dim)
 
+        # Compute color legend
         line = dict()
+        padding_right = 40
         if self.color_attr:
             attr = data.domain[self.color_attr]
             values = data.get_column_view(attr)[0][sample]
             line.update(color=values, showscale=True)
-            title = attr.name.replace(' ', '<br>')
+            title = '<br>'.join(textwrap.wrap(attr.name.strip(), width=7,
+                                              max_lines=4, placeholder='…'))
             if attr.is_discrete:
-                line.update(colorscale=list(zip(np.linspace(0, 1, len(attr.values)),
-                                                (color_to_hex(i) for i in attr.colors))),
-                            colorbar=dict(title=title,
-                                          tickangle=-90,
-                                          tickvals=np.arange(len(attr.values)),
-                                          ticktext=attr.values))
+                padding_right = 90
+                colors = [color_to_hex(i) for i in attr.colors]
+                values_short = [textwrap.fill(value, width=9,
+                                              max_lines=1, placeholder='…')
+                                for value in attr.values]
+                self.graph.exposeObject('discrete_colorbar',
+                                        dict(colors=colors,
+                                             title=title,
+                                             values=attr.values,
+                                             values_short=values_short))
+                line.update(showscale=False,
+                            colorscale=list(zip(np.linspace(0, 1, len(attr.values)),
+                                                colors)))
             else:
+                padding_right = 0
+                self.graph.exposeObject('discrete_colorbar', {})
                 line.update(colorscale=list(zip((0, 1),
                                                 (color_to_hex(i) for i in attr.colors[:-1]))),
                             colorbar=dict(title=title))
@@ -228,7 +241,7 @@ class OWParallelCoordinates(widget.OWWidget):
                                               ticktext=ticktext))
         self.graph.plot([Parcoords(line=line,
                                    dimensions=dimensions)],
-                        padding_right=0 if self.color_attr else 40)
+                        padding_right=padding_right)
 
     def set_shown_attributes(self, attrs):
         self.selected_attrs = attrs
