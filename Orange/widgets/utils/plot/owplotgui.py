@@ -257,6 +257,10 @@ class OWPlotGUI:
         :type icon_name: str
 
     '''
+
+    JITTER_SIZES = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
+
+
     def __init__(self, plot):
         self._plot = plot
         self.color_model = DomainModel(placeholder="(Same color)",
@@ -288,6 +292,11 @@ class OWPlotGUI:
     ZoomSelection = 15
     ZoomReset = 16
 
+    ToolTipShowsAll = 17
+    ClassDensity = 18
+    RegressionLine = 19
+    LabelOnlySelected = 20
+
     SelectionAdd = 21
     SelectionRemove = 22
     SelectionToggle = 23
@@ -308,6 +317,9 @@ class OWPlotGUI:
     AntialiasLines = 45
     DisableAnimationsThreshold = 48
     AutoAdjustPerformance = 49
+
+    JitterSizeSlider = 51
+    JitterNumericValues = 52
 
     UserButton = 100
 
@@ -365,7 +377,7 @@ class OWPlotGUI:
             When the checkbox is toggled, the attribute ``value`` of the plot object is set to the checkbox' check state,
             and the callback ``cb_name`` is called.
         '''
-        gui.checkBox(widget, self._plot, value, label, callback=self._get_callback(cb_name))
+        return gui.checkBox(widget, self._plot, value, label, callback=self._get_callback(cb_name))
 
     def antialiasing_check_box(self, widget):
         '''
@@ -373,11 +385,43 @@ class OWPlotGUI:
         '''
         self._check_box(widget, 'use_antialiasing', 'Use antialiasing', 'update_antialiasing')
 
+    def jitter_size_slider(self, widget):
+        values = getattr(self._plot.master, "jitter_sizes", self.JITTER_SIZES)
+        gui.valueSlider(
+            widget=widget, master=self._plot, value='jitter_size', label="Jittering: ",
+            values=values, callback=self._plot.master.reset_graph_data,
+            labelFormat=lambda x: "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
+
+    def jitter_numeric_check_box(self, widget):
+        gui.checkBox(
+            widget=gui.indentedBox(widget=widget), master=self._plot, value="jitter_continuous",
+            label="Jitter numeric values", callback=self._plot.master.reset_graph_data)
+
     def show_legend_check_box(self, widget):
         '''
             Creates a check box that shows and hides the plot legend
         '''
         self._check_box(widget, 'show_legend', 'Show legend', 'update_legend')
+
+    def tooltip_shows_all_check_box(self, widget):
+        self._check_box(widget=widget, value="tooltip_shows_all",
+                        label='Show all data on mouse hover', cb_name="cb_tooltip_shows_all")
+
+    def class_density_check_box(self, widget):
+        self._plot.master.cb_class_density = \
+            self._check_box(widget=widget, value="class_density", label="Show class density",
+                            cb_name=self._plot.master.update_density)
+
+    def regression_line_check_box(self, widget):
+        self._plot.master.cb_reg_line = \
+            self._check_box(widget=widget, value="show_reg_line",
+                            label="Show regression line",
+                            cb_name=self._plot.master.update_regression_line)
+
+    def label_only_selected_check_box(self, widget):
+        self._check_box(widget=widget, value="label_only_selected",
+                        label="Label only selected points",
+                        cb_name=self._plot.master.graph.update_labels)
 
     def filled_symbols_check_box(self, widget):
         self._check_box(widget, 'show_filled_symbols', 'Show filled symbols', 'update_filled_symbols')
@@ -449,6 +493,19 @@ class OWPlotGUI:
             self.AlphaValue
             ], widget, box, "Points")
 
+    def plot_properties_box(self, widget, box=None):
+        """
+        Create a box with controls for common plot settings
+        """
+        return self.create_box([
+            self.ToolTipShowsAll,
+            self.ShowGridLines,
+            self.ShowLegend,
+            self.ClassDensity,
+            self.RegressionLine,
+            self.LabelOnlySelected
+            ], widget, box, "Plot Properties")
+
     def plot_settings_box(self, widget, box=None):
         '''
             Creates a box with controls for common plot settings
@@ -460,9 +517,15 @@ class OWPlotGUI:
             ], widget, box, "Plot settings")
 
     _functions = {
-        ShowLegend: show_legend_check_box,
         ShowFilledSymbols: filled_symbols_check_box,
+        JitterSizeSlider: jitter_size_slider,
+        JitterNumericValues: jitter_numeric_check_box,
+        ShowLegend: show_legend_check_box,
         ShowGridLines: grid_lines_check_box,
+        ToolTipShowsAll: tooltip_shows_all_check_box,
+        ClassDensity: class_density_check_box,
+        RegressionLine: regression_line_check_box,
+        LabelOnlySelected: label_only_selected_check_box,
         PointSize: point_size_slider,
         AlphaValue: alpha_value_slider,
         Color: color_value_combo,
