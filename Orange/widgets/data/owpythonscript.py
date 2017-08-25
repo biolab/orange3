@@ -475,9 +475,9 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.execute_button = gui.auto_commit(
-            self.controlArea, self, "auto_execute", "Run",
-            checkbox_label="Autorun on new data").button
+        auto = gui.auto_commit(self.controlArea, self, "auto_execute", "Run",
+                               checkbox_label="Autorun on new data")
+        self.execute_button, self.autobox = auto.button, auto.checkbox
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -677,7 +677,7 @@ class OWPythonScript(widget.OWWidget):
 
     def commit(self):
         if self.auto_execute:
-           self.execute_button.setEnabled(False)
+            self.execute_button.setEnabled(False)
         self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()

@@ -17,9 +17,9 @@ class TestOWPythonScript(WidgetTest):
     def test_inputs(self):
         """Check widget's inputs"""
         for input, data in (("Data", self.iris),
-                             ("Learner", self.learner),
-                             ("Classifier", self.model),
-                             ("Object", "object")):
+                            ("Learner", self.learner),
+                            ("Classifier", self.model),
+                            ("Object", "object")):
             self.assertEqual(getattr(self.widget, input.lower()), {})
             self.send_signal(input, data, (1,))
             self.assertEqual(getattr(self.widget, input.lower()), {1: data})
@@ -38,17 +38,17 @@ class TestOWPythonScript(WidgetTest):
             self.assertIs(self.get_output(signal), data)
             self.send_signal(signal, None, (1,))
             self.widget.text.setPlainText("print(in_{})".format(lsignal))
-            self.widget.execute_button.button.click()
+            self.widget.execute_button.click()
             self.assertIsNone(self.get_output(signal))
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
-        self.widget.execute_button.checkbox.setCheckState(False)
+        self.widget.autobox.setCheckState(False)
         self.widget.text.setPlainText("temp = 42\nprint(temp)")
-        self.widget.execute_button.button.click()
+        self.widget.execute_button.click()
         self.assertIn("42", self.widget.console.toPlainText())
         self.widget.text.setPlainText("print(temp)")
-        self.widget.execute_button.button.click()
+        self.widget.execute_button.click()
         self.assertNotIn("NameError: name 'temp' is not defined",
                          self.widget.console.toPlainText())
 
@@ -57,7 +57,7 @@ class TestOWPythonScript(WidgetTest):
         Error is shown when output variables are filled with wrong variable
         types and also output variable is set to None. (GH-2308)
         """
-        self.widget.execute_button.checkbox.setCheckState(False)
+        self.widget.autobox.setCheckState(False)
         self.assertEqual(len(self.widget.Error.active), 0)
         for signal, data in (
                 ("Data", self.iris),
@@ -66,13 +66,13 @@ class TestOWPythonScript(WidgetTest):
             lsignal = signal.lower()
             self.send_signal(signal, data, (1, ))
             self.widget.text.setPlainText("out_{} = 42".format(lsignal))
-            self.widget.execute_button.button.click()
+            self.widget.execute_button.click()
             self.assertEqual(self.get_output(lsignal), None)
             self.assertTrue(hasattr(self.widget.Error, lsignal))
             self.assertTrue(getattr(self.widget.Error, lsignal).is_shown())
 
             self.widget.text.setPlainText("out_{0} = in_{0}".format(lsignal))
-            self.widget.execute_button.button.click()
+            self.widget.execute_button.click()
             self.assertIs(self.get_output(signal), data)
             self.assertFalse(getattr(self.widget.Error, lsignal).is_shown())
 
@@ -80,8 +80,8 @@ class TestOWPythonScript(WidgetTest):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
     def test_multiple_signals(self):
-        self.widget.execute_button.checkbox.setCheckState(False)
-        click = self.widget.execute_button.button.click
+        self.widget.autobox.setCheckState(False)
+        click = self.widget.execute_button.click
         console_locals = self.widget.console.locals
 
         titanic = Table("titanic")
