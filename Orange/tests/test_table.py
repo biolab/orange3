@@ -1368,12 +1368,6 @@ class CreateTableWithFilename(TableTests):
 
 
 class CreateTableWithUrl(TableTests):
-    def test_load_from_url(self):
-        d1 = data.Table('iris')
-        d2 = data.Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
-        np.testing.assert_array_equal(d1.X, d2.X)
-        np.testing.assert_array_equal(d1.Y, d2.Y)
-
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
                                           'filename*=UTF-8''Something%20%28Responses%29.tsv'}
