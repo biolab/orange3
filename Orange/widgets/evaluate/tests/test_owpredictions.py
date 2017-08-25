@@ -7,7 +7,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
 from Orange.data import Table, Domain, Variable
-from Orange.modelling import ConstantLearner, TreeLearner
+from Orange.modelling import ConstantLearner, TreeLearner, SVMLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch
 
@@ -170,3 +170,19 @@ class TestOWPredictions(WidgetTest):
         cl_data = ConstantLearner()(data)
         self.send_signal(self.widget.Inputs.predictors, cl_data, 1)
         self.send_signal(self.widget.Inputs.data, data)
+
+    def test_predictions_svm(self):
+        """
+        Predictions and SVM does not work together. Widget crashes when:
+        Sending iris with all three irises to SVM and then that created
+        predictors to Predictions and at last sending iris table with
+        only two irises to Predictions.
+        GH-2317
+        """
+        iris1 = Table("iris")[::5]  # setosa, versicolor, and virginica
+        learner = SVMLearner()
+        svm = learner(iris1)
+
+        self.send_signal(self.widget.Inputs.predictors, svm, 1)
+        iris2 = Table("iris")[:60]
+        self.send_signal(self.widget.Inputs.data, iris2)  # setosa and versicolor
