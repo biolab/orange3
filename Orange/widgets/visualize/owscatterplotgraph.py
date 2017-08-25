@@ -491,9 +491,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
-    def __init__(self, scatter_widget, parent=None, _="None"):
+    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
         gui.OWComponent.__init__(self, scatter_widget)
-        self.view_box = InteractiveViewBox(self)
+        self.view_box = view_box(self)
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
         self.plot_widget.getPlotItem().buttonsHidden = True
