@@ -46,6 +46,11 @@ class TestSqlTable(PostgresTest):
             self.assertEqual(string_attr.name, "col2")
             self.assertTrue('"col2"' in string_attr.to_sql())
 
+    def test_make_attributes(self):
+        table1 = SqlTable(self.conn, self.iris)
+        table2 = SqlTable(self.conn, self.iris)
+        self.assertIs(table1.domain[0], table2.domain[0])
+
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:
             self.assertEqual(len(table), 26)

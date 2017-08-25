@@ -144,10 +144,10 @@ class Psycopg2Backend(Backend):
         TIME_TYPES = (1083, 1114, 1184, 1266,)
 
         if type_code in FLOATISH_TYPES:
-            return ContinuousVariable(field_name)
+            return ContinuousVariable.make(field_name)
 
         if type_code in TIME_TYPES + DATE_TYPES:
-            tv = TimeVariable(field_name)
+            tv = TimeVariable.make(field_name)
             tv.have_date |= type_code in DATE_TYPES
             tv.have_time |= type_code in TIME_TYPES
             return tv
@@ -156,19 +156,19 @@ class Psycopg2Backend(Backend):
             if inspect_table:
                 values = self.get_distinct_values(field_name, inspect_table)
                 if values:
-                    return DiscreteVariable(field_name, values)
-            return ContinuousVariable(field_name)
+                    return DiscreteVariable.make(field_name, values)
+            return ContinuousVariable.make(field_name)
 
         if type_code in BOOLEAN_TYPES:
-            return DiscreteVariable(field_name, ['false', 'true'])
+            return DiscreteVariable.make(field_name, ['false', 'true'])
 
         if type_code in CHAR_TYPES:
             if inspect_table:
                 values = self.get_distinct_values(field_name, inspect_table)
                 if values:
-                    return DiscreteVariable(field_name, values)
+                    return DiscreteVariable.make(field_name, values)
 
-        return StringVariable(field_name)
+        return StringVariable.make(field_name)
 
     def count_approx(self, query):
         sql = "EXPLAIN " + query
