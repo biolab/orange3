@@ -74,6 +74,8 @@ class EuclideanRowsModel(FittedDistanceModel):
                 distances, data1, data2, self.dist_missing_disc,
                 self.dist_missing2_disc, x2 is not None)
 
+        if x2 is None:
+            _distance.lower_to_symmetric(distances)
         return np.sqrt(distances)
 
 
@@ -214,6 +216,8 @@ class ManhattanRowsModel(FittedDistanceModel):
                 distances, data1, data2, self.dist_missing_disc,
                 self.dist_missing2_disc, x2 is not None)
 
+        if x2 is None:
+            _distance.lower_to_symmetric(distances)
         return distances
 
 

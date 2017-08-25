@@ -15,7 +15,7 @@ cdef extern from "math.h":
     double sqrt(double x) nogil
 
 
-cdef void _lower_to_symmetric(double [:, :] distances):
+cpdef void lower_to_symmetric(double [:, :] distances):
     cdef int row1, row2
     for row1 in range(distances.shape[0]):
         for row2 in range(row1):
@@ -52,8 +52,6 @@ def euclidean_rows_discrete(np.ndarray[np.float64_t, ndim=2] distances,
                     elif ival1 != ival2:
                         d += 1
                 distances[row1, row2] += d
-    if not two_tables:
-        _lower_to_symmetric(distances)
 
 
 def fix_euclidean_rows(
@@ -203,9 +201,6 @@ def manhattan_rows_cont(np.ndarray[np.float64_t, ndim=2] x1,
                 for col in range(n_cols):
                     d += fabs(x1[row1, col] - x2[row2, col])
                 distances[row1, row2] = d
-    # TODO: Do this only at the end, not after each function
-    if not two_tables:
-        _lower_to_symmetric(distances)
     return distances
 
 def fix_manhattan_rows(np.ndarray[np.float64_t, ndim=2] distances,
@@ -238,8 +233,6 @@ def fix_manhattan_rows(np.ndarray[np.float64_t, ndim=2] distances,
                         else:
                             d += fabs(val1 - val2)
                     distances[row1, row2] = d
-    if not two_tables:
-        _lower_to_symmetric(distances)
     return distances
 
 
@@ -270,8 +263,6 @@ def fix_manhattan_rows_normalized(np.ndarray[np.float64_t, ndim=2] distances,
                         else:
                             d += fabs(val1 - val2)
                     distances[row1, row2] = d
-    if not two_tables:
-        _lower_to_symmetric(distances)
     return distances
 
 
@@ -418,7 +409,7 @@ def jaccard_rows(np.ndarray[np.int8_t, ndim=2] nonzeros1,
                     if union != 0:
                         distances[row1, row2] = 1 - intersection / union
     if not two_tables:
-        _lower_to_symmetric(distances)
+        lower_to_symmetric(distances)
     return distances
 
 
