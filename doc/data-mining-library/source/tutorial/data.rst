@@ -146,7 +146,7 @@ A slightly more complicated, but more interesting is a code that computes per-cl
 ..  literalinclude:: code/data-instances3.py
     :lines: 3-
 
-Of the four features, petal width and length look quite discriminative for the type of iris::
+Of the four features, petal width and length look quite discriminative for the type of iris:
 
     Feature             Iris-setosa Iris-versicolor  Iris-virginica
     sepal length               5.01            5.94            6.59
@@ -232,7 +232,7 @@ Values of meta attributes and all other (non-meta) attributes are treated simila
            ['bass'],
            ['bear']], dtype=object))
 
-Meta attributes may be passed to ``Orange.data.Table`` after providing arrays for attribute and class values::
+Meta attributes may be passed to ``Orange.data.Table`` after providing arrays for attribute and class values:
 
 ..   literalinclude:: code/data-metas.py
 
