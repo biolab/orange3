@@ -125,7 +125,7 @@ class Message(
 
         imgsize = 12
         parts = [
-            ('<div style="white-space:pre" class="message {}">'
+            ('<div class="message {}">'
              .format(self.severity.name.lower())),
             ('<div class="field-text">'
              '<img src="{iconurl}" width="{imgsize}" height="{imgsize}" />'
