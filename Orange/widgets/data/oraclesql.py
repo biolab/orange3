@@ -43,7 +43,7 @@ class ORACLESQL(OWWidget):
             self.password = self.savedPwd
         self.database = ''
         if self.savedDB is not None:
-            self.database = self.savedDB 
+            self.database = self.savedDB
         #Control Area layout
         sip.delete(self.controlArea.layout())
         self.controlArea.setLayout(QHBoxLayout())
@@ -91,22 +91,22 @@ class ORACLESQL(OWWidget):
         self.savedPwd = password
         self.savedDB = database
     def _invalidate(self):
-        self.commit()        
+        self.commit()
     def series2descriptor(self, d):
         if d.dtype is np.dtype("float") or d.dtype is np.dtype("int"):
             return ContinuousVariable(str(d.name))
         else:
             t = d.unique()
             #t.sort()
-            return DiscreteVariable(str(d.name), list(t.astype("str")))        
+            return DiscreteVariable(str(d.name), list(t.astype("str")))
     def df2domain(self, df):
         featurelist = [self.series2descriptor(df.iloc[:, col]) for col in range(len(df.columns))]
-        return Domain(featurelist)    
+        return Domain(featurelist)
     def df2table(self, df):
         tdomain = self.df2domain(df)
         ttables = [self.series2table(df.iloc[:, i], tdomain[i]) for i in range(len(df.columns))]
         ttables = np.array(ttables).reshape((len(df.columns), -1)).transpose()
-        return Table(tdomain, ttables)    
+        return Table(tdomain, ttables)
     def series2table(self, series, variable):
         if series.dtype is np.dtype("int") or series.dtype is np.dtype("float"):
             series = series.values[:, np.newaxis]
