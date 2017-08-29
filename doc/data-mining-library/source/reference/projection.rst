@@ -19,9 +19,10 @@ Example
 =======
 
     >>> from Orange.projection.pca import PCA
-    >>> iris = Orange.data.Table('iris')
+    >>> from Orange.data import Table
+    >>> iris = Table('iris')
     >>> pca = PCA()
-    >>> model = PCA(iris)
+    >>> model = pca(iris)
     >>> model.components_    # PCA components
     array([[ 0.36158968, -0.08226889,  0.85657211,  0.35884393],
         [ 0.65653988,  0.72971237, -0.1757674 , -0.07470647],
