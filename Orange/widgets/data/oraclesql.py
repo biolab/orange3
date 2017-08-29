@@ -1,4 +1,3 @@
-from AnyQt import QtGui
 from AnyQt.QtWidgets import QSizePolicy, QPlainTextEdit, QHBoxLayout, QLineEdit
 from Orange.widgets import gui, widget, settings
 from Orange.widgets.widget import OWWidget
@@ -50,7 +49,7 @@ class ORACLESQL(OWWidget):
         self.controlArea.setLayout(QHBoxLayout())
         self.connectBox = gui.widgetBox(self.controlArea, "Database connection")
         self.connectBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)      
-        self.SQLBox = gui.widgetBox(self.controlArea, "SQL")
+        self.sqlBox = gui.widgetBox(self.controlArea, "SQL")
         #Database
         self.userLabel = gui.label(self.connectBox, self, 'User name')
         self.connectUser = QLineEdit(self.username, self)
