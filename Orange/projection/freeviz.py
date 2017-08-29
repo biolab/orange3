@@ -1,5 +1,5 @@
 
-import numpy
+import numpy as np
 import scipy.spatial
 
 
@@ -38,14 +38,14 @@ def col_v(a):
 
 
 def allclose(a, b, rtol=1e-5, atol=1e-8, equal_nan=False):
-    # same as numpy.allclose in numpy==1.10
-    return numpy.all(numpy.isclose(a, b, rtol, atol, equal_nan=equal_nan))
+    # same as np.allclose in numpy==1.10
+    return np.all(np.isclose(a, b, rtol, atol, equal_nan=equal_nan))
 
 
 def forces_regression(distances, y, p=1):
-    y = numpy.asarray(y)
+    y = np.asarray(y)
     ydist = scipy.spatial.distance.pdist(y.reshape(-1, 1), "sqeuclidean")
-    mask = distances > numpy.finfo(distances.dtype).eps * 100
+    mask = distances > np.finfo(distances.dtype).eps * 100
     F = ydist
     if p == 1:
         F[mask] /= distances[mask]
@@ -64,8 +64,8 @@ def forces_classification(distances, y, p=1):
 
     # handle repulsive force
     mask = (diffclass &
-            (distances > numpy.finfo(distances.dtype).eps * 100))
-    assert mask.shape == F.shape and mask.dtype == numpy.bool
+            (distances > np.finfo(distances.dtype).eps * 100))
+    assert mask.shape == F.shape and mask.dtype == np.bool
     if p == 1:
         F[mask] = 1 / distances[mask]
     else:
@@ -74,11 +74,11 @@ def forces_classification(distances, y, p=1):
 
 
 def gradient(X, embeddings, forces, embedding_dist=None, weights=None):
-    X = numpy.asarray(X)
-    embeddings = numpy.asarray(embeddings)
+    X = np.asarray(X)
+    embeddings = np.asarray(embeddings)
 
     if weights is not None:
-        weights = numpy.asarray(weights)
+        weights = np.asarray(weights)
         if weights.ndim != 1:
             raise ValueError("weights.ndim != 1 ({})".format(weights.ndim))
 
@@ -94,8 +94,8 @@ def gradient(X, embeddings, forces, embedding_dist=None, weights=None):
                          .format(X.shape[0], weights.shape[0]))
 
     # all pairwise vector differences between embeddings
-    embedding_diff = (embeddings[:, numpy.newaxis, :] -
-                      embeddings[numpy.newaxis, :, :])
+    embedding_diff = (embeddings[:, np.newaxis, :] -
+                      embeddings[np.newaxis, :, :])
     assert embedding_diff.shape == (N, N, dim)
     assert allclose(embedding_diff[0, 1], embeddings[0] - embeddings[1])
     assert allclose(embedding_diff[1, 0], -embedding_diff[0, 1])
@@ -105,10 +105,10 @@ def gradient(X, embeddings, forces, embedding_dist=None, weights=None):
         # use supplied precomputed distances
         diff_norm = squareform(embedding_dist)
     else:
-        diff_norm = numpy.linalg.norm(embedding_diff, axis=2)
+        diff_norm = np.linalg.norm(embedding_diff, axis=2)
 
-    mask = diff_norm > numpy.finfo(diff_norm.dtype).eps * 100
-    embedding_diff[mask] /= diff_norm[mask][:, numpy.newaxis]
+    mask = diff_norm > np.finfo(diff_norm.dtype).eps * 100
+    embedding_diff[mask] /= diff_norm[mask][:, np.newaxis]
 
     forces = squareform(forces)
 
@@ -118,10 +118,10 @@ def gradient(X, embeddings, forces, embedding_dist=None, weights=None):
         forces *= col_v(weights)
 
     # multiply unit direction vectors with the force magnitude
-    F = embedding_diff * forces[:, :, numpy.newaxis]
+    F = embedding_diff * forces[:, :, np.newaxis]
     assert F.shape == (N, N, dim)
     # sum all the forces acting on a particle
-    F = numpy.sum(F, axis=0)
+    F = np.sum(F, axis=0)
     assert F.shape == (N, dim)
     # Transfer forces to the 'anchors'
     # (P, dim) array of gradients
@@ -158,9 +158,9 @@ def freeviz_gradient(X, y, embedding, p=1, weights=None):
            FreeViz - An Intelligent Visualization Approach for Class-Labeled
            Multidimensional Data Sets, Proceedings of IDAMAP 2005, Edinburgh.
     """
-    X = numpy.asarray(X)
-    y = numpy.asarray(y)
-    embedding = numpy.asarray(embedding)
+    X = np.asarray(X)
+    y = np.asarray(y)
+    embedding = np.asarray(embedding)
     assert X.ndim == 2 and X.shape[0] == y.shape[0] == embedding.shape[0]
     D = scipy.spatial.distance.pdist(embedding)
     if y.dtype.kind == "i":
@@ -179,10 +179,10 @@ def _rotate(A):
     vector (1, 0).
     """
     assert A.ndim == 2 and A.shape[1] == 2
-    phi = numpy.arctan2(A[0, 1], A[0, 0])
-    R = [[numpy.cos(-phi), numpy.sin(-phi)],
-         [-numpy.sin(-phi), numpy.cos(-phi)]]
-    return numpy.dot(A, R)
+    phi = np.arctan2(A[0, 1], A[0, 0])
+    R = [[np.cos(-phi), np.sin(-phi)],
+         [-np.sin(-phi), np.cos(-phi)]]
+    return np.dot(A, R)
 
 
 def freeviz(X, y, weights=None, center=True, scale=True, dim=2, p=1,
@@ -239,82 +239,82 @@ def freeviz(X, y, weights=None, center=True, scale=True, dim=2, p=1,
            Multidimensional Data Sets, Proceedings of IDAMAP 2005, Edinburgh.
     """
     needcopy = center is not False or scale is not False
-    X = numpy.array(X, copy=needcopy)
-    y = numpy.asarray(y)
+    X = np.array(X, copy=needcopy)
+    y = np.asarray(y)
     N, P = X.shape
     _N, = y.shape
     if N != _N:
         raise ValueError("X and y must have the same length")
 
     if weights is not None:
-        weights = numpy.asarray(weights)
+        weights = np.asarray(weights)
 
     if isinstance(center, bool):
         if center:
-            center = numpy.mean(X, axis=0)
+            center = np.mean(X, axis=0)
         else:
             center = None
     else:
-        center = numpy.asarray(center, dtype=X.dtype)
+        center = np.asarray(center, dtype=X.dtype)
         if center.shape != (P, ):
             raise ValueError("center.shape != (X.shape[1], ) ({} != {})"
                              .format(center.shape, (X.shape[1], )))
 
     if isinstance(scale, bool):
         if scale:
-            scale = numpy.std(X, axis=0)
+            scale = np.std(X, axis=0)
         else:
             scale = None
     else:
-        scale = numpy.asarray(scale, dtype=X.dtype)
+        scale = np.asarray(scale, dtype=X.dtype)
         if scale.shape != (P, ):
             raise ValueError("scale.shape != (X.shape[1],) ({} != {))"
                              .format(scale.shape, (P, )))
 
     if initial is not None:
-        initial = numpy.asarray(initial)
+        initial = np.asarray(initial)
         if initial.ndim != 2 or initial.shape != (P, dim):
             raise ValueError
     else:
         initial = init_random(P, dim)
-        # initial = numpy.random.random((P, dim)) * 2 - 1
+        # initial = np.random.random((P, dim)) * 2 - 1
 
     # Center/scale X if requested
     if center is not None:
         X -= center
 
     if scale is not None:
-        scalenonzero = numpy.abs(scale) > numpy.finfo(scale.dtype).eps
+        scalenonzero = np.abs(scale) > np.finfo(scale.dtype).eps
         X[:, scalenonzero] /= scale[scalenonzero]
 
     A = initial
-    embeddings = numpy.dot(X, A)
+    embeddings = np.dot(X, A)
 
     step_i = 0
     while step_i < maxiter:
         G = freeviz_gradient(X, y, embeddings, p=p, weights=weights)
 
         # Scale the changes (the largest anchor move is alpha * radius)
-        step = numpy.min(numpy.linalg.norm(A, axis=1) /
-                         numpy.linalg.norm(G, axis=1))
+        step = np.min(np.linalg.norm(A, axis=1) /
+                         np.linalg.norm(G, axis=1))
         step = alpha * step
         Anew = A - step * G
 
         # Center anchors (?? This does not seem right; it changes the
         # projection axes direction somewhat arbitrarily)
-        Anew = Anew - numpy.mean(Anew, axis=0)
+        Anew = Anew - np.mean(Anew, axis=0)
 
         # Scale (so that the largest radius is 1)
-        maxr = numpy.max(numpy.linalg.norm(Anew, axis=1))
+        maxr = np.max(np.linalg.norm(Anew, axis=1))
         if maxr >= 0.001:
             Anew /= maxr
 
-        change = numpy.linalg.norm(Anew - A, axis=1)
+        change = np.linalg.norm(Anew - A, axis=1)
         if allclose(change, 0, atol=atol):
             break
 
         A = Anew
-        embeddings = numpy.dot(X, A)
+        embeddings = np.dot(X, A)
         step_i = step_i + 1
 
     if dim == 2:
@@ -331,18 +331,18 @@ def init_radial(p):
     if p == 1:
         axes_angle = [0]
     elif p == 2:
-        axes_angle = [0, numpy.pi / 2]
+        axes_angle = [0, np.pi / 2]
     else:
-        axes_angle = numpy.linspace(0, 2 * numpy.pi, p, endpoint=False)
+        axes_angle = np.linspace(0, 2 * np.pi, p, endpoint=False)
 
-    A = numpy.c_[numpy.cos(axes_angle), numpy.sin(axes_angle)]
+    A = np.c_[np.cos(axes_angle), np.sin(axes_angle)]
     return A
 
 
 def init_random(p, dim, rstate=None):
     if rstate is None:
-        rstate = numpy.random
-    elif not isinstance(rstate, numpy.random.RandomState):
-        rstate = numpy.random.RandomState(rstate)
+        rstate = np.random
+    elif not isinstance(rstate, np.random.RandomState):
+        rstate = np.random.RandomState(rstate)
 
     return rstate.random((p, dim)) * 2 - 1
