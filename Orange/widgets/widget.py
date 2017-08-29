@@ -531,12 +531,27 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         # Create and return the StateInfo object
         if self.__info_ns is None:
             self.__info_ns = info = StateInfo(self)
+            # default css for IO summary.
+            css = textwrap.dedent("""
+            /* vertical row header cell */
+            tr > th.field-name {
+                text-align: right;
+                padding-right: 0.2em;
+                font-weight: bold;
+            }
+            dt {
+                font-weight: bold;
+            }
+            """)
+
             sb = self.statusBar()
             if sb is not None:
                 in_msg = MessagesWidget(objectName="input-summary")
                 in_msg.setVisible(False)
+                in_msg.setDefaultStyleSheet(css)
                 out_msg = MessagesWidget(objectName="output-summary")
                 out_msg.setVisible(False)
+                out_msg.setDefaultStyleSheet(css)
                 # Insert a separator if these are not the first elements
                 # TODO: This needs a better check.
                 if sb.findChildren(SimpleButton):
