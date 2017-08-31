@@ -92,7 +92,7 @@ class Message(
 
     def __new__(cls, severity=Severity.Information, icon=QIcon(), text="",
                 informativeText="", detailedText="", textFormat=Qt.PlainText):
-        return super().__new__(cls, Severity(severity), icon, text,
+        return super().__new__(cls, Severity(severity), QIcon(icon), text,
                                informativeText, detailedText, textFormat)
 
     def asHtml(self):
@@ -138,6 +138,9 @@ class Message(
         """
         return (not self.text and self.icon.isNull() and
                 not self.informativeText and not self.detailedText)
+    @property
+    def icon(self):
+        return QIcon(super().icon)
 
     def __eq__(self, other):
         if isinstance(other, Message):
