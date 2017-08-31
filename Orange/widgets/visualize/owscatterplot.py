@@ -25,7 +25,7 @@ from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME,
-                                                 get_next_name)
+                                                 create_groups_table)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -504,24 +504,6 @@ class OWScatterPlot(OWWidget):
     def selection_changed(self):
         self.send_data()
 
-    @staticmethod
-    def create_groups_table(data, selection):
-        if data is None:
-            return None
-        names = [var.name for var in data.domain.variables + data.domain.metas]
-        name = get_next_name(names, "Selection group")
-        metas = data.domain.metas + (
-            DiscreteVariable(
-                name,
-                ["Unselected"] + ["G{}".format(i + 1)
-                                  for i in range(np.max(selection))]),
-        )
-        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        table = data.transform(domain)
-        table.metas[:, len(data.domain.metas):] = \
-            selection.reshape(len(data), 1)
-        return table
-
     def send_data(self):
         selected = None
         selection = None
@@ -534,7 +516,7 @@ class OWScatterPlot(OWWidget):
             if len(selection) > 0:
                 selected = self.data[selection]
         if graph.selection is not None and np.max(graph.selection) > 1:
-            annotated = self.create_groups_table(self.data, graph.selection)
+            annotated = create_groups_table(self.data, graph.selection)
         else:
             annotated = create_annotated_table(self.data, selection)
         self.Outputs.selected_data.send(selected)
