@@ -546,12 +546,18 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
             sb = self.statusBar()
             if sb is not None:
-                in_msg = MessagesWidget(objectName="input-summary")
-                in_msg.setVisible(False)
-                in_msg.setDefaultStyleSheet(css)
-                out_msg = MessagesWidget(objectName="output-summary")
-                out_msg.setVisible(False)
-                out_msg.setDefaultStyleSheet(css)
+                in_msg = MessagesWidget(
+                    objectName="input-summary", visible=False,
+                    defaultStyleSheet=css,
+                    sizePolicy=QSizePolicy(QSizePolicy.Preferred,
+                                           QSizePolicy.Preferred)
+                )
+                out_msg = MessagesWidget(
+                    objectName="output-summary", visible=False,
+                    defaultStyleSheet=css,
+                    sizePolicy=QSizePolicy(QSizePolicy.Preferred,
+                                           QSizePolicy.Preferred)
+                )
                 # Insert a separator if these are not the first elements
                 # TODO: This needs a better check.
                 if sb.findChildren(SimpleButton):
