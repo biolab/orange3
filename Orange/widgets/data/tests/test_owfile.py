@@ -275,17 +275,11 @@ a
             self.assertAlmostEqual(float(data1[0][2].value), data2[0][1])
 
     def test_url_no_scheme(self):
-        class SkipRest(Exception):
-            pass
-
-        mock_urlreader = Mock(side_effect=SkipRest())
+        mock_urlreader = Mock(side_effect=ValueError())
         url = 'foo.bar/xxx.csv'
 
         with patch('Orange.widgets.data.owfile.UrlReader', mock_urlreader):
-            try:
-                self.widget.url_combo.insertItem(0, url)
-                self.widget.url_combo.activated.emit(0)
-            except SkipRest:
-                pass
+            self.widget.url_combo.insertItem(0, url)
+            self.widget.url_combo.activated.emit(0)
 
         mock_urlreader.assert_called_once_with('http://' + url)
