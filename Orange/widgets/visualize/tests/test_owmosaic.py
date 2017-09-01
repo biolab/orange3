@@ -124,10 +124,10 @@ class MosaicVizRankTests(WidgetTest):
         metas = [data.domain.attributes[0]]
         domain = Domain(attributes, data.domain.class_var, metas)
         new_data = data.from_table(domain, data)
-        widget.set_data(new_data)
+        self.send_signal(self.widget.Inputs.data, new_data)
 
         for data in [self.iris, new_data]:
-            widget.set_data(data)
+            self.send_signal(self.widget.Inputs.data, data)
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
             self.assertTrue(widget.interior_coloring == widget.PEARSON)
@@ -147,7 +147,7 @@ class MosaicVizRankTests(WidgetTest):
             vizrank.max_attrs = 4
             self.assertEqual(vizrank.state_count(), 15)  # above + 4x3x2x1 / 2x3x4
 
-            widget.set_data(self.iris_no_class)
+            self.send_signal(self.widget.Inputs.data, self.iris_no_class)
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
             vizrank.max_attrs = 2
             self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
@@ -160,7 +160,7 @@ class MosaicVizRankTests(WidgetTest):
         """MosaicVizrank correctly iterates through states"""
         widget = self.widget
         vizrank = self.vizrank
-        widget.set_data(self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         vizrank.compute_attr_order()
 
         widget.interior_coloring = widget.CLASS_DISTRIBUTION
@@ -209,7 +209,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_row_for_state(self):
         """MosaicVizrank returns table row corresponding to the state"""
-        self.widget.set_data(self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.vizrank.attr_ordering = [DiscreteVariable(n) for n in "abcd"]
         items = self.vizrank.row_for_state(0, [1, 3, 0])
         self.assertEqual(len(items), 1)
@@ -224,7 +224,7 @@ class MosaicVizRankTests(WidgetTest):
         """MosaicVizrank computes rankings without crashing"""
         widget = self.widget
         vizrank = self.vizrank
-        widget.set_data(self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         vizrank.max_attrs = 2
 
         widget.interior_coloring = widget.PEARSON
@@ -236,18 +236,18 @@ class MosaicVizRankTests(WidgetTest):
         time.sleep(0.5)
         self.assertEqual(vizrank.rank_model.rowCount(), 10)  # 4 + 4x5 / 2
 
-        widget.set_data(self.iris_no_class)
+        self.send_signal(self.widget.Inputs.data, self.iris_no_class)
         vizrank.toggle()
 
     def test_does_not_crash_cont_class(self):
         """MosaicVizrank computes rankings without crashing"""
         data = Table("housing.tab")
-        self.widget.set_data(data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()
 
     def test_pause_continue(self):
         data = Table("housing.tab")
-        self.widget.set_data(data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()  # start
         self.process_events(until=lambda: self.vizrank.saved_progress > 5)
         self.vizrank.toggle()  # stop
@@ -257,7 +257,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_finished(self):
         data = Table("iris.tab")
-        self.widget.set_data(data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()
         self.process_events(until=lambda: not self.vizrank.keep_running)
         self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
@@ -336,3 +336,29 @@ class MosaicVizRankTests(WidgetTest):
             attrlist = tuple(sorted(self.vizrank.attr_ordering[i].name for i in state))
             sc = self.vizrank.compute_score(state)
             self.assertTrue(np.allclose(sc, SCORES[attrlist], rtol=0.003, atol=0))
+
+    def test_subset_data(self):
+        """
+        Mosaic should not crash on subset data and should properly interpret it.
+        GH-2515
+        GH-2528
+        """
+        table_titanic = Table("titanic")
+        self.send_signal(self.widget.Inputs.data, table_titanic)
+        self.send_signal(self.widget.Inputs.data_subset, table_titanic[::20])
+        table_housing = Table("housing")
+        self.send_signal(self.widget.Inputs.data, table_housing)
+        self.send_signal(self.widget.Inputs.data_subset, table_housing[::20])
+
+    def test_incompatible_subset(self):
+        """
+        Show warning when subset data is not compatible with data.
+        GH-2528
+        """
+        table_titanic = Table("titanic")
+        self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data_subset, table_titanic)
+        self.assertTrue(self.widget.Warning.incompatible_subset.is_shown())
+        self.send_signal(self.widget.Inputs.data_subset, self.iris)
+        self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
