@@ -1,8 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from os import path, remove
-from unittest.mock import Mock
-from unittest import TestCase
+from unittest.mock import Mock, patch
 import pickle
 import tempfile
 
@@ -40,7 +39,7 @@ class TestOWFile(WidgetTest):
     event_data = None
 
     def setUp(self):
-        self.widget = self.create_widget(OWFile)
+        self.widget = self.create_widget(OWFile)  # type: OWFile
 
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
@@ -274,3 +273,13 @@ a
             self.assertEqual(len(data2[0].metas[0]), 1)
             # discrete integer values should stay the same after conversion to continuous
             self.assertAlmostEqual(float(data1[0][2].value), data2[0][1])
+
+    def test_url_no_scheme(self):
+        mock_urlreader = Mock(side_effect=ValueError())
+        url = 'foo.bar/xxx.csv'
+
+        with patch('Orange.widgets.data.owfile.UrlReader', mock_urlreader):
+            self.widget.url_combo.insertItem(0, url)
+            self.widget.url_combo.activated.emit(0)
+
+        mock_urlreader.assert_called_once_with('http://' + url)
