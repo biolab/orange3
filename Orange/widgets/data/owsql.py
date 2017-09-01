@@ -41,7 +41,7 @@ class OWSql(OWWidget):
     id = "orange.widgets.data.sql"
     description = "Load data set from SQL."
     icon = "icons/SQLTable.svg"
-    priority = 10
+    priority = 30
     category = "Data"
     keywords = ["data", "file", "load", "read"]
 
