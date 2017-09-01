@@ -247,7 +247,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         if not urlparse(url).scheme:
             url = 'http://' + url
-            self.url_combo.setCurrentText(url)
+            self.url_combo.setItemText(pos, url)
             self.recent_urls[pos] = url
 
         self.source = self.URL
