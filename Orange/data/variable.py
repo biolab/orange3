@@ -830,6 +830,7 @@ class TimeVariable(ContinuousVariable):
 
     If time is specified wihout an UTC offset, localtime is assumed.
     """
+    _all_vars = {}
     TYPE_HEADERS = ('time', 't')
     UNIX_EPOCH = datetime(1970, 1, 1)
     _ISO_FORMATS = [
