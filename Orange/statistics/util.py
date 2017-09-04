@@ -12,13 +12,12 @@ import bottleneck as bn
 
 def _count_nans_per_row_sparse(X, weights):
     """ Count the number of nans (undefined) values per row. """
-    items_per_row = 1 if X.ndim == 1 else X.shape[1]
-    counts = np.ones(X.shape[0]) * items_per_row
-    nnz_per_row = np.bincount(X.indices, minlength=len(counts))
-    counts -= nnz_per_row
+    counts = np.fromiter((np.isnan(row.data).sum() for row in X), dtype=np.float)
+
     if weights is not None:
         counts *= weights
-    return np.sum(counts)
+
+    return counts
 
 
 def bincount(X, max_val=None, weights=None, minlength=None):
@@ -56,7 +55,7 @@ def bincount(X, max_val=None, weights=None, minlength=None):
 
 def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
     """
-    Count the undefined elements in arr along given axis.
+    Count the undefined elements in an array along given axis.
 
     Parameters
     ----------
@@ -64,26 +63,43 @@ def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
     weights : array_like
         Weights to weight the nans with, before or after counting (depending
         on the weights shape).
+    axis : Optional[int]
 
     Returns
     -------
-    counts
+    Union[np.ndarray, float]
+
     """
     if not sp.issparse(X):
         X = np.asanyarray(X)
         isnan = np.isnan(X)
         if weights is not None and weights.shape == X.shape:
             isnan = isnan * weights
+
         counts = isnan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
         if weights is not None and weights.shape != X.shape:
             counts = counts * weights
     else:
-        if any(attr is not None for attr in [axis, dtype]) or \
-                        keepdims is not False:
-            raise ValueError('Arguments axis, dtype and keepdims'
-                             'are not yet supported on sparse data!')
+        assert axis in [None, 0, 1], 'Only axis 0 and 1 are currently supported'
+        # To have consistent behaviour with dense matrices, raise error when
+        # `axis=1` and the array is 1d (e.g. [[1 2 3]])
+        if X.shape[0] == 1 and axis == 1:
+            raise ValueError('Axis %d is out of bounds' % axis)
 
-        counts = _count_nans_per_row_sparse(X, weights)
+        arr = X if axis == 1 else X.T
+
+        if weights is not None:
+            weights = weights if axis == 1 else weights.T
+
+        arr = arr.tocsr()
+        counts = _count_nans_per_row_sparse(arr, weights)
+
+        # We want a scalar value if `axis=None` or if the sparse matrix is
+        # actually a vector (e.g. [[1 2 3]]), but has `ndim=2` due to scipy
+        # implementation
+        if axis is None or X.shape[0] == 1:
+            counts = counts.sum()
+
     return counts
 
 
