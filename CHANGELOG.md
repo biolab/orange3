@@ -6,6 +6,26 @@ Change Log
 * ...
 
 
+[3.5.0] - 2017-09-04
+--------------------
+##### Enhancements
+* Proper calculation of distances ([#2454](../../pull/2454))
+* OWFeatureConstructor: Add new functions from numpy ([#2410](../../pull/2410))
+* Widget status bar ([#2464](../../pull/2464))
+* Impute widget: Parallel execution in the background ([#2395](../../pull/2395))
+
+##### Bugfixes
+* Mosaic Display: subset data ([#2528](../../pull/2528))
+* MDS: Optimize similar pairs graphics construction ([#2536](../../pull/2536))
+* Error Reporting: read attached schema file as utf8 ([#2416](../../pull/2416))
+* Another color palette when too many colors needed ([#2522](../../pull/2522))
+* Widget: splitter sizes ([#2524](../../pull/2524))
+* Silhouette Plot: another memory error ([#2521](../../pull/2521))
+* Fix asynchronous widget tests ([#2520](../../pull/2520))
+* Mosaic Vizrank: compute_attr_order is called every step ([#2484](../../pull/2484))
+* widgets/model: Restore 'explicit' hint flag for 'Coefficients' output ([#2509](../../pull/2509))
+
+
 [3.4.5] - 2017-07-27
 --------------------
 ##### Enhancements
@@ -589,7 +609,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.4.5...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.5...HEAD
+[3.4.5]: https://github.com/biolab/orange3/compare/3.4.5...3.5
 [3.4.5]: https://github.com/biolab/orange3/compare/3.4.4...3.4.5
 [3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
 [3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
