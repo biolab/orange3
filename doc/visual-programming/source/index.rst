@@ -80,19 +80,20 @@ Model
 .. toctree::
    :maxdepth: 1
 
-   widgets/model/naivebayes
-   widgets/model/logisticregression
-   widgets/model/tree
-   widgets/model/knn
-   widgets/model/loadmodel
    widgets/model/constant
-   widgets/model/randomforest
-   widgets/model/savemodel
-   widgets/model/svm
    widgets/model/cn2ruleinduction
-   widgets/model/adaboost
-   widgets/model/stochasticgradient
+   widgets/model/knn
+   widgets/model/tree
+   widgets/model/randomforest
+   widgets/model/svm
    widgets/model/linearregression
+   widgets/model/logisticregression
+   widgets/model/naivebayes
+   widgets/model/adaboost
+   widgets/model/neuralnetwork
+   widgets/model/stochasticgradient
+   widgets/model/loadmodel
+   widgets/model/savemodel
 
 
 Unsupervised
