@@ -2,26 +2,104 @@
 import numpy as np
 import scipy.spatial
 
+from Orange.data import ContinuousVariable, Domain
+from Orange.data.util import SharedComputeValue
+from Orange.projection import Projector, Projection, LinearCombinationSql
 
-class FreeViz:
-    def __init__(self, data, weights=None, center=True, scale=True, dim=2, p=1,
-                initial=None, maxiter=500, alpha=0.1, atol=1e-5):
-        # TODO: center=False and scale=False  (widget calls with these two parameters!)
-        X, Y, _ = self.prepare_freeviz_data(data)
-        if X is not None:
-            _, a, _, _ = self.freeviz(X, Y, weights=weights, center=center,
-                                      scale=scale, dim=dim, p=p, initial=initial,
-                                      maxiter=maxiter, alpha=alpha, atol=atol)
-        self.anchors = a
+__all__ = ["FreeViz"]
+
+
+class FreeVizProjector(SharedComputeValue):
+    """Transform into a given FreeViz component."""
+
+    def __init__(self, projection, feature, freeviz_transform):
+        super().__init__(freeviz_transform)
+        self.projection = projection
+        self.feature = feature
+        self.transformed = None
+
+    def compute(self, data, freeviz_space):
+        return freeviz_space[:, self.feature]
+
+
+class _FreeVizTransformDomain:
+    """Computation common for all FreeViz variables."""
+
+    def __init__(self, freeviz):
+        self.freeviz = freeviz
 
     def __call__(self, data):
-        X, _, _ = self.prepare_freeviz_data(data)
-        EX = np.dot(X, self.anchors)
+        if data.domain != self.freeviz.pre_domain:
+            data = data.transform(self.freeviz.pre_domain)
+        return self.freeviz.transform(data.X)
+
+
+class FreeVizModel(Projection):
+    name = "FreeVizModel"
+
+    def __init__(self, proj, domain):
+        freeviz_transform = _FreeVizTransformDomain(self)
+
+        def freeviz_variable(i):
+            v = ContinuousVariable(
+                "FreeViz Component {}".format(i + 1),
+                compute_value=FreeVizProjector(self, i, freeviz_transform))
+            v.to_sql = LinearCombinationSql(
+                domain.attributes, self.components_[i, :],
+                getattr(self, 'mean_', None))
+            return v
+
+        super().__init__(proj=proj)
+        self.orig_domain = domain
+        self.domain = Domain(
+            [freeviz_variable(i) for i in range(proj.dim)],
+            domain.class_vars, domain.metas)
+
+
+class FreeViz(Projector):
+    name = 'FreeViz'
+    supports_sparse = False
+
+    def __init__(self, weights=None, center=True, scale=True, dim=2, p=1,
+                 initial=None, maxiter=500, alpha=0.1, atol=1e-5, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.weights = weights
+        self.center = center
+        self.scale = scale
+        self.dim = dim
+        self.p = p
+        self.initial = initial
+        self.maxiter = maxiter
+        self.alpha = alpha
+        self.atol = atol
+        self.is_class_discrete = False
+
+    def __call__(self, data):
+        if data is not None:
+            self.is_class_discrete = data.domain.class_var.is_discrete
+        return super().__call__(data)
+
+    def fit(self, X, Y=None):
+        X, Y, _ = self.prepare_freeviz_data(X=X, Y=Y)
+        if X is not None:
+            _, a, _, _ = self.freeviz(X, Y, weights=self.weights, center=self.center,
+                                      scale=self.scale, dim=self.dim, p=self.p,
+                                      initial=self.initial, maxiter=self.maxiter, alpha=self.alpha,
+                                      atol=self.atol, is_class_discrete=self.is_class_discrete)
+            self.components_ = a
+            return FreeVizModel(self, self.domain)
+
+    def transform(self, X):
+        EX = np.dot(X, self.components_)
         return EX
 
-    def prepare_freeviz_data(self, data):
-        X = data.X
-        Y = data.Y
+    @classmethod
+    def prepare_freeviz_data(cls, data=None, X=None, Y=None):
+        if data is not None:
+            X = data.X
+            Y = data.Y
+        if X is None or Y is None:
+            return None, None, None
         mask = np.bitwise_or.reduce(np.isnan(X), axis=1)
         mask |= np.isnan(Y)
         validmask = ~mask
@@ -31,8 +109,6 @@ class FreeViz:
         if not len(X):
             return None, None, None
 
-        if data.domain.class_var.is_discrete:
-            Y = Y.astype(int)
         X = (X - np.mean(X, axis=0))
         span = np.ptp(X, axis=0)
         X[:, span > 0] /= span[span > 0].reshape(1, -1)
@@ -124,7 +200,7 @@ class FreeViz:
 
         if not N == embeddings.shape[0]:
             raise ValueError("X and embeddings must have the same length ({}!={})"
-                             .format(X.shape[0] != embeddings.shape[0]))
+                             .format(X.shape[0], embeddings.shape[0]))
 
         if weights is not None and X.shape[0] != weights.shape[0]:
             raise ValueError("X.shape[0] != weights.shape[0] ({}!={})"
@@ -167,7 +243,7 @@ class FreeViz:
         return G
 
     @classmethod
-    def freeviz_gradient(cls, X, y, embedding, p=1, weights=None):
+    def freeviz_gradient(cls, X, y, embedding, p=1, weights=None, is_class_discrete=False):
         """
         Return the gradient for the FreeViz [1]_ projection.
 
@@ -200,12 +276,10 @@ class FreeViz:
         embedding = np.asarray(embedding)
         assert X.ndim == 2 and X.shape[0] == y.shape[0] == embedding.shape[0]
         D = scipy.spatial.distance.pdist(embedding)
-        if y.dtype.kind == "i":
+        if is_class_discrete:
             forces = cls.forces_classification(D, y, p=p)
-        elif y.dtype.kind == "f":
-            forces = cls.forces_regression(D, y, p=p)
         else:
-            raise TypeError
+            forces = cls.forces_regression(D, y, p=p)
         G = cls.gradient(X, embedding, forces, embedding_dist=D, weights=weights)
         return G
 
@@ -223,7 +297,7 @@ class FreeViz:
 
     @classmethod
     def freeviz(cls, X, y, weights=None, center=True, scale=True, dim=2, p=1,
-                initial=None, maxiter=500, alpha=0.1, atol=1e-5):
+                initial=None, maxiter=500, alpha=0.1, atol=1e-5, is_class_discrete=False):
         """
         FreeViz
 
@@ -305,7 +379,7 @@ class FreeViz:
         else:
             scale = np.asarray(scale, dtype=X.dtype)
             if scale.shape != (P, ):
-                raise ValueError("scale.shape != (X.shape[1],) ({} != {))"
+                raise ValueError("scale.shape != (X.shape[1],) ({} != {}))"
                                  .format(scale.shape, (P, )))
 
         if initial is not None:
@@ -329,11 +403,11 @@ class FreeViz:
 
         step_i = 0
         while step_i < maxiter:
-            G = cls.freeviz_gradient(X, y, embeddings, p=p, weights=weights)
+            G = cls.freeviz_gradient(X, y, embeddings, p=p, weights=weights,
+                                     is_class_discrete=is_class_discrete)
 
             # Scale the changes (the largest anchor move is alpha * radius)
-            step = np.min(np.linalg.norm(A, axis=1) /
-                             np.linalg.norm(G, axis=1))
+            step = np.min(np.linalg.norm(A, axis=1) / np.linalg.norm(G, axis=1))
             step = alpha * step
             Anew = A - step * G
 
@@ -377,9 +451,6 @@ class FreeViz:
 
     @staticmethod
     def init_random(p, dim, rstate=None):
-        if rstate is None:
-            rstate = np.random
-        elif not isinstance(rstate, np.random.RandomState):
-            rstate = np.random.RandomState(rstate)
-
-        return rstate.random((p, dim)) * 2 - 1
+        if not isinstance(rstate, np.random.RandomState):
+            rstate = np.random.RandomState(rstate if rstate is not None else 0)
+        return rstate.rand(p, dim) * 2 - 1
