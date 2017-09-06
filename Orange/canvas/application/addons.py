@@ -861,10 +861,24 @@ class PipInstaller:
 
 class CondaInstaller:
     def __init__(self):
+        self.conda = self._find_conda()
+
+    def _find_conda(self):
         executable = sys.executable
         bin = os.path.dirname(executable)
+
+        # posix
         conda = os.path.join(bin, "conda")
-        self.conda = conda if os.path.exists(conda) else None
+        if os.path.exists(conda):
+            return conda
+
+        # windows
+        conda = os.path.join(bin, "Scripts", "conda.bat")
+        if os.path.exists(conda):
+            # "activate" conda environment orange is running in
+            os.environ["CONDA_PREFIX"] = bin
+            os.environ["CONDA_DEFAULT_ENV"] = bin
+            return conda
 
     def install(self, pkg):
         cmd = ["conda", "install", "--yes", pkg.name]
