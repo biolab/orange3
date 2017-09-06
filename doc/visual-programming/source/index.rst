@@ -72,6 +72,7 @@ Visualize
    widgets/visualize/treeviewer
    widgets/visualize/nomogram
    widgets/visualize/freeviz
+   widgets/visualize/radviz
 
 
 Model
