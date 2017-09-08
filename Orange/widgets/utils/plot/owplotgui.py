@@ -31,11 +31,12 @@ from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.utils.itemmodels import DomainModel
 
-from .owconstants import *
-
-from AnyQt.QtWidgets import QWidget, QToolButton, QGroupBox, QVBoxLayout, QHBoxLayout, QMenu, QAction
+from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QMenu, QAction
 from AnyQt.QtGui import QIcon
-from AnyQt.QtCore import Qt, pyqtSignal, QObject
+from AnyQt.QtCore import Qt, pyqtSignal
+
+from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
+    SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
 
 
 class OrientedWidget(QWidget):
@@ -69,7 +70,7 @@ class OWToolbar(OrientedWidget):
         :param parent: The toolbar's parent widget
         :type parent: :obj:`.QWidget`
     '''
-    def __init__(self, gui, text, orientation, buttons, parent, nomargin = False):
+    def __init__(self, gui, text, orientation, buttons, parent, nomargin=False):
         OrientedWidget.__init__(self, orientation, parent)
         self.buttons = {}
         self.groups = {}
@@ -99,26 +100,23 @@ class OWToolbar(OrientedWidget):
         self.layout().addStretch()
 
     def select_state(self, state):
-        #NOTHING = 0
-        #ZOOMING = 1
-        #SELECT = 2
-        #SELECT_POLYGON = 3
-        #PANNING = 4
-        #SELECT_RECTANGLE = SELECT
-        #SELECT_RIGHTCLICK = SELECT
-        state_buttons = {0: 11, 1: 11, 2: 13, 3: 13, 4: 12}
+        # SELECT_RECTANGLE = SELECT
+        # SELECT_RIGHTCLICK = SELECT
+        state_buttons = {NOTHING: 11, ZOOMING: 11, SELECT: 13, SELECT_POLYGON: 13, PANNING: 12}
         self.buttons[state_buttons[state]].click()
 
     def select_selection_behaviour(self, selection_behaviour):
-        #SelectionAdd = 21
-        #SelectionRemove = 22
-        #SelectionToggle = 23
-        #SelectionOne = 24
+        # SelectionAdd = 21
+        # SelectionRemove = 22
+        # SelectionToggle = 23
+        # SelectionOne = 24
         self.buttons[13]._actions[21 + selection_behaviour].trigger()
+
 
 class StateButtonContainer(OrientedWidget):
     '''
-        This class can contain any number of checkable buttons, of which only one can be selected at any time.
+        This class can contain any number of checkable buttons, of which only one can be selected
+        at any time.
 
         :param gui: Used to create containers and buttons
         :type gui: :obj:`.OWPlotGUI`
@@ -132,7 +130,7 @@ class StateButtonContainer(OrientedWidget):
         :param parent: The toolbar's parent widget
         :type parent: :obj:`.QWidget`
     '''
-    def __init__(self, gui, orientation, buttons, parent, nomargin = False):
+    def __init__(self, gui, orientation, buttons, parent, nomargin=False):
         OrientedWidget.__init__(self, orientation, parent)
         self.buttons = {}
         if nomargin:
@@ -163,7 +161,8 @@ class OWAction(QAction):
       A :obj:`QAction` with convenience methods for calling a callback or
       setting an attribute of the plot.
     '''
-    def __init__(self, plot, icon_name=None, attr_name='', attr_value=None, callback=None, parent=None):
+    def __init__(self, plot, icon_name=None, attr_name='', attr_value=None, callback=None,
+                 parent=None):
         QAction.__init__(self, parent)
 
         if type(callback) == str:
@@ -178,7 +177,7 @@ class OWAction(QAction):
         if icon_name:
             self.setIcon(
                 QIcon(os.path.join(os.path.dirname(__file__),
-                      "../../icons", icon_name + '.png')))
+                                   "../../icons", icon_name + '.png')))
             self.setIconVisibleInMenu(True)
 
     def set_attribute(self, clicked):
@@ -208,12 +207,14 @@ class OWPlotGUI:
         This class contains functions to create common user interface elements (QWidgets)
         for configuration and interaction with the ``plot``.
 
-        It provides shorter versions of some methods in :obj:`.gui` that are directly related to an :obj:`.OWPlot` object.
+        It provides shorter versions of some methods in :obj:`.gui` that are directly related to an
+        :obj:`.OWPlot` object.
 
         Normally, you don't have to construct this class manually. Instead, first create the plot,
         then use the :attr:`.OWPlot.gui` attribute.
 
-        Most methods in this class have similar arguments, so they are explaned here in a single place.
+        Most methods in this class have similar arguments, so they are explaned here in a single
+        place.
 
         :param widget: The parent widget which will contain the newly created widget.
         :type widget: QWidget
@@ -229,11 +230,13 @@ class OWPlotGUI:
         :param text: The text displayed on the widget
         :type text: str
 
-        When using widgets that are specific to your visualization and not included here, you have to provide your
+        When using widgets that are specific to your visualization and not included here, you have
+        to provide your
         own widgets id's. They are a tuple with the following members:
 
         :param id: An optional unique identifier for the widget.
-                   This is only needed if you want to retrive this widget using :obj:`.OWToolbar.buttons`.
+                   This is only needed if you want to retrive this widget using
+                   :obj:`.OWToolbar.buttons`.
         :type id: int or str
 
         :param text: The text to be displayed on or next to the widget
@@ -245,11 +248,13 @@ class OWPlotGUI:
                           If this parameter is empty or None, no attribute will be read or set.
         :type attr_name: str
 
-        :param attr_value: The value that will be assigned to the ``attr_name`` when the button is clicked.
+        :param attr_value: The value that will be assigned to the ``attr_name`` when the button is
+        clicked.
         :type attr: any
 
         :param callback: Function to be called when the button is clicked.
-                         If a string is passed as ``callback``, a method by that name of ``plot`` will be called.
+                         If a string is passed as ``callback``, a method by that name of ``plot``
+                         will be called.
                          If this parameter is empty or ``None``, no function will be called
         :type callback: str or function
 
@@ -325,9 +330,9 @@ class OWPlotGUI:
 
     default_zoom_select_buttons = [
         StateButtonsBegin,
-            Zoom,
-            Pan,
-            Select,
+        Zoom,
+        Pan,
+        Select,
         StateButtonsEnd,
         Spacing,
         SendSelection,
@@ -340,10 +345,14 @@ class OWPlotGUI:
         Pan: ('Pan', 'state', PANNING, None, 'Dlg_pan_hand'),
         SimpleSelect: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
         Select: ('Select', 'state', SELECT, None, 'Dlg_arrow'),
-        SelectionAdd: ('Add to selection', 'selection_behavior', SELECTION_ADD, None, 'Dlg_select_add'),
-        SelectionRemove: ('Remove from selection', 'selection_behavior', SELECTION_REMOVE, None, 'Dlg_select_remove'),
-        SelectionToggle: ('Toggle selection', 'selection_behavior', SELECTION_TOGGLE, None, 'Dlg_select_toggle'),
-        SelectionOne: ('Replace selection', 'selection_behavior', SELECTION_REPLACE, None, 'Dlg_arrow'),
+        SelectionAdd: ('Add to selection', 'selection_behavior', SELECTION_ADD, None,
+                       'Dlg_select_add'),
+        SelectionRemove: ('Remove from selection', 'selection_behavior', SELECTION_REMOVE, None,
+                          'Dlg_select_remove'),
+        SelectionToggle: ('Toggle selection', 'selection_behavior', SELECTION_TOGGLE, None,
+                          'Dlg_select_toggle'),
+        SelectionOne: ('Replace selection', 'selection_behavior', SELECTION_REPLACE, None,
+                       'Dlg_arrow'),
         SendSelection: ('Send selection', None, None, 'send_selection', 'Dlg_send'),
         ClearSelection: ('Clear selection', None, None, 'clear_selection', 'Dlg_clear'),
         ShufflePoints: ('ShufflePoints', None, None, 'shuffle_points', 'Dlg_sort')
@@ -355,7 +364,8 @@ class OWPlotGUI:
         AntialiasPlot : ('Antialias plot', 'antialias_plot', 'update_antialiasing'),
         AntialiasPoints : ('Antialias points', 'antialias_points', 'update_antialiasing'),
         AntialiasLines : ('Antialias lines', 'antialias_lines', 'update_antialiasing'),
-        AutoAdjustPerformance : ('Disable effects for large data sets', 'auto_adjust_performance', 'update_performance')
+        AutoAdjustPerformance : ('Disable effects for large data sets', 'auto_adjust_performance',
+                                 'update_performance')
     }
 
     '''
@@ -374,8 +384,8 @@ class OWPlotGUI:
     def _check_box(self, widget, value, label, cb_name):
         '''
             Adds a :obj:`.QCheckBox` to ``widget``.
-            When the checkbox is toggled, the attribute ``value`` of the plot object is set to the checkbox' check state,
-            and the callback ``cb_name`` is called.
+            When the checkbox is toggled, the attribute ``value`` of the plot object is set to
+            the checkbox' check state, and the callback ``cb_name`` is called.
         '''
         return gui.checkBox(widget, self._plot, value, label, callback=self._get_callback(cb_name))
 
@@ -424,7 +434,8 @@ class OWPlotGUI:
                         cb_name=self._plot.master.graph.update_labels)
 
     def filled_symbols_check_box(self, widget):
-        self._check_box(widget, 'show_filled_symbols', 'Show filled symbols', 'update_filled_symbols')
+        self._check_box(widget, 'show_filled_symbols', 'Show filled symbols',
+                        'update_filled_symbols')
 
     def grid_lines_check_box(self, widget):
         self._check_box(widget, 'show_grid', 'Show gridlines', 'update_grid')
@@ -506,16 +517,6 @@ class OWPlotGUI:
             self.LabelOnlySelected
             ], widget, box, "Plot Properties")
 
-    def plot_settings_box(self, widget, box=None):
-        '''
-            Creates a box with controls for common plot settings
-        '''
-        return self.create_box([
-            self.ShowLegend,
-            self.ShowFilledSymbols,
-            self.ShowGridLines,
-            ], widget, box, "Plot settings")
-
     _functions = {
         ShowFilledSymbols: filled_symbols_check_box,
         JitterSizeSlider: jitter_size_slider,
@@ -571,7 +572,10 @@ class OWPlotGUI:
         '''
         id, name, attr_name, attr_value, callback, icon_name = self._expand_id(id)
         if id == OWPlotGUI.Select:
-            b = self.menu_button(self.Select, [self.SelectionOne, self.SelectionAdd, self.SelectionRemove, self.SelectionToggle], widget)
+            b = self.menu_button(self.Select,
+                                 [self.SelectionOne, self.SelectionAdd,
+                                  self.SelectionRemove, self.SelectionToggle],
+                                 widget)
         else:
             b = OWButton(parent=widget)
             ac = OWAction(self._plot, icon_name, attr_name, attr_value, callback, parent=b)
@@ -585,7 +589,7 @@ class OWPlotGUI:
         '''
             Creates an :obj:`.OWButton` with a popup-menu and adds it to the parent ``widget``.
         '''
-        id, name, attr_name, attr_value, callback, icon_name = self._expand_id(main_action_id)
+        id, _, attr_name, attr_value, callback, icon_name = self._expand_id(main_action_id)
         b = OWButton(parent=widget)
         m = QMenu(b)
         b.setMenu(m)
@@ -594,11 +598,12 @@ class OWPlotGUI:
         m.triggered[QAction].connect(b.setDefaultAction)
 
         if main_action_id:
-            main_action = OWAction(self._plot, icon_name, attr_name, attr_value, callback, parent=b)
+            main_action = OWAction(self._plot, icon_name, attr_name, attr_value, callback,
+                                   parent=b)
             m.triggered.connect(main_action.trigger)
 
         for id in ids:
-            id, name, attr_name, attr_value, callback, icon_name = self._expand_id(id)
+            id, _, attr_name, attr_value, callback, icon_name = self._expand_id(id)
             a = OWAction(self._plot, icon_name, attr_name, attr_value, callback, parent=m)
             m.addAction(a)
             b._actions[id] = a
@@ -613,7 +618,7 @@ class OWPlotGUI:
         b.setMinimumSize(40, 30)
         return b
 
-    def state_buttons(self, orientation, buttons, widget, nomargin = False):
+    def state_buttons(self, orientation, buttons, widget, nomargin=False):
         '''
             This function creates a set of checkable buttons and connects them so that only one
             may be checked at a time.
@@ -623,9 +628,10 @@ class OWPlotGUI:
             widget.layout().addWidget(c)
         return c
 
-    def toolbar(self, widget, text, orientation, buttons, nomargin = False):
+    def toolbar(self, widget, text, orientation, buttons, nomargin=False):
         '''
-            Creates an :obj:`.OWToolbar` with the specified ``text``, ``orientation`` and ``buttons`` and adds it to ``widget``.
+            Creates an :obj:`.OWToolbar` with the specified ``text``, ``orientation``
+            and ``buttons`` and adds it to ``widget``.
 
             .. seealso:: :obj:`.OWToolbar`
         '''
@@ -636,7 +642,8 @@ class OWPlotGUI:
             widget.layout().addWidget(t)
         return t
 
-    def zoom_select_toolbar(self, widget, text = 'Zoom / Select', orientation = Qt.Horizontal, buttons = default_zoom_select_buttons, nomargin = False):
+    def zoom_select_toolbar(self, widget, text='Zoom / Select', orientation=Qt.Horizontal,
+                            buttons=default_zoom_select_buttons, nomargin=False):
         t = self.toolbar(widget, text, orientation, buttons, nomargin)
         t.buttons[self.SimpleSelect].click()
         return t
@@ -646,14 +653,15 @@ class OWPlotGUI:
             self.AnimatePlot,
             self.AnimatePoints,
             self.AntialiasPlot,
-        #    self.AntialiasPoints,
-        #    self.AntialiasLines,
+            # self.AntialiasPoints,
+            # self.AntialiasLines,
             self.AutoAdjustPerformance,
             self.DisableAnimationsThreshold], widget, box, "Visual effects")
         return b
 
     def theme_combo_box(self, widget):
-        c = gui.comboBox(widget, self._plot, "theme_name", "Theme", callback = self._plot.update_theme, sendSelectedValue = 1, valueType = str)
+        c = gui.comboBox(widget, self._plot, "theme_name", "Theme",
+                         callback=self._plot.update_theme, sendSelectedValue=1, valueType=str)
         c.addItem('Default')
         c.addItem('Light')
         c.addItem('Dark')
