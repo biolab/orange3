@@ -58,8 +58,8 @@ class TreeLearner(Learner):
     def __init__(
             self, *args, binarize=False, max_depth=None,
             min_samples_leaf=1, min_samples_split=2, sufficient_majority=0.95,
-            **kwargs):
-        super().__init__(*args, **kwargs)
+            preprocessors=None, **kwargs):
+        super().__init__(preprocessors=preprocessors)
         self.params = {}
         self.binarize = self.params['binarize'] = binarize
         self.min_samples_leaf = self.params['min_samples_leaf'] = min_samples_leaf
