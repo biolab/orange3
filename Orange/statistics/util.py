@@ -30,35 +30,67 @@ def _count_nans_per_row_sparse(X, weights):
     return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=np.float)
 
 
-def bincount(X, max_val=None, weights=None, minlength=None):
+def bincount(x, weights=None, max_val=None, minlength=None):
     """Return counts of values in array X.
 
     Works kind of like np.bincount(), except that it also supports floating
     arrays with nans.
+
+    Parameters
+    ----------
+    x : array_like, 1 dimension, nonnegative ints
+        Input array.
+    weights : array_like, optional
+        Weights, array of the same shape as x.
+    max_val : int, optional
+        Indicates the maximum value we expect to find in X and sets the result
+        array size accordingly. E.g. if we set `max_val=2` yet the largest
+        value in X is 1, the result will contain a bin for the value 2, and
+        will be set to 0. See examples for usage.
+    minlength : int, optional
+        A minimum number of bins for the output array. See numpy docs for info.
 
     Returns
     -------
     Tuple[np.ndarray, int]
         Returns the bincounts and the number of NaN values.
 
+    Examples
+    --------
+    In case `max_val` is provided, the return shape includes bins for these
+    values as well, even if they do not appear in the data. However, this will
+    not truncate the bincount if values larger than `max_count` are found.
+    >>> bincount([0, 0, 1, 1, 2], max_val=4)
+    (array([ 2.,  2.,  1.,  0.,  0.]), 0.0)
+    >>> bincount([0, 1, 2, 3, 4], max_val=2)
+    (array([ 1.,  1.,  1.,  1.,  1.]), 0.0)
+
     """
     # Store the original matrix before any manipulation to check for sparse
-    X_ = X
-    if sp.issparse(X):
-        weights = weights[X.indices] if weights is not None else weights
-        X = X.data
+    x_original = x
+    if sp.issparse(x):
+        n_items = np.prod(x_original.shape)
+        zero_indices = np.setdiff1d(np.arange(n_items), x.indices, assume_unique=True)
 
-    X = np.asanyarray(X)
-    if X.dtype.kind == 'f' and bn.anynan(X):
-        nonnan = ~np.isnan(X)
-        X = X[nonnan]
+        if weights is not None:
+            zero_weights = weights[zero_indices].sum()
+            weights = weights[x.indices]
+        else:
+            zero_weights = np.prod(x_original.shape) - x_original.nnz
+
+        x = x.data
+
+    x = np.asanyarray(x)
+    if x.dtype.kind == 'f' and bn.anynan(x):
+        nonnan = ~np.isnan(x)
+        x = x[nonnan]
         if weights is not None:
             nans = (~nonnan * weights).sum(axis=0)
             weights = weights[nonnan]
         else:
             nans = (~nonnan).sum(axis=0)
     else:
-        nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
+        nans = 0. if x.ndim == 1 else np.zeros(x.shape[1], dtype=float)
 
     if minlength is None and max_val is not None:
         minlength = max_val + 1
@@ -67,12 +99,12 @@ def bincount(X, max_val=None, weights=None, minlength=None):
         bc = np.array([])
     else:
         bc = np.bincount(
-            X.astype(np.int32, copy=False), weights=weights, minlength=minlength
+            x.astype(np.int32, copy=False), weights=weights, minlength=minlength
         ).astype(float)
         # Since `csr_matrix.values` only contain non-zero values, we must count
         # those separately and set the appropriate bin
-        if sp.issparse(X_):
-            bc[0] = np.prod(X_.shape) - X_.nnz
+        if sp.issparse(x_original):
+            bc[0] = zero_weights
 
     return bc, nans
 

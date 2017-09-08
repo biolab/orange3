@@ -355,3 +355,35 @@ class TestBincount(unittest.TestCase):
         expected = [0, 3, 2, 1, 0, 0]
 
         np.testing.assert_equal(bincount(x, max_val=max_val)[0], expected)
+
+    @dense_sparse
+    def test_maxval_doesnt_truncate_values_when_too_small(self, array):
+        x = array([1, 1, 1, 2, 3, 2])
+        max_val = 1
+        expected = [0, 3, 2, 1]
+
+        np.testing.assert_equal(bincount(x, max_val=max_val)[0], expected)
+
+    @dense_sparse
+    def test_minlength_adds_empty_bins(self, array):
+        x = array([1, 1, 1, 2, 3, 2])
+        minlength = 5
+        expected = [0, 3, 2, 1, 0]
+
+        np.testing.assert_equal(bincount(x, minlength=minlength)[0], expected)
+
+    @dense_sparse
+    def test_weights(self, array):
+        x = array([0, 0, 1, 1, 2, 2, 3, 3])
+        w = np.array([1, 2, 0, 0, 1, 1, 0, 1])
+
+        expected = [3, 0, 2, 1]
+        np.testing.assert_equal(bincount(x, w)[0], expected)
+
+    @dense_sparse
+    def test_weights_with_nans(self, array):
+        x = array([0, 0, 1, 1, np.nan, 2, np.nan, 3])
+        w = np.array([1, 2, 0, 0, 1, 1, 0, 1])
+
+        expected = [3, 0, 1, 1]
+        np.testing.assert_equal(bincount(x, w)[0], expected)
