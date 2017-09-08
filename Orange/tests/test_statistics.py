@@ -1,5 +1,7 @@
 import unittest
 import warnings
+
+from functools import wraps
 from itertools import chain
 
 import numpy as np
@@ -8,6 +10,16 @@ from scipy.sparse import csr_matrix, issparse
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
     nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
+
+
+def dense_sparse(test_case):
+    """Run a single test case on both dense and sparse data."""
+    @wraps(test_case)
+    def _wrapper(self):
+        test_case(self, lambda x: np.array(x))
+        test_case(self, lambda x: csr_matrix(x))
+
+    return _wrapper
 
 
 class TestUtil(unittest.TestCase):
@@ -231,113 +243,116 @@ class TestUtil(unittest.TestCase):
 
 
 class TestCountnans(unittest.TestCase):
-    def test_dense_array(self):
-        dense = np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
-        sparse = csr_matrix(dense)
-
-        self.assertEqual(countnans(dense), 2)
-        self.assertEqual(countnans(sparse), 2)
-
-    def test_sparse_array(self):
-        x = csr_matrix([0, 0, 0, 2, 2, np.nan, 1, np.nan, 2, 1])
+    @dense_sparse
+    def test_1d_array(self, array):
+        x = array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
         self.assertEqual(countnans(x), 2)
 
-    def test_shape_matches_dense_and_sparse_given_array_and_axis_None(self):
-        dense = np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
-        sparse = csr_matrix(dense)
-        self.assertEqual(countnans(dense).shape, countnans(sparse).shape)
-
-    def test_shape_matches_dense_and_sparse_given_array_and_axis_0(self):
-        dense = np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
-        sparse = csr_matrix(dense)
-        self.assertEqual(countnans(dense, axis=0).shape, countnans(sparse, axis=0).shape)
-
-    def test_shape_matches_dense_and_sparse_given_array_and_axis_1(self):
-        dense = np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
-        sparse = csr_matrix(dense)
-        self.assertEqual(countnans(dense, axis=1).shape, countnans(sparse, axis=1).shape)
-
-    def test_2d_matrix(self):
-        dense = [[1, np.nan, 1, 2],
-                 [2, np.nan, 2, 3]]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_1d_array_with_axis_0(self, array):
+        x = array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1])
         expected = 2
 
-        self.assertEqual(countnans(dense), expected)
-        self.assertEqual(countnans(sparse), expected)
+        self.assertEqual(countnans(x, axis=0), expected)
 
-    def test_on_columns(self):
-        dense = [[1, np.nan, 1, 2],
-                 [2, np.nan, 2, 3]]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_1d_array_with_axis_1_raises_exception(self, array):
+        with self.assertRaises(ValueError):
+            countnans(array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1]), axis=1)
+
+    @dense_sparse
+    def test_shape_matches_dense_and_sparse(self, array):
+        x = array([[0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1],
+                   [1, 2, 2, 1, np.nan, 1, 2, 3, np.nan, 3]])
+        expected = 4
+
+        self.assertEqual(countnans(x), expected)
+
+    @dense_sparse
+    def test_shape_matches_dense_and_sparse_with_axis_0(self, array):
+        x = array([[0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1],
+                   [1, 2, 2, 1, np.nan, 1, 2, np.nan, 3, 3]])
+        expected = [0, 0, 0, 0, 1, 1, 0, 2, 0, 0]
+
+        np.testing.assert_equal(countnans(x, axis=0), expected)
+
+    @dense_sparse
+    def test_shape_matches_dense_and_sparse_with_axis_1(self, array):
+        x = array([[0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1],
+                   [1, 2, 2, 1, np.nan, 1, 2, 3, np.nan, 3]])
+        expected = [2, 2]
+
+        np.testing.assert_equal(countnans(x, axis=1), expected)
+
+    @dense_sparse
+    def test_2d_matrix(self, array):
+        x = array([[1, np.nan, 1, 2],
+                   [2, np.nan, 2, 3]])
+        expected = 2
+
+        self.assertEqual(countnans(x), expected)
+
+    @dense_sparse
+    def test_on_columns(self, array):
+        x = array([[1, np.nan, 1, 2],
+                   [2, np.nan, 2, 3]])
         expected = [0, 2, 0, 0]
 
-        np.testing.assert_equal(countnans(dense, axis=0), expected)
-        np.testing.assert_equal(countnans(sparse, axis=0), expected)
+        np.testing.assert_equal(countnans(x, axis=0), expected)
 
-    def test_on_rows(self):
-        dense = [[1, np.nan, 1, 2],
-                 [2, np.nan, 2, 3]]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_on_rows(self, array):
+        x = array([[1, np.nan, 1, 2],
+                   [2, np.nan, 2, 3]])
         expected = [1, 1]
 
-        np.testing.assert_equal(countnans(dense, axis=1), expected)
-        np.testing.assert_equal(countnans(sparse, axis=1), expected)
+        np.testing.assert_equal(countnans(x, axis=1), expected)
 
-    def test_1d_weights_with_axis_0(self):
-        dense = [[1, 1, np.nan, 1],
-                 [np.nan, 1, 1, 1]]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_1d_weights_with_axis_0(self, array):
+        x = array([[1, 1, np.nan, 1],
+                   [np.nan, 1, 1, 1]])
         w = np.array([0.5, 1, 1, 1])
 
-        np.testing.assert_equal(countnans(dense, w, axis=0), [.5, 0, 1, 0])
-        np.testing.assert_equal(countnans(sparse, w, axis=0), [.5, 0, 1, 0])
+        np.testing.assert_equal(countnans(x, w, axis=0), [.5, 0, 1, 0])
 
-    def test_1d_weights_with_axis_1(self):
-        dense = [[1, 1, np.nan, 1],
-                 [np.nan, 1, 1, 1]]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_1d_weights_with_axis_1(self, array):
+        x = array([[1, 1, np.nan, 1],
+                   [np.nan, 1, 1, 1]])
         w = np.array([0.5, 1])
 
-        np.testing.assert_equal(countnans(dense, w, axis=1), [.5, 1])
-        np.testing.assert_equal(countnans(sparse, w, axis=1), [.5, 1])
+        np.testing.assert_equal(countnans(x, w, axis=1), [.5, 1])
 
     def test_2d_weights(self):
-        # 2d weights really only matter with dense matrices since we assume
-        # sparse matrices are huge, and constructing a full 2d weight matrix
-        # seems excessive
         x = [[0, np.nan, 1, 1],
              [0, np.nan, 2, 2]]
         w = np.array([[1, 2, 3, 4],
                       [5, 6, 7, 8]])
 
-        np.testing.assert_equal(countnans(x, weights=w, axis=0), [0, 8, 0, 0])
-        np.testing.assert_equal(countnans(x, weights=w, axis=1), [2, 6])
+        np.testing.assert_equal(countnans(x, w, axis=0), [0, 8, 0, 0])
+        np.testing.assert_equal(countnans(x, w, axis=1), [2, 6])
 
 
 class TestBincount(unittest.TestCase):
-    def test_count_nans(self):
-        dense = [0, 0, 1, 2, np.nan, 2]
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_count_nans(self, array):
+        x = array([0, 0, 1, 2, np.nan, 2])
         expected = 1
 
-        np.testing.assert_equal(bincount(dense)[1], expected)
-        np.testing.assert_equal(bincount(sparse)[1], expected)
+        np.testing.assert_equal(bincount(x)[1], expected)
 
-    def test_adds_empty_bins(self):
-        dense = np.array([0, 1, 3, 5])
-        sparse = csr_matrix(dense)
+    @dense_sparse
+    def test_adds_empty_bins(self, array):
+        x = array([0, 1, 3, 5])
         expected = [1, 1, 0, 1, 0, 1]
 
-        np.testing.assert_equal(bincount(dense)[0], expected)
-        np.testing.assert_equal(bincount(sparse)[0], expected)
+        np.testing.assert_equal(bincount(x)[0], expected)
 
-    def test_maxval_adds_empty_bins(self):
-        dense = [1, 1, 1, 2, 3, 2]
-        sparse = csr_matrix(dense)
-
+    @dense_sparse
+    def test_maxval_adds_empty_bins(self, array):
+        x = array([1, 1, 1, 2, 3, 2])
         max_val = 5
         expected = [0, 3, 2, 1, 0, 0]
 
-        np.testing.assert_equal(bincount(dense, max_val=max_val)[0], expected)
-        np.testing.assert_equal(bincount(sparse, max_val=max_val)[0], expected)
+        np.testing.assert_equal(bincount(x, max_val=max_val)[0], expected)
