@@ -1399,7 +1399,7 @@ class Table(MutableSequence, Storage):
             else:
                 m = self._Y[:, col - self.X.shape[1]]
             if var.is_discrete:
-                dist, unknowns = bincount(m, len(var.values) - 1, W)
+                dist, unknowns = bincount(m, weights=W, max_val=len(var.values) - 1)
             elif not m.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
