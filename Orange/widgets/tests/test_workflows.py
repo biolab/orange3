@@ -1,6 +1,7 @@
 from itertools import chain
-from os import listdir
+from os import listdir, environ
 from os.path import isfile, join, dirname
+import unittest
 
 from Orange.canvas.application import workflows
 from Orange.canvas.scheme import widgetsscheme
@@ -21,6 +22,8 @@ TEST_WORKFLOWS = chain(
 )
 
 
+@unittest.skipIf(environ.get("SKIP_EXAMPLE_WORKFLOWS", False),
+                 "Example workflows inflate coverage")
 class TestWorkflows(WidgetTest):
     def test_scheme_examples(self):
         """
