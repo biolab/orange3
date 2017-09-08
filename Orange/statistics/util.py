@@ -12,12 +12,22 @@ import bottleneck as bn
 
 def _count_nans_per_row_sparse(X, weights):
     """ Count the number of nans (undefined) values per row. """
-    counts = np.fromiter((np.isnan(row.data).sum() for row in X), dtype=np.float)
-
     if weights is not None:
-        counts *= weights
+        X = X.tocoo(copy=False)
+        nonzero_mask = np.isnan(X.data)
+        nan_rows, nan_cols = X.row[nonzero_mask], X.col[nonzero_mask]
 
-    return counts
+        if weights.ndim == 1:
+            data_weights = weights[nan_rows]
+        else:
+            data_weights = weights[nan_rows, nan_cols]
+
+        w = sp.coo_matrix((data_weights, (nan_rows, nan_cols)), shape=X.shape)
+        w = w.tocsr(copy=False)
+
+        return np.fromiter((np.sum(row.data) for row in w), dtype=np.float)
+
+    return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=np.float)
 
 
 def bincount(X, max_val=None, weights=None, minlength=None):

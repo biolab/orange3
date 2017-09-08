@@ -324,14 +324,16 @@ class TestCountnans(unittest.TestCase):
 
         np.testing.assert_equal(countnans(x, w, axis=1), [.5, 1])
 
-    def test_2d_weights(self):
-        x = [[0, np.nan, 1, 1],
-             [0, np.nan, 2, 2]]
+    @dense_sparse
+    def test_2d_weights(self, array):
+        x = array([[np.nan, np.nan, 1,      1 ],
+                   [     0, np.nan, 2, np.nan ]])
         w = np.array([[1, 2, 3, 4],
                       [5, 6, 7, 8]])
 
-        np.testing.assert_equal(countnans(x, w, axis=0), [0, 8, 0, 0])
-        np.testing.assert_equal(countnans(x, w, axis=1), [2, 6])
+        np.testing.assert_equal(countnans(x, w), 17)
+        np.testing.assert_equal(countnans(x, w, axis=0), [1, 8, 0, 8])
+        np.testing.assert_equal(countnans(x, w, axis=1), [3, 14])
 
 
 class TestBincount(unittest.TestCase):
