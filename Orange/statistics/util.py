@@ -30,6 +30,13 @@ def _count_nans_per_row_sparse(X, weights):
     return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=np.float)
 
 
+def sparse_count_zeros(x):
+    """ Count the number of zeros in a sparse matrix. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+    return np.prod(x.shape) - x.nnz
+
+
 def bincount(x, weights=None, max_val=None, minlength=None):
     """Return counts of values in array X.
 
@@ -76,7 +83,7 @@ def bincount(x, weights=None, max_val=None, minlength=None):
             zero_weights = weights[zero_indices].sum()
             weights = weights[x.indices]
         else:
-            zero_weights = np.prod(x_original.shape) - x_original.nnz
+            zero_weights = sparse_count_zeros(x)
 
         x = x.data
 
@@ -395,7 +402,7 @@ def unique(x, return_counts=False):
     if not sp.issparse(x):
         return np.unique(x, return_counts=return_counts)
 
-    implicit_zeros = np.prod(x.shape) - x.nnz
+    implicit_zeros = sparse_count_zeros(x)
     explicit_zeros = not np.all(x.data)
     r = np.unique(x.data, return_counts=return_counts)
     if not implicit_zeros:
