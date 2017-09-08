@@ -170,56 +170,62 @@ class TestUtil(unittest.TestCase):
                 nanmean(X_sparse),
                 np.nanmean(X))
 
-    def test_digitize(self):
-        for x in self.data:
-            x_sparse = csr_matrix(x)
+    def test_var(self):
+        for data in self.data:
+            for axis in chain((None,), range(len(data.shape))):
+                # Can't use array_equal here due to differences on 1e-16 level
+                np.testing.assert_array_almost_equal(
+                    var(csr_matrix(data), axis=axis),
+                    np.var(data, axis=axis)
+                )
+
+
+class TestDigitize(unittest.TestCase):
+    def setUp(self):
+        self.data = [
+            np.array([
+                [0., 1.,     0., np.nan, 3.,     5.],
+                [0., 0., np.nan, np.nan, 5., np.nan],
+                [0., 0.,     0., np.nan, 7.,     6.]]),
+            np.zeros((2, 3)),
+            np.ones((2, 3)),
+        ]
+
+    @dense_sparse
+    def test_digitize(self, array):
+        for x_original in self.data:
+            x = array(x_original)
             bins = np.arange(-2, 2)
 
             x_shape = x.shape
             np.testing.assert_array_equal(
-                np.digitize(x.flatten(), bins).reshape(x_shape),
+                np.digitize(x_original.flatten(), bins).reshape(x_shape),
                 digitize(x, bins),
-                'Digitize fails on dense data'
-            )
-            np.testing.assert_array_equal(
-                np.digitize(x.flatten(), bins).reshape(x_shape),
-                digitize(x_sparse, bins),
-                'Digitize fails on sparse data'
             )
 
-    def test_digitize_right(self):
-        for x in self.data:
-            x_sparse = csr_matrix(x)
+    @dense_sparse
+    def test_digitize_right(self, array):
+        for x_original in self.data:
+            x = array(x_original)
             bins = np.arange(-2, 2)
 
             x_shape = x.shape
             np.testing.assert_array_equal(
-                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
-                digitize(x, bins, right=True),
-                'Digitize fails on dense data'
-            )
-            np.testing.assert_array_equal(
-                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
-                digitize(x_sparse, bins, right=True),
-                'Digitize fails on sparse data'
+                np.digitize(x_original.flatten(), bins, right=True).reshape(x_shape),
+                digitize(x, bins, right=True)
             )
 
-    def test_digitize_1d_array(self):
+    @dense_sparse
+    def test_digitize_1d_array(self, array):
         """A consistent return shape must be returned for both sparse and dense."""
-        x = np.array([0, 1, 1, 0, np.nan, 0, 1])
-        x_sparse = csr_matrix(x)
+        x_original = np.array([0, 1, 1, 0, np.nan, 0, 1])
+        x = array(x_original)
         bins = np.arange(-2, 2)
 
-        x_shape = x.shape
+        x_shape = x_original.shape
         np.testing.assert_array_equal(
-            [np.digitize(x.flatten(), bins).reshape(x_shape)],
+            [np.digitize(x_original.flatten(), bins).reshape(x_shape)],
             digitize(x, bins),
-            'Digitize fails on 1d dense data'
-        )
-        np.testing.assert_array_equal(
-            [np.digitize(x.flatten(), bins).reshape(x_shape)],
-            digitize(x_sparse, bins),
-            'Digitize fails on 1d sparse data'
         )
 
     def test_digitize_sparse_zeroth_bin(self):
@@ -231,15 +237,6 @@ class TestUtil(unittest.TestCase):
         bins = np.array([1])
         # Then digitize should return a sparse matrix
         self.assertTrue(issparse(digitize(data, bins)))
-
-    def test_var(self):
-        for data in self.data:
-            for axis in chain((None,), range(len(data.shape))):
-                # Can't use array_equal here due to differences on 1e-16 level
-                np.testing.assert_array_almost_equal(
-                    var(csr_matrix(data), axis=axis),
-                    np.var(data, axis=axis)
-                )
 
 
 class TestCountnans(unittest.TestCase):
