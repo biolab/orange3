@@ -22,15 +22,6 @@ class TestUtil(unittest.TestCase):
             np.ones((2, 3)),
         ]
 
-    def test_bincount(self):
-        hist, n_nans = bincount([0., 1., np.nan, 3])
-        self.assertEqual(n_nans, 1)
-        np.testing.assert_equal(hist, [1, 1, 0, 1])
-
-        hist, n_nans = bincount([0., 1., 3], max_val=3)
-        self.assertEqual(n_nans, 0)
-        np.testing.assert_equal(hist, [1, 1, 0, 1])
-
     def test_contingency(self):
         x = np.array([0, 1, 0, 2, np.nan])
         y = np.array([0, 0, 1, np.nan, 0])
@@ -324,3 +315,29 @@ class TestCountnans(unittest.TestCase):
         np.testing.assert_equal(countnans(x, weights=w, axis=1), [2, 6])
 
 
+class TestBincount(unittest.TestCase):
+    def test_count_nans(self):
+        dense = [0, 0, 1, 2, np.nan, 2]
+        sparse = csr_matrix(dense)
+        expected = 1
+
+        np.testing.assert_equal(bincount(dense)[1], expected)
+        np.testing.assert_equal(bincount(sparse)[1], expected)
+
+    def test_adds_empty_bins(self):
+        dense = np.array([0, 1, 3, 5])
+        sparse = csr_matrix(dense)
+        expected = [1, 1, 0, 1, 0, 1]
+
+        np.testing.assert_equal(bincount(dense)[0], expected)
+        np.testing.assert_equal(bincount(sparse)[0], expected)
+
+    def test_maxval_adds_empty_bins(self):
+        dense = [1, 1, 1, 2, 3, 2]
+        sparse = csr_matrix(dense)
+
+        max_val = 5
+        expected = [0, 3, 2, 1, 0, 0]
+
+        np.testing.assert_equal(bincount(dense, max_val=max_val)[0], expected)
+        np.testing.assert_equal(bincount(sparse, max_val=max_val)[0], expected)
