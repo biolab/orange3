@@ -31,6 +31,9 @@ from Orange.data import (
 from Orange.util import Registry, flatten, namegen
 
 
+# Support values longer than 128K (i.e. text contents features)
+csv.field_size_limit(100*1024*1024)
+
 __all__ = ["Flags", "FileFormat"]
 
 
