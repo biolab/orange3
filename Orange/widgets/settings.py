@@ -869,6 +869,9 @@ class DomainContextHandler(ContextHandler):
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
+    ENCODED_VARIABLE = 100
+    ENCODED_LIST = 200
+
     def __init__(self, max_vars_to_pickle=100, match_values=0,
                  reservoir=None, attributes_in_res=True, metas_in_res=False):
         super().__init__()
@@ -1010,7 +1013,8 @@ class DomainContextHandler(ContextHandler):
 
     def encode_setting(self, context, setting, value):
         if isinstance(value, list):
-            return copy.copy(value)
+            encoded = [self.encode_setting(context, setting, v) for v in value]
+            return encoded, self.ENCODED_LIST
         elif isinstance(setting, ContextSetting):
             if isinstance(value, str):
                 if not setting.exclude_attributes and value in context.attributes:
@@ -1018,12 +1022,14 @@ class DomainContextHandler(ContextHandler):
                 if not setting.exclude_metas and value in context.metas:
                     return value, context.metas[value]
             elif isinstance(value, Variable):
-                return value.name, 100 + vartype(value)
+                return value.name, self.ENCODED_VARIABLE + vartype(value)
         return copy.copy(value), -2
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
-            if 100 <= value[1]:
+            if isinstance(value[1], int) and value[1] == self.ENCODED_LIST:
+                return [self.decode_setting(setting, v, domain) for v in value[0]]
+            elif isinstance(value[1], int) and self.ENCODED_VARIABLE <= value[1]:
                 if not domain:
                     raise ValueError("Cannot decode variable without domain")
                 return domain[value[0]]
