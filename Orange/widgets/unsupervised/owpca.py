@@ -506,7 +506,7 @@ class OWPCA(widget.OWWidget):
                 else:
                     vc = 100
                 settings["variance_covered"] = vc
-        if settings["ncomponents"] > MAX_COMPONENTS:
+        if settings.get("ncomponents", 0) > MAX_COMPONENTS:
             settings["ncomponents"] = MAX_COMPONENTS
 
 

@@ -52,13 +52,22 @@ class TestOWPCA(WidgetTest):
         with self.assertRaises(IndexError):
             self.send_signal(self.widget.Inputs.data, data)
 
-    def test_migrate_settings(self):
+    def test_migrate_settings_limits_components(self):
         settings = dict(ncomponents=10)
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 10)
         settings = dict(ncomponents=101)
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 100)
+
+    def test_migrate_settings_changes_variance_covered_to_int(self):
+        settings = dict(variance_covered=17.5)
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings["variance_covered"], 17)
+
+        settings = dict(variance_covered=float('nan'))
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings["variance_covered"], 100)
 
     def test_variance_shown(self):
         data = Table("iris")
