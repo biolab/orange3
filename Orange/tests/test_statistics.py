@@ -332,6 +332,16 @@ class TestCountnans(unittest.TestCase):
         np.testing.assert_equal(countnans(x, w, axis=0), [1, 8, 0, 8])
         np.testing.assert_equal(countnans(x, w, axis=1), [3, 14])
 
+    @dense_sparse
+    def test_dtype(self, array):
+        x = array([0, np.nan, 2, 3])
+        w = np.array([0, 1.5, 0, 0])
+
+        self.assertIsInstance(countnans(x, w, dtype=np.int32), np.int32)
+        self.assertEqual(countnans(x, w, dtype=np.int32), 1)
+        self.assertIsInstance(countnans(x, w, dtype=np.float64), np.float64)
+        self.assertEqual(countnans(x, w, dtype=np.float64), 1.5)
+
 
 class TestBincount(unittest.TestCase):
     @dense_sparse
