@@ -42,7 +42,7 @@ class Normalizer(Reprable):
         avg, sd = (dist.mean(), dist.standard_deviation()) if dist.size else (0, 1)
         if sd == 0:
             sd = 1
-        return ContinuousVariable(var.name, compute_value=Norm(var, avg, 1 / sd))
+        return ContinuousVariable(var.name, compute_value=Norm(var, avg, 1 / sd), sparse=var.sparse)
 
     def normalize_by_span(self, dist, var):
         dma, dmi = dist.max(), dist.min()
@@ -50,6 +50,6 @@ class Normalizer(Reprable):
         if diff < 1e-15:
             diff = 1
         if self.zero_based:
-            return ContinuousVariable(var.name, compute_value=Norm(var, dmi, 1 / diff))
+            return ContinuousVariable(var.name, compute_value=Norm(var, dmi, 1 / diff), sparse=var.sparse)
         else:
-            return ContinuousVariable(var.name, compute_value=Norm(var, (dma + dmi) / 2, 2 / diff))
+            return ContinuousVariable(var.name, compute_value=Norm(var, (dma + dmi) / 2, 2 / diff), sparse=var.sparse)
