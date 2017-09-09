@@ -272,8 +272,8 @@ class Continuous(np.ndarray):
         return np.average(np.asarray(self[0]), weights=np.asarray(self[1]))
 
     def variance(self):
-        avg = self.mean()
-        return sum([((x-avg)**2)*w for x, w in zip(self[0], self[1])])/sum(self[1])
+        mean = self.mean()
+        return sum(((x - mean) ** 2) * w for x, w in zip(self[0], self[1])) / sum(self[1])
 
     def standard_deviation(self):
         return math.sqrt(self.variance())

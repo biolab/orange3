@@ -12,6 +12,7 @@ from Orange.statistics import distribution
 from Orange import data
 from Orange.tests import test_filename
 
+
 class Distribution_DiscreteTestCase(unittest.TestCase):
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
@@ -291,6 +292,7 @@ class TestClassDistribution(unittest.TestCase):
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
+
 class TestGetDistribution(unittest.TestCase):
     def test_get_distribution(self):
         d = data.Table("iris")
@@ -427,6 +429,30 @@ class TestDomainDistribution(unittest.TestCase):
         dist, nanc = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [2, 3, 2])
         self.assertEqual(nanc, 1)
+
+
+class TestContinuous(unittest.TestCase):
+    def test_mean(self):
+        x = np.array([[0, 5, 10],
+                      [9, 0,  1]])
+        dist = distribution.Continuous(x)
+
+        self.assertEqual(dist.mean(), np.mean(([0] * 9) + [10]))
+
+    def test_variance(self):
+        x = np.array([[0, 5, 10],
+                      [9, 0,  1]])
+        dist = distribution.Continuous(x)
+
+        self.assertEqual(dist.variance(), np.var(([0] * 9) + [10]))
+
+    def test_standard_deviation(self):
+        x = np.array([[0, 5, 10],
+                      [9, 0,  1]])
+        dist = distribution.Continuous(x)
+
+        self.assertEqual(dist.standard_deviation(), np.std(([0] * 9) + [10]))
+
 
 if __name__ == "__main__":
     unittest.main()

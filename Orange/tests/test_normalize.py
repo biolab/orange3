@@ -98,16 +98,14 @@ class TestNormalizer(unittest.TestCase):
     def test_normalize_sparse(self):
         domain = Domain([ContinuousVariable(str(i)) for i in range(3)])
         X = sp.csr_matrix(np.array([
-            [0, 0, 0,],
             [0, -1, -2],
-            [0, 1, 2],
+            [0,  1,  2],
         ]))
         data = Table.from_numpy(domain, X)
 
         solution = sp.csr_matrix(np.array([
-            [0, 0, 0,],
             [0, -1, -1],
-            [0, 1, 1],
+            [0,  1,  1],
         ]))
 
         normalizer = Normalize()
@@ -116,7 +114,7 @@ class TestNormalizer(unittest.TestCase):
 
         # raise error for non-zero offsets
         data.X = sp.csr_matrix(np.array([
-            [0, 0, 0, ],
+            [0, 0, 0],
             [0, 1, 3],
             [0, 2, 4],
         ]))
