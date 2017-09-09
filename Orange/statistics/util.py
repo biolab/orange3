@@ -437,15 +437,18 @@ def unique(x, return_counts=False):
     r = np.unique(x.data, return_counts=return_counts)
     if not implicit_zeros:
         return r
+
     if return_counts:
+        zero_index = np.searchsorted(r[0], 0)
         if explicit_zeros:
             r[1][r[0] == 0.] += implicit_zeros
             return r
-        return np.insert(r[0], 0, 0), np.insert(r[1], 0, implicit_zeros)
+        return np.insert(r[0], zero_index, 0), np.insert(r[1], zero_index, implicit_zeros)
     else:
         if explicit_zeros:
             return r
-        return np.insert(r, 0, 0)
+        zero_index = np.searchsorted(r, 0)
+        return np.insert(r, zero_index, 0)
 
 
 def nanunique(x):
