@@ -31,10 +31,17 @@ def _count_nans_per_row_sparse(X, weights, dtype=None):
 
 
 def sparse_count_zeros(x):
-    """ Count the number of zeros in a sparse matrix. """
+    """ Count the number of implicit zeros in a sparse matrix. """
     if not sp.issparse(x):
         raise TypeError('The matrix provided was not sparse.')
     return np.prod(x.shape) - x.nnz
+
+
+def sparse_has_zeros(x):
+    """ Check if sparse matrix contains any implicit zeros. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+    return np.prod(x.shape) != x.nnz
 
 
 def bincount(x, weights=None, max_val=None, minlength=None):
@@ -315,17 +322,12 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[0] - nans))
 
 
-def _sparse_has_zeros(x):
-    """ Check if sparse matrix contains any implicit zeros. """
-    return np.prod(x.shape) != x.nnz
-
-
 def _nan_min_max(x, func, axis=0):
     if not sp.issparse(x):
         return func(x, axis=axis)
     if axis is None:
         extreme = func(x.data, axis=axis) if x.nnz else float('nan')
-        if _sparse_has_zeros(x):
+        if sparse_has_zeros(x):
             extreme = func([0, extreme])
         return extreme
     if axis == 0:
@@ -338,7 +340,7 @@ def _nan_min_max(x, func, axis=0):
     for row in x:
         values = row.data
         extreme = func(values) if values.size else float('nan')
-        if _sparse_has_zeros(row):
+        if sparse_has_zeros(row):
             extreme = func([0, extreme])
         r.append(extreme)
     return np.array(r)
