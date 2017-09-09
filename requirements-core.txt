@@ -1,3 +1,4 @@
+pip>=9.0
 numpy>=1.9.0
 scipy>=0.16.1
 scikit-learn>=0.18.1
