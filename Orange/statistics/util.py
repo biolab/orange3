@@ -451,11 +451,17 @@ def unique(x, return_counts=False):
         return np.insert(r, zero_index, 0)
 
 
-def nanunique(x):
+def nanunique(*args, **kwargs):
     """ Return unique values while disregarding missing (np.nan) values.
     Supports sparse or dense matrices. """
-    r = unique(x)
-    return r[~np.isnan(r)]
+    result = unique(*args, **kwargs)
+
+    if isinstance(result, tuple):
+        result, counts = result
+        non_nan_mask = ~np.isnan(result)
+        return result[non_nan_mask], counts[non_nan_mask]
+
+    return result[~np.isnan(result)]
 
 
 def digitize(x, bins, right=False):

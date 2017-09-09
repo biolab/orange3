@@ -1,8 +1,8 @@
 import unittest
+from itertools import chain
 from functools import partial, wraps
 
 import numpy as np
-from itertools import chain
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
@@ -125,13 +125,6 @@ class TestUtil(unittest.TestCase):
                 np.testing.assert_array_equal(
                     nanmax(X_sparse, axis=axis),
                     np.nanmax(X, axis=axis))
-
-    def test_nanunique(self):
-        x = csr_matrix(np.array([0, 1, 1, np.nan]))
-        np.testing.assert_array_equal(
-            nanunique(x),
-            np.array([0, 1])
-        )
 
     def test_mean(self):
         for X in self.data:
@@ -424,3 +417,22 @@ class TestUnique(unittest.TestCase):
             unique(x, return_counts=True),
         )
 
+    @dense_sparse
+    def test_nanunique_ignores_nans_in_values(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [-1, 0, 1, 2, 3, 5, 6, 7]
+
+        np.testing.assert_equal(nanunique(x, return_counts=False), expected)
+
+    @dense_sparse
+    def test_nanunique_ignores_nans_in_counts(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [2, 6, 2, 1, 2, 1, 1, 1]
+
+        np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
