@@ -23,7 +23,7 @@ def _count_nans_per_row_sparse(X, weights, dtype=None):
             data_weights = weights[nan_rows, nan_cols]
 
         w = sp.coo_matrix((data_weights, (nan_rows, nan_cols)), shape=X.shape)
-        w = w.tocsr(copy=False)
+        w = w.tocsr()
 
         return np.fromiter((np.sum(row.data) for row in w), dtype=dtype)
 
