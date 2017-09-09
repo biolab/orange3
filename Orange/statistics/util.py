@@ -44,6 +44,22 @@ def sparse_has_zeros(x):
     return np.prod(x.shape) != x.nnz
 
 
+def sparse_zero_weights(x, weights):
+    """ Extract the weight values of all zeros in a sparse matrix. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+
+    if weights.ndim == 1:
+        n_items = np.prod(x.shape)
+        zero_indices = np.setdiff1d(np.arange(n_items), x.indices, assume_unique=True)
+        return weights[zero_indices]
+    else:
+        # Can easily be implemented using a coo_matrix
+        raise NotImplemented(
+            'Computing zero weights on ndimensinal weight matrix is not implemented'
+        )
+
+
 def bincount(x, weights=None, max_val=None, minlength=None):
     """Return counts of values in array X.
 
@@ -83,11 +99,8 @@ def bincount(x, weights=None, max_val=None, minlength=None):
     # Store the original matrix before any manipulation to check for sparse
     x_original = x
     if sp.issparse(x):
-        n_items = np.prod(x_original.shape)
-        zero_indices = np.setdiff1d(np.arange(n_items), x.indices, assume_unique=True)
-
         if weights is not None:
-            zero_weights = weights[zero_indices].sum()
+            zero_weights = sparse_zero_weights(x, weights).sum()
             weights = weights[x.indices]
         else:
             zero_weights = sparse_count_zeros(x)

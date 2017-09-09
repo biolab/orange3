@@ -19,7 +19,8 @@ from Orange.data import (
 )
 from Orange.data.util import SharedComputeValue, vstack, hstack
 from Orange.statistics.util import bincount, countnans, contingency, \
-    stats as fast_stats, sparse_has_zeros, sparse_count_zeros
+    stats as fast_stats, sparse_has_zeros, sparse_count_zeros, \
+    sparse_zero_weights
 from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
@@ -1427,10 +1428,15 @@ class Table(MutableSequence, Storage):
                 # If sparse, then 0s will not be counted with `valuecount`, so
                 # we have to add them to the result manually.
                 if sp.issparse(x) and sparse_has_zeros(x):
-                    zero_vec = [0, sparse_count_zeros(x)]
+                    if W is not None:
+                        zero_weights = sparse_zero_weights(x, W).sum()
+                    else:
+                        zero_weights = sparse_count_zeros(x)
+                    zero_vec = [0, zero_weights]
                     dist = np.insert(dist, np.searchsorted(dist[0], 0), zero_vec, axis=1)
-
-                unknowns = countnans(x, W)
+                # Since `countnans` assumes vector shape to be (1, n) and `x`
+                # shape is (n, 1), we pass the transpose
+                unknowns = countnans(x.T, W)
             distributions.append((dist, unknowns))
 
         return distributions

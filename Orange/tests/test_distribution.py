@@ -338,93 +338,82 @@ class TestDomainDistribution(unittest.TestCase):
         np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
 
     def test_sparse_get_distributions(self):
-        def assert_dist_and_unknowns(computed, gold_dist):
+        def assert_dist_and_unknowns(computed, goal_dist):
             nonlocal d
-            gold_dist = np.array(gold_dist)
-            sum_dist = np.sum(gold_dist[1, :] if gold_dist.ndim == 2 else gold_dist)
+            goal_dist = np.array(goal_dist)
+            sum_dist = np.sum(goal_dist[1, :] if goal_dist.ndim == 2 else goal_dist)
             n_all = np.sum(d.W) if d.has_weights() else len(d)
 
-            np.testing.assert_almost_equal(computed, gold_dist)
+            np.testing.assert_almost_equal(computed, goal_dist)
             self.assertEqual(computed.unknowns, n_all - sum_dist)
 
         domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=list("abc"))
-             for i in range(10)] +
+            [data.DiscreteVariable("d%i" % i, values=list("abc")) for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)])
 
-        #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-        # ------------------------------------------------------------
-        #     2     2  1  1  2        1           1  1     2  0  2
-        #        1  1  0  0  1     2                 2     1  0
-        #           1     2  0
-        #
-        #        2        0  1                   1.1
-        #
-        sdata = np.array([2, 2, 1, 1, 2, 1, 1, 1, 2, 0, 2,
-                          1, 1, 0, 0, 1, 2, 2, 1, 0,
-                          1, 2, 0,
-                          2, 0, 1, 1.1])
-        indices = [1, 3, 4, 5, 6, 9, 13, 14, 16, 17, 18,
-                   2, 3, 4, 5, 6, 8, 14, 16, 17,
-                   3, 5, 6,
-                   2, 5, 6, 13]
-        indptr = [0, 11, 20, 23, 23, 27]
-        X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
+        X = sp.csr_matrix(
+            # 0  1  2  3       4       5       6  7  8  9 10 11 12   13 14 15 16      17 18 19
+            # --------------------------------------------------------------------------------
+            [[0, 2, 0, 2,      1,      1,      2, 0, 0, 1, 0, 0, 0,   1, 1, 0, 2, np.nan, 2, 0],
+             [0, 0, 1, 1, np.nan, np.nan,      1, 0, 2, 0, 0, 0, 0,   0, 2, 0, 1, np.nan, 0, 0],
+             [0, 0, 0, 1,      0,      2, np.nan, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,      0, 0, 0],
+             [0, 0, 0, 0,      0,      0,      0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,      0, 0, 0],
+             [0, 0, 2, 0,      0,      0,      1, 0, 0, 0, 0, 0, 0, 1.1, 0, 0, 0,      0, 0, 0]]
+        )
         d = data.Table.from_numpy(domain, X)
-
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 20)
-        assert_dist_and_unknowns(ddist[0], [0, 0, 0])
-        assert_dist_and_unknowns(ddist[1], [0, 0, 1])
-        assert_dist_and_unknowns(ddist[2], [0, 1, 1])
-        assert_dist_and_unknowns(ddist[3], [0, 2, 1])
-        assert_dist_and_unknowns(ddist[4], [1, 1, 0])
+        zeros = [5, 0, 0]
+        assert_dist_and_unknowns(ddist[0], zeros)
+        assert_dist_and_unknowns(ddist[1], [4, 0, 1])
+        assert_dist_and_unknowns(ddist[2], [3, 1, 1])
+        assert_dist_and_unknowns(ddist[3], [2, 2, 1])
+        assert_dist_and_unknowns(ddist[4], [3, 1, 0])
         assert_dist_and_unknowns(ddist[5], [2, 1, 1])
         assert_dist_and_unknowns(ddist[6], [1, 2, 1])
-        assert_dist_and_unknowns(ddist[7], [0, 0, 0])
-        assert_dist_and_unknowns(ddist[8], [0, 0, 1])
-        assert_dist_and_unknowns(ddist[9], [0, 1, 0])
+        assert_dist_and_unknowns(ddist[7], zeros)
+        assert_dist_and_unknowns(ddist[8], [4, 0, 1])
+        assert_dist_and_unknowns(ddist[9], [4, 1, 0])
 
-        z = np.zeros((2, 0))
-        assert_dist_and_unknowns(ddist[10], z)
-        assert_dist_and_unknowns(ddist[11], z)
-        assert_dist_and_unknowns(ddist[12], z)
-        assert_dist_and_unknowns(ddist[13], [[1, 1.1], [1, 1]])
-        assert_dist_and_unknowns(ddist[14], [[1, 2], [1, 1]])
-        assert_dist_and_unknowns(ddist[15], z)
-        assert_dist_and_unknowns(ddist[16], [[1, 2], [1, 1]])
-        assert_dist_and_unknowns(ddist[17], [[0], [2]])
-        assert_dist_and_unknowns(ddist[18], [[2], [1]])
-        assert_dist_and_unknowns(ddist[19], z)
+        zeros = [[0], [5]]
+        assert_dist_and_unknowns(ddist[10], zeros)
+        assert_dist_and_unknowns(ddist[11], zeros)
+        assert_dist_and_unknowns(ddist[12], zeros)
+        assert_dist_and_unknowns(ddist[13], [[0, 1, 1.1], [3, 1, 1]])
+        assert_dist_and_unknowns(ddist[14], [[0, 1, 2], [3, 1, 1]])
+        assert_dist_and_unknowns(ddist[15], zeros)
+        assert_dist_and_unknowns(ddist[16], [[0, 1, 2], [3, 1, 1]])
+        assert_dist_and_unknowns(ddist[17], [[0], [3]])
+        assert_dist_and_unknowns(ddist[18], [[0, 2], [4, 1]])
+        assert_dist_and_unknowns(ddist[19], zeros)
 
         d.set_weights(np.array([1, 2, 3, 4, 5]))
-
         ddist = distribution.get_distributions(d)
 
         self.assertEqual(len(ddist), 20)
-        assert_dist_and_unknowns(ddist[0], [0, 0, 0])
-        assert_dist_and_unknowns(ddist[1], [0, 0, 1])
-        assert_dist_and_unknowns(ddist[2], [0, 2, 5])
-        assert_dist_and_unknowns(ddist[3], [0, 5, 1])
-        assert_dist_and_unknowns(ddist[4], [2, 1, 0])
-        assert_dist_and_unknowns(ddist[5], [7, 1, 3])
-        assert_dist_and_unknowns(ddist[6], [3, 7, 1])
-        assert_dist_and_unknowns(ddist[7], [0, 0, 0])
-        assert_dist_and_unknowns(ddist[8], [0, 0, 2])
-        assert_dist_and_unknowns(ddist[9], [0, 1, 0])
+        assert_dist_and_unknowns(ddist[0], [15, 0, 0])
+        assert_dist_and_unknowns(ddist[1], [14, 0, 1])
+        assert_dist_and_unknowns(ddist[2], [8, 2, 5])
+        assert_dist_and_unknowns(ddist[3], [9, 5, 1])
+        assert_dist_and_unknowns(ddist[4], [12, 1, 0])
+        assert_dist_and_unknowns(ddist[5], [9, 1, 3])
+        assert_dist_and_unknowns(ddist[6], [4, 7, 1])
+        assert_dist_and_unknowns(ddist[7], [15, 0, 0])
+        assert_dist_and_unknowns(ddist[8], [13, 0, 2])
+        assert_dist_and_unknowns(ddist[9], [14, 1, 0])
 
-        z = np.zeros((2, 0))
-        assert_dist_and_unknowns(ddist[10], z)
-        assert_dist_and_unknowns(ddist[11], z)
-        assert_dist_and_unknowns(ddist[12], z)
-        assert_dist_and_unknowns(ddist[13], [[1, 1.1], [1, 5]])
-        assert_dist_and_unknowns(ddist[14], [[1, 2], [1, 2]])
-        assert_dist_and_unknowns(ddist[15], z)
-        assert_dist_and_unknowns(ddist[16], [[1, 2], [2, 1]])
-        assert_dist_and_unknowns(ddist[17], [[0], [3]])
-        assert_dist_and_unknowns(ddist[18], [[2], [1]])
-        assert_dist_and_unknowns(ddist[19], z)
+        zeros = [[0], [15]]
+        assert_dist_and_unknowns(ddist[10], zeros)
+        assert_dist_and_unknowns(ddist[11], zeros)
+        assert_dist_and_unknowns(ddist[12], zeros)
+        assert_dist_and_unknowns(ddist[13], [[0, 1, 1.1], [9, 1, 5]])
+        assert_dist_and_unknowns(ddist[14], [[0, 1, 2], [12, 1, 2]])
+        assert_dist_and_unknowns(ddist[15], zeros)
+        assert_dist_and_unknowns(ddist[16], [[0, 1, 2], [12, 2, 1]])
+        assert_dist_and_unknowns(ddist[17], [[0], [12]])
+        assert_dist_and_unknowns(ddist[18], [[0, 2], [14, 1]])
+        assert_dist_and_unknowns(ddist[19], zeros)
 
     def test_compute_distributions_metas(self):
         d = data.Table(test_filename("test9.tab"))
