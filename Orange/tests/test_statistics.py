@@ -1,6 +1,5 @@
 import unittest
 import warnings
-
 from functools import wraps
 from itertools import chain
 
@@ -13,6 +12,7 @@ from Orange.statistics.util import bincount, countnans, contingency, stats, \
 
 
 def dense_sparse(test_case):
+    # type: (Callable) -> Callable
     """Run a single test case on both dense and sparse data."""
     @wraps(test_case)
     def _wrapper(self):
@@ -182,6 +182,7 @@ class TestUtil(unittest.TestCase):
 
 class TestDigitize(unittest.TestCase):
     def setUp(self):
+        # pylint: disable=bad-whitespace
         self.data = [
             np.array([
                 [0., 1.,     0., np.nan, 3.,     5.],
@@ -323,6 +324,7 @@ class TestCountnans(unittest.TestCase):
 
     @dense_sparse
     def test_2d_weights(self, array):
+        # pylint: disable=bad-whitespace
         x = array([[np.nan, np.nan, 1,      1 ],
                    [     0, np.nan, 2, np.nan ]])
         w = np.array([[1, 2, 3, 4],

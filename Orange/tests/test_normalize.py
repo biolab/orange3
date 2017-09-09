@@ -97,12 +97,14 @@ class TestNormalizer(unittest.TestCase):
 
     def test_normalize_sparse(self):
         domain = Domain([ContinuousVariable(str(i)) for i in range(3)])
+        # pylint: disable=bad-whitespace
         X = sp.csr_matrix(np.array([
             [0, -1, -2],
             [0,  1,  2],
         ]))
         data = Table.from_numpy(domain, X)
 
+        # pylint: disable=bad-whitespace
         solution = sp.csr_matrix(np.array([
             [0, -1, -1],
             [0,  1,  1],

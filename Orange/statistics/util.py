@@ -55,7 +55,7 @@ def sparse_zero_weights(x, weights):
         return weights[zero_indices]
     else:
         # Can easily be implemented using a coo_matrix
-        raise NotImplemented(
+        raise NotImplementedError(
             'Computing zero weights on ndimensinal weight matrix is not implemented'
         )
 

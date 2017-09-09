@@ -353,6 +353,7 @@ class TestDomainDistribution(unittest.TestCase):
             [data.DiscreteVariable("d%i" % i, values=list("abc")) for i in range(10)] +
             [data.ContinuousVariable("c%i" % i) for i in range(10)])
 
+        # pylint: disable=bad-whitespace
         X = sp.csr_matrix(
             # 0  1  2  3       4       5       6  7  8  9 10 11 12   13 14 15 16      17 18 19
             # --------------------------------------------------------------------------------
@@ -433,6 +434,7 @@ class TestDomainDistribution(unittest.TestCase):
 
 class TestContinuous(unittest.TestCase):
     def test_mean(self):
+        # pylint: disable=bad-whitespace
         x = np.array([[0, 5, 10],
                       [9, 0,  1]])
         dist = distribution.Continuous(x)
@@ -440,6 +442,7 @@ class TestContinuous(unittest.TestCase):
         self.assertEqual(dist.mean(), np.mean(([0] * 9) + [10]))
 
     def test_variance(self):
+        # pylint: disable=bad-whitespace
         x = np.array([[0, 5, 10],
                       [9, 0,  1]])
         dist = distribution.Continuous(x)
@@ -447,6 +450,7 @@ class TestContinuous(unittest.TestCase):
         self.assertEqual(dist.variance(), np.var(([0] * 9) + [10]))
 
     def test_standard_deviation(self):
+        # pylint: disable=bad-whitespace
         x = np.array([[0, 5, 10],
                       [9, 0,  1]])
         dist = distribution.Continuous(x)
