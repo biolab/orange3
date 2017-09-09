@@ -1024,7 +1024,7 @@ class DomainContextHandler(ContextHandler):
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
             if 100 <= value[1]:
-                if not domain:
+                if domain is None:
                     raise ValueError("Cannot decode variable without domain")
                 return domain[value[0]]
             return value[0]

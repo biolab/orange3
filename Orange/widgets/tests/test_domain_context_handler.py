@@ -270,7 +270,13 @@ class TestDomainContextHandler(TestCase):
         setting = ContextSetting(None)
 
         var = self.domain[0]
-        val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)), self.domain)
+        val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)),
+                                          self.domain)
+        self.assertIs(val, var)
+
+        all_metas_domain = Domain([], metas=[var])
+        val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)),
+                                          all_metas_domain)
         self.assertIs(val, var)
 
     def create_context(self, domain, values):
