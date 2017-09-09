@@ -19,7 +19,7 @@ from Orange.data import (
 )
 from Orange.data.util import SharedComputeValue, vstack, hstack
 from Orange.statistics.util import bincount, countnans, contingency, \
-    stats as fast_stats
+    stats as fast_stats, sparse_has_zeros, sparse_count_zeros
 from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
@@ -1384,42 +1384,53 @@ class Table(MutableSequence, Storage):
             columns = range(len(self.domain.variables))
         else:
             columns = [self.domain.index(var) for var in columns]
+
         distributions = []
         if sp.issparse(self.X):
             self.X = self.X.tocsc()
+
         W = self.W.ravel() if self.has_weights() else None
+
         for col in columns:
-            var = self.domain[col]
+            variable = self.domain[col]
+
+            # Select the correct data column from X, Y or metas
             if 0 <= col < self.X.shape[1]:
-                m = self.X[:, col]
+                x = self.X[:, col]
             elif col < 0:
-                m = self.metas[:, col * (-1) - 1]
-                if np.issubdtype(m.dtype, np.dtype(object)):
-                    m = m.astype(float)
+                x = self.metas[:, col * (-1) - 1]
+                if np.issubdtype(x.dtype, np.dtype(object)):
+                    x = x.astype(float)
             else:
-                m = self._Y[:, col - self.X.shape[1]]
-            if var.is_discrete:
-                dist, unknowns = bincount(m, weights=W, max_val=len(var.values) - 1)
-            elif not m.shape[0]:
+                x = self._Y[:, col - self.X.shape[1]]
+
+            if variable.is_discrete:
+                dist, unknowns = bincount(x, weights=W, max_val=len(variable.values) - 1)
+            elif not x.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
                 if W is not None:
-                    unknowns = countnans(m, W)
-                    if sp.issparse(m):
-                        arg_sort = np.argsort(m.data)
-                        ranks = m.indices[arg_sort]
-                        vals = np.vstack((m.data[arg_sort], W[ranks]))
+                    if sp.issparse(x):
+                        arg_sort = np.argsort(x.data)
+                        ranks = x.indices[arg_sort]
+                        vals = np.vstack((x.data[arg_sort], W[ranks]))
                     else:
-                        ranks = np.argsort(m)
-                        vals = np.vstack((m[ranks], W[ranks]))
+                        ranks = np.argsort(x)
+                        vals = np.vstack((x[ranks], W[ranks]))
                 else:
-                    unknowns = countnans(m.astype(float))
-                    if sp.issparse(m):
-                        m = m.data
-                    vals = np.ones((2, m.shape[0]))
-                    vals[0, :] = m
+                    x_values = x.data if sp.issparse(x) else x
+                    vals = np.ones((2, x_values.shape[0]))
+                    vals[0, :] = x_values
                     vals[0, :].sort()
+
                 dist = np.array(_valuecount.valuecount(vals))
+                # If sparse, then 0s will not be counted with `valuecount`, so
+                # we have to add them to the result manually.
+                if sp.issparse(x) and sparse_has_zeros(x):
+                    zero_vec = [0, sparse_count_zeros(x)]
+                    dist = np.insert(dist, np.searchsorted(dist[0], 0), zero_vec, axis=1)
+
+                unknowns = countnans(x, W)
             distributions.append((dist, unknowns))
 
         return distributions
