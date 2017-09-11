@@ -4,7 +4,11 @@ import time
 import unittest
 from unittest.mock import Mock
 # pylint: disable=unused-import
-from typing import List, Optional, Type, TypeVar
+from typing import List, Optional, TypeVar
+try:
+    from typing import Type  # typing.Type was added in 3.5.2
+except ImportError:  # pragma: no cover
+    pass
 
 import numpy as np
 import sip
