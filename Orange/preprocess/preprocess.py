@@ -4,8 +4,8 @@ Preprocess
 
 """
 import numpy as np
+import scipy.sparse as sp
 import sklearn.preprocessing as skl_preprocessing
-from sklearn.utils import shuffle as skl_shuffle
 import bottleneck as bn
 
 import Orange.data
@@ -363,7 +363,22 @@ class Randomize(Preprocess):
         return new_data
 
     def randomize(self, table):
-        return skl_shuffle(table, random_state=self.rand_seed)
+        np.random.seed(self.rand_seed)
+        if sp.issparse(table):
+            table = table.tocsc()
+            rnd_indices = np.arange(table.shape[0], dtype=table.indices.dtype)
+            for i in range(table.shape[1]):
+                col_indices = \
+                    table.indices[table.indptr[i]: table.indptr[i + 1]]
+                new_indices = rnd_indices[:len(col_indices)]
+                np.random.shuffle(new_indices)
+                col_indices[:] = new_indices
+        elif len(table.shape) > 1:
+            for i in range(table.shape[1]):
+                np.random.shuffle(table[:, i])
+        else:
+            np.random.shuffle(table)
+        return table
 
 
 class ProjectPCA(Preprocess):
