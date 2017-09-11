@@ -127,9 +127,9 @@ class TestReport(WidgetTest):
         patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
         filenames = ["f.report", "f.html"]
         for filename in filenames:
-            with unittest.patch(patch_target_1, create=True, side_effect=PermissionError),\
-                    unittest.patch(patch_target_2, return_value=(filename, 0)),\
-                    unittest.patch(patch_target_3, return_value=True):
+            with unittest.mock.patch(patch_target_1, create=True, side_effect=PermissionError),\
+                    unittest.mock.patch(patch_target_2, return_value=(filename, 0)),\
+                    unittest.mock.patch(patch_target_3, return_value=True):
                 rep.save_report()
 
 
