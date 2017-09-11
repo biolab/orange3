@@ -183,9 +183,9 @@ class TestReportWidgets(WidgetTest):
         results.learner_names = ["LR l2"]
 
         w = self.create_widget(OWTestLearners)
-        set_learner = getattr(w, w.inputs[0].handler)
-        set_train = getattr(w, w.inputs[1].handler)
-        set_test = getattr(w, w.inputs[2].handler)
+        set_learner = getattr(w, w.Inputs.learner.handler)
+        set_train = getattr(w, w.Inputs.train_data.handler)
+        set_test = getattr(w, w.Inputs.test_data.handler)
         set_learner(LogisticRegressionLearner(), 0)
         set_train(data)
         set_test(data)
