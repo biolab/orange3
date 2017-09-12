@@ -10,7 +10,6 @@ from AnyQt.QtCore import Qt
 from Orange.data.table import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
-from Orange.regression.tree import TreeLearner as RegressionTreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
 from Orange.canvas.report.owreport import OWReport
@@ -36,13 +35,16 @@ from Orange.widgets.utils.itemmodels import PyTableModel
 def get_owwidgets(top_module_name):
     top_module = import_module(top_module_name)
     widgets = []
-    for root, dirs, files in os.walk(top_module.__path__[0]):
+    for root, _, files in os.walk(top_module.__path__[0]):
         root = root[len(top_module.__path__[0]):].lstrip(os.path.sep)
         for file in files:
             if file.lower().startswith('ow') and file.lower().endswith('.py'):
-                module_name = top_module_name + '.' + os.path.join(root, file).replace(os.path.sep, '.')[:-len('.py')]
+                module_name = "{}.{}".format(
+                    top_module_name,
+                    os.path.join(root, file).replace(os.path.sep, '.')[:-len('.py')])
                 try:
-                    module = import_module(module_name, top_module_name[:top_module_name.index('.')])
+                    module = import_module(module_name,
+                                           top_module_name[:top_module_name.index('.')])
                 except (ImportError, RuntimeError):
                     warnings.warn('Failed to import module: ' + module_name)
                     continue
@@ -64,7 +66,7 @@ MODEL_WIDGETS = get_owwidgets('Orange.widgets.model')
 class TestReport(WidgetTest):
     def test_report(self):
         count = 5
-        for i in range(count):
+        for _ in range(count):
             rep = OWReport.get_instance()
             file = self.create_widget(OWFile)
             file.create_report_html()
@@ -125,9 +127,9 @@ class TestReport(WidgetTest):
         patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
         filenames = ["f.report", "f.html"]
         for filename in filenames:
-            with unittest.patch(patch_target_1, create=True, side_effect=PermissionError),\
-                    unittest.patch(patch_target_2, return_value=(filename, 0)),\
-                    unittest.patch(patch_target_3, return_value=True):
+            with unittest.mock.patch(patch_target_1, create=True, side_effect=PermissionError),\
+                    unittest.mock.patch(patch_target_2, return_value=(filename, 0)),\
+                    unittest.mock.patch(patch_target_3, return_value=True):
                 rep.save_report()
 
 
@@ -181,9 +183,9 @@ class TestReportWidgets(WidgetTest):
         results.learner_names = ["LR l2"]
 
         w = self.create_widget(OWTestLearners)
-        set_learner = getattr(w, w.inputs[0].handler)
-        set_train = getattr(w, w.inputs[1].handler)
-        set_test = getattr(w, w.inputs[2].handler)
+        set_learner = getattr(w, w.Inputs.learner.handler)
+        set_train = getattr(w, w.Inputs.train_data.handler)
+        set_test = getattr(w, w.Inputs.test_data.handler)
         set_learner(LogisticRegressionLearner(), 0)
         set_train(data)
         set_test(data)
