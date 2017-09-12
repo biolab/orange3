@@ -248,7 +248,7 @@ class DomainEditor(QTableView):
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
 
-        for (name, tpe, place, _, _), (orig_var, orig_plc) in \
+        for (name, tpe, place, _, may_be_numeric), (orig_var, orig_plc) in \
                 zip(variables,
                         chain([(at, Place.feature) for at in domain.attributes],
                               [(cl, Place.class_var) for cl in domain.class_vars],
@@ -261,8 +261,6 @@ class DomainEditor(QTableView):
 
             cont_ints = type(orig_var) == ContinuousVariable and \
                         all(x.is_integer() for x in self._iter_vals(col_data) if not np.isnan(x))
-            disc_ints = type(orig_var) == DiscreteVariable and \
-                        all(x.isdecimal() for x in orig_var.values)
 
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
@@ -292,7 +290,7 @@ class DomainEditor(QTableView):
                 col_data = self._to_column(col_data, False, dtype=object)
             elif tpe == ContinuousVariable and type(orig_var) == DiscreteVariable:
                 var = tpe(name)
-                if disc_ints:
+                if may_be_numeric:
                     col_data = [np.nan if self._is_missing(x) else float(orig_var.values[int(x)])
                                 for x in self._iter_vals(col_data)]
                 col_data = self._to_column(col_data, is_sparse)
