@@ -486,8 +486,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_reg_line = Setting(False)
     resolution = 256
 
-    JITTER_SIZES = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
-
     CurveSymbols = np.array("o x t + d s ?".split())
     MinShapeSize = 6
     DarkerValue = 120
