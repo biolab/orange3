@@ -691,17 +691,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 x_data, y_data, rgb_data)
             self.plot_widget.addItem(self.density_img)
 
-        data_indices = np.flatnonzero(self.valid_data)
-        if len(data_indices) != self.original_data.shape[1]:
+        self.data_indices = np.flatnonzero(self.valid_data)
+        if len(self.data_indices) != self.original_data.shape[1]:
             self.master.Information.missing_coords(
                 self.shown_x.name, self.shown_y.name)
 
         self.scatterplot_item = ScatterPlotItem(
-            x=x_data, y=y_data, data=data_indices,
+            x=x_data, y=y_data, data=self.data_indices,
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
         )
         self.scatterplot_item_sel = ScatterPlotItem(
-            x=x_data, y=y_data, data=data_indices,
+            x=x_data, y=y_data, data=self.data_indices,
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
@@ -943,8 +943,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def _create_label_column(self):
         if self.attr_label in self.data.domain:
-            return self.data.get_column_view(self.attr_label)[0]
-        return self.master.data.get_column_view(self.attr_label)[0]
+            label_column = self.data.get_column_view(self.attr_label)[0]
+        else:
+            label_column = self.master.data.get_column_view(self.attr_label)[0]
+        return label_column[self.data_indices]
+
 
     def update_labels(self):
         if self.attr_label is None or \
