@@ -2,10 +2,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtGui import (
-    QPen, QFont, QFontInfo, QPalette, QKeySequence,
-)
-from AnyQt.QtWidgets import QApplication, QAction
+from AnyQt.QtGui import QPen, QFont, QFontInfo, QPalette
+from AnyQt.QtWidgets import QApplication
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
@@ -25,7 +23,7 @@ from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME,
-                                                 get_next_name)
+                                                 create_groups_table)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -181,49 +179,28 @@ class OWScatterPlot(OWWidget):
 
         gui.separator(box)
 
-        gui.valueSlider(
-            box, self, value='graph.jitter_size', label='Jittering: ',
-            values=self.jitter_sizes, callback=self.reset_graph_data,
-            labelFormat=lambda x:
-            "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
-        gui.checkBox(
-            gui.indentedBox(box), self, 'graph.jitter_continuous',
-            'Jitter numeric values', callback=self.reset_graph_data)
+        g = self.graph.gui
+        g.add_widgets([g.JitterSizeSlider,
+                       g.JitterNumericValues], box)
 
         self.sampling = gui.auto_commit(
             self.controlArea, self, "auto_sample", "Sample", box="Sampling",
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        g = self.graph.gui
         g.point_properties_box(self.controlArea)
         self.models = [self.xy_model] + g.points_models
 
-        box = gui.vBox(self.controlArea, "Plot Properties")
-        g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
-        gui.checkBox(
-            box, self, value='graph.tooltip_shows_all',
-            label='Show all data on mouse hover')
-        self.cb_class_density = gui.checkBox(
-            box, self, value='graph.class_density', label='Show class density',
-            callback=self.update_density)
-        self.cb_reg_line = gui.checkBox(
-            box, self, value='graph.show_reg_line',
-            label='Show regression line', callback=self.update_regression_line)
-        gui.checkBox(
-            box, self, 'graph.label_only_selected',
-            'Label only selected points', callback=self.graph.update_labels)
+        box_plot_prop = gui.vBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend,
+                       g.ShowGridLines,
+                       g.ToolTipShowsAll,
+                       g.ClassDensity,
+                       g.RegressionLine,
+                       g.LabelOnlySelected], box_plot_prop)
 
-        self.zoom_select_toolbar = g.zoom_select_toolbar(
-            gui.vBox(self.controlArea, "Zoom/Select"), nomargin=True,
-            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
-                     g.StateButtonsEnd, g.ZoomReset]
-        )
-        buttons = self.zoom_select_toolbar.buttons
-        buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
-        buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
-        buttons[g.SimpleSelect].clicked.connect(self.graph.select_button_clicked)
-        buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
+        self.graph.box_zoom_select(self.controlArea)
+
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
@@ -233,31 +210,7 @@ class OWScatterPlot(OWWidget):
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection", "Send Automatically")
 
-        def zoom(s):
-            """Zoom in/out by factor `s`."""
-            viewbox = plot.getViewBox()
-            # scaleBy scales the view's bounds (the axis range)
-            viewbox.scaleBy((1 / s, 1 / s))
-
-        def fit_to_view():
-            viewbox = plot.getViewBox()
-            viewbox.autoRange()
-
-        zoom_in = QAction(
-            "Zoom in", self, triggered=lambda: zoom(1.25)
-        )
-        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
-                              QKeySequence(self.tr("Ctrl+="))])
-        zoom_out = QAction(
-            "Zoom out", self, shortcut=QKeySequence.ZoomOut,
-            triggered=lambda: zoom(1 / 1.25)
-        )
-        zoom_fit = QAction(
-            "Fit in view", self,
-            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
-            triggered=fit_to_view
-        )
-        self.addActions([zoom_in, zoom_out, zoom_fit])
+        self.graph.zoom_actions(self)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -504,24 +457,6 @@ class OWScatterPlot(OWWidget):
     def selection_changed(self):
         self.send_data()
 
-    @staticmethod
-    def create_groups_table(data, selection):
-        if data is None:
-            return None
-        names = [var.name for var in data.domain.variables + data.domain.metas]
-        name = get_next_name(names, "Selection group")
-        metas = data.domain.metas + (
-            DiscreteVariable(
-                name,
-                ["Unselected"] + ["G{}".format(i + 1)
-                                  for i in range(np.max(selection))]),
-        )
-        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        table = data.transform(domain)
-        table.metas[:, len(data.domain.metas):] = \
-            selection.reshape(len(data), 1)
-        return table
-
     def send_data(self):
         selected = None
         selection = None
@@ -534,7 +469,7 @@ class OWScatterPlot(OWWidget):
             if len(selection) > 0:
                 selected = self.data[selection]
         if graph.selection is not None and np.max(graph.selection) > 1:
-            annotated = self.create_groups_table(self.data, graph.selection)
+            annotated = create_groups_table(self.data, graph.selection)
         else:
             annotated = create_annotated_table(self.data, selection)
         self.Outputs.selected_data.send(selected)

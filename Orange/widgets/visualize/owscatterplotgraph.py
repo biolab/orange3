@@ -8,9 +8,9 @@ from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter)
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence)
 from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
-    QGraphicsTextItem, QGraphicsRectItem
+    QGraphicsTextItem, QGraphicsRectItem, QAction
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -491,9 +491,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
-    def __init__(self, scatter_widget, parent=None, _="None"):
+    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
         gui.OWComponent.__init__(self, scatter_widget)
-        self.view_box = InteractiveViewBox(self)
+        self.view_box = view_box(self)
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
         self.plot_widget.getPlotItem().buttonsHidden = True
@@ -1185,6 +1185,47 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:
             return False
 
+    def box_zoom_select(self, parent):
+        g = self.gui
+        box_zoom_select = gui.vBox(parent, "Zoom/Select")
+        zoom_select_toolbar = g.zoom_select_toolbar(
+            box_zoom_select, nomargin=True,
+            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
+                     g.StateButtonsEnd, g.ZoomReset]
+        )
+        buttons = zoom_select_toolbar.buttons
+        buttons[g.Zoom].clicked.connect(self.zoom_button_clicked)
+        buttons[g.Pan].clicked.connect(self.pan_button_clicked)
+        buttons[g.SimpleSelect].clicked.connect(self.select_button_clicked)
+        buttons[g.ZoomReset].clicked.connect(self.reset_button_clicked)
+        return box_zoom_select
+
+    def zoom_actions(self, parent):
+        def zoom(s):
+            """Zoom in/out by factor `s`."""
+            viewbox = self.plot.getViewBox()
+            # scaleBy scales the view's bounds (the axis range)
+            viewbox.scaleBy((1 / s, 1 / s))
+
+        def fit_to_view():
+            viewbox = self.plot.getViewBox()
+            viewbox.autoRange()
+
+        zoom_in = QAction(
+            "Zoom in", parent, triggered=lambda: zoom(1.25)
+        )
+        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
+                              QKeySequence(parent.tr("Ctrl+="))])
+        zoom_out = QAction(
+            "Zoom out", parent, shortcut=QKeySequence.ZoomOut,
+            triggered=lambda: zoom(1 / 1.25)
+        )
+        zoom_fit = QAction(
+            "Fit in view", parent,
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
+            triggered=fit_to_view
+        )
+        parent.addActions([zoom_in, zoom_out, zoom_fit])
 
 class HelpEventDelegate(QObject): #also used by owdistributions
     def __init__(self, delegate, parent=None):

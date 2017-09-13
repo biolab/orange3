@@ -67,3 +67,21 @@ def create_annotated_table(data, selected_indices):
     table = data.transform(domain)
     table[:, name] = annotated
     return table
+
+
+def create_groups_table(data, selection):
+    if data is None:
+        return None
+    names = [var.name for var in data.domain.variables + data.domain.metas]
+    name = get_next_name(names, "Selection group")
+    metas = data.domain.metas + (
+        DiscreteVariable(
+            name,
+            ["Unselected"] + ["G{}".format(i + 1)
+                              for i in range(np.max(selection))]),
+    )
+    domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
+    table = data.transform(domain)
+    table.metas[:, len(data.domain.metas):] = \
+        selection.reshape(len(data), 1)
+    return table
