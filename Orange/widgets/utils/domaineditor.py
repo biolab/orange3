@@ -97,6 +97,13 @@ class VarTableModel(QAbstractTableModel):
             self.dataChanged.emit(index.sibling(row, 0), index.sibling(row, 3))
             return True
 
+    def headerData(self, i, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole and i < 4:
+            return ("Name", "Type", "Role", "Values")[i]
+        if role == Qt.TextAlignmentRole:
+            return Qt.AlignLeft
+        return super().headerData(i, orientation, role)
+
     def flags(self, index):
         if index.column() == Column.values:
             return super().flags(index)
@@ -181,7 +188,6 @@ class DomainEditor(QTableView):
 
         self.setModel(VarTableModel(self.variables))
         self.setSelectionMode(QTableView.NoSelection)
-        self.horizontalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
         self.setShowGrid(False)
         self.setEditTriggers(
