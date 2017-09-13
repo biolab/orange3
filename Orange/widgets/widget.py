@@ -13,13 +13,13 @@ from typing import Optional, Union
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction, QFrame, QWIDGETSIZE_MAX
+    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
     QSettings, QUrl, QThread, pyqtSignal as Signal
 )
-from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
+from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
@@ -1194,6 +1194,16 @@ class _StatusBar(QStatusBar):
                             QEvent.HideToParent}:
             self.change.emit()
         return super().event(event)
+
+    def paintEvent(self, event):
+        style = self.style()
+        opt = QStyleOption()
+        opt.initFrom(self)
+        painter = QPainter(self)
+        # Omit the widget instance from the call (QTBUG-60018)
+        style.drawPrimitive(QStyle.PE_PanelStatusBar, opt, painter, None)
+        # Do not draw any PE_FrameStatusBarItem frames.
+        painter.end()
 
 
 class Message(object):
