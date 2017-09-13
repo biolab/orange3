@@ -1,7 +1,9 @@
 import unittest
+from unittest import mock
 from importlib import import_module
 import os
 import warnings
+import tempfile
 
 import AnyQt
 from AnyQt.QtGui import QFont, QBrush
@@ -116,7 +118,7 @@ class TestReport(WidgetTest):
             'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
             '</tr></table>')
 
-    def test_save_report(self):
+    def test_save_report_permission(self):
         """
         Permission Error may occur when trying to save report.
         GH-2147
@@ -131,6 +133,23 @@ class TestReport(WidgetTest):
                     unittest.mock.patch(patch_target_2, return_value=(filename, 0)),\
                     unittest.mock.patch(patch_target_3, return_value=True):
                 rep.save_report()
+
+    def test_save_report(self):
+        rep = OWReport.get_instance()
+        file = self.create_widget(OWFile)
+        file.create_report_html()
+        rep.make_report(file)
+        temp_dir = tempfile.mkdtemp()
+        temp_name = os.path.join(temp_dir, "f.report")
+        try:
+            with mock.patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName",
+                            return_value=(temp_name, 0)), \
+                    mock.patch("AnyQt.QtWidgets.QMessageBox.exec_",
+                               return_value=True):
+                rep.save_report()
+        finally:
+            os.remove(temp_name)
+            os.rmdir(temp_dir)
 
 
 class TestReportWidgets(WidgetTest):
@@ -220,3 +239,7 @@ class TestReportWidgets(WidgetTest):
                   self.unsu_widgets + self.dist_widgets + self.visu_widgets + \
                   self.spec_widgets
         self._create_report(widgets, rep, None)
+
+
+if __name__ == "__main__":
+    unittest.main()
