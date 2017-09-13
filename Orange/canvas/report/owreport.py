@@ -56,6 +56,10 @@ class ReportItem(QStandardItem):
         self.id = id(icon)
         super().__init__(icon, name)
 
+    def __getnewargs__(self):
+        return (self.name, self.html, self.scheme, self.module, self.icon_name,
+                self.comment)
+
 
 class ReportItemModel(QStandardItemModel):
     def __init__(self, rows, columns, parent=None):
