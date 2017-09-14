@@ -204,6 +204,7 @@ class OWBoxPlot(widget.OWWidget):
             order=order,
             placeholder="None",
             valid_types=Orange.data.DiscreteVariable)
+        self.group_vars.clear()  # Remove 'None' from the list view
         view = gui.listView(
             self.controlArea, self, "group_var", box="Subgroups",
             model=self.group_vars, callback=self.grouping_changed)
@@ -345,6 +346,7 @@ class OWBoxPlot(widget.OWWidget):
         self.infot1.setText("")
         self.attrs.set_domain(None)
         self.group_vars.set_domain(None)
+        self.group_vars.clear()  # Remove 'None' from the list view
         self.is_continuous = False
         self.update_display_box()
 
