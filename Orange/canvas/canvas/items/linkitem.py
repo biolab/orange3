@@ -290,6 +290,8 @@ class LinkItem(QGraphicsObject):
     #: These are pulled from SchemeLink.State for ease of binding to it's
     #: state
     State = SchemeLink.State
+    #: The link has no associated state.
+    NoState = SchemeLink.NoState
     #: Link is empty; the source node does not have any value on output
     Empty = SchemeLink.Empty
     #: Link is active; the source node has a valid value on output
@@ -326,7 +328,7 @@ class LinkItem(QGraphicsObject):
 
         self.__dynamic = False
         self.__dynamicEnabled = False
-        self.__state = LinkItem.Empty
+        self.__state = LinkItem.NoState
         self.hover = False
 
         self.prepareGeometryChange()
@@ -707,10 +709,10 @@ class LinkItem(QGraphicsObject):
             normal = QPen(QBrush(QColor("#9CACB4")), 2.0)
             hover = QPen(QBrush(QColor("#7D7D7D")), 2.1)
 
-        if self.__state & LinkItem.Active:
-            pen_style = Qt.SolidLine
-        else:
+        if self.__state & LinkItem.Empty:
             pen_style = Qt.DashLine
+        else:
+            pen_style = Qt.SolidLine
 
         normal.setStyle(pen_style)
         hover.setStyle(pen_style)
