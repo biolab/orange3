@@ -962,9 +962,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         formatter = self.attr_label.str_val
         label_data = map(formatter, label_column)
         black = pg.mkColor(0, 0, 0)
+        selection = self.selection[self.valid_data] if self.selection is not None else []
         if self.label_only_selected:
             for label, text, selected \
-                    in zip(self.labels, label_data, self.selection):
+                    in zip(self.labels, label_data, selection):
                 label.setText(text if selected else "", black)
         else:
             for label, text in zip(self.labels, label_data):
