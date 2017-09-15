@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+import scipy.sparse as sp
 from Orange.data import Table
 from Orange.preprocess import Randomize
 
@@ -88,3 +89,30 @@ class TestRandomizer(unittest.TestCase):
         rand_data2 = randomizer2(self.zoo)
         np.testing.assert_array_equal(rand_data11.Y, rand_data12.Y)
         np.testing.assert_array_equal(rand_data11.Y, rand_data2.Y)
+
+    def test_randomize(self):
+        x = np.arange(10000, dtype=int).reshape((100, 100))
+        randomized = Randomize().randomize(x.copy())
+
+        # Do not mix data between columns
+        np.testing.assert_equal(randomized % 100, x % 100)
+
+        # Do not shuffle entire rows:
+        # lexical sorting of rows should not equal the original table
+        randomized = np.array(sorted(list(map(list, randomized))), dtype=int)
+        self.assertFalse(np.all(randomized == x))
+
+    def test_randomize_sparse(self):
+        x = np.array([[0, 0, 3, 0],
+                      [1, 0, 2, 0],
+                      [4, 5, 6, 7]])
+        randomized = Randomize(rand_seed=1).randomize(sp.csr_matrix(x))
+        randomized = randomized.toarray()
+        # Data is shuffled (rand_seed=1 should always shuffle it)
+        self.assertFalse(np.all(x == randomized))
+        # Data remains within a column
+        self.assertTrue(all(sorted(x[:, i]) == sorted(randomized[:, i])
+                            for i in range(4)))
+        # Do not shuffle entire rows
+        randomized = np.array(sorted(list(map(list, randomized))), dtype=int)
+        self.assertFalse(np.all(randomized == x))
