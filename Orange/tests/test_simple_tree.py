@@ -136,7 +136,7 @@ class TestSimpleTreeLearner(unittest.TestCase):
         lrn = SimpleTreeReg(min_instances=1)
         reg = lrn(data)
         reg_str = reg.to_string()
-        res = '   LSTAT (19.934: 430.0)'
+        res = '   LSTAT (19.9: 430.0)'
         self.assertEqual(reg_str.split("\n")[3], res)
 
 

@@ -247,3 +247,13 @@ class TestTabReader(unittest.TestCase):
             self.assertFalse(path.isfile(fname + ".metadata"))
         finally:
             shutil.rmtree(tempdir)
+
+    def test_number_of_decimals(self):
+        data = Table("heart_disease")
+        self.assertEqual(data.domain["age"].number_of_decimals, 0)
+        self.assertEqual(data.domain["ST by exercise"].number_of_decimals, 1)
+
+        data = Table("glass")
+        self.assertEqual(data.domain["RI"].number_of_decimals, 5)
+        self.assertEqual(data.domain["Na"].number_of_decimals, 2)
+        self.assertEqual(data.domain["Fe"].number_of_decimals, 2)
