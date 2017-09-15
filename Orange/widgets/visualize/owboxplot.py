@@ -279,20 +279,24 @@ class OWBoxPlot(widget.OWWidget):
             domain = dataset.domain
             self.group_vars.set_domain(domain)
             self.attrs.set_domain(domain)
-            if self.attrs:
-                # Select the first non-class variable; if all are classes,
-                # select the first class
-                self.attribute = \
-                    self.attrs[len(domain.class_vars) % len(self.attrs)]
-            if domain.class_var and domain.class_var.is_discrete:
-                self.group_var = domain.class_var
-            else:
-                self.group_var = None  # Reset to trigger selection via callback
+            self.select_default_variables(domain)
             self.openContext(self.dataset)
             self.grouping_changed()
         else:
             self.reset_all_data()
         self.commit()
+
+    def select_default_variables(self, domain):
+        # visualize first non-class variable, group by class (if present)
+        if len(self.attrs) > len(domain.class_vars):
+            self.attribute = self.attrs[len(domain.class_vars)]
+        elif self.attrs:
+            self.attribute = self.attrs[0]
+
+        if domain.class_var and domain.class_var.is_discrete:
+            self.group_var = domain.class_var
+        else:
+            self.group_var = None  # Reset to trigger selection via callback
 
     def apply_sorting(self):
         def compute_score(attr):
