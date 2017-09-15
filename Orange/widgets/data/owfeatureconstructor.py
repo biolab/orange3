@@ -396,18 +396,18 @@ class OWFeatureConstructor(OWWidget):
             return unique_name(fmt, reserved_names())
 
         menu = QMenu(self.addbutton)
-        cont = menu.addAction("Continuous")
+        cont = menu.addAction("Numeric")
         cont.triggered.connect(
             lambda: self.addFeature(
                 ContinuousDescriptor(generate_newname("X{}"), "", 3))
         )
-        disc = menu.addAction("Discrete")
+        disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
                 DiscreteDescriptor(generate_newname("D{}"), "",
                                    ("A", "B"), -1, False))
         )
-        string = menu.addAction("String")
+        string = menu.addAction("Text")
         string.triggered.connect(
             lambda: self.addFeature(
                 StringDescriptor(generate_newname("S{}"), ""))
