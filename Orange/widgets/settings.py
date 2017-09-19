@@ -877,18 +877,10 @@ class DomainContextHandler(ContextHandler):
         self.attributes_in_res = attributes_in_res
         self.metas_in_res = metas_in_res
 
-        self.has_ordinary_attributes = attributes_in_res
-        self.has_meta_attributes = metas_in_res
+        self.has_ordinary_attributes = True
+        self.has_meta_attributes = True
 
         self.known_settings = {}
-
-    def analyze_setting(self, prefix, setting):
-        super().analyze_setting(prefix, setting)
-        if isinstance(setting, ContextSetting) and not setting.not_attribute:
-            if not setting.exclude_attributes:
-                self.has_ordinary_attributes = True
-            if not setting.exclude_metas:
-                self.has_meta_attributes = True
 
     def encode_domain(self, domain):
         """
@@ -899,19 +891,13 @@ class DomainContextHandler(ContextHandler):
 
         match = self.match_values
         encode = self.encode_variables
-        if self.has_ordinary_attributes:
-            if match == self.MATCH_VALUES_CLASS:
-                attributes = encode(domain.attributes, False)
-                attributes.update(encode(domain.class_vars, True))
-            else:
-                attributes = encode(domain, match == self.MATCH_VALUES_ALL)
+        if match == self.MATCH_VALUES_CLASS:
+            attributes = encode(domain.attributes, False)
+            attributes.update(encode(domain.class_vars, True))
         else:
-            attributes = {}
+            attributes = encode(domain, match == self.MATCH_VALUES_ALL)
 
-        if self.has_meta_attributes:
-            metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
-        else:
-            metas = {}
+        metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
 
         return attributes, metas
 
@@ -932,12 +918,10 @@ class DomainContextHandler(ContextHandler):
         context.attributes = attributes
         context.metas = metas
         context.ordered_domain = []
-        if self.has_ordinary_attributes:
-            context.ordered_domain += [(attr.name, vartype(attr))
-                                       for attr in domain]
-        if self.has_meta_attributes:
-            context.ordered_domain += [(attr.name, vartype(attr))
-                                       for attr in domain.metas]
+        context.ordered_domain += [(attr.name, vartype(attr))
+                                   for attr in domain]
+        context.ordered_domain += [(attr.name, vartype(attr))
+                                   for attr in domain.metas]
         return context
 
     def open_context(self, widget, domain):
