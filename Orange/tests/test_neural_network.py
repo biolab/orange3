@@ -5,7 +5,7 @@ import unittest
 
 from Orange.data import Table
 from Orange.classification import NNClassificationLearner
-from Orange.modelling import NNLearner
+from Orange.modelling import NNLearner, ConstantLearner
 from Orange.regression import NNRegressionLearner
 from Orange.evaluation import CA, CrossValidation, MSE
 
@@ -15,22 +15,30 @@ class TestNNLearner(unittest.TestCase):
     def setUpClass(cls):
         cls.iris = Table('iris')
         cls.housing = Table('housing')
+        cls.learner = NNLearner()
 
     def test_NN_classification(self):
         results = CrossValidation(self.iris, [NNClassificationLearner()], k=3)
-        self.assertGreater(CA(results), 0.90)
+        ca = CA(results)
+        self.assertGreater(ca, 0.8)
+        self.assertLess(ca, 0.99)
 
     def test_NN_regression(self):
-        results = CrossValidation(self.housing, [NNRegressionLearner()], k=3)
-        scorer = MSE()
-        self.assertLess(scorer(results)[0], 35)
+        const = ConstantLearner()
+        results = CrossValidation(self.housing, [NNRegressionLearner(), const],
+                                  k=3)
+        mse = MSE()
+        res = mse(results)
+        self.assertLess(res[0], 35)
+        self.assertLess(res[0], res[1])
 
     def test_NN_model(self):
-        results = CrossValidation(self.iris, [NNLearner()], k=3)
+        results = CrossValidation(self.iris, [self.learner], k=3)
         self.assertGreater(CA(results), 0.90)
-        results = CrossValidation(self.housing, [NNLearner()], k=3)
-        scorer = MSE()
-        self.assertLess(scorer(results)[0], 35)
+        results = CrossValidation(self.housing, [self.learner], k=3)
+        mse = MSE()
+        res = mse(results)
+        self.assertLess(res[0], 35)
 
     def test_NN_classification_predict_single_instance(self):
         lrn = NNClassificationLearner()
