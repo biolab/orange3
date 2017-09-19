@@ -46,6 +46,10 @@ log = logging.getLogger(__name__)
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+# Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
+import pyqtgraph
+pyqtgraph.setConfigOption("exitCleanup", False)
+
 
 def fix_osx_10_9_private_font():
     # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
