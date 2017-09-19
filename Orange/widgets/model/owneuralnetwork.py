@@ -1,5 +1,8 @@
-from AnyQt.QtCore import Qt
 import re
+import sys
+
+from AnyQt.QtWidgets import QApplication
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.modelling import NNLearner
@@ -80,9 +83,6 @@ class OWNNLearner(OWBaseLearner):
 
 
 if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
     a = QApplication(sys.argv)
     ow = OWNNLearner()
     d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
