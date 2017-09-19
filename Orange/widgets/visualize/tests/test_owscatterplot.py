@@ -225,6 +225,13 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.reset_graph_data()
 
+    def test_saving_selection(self):
+        self.send_signal(self.widget.Inputs.data, self.data)  # iris
+        self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
+        selected_inds = np.flatnonzero(self.widget.graph.selection)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        np.testing.assert_equal(selected_inds, settings["selection"])
+
     def test_points_selection(self):
         # Opening widget with saved selection should restore it
         self.widget.selection = list(range(50))

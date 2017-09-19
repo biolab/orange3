@@ -476,8 +476,10 @@ class OWScatterPlot(OWWidget):
         self.Outputs.annotated_data.send(annotated)
 
         # Store current selection in a setting that is stored in workflow
-        if self.selection is not None and len(selection):
+        if selection is not None and len(selection):
             self.selection = list(selection)
+        else:
+            self.selection = None
 
     def send_features(self):
         features = None
