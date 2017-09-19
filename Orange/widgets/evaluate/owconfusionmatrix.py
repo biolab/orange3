@@ -3,15 +3,10 @@
 from math import isnan, isinf
 import unicodedata
 
-from AnyQt.QtWidgets import (
-    QGridLayout, QTableView,QHeaderView, QStyledItemDelegate
-)
-from AnyQt.QtGui import (
-    QFont, QBrush, QColor, QStandardItemModel, QStandardItem
-)
-from AnyQt.QtCore import (
-    Qt, QSize, QItemSelectionModel, QItemSelection, QT_VERSION
-)
+from AnyQt.QtWidgets import QTableView, QHeaderView, QStyledItemDelegate, \
+    QSizePolicy
+from AnyQt.QtGui import QFont, QBrush, QColor, QStandardItemModel, QStandardItem
+from AnyQt.QtCore import Qt, QSize, QItemSelectionModel, QItemSelection
 import numpy as np
 import sklearn.metrics as skl_metrics
 
@@ -128,37 +123,31 @@ class OWConfusionMatrix(widget.OWWidget):
         self.learners = []
         self.headers = []
 
-        box = gui.vBox(self.controlArea, "Learners")
-
         self.learners_box = gui.listBox(
-            box, self, "selected_learner", "learners",
+            self.controlArea, self, "selected_learner", "learners", box=True,
             callback=self._learner_changed
         )
-        box = gui.vBox(self.controlArea, "Show")
 
-        gui.comboBox(box, self, "selected_quantity", items=self.quantities,
-                     callback=self._update)
-
-        box = gui.vBox(self.controlArea, "Select")
-
-        gui.button(box, self, "Select Correct",
-                   callback=self.select_correct, autoDefault=False)
-        gui.button(box, self, "Select Misclassified",
-                   callback=self.select_wrong, autoDefault=False)
-        gui.button(box, self, "Clear Selection",
-                   callback=self.select_none, autoDefault=False)
-
-        self.outputbox = box = gui.vBox(self.controlArea, "Output")
+        self.outputbox = gui.vBox(self.controlArea, "Output")
+        box = gui.hBox(self.outputbox)
         gui.checkBox(box, self, "append_predictions",
                      "Predictions", callback=self._invalidate)
         gui.checkBox(box, self, "append_probabilities",
                      "Probabilities",
                      callback=self._invalidate)
 
-        gui.auto_commit(self.controlArea, self, "autocommit",
-                        "Send Selected", "Send Automatically")
+        gui.auto_commit(self.outputbox, self, "autocommit",
+                        "Send Selected", "Send Automatically", box=False)
 
-        grid = QGridLayout()
+        self.mainArea.layout().setContentsMargins(0, 0, 0, 0)
+
+        box = gui.vBox(self.mainArea, box=True)
+
+        sbox = gui.hBox(box)
+        gui.rubber(sbox)
+        gui.comboBox(sbox, self, "selected_quantity",
+                     items=self.quantities, label="Show: ",
+                     orientation=Qt.Horizontal, callback=self._update)
 
         self.tablemodel = QStandardItemModel(self)
         view = self.tableview = QTableView(
@@ -170,13 +159,22 @@ class OWConfusionMatrix(widget.OWWidget):
         view.selectionModel().selectionChanged.connect(self._invalidate)
         view.setShowGrid(False)
         view.setItemDelegate(BorderedItemDelegate(Qt.white))
+        view.setSizePolicy(QSizePolicy.MinimumExpanding,
+                           QSizePolicy.MinimumExpanding)
         view.clicked.connect(self.cell_clicked)
-        grid.addWidget(view, 0, 0)
-        self.mainArea.layout().addLayout(grid)
+        box.layout().addWidget(view)
+
+        selbox = gui.hBox(box)
+        gui.button(selbox, self, "Select Correct",
+                   callback=self.select_correct, autoDefault=False)
+        gui.button(selbox, self, "Select Misclassified",
+                   callback=self.select_wrong, autoDefault=False)
+        gui.button(selbox, self, "Clear Selection",
+                   callback=self.select_none, autoDefault=False)
 
     def sizeHint(self):
         """Initial size"""
-        return QSize(750, 490)
+        return QSize(750, 340)
 
     def _item(self, i, j):
         return self.tablemodel.item(i, j) or QStandardItem()
