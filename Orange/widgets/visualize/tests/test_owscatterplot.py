@@ -230,11 +230,11 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
         selected_inds = np.flatnonzero(self.widget.graph.selection)
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        np.testing.assert_equal(selected_inds, settings["selection"])
+        np.testing.assert_equal(selected_inds, [i for i, g in settings["selection_group"]])
 
     def test_points_selection(self):
         # Opening widget with saved selection should restore it
-        self.widget.selection = list(range(50))
+        self.widget.selection_group = [(i, 1) for i in range(50)]
         self.send_signal(self.widget.Inputs.data, self.data)  # iris
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected_data), 50)
@@ -245,10 +245,15 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertIsNone(selected_data)
 
+    def test_migrate_selection(self):
+        settings = dict(selection=list(range(2)))
+        OWScatterPlot.migrate_settings(settings, 0)
+        self.assertEqual(settings["selection_group"], [(0, 1), (1, 1)])
+
     def test_invalid_points_selection(self):
         # if selection contains rows that are not present in the current
         # dataset, widget should select what can be selected.
-        self.widget.selection = list(range(50))
+        self.widget.selection_group = [(i, 1) for i in range(50)]
         self.send_signal(self.widget.Inputs.data, self.data[:10])
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected_data), 10)
