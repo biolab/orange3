@@ -137,8 +137,8 @@ class TestPerfectDomainContextHandler(TestCase):
 
 class SimpleWidget:
     setting = Setting("foo")
-    text = ContextSetting("", exclude_attributes=True)
-    with_metas = ContextSetting([], exclude_metas=False)
+    text = ContextSetting("", exclude_attributes=True, exclude_metas=True)
+    with_metas = ContextSetting([])
 
     def retrieveSpecificSettings(self):
         pass

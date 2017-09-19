@@ -773,7 +773,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Selected linkage
     linkage = settings.Setting(1)
     #: Index of the selected annotation item (variable, ...)
-    annotation = settings.ContextSetting("Enumeration", exclude_metas=False)
+    annotation = settings.ContextSetting("Enumeration")
     #: Out-of-context setting for the case when the "Name" option is available
     annotation_if_names = settings.Setting("Name")
     #: Out-of-context setting for the case with just "Enumerate" and "None"

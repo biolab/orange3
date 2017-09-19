@@ -87,8 +87,8 @@ class OWSieveDiagram(OWWidget):
 
     settings_version = 1
     settingsHandler = DomainContextHandler()
-    attr_x = ContextSetting(None, exclude_metas=False)
-    attr_y = ContextSetting(None, exclude_metas=False)
+    attr_x = ContextSetting(None)
+    attr_y = ContextSetting(None)
     selection = ContextSetting(set())
 
     def __init__(self):

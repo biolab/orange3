@@ -99,7 +99,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
 
 
 class SimpleWidget:
-    domain_role_hints = ContextSetting({}, exclude_metas=False)
+    domain_role_hints = ContextSetting({})
     required = ContextSetting("", required=ContextSetting.REQUIRED)
 
     def retrieveSpecificSettings(self):

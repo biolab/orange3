@@ -270,11 +270,11 @@ class OWMosaicDisplay(OWWidget):
     settingsHandler = DomainContextHandler()
     use_boxes = Setting(True)
     interior_coloring = Setting(CLASS_DISTRIBUTION)
-    variable1 = ContextSetting("", exclude_metas=False)
-    variable2 = ContextSetting("", exclude_metas=False)
-    variable3 = ContextSetting("", exclude_metas=False)
-    variable4 = ContextSetting("", exclude_metas=False)
-    variable_color = ContextSetting("", exclude_metas=False)
+    variable1 = ContextSetting("")
+    variable2 = ContextSetting("")
+    variable3 = ContextSetting("")
+    variable4 = ContextSetting("")
+    variable_color = ContextSetting("")
     selection = ContextSetting(set())
 
     BAR_WIDTH = 5

@@ -553,9 +553,8 @@ class ContextSetting(Setting):
     # something with the attributes. Large majority does, so this greatly
     # simplifies the declaration of settings in widget at no (visible)
     # cost to those settings that don't need it
-    # TODO: exclude_metas should be disabled by default
     def __init__(self, default, not_attribute=False, required=0,
-                 exclude_attributes=False, exclude_metas=True, **data):
+                 exclude_attributes=False, exclude_metas=False, **data):
         super().__init__(default, **data)
         self.not_attribute = not_attribute
         self.exclude_attributes = exclude_attributes

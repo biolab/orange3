@@ -266,7 +266,7 @@ class OWDistanceMap(widget.OWWidget):
     color_low = settings.Setting(0.0)
     color_high = settings.Setting(1.0)
 
-    annotation_idx = settings.ContextSetting(0, exclude_metas=False)
+    annotation_idx = settings.ContextSetting(0)
 
     autocommit = settings.Setting(True)
 
