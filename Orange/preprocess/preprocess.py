@@ -354,16 +354,19 @@ class Randomize(Preprocess):
             Randomized data table.
         """
         new_data = data.copy()
+        rstate = np.random.RandomState(self.rand_seed)
+        # ensure the same seed is not used to shuffle X and Y at the same time
+        r1, r2, r3 = rstate.randint(0, 2 ** 32 - 1, size=3, dtype=np.int64)
         if self.rand_type & Randomize.RandomizeClasses:
-            new_data.Y = self.randomize(new_data.Y)
+            new_data.Y = self.randomize(new_data.Y, r1)
         if self.rand_type & Randomize.RandomizeAttributes:
-            new_data.X = self.randomize(new_data.X)
+            new_data.X = self.randomize(new_data.X, r2)
         if self.rand_type & Randomize.RandomizeMetas:
-            new_data.metas = self.randomize(new_data.metas)
+            new_data.metas = self.randomize(new_data.metas, r3)
         return new_data
 
-    def randomize(self, table):
-        np.random.seed(self.rand_seed)
+    def randomize(self, table, rand_state=None):
+        rstate = np.random.RandomState(rand_state)
         if sp.issparse(table):
             table = table.tocsc()
             rnd_indices = np.arange(table.shape[0], dtype=table.indices.dtype)
@@ -371,13 +374,13 @@ class Randomize(Preprocess):
                 col_indices = \
                     table.indices[table.indptr[i]: table.indptr[i + 1]]
                 new_indices = rnd_indices[:len(col_indices)]
-                np.random.shuffle(new_indices)
+                rstate.shuffle(new_indices)
                 col_indices[:] = new_indices
         elif len(table.shape) > 1:
             for i in range(table.shape[1]):
-                np.random.shuffle(table[:, i])
+                rstate.shuffle(table[:, i])
         else:
-            np.random.shuffle(table)
+            rstate.shuffle(table)
         return table
 
 
