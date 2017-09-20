@@ -107,6 +107,7 @@ class OWDataSets(widget.OWWidget):
     description = "Load a data set from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20
+    replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
 
     outputs = [("Data", Orange.data.Table)]
 
