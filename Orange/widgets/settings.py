@@ -917,11 +917,6 @@ class DomainContextHandler(ContextHandler):
         context = super().new_context()
         context.attributes = attributes
         context.metas = metas
-        context.ordered_domain = []
-        context.ordered_domain += [(attr.name, vartype(attr))
-                                   for attr in domain]
-        context.ordered_domain += [(attr.name, vartype(attr))
-                                   for attr in domain.metas]
         return context
 
     def open_context(self, widget, domain):
@@ -959,7 +954,6 @@ class DomainContextHandler(ContextHandler):
             return
 
         widget.retrieveSpecificSettings()
-        excluded = set()
 
         for setting, data, instance in \
                 self.provider.traverse_settings(data=context.values, instance=widget):
@@ -970,26 +964,6 @@ class DomainContextHandler(ContextHandler):
             setattr(instance, setting.name, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
-
-            if isinstance(value, list):
-                try:
-                    excluded |= set(value)
-                except Exception:
-                    # Some values in the list were not hashable so they will
-                    # be included in the reservoir. Since no one uses
-                    # reservoirs anyway, pretend nothing happened.
-                    pass
-            else:
-                if setting.not_attribute:
-                    excluded.add(value)
-
-        if self.reservoir is not None:
-            get_attribute = lambda name: context.attributes.get(name, None)
-            get_meta = lambda name: context.metas.get(name, None)
-            ll = [a for a in context.ordered_domain if a not in excluded and (
-                self.attributes_in_res and get_attribute(a[0]) == a[1] or
-                self.metas_in_res and get_meta(a[0]) == a[1])]
-            setattr(widget, self.reservoir, ll)
 
     def encode_setting(self, context, setting, value):
         if isinstance(value, list):
