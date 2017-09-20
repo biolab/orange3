@@ -29,6 +29,7 @@ import Orange.data
 
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.utils.signals import Output
 from Orange.widgets.widget import Msg
 
 INDEX_URL = "http://datasets.orange.biolab.si/"
@@ -118,7 +119,8 @@ class OWDataSets(widget.OWWidget):
         only_local_datasets = Msg("Could not fetch data sets list, only local "
                                   "cached data sets are shown")
 
-    outputs = [("Data", Orange.data.Table)]
+    class Outputs:
+        data = Output("Data", Orange.data.Table)
 
     #: Selected data set id
     selected_id = settings.Setting(None)   # type: Optional[Tuple[str, str]]
@@ -403,7 +405,7 @@ class OWDataSets(widget.OWWidget):
                 self.setBlocking(False)
                 self.commit_cached(di.prefix, di.filename)
         else:
-            self.send("Data", None)
+            self.Outputs.data.send(None)
 
     @Slot(object)
     def __commit_complete(self, f):
@@ -433,11 +435,11 @@ class OWDataSets(widget.OWWidget):
             data = Orange.data.Table(path)
         else:
             data = None
-        self.send("Data", data)
+        self.Outputs.data.send(data)
 
     def commit_cached(self, prefix, filename):
         path = LocalFiles(local_cache_path()).localpath(prefix, filename)
-        self.send("Data", Orange.data.Table(path))
+        self.Outputs.data.send(Orange.data.Table(path))
 
     @Slot()
     def __progress_advance(self):
