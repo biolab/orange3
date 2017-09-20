@@ -248,9 +248,10 @@ class TestOWRank(WidgetTest):
         self.widget.selected_methods.add('ANOVA')
         self.send_signal(self.widget.Inputs.data, table)
 
-    def test_setting_migration_extends_header_state(self):
+    def test_setting_migration_fixes_header_state(self):
         # Settings as of version 3.3.5
         settings = {
+            '__version__': 1,
             'auto_apply': True,
             'headerState': (
                 b'\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00'
@@ -275,4 +276,4 @@ class TestOWRank(WidgetTest):
 
         w = self.create_widget(OWRank, stored_settings=settings)
 
-        self.assertEqual(len(w.headerState), 3)
+        self.assertEqual(w.sorting, (0, Qt.AscendingOrder))

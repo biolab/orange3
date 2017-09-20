@@ -169,7 +169,7 @@ class OWRank(OWWidget):
     nSelected = Setting(5)
     auto_apply = Setting(True)
 
-    headerState = Setting(['', 1])
+    sorting = Setting((0, Qt.DescendingOrder))
     selected_methods = Setting(set())
 
     settings_version = 2
@@ -421,8 +421,9 @@ class OWRank(OWWidget):
 
         # Re-apply sort
         try:
-            sort_column, sort_order = self.headerState
-            self.ranksModel.sort(labels.index(sort_column) + 1, sort_order)
+            sort_column, sort_order = self.sorting
+            if sort_column < len(labels):
+                self.ranksModel.sort(sort_column + 1, sort_order)  # +1 for '#' (discrete count) column
         except ValueError:
             pass
 
@@ -471,8 +472,8 @@ class OWRank(OWWidget):
 
         # Store the header states
         sort_order = self.ranksModel.sortOrder()
-        sort_column = self.ranksModel.headerData(self.ranksModel.sortColumn(), Qt.Horizontal)
-        self.headerState = (sort_column, sort_order)
+        sort_column = self.ranksModel.sortColumn() - 1  # -1 for '#' (discrete count) column
+        self.sorting = (sort_column, sort_order)
 
     def methodSelectionChanged(self, state, method_name):
         if state == Qt.Checked:
@@ -539,7 +540,26 @@ class OWRank(OWWidget):
         # If older settings, restore sort header to default
         # Saved selected_rows will likely be incorrect
         if version is None or version < 2:
-            settings['headerState'] = ('', 1)
+            column, order = 0, Qt.DescendingOrder
+            headerState = settings.pop("headerState")
+
+            # Lacking knowledge of last problemType, use discrete ranks view's ordering
+            if isinstance(headerState, (tuple, list)):
+                headerState = headerState[0]
+
+            if isinstance(headerState, bytes):
+                hview = QHeaderView(Qt.Horizontal)
+                hview.restoreState(headerState)
+                column, order = hview.sortIndicatorSection() - 1, hview.sortIndicatorOrder()
+            settings["sorting"] = (column, order)
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version is None or version < 2:
+            # Old selection was saved as sorted indices. New selection is original indices.
+            # Since we can't devise the latter without first computing the ranks,
+            # just reset the selection to avoid confusion.
+            context.values['selected_rows'] = []
 
 
 if __name__ == "__main__":
