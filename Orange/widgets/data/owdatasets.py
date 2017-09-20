@@ -60,10 +60,7 @@ def list_local():
 def format_info(n_all, n_cached):
     plural = lambda x: '' if x == 1 else 's'
     return "{} data set{}\n{} data set{} cached".format(
-            n_all,
-            plural(n_all),
-            n_cached if n_cached else 'No',
-            plural(n_cached))
+        n_all, plural(n_all), n_cached if n_cached else 'No', plural(n_cached))
 
 
 def format_exception(error):
@@ -148,8 +145,8 @@ class OWDataSets(widget.OWWidget):
         )
         self.descriptionlabel = QTextBrowser(
             openExternalLinks=True,
-            textInteractionFlags=Qt.TextSelectableByMouse |
-                                 Qt.LinksAccessibleByMouse
+            textInteractionFlags=(Qt.TextSelectableByMouse |
+                                  Qt.LinksAccessibleByMouse)
         )
         self.descriptionlabel.setFrameStyle(QTextBrowser.NoFrame)
         # no (white) text background
@@ -162,8 +159,7 @@ class OWDataSets(widget.OWWidget):
         self.splitter.setSizes([300, 200])
         self.splitter.splitterMoved.connect(
             lambda:
-                setattr(self, "splitter_state",
-                        bytes(self.splitter.saveState()))
+            setattr(self, "splitter_state", bytes(self.splitter.saveState()))
         )
         self.mainArea.layout().addWidget(self.splitter)
         self.controlArea.layout().addStretch(10)
@@ -211,7 +207,7 @@ class OWDataSets(widget.OWWidget):
         allinfolocal = list_local()
         try:
             res = f.result()
-        except Exception as er:
+        except Exception:
             log = logging.getLogger(__name__)
             log.exception("Error while fetching updated index")
             if not allinfolocal:
