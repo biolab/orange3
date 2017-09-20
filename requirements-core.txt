@@ -12,4 +12,4 @@ joblib>=0.9.4
 keyring
 keyrings.alt    # for alternative keyring implementations
 dill
-setuptools>=11.3
+setuptools>=36.3
