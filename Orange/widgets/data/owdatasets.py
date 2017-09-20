@@ -32,6 +32,7 @@ from Orange.widgets import widget, settings, gui
 from Orange.widgets.widget import Msg
 
 INDEX_URL = "http://datasets.orange.biolab.si/"
+log = logging.getLogger(__name__)
 
 
 def local_cache_path():
@@ -217,7 +218,6 @@ class OWDataSets(widget.OWWidget):
         try:
             res = f.result()
         except Exception:
-            log = logging.getLogger(__name__)
             log.exception("Error while fetching updated index")
             if not allinfolocal:
                 self.Error.no_remote_datasets()
@@ -423,7 +423,6 @@ class OWDataSets(widget.OWWidget):
         try:
             path = f.result()
         except Exception as ex:
-            log = logging.getLogger(__name__)
             log.exception("Error:")
             self.error(format_exception(ex))
             path = None
