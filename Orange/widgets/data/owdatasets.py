@@ -29,6 +29,7 @@ import Orange.data
 
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
+from Orange.widgets.widget import Msg
 
 INDEX_URL = "http://datasets.orange.biolab.si/"
 
@@ -108,6 +109,13 @@ class OWDataSets(widget.OWWidget):
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
+
+    class Error(widget.OWWidget.Error):
+        no_remote_datasets = Msg("Could not fetch data set list")
+
+    class Warning(widget.OWWidget.Warning):
+        only_local_datasets = Msg("Could not fetch data sets list, only local "
+                                  "cached data sets are shown")
 
     outputs = [("Data", Orange.data.Table)]
 
@@ -212,10 +220,9 @@ class OWDataSets(widget.OWWidget):
             log = logging.getLogger(__name__)
             log.exception("Error while fetching updated index")
             if not allinfolocal:
-                self.error("Could not fetch data set list")
+                self.Error.no_remote_datasets()
             else:
-                self.warning("Could not fetch data sets list, only local "
-                             "cached data sets are shown")
+                self.Warning.only_local_datasets()
             res = {}
 
         allinforemote = res  # type: Dict[Tuple[str, str], dict]
@@ -361,7 +368,7 @@ class OWDataSets(widget.OWWidget):
         """
         di = self.selected_dataset()
         if di is not None:
-            self.error("")
+            self.Error.clear()
 
             if self.__awaiting_state is not None:
                 # disconnect from the __commit_complete
