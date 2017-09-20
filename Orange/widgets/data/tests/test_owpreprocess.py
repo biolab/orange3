@@ -25,11 +25,16 @@ class TestOWPreprocess(WidgetTest):
         self.widget.set_model(model)
         self.send_signal(self.widget.Inputs.data, self.zoo)
         output = self.get_output(self.widget.Outputs.preprocessed_data)
-        np.random.seed(1)
-        np.random.shuffle(self.zoo.Y)
+        r = Randomize(Randomize.RandomizeClasses, rand_seed=1)
+        expected = r(self.zoo)
+
+        np.testing.assert_array_equal(expected.X, output.X)
+        np.testing.assert_array_equal(expected.Y, output.Y)
+        np.testing.assert_array_equal(expected.metas, output.metas)
+
         np.testing.assert_array_equal(self.zoo.X, output.X)
-        np.testing.assert_array_equal(self.zoo.Y, output.Y)
         np.testing.assert_array_equal(self.zoo.metas, output.metas)
+        self.assertFalse(np.array_equal(self.zoo.Y, output.Y))
 
     def test_normalize(self):
         data = Table("iris")
