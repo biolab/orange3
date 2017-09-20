@@ -2882,15 +2882,12 @@ class ColoredBarItemDelegate(QtWidgets.QStyledItemDelegate):
         self.float_fmt = "%%.%if" % decimals
         self.color = QtGui.QColor(color)
 
-    def displayText(self, value, locale):
+    def displayText(self, value, locale=QtCore.QLocale()):
+        if value is None or isinstance(value, float) and math.isnan(value):
+            return "NA"
         if isinstance(value, float):
             return self.float_fmt % value
-        elif isinstance(value, str):
-            return value
-        elif value is None:
-            return "NA"
-        else:
-            return str(value)
+        return str(value)
 
     def sizeHint(self, option, index):
         font = self.get_font(option, index)
@@ -2902,7 +2899,7 @@ class ColoredBarItemDelegate(QtWidgets.QStyledItemDelegate):
 
     def paint(self, painter, option, index):
         self.initStyleOption(option, index)
-        text = self.displayText(index.data(Qt.DisplayRole), QtCore.QLocale())
+        text = self.displayText(index.data(Qt.DisplayRole))
         ratio, have_ratio = self.get_bar_ratio(option, index)
 
         rect = option.rect

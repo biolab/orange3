@@ -6,20 +6,24 @@ from Orange.preprocess.score import Scorer
 from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
-from Orange.widgets.data.owrank import OWRank
+from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QCheckBox
 
 
 class TestOWRank(WidgetTest):
     def setUp(self):
-        self.widget = self.create_widget(OWRank)
+        self.widget = self.create_widget(OWRank)  # type: OWRank
         self.iris = Table("iris")
         self.housing = Table("housing")
         self.log_reg = LogisticRegressionLearner()
         self.lin_reg = LinearRegressionLearner()
         self.pca = PCA()
+
+    def _get_checkbox(self, method_shortname):
+        return self.widget.controlArea.findChild(QCheckBox, method_shortname)
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
@@ -36,23 +40,25 @@ class TestOWRank(WidgetTest):
 
     def test_input_scorer(self):
         """Check widget's scorer with scorer on the input"""
-        self.assertEqual(self.widget.learners, {})
+        self.assertEqual(self.widget.scorers, {})
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
-        value = self.widget.learners[1]
-        self.assertEqual(self.log_reg, value.score)
-        self.assertIsInstance(value.score, Scorer)
+        value = self.widget.scorers[1]
+        self.assertEqual(self.log_reg, value.scorer)
+        self.assertIsInstance(value.scorer, Scorer)
 
     def test_input_scorer_fitter(self):
         heart_disease = Table('heart_disease')
-        self.assertEqual(self.widget.learners, {})
+        self.assertEqual(self.widget.scorers, {})
+
+        model = self.widget.ranksModel
 
         for fitter, name in ((RandomForestLearner(), 'random forest'),
                              (SGDLearner(), 'sgd')):
             with self.subTest(fitter=fitter):
                 self.send_signal("Scorer", fitter, 1)
 
-                for data, model in ((self.housing, self.widget.contRanksModel),
-                                    (heart_disease, self.widget.discRanksModel)):
+                for data in (self.housing,
+                             heart_disease):
                     with self.subTest(data=data.name):
                         self.send_signal('Data', data)
                         scores = [model.data(model.index(row, model.columnCount() - 1))
@@ -65,14 +71,14 @@ class TestOWRank(WidgetTest):
                         self.assertIn(name, last_column)
 
                 self.send_signal("Scorer", None, 1)
-                self.assertEqual(self.widget.learners, {})
+                self.assertEqual(self.widget.scorers, {})
 
     def test_input_scorer_disconnect(self):
         """Check widget's scorer after disconnecting scorer on the input"""
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
-        self.assertEqual(len(self.widget.learners), 1)
+        self.assertEqual(len(self.widget.scorers), 1)
         self.send_signal(self.widget.Inputs.scorer, None, 1)
-        self.assertEqual(self.widget.learners, {})
+        self.assertEqual(self.widget.scorers, {})
 
     def test_output_data(self):
         """Check data on the output after apply"""
@@ -101,43 +107,37 @@ class TestOWRank(WidgetTest):
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.iris.domain.attributes), 5))
 
-    def test_scoring_method_check_box(self):
+    def test_scoring_method_problem_type(self):
         """Check scoring methods check boxes"""
-        boxes = [self.widget.cls_scoring_box] * 7 + \
-                [self.widget.reg_scoring_box] * 2
-        for check_box, box in zip(self.widget.score_checks, boxes):
-            self.assertEqual(check_box.parent(), box)
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(self.widget.score_stack.currentWidget(), boxes[0])
+        self.assertEqual(self.widget.problem_type_mode, ProblemType.CLASSIFICATION)
+        self.assertEqual(self.widget.measuresStack.currentIndex(), ProblemType.CLASSIFICATION)
+
         self.send_signal(self.widget.Inputs.data, self.housing)
-        self.assertEqual(self.widget.score_stack.currentWidget(), boxes[7])
+        self.assertEqual(self.widget.problem_type_mode, ProblemType.REGRESSION)
+        self.assertEqual(self.widget.measuresStack.currentIndex(), ProblemType.REGRESSION)
+
         data = Table.from_table(Domain(self.iris.domain.variables), self.iris)
         self.send_signal(self.widget.Inputs.data, data)
-        self.assertNotIn(self.widget.score_stack.currentWidget(), boxes)
+        self.assertEqual(self.widget.problem_type_mode, ProblemType.UNSUPERVISED)
+        self.assertEqual(self.widget.measuresStack.currentIndex(), ProblemType.UNSUPERVISED)
 
-    def test_scoring_method_default(self):
-        """Check selected scoring methods with no data on the input"""
+    def test_scoring_method_defaults(self):
+        """Check default scoring methods are selected"""
         self.send_signal(self.widget.Inputs.data, None)
-        check_score = (False, True, True, False, False, False, False, False,
-                       False)
-        for check_box, checked in zip(self.widget.score_checks, check_score):
-            self.assertEqual(check_box.isChecked(), checked)
+        for method in CLS_SCORES:
+            checkbox = self._get_checkbox(method.shortname)
+            self.assertEqual(checkbox.isChecked(), method.is_default)
 
-    def test_scoring_method_classification(self):
-        """Check selected scoring methods with classification data on the input"""
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        check_score = (False, True, True, False, False, False, False, False,
-                       False)
-        for check_box, checked in zip(self.widget.score_checks, check_score):
-            self.assertEqual(check_box.isChecked(), checked)
-
-    def test_scoring_method_regression(self):
-        """Check selected scoring methods with regression data on the input"""
         self.send_signal(self.widget.Inputs.data, self.housing)
-        check_score = (False, False, False, False, False, False, False,
-                       True, True)
-        for check_box, checked in zip(self.widget.score_checks, check_score):
-            self.assertEqual(check_box.isChecked(), checked)
+        for method in REG_SCORES:
+            checkbox = self._get_checkbox(method.shortname)
+            self.assertEqual(checkbox.isChecked(), method.is_default)
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        for method in CLS_SCORES:
+            checkbox = self._get_checkbox(method.shortname)
+            self.assertEqual(checkbox.isChecked(), method.is_default)
 
     def test_cls_scorer_reg_data(self):
         """Check scores on the output with inadequate scorer"""
@@ -155,25 +155,16 @@ class TestOWRank(WidgetTest):
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 7))
 
-    def test_scoring_method_visible(self):
-        """Check which scoring box is visible according to data"""
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(self.widget.score_stack.currentIndex(), 0)
-        self.send_signal(self.widget.Inputs.data, self.housing)
-        self.assertEqual(self.widget.score_stack.currentIndex(), 1)
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(self.widget.score_stack.currentIndex(), 0)
-
     def test_scores_updates_cls(self):
         """Check arbitrary workflow with classification data"""
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 5))
-        self.widget.score_checks[2].setChecked(False)
+        self._get_checkbox('Gini').setChecked(False)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 4))
-        self.widget.score_checks[2].setChecked(True)
+        self._get_checkbox('Gini').setChecked(True)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.attributes), 5))
         self.send_signal(self.widget.Inputs.scorer, self.log_reg, 2)
@@ -195,15 +186,19 @@ class TestOWRank(WidgetTest):
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 3))
-        self.widget.score_checks[-2].setChecked(False)
+
+        self._get_checkbox('Univar. reg.').setChecked(False)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 2))
-        self.widget.score_checks[-2].setChecked(True)
+
+        self._get_checkbox('Univar. reg.').setChecked(True)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 3))
+
         self.send_signal(self.widget.Inputs.scorer, None, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 2))
+
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.housing.domain.attributes), 3))
@@ -214,15 +209,27 @@ class TestOWRank(WidgetTest):
         self.assertIsNone(data.domain.class_var)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNone(self.get_output(self.widget.Outputs.scores))
+
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 1))
+
         self.send_signal(self.widget.Inputs.scorer, self.pca, 1)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 7))
+
         self.send_signal(self.widget.Inputs.scorer, self.lin_reg, 2)
         self.assertEqual(self.get_output(self.widget.Outputs.scores).X.shape,
                          (len(self.iris.domain.variables), 8))
+
+    def test_scores_sorting(self):
+        """Check clicking on header column orders scores in a different way"""
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        order1 = self.widget.ranksModel.mapToSourceRows(...).tolist()
+        self._get_checkbox('FCBF').setChecked(True)
+        self.widget.ranksView.horizontalHeader().setSortIndicator(3, Qt.DescendingOrder)
+        order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
+        self.assertNotEqual(order1, order2)
 
     def test_data_which_make_scorer_nan(self):
         """
@@ -238,12 +245,13 @@ class TestOWRank(WidgetTest):
                 [-np.power(10, 10), 1, 1],
                 [0, 1, 1]
             )))
-        self.widget.score_checks[3].setChecked(True) #ANOVA
+        self.widget.selected_methods.add('ANOVA')
         self.send_signal(self.widget.Inputs.data, table)
 
-    def test_setting_migration_extends_header_state(self):
+    def test_setting_migration_fixes_header_state(self):
         # Settings as of version 3.3.5
         settings = {
+            '__version__': 1,
             'auto_apply': True,
             'headerState': (
                 b'\x00\x00\x00\xff\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00'
@@ -268,4 +276,4 @@ class TestOWRank(WidgetTest):
 
         w = self.create_widget(OWRank, stored_settings=settings)
 
-        self.assertEqual(len(w.headerState), 3)
+        self.assertEqual(w.sorting, (0, Qt.AscendingOrder))

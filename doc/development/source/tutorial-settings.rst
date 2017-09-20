@@ -296,6 +296,13 @@ Imagine opening a complex workflow you have designed a year ago with the
 new version of Orange and finding out that all the settings are back to
 default. Not fun!
 
+.. warning::
+
+   If you change the format of an existing setting in a backwards-incompatible
+   way, you will also want to *change the name* of that setting. Otherwise,
+   older versions of Orange won't be able to load workflows with the new
+   setting format.
+
 There are two helper functions you can use.
 :obj:`Orange.widget.settings.rename_settings(settings, old_name, new_name)`
 does the obvious operation on `settings`, which can be either a dictionary
@@ -304,7 +311,7 @@ or a context, thus it can be called from `migrate_settings` or
 
 Another common operation may be upgrading your widget from storing variable
 names (as `str`) to storing variables (instances of classes derived from
-`Variable`). In a typical scenario, this happenswhen combo boxes are upgraded to
+`Variable`). In a typical scenario, this happens when combo boxes are upgraded to
 using models. Function
 :obj:`Orange.widget.settings.migrate_str_to_variable(settings, names=None)`
 makes the necessary changes to the settings listed in `names`. `names` can be
