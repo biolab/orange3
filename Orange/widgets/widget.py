@@ -521,7 +521,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.raise_()
         self.activateWindow()
 
-    def openContext(self, *a):
+    def openContext(self, *a, **kwargs):
         """Open a new context corresponding to the given data.
 
         The settings handler first checks the stored context for a
@@ -540,7 +540,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         `Orange.data.Domain`.
         """
         self.contextAboutToBeOpened.emit(a)
-        self.settingsHandler.open_context(self, *a)
+        self.settingsHandler.open_context(self, *a, **kwargs)
         self.contextOpened.emit()
 
     def closeContext(self):
