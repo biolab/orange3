@@ -977,7 +977,7 @@ class DomainContextHandler(ContextHandler):
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
-            if 100 <= value[1]:
+            if value[1] >= 100:
                 if domain is None:
                     raise ValueError("Cannot decode variable without domain")
                 return domain[value[0]]
@@ -991,7 +991,7 @@ class DomainContextHandler(ContextHandler):
             return False
 
         attr_name, attr_type = value
-        if 100 <= attr_type:
+        if attr_type >= 100:
             attr_type -= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
