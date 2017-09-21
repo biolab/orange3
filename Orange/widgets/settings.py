@@ -41,6 +41,7 @@ from operator import itemgetter
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.utils import vartype
 
 log = logging.getLogger(__name__)
@@ -868,9 +869,15 @@ class DomainContextHandler(ContextHandler):
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
-    def __init__(self, *, match_values=0):
+    def __init__(self, *, match_values=0, **kwargs):
         super().__init__()
         self.match_values = match_values
+
+        for name in kwargs:
+            warnings.warn(
+                "{} is not a valid parameter for DomainContextHandler"
+                .format(name), OrangeDeprecationWarning
+            )
 
     def encode_domain(self, domain):
         """

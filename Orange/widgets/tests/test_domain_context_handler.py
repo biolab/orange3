@@ -1,7 +1,9 @@
+import warnings
 from unittest import TestCase
 from unittest.mock import Mock
 from Orange.data import Domain, DiscreteVariable
 from Orange.data import ContinuousVariable
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import vartype
 
@@ -243,6 +245,13 @@ class TestDomainContextHandler(TestCase):
         val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)),
                                           all_metas_domain)
         self.assertIs(val, var)
+
+    def test_backward_compatible_params(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            DomainContextHandler(metas_in_res=True)
+            self.assertIn(OrangeDeprecationWarning,
+                          [x.category for x in w])
 
     def create_context(self, domain, values):
         if not domain:
