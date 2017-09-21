@@ -13,3 +13,4 @@ keyring
 keyrings.alt    # for alternative keyring implementations
 dill
 setuptools>=36.3
+serverfiles		# for Data Sets synchronization

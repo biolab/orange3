@@ -23,6 +23,7 @@ Data
    :maxdepth: 1
 
    widgets/data/file
+   widgets/data/datasets
    widgets/data/sqltable
    widgets/data/save
    widgets/data/datainfo

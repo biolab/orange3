@@ -742,7 +742,7 @@ class OWPaintData(OWWidget):
     name = "Paint Data"
     description = "Create data by painting data points on a plane."
     icon = "icons/PaintData.svg"
-    priority = 15
+    priority = 60
     keywords = ["data", "paint", "create"]
 
     class Inputs:
