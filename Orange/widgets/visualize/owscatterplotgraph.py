@@ -467,10 +467,10 @@ _define_symbols()
 
 
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
-    attr_color = ContextSetting(None, ContextSetting.OPTIONAL)
-    attr_label = ContextSetting(None, ContextSetting.OPTIONAL)
-    attr_shape = ContextSetting(None, ContextSetting.OPTIONAL)
-    attr_size = ContextSetting(None, ContextSetting.OPTIONAL)
+    attr_color = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_label = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_shape = ContextSetting(None, required=ContextSetting.OPTIONAL)
+    attr_size = ContextSetting(None, required=ContextSetting.OPTIONAL)
     label_only_selected = Setting(False)
 
     point_width = Setting(10)
