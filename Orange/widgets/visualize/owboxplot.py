@@ -885,10 +885,11 @@ class OWBoxPlot(widget.OWWidget):
         selected, selection = None, []
         if self.conditions:
             selected = Values(self.conditions, conjunction=False)(self.dataset)
-            selection = [i for i, inst in enumerate(self.dataset)
-                         if inst in selected]
+            selection = np.in1d(
+                self.dataset.ids, selected.ids, assume_unique=True).nonzero()[0]
         self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(create_annotated_table(self.dataset, selection))
+        self.Outputs.annotated_data.send(
+            create_annotated_table(self.dataset, selection))
 
     def show_posthoc(self):
         def line(y0, y1):
