@@ -96,3 +96,16 @@ class TestOWBaseLearner(WidgetTest):
         self.assertIn(WidgetA.Inputs.data.name, inputs)
         self.assertIn(WidgetA.Inputs.preprocessor.name, inputs)
         self.assertIn("A", inputs)
+
+    def test_persists_learner_name_in_settings(self):
+        class WidgetA(OWBaseLearner):
+            name = "A"
+            LEARNER = KNNLearner
+
+        w1 = self.create_widget(WidgetA)
+        self.assertEqual(w1.learner_name, "A")
+        w1.learner_name = "MyWidget"
+
+        settings = w1.settingsHandler.pack_data(w1)
+        w2 = self.create_widget(WidgetA, settings)
+        self.assertEqual(w2.learner_name, w1.learner_name)
