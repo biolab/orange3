@@ -28,7 +28,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
 
-        self.handler = SelectAttributesDomainContextHandler(metas_in_res=True)
+        self.handler = SelectAttributesDomainContextHandler()
         self.handler.read_defaults = lambda: None
 
     def test_open_context(self):

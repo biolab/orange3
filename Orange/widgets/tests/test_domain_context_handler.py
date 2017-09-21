@@ -23,13 +23,12 @@ class TestDomainContextHandler(TestCase):
                      {'c1': Continuous, 'd1': Discrete,
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
-        self.handler = DomainContextHandler(metas_in_res=True)
+        self.handler = DomainContextHandler()
         self.handler.read_defaults = lambda: None
 
     def test_encode_domain_with_match_none(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_NONE,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_NONE)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
@@ -40,8 +39,7 @@ class TestDomainContextHandler(TestCase):
 
     def test_encode_domain_with_match_class(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_CLASS,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_CLASS)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
@@ -52,8 +50,7 @@ class TestDomainContextHandler(TestCase):
 
     def test_encode_domain_with_match_all(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_ALL,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_ALL)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 

@@ -158,7 +158,7 @@ class OWTestLearners(OWWidget):
             "Click on the table header to select shown columns",
             "click_header")]
 
-    settingsHandler = settings.PerfectDomainContextHandler(metas_in_res=True)
+    settingsHandler = settings.PerfectDomainContextHandler()
 
     #: Resampling/testing types
     KFold, FeatureFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest \

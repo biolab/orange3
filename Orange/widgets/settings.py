@@ -868,19 +868,9 @@ class DomainContextHandler(ContextHandler):
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
-    def __init__(self, max_vars_to_pickle=100, match_values=0,
-                 reservoir=None, attributes_in_res=True, metas_in_res=False):
+    def __init__(self, *, match_values=0):
         super().__init__()
-        self.max_vars_to_pickle = max_vars_to_pickle
         self.match_values = match_values
-        self.reservoir = reservoir
-        self.attributes_in_res = attributes_in_res
-        self.metas_in_res = metas_in_res
-
-        self.has_ordinary_attributes = True
-        self.has_meta_attributes = True
-
-        self.known_settings = {}
 
     def encode_domain(self, domain):
         """
