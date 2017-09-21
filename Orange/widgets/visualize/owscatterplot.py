@@ -117,6 +117,7 @@ class OWScatterPlot(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
         features = Output("Features", Table, dynamic=False)
 
+    settings_version = 2
     settingsHandler = DomainContextHandler()
 
     auto_send_selection = Setting(True)
@@ -125,7 +126,7 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
-    selection = Setting(None, schema_only=True)
+    selection_group = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
 
@@ -399,10 +400,11 @@ class OWScatterPlot(OWWidget):
 
     def apply_selection(self):
         """Apply selection saved in workflow."""
-        if self.data is not None and self.selection is not None:
+        if self.data is not None and self.selection_group is not None:
             self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
-            self.selection = [x for x in self.selection if x < len(self.data)]
-            self.graph.selection[self.selection] = 1
+            self.selection_group = [x for x in self.selection_group if x[0] < len(self.data)]
+            selection_array = np.array(self.selection_group).T
+            self.graph.selection[selection_array[0]] = selection_array[1]
             self.graph.update_colors(keep_colors=True)
 
     @Inputs.features
@@ -476,8 +478,10 @@ class OWScatterPlot(OWWidget):
         self.Outputs.annotated_data.send(annotated)
 
         # Store current selection in a setting that is stored in workflow
-        if self.selection is not None and len(selection):
-            self.selection = list(selection)
+        if selection is not None and len(selection):
+            self.selection_group = list(zip(selection, graph.selection[selection]))
+        else:
+            self.selection_group = None
 
     def send_features(self):
         features = None
@@ -517,6 +521,11 @@ class OWScatterPlot(OWWidget):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2 and "selection" in settings and settings["selection"]:
+            settings["selection_group"] = [(a, 1) for a in settings["selection"]]
 
 
 def main(argv=None):
