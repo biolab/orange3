@@ -343,6 +343,9 @@ class InteractiveViewBox(ViewBox):
         self.setMouseMode(self.PanMode)
         self.grabGesture(Qt.PinchGesture)
 
+    def _dragtip_pos(self):
+        return 10, self.height()
+
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
         if buttonDownPos[0] == x:
@@ -367,7 +370,7 @@ class InteractiveViewBox(ViewBox):
                     value_rect = self.childGroup.mapRectFromParent(pixel_rect)
                     self.graph.select_by_rectangle(value_rect)
                 else:
-                    dragtip.setPos(10, self.height() + 3)
+                    dragtip.setPos(*self._dragtip_pos())
                     dragtip.show()  # although possibly already shown
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
