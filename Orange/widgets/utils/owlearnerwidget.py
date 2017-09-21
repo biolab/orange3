@@ -67,6 +67,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     LEARNER = None
     supports_sparse = True
 
+    learner_name = Setting(None, schema_only=True)
     want_main_area = False
     resizing_enabled = False
     auto_apply = Setting(True)
@@ -96,7 +97,8 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
         self.data = None
         self.valid_data = False
         self.learner = None
-        self.learner_name = self.name
+        if self.learner_name is None:
+            self.learner_name = self.name
         self.model = None
         self.preprocessors = None
         self.outdated_settings = False
