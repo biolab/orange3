@@ -1,5 +1,6 @@
 import os
 import tempfile
+from warnings import warn
 
 from AnyQt import QtGui, QtCore, QtSvg
 from AnyQt.QtCore import QMimeData
@@ -8,7 +9,15 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.data.io import FileFormat
-from Orange.widgets.utils.webview import WebviewWidget
+
+# Importing WebviewWidget can fail if neither QWebKit (old, deprecated) nor
+# QWebEngine (bleeding-edge, hard to install) are available
+try:
+    from Orange.widgets.utils.webview import WebviewWidget
+except ImportError:
+    warn('WebView from QWebKit or QWebEngine is not available. Orange '
+         'widgets that depend on it will fail to work.')
+    WebviewWidget = None
 
 
 class ImgFormat(FileFormat):

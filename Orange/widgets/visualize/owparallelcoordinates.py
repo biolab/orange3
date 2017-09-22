@@ -93,7 +93,8 @@ class OWParallelCoordinates(OWVisWidget):
                      items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
                      sendSelectedValue=False, valueType=int)
         gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
-                     tooltip="Show bars with distribution of class values (only for discrete attributes)")
+                     tooltip="Show bars with distribution of class values "
+                             "(only for categorical attributes)")
 
     def add_group_settings(self, parent):
         box = gui.vBox(parent, "Groups")

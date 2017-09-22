@@ -13,10 +13,13 @@ import builtins
 import math
 import random
 import logging
+import ast
 
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
+
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
@@ -341,7 +344,7 @@ class OWFeatureConstructor(OWWidget):
     ]
 
     class Error(OWWidget.Error):
-        more_values_needed = Msg("Discrete feature {} needs more values.")
+        more_values_needed = Msg("Categorical feature {} needs more values.")
         invalid_expressions = Msg("Invalid expressions: {}.")
 
     def __init__(self):
@@ -393,18 +396,18 @@ class OWFeatureConstructor(OWWidget):
             return unique_name(fmt, reserved_names())
 
         menu = QMenu(self.addbutton)
-        cont = menu.addAction("Continuous")
+        cont = menu.addAction("Numeric")
         cont.triggered.connect(
             lambda: self.addFeature(
                 ContinuousDescriptor(generate_newname("X{}"), "", 3))
         )
-        disc = menu.addAction("Discrete")
+        disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
                 DiscreteDescriptor(generate_newname("D{}"), "",
                                    ("A", "B"), -1, False))
         )
-        string = menu.addAction("String")
+        string = menu.addAction("Text")
         string.triggered.connect(
             lambda: self.addFeature(
                 StringDescriptor(generate_newname("S{}"), ""))
@@ -618,7 +621,7 @@ class OWFeatureConstructor(OWWidget):
         items = OrderedDict()
         for feature in self.featuremodel:
             if isinstance(feature, DiscreteDescriptor):
-                items[feature.name] = "{} (discrete with values {}{})".format(
+                items[feature.name] = "{} (categorical with values {}{})".format(
                     feature.expression, feature.values,
                     "; ordered" * feature.ordered)
             elif isinstance(feature, ContinuousDescriptor):
@@ -630,7 +633,6 @@ class OWFeatureConstructor(OWWidget):
 
 
 
-import ast
 
 
 def freevars(exp, env):
@@ -883,9 +885,9 @@ __ALLOWED = [
     "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
     "divmod", "enumerate", "filter", "float", "format", "frozenset",
     "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
-    "list", "map", "max", "memoryview", "min", "next", "object",
+    "list", "map", "memoryview", "next", "object",
     "oct", "ord", "pow", "range", "repr", "reversed", "round",
-    "set", "slice", "sorted", "str", "sum", "tuple", "type",
+    "set", "slice", "sorted", "str", "tuple", "type",
     "zip"
 ]
 
@@ -906,8 +908,29 @@ __GLOBALS.update({
     "vonmisesvariate": random.vonmisesvariate,
     "weibullvariate": random.weibullvariate,
     "triangular": random.triangular,
-    "uniform": random.uniform}
-                )
+    "uniform": random.uniform,
+    "nanmean": lambda *args: np.nanmean(args),
+    "nanmin": lambda *args: np.nanmin(args),
+    "nanmax": lambda *args: np.nanmax(args),
+    "nansum": lambda *args: np.nansum(args),
+    "nanstd": lambda *args: np.nanstd(args),
+    "nanmedian": lambda *args: np.nanmedian(args),
+    "nancumsum": lambda *args: np.nancumsum(args),
+    "nancumprod": lambda *args: np.nancumprod(args),
+    "nanargmax": lambda *args: np.nanargmax(args),
+    "nanargmin": lambda *args: np.nanargmin(args),
+    "nanvar": lambda *args: np.nanvar(args),
+    "mean": lambda *args: np.mean(args),
+    "min": lambda *args: np.min(args),
+    "max": lambda *args: np.max(args),
+    "sum": lambda *args: np.sum(args),
+    "std": lambda *args: np.std(args),
+    "median": lambda *args: np.median(args),
+    "cumsum": lambda *args: np.cumsum(args),
+    "cumprod": lambda *args: np.cumprod(args),
+    "argmax": lambda *args: np.argmax(args),
+    "argmin": lambda *args: np.argmin(args),
+    "var": lambda *args: np.var(args)})
 
 
 class FeatureFunc:

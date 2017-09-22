@@ -35,7 +35,7 @@ class VarTableModel(QAbstractTableModel):
     DISCRETE_VALUE_DISPLAY_LIMIT = 20
 
     places = "feature", "target", "meta", "skip"
-    typenames = "nominal", "numeric", "string", "datetime"
+    typenames = "categorical", "numeric", "string", "datetime"
     vartypes = DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
     name2type = dict(zip(typenames, vartypes))
     type2name = dict(zip(vartypes, typenames))
@@ -96,6 +96,13 @@ class VarTableModel(QAbstractTableModel):
             # Settings may change background colors
             self.dataChanged.emit(index.sibling(row, 0), index.sibling(row, 3))
             return True
+
+    def headerData(self, i, orientation, role=Qt.DisplayRole):
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole and i < 4:
+            return ("Name", "Type", "Role", "Values")[i]
+        if role == Qt.TextAlignmentRole:
+            return Qt.AlignLeft
+        return super().headerData(i, orientation, role)
 
     def flags(self, index):
         if index.column() == Column.values:
@@ -181,7 +188,6 @@ class DomainEditor(QTableView):
 
         self.setModel(VarTableModel(self.variables))
         self.setSelectionMode(QTableView.NoSelection)
-        self.horizontalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
         self.setShowGrid(False)
         self.setEditTriggers(
@@ -241,11 +247,14 @@ class DomainEditor(QTableView):
         -------
         (new_domain, [attribute_columns, class_var_columns, meta_columns])
         """
+        # Allow type-checking with type() instead of isinstance() for exact comparison
+        # pylint: disable=unidiomatic-typecheck
+
         variables = self.model().variables
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
 
-        for (name, tpe, place, _, _), (orig_var, orig_plc) in \
+        for (name, tpe, place, _, may_be_numeric), (orig_var, orig_plc) in \
                 zip(variables,
                         chain([(at, Place.feature) for at in domain.attributes],
                               [(cl, Place.class_var) for cl in domain.class_vars],
@@ -255,6 +264,10 @@ class DomainEditor(QTableView):
 
             col_data = self._get_column(data, orig_var, orig_plc)
             is_sparse = sp.issparse(col_data)
+
+            cont_ints = type(orig_var) == ContinuousVariable and \
+                        all(x.is_integer() for x in self._iter_vals(col_data) if not np.isnan(x))
+
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == type(orig_var):
@@ -263,17 +276,30 @@ class DomainEditor(QTableView):
                 var = orig_var
             elif tpe == DiscreteVariable:
                 values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
-                var = tpe(name, values)
                 col_data = [np.nan if self._is_missing(x) else values.index(str(x))
                             for x in self._iter_vals(col_data)]
+                if cont_ints:
+                    values = [str(int(float(v))) for v in values]
+                var = tpe(name, values)
                 col_data = self._to_column(col_data, is_sparse)
-            elif tpe == StringVariable and type(orig_var) == DiscreteVariable:
+            elif tpe == StringVariable:
                 var = tpe(name)
-                col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
-                            for x in self._iter_vals(col_data)]
+                if type(orig_var) == DiscreteVariable:
+                    col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
+                                for x in self._iter_vals(col_data)]
+                elif type(orig_var) == ContinuousVariable:
+                    col_data = [str(int(x)) if cont_ints else orig_var.repr_val(x)
+                                if not np.isnan(x) else ""
+                                for x in self._iter_vals(col_data)]
                 # don't obey sparsity for StringVariable since they are
                 # in metas which are transformed to dense below
                 col_data = self._to_column(col_data, False, dtype=object)
+            elif tpe == ContinuousVariable and type(orig_var) == DiscreteVariable:
+                var = tpe(name)
+                if may_be_numeric:
+                    col_data = [np.nan if self._is_missing(x) else float(orig_var.values[int(x)])
+                                for x in self._iter_vals(col_data)]
+                col_data = self._to_column(col_data, is_sparse)
             else:
                 var = tpe(name)
             places[place].append(var)

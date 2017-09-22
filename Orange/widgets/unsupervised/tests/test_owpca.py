@@ -52,13 +52,22 @@ class TestOWPCA(WidgetTest):
         with self.assertRaises(IndexError):
             self.send_signal(self.widget.Inputs.data, data)
 
-    def test_migrate_settings(self):
+    def test_migrate_settings_limits_components(self):
         settings = dict(ncomponents=10)
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 10)
         settings = dict(ncomponents=101)
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 100)
+
+    def test_migrate_settings_changes_variance_covered_to_int(self):
+        settings = dict(variance_covered=17.5)
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings["variance_covered"], 17)
+
+        settings = dict(variance_covered=float('nan'))
+        OWPCA.migrate_settings(settings, 0)
+        self.assertEqual(settings["variance_covered"], 100)
 
     def test_variance_shown(self):
         data = Table("iris")
@@ -103,3 +112,22 @@ class TestOWPCA(WidgetTest):
         self.assertTrue(all(type(a) is ContinuousVariable   # pylint: disable=unidiomatic-typecheck
                             for a in components.domain.attributes),
                         "Some variables aren't of type ContinuousVariable")
+
+    def test_normalization(self):
+        data = Table("iris.tab")
+        self.widget.ncomponents = 2
+        self.assertTrue(self.widget.normalize)
+        self.widget.set_data(data)
+        varnorm = self.widget.variance_covered
+        self.widget.controls.normalize.toggle()
+        varnonnorm = self.widget.variance_covered
+        # normalized data will have lower covered variance
+        self.assertLess(varnorm, varnonnorm)
+
+    def test_do_not_mask_features(self):
+        # the widget used to replace cached variables when creating the
+        # components output (until 20170726)
+        data = Table("iris.tab")
+        self.widget.set_data(data)
+        ndata = Table("iris.tab")
+        self.assertIs(data.domain[0], ndata.domain[0])

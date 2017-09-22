@@ -161,7 +161,8 @@ class OWConcatenate(widget.OWWidget):
                 domain = reduce(domain_intersection,
                                 (table.domain for table in tables))
 
-        if self.append_source_column:
+        if tables and self.append_source_column:
+            assert domain is not None
             source_var = Orange.data.DiscreteVariable(
                 self.source_attr_name,
                 values=["{}".format(i) for i in range(len(tables))]

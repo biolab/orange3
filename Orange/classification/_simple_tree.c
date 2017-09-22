@@ -61,7 +61,7 @@ enum { IntVar, FloatVar };
 #define QSORT_R_STYLE_GNU
 #define QSORT_R_FUNC(base, nel, size, thunk, compar) \
 	qsort_r(base, nel, size, compar, thunk)
-#elif (defined _MSC_VER)
+#elif (defined _MSC_VER || defined __MINGW32__)
 #define QSORT_R_STYLE_MSVC
 #define QSORT_R_FUNC(base, nel, size, thunk, compar) \
 	qsort_s(base, nel, size, compar, thunk)

@@ -4,6 +4,7 @@ and once used from the bottlechest package (fork of bottleneck).
 
 It also patches bottleneck to contain these functions.
 """
+from warnings import warn
 import numpy as np
 import scipy.sparse as sp
 import bottleneck as bn
@@ -274,11 +275,29 @@ def nanmax(x, axis=None):
 
 def mean(x):
     """ Equivalent of np.mean that supports sparse or dense matrices. """
-    if not sp.issparse(x):
-        return np.mean(x)
+    m = (np.sum(x.data) / np.prod(x.shape)
+         if sp.issparse(x) else
+         np.mean(x))
+    if np.isnan(m):
+        warn('mean() resulted in nan. If input can contain nan values, perhaps '
+             'you meant nanmean?', stacklevel=2)
+    return m
 
-    n_values = np.prod(x.shape)
-    return np.sum(x.data) / n_values
+
+def _apply_func(x, dense_func, sparse_func, axis=None):
+    """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    if not sp.issparse(x):
+        return dense_func(x, axis=axis)
+    if axis is None:
+        return sparse_func(x)
+    if axis in [0, 1]:
+        arr = x if axis == 1 else x.T
+        arr = arr.tocsr()
+        return np.fromiter((sparse_func(row) for row in arr),
+                           dtype=np.double, count=arr.shape[0])
+    else:
+        raise NotImplementedError
+
 
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
@@ -286,16 +305,18 @@ def nanmean(x, axis=None):
         n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
         return np.nansum(x.data) / n_values
 
-    if not sp.issparse(x):
-        return np.nanmean(x, axis=axis)
-    if axis is None:
-        return nanmean_sparse(x)
-    if axis in [0, 1]:
-        arr = x if axis == 1 else x.T
-        arr = arr.tocsr()
-        return np.array([nanmean_sparse(row) for row in arr])
-    else:
-        raise NotImplementedError
+    return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
+
+
+def nanvar(x, axis=None):
+    """ Equivalent of np.nanvar that supports sparse or dense matrices. """
+    def nanvar_sparse(x):
+        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        mean = np.nansum(x.data) / n_values
+        return np.nansum((x.data - mean) ** 2) / n_values
+
+    return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
+
 
 def unique(x, return_counts=False):
     """ Equivalent of np.unique that supports sparse or dense matrices. """
@@ -316,3 +337,76 @@ def unique(x, return_counts=False):
         if explicit_zeros:
             return r
         return np.insert(r, 0, 0)
+
+
+def nanunique(x):
+    """ Return unique values while disregarding missing (np.nan) values.
+    Supports sparse or dense matrices. """
+    r = unique(x)
+    return r[~np.isnan(r)]
+
+
+def digitize(x, bins, right=False):
+    """Equivalent of np.digitize that supports sparse and dense matrices.
+
+    If a sparse matrix is provided and the '0's belong to the '0'th bin, then
+    a sparse matrix is returned.
+
+    Because this can return both sparse and dense matrices, we must keep the
+    return shape consistent. Since sparse matrices don't support 1d matrices,
+    we reshape any returned 1d numpy array to a 2d matrix, with the first
+    dimension shape being 1. This is equivalent to the behaviour of sparse
+    matrices.
+
+    Parameters
+    ----------
+    x : Union[np.ndarry, sp.csr_matrix, sp.csc_matrix]
+    bins : np.ndarray
+    right : Optional[bool]
+
+    Returns
+    -------
+    Union[np.ndarray, sp.csr_matrix]
+
+    """
+    if not sp.issparse(x):
+        # TODO Remove reshaping logic when support for numpy==1.9 is dropped
+        original_shape = x.shape
+        x = x.flatten()
+        result = np.digitize(x, bins, right)
+        result = result.reshape(original_shape)
+        # In order to keep the return shape consistent, and sparse matrices
+        # don't support 1d matrices, make sure to convert 1d to 2d matrices
+        if result.ndim == 1:
+            result = result.reshape(((1,) + result.shape))
+        return result
+
+    # Find the bin where zeros belong, depending on the `right` parameter
+    zero_bin = np.searchsorted(bins, 0, side=['right', 'left'][right])
+
+    if zero_bin == 0:
+        r = sp.lil_matrix(x.shape, dtype=np.int64)
+    else:
+        r = zero_bin * np.ones(x.shape, dtype=np.int64)
+
+    for idx, row in enumerate(x.tocsr()):
+        # TODO Remove this check when support for numpy==1.9 is dropped
+        if row.nnz > 0:
+            r[idx, row.indices] = np.digitize(row.data, bins, right)
+
+    # Orange mainly deals with `csr_matrix`, but `lil_matrix` is more efficient
+    # for incremental building
+    if sp.issparse(r):
+        r = r.tocsr()
+
+    return r
+
+
+def var(x, axis=None):
+    """ Equivalent of np.var that supports sparse and dense matrices. """
+    if not sp.issparse(x):
+        return np.var(x, axis)
+
+    result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
+    result = np.squeeze(np.asarray(result))
+    return result

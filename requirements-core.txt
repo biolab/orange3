@@ -1,3 +1,4 @@
+pip>=9.0
 numpy>=1.9.0
 scipy>=0.16.1
 scikit-learn>=0.18.1
@@ -11,4 +12,5 @@ joblib>=0.9.4
 keyring
 keyrings.alt    # for alternative keyring implementations
 dill
-setuptools>=11.3
+setuptools>=36.3
+serverfiles		# for Data Sets synchronization

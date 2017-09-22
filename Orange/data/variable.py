@@ -452,7 +452,7 @@ class ContinuousVariable(Variable):
     set to 0 to prevent changes by `to_val`.
     """
 
-    TYPE_HEADERS = ('continuous', 'c')
+    TYPE_HEADERS = ('continuous', 'c', 'numeric', 'n')
 
     def __init__(self, name="", number_of_decimals=None, compute_value=None):
         """
@@ -549,7 +549,7 @@ class DiscreteVariable(Variable):
         for regression.
     """
 
-    TYPE_HEADERS = ('discrete', 'd')
+    TYPE_HEADERS = ('discrete', 'd', 'categorical')
 
     _all_vars = collections.defaultdict(list)
     presorted_values = []
@@ -830,6 +830,7 @@ class TimeVariable(ContinuousVariable):
 
     If time is specified wihout an UTC offset, localtime is assumed.
     """
+    _all_vars = {}
     TYPE_HEADERS = ('time', 't')
     UNIX_EPOCH = datetime(1970, 1, 1)
     _ISO_FORMATS = [

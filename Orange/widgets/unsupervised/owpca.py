@@ -257,6 +257,8 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         data = self.data
+        self._pca_projector.preprocessors = \
+            self._pca_preprocessors + ([Normalize()] if self.normalize else [])
         if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
@@ -407,11 +409,6 @@ class OWPCA(widget.OWWidget):
         self._invalidate_selection()
 
     def _update_normalize(self):
-        if self.normalize:
-            pp = self._pca_preprocessors + [Normalize()]
-        else:
-            pp = self._pca_preprocessors
-        self._pca_projector.preprocessors = pp
         self.fit()
         if self.data is None:
             self._invalidate_selection()
@@ -470,7 +467,8 @@ class OWPCA(widget.OWWidget):
                 self.data.domain.metas
             )
             transformed = transformed.from_table(domain, transformed)
-            dom = Domain([ContinuousVariable(a.name)
+            # prevent caching new features by defining compute_value
+            dom = Domain([ContinuousVariable(a.name, compute_value=lambda _: None)
                           for a in self._pca.orig_domain.attributes],
                          metas=[StringVariable(name='component')])
             metas = numpy.array([['PC{}'.format(i + 1)
@@ -508,7 +506,7 @@ class OWPCA(widget.OWWidget):
                 else:
                     vc = 100
                 settings["variance_covered"] = vc
-        if settings["ncomponents"] > MAX_COMPONENTS:
+        if settings.get("ncomponents", 0) > MAX_COMPONENTS:
             settings["ncomponents"] = MAX_COMPONENTS
 
 

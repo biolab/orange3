@@ -2,8 +2,8 @@ import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
 from Orange.classification import Learner, Model
-from Orange.preprocess import (RemoveNaNClasses, Continuize, RemoveNaNColumns,
-                               Impute, Normalize)
+from Orange.data.filter import HasClass
+from Orange.preprocess import Continuize, RemoveNaNColumns, Impute, Normalize
 
 __all__ = ["SoftmaxRegressionLearner"]
 
@@ -40,7 +40,7 @@ class SoftmaxRegressionLearner(Learner):
         Parameters for L-BFGS algorithm.
     """
     name = 'softmax'
-    preprocessors = [RemoveNaNClasses(),
+    preprocessors = [HasClass(),
                      RemoveNaNColumns(),
                      Impute(),
                      Continuize(),

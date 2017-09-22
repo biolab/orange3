@@ -31,6 +31,9 @@ from Orange.data import (
 from Orange.util import Registry, flatten, namegen
 
 
+# Support values longer than 128K (i.e. text contents features)
+csv.field_size_limit(100*1024*1024)
+
 __all__ = ["Flags", "FileFormat"]
 
 
@@ -133,6 +136,27 @@ def guess_data_type(orig_values):
 
 def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                       domain_vars, existing_var, new_var_name, data=None):
+    def reorder_values():
+        new_order, old_order = \
+            var.values, coltype_kwargs.get('values', var.values)
+        if new_order != old_order:
+            offset = len(new_order)
+            column = values if data.ndim > 1 else data
+            column += offset
+            for _, val in enumerate(var.values):
+                try:
+                    oldval = old_order.index(val)
+                except ValueError:
+                    continue
+                bn.replace(column, offset + oldval, new_order.index(val))
+
+    def get_number_of_decimals():
+        ndecimals = max((len(value) - value.find(".")
+                         for value in orig_values
+                         if isinstance(value, str) and "." in value),
+                        default=1)
+        return ndecimals - 1
+
     if valuemap:
         # Map discrete data to ints
         def valuemap_index(val):
@@ -156,20 +180,20 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
             # Never use existing for un-named variables
             var = coltype(new_var_name, **coltype_kwargs)
 
-        # Reorder discrete values to match existing variable
         if var.is_discrete and not var.ordered:
-            new_order, old_order = var.values, coltype_kwargs.get('values',
-                                                                  var.values)
-            if new_order != old_order:
-                offset = len(new_order)
-                column = values if data.ndim > 1 else data
-                column += offset
-                for _, val in enumerate(var.values):
-                    try:
-                        oldval = old_order.index(val)
-                    except ValueError:
-                        continue
-                    bn.replace(column, offset + oldval, new_order.index(val))
+            # Reorder discrete values to match existing variable
+            reorder_values()
+
+    # ContinuousVariable.number_of_decimals is supposed to be handled by
+    # ContinuousVariable.to_val. In the interest of speed, the reader bypasses
+    # it, so we set the number of decimals here.
+    # The number of decimals is increased if not set manually (in which case
+    # var.adjust_decimals would be 0).
+    if isinstance(var, ContinuousVariable) and var.adjust_decimals:
+        ndecimals = get_number_of_decimals()
+        if var.adjust_decimals == 2 or ndecimals > var.number_of_decimals:
+            var.number_of_decimals = ndecimals
+            var.adjust_decimals = 1
 
     if isinstance(var, TimeVariable) or coltype is TimeVariable:
         # Re-parse the values because only now after coltype.make call
@@ -923,6 +947,12 @@ class DotReader(FileFormat):
 
 
 class UrlReader(FileFormat):
+    def __init__(self, filename):
+        filename = filename.strip()
+        if not urlparse(filename).scheme:
+            filename = 'http://' + filename
+        super().__init__(filename)
+
     @staticmethod
     def urlopen(url):
         req = Request(

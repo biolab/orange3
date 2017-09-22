@@ -15,8 +15,8 @@ from xml.sax.saxutils import escape
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsObject
 from AnyQt.QtGui import QPainter, QBrush, QColor, QFont
 from AnyQt.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, \
-                         QEvent, QObject, QSignalMapper
-
+                         QEvent, QObject, QSignalMapper, QT_VERSION
+from AnyQt.QtSvg import QSvgGenerator
 from AnyQt.QtCore import pyqtSignal as Signal
 try:
     from AnyQt.QtCore import PYQT_VERSION
@@ -902,6 +902,17 @@ def font_from_dict(font_dict, font=None):
     return font
 
 
+if QT_VERSION >= 0x50900 and \
+      QSvgGenerator().metric(QSvgGenerator.PdmDevicePixelRatioScaled) == 1:
+    # QTBUG-63159
+    class QSvgGenerator(QSvgGenerator):
+        def metric(self, metric):
+            if metric == QSvgGenerator.PdmDevicePixelRatioScaled:
+                return int(1 * QSvgGenerator.devicePixelRatioFScale())
+            else:
+                return super().metric(metric)
+
+
 def grab_svg(scene):
     """
     Return a SVG rendering of the scene contents.
@@ -911,7 +922,6 @@ def grab_svg(scene):
     scene : :class:`CanvasScene`
 
     """
-    from AnyQt.QtSvg import QSvgGenerator
     svg_buffer = QBuffer()
     gen = QSvgGenerator()
     gen.setOutputDevice(svg_buffer)

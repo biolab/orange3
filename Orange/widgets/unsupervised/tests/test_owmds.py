@@ -29,6 +29,10 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
             }
         )  # type: OWMDS
 
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
+
     def _select_data(self):
         random.seed(42)
         points = random.sample(range(0, len(self.data)), 20)
@@ -37,8 +41,8 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         return sorted(points)
 
     def test_pca_init(self):
-        self.send_signal(self.signal_name, self.signal_data, wait=1000)
-        output = self.get_output(self.widget.Outputs.annotated_data)
+        self.send_signal(self.signal_name, self.signal_data)
+        output = self.get_output(self.widget.Outputs.annotated_data, wait=1000)
         expected = np.array(
             [[-2.69304803, 0.32676458],
              [-2.7246721, -0.20921726],
@@ -49,7 +53,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
     def test_nan_plot(self):
         data = datasets.missing_data_1()
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, data, wait=1000)
 
         simulate.combobox_run_through_all(self.widget.cb_color_value)
         simulate.combobox_run_through_all(self.widget.cb_color_value)
@@ -63,7 +67,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         data.Y[:] = np.nan
         data.metas[:, 1] = np.nan
 
-        self.send_signal("Data", data)
+        self.send_signal("Data", data, wait=1000)
 
         simulate.combobox_run_through_all(self.widget.cb_color_value)
         simulate.combobox_run_through_all(self.widget.cb_shape_value)

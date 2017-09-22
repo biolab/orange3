@@ -2,10 +2,8 @@ import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtGui import (
-    QPen, QFont, QFontInfo, QPalette, QKeySequence,
-)
-from AnyQt.QtWidgets import QApplication, QAction
+from AnyQt.QtGui import QPen, QFont, QFontInfo, QPalette
+from AnyQt.QtWidgets import QApplication
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
@@ -25,7 +23,7 @@ from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME,
-                                                 get_next_name)
+                                                 create_groups_table)
 
 
 def font_resize(font, factor, minsize=None, maxsize=None):
@@ -119,6 +117,7 @@ class OWScatterPlot(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
         features = Output("Features", Table, dynamic=False)
 
+    settings_version = 2
     settingsHandler = DomainContextHandler()
 
     auto_send_selection = Setting(True)
@@ -127,7 +126,7 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
-    selection = Setting(None, schema_only=True)
+    selection_group = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
 
@@ -181,49 +180,28 @@ class OWScatterPlot(OWWidget):
 
         gui.separator(box)
 
-        gui.valueSlider(
-            box, self, value='graph.jitter_size', label='Jittering: ',
-            values=self.jitter_sizes, callback=self.reset_graph_data,
-            labelFormat=lambda x:
-            "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
-        gui.checkBox(
-            gui.indentedBox(box), self, 'graph.jitter_continuous',
-            'Jitter continuous values', callback=self.reset_graph_data)
+        g = self.graph.gui
+        g.add_widgets([g.JitterSizeSlider,
+                       g.JitterNumericValues], box)
 
         self.sampling = gui.auto_commit(
             self.controlArea, self, "auto_sample", "Sample", box="Sampling",
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        g = self.graph.gui
         g.point_properties_box(self.controlArea)
         self.models = [self.xy_model] + g.points_models
 
-        box = gui.vBox(self.controlArea, "Plot Properties")
-        g.add_widgets([g.ShowLegend, g.ShowGridLines], box)
-        gui.checkBox(
-            box, self, value='graph.tooltip_shows_all',
-            label='Show all data on mouse hover')
-        self.cb_class_density = gui.checkBox(
-            box, self, value='graph.class_density', label='Show class density',
-            callback=self.update_density)
-        self.cb_reg_line = gui.checkBox(
-            box, self, value='graph.show_reg_line',
-            label='Show regression line', callback=self.update_regression_line)
-        gui.checkBox(
-            box, self, 'graph.label_only_selected',
-            'Label only selected points', callback=self.graph.update_labels)
+        box_plot_prop = gui.vBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend,
+                       g.ShowGridLines,
+                       g.ToolTipShowsAll,
+                       g.ClassDensity,
+                       g.RegressionLine,
+                       g.LabelOnlySelected], box_plot_prop)
 
-        self.zoom_select_toolbar = g.zoom_select_toolbar(
-            gui.vBox(self.controlArea, "Zoom/Select"), nomargin=True,
-            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
-                     g.StateButtonsEnd, g.ZoomReset]
-        )
-        buttons = self.zoom_select_toolbar.buttons
-        buttons[g.Zoom].clicked.connect(self.graph.zoom_button_clicked)
-        buttons[g.Pan].clicked.connect(self.graph.pan_button_clicked)
-        buttons[g.SimpleSelect].clicked.connect(self.graph.select_button_clicked)
-        buttons[g.ZoomReset].clicked.connect(self.graph.reset_button_clicked)
+        self.graph.box_zoom_select(self.controlArea)
+
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
@@ -233,31 +211,7 @@ class OWScatterPlot(OWWidget):
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection", "Send Automatically")
 
-        def zoom(s):
-            """Zoom in/out by factor `s`."""
-            viewbox = plot.getViewBox()
-            # scaleBy scales the view's bounds (the axis range)
-            viewbox.scaleBy((1 / s, 1 / s))
-
-        def fit_to_view():
-            viewbox = plot.getViewBox()
-            viewbox.autoRange()
-
-        zoom_in = QAction(
-            "Zoom in", self, triggered=lambda: zoom(1.25)
-        )
-        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
-                              QKeySequence(self.tr("Ctrl+="))])
-        zoom_out = QAction(
-            "Zoom out", self, shortcut=QKeySequence.ZoomOut,
-            triggered=lambda: zoom(1 / 1.25)
-        )
-        zoom_fit = QAction(
-            "Fit in view", self,
-            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
-            triggered=fit_to_view
-        )
-        self.addActions([zoom_in, zoom_out, zoom_fit])
+        self.graph.zoom_actions(self)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -446,10 +400,11 @@ class OWScatterPlot(OWWidget):
 
     def apply_selection(self):
         """Apply selection saved in workflow."""
-        if self.data is not None and self.selection is not None:
+        if self.data is not None and self.selection_group is not None:
             self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
-            self.selection = [x for x in self.selection if x < len(self.data)]
-            self.graph.selection[self.selection] = 1
+            self.selection_group = [x for x in self.selection_group if x[0] < len(self.data)]
+            selection_array = np.array(self.selection_group).T
+            self.graph.selection[selection_array[0]] = selection_array[1]
             self.graph.update_colors(keep_colors=True)
 
     @Inputs.features
@@ -504,24 +459,6 @@ class OWScatterPlot(OWWidget):
     def selection_changed(self):
         self.send_data()
 
-    @staticmethod
-    def create_groups_table(data, selection):
-        if data is None:
-            return None
-        names = [var.name for var in data.domain.variables + data.domain.metas]
-        name = get_next_name(names, "Selection group")
-        metas = data.domain.metas + (
-            DiscreteVariable(
-                name,
-                ["Unselected"] + ["G{}".format(i + 1)
-                                  for i in range(np.max(selection))]),
-        )
-        domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        table = data.transform(domain)
-        table.metas[:, len(data.domain.metas):] = \
-            selection.reshape(len(data), 1)
-        return table
-
     def send_data(self):
         selected = None
         selection = None
@@ -534,15 +471,17 @@ class OWScatterPlot(OWWidget):
             if len(selection) > 0:
                 selected = self.data[selection]
         if graph.selection is not None and np.max(graph.selection) > 1:
-            annotated = self.create_groups_table(self.data, graph.selection)
+            annotated = create_groups_table(self.data, graph.selection)
         else:
             annotated = create_annotated_table(self.data, selection)
         self.Outputs.selected_data.send(selected)
         self.Outputs.annotated_data.send(annotated)
 
         # Store current selection in a setting that is stored in workflow
-        if self.selection is not None and len(selection):
-            self.selection = list(selection)
+        if selection is not None and len(selection):
+            self.selection_group = list(zip(selection, graph.selection[selection]))
+        else:
+            self.selection_group = None
 
     def send_features(self):
         features = None
@@ -578,16 +517,15 @@ class OWScatterPlot(OWWidget):
         if caption:
             self.report_caption(caption)
 
-    def closeContext(self):
-        if self.current_context is not None:
-            # When dataset changes, forget selection
-            self.selection = None
-        super().closeContext()
-
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2 and "selection" in settings and settings["selection"]:
+            settings["selection_group"] = [(a, 1) for a in settings["selection"]]
 
 
 def main(argv=None):

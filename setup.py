@@ -19,7 +19,7 @@ from distutils.command.build_ext import build_ext
 
 NAME = 'Orange3'
 
-VERSION = '3.5.0'
+VERSION = '3.6.0'
 ISRELEASED = False
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -67,6 +67,10 @@ INSTALL_REQUIRES = sorted(set(
 ) - {''})
 
 
+EXTRAS_REQUIRE = {
+    ':python_version<="3.4"': ["typing"],
+}
+
 ENTRY_POINTS = {
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
@@ -76,6 +80,10 @@ ENTRY_POINTS = {
     ),
 }
 
+
+EXTRAS_REQUIRE = {
+    ':python_version<="3.4"': ["typing"],
+}
 
 # Return the git revision as a string
 def git_version():
@@ -268,6 +276,7 @@ def setup_package():
         packages=PACKAGES,
         package_data=PACKAGE_DATA,
         install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.suite',

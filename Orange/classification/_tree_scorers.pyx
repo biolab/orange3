@@ -416,3 +416,92 @@ def compute_predictions(double[:, :] X, int[:] code,
             for j in range(values.shape[1]):
                 predictions[i, j] = values[node_idx, j]
     return np.asarray(predictions)
+
+
+def compute_predictions_csr(X, int[:] code,
+                               double[:, :] values, double[:] thresholds):
+    """
+    Same as compute_predictions except for sparse data
+    """
+    cdef:
+        unsigned int node_ptr, i, j, val_idx
+        signed int next_node_ptr, node_idx
+        np.float64_t val
+        double[: ,:] predictions = np.empty(
+            (X.shape[0], values.shape[1]), dtype=np.float64)
+
+        double[:] data = X.data
+        np.int32_t[:] indptr = X.indptr
+        np.int32_t[:] indices = X.indices
+        int ind, attr, n_rows
+
+    n_rows = X.shape[0]
+
+    with nogil:
+        for i in range(n_rows):
+            node_ptr = 0
+            while code[node_ptr]:
+                attr = code[node_ptr + 2]
+                ind = indptr[i]
+                while ind < indptr[i + 1] and indices[ind] != attr:
+                    ind += 1
+                val = data[ind] if ind < indptr[i + 1] else 0
+                if npy_isnan(val):
+                    break
+                if code[node_ptr] == 3:
+                    node_idx = code[node_ptr + 1]
+                    val_idx = int(val > thresholds[node_idx])
+                else:
+                    val_idx = int(val)
+                next_node_ptr = code[node_ptr + 3 + val_idx]
+                if next_node_ptr == NULL_BRANCH:
+                    break
+                node_ptr = next_node_ptr
+            node_idx = code[node_ptr + 1]
+            for j in range(values.shape[1]):
+                predictions[i, j] = values[node_idx, j]
+    return np.asarray(predictions)
+
+def compute_predictions_csc(X, int[:] code,
+                               double[:, :] values, double[:] thresholds):
+    """
+    Same as compute_predictions except for sparse data
+    """
+    cdef:
+        unsigned int node_ptr, i, j, val_idx
+        signed int next_node_ptr, node_idx
+        np.float64_t val
+        double[: ,:] predictions = np.empty(
+            (X.shape[0], values.shape[1]), dtype=np.float64)
+
+        double[:] data = X.data
+        np.int32_t[:] indptr = X.indptr
+        np.int32_t[:] indices = X.indices
+        int ind, attr, n_rows
+
+    n_rows = X.shape[0]
+
+    with nogil:
+        for i in range(n_rows):
+            node_ptr = 0
+            while code[node_ptr]:
+                attr = code[node_ptr + 2]
+                ind = indptr[attr]
+                while ind < indptr[attr + 1] and indices[ind] != i:
+                    ind += 1
+                val = data[ind] if ind < indptr[attr + 1] else 0
+                if npy_isnan(val):
+                    break
+                if code[node_ptr] == 3:
+                    node_idx = code[node_ptr + 1]
+                    val_idx = int(val > thresholds[node_idx])
+                else:
+                    val_idx = int(val)
+                next_node_ptr = code[node_ptr + 3 + val_idx]
+                if next_node_ptr == NULL_BRANCH:
+                    break
+                node_ptr = next_node_ptr
+            node_idx = code[node_ptr + 1]
+            for j in range(values.shape[1]):
+                predictions[i, j] = values[node_idx, j]
+    return np.asarray(predictions)

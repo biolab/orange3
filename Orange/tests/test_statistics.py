@@ -1,11 +1,13 @@
 import unittest
 import warnings
+from itertools import chain
+
 import numpy as np
 import scipy as sp
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, issparse
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, mean, nanmean
+    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
 
 
 class TestUtil(unittest.TestCase):
@@ -145,6 +147,13 @@ class TestUtil(unittest.TestCase):
             unique(x2, return_counts=True),
         )
 
+    def test_nanunique(self):
+        x = csr_matrix(np.array([0, 1, 1, np.nan]))
+        np.testing.assert_array_equal(
+            nanunique(x),
+            np.array([0, 1])
+        )
+
     def test_mean(self):
         for X in self.data:
             X_sparse = csr_matrix(X)
@@ -152,9 +161,83 @@ class TestUtil(unittest.TestCase):
                 mean(X_sparse),
                 np.mean(X))
 
+        with self.assertWarns(UserWarning):
+            mean([1, np.nan, 0])
+
     def test_nanmean(self):
         for X in self.data:
             X_sparse = csr_matrix(X)
             np.testing.assert_array_equal(
                 nanmean(X_sparse),
                 np.nanmean(X))
+
+    def test_digitize(self):
+        for x in self.data:
+            x_sparse = csr_matrix(x)
+            bins = np.arange(-2, 2)
+
+            x_shape = x.shape
+            np.testing.assert_array_equal(
+                np.digitize(x.flatten(), bins).reshape(x_shape),
+                digitize(x, bins),
+                'Digitize fails on dense data'
+            )
+            np.testing.assert_array_equal(
+                np.digitize(x.flatten(), bins).reshape(x_shape),
+                digitize(x_sparse, bins),
+                'Digitize fails on sparse data'
+            )
+
+    def test_digitize_right(self):
+        for x in self.data:
+            x_sparse = csr_matrix(x)
+            bins = np.arange(-2, 2)
+
+            x_shape = x.shape
+            np.testing.assert_array_equal(
+                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
+                digitize(x, bins, right=True),
+                'Digitize fails on dense data'
+            )
+            np.testing.assert_array_equal(
+                np.digitize(x.flatten(), bins, right=True).reshape(x_shape),
+                digitize(x_sparse, bins, right=True),
+                'Digitize fails on sparse data'
+            )
+
+    def test_digitize_1d_array(self):
+        """A consistent return shape must be returned for both sparse and dense."""
+        x = np.array([0, 1, 1, 0, np.nan, 0, 1])
+        x_sparse = csr_matrix(x)
+        bins = np.arange(-2, 2)
+
+        x_shape = x.shape
+        np.testing.assert_array_equal(
+            [np.digitize(x.flatten(), bins).reshape(x_shape)],
+            digitize(x, bins),
+            'Digitize fails on 1d dense data'
+        )
+        np.testing.assert_array_equal(
+            [np.digitize(x.flatten(), bins).reshape(x_shape)],
+            digitize(x_sparse, bins),
+            'Digitize fails on 1d sparse data'
+        )
+
+    def test_digitize_sparse_zeroth_bin(self):
+        # Setup the data so that the '0's will fit into the '0'th bin.
+        data = csr_matrix([
+            [0, 0, 0, 1, 1, 0, 0, 1, 0],
+            [0, 0, 1, 1, 0, 0, 1, 0, 0],
+        ])
+        bins = np.array([1])
+        # Then digitize should return a sparse matrix
+        self.assertTrue(issparse(digitize(data, bins)))
+
+    def test_var(self):
+        for data in self.data:
+            for axis in chain((None,), range(len(data.shape))):
+                # Can't use array_equal here due to differences on 1e-16 level
+                np.testing.assert_array_almost_equal(
+                    var(csr_matrix(data), axis=axis),
+                    np.var(data, axis=axis)
+                )

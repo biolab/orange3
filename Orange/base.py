@@ -8,10 +8,10 @@ import numpy as np
 import scipy
 
 from Orange.data import Table, Storage, Instance, Value
+from Orange.data.filter import HasClass
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.preprocess import (RemoveNaNClasses, Continuize,
-                               RemoveNaNColumns, SklImpute, Normalize)
+from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
 from Orange.util import Reprable
 
 __all__ = ["Learner", "Model", "SklLearner", "SklModel"]
@@ -341,7 +341,7 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     _params = {}
 
     preprocessors = default_preprocessors = [
-        RemoveNaNClasses(),
+        HasClass(),
         Continuize(),
         RemoveNaNColumns(),
         SklImpute()]

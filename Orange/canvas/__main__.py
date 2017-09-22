@@ -46,6 +46,10 @@ log = logging.getLogger(__name__)
 import signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+# Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
+import pyqtgraph
+pyqtgraph.setConfigOption("exitCleanup", False)
+
 
 def fix_osx_10_9_private_font():
     # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
@@ -125,7 +129,7 @@ def check_for_updates():
     if check_updates and time.time() - last_check_time > ONE_DAY:
         settings.setValue('startup/last-update-check-time', int(time.time()))
 
-        from urllib.request import urlopen
+        from urllib.request import urlopen, Request
         from Orange.version import version as current
 
         class GetLatestVersion(QThread):
@@ -133,10 +137,28 @@ def check_for_updates():
 
             def run(self):
                 try:
-                    self.resultReady.emit(
-                        urlopen('https://orange.biolab.si/version/', timeout=10).read().decode())
-                except OSError:
+                    request = Request('https://orange.biolab.si/version/',
+                                      headers={
+                                          'Accept': 'text/plain',
+                                          'Accept-Encoding': 'gzip, deflate',
+                                          'Connection': 'close',
+                                          'User-Agent': self.ua_string()})
+                    contents = urlopen(request, timeout=10).read().decode()
+                # Nothing that this fails with should make Orange crash
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to check for updates')
+                else:
+                    self.resultReady.emit(contents)
+
+            @staticmethod
+            def ua_string():
+                is_anaconda = 'Continuum' in sys.version or 'conda' in sys.version
+                return 'Orange{orange_version}:Python{py_version}:{platform}:{conda}'.format(
+                    orange_version=current,
+                    py_version='.'.join(sys.version[:3]),
+                    platform=sys.platform,
+                    conda='Anaconda' if is_anaconda else '',
+                )
 
         def compare_versions(latest):
             version = pkg_resources.parse_version

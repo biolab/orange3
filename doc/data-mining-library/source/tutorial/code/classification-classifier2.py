@@ -1,7 +1,8 @@
 import Orange
 
 data = Orange.data.Table("voting")
-classifier = Orange.classification.LogisticRegressionLearner(data)
+learner = Orange.classification.LogisticRegressionLearner()
+classifier = learner(data)
 target_class = 1
 print("Probabilities for %s:" % data.domain.class_var.values[target_class])
 probabilities = classifier(data, 1)

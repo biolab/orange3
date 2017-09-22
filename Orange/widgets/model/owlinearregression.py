@@ -25,7 +25,7 @@ class OWLinearRegression(OWBaseLearner):
 
     LEARNER = LinearRegressionLearner
 
-    class Outputs:
+    class Outputs(OWBaseLearner.Outputs):
         coefficients = Output("Coefficients", Table, explicit=True)
 
     #: Types

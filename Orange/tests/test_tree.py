@@ -2,17 +2,18 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import sklearn.tree as skl_tree
 from sklearn.tree._tree import TREE_LEAF
 
 from Orange.data import Table
-from Orange.classification import SklTreeLearner
+from Orange.classification import SklTreeLearner, TreeLearner
 from Orange.regression import SklTreeRegressionLearner
 
 
-class TestTreeLearner(unittest.TestCase):
+class TestSklTreeLearner(unittest.TestCase):
     def test_classification(self):
         table = Table('iris')
         learn = SklTreeLearner()
@@ -26,6 +27,16 @@ class TestTreeLearner(unittest.TestCase):
         model = learn(table)
         pred = model(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
+
+
+class TestTreeLearner(unittest.TestCase):
+    def test_uses_preprocessors(self):
+        iris = Table('iris')
+        mock_preprocessor = Mock(return_value=iris)
+
+        tree = TreeLearner(preprocessors=[mock_preprocessor])
+        tree(iris)
+        mock_preprocessor.assert_called_with(iris)
 
 
 class TestDecisionTreeClassifier(unittest.TestCase):

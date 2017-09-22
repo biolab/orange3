@@ -4,6 +4,7 @@ import random
 import numpy as np
 
 from Orange.data import Table
+from Orange.widgets.settings import Context
 from Orange.widgets.visualize.owlinearprojection import OWLinearProjection
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.tests.utils import EventSpy, excepthook_catch, simulate
@@ -79,3 +80,39 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.widget.controls.attr_shape.model()), 3)
         self.assertEqual(len(self.widget.controls.attr_size.model()), 6)
         self.assertEqual(len(self.widget.controls.attr_label.model()), 8)
+
+    def test_migrate_settings_from_version_1(self):
+        # Settings from Orange 3.4.0
+        settings = {
+            '__version__': 1,
+            'alpha_value': 255,
+            'auto_commit': True,
+            'class_density': False,
+            'context_settings': [
+                Context(attributes={'iris': 1,
+                                    'petal length': 2, 'petal width': 2,
+                                    'sepal length': 2, 'sepal width': 2},
+                        metas={},
+                        ordered_domain=[('sepal length', 2),
+                                        ('sepal width', 2),
+                                        ('petal length', 2),
+                                        ('petal width', 2),
+                                        ('iris', 1)],
+                        time=1504865133.098991,
+                        values={'__version__': 1,
+                                'color_index': (5, -2),
+                                'shape_index': (1, -2),
+                                'size_index': (1, -2),
+                                'variable_state': ({}, -2)})],
+            'jitter_value': 0,
+            'legend_anchor': ((1, 0), (1, 0)),
+            'point_size': 8,
+            'savedWidgetGeometry': None
+        }
+        w = self.create_widget(OWLinearProjection, stored_settings=settings)
+        iris = Table("iris")
+        self.send_signal(w.Inputs.data, iris, widget=w)
+        self.assertEqual(w.point_width, 8)
+        self.assertEqual(w.attr_color, iris.domain["iris"])
+        self.assertEqual(w.attr_shape, iris.domain["iris"])
+        self.assertEqual(w.attr_size, iris.domain["sepal length"])

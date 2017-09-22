@@ -144,9 +144,9 @@ class OWDistributions(widget.OWWidget):
 
         self.cb_disc_cont = gui.checkBox(
             gui.indentedBox(box, sep=4),
-            self, "disc_cont", "Bin continuous variables",
+            self, "disc_cont", "Bin numeric variables",
             callback=self._on_groupvar_idx_changed,
-            tooltip="Show continuous variables as discrete.")
+            tooltip="Show numeric variables as categorical.")
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
@@ -220,6 +220,8 @@ class OWDistributions(widget.OWWidget):
         self.clear()
         self.warning()
         self.data = data
+        self.distributions = None
+        self.contingencies = None
         if self.data is not None:
             if not self.data:
                 self.warning("Empty input data cannot be visualized")
@@ -260,11 +262,11 @@ class OWDistributions(widget.OWWidget):
 
     def _setup_smoothing(self):
         if not self.disc_cont and self.var and self.var.is_continuous:
-            self.cb_disc_cont.setText("Bin continuous variables")
+            self.cb_disc_cont.setText("Bin numeric variables")
             self.l_smoothing_l.setText("Smooth")
             self.l_smoothing_r.setText("Precise")
         else:
-            self.cb_disc_cont.setText("Bin continuous variables into {} bins".
+            self.cb_disc_cont.setText("Bin numeric variables into {} bins".
                                       format(self.bins[self.smoothing_index]))
             self.l_smoothing_l.setText(" " + str(self.bins[0]))
             self.l_smoothing_r.setText(" " + str(self.bins[-1]))
@@ -332,7 +334,7 @@ class OWDistributions(widget.OWWidget):
     def display_distribution(self):
         dist = self.distributions
         var = self.var
-        if not len(dist):
+        if dist is None or not len(dist):
             return
         self.plot.clear()
         self.plot_prob.clear()
@@ -371,8 +373,6 @@ class OWDistributions(widget.OWWidget):
                 self.tooltip_items.append((self.plot, item))
 
     def _on_relative_freq_changed(self):
-        if not self.distributions:
-            return
         self.set_left_axis_name()
         if self.cvar and self.cvar.is_discrete:
             self.display_contingency()
@@ -386,7 +386,7 @@ class OWDistributions(widget.OWWidget):
         """
         cont = self.contingencies
         var, cvar = self.var, self.cvar
-        if not len(cont):
+        if cont is None or not len(cont):
             return
         self.plot.clear()
         self.plot_prob.clear()

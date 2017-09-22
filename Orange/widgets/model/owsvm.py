@@ -8,6 +8,7 @@ from Orange.modelling import SVMLearner, NuSVMLearner
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.signals import Output
 
 
 class OWSVM(OWBaseLearner):
@@ -23,7 +24,8 @@ class OWSVM(OWBaseLearner):
 
     LEARNER = SVMLearner
 
-    outputs = [("Support vectors", Table, widget.Explicit)]
+    class Outputs(OWBaseLearner.Outputs):
+        support_vectors = Output("Support vectors", Table, explicit=True)
 
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
@@ -186,7 +188,7 @@ class OWSVM(OWBaseLearner):
         sv = None
         if self.model is not None:
             sv = self.data[self.model.skl_model.support_]
-        self.send("Support vectors", sv)
+        self.Outputs.support_vectors.send(sv)
 
     def _on_kernel_changed(self):
         self._show_right_kernel()

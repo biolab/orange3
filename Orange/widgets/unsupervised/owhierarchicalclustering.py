@@ -4,6 +4,7 @@ import sys
 from collections import namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
+from typing import List, Tuple, Dict, Optional  # pylint: disable=unused-import
 
 import numpy as np
 
@@ -43,6 +44,7 @@ LINKAGE = ["Single", "Average", "Weighted", "Complete", "Ward"]
 
 
 def dendrogram_layout(tree, expand_leaves=False):
+    # type: (Tree, bool) -> List[Tuple[Tree, Tuple[float, float, float]]]
     coords = []
     cluster_geometry = {}
     leaf_idx = 0
@@ -190,25 +192,43 @@ class DendrogramWidget(QGraphicsWidget):
     """A Graphics Widget displaying a dendrogram."""
 
     class ClusterGraphicsItem(QGraphicsPathItem):
-        _rect = None
+        #: An extended path describing the full mouse hit area
+        #: (extends all the way to the base of the dendrogram)
+        mouseAreaShape = QPainterPath()  # type: QPainterPath
+        #: The untransformed source path in 'dendrogram' logical coordinate
+        #: system
+        sourcePath = QPainterPath()  # type: QPainterPath
+        sourceAreaShape = QPainterPath()  # type: QPainterPath
+
+        __shape = None  # type: Optional[QPainterPath]
+        __boundingRect = None  # type: Optional[QRectF]
+
+        def setGeometryData(self, path, hitArea):
+            # type: (QPainterPath, QPainterPath) -> None
+            """
+            Set the geometry (path) and the mouse hit area (hitArea) for this
+            item.
+            """
+            self.__boundingRect = self.__shape = None
+            super().setPath(path)
+            assert self.__boundingRect is None, "setPath -> boundingRect"
+            assert self.__shape is None, "setPath -> shape"
+            self.mouseAreaShape = hitArea
 
         def shape(self):
-            if self._rect is not None:
-                p = QPainterPath()
-                p.addRect(self.boundingRect())
-                return p
-            else:
-                return super().shape()
-
-        def setRect(self, rect):
-            self.prepareGeometryChange()
-            self._rect = QRectF(rect)
+            # type: () -> QPainterPath
+            if self.__shape is None:
+                path = super().shape()  # type: QPainterPath
+                self.__shape = path.united(self.mouseAreaShape)
+            return self.__shape
 
         def boundingRect(self):
-            if self._rect is not None:
-                return QRectF(self._rect)
-            else:
-                return super().boundingRect()
+            # type: () -> QRectF
+            if self.__boundingRect is None:
+                sh = self.shape()
+                pw = self.pen().widthF() / 2.0
+                self.__boundingRect = sh.boundingRect().adjusted(-pw, -pw, pw, pw)
+            return self.__boundingRect
 
     #: Orientation
     Left, Top, Right, Bottom = 1, 2, 3, 4
@@ -222,24 +242,32 @@ class DendrogramWidget(QGraphicsWidget):
     selectionEdited = Signal()
 
     def __init__(self, parent=None, root=None, orientation=Left,
-                 hoverHighlightEnabled=True, selectionMode=ExtendedSelection):
+                 hoverHighlightEnabled=True, selectionMode=ExtendedSelection,
+                 **kwargs):
 
-        QGraphicsWidget.__init__(self, parent)
+        super().__init__(None, **kwargs)
         self.orientation = orientation
         self._root = None
+        #: A tree with dendrogram geometry
+        self._layout = None
         self._highlighted_item = None
         #: a list of selected items
         self._selection = OrderedDict()
         #: a {node: item} mapping
-        self._items = {}
+        self._items = {}  # type: Dict[Tree, DendrogramWidget.ClusterGraphicsItem]
         #: container for all cluster items.
         self._itemgroup = QGraphicsWidget(self)
         self._itemgroup.setGeometry(self.contentsRect())
+        #: Transform mapping from 'dendrogram' to widget local coordinate
+        #: system
+        self._transform = QTransform()
         self._cluster_parent = {}
         self.__hoverHighlightEnabled = hoverHighlightEnabled
         self.__selectionMode = selectionMode
         self.setContentsMargins(0, 0, 0, 0)
         self.set_root(root)
+        if parent is not None:
+            self.setParentItem(parent)
 
     def clear(self):
         for item in self._items.values():
@@ -265,7 +293,7 @@ class DendrogramWidget(QGraphicsWidget):
         """
         self.clear()
         self._root = root
-        if root:
+        if root is not None:
             pen = make_pen(Qt.blue, width=1, cosmetic=True,
                            join_style=Qt.MiterJoin)
             for node in postorder(root):
@@ -279,9 +307,9 @@ class DendrogramWidget(QGraphicsWidget):
                     self._cluster_parent[branch] = node
                 self._items[node] = item
 
-            self.updateGeometry()
             self._relayout()
             self._rescale()
+            self.updateGeometry()
 
     def item(self, node):
         """Return the DendrogramNode instance representing the cluster.
@@ -296,8 +324,10 @@ class DendrogramWidget(QGraphicsWidget):
         """
         if not self._root:
             return 0
-
-        tpoint = self.mapToItem(self._itemgroup, point)
+        tinv, ok = self._transform.inverted()
+        if not ok:
+            return 0
+        tpoint = tinv.map(point)
         if self.orientation in [self.Left, self.Right]:
             height = tpoint.x()
         else:
@@ -323,7 +353,7 @@ class DendrogramWidget(QGraphicsWidget):
             p = QPointF(height, 0)
         else:
             p = QPointF(0, height)
-        return self.mapFromItem(self._itemgroup, p)
+        return self._transform.map(p)
 
     def _set_hover_item(self, item):
         """Set the currently highlighted item."""
@@ -440,7 +470,7 @@ class DendrogramWidget(QGraphicsWidget):
         selection_item.setPos(self.contentsRect().topLeft())
         selection_item.setPen(make_pen(width=1, cosmetic=True))
 
-        transform = self._itemgroup.transform()
+        transform = self._transform
         path = transform.map(outline)
         margin = 4
 
@@ -508,7 +538,9 @@ class DendrogramWidget(QGraphicsWidget):
             selection_item.setBrush(QColor(color))
 
     def _selection_poly(self, item):
-        """Return an selection item covering the selection rooted at item.
+        # type: (Tree) -> QPolygonF
+        """
+        Return an selection geometry covering item and all its children.
         """
         def left(item):
             return [self._items[ch] for ch in item.node.branches[:1]]
@@ -556,7 +588,7 @@ class DendrogramWidget(QGraphicsWidget):
     def _update_selection_items(self):
         """Update the shapes of selection items after a scale change.
         """
-        transform = self._itemgroup.transform()
+        transform = self._transform
         for item, selection in self._selection.items():
             path = transform.map(selection.unscaled_path)
             ppath = QPainterPath()
@@ -578,10 +610,9 @@ class DendrogramWidget(QGraphicsWidget):
             node, geom = node_geom.value
             item = self._items[node]
             item.element = geom
-
-            item.setPath(path_toQtPath(geom))
-            item.setZValue(-node.value.height)
-            r = item.path().boundingRect()
+            # the untransformed source path
+            item.sourcePath = path_toQtPath(geom)
+            r = item.sourcePath.boundingRect()
             base = self._root.value.height
 
             if self.orientation == Left:
@@ -592,7 +623,12 @@ class DendrogramWidget(QGraphicsWidget):
                 r.setBottom(base)
             else:
                 r.setTop(0)
-            item.setRect(r)
+
+            hitarea = QPainterPath()
+            hitarea.addRect(r)
+            item.sourceAreaShape = hitarea
+            item.setGeometryData(item.sourcePath, item.sourceAreaShape)
+            item.setZValue(-node.value.height)
 
     def _rescale(self):
         if self._root is None:
@@ -618,9 +654,16 @@ class DendrogramWidget(QGraphicsWidget):
             sy = crect.height() / drect.height()
 
         transform = QTransform().scale(sx, sy)
-
+        self._transform = transform
         self._itemgroup.setPos(crect.topLeft())
-        self._itemgroup.setTransform(transform)
+        self._itemgroup.setGeometry(crect)
+        for node_geom in postorder(self._layout):
+            node, _ = node_geom.value
+            item = self._items[node]
+            item.setGeometryData(
+                transform.map(item.sourcePath),
+                transform.map(item.sourceAreaShape)
+            )
         self._selection_items = None
         self._update_selection_items()
 
@@ -1547,7 +1590,7 @@ class SliderLine(QGraphicsObject):
         super().__init__(parent, **kwargs)
 
         self.setAcceptedMouseButtons(Qt.LeftButton)
-        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=True))
+        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=False))
 
         if self._orientation == Qt.Vertical:
             self.setCursor(Qt.SizeVerCursor)

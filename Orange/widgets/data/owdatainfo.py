@@ -131,14 +131,14 @@ class OWDataInfo(widget.OWWidget):
             disc_class = count(domain.class_vars, DiscreteVariable)
             cont_class = count(domain.class_vars, ContinuousVariable)
             if not cont_class:
-                self.targets = "Multitarget data,\n%i discrete targets" % \
+                self.targets = "Multitarget data,\n%i categorical targets" % \
                                n_or_none(disc_class)
             elif not disc_class:
                 self.targets = "Multitarget data,\n%i numeric targets" % \
                                n_or_none(cont_class)
             else:
                 self.targets = "<p>Multi target data</p>\n" + pack_table(
-                    (("Discrete", disc_class), ("Numeric", cont_class)))
+                    (("Categorical", disc_class), ("Numeric", cont_class)))
 
         self.data_desc = dd = OrderedDict()
 
@@ -158,23 +158,23 @@ class OWDataInfo(widget.OWWidget):
             return ", ".join(s.format(n) for s, n in items if n)
 
         dd["Features"] = len(domain.attributes) and join_if((
-            ("{} discrete", disc_features),
+            ("{} categorical", disc_features),
             ("{} numeric", cont_features)
         ))
         if domain.class_var:
             name = domain.class_var.name
             if domain.class_var.is_discrete:
-                dd["Target"] = "discrete outcome '{}'".format(name)
+                dd["Target"] = "categorical outcome '{}'".format(name)
             else:
                 dd["Target"] = "numeric target '{}'".format(name)
         elif domain.class_vars:
             tt = ""
             if disc_class:
-                tt += report.plural("{number} discrete outcome{s}", disc_class)
+                tt += report.plural("{number} categorical outcome{s}", disc_class)
             if cont_class:
                 tt += report.plural("{number} numeric target{s}", cont_class)
         dd["Meta attributes"] = len(domain.metas) > 0 and join_if((
-            ("{} discrete", disc_metas),
+            ("{} categorical", disc_metas),
             ("{} numeric", cont_metas),
             ("{} textual", str_metas)
         ))

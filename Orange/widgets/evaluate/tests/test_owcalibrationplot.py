@@ -6,11 +6,12 @@ import Orange.data
 import Orange.evaluation
 import Orange.classification
 
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
+from Orange.widgets.tests.base import WidgetTest
 
 
-class TestOWCalibrationPlot(WidgetTest):
+class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()

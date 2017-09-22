@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import patch, Mock
+
 import numpy as np
 from scipy import sparse
 
@@ -108,3 +110,16 @@ class TestOWManifoldLearning(WidgetTest):
         self.assertFalse(self.widget.Error.manifold_error.is_shown())
         self.widget.apply_button.button.click()
         self.assertTrue(self.widget.Error.manifold_error.is_shown())
+
+    def test_out_of_memory(self):
+        """
+        Show error message when out of memory.
+        GH-2441
+        """
+        table = Table("iris")
+        with patch("Orange.projection.manifold.MDS.__call__", Mock()) as mock:
+            mock.side_effect = MemoryError
+            self.send_signal("Data", table)
+            self.widget.manifold_methods_combo.activated.emit(1)
+            self.widget.apply_button.button.click()
+            self.assertTrue(self.widget.Error.out_of_memory.is_shown())

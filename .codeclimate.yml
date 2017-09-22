@@ -1,9 +1,11 @@
 engines:
  duplication:
-   enabled: true
+   enabled: false
    config:
      languages:
-       - python
+       python:
+         python_version: 3
+         mass_threshold: 50
    exclude_paths:
      - doc/
  pep8:

@@ -8,9 +8,9 @@ from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter)
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence)
 from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
-    QGraphicsTextItem, QGraphicsRectItem
+    QGraphicsTextItem, QGraphicsRectItem, QAction
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ViewBox import ViewBox
@@ -491,9 +491,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
-    def __init__(self, scatter_widget, parent=None, _="None"):
+    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
         gui.OWComponent.__init__(self, scatter_widget)
-        self.view_box = InteractiveViewBox(self)
+        self.view_box = view_box(self)
         self.plot_widget = pg.PlotWidget(viewBox=self.view_box, parent=parent,
                                          background="w")
         self.plot_widget.getPlotItem().buttonsHidden = True
@@ -691,17 +691,17 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 x_data, y_data, rgb_data)
             self.plot_widget.addItem(self.density_img)
 
-        data_indices = np.flatnonzero(self.valid_data)
-        if len(data_indices) != self.original_data.shape[1]:
+        self.data_indices = np.flatnonzero(self.valid_data)
+        if len(self.data_indices) != self.original_data.shape[1]:
             self.master.Information.missing_coords(
                 self.shown_x.name, self.shown_y.name)
 
         self.scatterplot_item = ScatterPlotItem(
-            x=x_data, y=y_data, data=data_indices,
+            x=x_data, y=y_data, data=self.data_indices,
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
         )
         self.scatterplot_item_sel = ScatterPlotItem(
-            x=x_data, y=y_data, data=data_indices,
+            x=x_data, y=y_data, data=self.data_indices,
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
@@ -943,8 +943,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def _create_label_column(self):
         if self.attr_label in self.data.domain:
-            return self.data.get_column_view(self.attr_label)[0]
-        return self.master.data.get_column_view(self.attr_label)[0]
+            label_column = self.data.get_column_view(self.attr_label)[0]
+        else:
+            label_column = self.master.data.get_column_view(self.attr_label)[0]
+        return label_column[self.data_indices]
+
 
     def update_labels(self):
         if self.attr_label is None or \
@@ -959,9 +962,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         formatter = self.attr_label.str_val
         label_data = map(formatter, label_column)
         black = pg.mkColor(0, 0, 0)
+        selection = self.selection[self.valid_data] if self.selection is not None else []
         if self.label_only_selected:
             for label, text, selected \
-                    in zip(self.labels, label_data, self.selection):
+                    in zip(self.labels, label_data, selection):
                 label.setText(text if selected else "", black)
         else:
             for label, text in zip(self.labels, label_data):
@@ -1064,12 +1068,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not self.legend:
             self.create_legend()
         shape_var = self.domain[shape_index]
-        color = self.plot_widget.palette().color(OWPalette.Data)
-        pen = QPen(color.darker(self.DarkerValue))
+        color = QColor(0, 0, 0)
         color.setAlpha(self.alpha_value)
         for i, value in enumerate(shape_var.values):
             self.legend.addItem(
-                ScatterPlotItem(pen=pen, brush=color, size=10,
+                ScatterPlotItem(pen=color, brush=color, size=10,
                                 symbol=self.CurveSymbols[i]), escape(value))
 
     def zoom_button_clicked(self):
@@ -1183,6 +1186,47 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         else:
             return False
 
+    def box_zoom_select(self, parent):
+        g = self.gui
+        box_zoom_select = gui.vBox(parent, "Zoom/Select")
+        zoom_select_toolbar = g.zoom_select_toolbar(
+            box_zoom_select, nomargin=True,
+            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
+                     g.StateButtonsEnd, g.ZoomReset]
+        )
+        buttons = zoom_select_toolbar.buttons
+        buttons[g.Zoom].clicked.connect(self.zoom_button_clicked)
+        buttons[g.Pan].clicked.connect(self.pan_button_clicked)
+        buttons[g.SimpleSelect].clicked.connect(self.select_button_clicked)
+        buttons[g.ZoomReset].clicked.connect(self.reset_button_clicked)
+        return box_zoom_select
+
+    def zoom_actions(self, parent):
+        def zoom(s):
+            """Zoom in/out by factor `s`."""
+            viewbox = self.plot.getViewBox()
+            # scaleBy scales the view's bounds (the axis range)
+            viewbox.scaleBy((1 / s, 1 / s))
+
+        def fit_to_view():
+            viewbox = self.plot.getViewBox()
+            viewbox.autoRange()
+
+        zoom_in = QAction(
+            "Zoom in", parent, triggered=lambda: zoom(1.25)
+        )
+        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
+                              QKeySequence(parent.tr("Ctrl+="))])
+        zoom_out = QAction(
+            "Zoom out", parent, shortcut=QKeySequence.ZoomOut,
+            triggered=lambda: zoom(1 / 1.25)
+        )
+        zoom_fit = QAction(
+            "Fit in view", parent,
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
+            triggered=fit_to_view
+        )
+        parent.addActions([zoom_in, zoom_out, zoom_fit])
 
 class HelpEventDelegate(QObject): #also used by owdistributions
     def __init__(self, delegate, parent=None):

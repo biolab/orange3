@@ -3,6 +3,12 @@ import os
 import time
 import unittest
 from unittest.mock import Mock
+# pylint: disable=unused-import
+from typing import List, Optional, TypeVar
+try:
+    from typing import Type  # typing.Type was added in 3.5.2
+except ImportError:  # pragma: no cover
+    pass
 
 import numpy as np
 import sip
@@ -28,6 +34,7 @@ from Orange.regression.base_regression import (
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
+from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 sip.setdestroyonexit(False)
@@ -36,12 +43,17 @@ app = None
 
 DEFAULT_TIMEOUT = 5000
 
+# pylint: disable=invalid-name
+T = TypeVar("T")
+
 
 class DummySignalManager:
     def __init__(self):
         self.outputs = {}
 
     def send(self, widget, signal_name, value, id):
+        if not isinstance(signal_name, str):
+            signal_name = signal_name.name
         self.outputs[(widget, signal_name)] = value
 
 
@@ -70,8 +82,7 @@ class WidgetTest(GuiTest):
     will ensure they are created correctly.
     """
 
-    #: list[OwWidget]
-    widgets = []
+    widgets = []  # type: List[OWWidget]
 
     @classmethod
     def setUpClass(cls):
@@ -95,6 +106,7 @@ class WidgetTest(GuiTest):
         self.process_events()
 
     def create_widget(self, cls, stored_settings=None, reset_default_settings=True):
+        # type: (Type[T], Optional[dict], bool) -> T
         """Create a widget instance using mock signal_manager.
 
         When used with default parameters, it also overrides settings stored
@@ -196,7 +208,7 @@ class WidgetTest(GuiTest):
 
         Parameters
         ----------
-        input_name : str
+        input : str
         value : Object
         id : int
             channel id, used for inputs with flag Multiple
@@ -215,13 +227,17 @@ class WidgetTest(GuiTest):
             else:
                 raise ValueError("'{}' is not an input name for widget {}"
                                  .format(input, type(widget).__name__))
-        getattr(widget, input.handler)(value, *args)
+        if widget.isBlocking():
+            raise RuntimeError("'send_signal' called but the widget is in "
+                               "blocking state and does not accept inputs.")
+        handler = getattr(widget, input.handler)
+        handler(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
             spy = QSignalSpy(widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout=wait))
 
-    def get_output(self, output, widget=None):
+    def get_output(self, output, widget=None, wait=5000):
         """Return the last output that has been sent from the widget.
 
         Parameters
@@ -229,6 +245,8 @@ class WidgetTest(GuiTest):
         output_name : str
         widget : Optional[OWWidget]
             widget whose output is returned. If not set, self.widget is used
+        wait : int
+            The amount of time (in milliseconds) to wait for widget to complete.
 
         Returns
         -------
@@ -236,9 +254,15 @@ class WidgetTest(GuiTest):
         """
         if widget is None:
             widget = self.widget
+
+        if widget.isBlocking() and wait >= 0:
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(wait),
+                            "Failed to get output in the specified timeout")
         if not isinstance(output, str):
             output = output.name
         return self.signal_manager.outputs.get((widget, output), None)
+
 
     @contextmanager
     def modifiers(self, modifiers):
@@ -453,7 +477,7 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.send_signal("Data", None)
         self.assertEqual(self.widget.data, None)
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
 
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
@@ -509,12 +533,12 @@ class WidgetLearnerTestMixin:
 
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.widget.apply_button.button.click()
-        self.assertIsNone(self.get_output(self.model_name))
+        self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
         self.widget.apply_button.button.click()
-        model = self.get_output(self.model_name)
+        model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)
         self.assertIsInstance(model, self.widget.LEARNER.__returns__)
         self.assertIsInstance(model, self.model_class)
@@ -535,7 +559,7 @@ class WidgetLearnerTestMixin:
         self.widget.name_line_edit.setText(new_name)
         self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
-        self.assertEqual(self.get_output(self.model_name).name, new_name)
+        self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
     def _get_param_value(self, learner, param):
         if isinstance(learner, Fitter):
@@ -592,7 +616,7 @@ class WidgetLearnerTestMixin:
                         "Mismatching setting for parameter '%s'" % parameter)
 
                     if issubclass(self.widget.LEARNER, SklModel):
-                        model = self.get_output(self.model_name)
+                        model = self.get_output(self.widget.Outputs.model)
                         if model is not None:
                             self.assertEqual(self._get_param_value(model, parameter), value)
                             self.assertFalse(self.widget.Error.active)

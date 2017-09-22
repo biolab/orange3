@@ -1,15 +1,16 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import copy
 import os
+import random
 import unittest
 from itertools import chain
 from math import isnan
-import random
-
 from unittest.mock import Mock, MagicMock, patch
-import scipy.sparse as sp
+
 import numpy as np
+import scipy.sparse as sp
 
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
@@ -354,6 +355,13 @@ class TableTestCase(unittest.TestCase):
 
             del d[:]
             self.assertEqual(len(d), 0)
+
+    def test_del_slice_ids(self):
+        # __del__ updates `ids` member
+        d = data.Table("test2")
+        ids = d.ids.copy()
+        del d[2:4]
+        np.testing.assert_array_equal(d.ids, np.delete(ids, slice(2, 4)))
 
     def test_set_slice_example(self):
         import warnings
@@ -1360,11 +1368,21 @@ class CreateTableWithFilename(TableTests):
 
 
 class CreateTableWithUrl(TableTests):
-    def test_load_from_url(self):
-        d1 = data.Table('iris')
-        d2 = data.Table('https://raw.githubusercontent.com/biolab/orange3/master/Orange/datasets/iris.tab')
-        np.testing.assert_array_equal(d1.X, d2.X)
-        np.testing.assert_array_equal(d1.Y, d2.Y)
+    def test_url_no_scheme(self):
+
+        class SkipRest(Exception):
+            pass
+
+        mock_urlopen = Mock(side_effect=SkipRest())
+        url = 'www.foo.bar/xx.csv'
+
+        with patch('Orange.data.io.UrlReader.urlopen', mock_urlopen):
+            try:
+                Table.from_url(url)
+            except SkipRest:
+                pass
+
+        mock_urlopen.assert_called_once_with('http://' + url)
 
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
@@ -1734,6 +1752,12 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertIsInstance(new_table, MyTableClass)
         self.assertIsNot(table, new_table)
         self.assertIs(new_table.domain, new_domain)
+
+    def test_transform_same_domain(self):
+        iris = data.Table("iris")
+        new_domain = copy.copy(iris.domain)
+        new_data = iris.transform(new_domain)
+        self.assertIs(new_data.domain, new_domain)
 
     def test_can_copy_table(self):
         new_table = data.Table.from_table(self.domain, self.table)

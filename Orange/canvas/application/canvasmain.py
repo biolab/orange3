@@ -26,7 +26,10 @@ try:
     from AnyQt.QtWebEngineWidgets import QWebEngineView
     USE_WEB_ENGINE = True
 except ImportError:
-    from AnyQt.QtWebKitWidgets import QWebView
+    try:
+        from AnyQt.QtWebKitWidgets import QWebView
+    except ImportError:
+        QWebView = None
     from AnyQt.QtNetwork import QNetworkDiskCache
     USE_WEB_ENGINE = False
 

@@ -4,6 +4,7 @@ from itertools import product, chain
 from math import sqrt, log
 from operator import mul, attrgetter
 
+import numpy as np
 from scipy.stats import distributions
 from scipy.misc import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
@@ -66,10 +67,8 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         """Initialize triggered by change of coloring"""
         super().initialize()
 
-    def run(self):
+    def before_running(self):
         """
-        Add handling of the spin box for maximal number of attributes.
-
         Disable the spin for maximal number of attributes before running and
         enable afterwards. Also, if the number of attributes is different than
         in the last run, reset the saved state (if it was paused).
@@ -83,10 +82,9 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.compute_attr_order()
         self.last_run_max_attr = self.max_attrs
         self.max_attr_spin.setDisabled(True)
-        try:
-            super().run()
-        finally:
-            self.max_attr_spin.setDisabled(False)
+
+    def stopped(self):
+        self.max_attr_spin.setDisabled(False)
 
     def max_attr_changed(self):
         """
@@ -137,12 +135,6 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                 attrs = sorted(zip(weights, data.domain.attributes),
                                key=lambda x: (-x[0], x[1].name))
                 self.attr_ordering = [a for _, a in attrs]
-        if class_var is not None:
-            if self._compute_class_dists():
-                if self.attr_ordering[0] is class_var:
-                    del self.attr_ordering[0]
-            elif self.attr_ordering[0] is not class_var:
-                self.attr_ordering.insert(0, class_var)
 
     def _compute_class_dists(self):
         return self.master.interior_coloring == self.master.CLASS_DISTRIBUTION
@@ -152,8 +144,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         Return the number of combinations, starting with a single attribute
         if Mosaic is colored by class distributions, and two if by Pearson
         """
-        self.compute_attr_order()
-        n_attrs = len(self.attr_ordering)
+        n_attrs = len(self.master.discrete_data.domain.attributes)
         min_attrs = 1 if self._compute_class_dists() else 2
         max_attrs = min(n_attrs, self.max_attrs)
         return sum(comb(n_attrs, k, exact=True)
@@ -303,15 +294,15 @@ class OWMosaicDisplay(OWWidget):
         incompatible_subset = Msg("Data subset is incompatible with Data")
         no_valid_data = Msg("No valid data")
         no_cont_selection_sql = \
-            Msg("Selection of continuous variables on SQL is not supported")
+            Msg("Selection of numeric features on SQL is not supported")
 
     def __init__(self):
         super().__init__()
 
         self.data = None
         self.discrete_data = None
-        self.unprocessed_subset_data = None
         self.subset_data = None
+        self.subset_indices = None
 
         self.color_data = None
 
@@ -384,7 +375,9 @@ class OWMosaicDisplay(OWWidget):
         for combo in self.attr_combos:
             combo.clear()
         if data is None:
+            self.color_model.set_domain(None)
             return
+        self.color_model.set_domain(self.data.domain)
         for combo in self.attr_combos[1:]:
             combo.addItem("(None)")
 
@@ -440,35 +433,32 @@ class OWMosaicDisplay(OWWidget):
             and len(self.data.domain.attributes) >= 1)
 
         if self.data is None:
+            self.discrete_data = None
+            self.init_combos(None)
             return
 
-        self.color_model.set_domain(self.data.domain)
         self.init_combos(self.data)
 
         self.openContext(self.data)
 
-        # if we first received subset we now call setSubsetData to process it
-        if self.unprocessed_subset_data:
-            self.set_subset_data(self.unprocessed_subset_data)
-            self.unprocessed_subset_data = None
-
-        self.set_color_data()
-
     @Inputs.data_subset
     def set_subset_data(self, data):
-        self.Warning.incompatible_subset.clear()
-        if self.data is None:
-            self.unprocessed_subset_data = data
-            return
-        try:
-            self.subset_data = data.transform(self.data.domain)
-        except:
-            self.subset_data = None
-            self.Warning.incompatible_subset(shown=data is not None)
+        self.subset_data = data
 
     # this is called by widget after setData and setSubsetData are called.
     # this way the graph is updated only once
     def handleNewSignals(self):
+        self.Warning.incompatible_subset.clear()
+        self.subset_indices = indices = None
+        if self.data is not None and self.subset_data:
+            transformed = self.subset_data.transform(self.data.domain)
+            if np.all(np.isnan(transformed.X)) and np.all(np.isnan(transformed.Y)):
+                self.Warning.incompatible_subset()
+            else:
+                indices = {e.id for e in transformed}
+                self.subset_indices = [ex.id in indices for ex in self.data]
+
+        self.set_color_data()
         self.reset_graph()
 
     def clear_selection(self):
@@ -495,9 +485,9 @@ class OWMosaicDisplay(OWWidget):
             color_var = self.data.domain[self.cb_attr_color.currentText()]
             self.interior_coloring = self.CLASS_DISTRIBUTION
             self.bar_button.setEnabled(True)
-        attributes = [v for v in self.data.domain if v != color_var]
-        metas = [v for v in self.data.domain.metas if v != color_var]
-        domain = Domain(attributes, color_var, metas)
+        attributes = [v for v in self.data.domain.attributes + self.data.domain.class_vars
+                      + self.data.domain.metas if v != color_var and v.is_primitive()]
+        domain = Domain(attributes, color_var, None)
         self.color_data = color_data = self.data.from_table(domain, self.data)
         self.discrete_data = self._get_discrete_data(color_data)
         self.vizrank.stop_and_reset()
@@ -836,13 +826,7 @@ class OWMosaicDisplay(OWWidget):
 
                 if conditionalsubsetdict:
                     if conditionalsubsetdict[attr_vals]:
-                        counts = [conditionalsubsetdict[attr_vals + "-" + val]
-                                  for val in cls_values]
-                        if sum(counts) == 1:
-                            rect(x0 - 2, y0 - 2, x1 - x0 + 5, y1 - y0 + 5, -550,
-                                 colors[counts.index(1)], Qt.white,
-                                 penWidth=2, penStyle=Qt.DashLine)
-                        if self.subset_data is not None:
+                        if self.subset_indices is not None:
                             line(x1 - bar_width, y0, x1 - bar_width, y1)
                             total = 0
                             n = conditionalsubsetdict[attr_vals]
@@ -922,7 +906,6 @@ class OWMosaicDisplay(OWWidget):
         data = self.discrete_data
         if data is None:
             return
-        subset = self.subset_data
         attr_list = self.get_attr_list()
         class_var = data.domain.class_var
         if class_var:
@@ -995,9 +978,9 @@ class OWMosaicDisplay(OWWidget):
         conditionaldict, distributiondict = \
             get_conditional_distribution(data, attr_list)
         conditionalsubsetdict = None
-        if subset:
+        if self.subset_indices:
             conditionalsubsetdict, _ = \
-                get_conditional_distribution(subset, attr_list)
+                get_conditional_distribution(self.discrete_data[self.subset_indices], attr_list)
 
         # draw rectangles
         draw_data(
@@ -1054,6 +1037,7 @@ def main():
     ow.show()
     data = Table("zoo.tab")
     ow.set_data(data)
+    ow.set_subset_data(data[::10])
     ow.handleNewSignals()
     a.exec_()
 

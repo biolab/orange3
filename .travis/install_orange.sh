@@ -1,5 +1,8 @@
 foldable pip install -U setuptools pip codecov
 
+# Don't install PyQt5 if PyQt4 is requested
+[ "$PYQT4" ] && sed -i '/pyqt5/Id' requirements-doc.txt
+
 # Install dependencies sequentially
 cat requirements-core.txt \
     requirements-gui.txt \

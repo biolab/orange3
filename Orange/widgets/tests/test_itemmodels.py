@@ -56,12 +56,12 @@ class TestPyTableModel(TestCase):
 
     def test_sort(self):
         self.model.sort(1)
-        self.assertEqual(self.model[0][0], 2)
+        self.assertEqual(self.model.index(0, 0).data(Qt.EditRole), 2)
 
     def test_setHeaderLabels(self):
         self.model.setHorizontalHeaderLabels(['Col 1', 'Col 2'])
         self.assertEqual(self.model.headerData(1, Qt.Horizontal), 'Col 2')
-        self.assertEqual(self.model.headerData(1, Qt.Vertical), '1')
+        self.assertEqual(self.model.headerData(1, Qt.Vertical), 2)
 
     def test_removeRows(self):
         self.model.removeRows(0, 1)

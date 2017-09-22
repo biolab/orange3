@@ -4,14 +4,15 @@ Preprocess
 
 """
 import numpy as np
+import scipy.sparse as sp
 import sklearn.preprocessing as skl_preprocessing
-from sklearn.utils import shuffle as skl_shuffle
 import bottleneck as bn
 
 import Orange.data
+from Orange.data.filter import HasClass
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution
-from Orange.util import Reprable, Enum
+from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
 
 __all__ = ["Continuize", "Discretize", "Impute",
@@ -197,6 +198,7 @@ class RemoveConstant(Preprocess):
         return data.transform(domain)
 
 
+@deprecated("Orange.data.filter.HasClas")
 class RemoveNaNClasses(Preprocess):
     """
     Construct preprocessor that removes examples with missing class
@@ -216,11 +218,7 @@ class RemoveNaNClasses(Preprocess):
         -------
         data : data set without rows with missing classes
         """
-        if len(data.Y.shape) > 1:
-            nan_cls = np.any(np.isnan(data.Y), axis=1)
-        else:
-            nan_cls = np.isnan(data.Y)
-        return data[~nan_cls]
+        return HasClass()(data)
 
 
 class Normalize(Preprocess):
@@ -356,16 +354,34 @@ class Randomize(Preprocess):
             Randomized data table.
         """
         new_data = data.copy()
+        rstate = np.random.RandomState(self.rand_seed)
+        # ensure the same seed is not used to shuffle X and Y at the same time
+        r1, r2, r3 = rstate.randint(0, 2 ** 32 - 1, size=3, dtype=np.int64)
         if self.rand_type & Randomize.RandomizeClasses:
-            new_data.Y = self.randomize(new_data.Y)
+            new_data.Y = self.randomize(new_data.Y, r1)
         if self.rand_type & Randomize.RandomizeAttributes:
-            new_data.X = self.randomize(new_data.X)
+            new_data.X = self.randomize(new_data.X, r2)
         if self.rand_type & Randomize.RandomizeMetas:
-            new_data.metas = self.randomize(new_data.metas)
+            new_data.metas = self.randomize(new_data.metas, r3)
         return new_data
 
-    def randomize(self, table):
-        return skl_shuffle(table, random_state=self.rand_seed)
+    def randomize(self, table, rand_state=None):
+        rstate = np.random.RandomState(rand_state)
+        if sp.issparse(table):
+            table = table.tocsc()
+            rnd_indices = np.arange(table.shape[0], dtype=table.indices.dtype)
+            for i in range(table.shape[1]):
+                col_indices = \
+                    table.indices[table.indptr[i]: table.indptr[i + 1]]
+                new_indices = rnd_indices[:len(col_indices)]
+                rstate.shuffle(new_indices)
+                col_indices[:] = new_indices
+        elif len(table.shape) > 1:
+            for i in range(table.shape[1]):
+                rstate.shuffle(table[:, i])
+        else:
+            rstate.shuffle(table)
+        return table
 
 
 class ProjectPCA(Preprocess):

@@ -130,6 +130,29 @@ Well-behaved widgets remember their settings - the state of their
 checkboxes and radio-buttons, the text in their line edits, the
 selections in their combo boxes and similar.
 
+Persisting defaults
+*******************
+When a widget is removed, its settings are stored to be used as defaults
+for future instances of this widget.
+
+Updated defaults are stored in user's profile. It's location depends
+on the operating system:
+(%APPDATA%\Orange\<version>\widgets on windows,
+~/Library/Application\ Support/orange/<version>/widgets on macOS,
+~/.local/share/Orange/<version>/widgets on linux)
+Original default values can be restored by deleting files from this folder,
+by running Orange from command line with `--clear-widget-settings` option,
+or through Options/Reset Widget Settings menu action.
+
+Schema-only settings
+--------------------
+Some settings have defaults that should not change. For instance, when using
+a Paint Data widget, drawn points should be saved in a workflow, but a new
+widget should always start with a blank page - modified value should not
+be remembered.
+
+This can be achieved by declaring a setting with a `schema_only` flag. Such
+setting is saved with a workflow, but its default value never changes.
 
 Context dependent settings
 **************************
@@ -273,6 +296,13 @@ Imagine opening a complex workflow you have designed a year ago with the
 new version of Orange and finding out that all the settings are back to
 default. Not fun!
 
+.. warning::
+
+   If you change the format of an existing setting in a backwards-incompatible
+   way, you will also want to *change the name* of that setting. Otherwise,
+   older versions of Orange won't be able to load workflows with the new
+   setting format.
+
 There are two helper functions you can use.
 :obj:`Orange.widget.settings.rename_settings(settings, old_name, new_name)`
 does the obvious operation on `settings`, which can be either a dictionary
@@ -281,7 +311,7 @@ or a context, thus it can be called from `migrate_settings` or
 
 Another common operation may be upgrading your widget from storing variable
 names (as `str`) to storing variables (instances of classes derived from
-`Variable`). In a typical scenario, this happenswhen combo boxes are upgraded to
+`Variable`). In a typical scenario, this happens when combo boxes are upgraded to
 using models. Function
 :obj:`Orange.widget.settings.migrate_str_to_variable(settings, names=None)`
 makes the necessary changes to the settings listed in `names`. `names` can be

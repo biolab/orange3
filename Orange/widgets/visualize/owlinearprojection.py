@@ -206,6 +206,8 @@ class OWLinearProjection(widget.OWWidget):
     attr_shape = settings.ContextSetting(None, exclude_metas=False)
     attr_size = settings.ContextSetting(None, exclude_metas=False)
 
+    selection_indices = settings.Setting(None, schema_only=True)
+
     point_width = settings.Setting(10)
     alpha_value = settings.Setting(128)
     jitter_value = settings.Setting(0)
@@ -513,6 +515,9 @@ class OWLinearProjection(widget.OWWidget):
             if set(selected_keys).issubset(set(state.keys())):
                 pass
 
+            if self.selection_indices is not None:
+                self.select_indices(self.selection_indices)
+
             # update the defaults state (the encoded state must contain
             # all variables in the input domain)
             state.update(self.variable_state)
@@ -584,7 +589,7 @@ class OWLinearProjection(widget.OWWidget):
         # Initialize the GUI controls from data's domain.
         cont_vars = [var for var in data.domain.variables
                      if var.is_continuous]
-        self.warning("Plotting requires continuous features.",
+        self.warning("Plotting requires numeric features.",
                      shown=not len(cont_vars))
         self.varmodel_selected[:] = cont_vars[:3]
         self.varmodel_other[:] = cont_vars[3:]
@@ -947,6 +952,7 @@ class OWLinearProjection(widget.OWWidget):
             if len(indices) > 0:
                 subset = self.data[indices]
 
+        self.selection_indices = indices
         self.Outputs.selected_data.send(subset)
         self.Outputs.annotated_data.send(create_annotated_table(self.data, indices))
 

@@ -105,21 +105,22 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
         select_group(0)
         self.assertFalse(order_check.isEnabled())
-        select_group(1)
+        select_group(2)  # First attribute
         self.assertTrue(order_check.isEnabled())
 
         order_check.setChecked(False)
-        self.assertEqual(tuple(attributes), data.domain.variables)
+        self.assertEqual(tuple(attributes),
+                         data.domain.class_vars + data.domain.attributes)
         order_check.setChecked(True)
         self.assertEqual([x.name for x in attributes],
                          ['sex', 'survived', 'age', 'status'])
-        select_group(4)
+        select_group(1)  # Class
         self.assertEqual([x.name for x in attributes],
                          ['sex', 'status', 'age', 'survived'])
 
         data = self.heart
         self.send_signal("Data", data)
-        select_group(len(group_list.model()) - 1)
+        select_group(1)  # Class
         order_check.setChecked(True)
         self.assertEqual([x.name for x in attributes],
                          ['thal', 'major vessels colored', 'chest pain',

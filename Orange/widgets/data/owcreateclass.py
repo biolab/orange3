@@ -150,6 +150,10 @@ class OWCreateClass(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         no_nonnumeric_vars = Msg("Data contains only numeric variables.")
 
+    class Error(widget.OWWidget.Error):
+        class_name_duplicated = Msg("Class name duplicated.")
+        class_name_empty = Msg("Class name should not be empty.")
+
     def __init__(self):
         super().__init__()
         self.data = None
@@ -451,10 +455,19 @@ class OWCreateClass(widget.OWWidget):
 
     def apply(self):
         """Output the transformed data."""
+        self.Error.clear()
+        self.class_name = self.class_name.strip()
         if not self.attribute:
             self.Outputs.data.send(None)
             return
         domain = self.data.domain
+        if not len(self.class_name):
+            self.Error.class_name_empty()
+        if self.class_name in domain:
+            self.Error.class_name_duplicated()
+        if not len(self.class_name) or self.class_name in domain:
+            self.Outputs.data.send(None)
+            return
         rules = self.active_rules
         # Transposition + stripping
         valid_rules = [label or pattern or n_matches

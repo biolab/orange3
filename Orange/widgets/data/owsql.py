@@ -12,6 +12,7 @@ from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import BackendError
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, AUTO_DL_LIMIT
 from Orange.widgets import gui
+from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.widget import OWWidget, Output, Msg
@@ -40,12 +41,14 @@ class OWSql(OWWidget):
     id = "orange.widgets.data.sql"
     description = "Load data set from SQL."
     icon = "icons/SQLTable.svg"
-    priority = 10
+    priority = 30
     category = "Data"
     keywords = ["data", "file", "load", "read"]
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
+
+    settings_version = 2
 
     want_main_area = False
     resizing_enabled = False
@@ -54,8 +57,8 @@ class OWSql(OWWidget):
     port = Setting(None)
     database = Setting(None)
     schema = Setting(None)
-    username = Setting(None)
-    password = Setting(None)
+    username = ""
+    password = ""
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
@@ -94,10 +97,12 @@ class OWSql(OWWidget):
         self.servertext = QLineEdit(box)
         self.servertext.setPlaceholderText('Server')
         self.servertext.setToolTip('Server')
+        self.servertext.editingFinished.connect(self._load_credentials)
         if self.host:
             self.servertext.setText(self.host if not self.port else
                                     '{}:{}'.format(self.host, self.port))
         box.layout().addWidget(self.servertext)
+
         self.databasetext = QLineEdit(box)
         self.databasetext.setPlaceholderText('Database[/Schema]')
         self.databasetext.setToolTip('Database or optionally Database/Schema')
@@ -109,16 +114,16 @@ class OWSql(OWWidget):
         self.usernametext = QLineEdit(box)
         self.usernametext.setPlaceholderText('Username')
         self.usernametext.setToolTip('Username')
-        if self.username:
-            self.usernametext.setText(self.username)
+
         box.layout().addWidget(self.usernametext)
         self.passwordtext = QLineEdit(box)
         self.passwordtext.setPlaceholderText('Password')
         self.passwordtext.setToolTip('Password')
         self.passwordtext.setEchoMode(QLineEdit.Password)
-        if self.password:
-            self.passwordtext.setText(self.password)
+
         box.layout().addWidget(self.passwordtext)
+
+        self._load_credentials()
 
         tables = gui.hBox(box)
         self.tablemodel = TableModel()
@@ -154,7 +159,7 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.custom_sql)
 
         gui.checkBox(box, self, "guess_values",
-                     "Auto-discover discrete variables",
+                     "Auto-discover categorical variables",
                      callback=self.open_table)
 
         gui.checkBox(box, self, "download",
@@ -163,6 +168,25 @@ class OWSql(OWWidget):
 
         gui.rubber(self.buttonsArea)
         QTimer.singleShot(0, self.connect)
+
+    def _load_credentials(self):
+        self._parse_host_port()
+        cm = self._credential_manager(self.host, self.port)
+        self.username = cm.username
+        self.password = cm.password
+
+        if self.username:
+            self.usernametext.setText(self.username)
+        if self.password:
+            self.passwordtext.setText(self.password)
+
+    def _save_credentials(self):
+        cm = self._credential_manager(self.host, self.port)
+        cm.username = self.username
+        cm.password = self.password
+
+    def _credential_manager(self, host, port):
+        return CredentialManager("SQL Table: {}:{}".format(host, port))
 
     def error(self, id=0, text=""):
         super().error(id, text)
@@ -180,10 +204,13 @@ class OWSql(OWWidget):
         else:
             self.databasetext.setStyleSheet('')
 
-    def connect(self):
+    def _parse_host_port(self):
         hostport = self.servertext.text().split(':')
         self.host = hostport[0]
         self.port = hostport[1] if len(hostport) == 2 else None
+
+    def connect(self):
+        self._parse_host_port()
         self.database, _, self.schema = self.databasetext.text().partition('/')
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
@@ -199,6 +226,7 @@ class OWSql(OWWidget):
                 password=self.password
             ))
             self.Error.connection.clear()
+            self._save_credentials()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
                 ("Database", self.database), ("User name", self.username)
@@ -264,14 +292,17 @@ class OWSql(OWWidget):
                         "Specify a table name to materialize the query")
                     return
                 try:
-                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " + self.materialize_table_name):
+                    with self.backend.execute_sql_query("DROP TABLE IF EXISTS " +
+                                                        self.materialize_table_name):
                         pass
-                    with self.backend.execute_sql_query("CREATE TABLE " + self.materialize_table_name + " AS " + self.table):
+                    with self.backend.execute_sql_query("CREATE TABLE " +
+                                                        self.materialize_table_name +
+                                                        " AS " + self.table):
                         pass
                     with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
                         pass
                     self.table = self.materialize_table_name
-                except psycopg2.ProgrammingError as ex:
+                except (psycopg2.ProgrammingError, BackendError) as ex:
                     self.Error.connection(str(ex))
                     return
 
@@ -348,6 +379,16 @@ class OWSql(OWWidget):
         if self.data_desc_table:
             self.report_items("Data",
                               report.describe_data(self.data_desc_table))
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            # Until Orange version 3.4.4 username and password had been stored
+            # in Settings.
+            cm = cls._credential_manager(settings["host"], settings["port"])
+            cm.username = settings["username"]
+            cm.password = settings["password"]
+
 
 if __name__ == "__main__":
     a = QApplication(sys.argv)

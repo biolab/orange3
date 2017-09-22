@@ -160,6 +160,9 @@ class SchemeEditWidget(QWidget):
         self.__widgetMenu.addAction(self.__removeSelectedAction)
         self.__widgetMenu.addSeparator()
         self.__widgetMenu.addAction(self.__helpAction)
+        if log.isEnabledFor(logging.DEBUG):
+            self.__widgetMenu.addSeparator()
+            self.__widgetMenu.addAction(self.__showSettingsAction)
 
         self.__linkMenu = QMenu(self.tr("Link"), self)
         self.__linkMenu.addAction(self.__linkEnableAction)
@@ -285,6 +288,13 @@ class SchemeEditWidget(QWidget):
                     enabled=False
                     )
 
+        self.__showSettingsAction = \
+            QAction(self.tr("Show settings"), self,
+                    objectName="show-settings",
+                    toolTip=self.tr("Show widget settings"),
+                    triggered=self.showSettings,
+                    enabled=False)
+
         shortcuts = [Qt.Key_Delete,
                      Qt.ControlModifier + Qt.Key_Backspace]
 
@@ -361,7 +371,7 @@ class SchemeEditWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        scene = CanvasScene()
+        scene = CanvasScene(self)
         scene.setItemIndexMethod(CanvasScene.NoIndex)
         self.__setupScene(scene)
 
@@ -628,16 +638,31 @@ class SchemeEditWidget(QWidget):
 
             self.__undoStack.clear()
 
-            self.__scene = CanvasScene()
+            self.__scene = CanvasScene(self)
             self.__scene.setItemIndexMethod(CanvasScene.NoIndex)
             self.__setupScene(self.__scene)
 
-            self.__view.setScene(self.__scene)
-
             self.__scene.set_scheme(scheme)
+            self.__view.setScene(self.__scene)
 
             if self.__scheme:
                 self.__scheme.installEventFilter(self)
+                nodes = self.__scheme.nodes
+                if nodes:
+                    self.ensureVisible(nodes[0])
+
+    def ensureVisible(self, node):
+        """
+        Scroll the contents of the viewport so that `node` is visible.
+
+        Parameters
+        ----------
+        node: SchemeNode
+        """
+        if self.__scheme is None:
+            return
+        item = self.__scene.item_for_node(node)
+        self.__view.ensureVisible(item)
 
     def scheme(self):
         """
@@ -828,6 +853,15 @@ class SchemeEditWidget(QWidget):
                     commands.RemoveAnnotationCommand(self.__scheme, annot)
                 )
         self.__undoStack.endMacro()
+
+    def showSettings(self):
+        """
+        Dump settings of selected items to the standard output.
+        """
+        selected = self.scene().selectedItems()
+        for item in selected:
+            node = self.scene().node_for_item(item)
+            self.scheme().dump_settings(node)
 
     def selectAll(self):
         """
@@ -1253,6 +1287,7 @@ class SchemeEditWidget(QWidget):
         self.__helpAction.setEnabled(len(nodes) == 1)
         self.__renameAction.setEnabled(len(nodes) == 1)
         self.__duplicateSelectedAction.setEnabled(bool(nodes))
+        self.__showSettingsAction.setEnabled(len(nodes) == 1)
 
         if len(nodes) > 1:
             self.__openSelectedAction.setText(self.tr("Open All"))

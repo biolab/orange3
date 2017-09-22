@@ -288,7 +288,8 @@ class SimpleTreeModel(Model):
                 node_cont = str(round(n.sum / n.n, decimals)) + ': ' + str(n.n)
                 return ' --> (%s)' % node_cont
         else:
-            node_desc = self.dom_attr[n.split_attr].name
+            attr = self.dom_attr[n.split_attr]
+            node_desc = attr.name
             if self.type == Classification:
                 node_cont = [round(n.dist[i], decimals)
                              for i in range(self.cls_vals)]
@@ -297,10 +298,9 @@ class SimpleTreeModel(Model):
             ret_str = '\n' + '   ' * level + '%s (%s)' % (node_desc,
                                                           node_cont)
             for i in range(n.children_size):
-                attr = self.dom_attr[n.split_attr]
                 if attr.is_continuous:
                     split = '<=' if i % 2 == 0 else '>'
-                    split += str(round(n.split, 5))
+                    split += str(round(n.split, attr.number_of_decimals))
                     ret_str += '\n' + '   ' * level + ': %s' % split
                 else:
                     ret_str += '\n' + '   ' * level + ': %s' % attr.values[i]

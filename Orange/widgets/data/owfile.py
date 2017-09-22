@@ -1,6 +1,7 @@
 import os
 import logging
 from warnings import catch_warnings
+from urllib.parse import urlparse
 
 import numpy as np
 from AnyQt.QtWidgets import \
@@ -240,6 +241,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.load_data()
 
     def _url_set(self):
+        url = self.url_combo.currentText()
+        pos = self.recent_urls.index(url)
+        url = url.strip()
+
+        if not urlparse(url).scheme:
+            url = 'http://' + url
+            self.url_combo.setItemText(pos, url)
+            self.recent_urls[pos] = url
+
         self.source = self.URL
         self.load_data()
 
@@ -371,7 +381,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         if domain.has_continuous_class:
             text += "<br/>Regression; numerical class."
         elif domain.has_discrete_class:
-            text += "<br/>Classification; discrete class with {} values.".\
+            text += "<br/>Classification; categorical class with {} values.".\
                 format(len(domain.class_var.values))
         elif table.domain.class_vars:
             text += "<br/>Multi-target; {} target variables.".format(

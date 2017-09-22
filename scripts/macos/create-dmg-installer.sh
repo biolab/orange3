@@ -75,9 +75,6 @@ ln -s /Applications/ "${TMP_TEMPLATE}"/Applications
 # Copy the .app directory in place
 cp -a "${APP}" "${TMP_TEMPLATE}"/Orange3.app
 
-# Remove unnecesary files.
-find "${TMP_TEMPLATE}"/Orange3.app/Contents/ \( -name '*.pyc' -or -name '*.pyo' \) -delete
-
 # Create a regular .fseventsd/no_log file
 # (see http://hostilefork.com/2009/12/02/trashes-fseventsd-and-spotlight-v100/ )
 

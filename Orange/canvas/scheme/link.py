@@ -83,15 +83,17 @@ class SchemeLink(QObject):
         """
         Flags indicating the runtime state of a link
         """
+        #: The link has no associated state.
+        NoState = 0
         #: A link is empty when it has no value on it
-        Empty = 0
+        Empty = 1
         #: A link is active when the source node provides a value on output
-        Active = 1
+        Active = 2
         #: A link is pending when it's sink node has not yet been notified
         #: of a change (note that Empty|Pending is a valid state)
-        Pending = 2
+        Pending = 4
 
-    Empty, Active, Pending = State
+    NoState, Empty, Active, Pending = State
 
     def __init__(self, source_node, source_channel,
                  sink_node, sink_channel, enabled=True, properties=None,
@@ -125,7 +127,7 @@ class SchemeLink(QObject):
 
         self.__enabled = enabled
         self.__dynamic_enabled = False
-        self.__state = SchemeLink.Empty
+        self.__state = SchemeLink.NoState
         self.__tool_tip = ""
         self.properties = properties or {}
 

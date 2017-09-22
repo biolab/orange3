@@ -1,53 +1,79 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,pointless-statement,blacklisted-name
 import numpy as np
 
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtTest import QTest
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.preprocess import impute
-from Orange.widgets.data.owimpute import OWImpute, AsDefault
+from Orange.widgets.data.owimpute import OWImpute, AsDefault, Learner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.itemmodels import select_row
 
 
+class Foo(Learner):
+    def __call__(self, *args, **kwargs):
+        1/0
+
+
+class Bar:
+    def __call__(self, args, **kwargs):
+        1/0
+
+
+class FooBar(Learner):
+    def __call__(self, data, *args, **kwargs):
+        bar = Bar()
+        bar.domain = data.domain
+        return bar
+
+
 class TestOWImpute(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWImpute)  # type: OWImpute
+
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
 
     def test_empty_data(self):
         """No crash on empty data"""
-        data = Table("iris")
+        data = Table("iris")[::3]
         widget = self.widget
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
         widget.default_method = widget.methods[widget.default_method_index]
 
-        self.send_signal(self.widget.Inputs.data, data)
-        widget.unconditional_commit()
+        self.send_signal(self.widget.Inputs.data, data, wait=1000)
         imp_data = self.get_output(self.widget.Outputs.data)
         np.testing.assert_equal(imp_data.X, data.X)
         np.testing.assert_equal(imp_data.Y, data.Y)
 
-        self.send_signal(self.widget.Inputs.data, Table(data.domain))
-        widget.unconditional_commit()
+        self.send_signal(self.widget.Inputs.data, Table(data.domain), wait=1000)
         imp_data = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(imp_data), 0)
 
-    def test_no_features(self):
+        # only meta columns
+        data = data.transform(Domain([], [], data.domain.attributes))
+        self.send_signal("Data", data, wait=1000)
+        imp_data = self.get_output("Data")
+        self.assertEqual(len(imp_data), len(data))
+        self.assertEqual(imp_data.domain, data.domain)
+        np.testing.assert_equal(imp_data.metas, data.metas)
+
+    def test_model_error(self):
         widget = self.widget
         widget.default_method_index = widget.MODEL_BASED_IMPUTER
         widget.default_method = widget.methods[widget.default_method_index]
+        data = Table("brown-selected")[::4][:, :4]
+        self.send_signal(self.widget.Inputs.data, data, wait=1000)
 
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-
-        self.send_signal(self.widget.Inputs.learner, lambda *_: 1/0)  # Learner fails
-        widget.unconditional_commit()
+        self.send_signal(self.widget.Inputs.learner, Foo(), wait=1000)  # Learner fails
         self.assertTrue(widget.Error.imputation_failed.is_shown())
 
-        self.send_signal(self.widget.Inputs.learner, lambda *_: (lambda *_: 1/0))  # Model fails
-        widget.unconditional_commit()
+        self.send_signal(self.widget.Inputs.learner, FooBar(), wait=1000)  # Model fails
         self.assertTrue(widget.Error.imputation_failed.is_shown())
 
     def test_select_method(self):

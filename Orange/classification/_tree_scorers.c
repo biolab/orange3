@@ -615,7 +615,7 @@ typedef volatile __pyx_atomic_int_type __pyx_atomic_int;
 #endif
 
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":725
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":725
  * # in Cython to enable them only on the right systems.
  * 
  * ctypedef npy_int8       int8_t             # <<<<<<<<<<<<<<
@@ -624,7 +624,7 @@ typedef volatile __pyx_atomic_int_type __pyx_atomic_int;
  */
 typedef npy_int8 __pyx_t_5numpy_int8_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":726
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":726
  * 
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t             # <<<<<<<<<<<<<<
@@ -633,7 +633,7 @@ typedef npy_int8 __pyx_t_5numpy_int8_t;
  */
 typedef npy_int16 __pyx_t_5numpy_int16_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":727
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":727
  * ctypedef npy_int8       int8_t
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t             # <<<<<<<<<<<<<<
@@ -642,7 +642,7 @@ typedef npy_int16 __pyx_t_5numpy_int16_t;
  */
 typedef npy_int32 __pyx_t_5numpy_int32_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":728
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":728
  * ctypedef npy_int16      int16_t
  * ctypedef npy_int32      int32_t
  * ctypedef npy_int64      int64_t             # <<<<<<<<<<<<<<
@@ -651,7 +651,7 @@ typedef npy_int32 __pyx_t_5numpy_int32_t;
  */
 typedef npy_int64 __pyx_t_5numpy_int64_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":732
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":732
  * #ctypedef npy_int128     int128_t
  * 
  * ctypedef npy_uint8      uint8_t             # <<<<<<<<<<<<<<
@@ -660,7 +660,7 @@ typedef npy_int64 __pyx_t_5numpy_int64_t;
  */
 typedef npy_uint8 __pyx_t_5numpy_uint8_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":733
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":733
  * 
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t             # <<<<<<<<<<<<<<
@@ -669,7 +669,7 @@ typedef npy_uint8 __pyx_t_5numpy_uint8_t;
  */
 typedef npy_uint16 __pyx_t_5numpy_uint16_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":734
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":734
  * ctypedef npy_uint8      uint8_t
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t             # <<<<<<<<<<<<<<
@@ -678,7 +678,7 @@ typedef npy_uint16 __pyx_t_5numpy_uint16_t;
  */
 typedef npy_uint32 __pyx_t_5numpy_uint32_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":735
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":735
  * ctypedef npy_uint16     uint16_t
  * ctypedef npy_uint32     uint32_t
  * ctypedef npy_uint64     uint64_t             # <<<<<<<<<<<<<<
@@ -687,7 +687,7 @@ typedef npy_uint32 __pyx_t_5numpy_uint32_t;
  */
 typedef npy_uint64 __pyx_t_5numpy_uint64_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":739
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":739
  * #ctypedef npy_uint128    uint128_t
  * 
  * ctypedef npy_float32    float32_t             # <<<<<<<<<<<<<<
@@ -696,7 +696,7 @@ typedef npy_uint64 __pyx_t_5numpy_uint64_t;
  */
 typedef npy_float32 __pyx_t_5numpy_float32_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":740
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":740
  * 
  * ctypedef npy_float32    float32_t
  * ctypedef npy_float64    float64_t             # <<<<<<<<<<<<<<
@@ -705,7 +705,7 @@ typedef npy_float32 __pyx_t_5numpy_float32_t;
  */
 typedef npy_float64 __pyx_t_5numpy_float64_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":749
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":749
  * # The int types are mapped a bit surprising --
  * # numpy.int corresponds to 'l' and numpy.long to 'q'
  * ctypedef npy_long       int_t             # <<<<<<<<<<<<<<
@@ -714,7 +714,7 @@ typedef npy_float64 __pyx_t_5numpy_float64_t;
  */
 typedef npy_long __pyx_t_5numpy_int_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":750
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":750
  * # numpy.int corresponds to 'l' and numpy.long to 'q'
  * ctypedef npy_long       int_t
  * ctypedef npy_longlong   long_t             # <<<<<<<<<<<<<<
@@ -723,7 +723,7 @@ typedef npy_long __pyx_t_5numpy_int_t;
  */
 typedef npy_longlong __pyx_t_5numpy_long_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":751
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":751
  * ctypedef npy_long       int_t
  * ctypedef npy_longlong   long_t
  * ctypedef npy_longlong   longlong_t             # <<<<<<<<<<<<<<
@@ -732,7 +732,7 @@ typedef npy_longlong __pyx_t_5numpy_long_t;
  */
 typedef npy_longlong __pyx_t_5numpy_longlong_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":753
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":753
  * ctypedef npy_longlong   longlong_t
  * 
  * ctypedef npy_ulong      uint_t             # <<<<<<<<<<<<<<
@@ -741,7 +741,7 @@ typedef npy_longlong __pyx_t_5numpy_longlong_t;
  */
 typedef npy_ulong __pyx_t_5numpy_uint_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":754
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":754
  * 
  * ctypedef npy_ulong      uint_t
  * ctypedef npy_ulonglong  ulong_t             # <<<<<<<<<<<<<<
@@ -750,7 +750,7 @@ typedef npy_ulong __pyx_t_5numpy_uint_t;
  */
 typedef npy_ulonglong __pyx_t_5numpy_ulong_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":755
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":755
  * ctypedef npy_ulong      uint_t
  * ctypedef npy_ulonglong  ulong_t
  * ctypedef npy_ulonglong  ulonglong_t             # <<<<<<<<<<<<<<
@@ -759,7 +759,7 @@ typedef npy_ulonglong __pyx_t_5numpy_ulong_t;
  */
 typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":757
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":757
  * ctypedef npy_ulonglong  ulonglong_t
  * 
  * ctypedef npy_intp       intp_t             # <<<<<<<<<<<<<<
@@ -768,7 +768,7 @@ typedef npy_ulonglong __pyx_t_5numpy_ulonglong_t;
  */
 typedef npy_intp __pyx_t_5numpy_intp_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":758
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":758
  * 
  * ctypedef npy_intp       intp_t
  * ctypedef npy_uintp      uintp_t             # <<<<<<<<<<<<<<
@@ -777,7 +777,7 @@ typedef npy_intp __pyx_t_5numpy_intp_t;
  */
 typedef npy_uintp __pyx_t_5numpy_uintp_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":760
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":760
  * ctypedef npy_uintp      uintp_t
  * 
  * ctypedef npy_double     float_t             # <<<<<<<<<<<<<<
@@ -786,7 +786,7 @@ typedef npy_uintp __pyx_t_5numpy_uintp_t;
  */
 typedef npy_double __pyx_t_5numpy_float_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":761
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":761
  * 
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t             # <<<<<<<<<<<<<<
@@ -795,7 +795,7 @@ typedef npy_double __pyx_t_5numpy_float_t;
  */
 typedef npy_double __pyx_t_5numpy_double_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":762
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":762
  * ctypedef npy_double     float_t
  * ctypedef npy_double     double_t
  * ctypedef npy_longdouble longdouble_t             # <<<<<<<<<<<<<<
@@ -832,7 +832,7 @@ struct __pyx_MemviewEnum_obj;
 struct __pyx_memoryview_obj;
 struct __pyx_memoryviewslice_obj;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":764
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":764
  * ctypedef npy_longdouble longdouble_t
  * 
  * ctypedef npy_cfloat      cfloat_t             # <<<<<<<<<<<<<<
@@ -841,7 +841,7 @@ struct __pyx_memoryviewslice_obj;
  */
 typedef npy_cfloat __pyx_t_5numpy_cfloat_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":765
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":765
  * 
  * ctypedef npy_cfloat      cfloat_t
  * ctypedef npy_cdouble     cdouble_t             # <<<<<<<<<<<<<<
@@ -850,7 +850,7 @@ typedef npy_cfloat __pyx_t_5numpy_cfloat_t;
  */
 typedef npy_cdouble __pyx_t_5numpy_cdouble_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":766
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":766
  * ctypedef npy_cfloat      cfloat_t
  * ctypedef npy_cdouble     cdouble_t
  * ctypedef npy_clongdouble clongdouble_t             # <<<<<<<<<<<<<<
@@ -859,7 +859,7 @@ typedef npy_cdouble __pyx_t_5numpy_cdouble_t;
  */
 typedef npy_clongdouble __pyx_t_5numpy_clongdouble_t;
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":768
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":768
  * ctypedef npy_clongdouble clongdouble_t
  * 
  * ctypedef npy_cdouble     complex_t             # <<<<<<<<<<<<<<
@@ -1180,6 +1180,28 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallMethO(PyObject *func, PyObject
 /* PyObjectCallOneArg.proto */
 static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObject *arg);
 
+/* GetItemInt.proto */
+#define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Fast(o, (Py_ssize_t)i, is_list, wraparound, boundscheck) :\
+    (is_list ? (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL) :\
+               __Pyx_GetItemInt_Generic(o, to_py_func(i))))
+#define __Pyx_GetItemInt_List(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_List_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
+    (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck);
+#define __Pyx_GetItemInt_Tuple(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
+    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
+    __Pyx_GetItemInt_Tuple_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
+    (PyErr_SetString(PyExc_IndexError, "tuple index out of range"), (PyObject*)NULL))
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              int wraparound, int boundscheck);
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
+                                                     int is_list, int wraparound, int boundscheck);
+
 /* RaiseException.proto */
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb, PyObject *cause);
 
@@ -1285,28 +1307,6 @@ static CYTHON_INLINE void __Pyx_ExceptionSwap(PyObject **type, PyObject **value,
 
 /* Import.proto */
 static PyObject *__Pyx_Import(PyObject *name, PyObject *from_list, int level);
-
-/* GetItemInt.proto */
-#define __Pyx_GetItemInt(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_Fast(o, (Py_ssize_t)i, is_list, wraparound, boundscheck) :\
-    (is_list ? (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL) :\
-               __Pyx_GetItemInt_Generic(o, to_py_func(i))))
-#define __Pyx_GetItemInt_List(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_List_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
-    (PyErr_SetString(PyExc_IndexError, "list index out of range"), (PyObject*)NULL))
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
-                                                              int wraparound, int boundscheck);
-#define __Pyx_GetItemInt_Tuple(o, i, type, is_signed, to_py_func, is_list, wraparound, boundscheck)\
-    (__Pyx_fits_Py_ssize_t(i, type, is_signed) ?\
-    __Pyx_GetItemInt_Tuple_Fast(o, (Py_ssize_t)i, wraparound, boundscheck) :\
-    (PyErr_SetString(PyExc_IndexError, "tuple index out of range"), (PyObject*)NULL))
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
-                                                              int wraparound, int boundscheck);
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j);
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i,
-                                                     int is_list, int wraparound, int boundscheck);
 
 static CYTHON_UNUSED int __pyx_memoryview_getbuffer(PyObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /*proto*/
 /* ListCompAppend.proto */
@@ -1753,13 +1753,16 @@ static const char __pyx_k_tx[] = "tx";
 static const char __pyx_k_xi[] = "xi";
 static const char __pyx_k_yi[] = "yi";
 static const char __pyx_k_idx[] = "idx";
+static const char __pyx_k_ind[] = "ind";
 static const char __pyx_k_mto[] = "mto";
 static const char __pyx_k_obj[] = "obj";
 static const char __pyx_k_sum[] = "sum";
 static const char __pyx_k_val[] = "val";
+static const char __pyx_k_attr[] = "attr";
 static const char __pyx_k_base[] = "base";
 static const char __pyx_k_code[] = "code";
 static const char __pyx_k_cont[] = "cont";
+static const char __pyx_k_data[] = "data";
 static const char __pyx_k_left[] = "left";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_mode[] = "mode";
@@ -1794,6 +1797,8 @@ static const char __pyx_k_curr_y[] = "curr_y";
 static const char __pyx_k_encode[] = "encode";
 static const char __pyx_k_format[] = "format";
 static const char __pyx_k_import[] = "__import__";
+static const char __pyx_k_indptr[] = "indptr";
+static const char __pyx_k_n_rows[] = "n_rows";
 static const char __pyx_k_name_2[] = "__name__";
 static const char __pyx_k_nvalid[] = "nvalid";
 static const char __pyx_k_struct[] = "struct";
@@ -1804,6 +1809,7 @@ static const char __pyx_k_allowed[] = "allowed";
 static const char __pyx_k_asarray[] = "asarray";
 static const char __pyx_k_float64[] = "float64";
 static const char __pyx_k_fortran[] = "fortran";
+static const char __pyx_k_indices[] = "indices";
 static const char __pyx_k_mapping[] = "mapping";
 static const char __pyx_k_memview[] = "memview";
 static const char __pyx_k_val_idx[] = "val_idx";
@@ -1850,6 +1856,8 @@ static const char __pyx_k_find_binarization_MSE[] = "find_binarization_MSE";
 static const char __pyx_k_MemoryView_of_r_object[] = "<MemoryView of %r object>";
 static const char __pyx_k_find_threshold_entropy[] = "find_threshold_entropy";
 static const char __pyx_k_MemoryView_of_r_at_0x_x[] = "<MemoryView of %r at 0x%x>";
+static const char __pyx_k_compute_predictions_csc[] = "compute_predictions_csc";
+static const char __pyx_k_compute_predictions_csr[] = "compute_predictions_csr";
 static const char __pyx_k_contiguous_and_indirect[] = "<contiguous and indirect>";
 static const char __pyx_k_Cannot_index_with_type_s[] = "Cannot index with type '%s'";
 static const char __pyx_k_Invalid_shape_in_axis_d_d[] = "Invalid shape in axis %d: %d.";
@@ -1858,7 +1866,7 @@ static const char __pyx_k_itemsize_0_for_cython_array[] = "itemsize <= 0 for cyt
 static const char __pyx_k_ndarray_is_not_C_contiguous[] = "ndarray is not C contiguous";
 static const char __pyx_k_unable_to_allocate_array_data[] = "unable to allocate array data.";
 static const char __pyx_k_strided_and_direct_or_indirect[] = "<strided and direct or indirect>";
-static const char __pyx_k_Users_aleserjavec_workspace_ora[] = "/Users/aleserjavec/workspace/orange3/Orange/classification/_tree_scorers.pyx";
+static const char __pyx_k_Users_janez_Dropbox_orange3_Ora[] = "/Users/janez/Dropbox/orange3/Orange/classification/_tree_scorers.pyx";
 static const char __pyx_k_unknown_dtype_code_in_numpy_pxd[] = "unknown dtype code in numpy.pxd (%d)";
 static const char __pyx_k_Buffer_view_does_not_expose_stri[] = "Buffer view does not expose strides";
 static const char __pyx_k_Can_only_create_a_buffer_that_is[] = "Can only create a buffer that is contiguous in memory.";
@@ -1897,12 +1905,13 @@ static PyObject *__pyx_kp_s_Out_of_bounds_on_buffer_access_a;
 static PyObject *__pyx_n_s_RuntimeError;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_kp_s_Unable_to_convert_item_to_object;
-static PyObject *__pyx_kp_s_Users_aleserjavec_workspace_ora;
+static PyObject *__pyx_kp_s_Users_janez_Dropbox_orange3_Ora;
 static PyObject *__pyx_n_s_ValueError;
 static PyObject *__pyx_n_s_X;
 static PyObject *__pyx_n_s_allocate_buffer;
 static PyObject *__pyx_n_s_allowed;
 static PyObject *__pyx_n_s_asarray;
+static PyObject *__pyx_n_s_attr;
 static PyObject *__pyx_n_s_base;
 static PyObject *__pyx_n_s_best_entro;
 static PyObject *__pyx_n_s_best_idx;
@@ -1917,11 +1926,14 @@ static PyObject *__pyx_n_s_class_entro;
 static PyObject *__pyx_n_s_code;
 static PyObject *__pyx_n_s_compute_grouped_MSE;
 static PyObject *__pyx_n_s_compute_predictions;
+static PyObject *__pyx_n_s_compute_predictions_csc;
+static PyObject *__pyx_n_s_compute_predictions_csr;
 static PyObject *__pyx_n_s_cont;
 static PyObject *__pyx_kp_s_contiguous_and_direct;
 static PyObject *__pyx_kp_s_contiguous_and_indirect;
 static PyObject *__pyx_n_s_contingency;
 static PyObject *__pyx_n_s_curr_y;
+static PyObject *__pyx_n_s_data;
 static PyObject *__pyx_n_s_distr;
 static PyObject *__pyx_n_s_dtype;
 static PyObject *__pyx_n_s_dtype_is_object;
@@ -1946,6 +1958,9 @@ static PyObject *__pyx_n_s_i;
 static PyObject *__pyx_n_s_id;
 static PyObject *__pyx_n_s_idx;
 static PyObject *__pyx_n_s_import;
+static PyObject *__pyx_n_s_ind;
+static PyObject *__pyx_n_s_indices;
+static PyObject *__pyx_n_s_indptr;
 static PyObject *__pyx_n_s_int32;
 static PyObject *__pyx_n_s_inter;
 static PyObject *__pyx_n_s_itemsize;
@@ -1963,6 +1978,7 @@ static PyObject *__pyx_n_s_move;
 static PyObject *__pyx_n_s_mto;
 static PyObject *__pyx_n_s_n;
 static PyObject *__pyx_n_s_n_classes;
+static PyObject *__pyx_n_s_n_rows;
 static PyObject *__pyx_n_s_n_values;
 static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_n_s_name_2;
@@ -2023,6 +2039,8 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_6find_thresho
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_8find_binarization_MSE(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_x, __Pyx_memviewslice __pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf); /* proto */
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_10compute_grouped_MSE(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_x, __Pyx_memviewslice __pyx_v_y, int __pyx_v_n_values, int __pyx_v_min_leaf); /* proto */
 static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_12compute_predictions(CYTHON_UNUSED PyObject *__pyx_self, __Pyx_memviewslice __pyx_v_X, __Pyx_memviewslice __pyx_v_code, __Pyx_memviewslice __pyx_v_values, __Pyx_memviewslice __pyx_v_thresholds); /* proto */
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_14compute_predictions_csr(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_X, __Pyx_memviewslice __pyx_v_code, __Pyx_memviewslice __pyx_v_values, __Pyx_memviewslice __pyx_v_thresholds); /* proto */
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_16compute_predictions_csc(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_X, __Pyx_memviewslice __pyx_v_code, __Pyx_memviewslice __pyx_v_values, __Pyx_memviewslice __pyx_v_thresholds); /* proto */
 static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info, int __pyx_v_flags); /* proto */
 static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_self, Py_buffer *__pyx_v_info); /* proto */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */
@@ -2094,10 +2112,12 @@ static PyObject *__pyx_tuple__31;
 static PyObject *__pyx_tuple__33;
 static PyObject *__pyx_tuple__35;
 static PyObject *__pyx_tuple__37;
-static PyObject *__pyx_tuple__38;
 static PyObject *__pyx_tuple__39;
-static PyObject *__pyx_tuple__40;
 static PyObject *__pyx_tuple__41;
+static PyObject *__pyx_tuple__42;
+static PyObject *__pyx_tuple__43;
+static PyObject *__pyx_tuple__44;
+static PyObject *__pyx_tuple__45;
 static PyObject *__pyx_codeobj__24;
 static PyObject *__pyx_codeobj__26;
 static PyObject *__pyx_codeobj__28;
@@ -2105,6 +2125,8 @@ static PyObject *__pyx_codeobj__30;
 static PyObject *__pyx_codeobj__32;
 static PyObject *__pyx_codeobj__34;
 static PyObject *__pyx_codeobj__36;
+static PyObject *__pyx_codeobj__38;
+static PyObject *__pyx_codeobj__40;
 
 /* "Orange/classification/_tree_scorers.pyx":19
  *     NULL_BRANCH = -1
@@ -5984,6 +6006,7 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_12compute_pre
  *             for j in range(values.shape[1]):
  *                 predictions[i, j] = values[node_idx, j]             # <<<<<<<<<<<<<<
  *     return np.asarray(predictions)
+ * 
  */
             __pyx_t_21 = __pyx_v_node_idx;
             __pyx_t_22 = __pyx_v_j;
@@ -6016,6 +6039,8 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_12compute_pre
  *             for j in range(values.shape[1]):
  *                 predictions[i, j] = values[node_idx, j]
  *     return np.asarray(predictions)             # <<<<<<<<<<<<<<
+ * 
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_4 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 418, __pyx_L1_error)
@@ -6084,7 +6109,1326 @@ static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_12compute_pre
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":197
+/* "Orange/classification/_tree_scorers.pyx":421
+ * 
+ * 
+ * def compute_predictions_csr(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_15compute_predictions_csr(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_14classification_13_tree_scorers_14compute_predictions_csr[] = "compute_predictions_csr(X, __Pyx_memviewslice code, __Pyx_memviewslice values, __Pyx_memviewslice thresholds)\n\n    Same as compute_predictions except for sparse data\n    ";
+static PyMethodDef __pyx_mdef_6Orange_14classification_13_tree_scorers_15compute_predictions_csr = {"compute_predictions_csr", (PyCFunction)__pyx_pw_6Orange_14classification_13_tree_scorers_15compute_predictions_csr, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_14classification_13_tree_scorers_14compute_predictions_csr};
+static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_15compute_predictions_csr(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyObject *__pyx_v_X = 0;
+  __Pyx_memviewslice __pyx_v_code = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_values = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_thresholds = { 0, 0, { 0 }, { 0 }, { 0 } };
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("compute_predictions_csr (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_X,&__pyx_n_s_code,&__pyx_n_s_values,&__pyx_n_s_thresholds,0};
+    PyObject* values[4] = {0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_X)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        case  1:
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_code)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csr", 1, 4, 4, 1); __PYX_ERR(0, 421, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_values)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csr", 1, 4, 4, 2); __PYX_ERR(0, 421, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_thresholds)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csr", 1, 4, 4, 3); __PYX_ERR(0, 421, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_predictions_csr") < 0)) __PYX_ERR(0, 421, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+    }
+    __pyx_v_X = values[0];
+    __pyx_v_code = __Pyx_PyObject_to_MemoryviewSlice_ds_int(values[1]); if (unlikely(!__pyx_v_code.memview)) __PYX_ERR(0, 421, __pyx_L3_error)
+    __pyx_v_values = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[2]); if (unlikely(!__pyx_v_values.memview)) __PYX_ERR(0, 422, __pyx_L3_error)
+    __pyx_v_thresholds = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[3]); if (unlikely(!__pyx_v_thresholds.memview)) __PYX_ERR(0, 422, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("compute_predictions_csr", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 421, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_predictions_csr", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_14compute_predictions_csr(__pyx_self, __pyx_v_X, __pyx_v_code, __pyx_v_values, __pyx_v_thresholds);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_14compute_predictions_csr(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_X, __Pyx_memviewslice __pyx_v_code, __Pyx_memviewslice __pyx_v_values, __Pyx_memviewslice __pyx_v_thresholds) {
+  unsigned int __pyx_v_node_ptr;
+  unsigned int __pyx_v_i;
+  unsigned int __pyx_v_j;
+  unsigned int __pyx_v_val_idx;
+  int __pyx_v_next_node_ptr;
+  int __pyx_v_node_idx;
+  __pyx_t_5numpy_float64_t __pyx_v_val;
+  __Pyx_memviewslice __pyx_v_predictions = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_data = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_indptr = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_indices = { 0, 0, { 0 }, { 0 }, { 0 } };
+  int __pyx_v_ind;
+  int __pyx_v_attr;
+  int __pyx_v_n_rows;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  PyObject *__pyx_t_4 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  __Pyx_memviewslice __pyx_t_6 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_t_7 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_t_8 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  int __pyx_t_9;
+  unsigned int __pyx_t_10;
+  size_t __pyx_t_11;
+  int __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  size_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
+  int __pyx_t_16;
+  Py_ssize_t __pyx_t_17;
+  __pyx_t_5numpy_float64_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  size_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  Py_ssize_t __pyx_t_23;
+  Py_ssize_t __pyx_t_24;
+  Py_ssize_t __pyx_t_25;
+  Py_ssize_t __pyx_t_26;
+  unsigned int __pyx_t_27;
+  Py_ssize_t __pyx_t_28;
+  size_t __pyx_t_29;
+  size_t __pyx_t_30;
+  size_t __pyx_t_31;
+  __Pyx_RefNannySetupContext("compute_predictions_csr", 0);
+
+  /* "Orange/classification/_tree_scorers.pyx":430
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":431
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)             # <<<<<<<<<<<<<<
+ * 
+ *         double[:] data = X.data
+ */
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_shape); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = PyInt_FromSsize_t((__pyx_v_values.shape[1])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_GIVEREF(__pyx_t_3);
+  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_3);
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_1);
+  __pyx_t_3 = 0;
+  __pyx_t_1 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":430
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_4);
+  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_4);
+  __pyx_t_4 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":431
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)             # <<<<<<<<<<<<<<
+ * 
+ *         double[:] data = X.data
+ */
+  __pyx_t_4 = PyDict_New(); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float64); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 431, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":430
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_5);
+  if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 430, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_predictions = __pyx_t_6;
+  __pyx_t_6.memview = NULL;
+  __pyx_t_6.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":433
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ *         double[:] data = X.data             # <<<<<<<<<<<<<<
+ *         np.int32_t[:] indptr = X.indptr
+ *         np.int32_t[:] indices = X.indices
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_data); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_5);
+  if (unlikely(!__pyx_t_7.memview)) __PYX_ERR(0, 433, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_data = __pyx_t_7;
+  __pyx_t_7.memview = NULL;
+  __pyx_t_7.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":434
+ * 
+ *         double[:] data = X.data
+ *         np.int32_t[:] indptr = X.indptr             # <<<<<<<<<<<<<<
+ *         np.int32_t[:] indices = X.indices
+ *         int ind, attr, n_rows
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_indptr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 434, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5numpy_int32_t(__pyx_t_5);
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 434, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_indptr = __pyx_t_8;
+  __pyx_t_8.memview = NULL;
+  __pyx_t_8.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":435
+ *         double[:] data = X.data
+ *         np.int32_t[:] indptr = X.indptr
+ *         np.int32_t[:] indices = X.indices             # <<<<<<<<<<<<<<
+ *         int ind, attr, n_rows
+ * 
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_indices); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 435, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5numpy_int32_t(__pyx_t_5);
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 435, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_indices = __pyx_t_8;
+  __pyx_t_8.memview = NULL;
+  __pyx_t_8.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":438
+ *         int ind, attr, n_rows
+ * 
+ *     n_rows = X.shape[0]             # <<<<<<<<<<<<<<
+ * 
+ *     with nogil:
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_shape); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 438, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_5, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 438, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 438, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_v_n_rows = __pyx_t_9;
+
+  /* "Orange/classification/_tree_scorers.pyx":440
+ *     n_rows = X.shape[0]
+ * 
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ */
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      #endif
+      /*try:*/ {
+
+        /* "Orange/classification/_tree_scorers.pyx":441
+ * 
+ *     with nogil:
+ *         for i in range(n_rows):             # <<<<<<<<<<<<<<
+ *             node_ptr = 0
+ *             while code[node_ptr]:
+ */
+        __pyx_t_9 = __pyx_v_n_rows;
+        for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
+          __pyx_v_i = __pyx_t_10;
+
+          /* "Orange/classification/_tree_scorers.pyx":442
+ *     with nogil:
+ *         for i in range(n_rows):
+ *             node_ptr = 0             # <<<<<<<<<<<<<<
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]
+ */
+          __pyx_v_node_ptr = 0;
+
+          /* "Orange/classification/_tree_scorers.pyx":443
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ *             while code[node_ptr]:             # <<<<<<<<<<<<<<
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[i]
+ */
+          while (1) {
+            __pyx_t_11 = __pyx_v_node_ptr;
+            __pyx_t_12 = ((*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_11 * __pyx_v_code.strides[0]) ))) != 0);
+            if (!__pyx_t_12) break;
+
+            /* "Orange/classification/_tree_scorers.pyx":444
+ *             node_ptr = 0
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]             # <<<<<<<<<<<<<<
+ *                 ind = indptr[i]
+ *                 while ind < indptr[i + 1] and indices[ind] != attr:
+ */
+            __pyx_t_13 = (__pyx_v_node_ptr + 2);
+            __pyx_v_attr = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_13 * __pyx_v_code.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":445
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[i]             # <<<<<<<<<<<<<<
+ *                 while ind < indptr[i + 1] and indices[ind] != attr:
+ *                     ind += 1
+ */
+            __pyx_t_14 = __pyx_v_i;
+            __pyx_v_ind = (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_14 * __pyx_v_indptr.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":446
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[i]
+ *                 while ind < indptr[i + 1] and indices[ind] != attr:             # <<<<<<<<<<<<<<
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[i + 1] else 0
+ */
+            while (1) {
+              __pyx_t_15 = (__pyx_v_i + 1);
+              __pyx_t_16 = ((__pyx_v_ind < (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_15 * __pyx_v_indptr.strides[0]) )))) != 0);
+              if (__pyx_t_16) {
+              } else {
+                __pyx_t_12 = __pyx_t_16;
+                goto __pyx_L12_bool_binop_done;
+              }
+              __pyx_t_17 = __pyx_v_ind;
+              __pyx_t_16 = (((*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indices.data + __pyx_t_17 * __pyx_v_indices.strides[0]) ))) != __pyx_v_attr) != 0);
+              __pyx_t_12 = __pyx_t_16;
+              __pyx_L12_bool_binop_done:;
+              if (!__pyx_t_12) break;
+
+              /* "Orange/classification/_tree_scorers.pyx":447
+ *                 ind = indptr[i]
+ *                 while ind < indptr[i + 1] and indices[ind] != attr:
+ *                     ind += 1             # <<<<<<<<<<<<<<
+ *                 val = data[ind] if ind < indptr[i + 1] else 0
+ *                 if npy_isnan(val):
+ */
+              __pyx_v_ind = (__pyx_v_ind + 1);
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":448
+ *                 while ind < indptr[i + 1] and indices[ind] != attr:
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[i + 1] else 0             # <<<<<<<<<<<<<<
+ *                 if npy_isnan(val):
+ *                     break
+ */
+            __pyx_t_19 = (__pyx_v_i + 1);
+            if (((__pyx_v_ind < (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_19 * __pyx_v_indptr.strides[0]) )))) != 0)) {
+              __pyx_t_20 = __pyx_v_ind;
+              __pyx_t_18 = (*((double *) ( /* dim=0 */ (__pyx_v_data.data + __pyx_t_20 * __pyx_v_data.strides[0]) )));
+            } else {
+              __pyx_t_18 = 0.0;
+            }
+            __pyx_v_val = __pyx_t_18;
+
+            /* "Orange/classification/_tree_scorers.pyx":449
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[i + 1] else 0
+ *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
+ *                     break
+ *                 if code[node_ptr] == 3:
+ */
+            __pyx_t_12 = (npy_isnan(__pyx_v_val) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":450
+ *                 val = data[ind] if ind < indptr[i + 1] else 0
+ *                 if npy_isnan(val):
+ *                     break             # <<<<<<<<<<<<<<
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]
+ */
+              goto __pyx_L9_break;
+
+              /* "Orange/classification/_tree_scorers.pyx":449
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[i + 1] else 0
+ *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
+ *                     break
+ *                 if code[node_ptr] == 3:
+ */
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":451
+ *                 if npy_isnan(val):
+ *                     break
+ *                 if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])
+ */
+            __pyx_t_21 = __pyx_v_node_ptr;
+            __pyx_t_12 = (((*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_21 * __pyx_v_code.strides[0]) ))) == 3) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":452
+ *                     break
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
+ *                     val_idx = int(val > thresholds[node_idx])
+ *                 else:
+ */
+              __pyx_t_22 = (__pyx_v_node_ptr + 1);
+              __pyx_v_node_idx = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_22 * __pyx_v_code.strides[0]) )));
+
+              /* "Orange/classification/_tree_scorers.pyx":453
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     val_idx = int(val)
+ */
+              __pyx_t_23 = __pyx_v_node_idx;
+              __pyx_v_val_idx = ((unsigned int)(__pyx_v_val > (*((double *) ( /* dim=0 */ (__pyx_v_thresholds.data + __pyx_t_23 * __pyx_v_thresholds.strides[0]) )))));
+
+              /* "Orange/classification/_tree_scorers.pyx":451
+ *                 if npy_isnan(val):
+ *                     break
+ *                 if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])
+ */
+              goto __pyx_L15;
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":455
+ *                     val_idx = int(val > thresholds[node_idx])
+ *                 else:
+ *                     val_idx = int(val)             # <<<<<<<<<<<<<<
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:
+ */
+            /*else*/ {
+              __pyx_v_val_idx = ((unsigned int)__pyx_v_val);
+            }
+            __pyx_L15:;
+
+            /* "Orange/classification/_tree_scorers.pyx":456
+ *                 else:
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]             # <<<<<<<<<<<<<<
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break
+ */
+            __pyx_t_24 = ((__pyx_v_node_ptr + 3) + __pyx_v_val_idx);
+            __pyx_v_next_node_ptr = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_24 * __pyx_v_code.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":457
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:             # <<<<<<<<<<<<<<
+ *                     break
+ *                 node_ptr = next_node_ptr
+ */
+            __pyx_t_12 = ((__pyx_v_next_node_ptr == __pyx_e_6Orange_14classification_13_tree_scorers_NULL_BRANCH) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":458
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break             # <<<<<<<<<<<<<<
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]
+ */
+              goto __pyx_L9_break;
+
+              /* "Orange/classification/_tree_scorers.pyx":457
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:             # <<<<<<<<<<<<<<
+ *                     break
+ *                 node_ptr = next_node_ptr
+ */
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":459
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break
+ *                 node_ptr = next_node_ptr             # <<<<<<<<<<<<<<
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):
+ */
+            __pyx_v_node_ptr = __pyx_v_next_node_ptr;
+          }
+          __pyx_L9_break:;
+
+          /* "Orange/classification/_tree_scorers.pyx":460
+ *                     break
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]
+ */
+          __pyx_t_25 = (__pyx_v_node_ptr + 1);
+          __pyx_v_node_idx = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_25 * __pyx_v_code.strides[0]) )));
+
+          /* "Orange/classification/_tree_scorers.pyx":461
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):             # <<<<<<<<<<<<<<
+ *                 predictions[i, j] = values[node_idx, j]
+ *     return np.asarray(predictions)
+ */
+          __pyx_t_26 = (__pyx_v_values.shape[1]);
+          for (__pyx_t_27 = 0; __pyx_t_27 < __pyx_t_26; __pyx_t_27+=1) {
+            __pyx_v_j = __pyx_t_27;
+
+            /* "Orange/classification/_tree_scorers.pyx":462
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]             # <<<<<<<<<<<<<<
+ *     return np.asarray(predictions)
+ * 
+ */
+            __pyx_t_28 = __pyx_v_node_idx;
+            __pyx_t_29 = __pyx_v_j;
+            __pyx_t_30 = __pyx_v_i;
+            __pyx_t_31 = __pyx_v_j;
+            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_predictions.data + __pyx_t_30 * __pyx_v_predictions.strides[0]) ) + __pyx_t_31 * __pyx_v_predictions.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_values.data + __pyx_t_28 * __pyx_v_values.strides[0]) ) + __pyx_t_29 * __pyx_v_values.strides[1]) )));
+          }
+        }
+      }
+
+      /* "Orange/classification/_tree_scorers.pyx":440
+ *     n_rows = X.shape[0]
+ * 
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
+  }
+
+  /* "Orange/classification/_tree_scorers.pyx":463
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]
+ *     return np.asarray(predictions)             # <<<<<<<<<<<<<<
+ * 
+ * def compute_predictions_csc(X, int[:] code,
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_5 = __pyx_memoryview_fromslice(__pyx_v_predictions, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_2 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_1))) {
+    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_1);
+    if (likely(__pyx_t_2)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+      __Pyx_INCREF(__pyx_t_2);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_1, function);
+    }
+  }
+  if (!__pyx_t_2) {
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 463, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __Pyx_GOTREF(__pyx_t_4);
+  } else {
+    __pyx_t_3 = PyTuple_New(1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 463, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2); __pyx_t_2 = NULL;
+    __Pyx_GIVEREF(__pyx_t_5);
+    PyTuple_SET_ITEM(__pyx_t_3, 0+1, __pyx_t_5);
+    __pyx_t_5 = 0;
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_3, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 463, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  }
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_r = __pyx_t_4;
+  __pyx_t_4 = 0;
+  goto __pyx_L0;
+
+  /* "Orange/classification/_tree_scorers.pyx":421
+ * 
+ * 
+ * def compute_predictions_csr(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_5);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_6, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_7, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
+  __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_predictions_csr", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __PYX_XDEC_MEMVIEW(&__pyx_v_predictions, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_data, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_indptr, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_indices, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_code, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_values, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_thresholds, 1);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "Orange/classification/_tree_scorers.pyx":465
+ *     return np.asarray(predictions)
+ * 
+ * def compute_predictions_csc(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_17compute_predictions_csc(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static char __pyx_doc_6Orange_14classification_13_tree_scorers_16compute_predictions_csc[] = "compute_predictions_csc(X, __Pyx_memviewslice code, __Pyx_memviewslice values, __Pyx_memviewslice thresholds)\n\n    Same as compute_predictions except for sparse data\n    ";
+static PyMethodDef __pyx_mdef_6Orange_14classification_13_tree_scorers_17compute_predictions_csc = {"compute_predictions_csc", (PyCFunction)__pyx_pw_6Orange_14classification_13_tree_scorers_17compute_predictions_csc, METH_VARARGS|METH_KEYWORDS, __pyx_doc_6Orange_14classification_13_tree_scorers_16compute_predictions_csc};
+static PyObject *__pyx_pw_6Orange_14classification_13_tree_scorers_17compute_predictions_csc(PyObject *__pyx_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyObject *__pyx_v_X = 0;
+  __Pyx_memviewslice __pyx_v_code = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_values = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_thresholds = { 0, 0, { 0 }, { 0 }, { 0 } };
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("compute_predictions_csc (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_X,&__pyx_n_s_code,&__pyx_n_s_values,&__pyx_n_s_thresholds,0};
+    PyObject* values[4] = {0,0,0,0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  4: values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+        case  3: values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+        case  2: values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_X)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+        case  1:
+        if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_code)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csc", 1, 4, 4, 1); __PYX_ERR(0, 465, __pyx_L3_error)
+        }
+        case  2:
+        if (likely((values[2] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_values)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csc", 1, 4, 4, 2); __PYX_ERR(0, 465, __pyx_L3_error)
+        }
+        case  3:
+        if (likely((values[3] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_thresholds)) != 0)) kw_args--;
+        else {
+          __Pyx_RaiseArgtupleInvalid("compute_predictions_csc", 1, 4, 4, 3); __PYX_ERR(0, 465, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "compute_predictions_csc") < 0)) __PYX_ERR(0, 465, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 4) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+      values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
+      values[2] = PyTuple_GET_ITEM(__pyx_args, 2);
+      values[3] = PyTuple_GET_ITEM(__pyx_args, 3);
+    }
+    __pyx_v_X = values[0];
+    __pyx_v_code = __Pyx_PyObject_to_MemoryviewSlice_ds_int(values[1]); if (unlikely(!__pyx_v_code.memview)) __PYX_ERR(0, 465, __pyx_L3_error)
+    __pyx_v_values = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(values[2]); if (unlikely(!__pyx_v_values.memview)) __PYX_ERR(0, 466, __pyx_L3_error)
+    __pyx_v_thresholds = __Pyx_PyObject_to_MemoryviewSlice_ds_double(values[3]); if (unlikely(!__pyx_v_thresholds.memview)) __PYX_ERR(0, 466, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("compute_predictions_csc", 1, 4, 4, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 465, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_predictions_csc", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_6Orange_14classification_13_tree_scorers_16compute_predictions_csc(__pyx_self, __pyx_v_X, __pyx_v_code, __pyx_v_values, __pyx_v_thresholds);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6Orange_14classification_13_tree_scorers_16compute_predictions_csc(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v_X, __Pyx_memviewslice __pyx_v_code, __Pyx_memviewslice __pyx_v_values, __Pyx_memviewslice __pyx_v_thresholds) {
+  unsigned int __pyx_v_node_ptr;
+  unsigned int __pyx_v_i;
+  unsigned int __pyx_v_j;
+  unsigned int __pyx_v_val_idx;
+  int __pyx_v_next_node_ptr;
+  int __pyx_v_node_idx;
+  __pyx_t_5numpy_float64_t __pyx_v_val;
+  __Pyx_memviewslice __pyx_v_predictions = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_data = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_indptr = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_v_indices = { 0, 0, { 0 }, { 0 }, { 0 } };
+  int __pyx_v_ind;
+  int __pyx_v_attr;
+  int __pyx_v_n_rows;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  PyObject *__pyx_t_4 = NULL;
+  PyObject *__pyx_t_5 = NULL;
+  __Pyx_memviewslice __pyx_t_6 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_t_7 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  __Pyx_memviewslice __pyx_t_8 = { 0, 0, { 0 }, { 0 }, { 0 } };
+  int __pyx_t_9;
+  unsigned int __pyx_t_10;
+  size_t __pyx_t_11;
+  int __pyx_t_12;
+  Py_ssize_t __pyx_t_13;
+  Py_ssize_t __pyx_t_14;
+  Py_ssize_t __pyx_t_15;
+  int __pyx_t_16;
+  Py_ssize_t __pyx_t_17;
+  __pyx_t_5numpy_float64_t __pyx_t_18;
+  Py_ssize_t __pyx_t_19;
+  Py_ssize_t __pyx_t_20;
+  size_t __pyx_t_21;
+  Py_ssize_t __pyx_t_22;
+  Py_ssize_t __pyx_t_23;
+  Py_ssize_t __pyx_t_24;
+  Py_ssize_t __pyx_t_25;
+  Py_ssize_t __pyx_t_26;
+  unsigned int __pyx_t_27;
+  Py_ssize_t __pyx_t_28;
+  size_t __pyx_t_29;
+  size_t __pyx_t_30;
+  size_t __pyx_t_31;
+  __Pyx_RefNannySetupContext("compute_predictions_csc", 0);
+
+  /* "Orange/classification/_tree_scorers.pyx":474
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 474, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_empty); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 474, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":475
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)             # <<<<<<<<<<<<<<
+ * 
+ *         double[:] data = X.data
+ */
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_shape); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_3 = __Pyx_GetItemInt(__pyx_t_1, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_1 = PyInt_FromSsize_t((__pyx_v_values.shape[1])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_GIVEREF(__pyx_t_3);
+  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_t_3);
+  __Pyx_GIVEREF(__pyx_t_1);
+  PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_t_1);
+  __pyx_t_3 = 0;
+  __pyx_t_1 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":474
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_1 = PyTuple_New(1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 474, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_GIVEREF(__pyx_t_4);
+  PyTuple_SET_ITEM(__pyx_t_1, 0, __pyx_t_4);
+  __pyx_t_4 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":475
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)             # <<<<<<<<<<<<<<
+ * 
+ *         double[:] data = X.data
+ */
+  __pyx_t_4 = PyDict_New(); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __pyx_t_3 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_3);
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_3, __pyx_n_s_float64); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  if (PyDict_SetItem(__pyx_t_4, __pyx_n_s_dtype, __pyx_t_5) < 0) __PYX_ERR(0, 475, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":474
+ *         signed int next_node_ptr, node_idx
+ *         np.float64_t val
+ *         double[: ,:] predictions = np.empty(             # <<<<<<<<<<<<<<
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ */
+  __pyx_t_5 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_t_1, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 474, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_t_6 = __Pyx_PyObject_to_MemoryviewSlice_dsds_double(__pyx_t_5);
+  if (unlikely(!__pyx_t_6.memview)) __PYX_ERR(0, 474, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_predictions = __pyx_t_6;
+  __pyx_t_6.memview = NULL;
+  __pyx_t_6.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":477
+ *             (X.shape[0], values.shape[1]), dtype=np.float64)
+ * 
+ *         double[:] data = X.data             # <<<<<<<<<<<<<<
+ *         np.int32_t[:] indptr = X.indptr
+ *         np.int32_t[:] indices = X.indices
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_data); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 477, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_7 = __Pyx_PyObject_to_MemoryviewSlice_ds_double(__pyx_t_5);
+  if (unlikely(!__pyx_t_7.memview)) __PYX_ERR(0, 477, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_data = __pyx_t_7;
+  __pyx_t_7.memview = NULL;
+  __pyx_t_7.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":478
+ * 
+ *         double[:] data = X.data
+ *         np.int32_t[:] indptr = X.indptr             # <<<<<<<<<<<<<<
+ *         np.int32_t[:] indices = X.indices
+ *         int ind, attr, n_rows
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_indptr); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5numpy_int32_t(__pyx_t_5);
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 478, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_indptr = __pyx_t_8;
+  __pyx_t_8.memview = NULL;
+  __pyx_t_8.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":479
+ *         double[:] data = X.data
+ *         np.int32_t[:] indptr = X.indptr
+ *         np.int32_t[:] indices = X.indices             # <<<<<<<<<<<<<<
+ *         int ind, attr, n_rows
+ * 
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_indices); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 479, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_8 = __Pyx_PyObject_to_MemoryviewSlice_ds_nn___pyx_t_5numpy_int32_t(__pyx_t_5);
+  if (unlikely(!__pyx_t_8.memview)) __PYX_ERR(0, 479, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_v_indices = __pyx_t_8;
+  __pyx_t_8.memview = NULL;
+  __pyx_t_8.data = NULL;
+
+  /* "Orange/classification/_tree_scorers.pyx":482
+ *         int ind, attr, n_rows
+ * 
+ *     n_rows = X.shape[0]             # <<<<<<<<<<<<<<
+ * 
+ *     with nogil:
+ */
+  __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_X, __pyx_n_s_shape); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 482, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_4 = __Pyx_GetItemInt(__pyx_t_5, 0, long, 1, __Pyx_PyInt_From_long, 0, 0, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 482, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_9 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_9 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 482, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  __pyx_v_n_rows = __pyx_t_9;
+
+  /* "Orange/classification/_tree_scorers.pyx":484
+ *     n_rows = X.shape[0]
+ * 
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ */
+  {
+      #ifdef WITH_THREAD
+      PyThreadState *_save;
+      Py_UNBLOCK_THREADS
+      #endif
+      /*try:*/ {
+
+        /* "Orange/classification/_tree_scorers.pyx":485
+ * 
+ *     with nogil:
+ *         for i in range(n_rows):             # <<<<<<<<<<<<<<
+ *             node_ptr = 0
+ *             while code[node_ptr]:
+ */
+        __pyx_t_9 = __pyx_v_n_rows;
+        for (__pyx_t_10 = 0; __pyx_t_10 < __pyx_t_9; __pyx_t_10+=1) {
+          __pyx_v_i = __pyx_t_10;
+
+          /* "Orange/classification/_tree_scorers.pyx":486
+ *     with nogil:
+ *         for i in range(n_rows):
+ *             node_ptr = 0             # <<<<<<<<<<<<<<
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]
+ */
+          __pyx_v_node_ptr = 0;
+
+          /* "Orange/classification/_tree_scorers.pyx":487
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ *             while code[node_ptr]:             # <<<<<<<<<<<<<<
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[attr]
+ */
+          while (1) {
+            __pyx_t_11 = __pyx_v_node_ptr;
+            __pyx_t_12 = ((*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_11 * __pyx_v_code.strides[0]) ))) != 0);
+            if (!__pyx_t_12) break;
+
+            /* "Orange/classification/_tree_scorers.pyx":488
+ *             node_ptr = 0
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]             # <<<<<<<<<<<<<<
+ *                 ind = indptr[attr]
+ *                 while ind < indptr[attr + 1] and indices[ind] != i:
+ */
+            __pyx_t_13 = (__pyx_v_node_ptr + 2);
+            __pyx_v_attr = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_13 * __pyx_v_code.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":489
+ *             while code[node_ptr]:
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[attr]             # <<<<<<<<<<<<<<
+ *                 while ind < indptr[attr + 1] and indices[ind] != i:
+ *                     ind += 1
+ */
+            __pyx_t_14 = __pyx_v_attr;
+            __pyx_v_ind = (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_14 * __pyx_v_indptr.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":490
+ *                 attr = code[node_ptr + 2]
+ *                 ind = indptr[attr]
+ *                 while ind < indptr[attr + 1] and indices[ind] != i:             # <<<<<<<<<<<<<<
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0
+ */
+            while (1) {
+              __pyx_t_15 = (__pyx_v_attr + 1);
+              __pyx_t_16 = ((__pyx_v_ind < (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_15 * __pyx_v_indptr.strides[0]) )))) != 0);
+              if (__pyx_t_16) {
+              } else {
+                __pyx_t_12 = __pyx_t_16;
+                goto __pyx_L12_bool_binop_done;
+              }
+              __pyx_t_17 = __pyx_v_ind;
+              __pyx_t_16 = (((*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indices.data + __pyx_t_17 * __pyx_v_indices.strides[0]) ))) != __pyx_v_i) != 0);
+              __pyx_t_12 = __pyx_t_16;
+              __pyx_L12_bool_binop_done:;
+              if (!__pyx_t_12) break;
+
+              /* "Orange/classification/_tree_scorers.pyx":491
+ *                 ind = indptr[attr]
+ *                 while ind < indptr[attr + 1] and indices[ind] != i:
+ *                     ind += 1             # <<<<<<<<<<<<<<
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0
+ *                 if npy_isnan(val):
+ */
+              __pyx_v_ind = (__pyx_v_ind + 1);
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":492
+ *                 while ind < indptr[attr + 1] and indices[ind] != i:
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0             # <<<<<<<<<<<<<<
+ *                 if npy_isnan(val):
+ *                     break
+ */
+            __pyx_t_19 = (__pyx_v_attr + 1);
+            if (((__pyx_v_ind < (*((__pyx_t_5numpy_int32_t *) ( /* dim=0 */ (__pyx_v_indptr.data + __pyx_t_19 * __pyx_v_indptr.strides[0]) )))) != 0)) {
+              __pyx_t_20 = __pyx_v_ind;
+              __pyx_t_18 = (*((double *) ( /* dim=0 */ (__pyx_v_data.data + __pyx_t_20 * __pyx_v_data.strides[0]) )));
+            } else {
+              __pyx_t_18 = 0.0;
+            }
+            __pyx_v_val = __pyx_t_18;
+
+            /* "Orange/classification/_tree_scorers.pyx":493
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0
+ *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
+ *                     break
+ *                 if code[node_ptr] == 3:
+ */
+            __pyx_t_12 = (npy_isnan(__pyx_v_val) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":494
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0
+ *                 if npy_isnan(val):
+ *                     break             # <<<<<<<<<<<<<<
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]
+ */
+              goto __pyx_L9_break;
+
+              /* "Orange/classification/_tree_scorers.pyx":493
+ *                     ind += 1
+ *                 val = data[ind] if ind < indptr[attr + 1] else 0
+ *                 if npy_isnan(val):             # <<<<<<<<<<<<<<
+ *                     break
+ *                 if code[node_ptr] == 3:
+ */
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":495
+ *                 if npy_isnan(val):
+ *                     break
+ *                 if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])
+ */
+            __pyx_t_21 = __pyx_v_node_ptr;
+            __pyx_t_12 = (((*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_21 * __pyx_v_code.strides[0]) ))) == 3) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":496
+ *                     break
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
+ *                     val_idx = int(val > thresholds[node_idx])
+ *                 else:
+ */
+              __pyx_t_22 = (__pyx_v_node_ptr + 1);
+              __pyx_v_node_idx = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_22 * __pyx_v_code.strides[0]) )));
+
+              /* "Orange/classification/_tree_scorers.pyx":497
+ *                 if code[node_ptr] == 3:
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     val_idx = int(val)
+ */
+              __pyx_t_23 = __pyx_v_node_idx;
+              __pyx_v_val_idx = ((unsigned int)(__pyx_v_val > (*((double *) ( /* dim=0 */ (__pyx_v_thresholds.data + __pyx_t_23 * __pyx_v_thresholds.strides[0]) )))));
+
+              /* "Orange/classification/_tree_scorers.pyx":495
+ *                 if npy_isnan(val):
+ *                     break
+ *                 if code[node_ptr] == 3:             # <<<<<<<<<<<<<<
+ *                     node_idx = code[node_ptr + 1]
+ *                     val_idx = int(val > thresholds[node_idx])
+ */
+              goto __pyx_L15;
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":499
+ *                     val_idx = int(val > thresholds[node_idx])
+ *                 else:
+ *                     val_idx = int(val)             # <<<<<<<<<<<<<<
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:
+ */
+            /*else*/ {
+              __pyx_v_val_idx = ((unsigned int)__pyx_v_val);
+            }
+            __pyx_L15:;
+
+            /* "Orange/classification/_tree_scorers.pyx":500
+ *                 else:
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]             # <<<<<<<<<<<<<<
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break
+ */
+            __pyx_t_24 = ((__pyx_v_node_ptr + 3) + __pyx_v_val_idx);
+            __pyx_v_next_node_ptr = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_24 * __pyx_v_code.strides[0]) )));
+
+            /* "Orange/classification/_tree_scorers.pyx":501
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:             # <<<<<<<<<<<<<<
+ *                     break
+ *                 node_ptr = next_node_ptr
+ */
+            __pyx_t_12 = ((__pyx_v_next_node_ptr == __pyx_e_6Orange_14classification_13_tree_scorers_NULL_BRANCH) != 0);
+            if (__pyx_t_12) {
+
+              /* "Orange/classification/_tree_scorers.pyx":502
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break             # <<<<<<<<<<<<<<
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]
+ */
+              goto __pyx_L9_break;
+
+              /* "Orange/classification/_tree_scorers.pyx":501
+ *                     val_idx = int(val)
+ *                 next_node_ptr = code[node_ptr + 3 + val_idx]
+ *                 if next_node_ptr == NULL_BRANCH:             # <<<<<<<<<<<<<<
+ *                     break
+ *                 node_ptr = next_node_ptr
+ */
+            }
+
+            /* "Orange/classification/_tree_scorers.pyx":503
+ *                 if next_node_ptr == NULL_BRANCH:
+ *                     break
+ *                 node_ptr = next_node_ptr             # <<<<<<<<<<<<<<
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):
+ */
+            __pyx_v_node_ptr = __pyx_v_next_node_ptr;
+          }
+          __pyx_L9_break:;
+
+          /* "Orange/classification/_tree_scorers.pyx":504
+ *                     break
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]             # <<<<<<<<<<<<<<
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]
+ */
+          __pyx_t_25 = (__pyx_v_node_ptr + 1);
+          __pyx_v_node_idx = (*((int *) ( /* dim=0 */ (__pyx_v_code.data + __pyx_t_25 * __pyx_v_code.strides[0]) )));
+
+          /* "Orange/classification/_tree_scorers.pyx":505
+ *                 node_ptr = next_node_ptr
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):             # <<<<<<<<<<<<<<
+ *                 predictions[i, j] = values[node_idx, j]
+ *     return np.asarray(predictions)
+ */
+          __pyx_t_26 = (__pyx_v_values.shape[1]);
+          for (__pyx_t_27 = 0; __pyx_t_27 < __pyx_t_26; __pyx_t_27+=1) {
+            __pyx_v_j = __pyx_t_27;
+
+            /* "Orange/classification/_tree_scorers.pyx":506
+ *             node_idx = code[node_ptr + 1]
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]             # <<<<<<<<<<<<<<
+ *     return np.asarray(predictions)
+ */
+            __pyx_t_28 = __pyx_v_node_idx;
+            __pyx_t_29 = __pyx_v_j;
+            __pyx_t_30 = __pyx_v_i;
+            __pyx_t_31 = __pyx_v_j;
+            *((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_predictions.data + __pyx_t_30 * __pyx_v_predictions.strides[0]) ) + __pyx_t_31 * __pyx_v_predictions.strides[1]) )) = (*((double *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_values.data + __pyx_t_28 * __pyx_v_values.strides[0]) ) + __pyx_t_29 * __pyx_v_values.strides[1]) )));
+          }
+        }
+      }
+
+      /* "Orange/classification/_tree_scorers.pyx":484
+ *     n_rows = X.shape[0]
+ * 
+ *     with nogil:             # <<<<<<<<<<<<<<
+ *         for i in range(n_rows):
+ *             node_ptr = 0
+ */
+      /*finally:*/ {
+        /*normal exit:*/{
+          #ifdef WITH_THREAD
+          Py_BLOCK_THREADS
+          #endif
+          goto __pyx_L5;
+        }
+        __pyx_L5:;
+      }
+  }
+
+  /* "Orange/classification/_tree_scorers.pyx":507
+ *             for j in range(values.shape[1]):
+ *                 predictions[i, j] = values[node_idx, j]
+ *     return np.asarray(predictions)             # <<<<<<<<<<<<<<
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_5 = __Pyx_GetModuleGlobalName(__pyx_n_s_np); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 507, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_1 = __Pyx_PyObject_GetAttrStr(__pyx_t_5, __pyx_n_s_asarray); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 507, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+  __pyx_t_5 = __pyx_memoryview_fromslice(__pyx_v_predictions, 2, (PyObject *(*)(char *)) __pyx_memview_get_double, (int (*)(char *, PyObject *)) __pyx_memview_set_double, 0);; if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 507, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_5);
+  __pyx_t_2 = NULL;
+  if (CYTHON_COMPILING_IN_CPYTHON && unlikely(PyMethod_Check(__pyx_t_1))) {
+    __pyx_t_2 = PyMethod_GET_SELF(__pyx_t_1);
+    if (likely(__pyx_t_2)) {
+      PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_1);
+      __Pyx_INCREF(__pyx_t_2);
+      __Pyx_INCREF(function);
+      __Pyx_DECREF_SET(__pyx_t_1, function);
+    }
+  }
+  if (!__pyx_t_2) {
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_1, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 507, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __Pyx_GOTREF(__pyx_t_4);
+  } else {
+    __pyx_t_3 = PyTuple_New(1+1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 507, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __Pyx_GIVEREF(__pyx_t_2); PyTuple_SET_ITEM(__pyx_t_3, 0, __pyx_t_2); __pyx_t_2 = NULL;
+    __Pyx_GIVEREF(__pyx_t_5);
+    PyTuple_SET_ITEM(__pyx_t_3, 0+1, __pyx_t_5);
+    __pyx_t_5 = 0;
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_t_3, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 507, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_4);
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+  }
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_r = __pyx_t_4;
+  __pyx_t_4 = 0;
+  goto __pyx_L0;
+
+  /* "Orange/classification/_tree_scorers.pyx":465
+ *     return np.asarray(predictions)
+ * 
+ * def compute_predictions_csc(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_5);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_6, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_7, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_t_8, 1);
+  __Pyx_AddTraceback("Orange.classification._tree_scorers.compute_predictions_csc", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __PYX_XDEC_MEMVIEW(&__pyx_v_predictions, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_data, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_indptr, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_indices, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_code, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_values, 1);
+  __PYX_XDEC_MEMVIEW(&__pyx_v_thresholds, 1);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":197
  *         # experimental exception made for __getbuffer__ and __releasebuffer__
  *         # -- the details of this may change.
  *         def __getbuffer__(ndarray self, Py_buffer* info, int flags):             # <<<<<<<<<<<<<<
@@ -6131,7 +7475,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __Pyx_GIVEREF(__pyx_v_info->obj);
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":203
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":203
  *             # of flags
  * 
  *             if info == NULL: return             # <<<<<<<<<<<<<<
@@ -6144,7 +7488,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L0;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":206
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":206
  * 
  *             cdef int copy_shape, i, ndim
  *             cdef int endian_detector = 1             # <<<<<<<<<<<<<<
@@ -6153,7 +7497,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_endian_detector = 1;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":207
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":207
  *             cdef int copy_shape, i, ndim
  *             cdef int endian_detector = 1
  *             cdef bint little_endian = ((<char*>&endian_detector)[0] != 0)             # <<<<<<<<<<<<<<
@@ -6162,7 +7506,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_little_endian = ((((char *)(&__pyx_v_endian_detector))[0]) != 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":209
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":209
  *             cdef bint little_endian = ((<char*>&endian_detector)[0] != 0)
  * 
  *             ndim = PyArray_NDIM(self)             # <<<<<<<<<<<<<<
@@ -6171,7 +7515,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_ndim = PyArray_NDIM(__pyx_v_self);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":211
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":211
  *             ndim = PyArray_NDIM(self)
  * 
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):             # <<<<<<<<<<<<<<
@@ -6181,7 +7525,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_t_1 = (((sizeof(npy_intp)) != (sizeof(Py_ssize_t))) != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":212
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":212
  * 
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):
  *                 copy_shape = 1             # <<<<<<<<<<<<<<
@@ -6190,7 +7534,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     __pyx_v_copy_shape = 1;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":211
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":211
  *             ndim = PyArray_NDIM(self)
  * 
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):             # <<<<<<<<<<<<<<
@@ -6200,7 +7544,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L4;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":214
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":214
  *                 copy_shape = 1
  *             else:
  *                 copy_shape = 0             # <<<<<<<<<<<<<<
@@ -6212,7 +7556,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   }
   __pyx_L4:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
  *                 copy_shape = 0
  * 
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6226,7 +7570,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L6_bool_binop_done;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":217
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":217
  * 
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_C_CONTIGUOUS)):             # <<<<<<<<<<<<<<
@@ -6237,7 +7581,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_t_1 = __pyx_t_2;
   __pyx_L6_bool_binop_done:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
  *                 copy_shape = 0
  * 
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6246,7 +7590,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_C_CONTIGUOUS)):
  *                 raise ValueError(u"ndarray is not C contiguous")             # <<<<<<<<<<<<<<
@@ -6259,7 +7603,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __PYX_ERR(1, 218, __pyx_L1_error)
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":216
  *                 copy_shape = 0
  * 
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6268,7 +7612,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
  *                 raise ValueError(u"ndarray is not C contiguous")
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6282,7 +7626,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L9_bool_binop_done;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":221
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":221
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_F_CONTIGUOUS)):             # <<<<<<<<<<<<<<
@@ -6293,7 +7637,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_t_1 = __pyx_t_2;
   __pyx_L9_bool_binop_done:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
  *                 raise ValueError(u"ndarray is not C contiguous")
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6302,7 +7646,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_F_CONTIGUOUS)):
  *                 raise ValueError(u"ndarray is not Fortran contiguous")             # <<<<<<<<<<<<<<
@@ -6315,7 +7659,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __PYX_ERR(1, 222, __pyx_L1_error)
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":220
  *                 raise ValueError(u"ndarray is not C contiguous")
  * 
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)             # <<<<<<<<<<<<<<
@@ -6324,7 +7668,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":224
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":224
  *                 raise ValueError(u"ndarray is not Fortran contiguous")
  * 
  *             info.buf = PyArray_DATA(self)             # <<<<<<<<<<<<<<
@@ -6333,7 +7677,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_info->buf = PyArray_DATA(__pyx_v_self);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":225
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":225
  * 
  *             info.buf = PyArray_DATA(self)
  *             info.ndim = ndim             # <<<<<<<<<<<<<<
@@ -6342,7 +7686,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_info->ndim = __pyx_v_ndim;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":226
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":226
  *             info.buf = PyArray_DATA(self)
  *             info.ndim = ndim
  *             if copy_shape:             # <<<<<<<<<<<<<<
@@ -6352,7 +7696,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_t_1 = (__pyx_v_copy_shape != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":229
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":229
  *                 # Allocate new buffer for strides and shape info.
  *                 # This is allocated as one block, strides first.
  *                 info.strides = <Py_ssize_t*>stdlib.malloc(sizeof(Py_ssize_t) * <size_t>ndim * 2)             # <<<<<<<<<<<<<<
@@ -6361,7 +7705,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     __pyx_v_info->strides = ((Py_ssize_t *)malloc((((sizeof(Py_ssize_t)) * ((size_t)__pyx_v_ndim)) * 2)));
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":230
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":230
  *                 # This is allocated as one block, strides first.
  *                 info.strides = <Py_ssize_t*>stdlib.malloc(sizeof(Py_ssize_t) * <size_t>ndim * 2)
  *                 info.shape = info.strides + ndim             # <<<<<<<<<<<<<<
@@ -6370,7 +7714,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     __pyx_v_info->shape = (__pyx_v_info->strides + __pyx_v_ndim);
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":231
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":231
  *                 info.strides = <Py_ssize_t*>stdlib.malloc(sizeof(Py_ssize_t) * <size_t>ndim * 2)
  *                 info.shape = info.strides + ndim
  *                 for i in range(ndim):             # <<<<<<<<<<<<<<
@@ -6381,7 +7725,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     for (__pyx_t_5 = 0; __pyx_t_5 < __pyx_t_4; __pyx_t_5+=1) {
       __pyx_v_i = __pyx_t_5;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":232
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":232
  *                 info.shape = info.strides + ndim
  *                 for i in range(ndim):
  *                     info.strides[i] = PyArray_STRIDES(self)[i]             # <<<<<<<<<<<<<<
@@ -6390,7 +7734,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
       (__pyx_v_info->strides[__pyx_v_i]) = (PyArray_STRIDES(__pyx_v_self)[__pyx_v_i]);
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":233
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":233
  *                 for i in range(ndim):
  *                     info.strides[i] = PyArray_STRIDES(self)[i]
  *                     info.shape[i] = PyArray_DIMS(self)[i]             # <<<<<<<<<<<<<<
@@ -6400,7 +7744,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       (__pyx_v_info->shape[__pyx_v_i]) = (PyArray_DIMS(__pyx_v_self)[__pyx_v_i]);
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":226
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":226
  *             info.buf = PyArray_DATA(self)
  *             info.ndim = ndim
  *             if copy_shape:             # <<<<<<<<<<<<<<
@@ -6410,7 +7754,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L11;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":235
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":235
  *                     info.shape[i] = PyArray_DIMS(self)[i]
  *             else:
  *                 info.strides = <Py_ssize_t*>PyArray_STRIDES(self)             # <<<<<<<<<<<<<<
@@ -6420,7 +7764,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   /*else*/ {
     __pyx_v_info->strides = ((Py_ssize_t *)PyArray_STRIDES(__pyx_v_self));
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":236
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":236
  *             else:
  *                 info.strides = <Py_ssize_t*>PyArray_STRIDES(self)
  *                 info.shape = <Py_ssize_t*>PyArray_DIMS(self)             # <<<<<<<<<<<<<<
@@ -6431,7 +7775,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   }
   __pyx_L11:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":237
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":237
  *                 info.strides = <Py_ssize_t*>PyArray_STRIDES(self)
  *                 info.shape = <Py_ssize_t*>PyArray_DIMS(self)
  *             info.suboffsets = NULL             # <<<<<<<<<<<<<<
@@ -6440,7 +7784,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_info->suboffsets = NULL;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":238
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":238
  *                 info.shape = <Py_ssize_t*>PyArray_DIMS(self)
  *             info.suboffsets = NULL
  *             info.itemsize = PyArray_ITEMSIZE(self)             # <<<<<<<<<<<<<<
@@ -6449,7 +7793,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_info->itemsize = PyArray_ITEMSIZE(__pyx_v_self);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":239
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":239
  *             info.suboffsets = NULL
  *             info.itemsize = PyArray_ITEMSIZE(self)
  *             info.readonly = not PyArray_ISWRITEABLE(self)             # <<<<<<<<<<<<<<
@@ -6458,7 +7802,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_info->readonly = (!(PyArray_ISWRITEABLE(__pyx_v_self) != 0));
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":242
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":242
  * 
  *             cdef int t
  *             cdef char* f = NULL             # <<<<<<<<<<<<<<
@@ -6467,7 +7811,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_f = NULL;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":243
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":243
  *             cdef int t
  *             cdef char* f = NULL
  *             cdef dtype descr = self.descr             # <<<<<<<<<<<<<<
@@ -6479,7 +7823,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_v_descr = ((PyArray_Descr *)__pyx_t_3);
   __pyx_t_3 = 0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":246
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":246
  *             cdef int offset
  * 
  *             cdef bint hasfields = PyDataType_HASFIELDS(descr)             # <<<<<<<<<<<<<<
@@ -6488,7 +7832,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   __pyx_v_hasfields = PyDataType_HASFIELDS(__pyx_v_descr);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":248
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":248
  *             cdef bint hasfields = PyDataType_HASFIELDS(descr)
  * 
  *             if not hasfields and not copy_shape:             # <<<<<<<<<<<<<<
@@ -6506,7 +7850,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_L15_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":250
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":250
  *             if not hasfields and not copy_shape:
  *                 # do not call releasebuffer
  *                 info.obj = None             # <<<<<<<<<<<<<<
@@ -6519,7 +7863,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __Pyx_DECREF(__pyx_v_info->obj);
     __pyx_v_info->obj = Py_None;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":248
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":248
  *             cdef bint hasfields = PyDataType_HASFIELDS(descr)
  * 
  *             if not hasfields and not copy_shape:             # <<<<<<<<<<<<<<
@@ -6529,7 +7873,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     goto __pyx_L14;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":253
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":253
  *             else:
  *                 # need to call releasebuffer
  *                 info.obj = self             # <<<<<<<<<<<<<<
@@ -6545,7 +7889,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   }
   __pyx_L14:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":255
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":255
  *                 info.obj = self
  * 
  *             if not hasfields:             # <<<<<<<<<<<<<<
@@ -6555,7 +7899,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   __pyx_t_1 = ((!(__pyx_v_hasfields != 0)) != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":256
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":256
  * 
  *             if not hasfields:
  *                 t = descr.type_num             # <<<<<<<<<<<<<<
@@ -6565,7 +7909,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __pyx_t_4 = __pyx_v_descr->type_num;
     __pyx_v_t = __pyx_t_4;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
  *             if not hasfields:
  *                 t = descr.type_num
  *                 if ((descr.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -6585,7 +7929,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     }
     __pyx_L20_next_or:;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":258
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":258
  *                 t = descr.type_num
  *                 if ((descr.byteorder == c'>' and little_endian) or
  *                     (descr.byteorder == c'<' and not little_endian)):             # <<<<<<<<<<<<<<
@@ -6602,7 +7946,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __pyx_t_1 = __pyx_t_2;
     __pyx_L19_bool_binop_done:;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
  *             if not hasfields:
  *                 t = descr.type_num
  *                 if ((descr.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -6611,7 +7955,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     if (__pyx_t_1) {
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
  *                 if ((descr.byteorder == c'>' and little_endian) or
  *                     (descr.byteorder == c'<' and not little_endian)):
  *                     raise ValueError(u"Non-native byte order not supported")             # <<<<<<<<<<<<<<
@@ -6624,7 +7968,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __PYX_ERR(1, 259, __pyx_L1_error)
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":257
  *             if not hasfields:
  *                 t = descr.type_num
  *                 if ((descr.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -6633,7 +7977,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":260
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":260
  *                     (descr.byteorder == c'<' and not little_endian)):
  *                     raise ValueError(u"Non-native byte order not supported")
  *                 if   t == NPY_BYTE:        f = "b"             # <<<<<<<<<<<<<<
@@ -6645,7 +7989,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"b");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":261
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":261
  *                     raise ValueError(u"Non-native byte order not supported")
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"             # <<<<<<<<<<<<<<
@@ -6656,7 +8000,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"B");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":262
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":262
  *                 if   t == NPY_BYTE:        f = "b"
  *                 elif t == NPY_UBYTE:       f = "B"
  *                 elif t == NPY_SHORT:       f = "h"             # <<<<<<<<<<<<<<
@@ -6667,7 +8011,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"h");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":263
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":263
  *                 elif t == NPY_UBYTE:       f = "B"
  *                 elif t == NPY_SHORT:       f = "h"
  *                 elif t == NPY_USHORT:      f = "H"             # <<<<<<<<<<<<<<
@@ -6678,7 +8022,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"H");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":264
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":264
  *                 elif t == NPY_SHORT:       f = "h"
  *                 elif t == NPY_USHORT:      f = "H"
  *                 elif t == NPY_INT:         f = "i"             # <<<<<<<<<<<<<<
@@ -6689,7 +8033,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"i");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":265
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":265
  *                 elif t == NPY_USHORT:      f = "H"
  *                 elif t == NPY_INT:         f = "i"
  *                 elif t == NPY_UINT:        f = "I"             # <<<<<<<<<<<<<<
@@ -6700,7 +8044,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"I");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":266
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":266
  *                 elif t == NPY_INT:         f = "i"
  *                 elif t == NPY_UINT:        f = "I"
  *                 elif t == NPY_LONG:        f = "l"             # <<<<<<<<<<<<<<
@@ -6711,7 +8055,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"l");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":267
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":267
  *                 elif t == NPY_UINT:        f = "I"
  *                 elif t == NPY_LONG:        f = "l"
  *                 elif t == NPY_ULONG:       f = "L"             # <<<<<<<<<<<<<<
@@ -6722,7 +8066,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"L");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":268
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":268
  *                 elif t == NPY_LONG:        f = "l"
  *                 elif t == NPY_ULONG:       f = "L"
  *                 elif t == NPY_LONGLONG:    f = "q"             # <<<<<<<<<<<<<<
@@ -6733,7 +8077,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"q");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":269
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":269
  *                 elif t == NPY_ULONG:       f = "L"
  *                 elif t == NPY_LONGLONG:    f = "q"
  *                 elif t == NPY_ULONGLONG:   f = "Q"             # <<<<<<<<<<<<<<
@@ -6744,7 +8088,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"Q");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":270
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":270
  *                 elif t == NPY_LONGLONG:    f = "q"
  *                 elif t == NPY_ULONGLONG:   f = "Q"
  *                 elif t == NPY_FLOAT:       f = "f"             # <<<<<<<<<<<<<<
@@ -6755,7 +8099,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"f");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":271
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":271
  *                 elif t == NPY_ULONGLONG:   f = "Q"
  *                 elif t == NPY_FLOAT:       f = "f"
  *                 elif t == NPY_DOUBLE:      f = "d"             # <<<<<<<<<<<<<<
@@ -6766,7 +8110,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"d");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":272
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":272
  *                 elif t == NPY_FLOAT:       f = "f"
  *                 elif t == NPY_DOUBLE:      f = "d"
  *                 elif t == NPY_LONGDOUBLE:  f = "g"             # <<<<<<<<<<<<<<
@@ -6777,7 +8121,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"g");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":273
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":273
  *                 elif t == NPY_DOUBLE:      f = "d"
  *                 elif t == NPY_LONGDOUBLE:  f = "g"
  *                 elif t == NPY_CFLOAT:      f = "Zf"             # <<<<<<<<<<<<<<
@@ -6788,7 +8132,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"Zf");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":274
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":274
  *                 elif t == NPY_LONGDOUBLE:  f = "g"
  *                 elif t == NPY_CFLOAT:      f = "Zf"
  *                 elif t == NPY_CDOUBLE:     f = "Zd"             # <<<<<<<<<<<<<<
@@ -6799,7 +8143,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"Zd");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":275
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":275
  *                 elif t == NPY_CFLOAT:      f = "Zf"
  *                 elif t == NPY_CDOUBLE:     f = "Zd"
  *                 elif t == NPY_CLONGDOUBLE: f = "Zg"             # <<<<<<<<<<<<<<
@@ -6810,7 +8154,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       __pyx_v_f = ((char *)"Zg");
       break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":276
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":276
  *                 elif t == NPY_CDOUBLE:     f = "Zd"
  *                 elif t == NPY_CLONGDOUBLE: f = "Zg"
  *                 elif t == NPY_OBJECT:      f = "O"             # <<<<<<<<<<<<<<
@@ -6822,7 +8166,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       break;
       default:
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":278
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":278
  *                 elif t == NPY_OBJECT:      f = "O"
  *                 else:
  *                     raise ValueError(u"unknown dtype code in numpy.pxd (%d)" % t)             # <<<<<<<<<<<<<<
@@ -6848,7 +8192,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
       break;
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":279
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":279
  *                 else:
  *                     raise ValueError(u"unknown dtype code in numpy.pxd (%d)" % t)
  *                 info.format = f             # <<<<<<<<<<<<<<
@@ -6857,7 +8201,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     __pyx_v_info->format = __pyx_v_f;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":280
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":280
  *                     raise ValueError(u"unknown dtype code in numpy.pxd (%d)" % t)
  *                 info.format = f
  *                 return             # <<<<<<<<<<<<<<
@@ -6867,7 +8211,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __pyx_r = 0;
     goto __pyx_L0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":255
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":255
  *                 info.obj = self
  * 
  *             if not hasfields:             # <<<<<<<<<<<<<<
@@ -6876,7 +8220,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":282
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":282
  *                 return
  *             else:
  *                 info.format = <char*>stdlib.malloc(_buffer_format_string_len)             # <<<<<<<<<<<<<<
@@ -6886,7 +8230,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   /*else*/ {
     __pyx_v_info->format = ((char *)malloc(0xFF));
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":283
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":283
  *             else:
  *                 info.format = <char*>stdlib.malloc(_buffer_format_string_len)
  *                 info.format[0] = c'^' # Native data types, manual alignment             # <<<<<<<<<<<<<<
@@ -6895,7 +8239,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     (__pyx_v_info->format[0]) = '^';
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":284
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":284
  *                 info.format = <char*>stdlib.malloc(_buffer_format_string_len)
  *                 info.format[0] = c'^' # Native data types, manual alignment
  *                 offset = 0             # <<<<<<<<<<<<<<
@@ -6904,7 +8248,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
  */
     __pyx_v_offset = 0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":285
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":285
  *                 info.format[0] = c'^' # Native data types, manual alignment
  *                 offset = 0
  *                 f = _util_dtypestring(descr, info.format + 1,             # <<<<<<<<<<<<<<
@@ -6914,7 +8258,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     __pyx_t_7 = __pyx_f_5numpy__util_dtypestring(__pyx_v_descr, (__pyx_v_info->format + 1), (__pyx_v_info->format + 0xFF), (&__pyx_v_offset)); if (unlikely(__pyx_t_7 == NULL)) __PYX_ERR(1, 285, __pyx_L1_error)
     __pyx_v_f = __pyx_t_7;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":288
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":288
  *                                       info.format + _buffer_format_string_len,
  *                                       &offset)
  *                 f[0] = c'\0' # Terminate format string             # <<<<<<<<<<<<<<
@@ -6924,7 +8268,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
     (__pyx_v_f[0]) = '\x00';
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":197
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":197
  *         # experimental exception made for __getbuffer__ and __releasebuffer__
  *         # -- the details of this may change.
  *         def __getbuffer__(ndarray self, Py_buffer* info, int flags):             # <<<<<<<<<<<<<<
@@ -6956,7 +8300,7 @@ static int __pyx_pf_5numpy_7ndarray___getbuffer__(PyArrayObject *__pyx_v_self, P
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":290
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":290
  *                 f[0] = c'\0' # Terminate format string
  * 
  *         def __releasebuffer__(ndarray self, Py_buffer* info):             # <<<<<<<<<<<<<<
@@ -6980,7 +8324,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("__releasebuffer__", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":291
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":291
  * 
  *         def __releasebuffer__(ndarray self, Py_buffer* info):
  *             if PyArray_HASFIELDS(self):             # <<<<<<<<<<<<<<
@@ -6990,7 +8334,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
   __pyx_t_1 = (PyArray_HASFIELDS(__pyx_v_self) != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":292
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":292
  *         def __releasebuffer__(ndarray self, Py_buffer* info):
  *             if PyArray_HASFIELDS(self):
  *                 stdlib.free(info.format)             # <<<<<<<<<<<<<<
@@ -6999,7 +8343,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
  */
     free(__pyx_v_info->format);
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":291
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":291
  * 
  *         def __releasebuffer__(ndarray self, Py_buffer* info):
  *             if PyArray_HASFIELDS(self):             # <<<<<<<<<<<<<<
@@ -7008,7 +8352,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":293
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":293
  *             if PyArray_HASFIELDS(self):
  *                 stdlib.free(info.format)
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):             # <<<<<<<<<<<<<<
@@ -7018,7 +8362,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
   __pyx_t_1 = (((sizeof(npy_intp)) != (sizeof(Py_ssize_t))) != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":294
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":294
  *                 stdlib.free(info.format)
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):
  *                 stdlib.free(info.strides)             # <<<<<<<<<<<<<<
@@ -7027,7 +8371,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
  */
     free(__pyx_v_info->strides);
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":293
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":293
  *             if PyArray_HASFIELDS(self):
  *                 stdlib.free(info.format)
  *             if sizeof(npy_intp) != sizeof(Py_ssize_t):             # <<<<<<<<<<<<<<
@@ -7036,7 +8380,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":290
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":290
  *                 f[0] = c'\0' # Terminate format string
  * 
  *         def __releasebuffer__(ndarray self, Py_buffer* info):             # <<<<<<<<<<<<<<
@@ -7048,7 +8392,7 @@ static void __pyx_pf_5numpy_7ndarray_2__releasebuffer__(PyArrayObject *__pyx_v_s
   __Pyx_RefNannyFinishContext();
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":770
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":770
  * ctypedef npy_cdouble     complex_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -7062,7 +8406,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew1", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":771
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":771
  * 
  * cdef inline object PyArray_MultiIterNew1(a):
  *     return PyArray_MultiIterNew(1, <void*>a)             # <<<<<<<<<<<<<<
@@ -7076,7 +8420,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":770
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":770
  * ctypedef npy_cdouble     complex_t
  * 
  * cdef inline object PyArray_MultiIterNew1(a):             # <<<<<<<<<<<<<<
@@ -7095,7 +8439,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew1(PyObject *__
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":773
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":773
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -7109,7 +8453,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew2", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":774
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":774
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)             # <<<<<<<<<<<<<<
@@ -7123,7 +8467,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":773
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":773
  *     return PyArray_MultiIterNew(1, <void*>a)
  * 
  * cdef inline object PyArray_MultiIterNew2(a, b):             # <<<<<<<<<<<<<<
@@ -7142,7 +8486,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew2(PyObject *__
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":776
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":776
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -7156,7 +8500,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew3", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":777
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":777
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)             # <<<<<<<<<<<<<<
@@ -7170,7 +8514,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":776
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":776
  *     return PyArray_MultiIterNew(2, <void*>a, <void*>b)
  * 
  * cdef inline object PyArray_MultiIterNew3(a, b, c):             # <<<<<<<<<<<<<<
@@ -7189,7 +8533,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew3(PyObject *__
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":779
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":779
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -7203,7 +8547,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew4", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":780
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":780
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)             # <<<<<<<<<<<<<<
@@ -7217,7 +8561,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":779
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":779
  *     return PyArray_MultiIterNew(3, <void*>a, <void*>b, <void*> c)
  * 
  * cdef inline object PyArray_MultiIterNew4(a, b, c, d):             # <<<<<<<<<<<<<<
@@ -7236,7 +8580,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew4(PyObject *__
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":782
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":782
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -7250,7 +8594,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("PyArray_MultiIterNew5", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":783
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":783
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)             # <<<<<<<<<<<<<<
@@ -7264,7 +8608,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":782
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":782
  *     return PyArray_MultiIterNew(4, <void*>a, <void*>b, <void*>c, <void*> d)
  * 
  * cdef inline object PyArray_MultiIterNew5(a, b, c, d, e):             # <<<<<<<<<<<<<<
@@ -7283,7 +8627,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_PyArray_MultiIterNew5(PyObject *__
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":785
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":785
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline char* _util_dtypestring(dtype descr, char* f, char* end, int* offset) except NULL:             # <<<<<<<<<<<<<<
@@ -7312,7 +8656,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
   char *__pyx_t_9;
   __Pyx_RefNannySetupContext("_util_dtypestring", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":790
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":790
  * 
  *     cdef dtype child
  *     cdef int endian_detector = 1             # <<<<<<<<<<<<<<
@@ -7321,7 +8665,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
   __pyx_v_endian_detector = 1;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":791
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":791
  *     cdef dtype child
  *     cdef int endian_detector = 1
  *     cdef bint little_endian = ((<char*>&endian_detector)[0] != 0)             # <<<<<<<<<<<<<<
@@ -7330,7 +8674,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
   __pyx_v_little_endian = ((((char *)(&__pyx_v_endian_detector))[0]) != 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":794
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":794
  *     cdef tuple fields
  * 
  *     for childname in descr.names:             # <<<<<<<<<<<<<<
@@ -7353,7 +8697,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __Pyx_XDECREF_SET(__pyx_v_childname, __pyx_t_3);
     __pyx_t_3 = 0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":795
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":795
  * 
  *     for childname in descr.names:
  *         fields = descr.fields[childname]             # <<<<<<<<<<<<<<
@@ -7370,7 +8714,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __Pyx_XDECREF_SET(__pyx_v_fields, ((PyObject*)__pyx_t_3));
     __pyx_t_3 = 0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":796
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":796
  *     for childname in descr.names:
  *         fields = descr.fields[childname]
  *         child, new_offset = fields             # <<<<<<<<<<<<<<
@@ -7409,7 +8753,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __Pyx_XDECREF_SET(__pyx_v_new_offset, __pyx_t_4);
     __pyx_t_4 = 0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":798
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":798
  *         child, new_offset = fields
  * 
  *         if (end - f) - <int>(new_offset - offset[0]) < 15:             # <<<<<<<<<<<<<<
@@ -7426,7 +8770,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __pyx_t_6 = ((((__pyx_v_end - __pyx_v_f) - ((int)__pyx_t_5)) < 15) != 0);
     if (__pyx_t_6) {
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
  * 
  *         if (end - f) - <int>(new_offset - offset[0]) < 15:
  *             raise RuntimeError(u"Format string allocated too short, see comment in numpy.pxd")             # <<<<<<<<<<<<<<
@@ -7439,7 +8783,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __PYX_ERR(1, 799, __pyx_L1_error)
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":798
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":798
  *         child, new_offset = fields
  * 
  *         if (end - f) - <int>(new_offset - offset[0]) < 15:             # <<<<<<<<<<<<<<
@@ -7448,7 +8792,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
  *             raise RuntimeError(u"Format string allocated too short, see comment in numpy.pxd")
  * 
  *         if ((child.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -7468,7 +8812,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     }
     __pyx_L8_next_or:;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":802
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":802
  * 
  *         if ((child.byteorder == c'>' and little_endian) or
  *             (child.byteorder == c'<' and not little_endian)):             # <<<<<<<<<<<<<<
@@ -7485,7 +8829,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __pyx_t_6 = __pyx_t_7;
     __pyx_L7_bool_binop_done:;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
  *             raise RuntimeError(u"Format string allocated too short, see comment in numpy.pxd")
  * 
  *         if ((child.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -7494,7 +8838,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
     if (__pyx_t_6) {
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
  *         if ((child.byteorder == c'>' and little_endian) or
  *             (child.byteorder == c'<' and not little_endian)):
  *             raise ValueError(u"Non-native byte order not supported")             # <<<<<<<<<<<<<<
@@ -7507,7 +8851,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __PYX_ERR(1, 803, __pyx_L1_error)
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":801
  *             raise RuntimeError(u"Format string allocated too short, see comment in numpy.pxd")
  * 
  *         if ((child.byteorder == c'>' and little_endian) or             # <<<<<<<<<<<<<<
@@ -7516,7 +8860,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":813
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":813
  * 
  *         # Output padding bytes
  *         while offset[0] < new_offset:             # <<<<<<<<<<<<<<
@@ -7532,7 +8876,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       if (!__pyx_t_6) break;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":814
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":814
  *         # Output padding bytes
  *         while offset[0] < new_offset:
  *             f[0] = 120 # "x"; pad byte             # <<<<<<<<<<<<<<
@@ -7541,7 +8885,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
       (__pyx_v_f[0]) = 0x78;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":815
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":815
  *         while offset[0] < new_offset:
  *             f[0] = 120 # "x"; pad byte
  *             f += 1             # <<<<<<<<<<<<<<
@@ -7550,7 +8894,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
       __pyx_v_f = (__pyx_v_f + 1);
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":816
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":816
  *             f[0] = 120 # "x"; pad byte
  *             f += 1
  *             offset[0] += 1             # <<<<<<<<<<<<<<
@@ -7561,7 +8905,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       (__pyx_v_offset[__pyx_t_8]) = ((__pyx_v_offset[__pyx_t_8]) + 1);
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":818
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":818
  *             offset[0] += 1
  * 
  *         offset[0] += child.itemsize             # <<<<<<<<<<<<<<
@@ -7571,7 +8915,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __pyx_t_8 = 0;
     (__pyx_v_offset[__pyx_t_8]) = ((__pyx_v_offset[__pyx_t_8]) + __pyx_v_child->elsize);
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":820
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":820
  *         offset[0] += child.itemsize
  * 
  *         if not PyDataType_HASFIELDS(child):             # <<<<<<<<<<<<<<
@@ -7581,7 +8925,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     __pyx_t_6 = ((!(PyDataType_HASFIELDS(__pyx_v_child) != 0)) != 0);
     if (__pyx_t_6) {
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":821
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":821
  * 
  *         if not PyDataType_HASFIELDS(child):
  *             t = child.type_num             # <<<<<<<<<<<<<<
@@ -7593,7 +8937,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       __Pyx_XDECREF_SET(__pyx_v_t, __pyx_t_4);
       __pyx_t_4 = 0;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":822
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":822
  *         if not PyDataType_HASFIELDS(child):
  *             t = child.type_num
  *             if end - f < 5:             # <<<<<<<<<<<<<<
@@ -7603,7 +8947,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       __pyx_t_6 = (((__pyx_v_end - __pyx_v_f) < 5) != 0);
       if (__pyx_t_6) {
 
-        /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
+        /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
  *             t = child.type_num
  *             if end - f < 5:
  *                 raise RuntimeError(u"Format string allocated too short.")             # <<<<<<<<<<<<<<
@@ -7616,7 +8960,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
         __PYX_ERR(1, 823, __pyx_L1_error)
 
-        /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":822
+        /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":822
  *         if not PyDataType_HASFIELDS(child):
  *             t = child.type_num
  *             if end - f < 5:             # <<<<<<<<<<<<<<
@@ -7625,7 +8969,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":826
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":826
  * 
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  *             if   t == NPY_BYTE:        f[0] =  98 #"b"             # <<<<<<<<<<<<<<
@@ -7643,7 +8987,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":827
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":827
  *             # Until ticket #99 is fixed, use integers to avoid warnings
  *             if   t == NPY_BYTE:        f[0] =  98 #"b"
  *             elif t == NPY_UBYTE:       f[0] =  66 #"B"             # <<<<<<<<<<<<<<
@@ -7661,7 +9005,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":828
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":828
  *             if   t == NPY_BYTE:        f[0] =  98 #"b"
  *             elif t == NPY_UBYTE:       f[0] =  66 #"B"
  *             elif t == NPY_SHORT:       f[0] = 104 #"h"             # <<<<<<<<<<<<<<
@@ -7679,7 +9023,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":829
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":829
  *             elif t == NPY_UBYTE:       f[0] =  66 #"B"
  *             elif t == NPY_SHORT:       f[0] = 104 #"h"
  *             elif t == NPY_USHORT:      f[0] =  72 #"H"             # <<<<<<<<<<<<<<
@@ -7697,7 +9041,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":830
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":830
  *             elif t == NPY_SHORT:       f[0] = 104 #"h"
  *             elif t == NPY_USHORT:      f[0] =  72 #"H"
  *             elif t == NPY_INT:         f[0] = 105 #"i"             # <<<<<<<<<<<<<<
@@ -7715,7 +9059,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":831
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":831
  *             elif t == NPY_USHORT:      f[0] =  72 #"H"
  *             elif t == NPY_INT:         f[0] = 105 #"i"
  *             elif t == NPY_UINT:        f[0] =  73 #"I"             # <<<<<<<<<<<<<<
@@ -7733,7 +9077,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":832
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":832
  *             elif t == NPY_INT:         f[0] = 105 #"i"
  *             elif t == NPY_UINT:        f[0] =  73 #"I"
  *             elif t == NPY_LONG:        f[0] = 108 #"l"             # <<<<<<<<<<<<<<
@@ -7751,7 +9095,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":833
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":833
  *             elif t == NPY_UINT:        f[0] =  73 #"I"
  *             elif t == NPY_LONG:        f[0] = 108 #"l"
  *             elif t == NPY_ULONG:       f[0] = 76  #"L"             # <<<<<<<<<<<<<<
@@ -7769,7 +9113,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":834
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":834
  *             elif t == NPY_LONG:        f[0] = 108 #"l"
  *             elif t == NPY_ULONG:       f[0] = 76  #"L"
  *             elif t == NPY_LONGLONG:    f[0] = 113 #"q"             # <<<<<<<<<<<<<<
@@ -7787,7 +9131,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":835
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":835
  *             elif t == NPY_ULONG:       f[0] = 76  #"L"
  *             elif t == NPY_LONGLONG:    f[0] = 113 #"q"
  *             elif t == NPY_ULONGLONG:   f[0] = 81  #"Q"             # <<<<<<<<<<<<<<
@@ -7805,7 +9149,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":836
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":836
  *             elif t == NPY_LONGLONG:    f[0] = 113 #"q"
  *             elif t == NPY_ULONGLONG:   f[0] = 81  #"Q"
  *             elif t == NPY_FLOAT:       f[0] = 102 #"f"             # <<<<<<<<<<<<<<
@@ -7823,7 +9167,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":837
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":837
  *             elif t == NPY_ULONGLONG:   f[0] = 81  #"Q"
  *             elif t == NPY_FLOAT:       f[0] = 102 #"f"
  *             elif t == NPY_DOUBLE:      f[0] = 100 #"d"             # <<<<<<<<<<<<<<
@@ -7841,7 +9185,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":838
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":838
  *             elif t == NPY_FLOAT:       f[0] = 102 #"f"
  *             elif t == NPY_DOUBLE:      f[0] = 100 #"d"
  *             elif t == NPY_LONGDOUBLE:  f[0] = 103 #"g"             # <<<<<<<<<<<<<<
@@ -7859,7 +9203,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":839
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":839
  *             elif t == NPY_DOUBLE:      f[0] = 100 #"d"
  *             elif t == NPY_LONGDOUBLE:  f[0] = 103 #"g"
  *             elif t == NPY_CFLOAT:      f[0] = 90; f[1] = 102; f += 1 # Zf             # <<<<<<<<<<<<<<
@@ -7879,7 +9223,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":840
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":840
  *             elif t == NPY_LONGDOUBLE:  f[0] = 103 #"g"
  *             elif t == NPY_CFLOAT:      f[0] = 90; f[1] = 102; f += 1 # Zf
  *             elif t == NPY_CDOUBLE:     f[0] = 90; f[1] = 100; f += 1 # Zd             # <<<<<<<<<<<<<<
@@ -7899,7 +9243,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":841
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":841
  *             elif t == NPY_CFLOAT:      f[0] = 90; f[1] = 102; f += 1 # Zf
  *             elif t == NPY_CDOUBLE:     f[0] = 90; f[1] = 100; f += 1 # Zd
  *             elif t == NPY_CLONGDOUBLE: f[0] = 90; f[1] = 103; f += 1 # Zg             # <<<<<<<<<<<<<<
@@ -7919,7 +9263,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":842
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":842
  *             elif t == NPY_CDOUBLE:     f[0] = 90; f[1] = 100; f += 1 # Zd
  *             elif t == NPY_CLONGDOUBLE: f[0] = 90; f[1] = 103; f += 1 # Zg
  *             elif t == NPY_OBJECT:      f[0] = 79 #"O"             # <<<<<<<<<<<<<<
@@ -7937,7 +9281,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
         goto __pyx_L15;
       }
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":844
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":844
  *             elif t == NPY_OBJECT:      f[0] = 79 #"O"
  *             else:
  *                 raise ValueError(u"unknown dtype code in numpy.pxd (%d)" % t)             # <<<<<<<<<<<<<<
@@ -7961,7 +9305,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       }
       __pyx_L15:;
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":845
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":845
  *             else:
  *                 raise ValueError(u"unknown dtype code in numpy.pxd (%d)" % t)
  *             f += 1             # <<<<<<<<<<<<<<
@@ -7970,7 +9314,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
  */
       __pyx_v_f = (__pyx_v_f + 1);
 
-      /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":820
+      /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":820
  *         offset[0] += child.itemsize
  * 
  *         if not PyDataType_HASFIELDS(child):             # <<<<<<<<<<<<<<
@@ -7980,7 +9324,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
       goto __pyx_L13;
     }
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":849
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":849
  *             # Cython ignores struct boundary information ("T{...}"),
  *             # so don't output it
  *             f = _util_dtypestring(child, f, end, offset)             # <<<<<<<<<<<<<<
@@ -7993,7 +9337,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
     }
     __pyx_L13:;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":794
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":794
  *     cdef tuple fields
  * 
  *     for childname in descr.names:             # <<<<<<<<<<<<<<
@@ -8003,7 +9347,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
   }
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":850
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":850
  *             # so don't output it
  *             f = _util_dtypestring(child, f, end, offset)
  *     return f             # <<<<<<<<<<<<<<
@@ -8013,7 +9357,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
   __pyx_r = __pyx_v_f;
   goto __pyx_L0;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":785
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":785
  *     return PyArray_MultiIterNew(5, <void*>a, <void*>b, <void*>c, <void*> d, <void*> e)
  * 
  * cdef inline char* _util_dtypestring(dtype descr, char* f, char* end, int* offset) except NULL:             # <<<<<<<<<<<<<<
@@ -8038,7 +9382,7 @@ static CYTHON_INLINE char *__pyx_f_5numpy__util_dtypestring(PyArray_Descr *__pyx
   return __pyx_r;
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":966
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":966
  * 
  * 
  * cdef inline void set_array_base(ndarray arr, object base):             # <<<<<<<<<<<<<<
@@ -8053,7 +9397,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   int __pyx_t_2;
   __Pyx_RefNannySetupContext("set_array_base", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":968
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":968
  * cdef inline void set_array_base(ndarray arr, object base):
  *      cdef PyObject* baseptr
  *      if base is None:             # <<<<<<<<<<<<<<
@@ -8064,7 +9408,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":969
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":969
  *      cdef PyObject* baseptr
  *      if base is None:
  *          baseptr = NULL             # <<<<<<<<<<<<<<
@@ -8073,7 +9417,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
  */
     __pyx_v_baseptr = NULL;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":968
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":968
  * cdef inline void set_array_base(ndarray arr, object base):
  *      cdef PyObject* baseptr
  *      if base is None:             # <<<<<<<<<<<<<<
@@ -8083,7 +9427,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
     goto __pyx_L3;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":971
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":971
  *          baseptr = NULL
  *      else:
  *          Py_INCREF(base) # important to do this before decref below!             # <<<<<<<<<<<<<<
@@ -8093,7 +9437,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   /*else*/ {
     Py_INCREF(__pyx_v_base);
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":972
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":972
  *      else:
  *          Py_INCREF(base) # important to do this before decref below!
  *          baseptr = <PyObject*>base             # <<<<<<<<<<<<<<
@@ -8104,7 +9448,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   }
   __pyx_L3:;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":973
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":973
  *          Py_INCREF(base) # important to do this before decref below!
  *          baseptr = <PyObject*>base
  *      Py_XDECREF(arr.base)             # <<<<<<<<<<<<<<
@@ -8113,7 +9457,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
  */
   Py_XDECREF(__pyx_v_arr->base);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":974
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":974
  *          baseptr = <PyObject*>base
  *      Py_XDECREF(arr.base)
  *      arr.base = baseptr             # <<<<<<<<<<<<<<
@@ -8122,7 +9466,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
  */
   __pyx_v_arr->base = __pyx_v_baseptr;
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":966
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":966
  * 
  * 
  * cdef inline void set_array_base(ndarray arr, object base):             # <<<<<<<<<<<<<<
@@ -8134,7 +9478,7 @@ static CYTHON_INLINE void __pyx_f_5numpy_set_array_base(PyArrayObject *__pyx_v_a
   __Pyx_RefNannyFinishContext();
 }
 
-/* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":976
+/* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":976
  *      arr.base = baseptr
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -8148,7 +9492,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("get_array_base", 0);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":977
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":977
  * 
  * cdef inline object get_array_base(ndarray arr):
  *     if arr.base is NULL:             # <<<<<<<<<<<<<<
@@ -8158,7 +9502,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
   __pyx_t_1 = ((__pyx_v_arr->base == NULL) != 0);
   if (__pyx_t_1) {
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":978
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":978
  * cdef inline object get_array_base(ndarray arr):
  *     if arr.base is NULL:
  *         return None             # <<<<<<<<<<<<<<
@@ -8170,7 +9514,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
     __pyx_r = Py_None;
     goto __pyx_L0;
 
-    /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":977
+    /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":977
  * 
  * cdef inline object get_array_base(ndarray arr):
  *     if arr.base is NULL:             # <<<<<<<<<<<<<<
@@ -8179,7 +9523,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
  */
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":980
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":980
  *         return None
  *     else:
  *         return <object>arr.base             # <<<<<<<<<<<<<<
@@ -8191,7 +9535,7 @@ static CYTHON_INLINE PyObject *__pyx_f_5numpy_get_array_base(PyArrayObject *__py
     goto __pyx_L0;
   }
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":976
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":976
  *      arr.base = baseptr
  * 
  * cdef inline object get_array_base(ndarray arr):             # <<<<<<<<<<<<<<
@@ -20489,12 +21833,13 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_RuntimeError, __pyx_k_RuntimeError, sizeof(__pyx_k_RuntimeError), 0, 0, 1, 1},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_kp_s_Unable_to_convert_item_to_object, __pyx_k_Unable_to_convert_item_to_object, sizeof(__pyx_k_Unable_to_convert_item_to_object), 0, 0, 1, 0},
-  {&__pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_k_Users_aleserjavec_workspace_ora, sizeof(__pyx_k_Users_aleserjavec_workspace_ora), 0, 0, 1, 0},
+  {&__pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_k_Users_janez_Dropbox_orange3_Ora, sizeof(__pyx_k_Users_janez_Dropbox_orange3_Ora), 0, 0, 1, 0},
   {&__pyx_n_s_ValueError, __pyx_k_ValueError, sizeof(__pyx_k_ValueError), 0, 0, 1, 1},
   {&__pyx_n_s_X, __pyx_k_X, sizeof(__pyx_k_X), 0, 0, 1, 1},
   {&__pyx_n_s_allocate_buffer, __pyx_k_allocate_buffer, sizeof(__pyx_k_allocate_buffer), 0, 0, 1, 1},
   {&__pyx_n_s_allowed, __pyx_k_allowed, sizeof(__pyx_k_allowed), 0, 0, 1, 1},
   {&__pyx_n_s_asarray, __pyx_k_asarray, sizeof(__pyx_k_asarray), 0, 0, 1, 1},
+  {&__pyx_n_s_attr, __pyx_k_attr, sizeof(__pyx_k_attr), 0, 0, 1, 1},
   {&__pyx_n_s_base, __pyx_k_base, sizeof(__pyx_k_base), 0, 0, 1, 1},
   {&__pyx_n_s_best_entro, __pyx_k_best_entro, sizeof(__pyx_k_best_entro), 0, 0, 1, 1},
   {&__pyx_n_s_best_idx, __pyx_k_best_idx, sizeof(__pyx_k_best_idx), 0, 0, 1, 1},
@@ -20509,11 +21854,14 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_code, __pyx_k_code, sizeof(__pyx_k_code), 0, 0, 1, 1},
   {&__pyx_n_s_compute_grouped_MSE, __pyx_k_compute_grouped_MSE, sizeof(__pyx_k_compute_grouped_MSE), 0, 0, 1, 1},
   {&__pyx_n_s_compute_predictions, __pyx_k_compute_predictions, sizeof(__pyx_k_compute_predictions), 0, 0, 1, 1},
+  {&__pyx_n_s_compute_predictions_csc, __pyx_k_compute_predictions_csc, sizeof(__pyx_k_compute_predictions_csc), 0, 0, 1, 1},
+  {&__pyx_n_s_compute_predictions_csr, __pyx_k_compute_predictions_csr, sizeof(__pyx_k_compute_predictions_csr), 0, 0, 1, 1},
   {&__pyx_n_s_cont, __pyx_k_cont, sizeof(__pyx_k_cont), 0, 0, 1, 1},
   {&__pyx_kp_s_contiguous_and_direct, __pyx_k_contiguous_and_direct, sizeof(__pyx_k_contiguous_and_direct), 0, 0, 1, 0},
   {&__pyx_kp_s_contiguous_and_indirect, __pyx_k_contiguous_and_indirect, sizeof(__pyx_k_contiguous_and_indirect), 0, 0, 1, 0},
   {&__pyx_n_s_contingency, __pyx_k_contingency, sizeof(__pyx_k_contingency), 0, 0, 1, 1},
   {&__pyx_n_s_curr_y, __pyx_k_curr_y, sizeof(__pyx_k_curr_y), 0, 0, 1, 1},
+  {&__pyx_n_s_data, __pyx_k_data, sizeof(__pyx_k_data), 0, 0, 1, 1},
   {&__pyx_n_s_distr, __pyx_k_distr, sizeof(__pyx_k_distr), 0, 0, 1, 1},
   {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
   {&__pyx_n_s_dtype_is_object, __pyx_k_dtype_is_object, sizeof(__pyx_k_dtype_is_object), 0, 0, 1, 1},
@@ -20538,6 +21886,9 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_id, __pyx_k_id, sizeof(__pyx_k_id), 0, 0, 1, 1},
   {&__pyx_n_s_idx, __pyx_k_idx, sizeof(__pyx_k_idx), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
+  {&__pyx_n_s_ind, __pyx_k_ind, sizeof(__pyx_k_ind), 0, 0, 1, 1},
+  {&__pyx_n_s_indices, __pyx_k_indices, sizeof(__pyx_k_indices), 0, 0, 1, 1},
+  {&__pyx_n_s_indptr, __pyx_k_indptr, sizeof(__pyx_k_indptr), 0, 0, 1, 1},
   {&__pyx_n_s_int32, __pyx_k_int32, sizeof(__pyx_k_int32), 0, 0, 1, 1},
   {&__pyx_n_s_inter, __pyx_k_inter, sizeof(__pyx_k_inter), 0, 0, 1, 1},
   {&__pyx_n_s_itemsize, __pyx_k_itemsize, sizeof(__pyx_k_itemsize), 0, 0, 1, 1},
@@ -20555,6 +21906,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_mto, __pyx_k_mto, sizeof(__pyx_k_mto), 0, 0, 1, 1},
   {&__pyx_n_s_n, __pyx_k_n, sizeof(__pyx_k_n), 0, 0, 1, 1},
   {&__pyx_n_s_n_classes, __pyx_k_n_classes, sizeof(__pyx_k_n_classes), 0, 0, 1, 1},
+  {&__pyx_n_s_n_rows, __pyx_k_n_rows, sizeof(__pyx_k_n_rows), 0, 0, 1, 1},
   {&__pyx_n_s_n_values, __pyx_k_n_values, sizeof(__pyx_k_n_values), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
   {&__pyx_n_s_name_2, __pyx_k_name_2, sizeof(__pyx_k_name_2), 0, 0, 1, 1},
@@ -20662,7 +22014,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":218
  *             if ((flags & pybuf.PyBUF_C_CONTIGUOUS == pybuf.PyBUF_C_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_C_CONTIGUOUS)):
  *                 raise ValueError(u"ndarray is not C contiguous")             # <<<<<<<<<<<<<<
@@ -20673,7 +22025,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__4);
   __Pyx_GIVEREF(__pyx_tuple__4);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":222
  *             if ((flags & pybuf.PyBUF_F_CONTIGUOUS == pybuf.PyBUF_F_CONTIGUOUS)
  *                 and not PyArray_CHKFLAGS(self, NPY_F_CONTIGUOUS)):
  *                 raise ValueError(u"ndarray is not Fortran contiguous")             # <<<<<<<<<<<<<<
@@ -20684,7 +22036,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__5);
   __Pyx_GIVEREF(__pyx_tuple__5);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":259
  *                 if ((descr.byteorder == c'>' and little_endian) or
  *                     (descr.byteorder == c'<' and not little_endian)):
  *                     raise ValueError(u"Non-native byte order not supported")             # <<<<<<<<<<<<<<
@@ -20695,7 +22047,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__6);
   __Pyx_GIVEREF(__pyx_tuple__6);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":799
  * 
  *         if (end - f) - <int>(new_offset - offset[0]) < 15:
  *             raise RuntimeError(u"Format string allocated too short, see comment in numpy.pxd")             # <<<<<<<<<<<<<<
@@ -20706,7 +22058,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__7);
   __Pyx_GIVEREF(__pyx_tuple__7);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":803
  *         if ((child.byteorder == c'>' and little_endian) or
  *             (child.byteorder == c'<' and not little_endian)):
  *             raise ValueError(u"Non-native byte order not supported")             # <<<<<<<<<<<<<<
@@ -20717,7 +22069,7 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "../../virtual/orange3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
+  /* "../../env/o3/lib/python3.5/site-packages/Cython/Includes/numpy/__init__.pxd":823
  *             t = child.type_num
  *             if end - f < 5:
  *                 raise RuntimeError(u"Format string allocated too short.")             # <<<<<<<<<<<<<<
@@ -20884,7 +22236,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__23 = PyTuple_Pack(9, __pyx_n_s_x, __pyx_n_s_nx, __pyx_n_s_y, __pyx_n_s_ny, __pyx_n_s_cont, __pyx_n_s_n, __pyx_n_s_yi, __pyx_n_s_xi, __pyx_n_s_i); if (unlikely(!__pyx_tuple__23)) __PYX_ERR(0, 19, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__23);
   __Pyx_GIVEREF(__pyx_tuple__23);
-  __pyx_codeobj__24 = (PyObject*)__Pyx_PyCode_New(4, 0, 9, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__23, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_contingency, 19, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__24)) __PYX_ERR(0, 19, __pyx_L1_error)
+  __pyx_codeobj__24 = (PyObject*)__Pyx_PyCode_New(4, 0, 9, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__23, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_contingency, 19, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__24)) __PYX_ERR(0, 19, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":30
  *     return cont
@@ -20896,7 +22248,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__25 = PyTuple_Pack(15, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_n_classes, __pyx_n_s_min_leaf, __pyx_n_s_distr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_p, __pyx_n_s_curr_y, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__25)) __PYX_ERR(0, 30, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__25);
   __Pyx_GIVEREF(__pyx_tuple__25);
-  __pyx_codeobj__26 = (PyObject*)__Pyx_PyCode_New(5, 0, 15, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_find_threshold_entropy, 30, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__26)) __PYX_ERR(0, 30, __pyx_L1_error)
+  __pyx_codeobj__26 = (PyObject*)__Pyx_PyCode_New(5, 0, 15, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__25, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_entropy, 30, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__26)) __PYX_ERR(0, 30, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":91
  * 
@@ -20908,7 +22260,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__27 = PyTuple_Pack(24, __pyx_n_s_cont, __pyx_n_s_class_distr, __pyx_n_s_val_distr, __pyx_n_s_min_leaf, __pyx_n_s_n_classes, __pyx_n_s_n_values, __pyx_n_s_distr, __pyx_n_s_mfrom, __pyx_n_s_mto, __pyx_n_s_left, __pyx_n_s_right, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_allowed, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_entro, __pyx_n_s_class_entro, __pyx_n_s_best_entro, __pyx_n_s_N); if (unlikely(!__pyx_tuple__27)) __PYX_ERR(0, 91, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__27);
   __Pyx_GIVEREF(__pyx_tuple__27);
-  __pyx_codeobj__28 = (PyObject*)__Pyx_PyCode_New(4, 0, 24, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_find_binarization_entropy, 91, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__28)) __PYX_ERR(0, 91, __pyx_L1_error)
+  __pyx_codeobj__28 = (PyObject*)__Pyx_PyCode_New(4, 0, 24, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__27, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_entropy, 91, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__28)) __PYX_ERR(0, 91, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":189
  * 
@@ -20920,7 +22272,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__29 = PyTuple_Pack(11, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_idx, __pyx_n_s_min_leaf, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_i, __pyx_n_s_best_idx, __pyx_n_s_N); if (unlikely(!__pyx_tuple__29)) __PYX_ERR(0, 189, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__29);
   __Pyx_GIVEREF(__pyx_tuple__29);
-  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_find_threshold_MSE, 189, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 189, __pyx_L1_error)
+  __pyx_codeobj__30 = (PyObject*)__Pyx_PyCode_New(4, 0, 11, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__29, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_threshold_MSE, 189, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__30)) __PYX_ERR(0, 189, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":234
  * 
@@ -20932,7 +22284,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__31 = PyTuple_Pack(22, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_n_values, __pyx_n_s_min_leaf, __pyx_n_s_sleft, __pyx_n_s_sum, __pyx_n_s_val, __pyx_n_s_left, __pyx_n_s_i, __pyx_n_s_change, __pyx_n_s_to_right, __pyx_n_s_m, __pyx_n_s_best_mapping, __pyx_n_s_move, __pyx_n_s_mapping, __pyx_n_s_previous, __pyx_n_s_inter, __pyx_n_s_best_inter, __pyx_n_s_start_inter, __pyx_n_s_N, __pyx_n_s_group_sizes, __pyx_n_s_group_sums); if (unlikely(!__pyx_tuple__31)) __PYX_ERR(0, 234, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__31);
   __Pyx_GIVEREF(__pyx_tuple__31);
-  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(4, 0, 22, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_find_binarization_MSE, 234, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 234, __pyx_L1_error)
+  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(4, 0, 22, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__31, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_find_binarization_MSE, 234, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 234, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":317
  * 
@@ -20944,7 +22296,7 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__33 = PyTuple_Pack(12, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_n_values, __pyx_n_s_min_leaf, __pyx_n_s_i, __pyx_n_s_n, __pyx_n_s_nvalid, __pyx_n_s_sum, __pyx_n_s_inter, __pyx_n_s_tx, __pyx_n_s_group_sizes, __pyx_n_s_group_sums); if (unlikely(!__pyx_tuple__33)) __PYX_ERR(0, 317, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__33);
   __Pyx_GIVEREF(__pyx_tuple__33);
-  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_compute_grouped_MSE, 317, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(0, 317, __pyx_L1_error)
+  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__33, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_grouped_MSE, 317, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(0, 317, __pyx_L1_error)
 
   /* "Orange/classification/_tree_scorers.pyx":373
  * 
@@ -20956,7 +22308,31 @@ static int __Pyx_InitCachedConstants(void) {
   __pyx_tuple__35 = PyTuple_Pack(12, __pyx_n_s_X, __pyx_n_s_code, __pyx_n_s_values, __pyx_n_s_thresholds, __pyx_n_s_node_ptr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_val_idx, __pyx_n_s_next_node_ptr, __pyx_n_s_node_idx, __pyx_n_s_val, __pyx_n_s_predictions); if (unlikely(!__pyx_tuple__35)) __PYX_ERR(0, 373, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__35);
   __Pyx_GIVEREF(__pyx_tuple__35);
-  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__35, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_aleserjavec_workspace_ora, __pyx_n_s_compute_predictions, 373, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(0, 373, __pyx_L1_error)
+  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(4, 0, 12, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__35, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_predictions, 373, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(0, 373, __pyx_L1_error)
+
+  /* "Orange/classification/_tree_scorers.pyx":421
+ * 
+ * 
+ * def compute_predictions_csr(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+  __pyx_tuple__37 = PyTuple_Pack(18, __pyx_n_s_X, __pyx_n_s_code, __pyx_n_s_values, __pyx_n_s_thresholds, __pyx_n_s_node_ptr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_val_idx, __pyx_n_s_next_node_ptr, __pyx_n_s_node_idx, __pyx_n_s_val, __pyx_n_s_predictions, __pyx_n_s_data, __pyx_n_s_indptr, __pyx_n_s_indices, __pyx_n_s_ind, __pyx_n_s_attr, __pyx_n_s_n_rows); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(0, 421, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__37);
+  __Pyx_GIVEREF(__pyx_tuple__37);
+  __pyx_codeobj__38 = (PyObject*)__Pyx_PyCode_New(4, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__37, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_predictions_csr, 421, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__38)) __PYX_ERR(0, 421, __pyx_L1_error)
+
+  /* "Orange/classification/_tree_scorers.pyx":465
+ *     return np.asarray(predictions)
+ * 
+ * def compute_predictions_csc(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+  __pyx_tuple__39 = PyTuple_Pack(18, __pyx_n_s_X, __pyx_n_s_code, __pyx_n_s_values, __pyx_n_s_thresholds, __pyx_n_s_node_ptr, __pyx_n_s_i, __pyx_n_s_j, __pyx_n_s_val_idx, __pyx_n_s_next_node_ptr, __pyx_n_s_node_idx, __pyx_n_s_val, __pyx_n_s_predictions, __pyx_n_s_data, __pyx_n_s_indptr, __pyx_n_s_indices, __pyx_n_s_ind, __pyx_n_s_attr, __pyx_n_s_n_rows); if (unlikely(!__pyx_tuple__39)) __PYX_ERR(0, 465, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__39);
+  __Pyx_GIVEREF(__pyx_tuple__39);
+  __pyx_codeobj__40 = (PyObject*)__Pyx_PyCode_New(4, 0, 18, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__39, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_Users_janez_Dropbox_orange3_Ora, __pyx_n_s_compute_predictions_csc, 465, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__40)) __PYX_ERR(0, 465, __pyx_L1_error)
 
   /* "View.MemoryView":282
  *         return self.name
@@ -20965,9 +22341,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef strided = Enum("<strided and direct>") # default
  * cdef indirect = Enum("<strided and indirect>")
  */
-  __pyx_tuple__37 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct_or_indirect); if (unlikely(!__pyx_tuple__37)) __PYX_ERR(2, 282, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__37);
-  __Pyx_GIVEREF(__pyx_tuple__37);
+  __pyx_tuple__41 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct_or_indirect); if (unlikely(!__pyx_tuple__41)) __PYX_ERR(2, 282, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__41);
+  __Pyx_GIVEREF(__pyx_tuple__41);
 
   /* "View.MemoryView":283
  * 
@@ -20976,9 +22352,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef indirect = Enum("<strided and indirect>")
  * 
  */
-  __pyx_tuple__38 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct); if (unlikely(!__pyx_tuple__38)) __PYX_ERR(2, 283, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__38);
-  __Pyx_GIVEREF(__pyx_tuple__38);
+  __pyx_tuple__42 = PyTuple_Pack(1, __pyx_kp_s_strided_and_direct); if (unlikely(!__pyx_tuple__42)) __PYX_ERR(2, 283, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__42);
+  __Pyx_GIVEREF(__pyx_tuple__42);
 
   /* "View.MemoryView":284
  * cdef generic = Enum("<strided and direct or indirect>")
@@ -20987,9 +22363,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__39 = PyTuple_Pack(1, __pyx_kp_s_strided_and_indirect); if (unlikely(!__pyx_tuple__39)) __PYX_ERR(2, 284, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__39);
-  __Pyx_GIVEREF(__pyx_tuple__39);
+  __pyx_tuple__43 = PyTuple_Pack(1, __pyx_kp_s_strided_and_indirect); if (unlikely(!__pyx_tuple__43)) __PYX_ERR(2, 284, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__43);
+  __Pyx_GIVEREF(__pyx_tuple__43);
 
   /* "View.MemoryView":287
  * 
@@ -20998,9 +22374,9 @@ static int __Pyx_InitCachedConstants(void) {
  * cdef indirect_contiguous = Enum("<contiguous and indirect>")
  * 
  */
-  __pyx_tuple__40 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_direct); if (unlikely(!__pyx_tuple__40)) __PYX_ERR(2, 287, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__40);
-  __Pyx_GIVEREF(__pyx_tuple__40);
+  __pyx_tuple__44 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_direct); if (unlikely(!__pyx_tuple__44)) __PYX_ERR(2, 287, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__44);
+  __Pyx_GIVEREF(__pyx_tuple__44);
 
   /* "View.MemoryView":288
  * 
@@ -21009,9 +22385,9 @@ static int __Pyx_InitCachedConstants(void) {
  * 
  * 
  */
-  __pyx_tuple__41 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_indirect); if (unlikely(!__pyx_tuple__41)) __PYX_ERR(2, 288, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__41);
-  __Pyx_GIVEREF(__pyx_tuple__41);
+  __pyx_tuple__45 = PyTuple_Pack(1, __pyx_kp_s_contiguous_and_indirect); if (unlikely(!__pyx_tuple__45)) __PYX_ERR(2, 288, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__45);
+  __Pyx_GIVEREF(__pyx_tuple__45);
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -21265,6 +22641,30 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_predictions, __pyx_t_1) < 0) __PYX_ERR(0, 373, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
+  /* "Orange/classification/_tree_scorers.pyx":421
+ * 
+ * 
+ * def compute_predictions_csr(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_15compute_predictions_csr, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 421, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_predictions_csr, __pyx_t_1) < 0) __PYX_ERR(0, 421, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "Orange/classification/_tree_scorers.pyx":465
+ *     return np.asarray(predictions)
+ * 
+ * def compute_predictions_csc(X, int[:] code,             # <<<<<<<<<<<<<<
+ *                                double[:, :] values, double[:] thresholds):
+ *     """
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_6Orange_14classification_13_tree_scorers_17compute_predictions_csc, NULL, __pyx_n_s_Orange_classification__tree_scor); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 465, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_compute_predictions_csc, __pyx_t_1) < 0) __PYX_ERR(0, 465, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
   /* "Orange/classification/_tree_scorers.pyx":1
  * #cython: embedsignature=True             # <<<<<<<<<<<<<<
  * #cython: boundscheck=False
@@ -21295,7 +22695,7 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
  * cdef strided = Enum("<strided and direct>") # default
  * cdef indirect = Enum("<strided and indirect>")
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__37, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 282, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__41, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 282, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(generic);
   __Pyx_DECREF_SET(generic, __pyx_t_1);
@@ -21309,7 +22709,7 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
  * cdef indirect = Enum("<strided and indirect>")
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__38, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 283, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__42, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 283, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(strided);
   __Pyx_DECREF_SET(strided, __pyx_t_1);
@@ -21323,7 +22723,7 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__39, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__43, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 284, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(indirect);
   __Pyx_DECREF_SET(indirect, __pyx_t_1);
@@ -21337,7 +22737,7 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
  * cdef indirect_contiguous = Enum("<contiguous and indirect>")
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__40, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 287, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__44, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 287, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(contiguous);
   __Pyx_DECREF_SET(contiguous, __pyx_t_1);
@@ -21351,7 +22751,7 @@ PyMODINIT_FUNC PyInit__tree_scorers(void)
  * 
  * 
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__41, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 288, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_MemviewEnum_type), __pyx_tuple__45, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(2, 288, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_XGOTREF(indirect_contiguous);
   __Pyx_DECREF_SET(indirect_contiguous, __pyx_t_1);
@@ -22434,6 +23834,87 @@ static CYTHON_INLINE PyObject* __Pyx_PyObject_CallOneArg(PyObject *func, PyObjec
 }
 #endif
 
+/* GetItemInt */
+      static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
+    PyObject *r;
+    if (!j) return NULL;
+    r = PyObject_GetItem(o, j);
+    Py_DECREF(j);
+    return r;
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
+                                                              CYTHON_NCP_UNUSED int wraparound,
+                                                              CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_COMPILING_IN_CPYTHON
+    if (wraparound & unlikely(i < 0)) i += PyList_GET_SIZE(o);
+    if ((!boundscheck) || likely((0 <= i) & (i < PyList_GET_SIZE(o)))) {
+        PyObject *r = PyList_GET_ITEM(o, i);
+        Py_INCREF(r);
+        return r;
+    }
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+#else
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
+                                                              CYTHON_NCP_UNUSED int wraparound,
+                                                              CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_COMPILING_IN_CPYTHON
+    if (wraparound & unlikely(i < 0)) i += PyTuple_GET_SIZE(o);
+    if ((!boundscheck) || likely((0 <= i) & (i < PyTuple_GET_SIZE(o)))) {
+        PyObject *r = PyTuple_GET_ITEM(o, i);
+        Py_INCREF(r);
+        return r;
+    }
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+#else
+    return PySequence_GetItem(o, i);
+#endif
+}
+static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, int is_list,
+                                                     CYTHON_NCP_UNUSED int wraparound,
+                                                     CYTHON_NCP_UNUSED int boundscheck) {
+#if CYTHON_COMPILING_IN_CPYTHON
+    if (is_list || PyList_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyList_GET_SIZE(o);
+        if ((!boundscheck) || (likely((n >= 0) & (n < PyList_GET_SIZE(o))))) {
+            PyObject *r = PyList_GET_ITEM(o, n);
+            Py_INCREF(r);
+            return r;
+        }
+    }
+    else if (PyTuple_CheckExact(o)) {
+        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyTuple_GET_SIZE(o);
+        if ((!boundscheck) || likely((n >= 0) & (n < PyTuple_GET_SIZE(o)))) {
+            PyObject *r = PyTuple_GET_ITEM(o, n);
+            Py_INCREF(r);
+            return r;
+        }
+    } else {
+        PySequenceMethods *m = Py_TYPE(o)->tp_as_sequence;
+        if (likely(m && m->sq_item)) {
+            if (wraparound && unlikely(i < 0) && likely(m->sq_length)) {
+                Py_ssize_t l = m->sq_length(o);
+                if (likely(l >= 0)) {
+                    i += l;
+                } else {
+                    if (!PyErr_ExceptionMatches(PyExc_OverflowError))
+                        return NULL;
+                    PyErr_Clear();
+                }
+            }
+            return m->sq_item(o, i);
+        }
+    }
+#else
+    if (is_list || PySequence_Check(o)) {
+        return PySequence_GetItem(o, i);
+    }
+#endif
+    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
+}
+
 /* RaiseException */
       #if PY_MAJOR_VERSION < 3
 static void __Pyx_Raise(PyObject *type, PyObject *value, PyObject *tb,
@@ -23002,87 +24483,6 @@ bad:
     Py_XDECREF(empty_list);
     Py_XDECREF(empty_dict);
     return module;
-}
-
-/* GetItemInt */
-          static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Generic(PyObject *o, PyObject* j) {
-    PyObject *r;
-    if (!j) return NULL;
-    r = PyObject_GetItem(o, j);
-    Py_DECREF(j);
-    return r;
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_List_Fast(PyObject *o, Py_ssize_t i,
-                                                              CYTHON_NCP_UNUSED int wraparound,
-                                                              CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_COMPILING_IN_CPYTHON
-    if (wraparound & unlikely(i < 0)) i += PyList_GET_SIZE(o);
-    if ((!boundscheck) || likely((0 <= i) & (i < PyList_GET_SIZE(o)))) {
-        PyObject *r = PyList_GET_ITEM(o, i);
-        Py_INCREF(r);
-        return r;
-    }
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
-#else
-    return PySequence_GetItem(o, i);
-#endif
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Tuple_Fast(PyObject *o, Py_ssize_t i,
-                                                              CYTHON_NCP_UNUSED int wraparound,
-                                                              CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_COMPILING_IN_CPYTHON
-    if (wraparound & unlikely(i < 0)) i += PyTuple_GET_SIZE(o);
-    if ((!boundscheck) || likely((0 <= i) & (i < PyTuple_GET_SIZE(o)))) {
-        PyObject *r = PyTuple_GET_ITEM(o, i);
-        Py_INCREF(r);
-        return r;
-    }
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
-#else
-    return PySequence_GetItem(o, i);
-#endif
-}
-static CYTHON_INLINE PyObject *__Pyx_GetItemInt_Fast(PyObject *o, Py_ssize_t i, int is_list,
-                                                     CYTHON_NCP_UNUSED int wraparound,
-                                                     CYTHON_NCP_UNUSED int boundscheck) {
-#if CYTHON_COMPILING_IN_CPYTHON
-    if (is_list || PyList_CheckExact(o)) {
-        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyList_GET_SIZE(o);
-        if ((!boundscheck) || (likely((n >= 0) & (n < PyList_GET_SIZE(o))))) {
-            PyObject *r = PyList_GET_ITEM(o, n);
-            Py_INCREF(r);
-            return r;
-        }
-    }
-    else if (PyTuple_CheckExact(o)) {
-        Py_ssize_t n = ((!wraparound) | likely(i >= 0)) ? i : i + PyTuple_GET_SIZE(o);
-        if ((!boundscheck) || likely((n >= 0) & (n < PyTuple_GET_SIZE(o)))) {
-            PyObject *r = PyTuple_GET_ITEM(o, n);
-            Py_INCREF(r);
-            return r;
-        }
-    } else {
-        PySequenceMethods *m = Py_TYPE(o)->tp_as_sequence;
-        if (likely(m && m->sq_item)) {
-            if (wraparound && unlikely(i < 0) && likely(m->sq_length)) {
-                Py_ssize_t l = m->sq_length(o);
-                if (likely(l >= 0)) {
-                    i += l;
-                } else {
-                    if (!PyErr_ExceptionMatches(PyExc_OverflowError))
-                        return NULL;
-                    PyErr_Clear();
-                }
-            }
-            return m->sq_item(o, i);
-        }
-    }
-#else
-    if (is_list || PySequence_Check(o)) {
-        return PySequence_GetItem(o, i);
-    }
-#endif
-    return __Pyx_GetItemInt_Generic(o, PyInt_FromSsize_t(i));
 }
 
 /* PyIntBinop */

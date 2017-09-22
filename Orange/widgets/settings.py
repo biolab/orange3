@@ -34,8 +34,10 @@ import itertools
 import os
 import logging
 import pickle
+import pprint
 import time
 import warnings
+from operator import itemgetter
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
@@ -505,9 +507,9 @@ class SettingsHandler:
         widget : OWWidget
         """
         self.defaults = self.provider.pack(widget)
-        for name, setting in self.known_settings.items():
+        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
             if setting.schema_only:
-                self.defaults.pop(name, None)
+                data.pop(setting.name, None)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
@@ -775,6 +777,17 @@ class ContextHandler(SettingsHandler):
         if widget.current_context is None:
             return
 
+        # Clear schema-only settings when *closing* the context
+        # FIXME: Sadly, schema-only settings aren't cleared when non-contextual
+        # SettingsHandler is used. Example: widget has non-contextual
+        # SettingsHandler, user loads schema that includes widget, user
+        # passes new data to widget => widget's schema-only settings still
+        # have previous values because equivalent of below reset was never
+        # called (i.e. `close_context()`).
+        for name, setting in self.known_settings.items():
+            if setting.schema_only:
+                setattr(widget, name, setting.default)
+
         self.settings_from_widget(widget)
         widget.current_context = None
 
@@ -1011,7 +1024,7 @@ class DomainContextHandler(ContextHandler):
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
             if 100 <= value[1]:
-                if not domain:
+                if domain is None:
                     raise ValueError("Cannot decode variable without domain")
                 return domain[value[0]]
             return value[0]
@@ -1196,6 +1209,30 @@ class PerfectDomainContextHandler(DomainContextHandler):
             return value, -1
         else:
             return super().encode_setting(context, setting, value)
+
+
+class SettingsPrinter(pprint.PrettyPrinter):
+    """Pretty Printer that knows how to properly format Contexts."""
+
+    def _format(self, obj, stream, indent, allowance, context, level):
+        if not isinstance(obj, Context):
+            return super()._format(obj, stream, indent,
+                                   allowance, context, level)
+
+        stream.write("Context(")
+        for key, value in sorted(obj.__dict__.items(), key=itemgetter(0)):
+            if key == "values":
+                continue
+            stream.write(key)
+            stream.write("=")
+            stream.write(self._repr(value, context, level + 1))
+            stream.write(",\n")
+            stream.write(" " * (indent + 8))
+        stream.write("values=")
+        stream.write(" ")
+        self._format(obj.values, stream, indent+15,
+                     allowance+1, context, level + 1)
+        stream.write(")")
 
 
 def rename_setting(settings, old_name, new_name):

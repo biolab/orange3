@@ -18,9 +18,17 @@ from Orange.util import deprecated
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.webview import WebviewWidget
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.gui.utils import message_critical
+
+# Importing WebviewWidget can fail if neither QWebKit (old, deprecated) nor
+# QWebEngine (bleeding-edge, hard to install) are available
+try:
+    from Orange.widgets.utils.webview import WebviewWidget
+except ImportError:
+    from unittest.mock import Mock
+    WebviewWidget = Mock
+
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +55,10 @@ class ReportItem(QStandardItem):
         icon = QIcon(path)
         self.id = id(icon)
         super().__init__(icon, name)
+
+    def __getnewargs__(self):
+        return (self.name, self.html, self.scheme, self.module, self.icon_name,
+                self.comment)
 
 
 class ReportItemModel(QStandardItemModel):

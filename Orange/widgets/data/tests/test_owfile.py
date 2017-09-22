@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from os import path, remove
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import pickle
 import tempfile
 
@@ -39,7 +39,7 @@ class TestOWFile(WidgetTest):
     event_data = None
 
     def setUp(self):
-        self.widget = self.create_widget(OWFile)
+        self.widget = self.create_widget(OWFile)  # type: OWFile
 
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
@@ -245,3 +245,44 @@ a
         # test adding file formats after registering the widget
         formats = dialog_formats()
         self.assertTrue(".123" in formats)
+
+    def test_domain_editor_conversions(self):
+        dat = """V0\tV1\tV2\tV3\tV4\tV5\tV6
+                 c\tc\td\td\tc\td\td
+                  \t \t \t \t \t \t
+                 3.0\t1.0\t4\ta\t0.0\tx\t1.0
+                 1.0\t2.0\t4\tb\t0.0\ty\t2.0
+                 2.0\t1.0\t7\ta\t0.0\ty\t2.0
+                 0.0\t2.0\t7\ta\t0.0\tz\t2.0"""
+        with named_file(dat, suffix=".tab") as filename:
+            self.open_dataset(filename)
+            data1 = self.get_output(self.widget.Outputs.data)
+            model = self.widget.domain_editor.model()
+            # check the ordering of attributes
+            for i, a in enumerate(data1.domain.attributes):
+                self.assertEqual(str(a), model.data(model.createIndex(i, 0), Qt.DisplayRole))
+            # make conversions
+            model.setData(model.createIndex(0, 1), "categorical", Qt.EditRole)
+            model.setData(model.createIndex(1, 1), "string", Qt.EditRole)
+            model.setData(model.createIndex(2, 1), "numeric", Qt.EditRole)
+            model.setData(model.createIndex(3, 1), "numeric", Qt.EditRole)
+            model.setData(model.createIndex(6, 1), "numeric", Qt.EditRole)
+            self.widget.apply_button.click()
+            data2 = self.get_output(self.widget.Outputs.data)
+            # round continuous values should be converted to integers (3.0 -> 3, "3")
+            self.assertEqual(len(data2.domain.attributes[0].values[0]), 1)
+            self.assertEqual(len(data2[0].metas[0]), 1)
+            # discrete integer values should stay the same after conversion to continuous
+            self.assertAlmostEqual(float(data1[0][2].value), data2[0][1])
+            # discrete round floats should stay the same after conversion to continuous
+            self.assertAlmostEqual(float(data1[0][6].value), data2[0][5])
+
+    def test_url_no_scheme(self):
+        mock_urlreader = Mock(side_effect=ValueError())
+        url = 'foo.bar/xxx.csv'
+
+        with patch('Orange.widgets.data.owfile.UrlReader', mock_urlreader):
+            self.widget.url_combo.insertItem(0, url)
+            self.widget.url_combo.activated.emit(0)
+
+        mock_urlreader.assert_called_once_with('http://' + url)

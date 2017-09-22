@@ -681,6 +681,7 @@ class NameTextItem(QGraphicsTextItem):
         super(NameTextItem, self).__init__(*args, **kwargs)
         self.__selected = False
         self.__palette = None
+        self.__content = ""
 
     def paint(self, painter, option, widget=None):
         if self.__selected:
@@ -742,6 +743,11 @@ class NameTextItem(QGraphicsTextItem):
         else:
             role = QPalette.WindowText
         self.setDefaultTextColor(self.palette().color(role))
+
+    def setHtml(self, contents):
+        if contents != self.__content:
+            self.__content = contents
+            super().setHtml(contents)
 
 
 class NodeItem(QGraphicsObject):

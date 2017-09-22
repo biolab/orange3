@@ -7,7 +7,7 @@ from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.widgets.widget import Output
+from Orange.widgets.utils.signals import Output
 
 
 class OWLogisticRegression(OWBaseLearner):
@@ -22,7 +22,7 @@ class OWLogisticRegression(OWBaseLearner):
 
     LEARNER = LogisticRegressionLearner
 
-    class Outputs:
+    class Outputs(OWBaseLearner.Outputs):
         coefficients = Output("Coefficients", Table, explicit=True)
 
     penalty_type = settings.Setting(1)

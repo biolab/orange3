@@ -1,0 +1,7 @@
+name	hair	eggs	milk	backbone	legs	type
+string	d	d	d	d	d	d
+meta						class
+aardvark	1	0	1	1	4	mammal
+antelope	1	0	1	1	4	mammal
+bass	0	1	0	1	0	fish
+bear	1	0	1	1	4	mammal

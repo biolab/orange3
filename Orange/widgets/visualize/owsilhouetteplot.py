@@ -84,6 +84,7 @@ class OWSilhouettePlot(widget.OWWidget):
         need_two_clusters = Msg("Need at least two non-empty clusters")
         singleton_clusters_all = Msg("All clusters are singletons")
         memory_error = Msg("Not enough memory")
+        value_error = Msg("Distances could not be computed: '{}'")
 
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
@@ -93,9 +94,7 @@ class OWSilhouettePlot(widget.OWWidget):
         super().__init__()
         #: The input data
         self.data = None         # type: Optional[Orange.data.Table]
-        #: Data after any applied pre-processing step
-        self._effective_data = None  # type: Optional[Orange.data.Table]
-        #: Distance matrix computed from _effective_data
+        #: Distance matrix computed from data
         self._matrix = None      # type: Optional[Orange.misc.DistMatrix]
         #: An bool mask (size == len(data)) indicating missing group/cluster
         #: assignments
@@ -179,18 +178,8 @@ class OWSilhouettePlot(widget.OWWidget):
                 v for v in data.domain.variables + data.domain.metas
                 if v.is_discrete and len(v.values) >= 2]
             if not candidatevars:
-                error_msg = "Input does not have any suitable cluster labels."
+                error_msg = "Input does not have any suitable labels."
                 data = None
-
-        if data is not None:
-            ncont = sum(v.is_continuous for v in data.domain.attributes)
-            ndiscrete = len(data.domain.attributes) - ncont
-            if ncont == 0:
-                data = None
-                error_msg = "No continuous columns"
-            elif ncont < len(data.domain.attributes):
-                warning_msg = "{0} discrete columns will not be used for " \
-                              "distance computation".format(ndiscrete)
 
         self.data = data
         if data is not None:
@@ -204,14 +193,13 @@ class OWSilhouettePlot(widget.OWWidget):
             annotvars = [var for var in data.domain.metas if var.is_string]
             self.annotation_var_model[:] = ["None"] + annotvars
             self.annotation_var_idx = 1 if len(annotvars) else 0
-            self._effective_data = Orange.distance._preprocess(data)
             self.openContext(Orange.data.Domain(candidatevars))
 
         self.error(error_msg)
         self.warning(warning_msg)
 
     def handleNewSignals(self):
-        if self._effective_data is not None:
+        if self.data is not None:
             self._update()
             self._replot()
 
@@ -222,7 +210,6 @@ class OWSilhouettePlot(widget.OWWidget):
         Clear the widget state.
         """
         self.data = None
-        self._effective_data = None
         self._matrix = None
         self._mask = None
         self._silhouette = None
@@ -260,12 +247,15 @@ class OWSilhouettePlot(widget.OWWidget):
             self._reset_all()
             return
 
-        if self._matrix is None and self._effective_data is not None:
+        if self._matrix is None and self.data is not None:
             _, metric = self.Distances[self.distance_idx]
             try:
-                self._matrix = np.asarray(metric(self._effective_data))
+                self._matrix = np.asarray(metric(self.data))
             except MemoryError:
                 self.Error.memory_error()
+                return
+            except ValueError as err:
+                self.Error.value_error(str(err))
                 return
 
         self._update_labels()
@@ -278,9 +268,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._clear_scene()
 
     def _clear_messages(self):
-        self.Error.memory_error.clear()
-        self.Error.singleton_clusters_all.clear()
-        self.Error.need_two_clusters.clear()
+        self.Error.clear()
         self.Warning.missing_cluster_assignment.clear()
 
     def _update_labels(self):

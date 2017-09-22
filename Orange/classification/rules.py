@@ -15,10 +15,11 @@ import bottleneck as bn
 import numpy as np
 from scipy.stats import chi2
 
-from Orange.data import Table, _contingency
 from Orange.classification import Learner, Model
+from Orange.data import Table, _contingency
+from Orange.data.filter import HasClass
 from Orange.preprocess.discretize import EntropyMDL
-from Orange.preprocess import RemoveNaNColumns, RemoveNaNClasses, Impute
+from Orange.preprocess import RemoveNaNColumns, Impute
 
 __all__ = ["CN2Learner", "CN2UnorderedLearner", "CN2SDLearner",
            "CN2SDUnorderedLearner"]
@@ -901,7 +902,7 @@ class _RuleLearner(Learner):
     .. [1] "Separate-and-Conquer Rule Learning", Johannes Fürnkranz,
            Artificial Intelligence Review 13, 3-54, 1999
     """
-    preprocessors = [RemoveNaNColumns(), RemoveNaNClasses(), Impute()]
+    preprocessors = [RemoveNaNColumns(), HasClass(), Impute()]
 
     def __init__(self, preprocessors=None, base_rules=None):
         """

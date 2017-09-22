@@ -17,7 +17,7 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel
 
-import Orange.data
+from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
@@ -98,6 +98,10 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
 class PythonScriptEditor(QPlainTextEdit):
     INDENT = 4
 
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+
     def lastLine(self):
         text = str(self.toPlainText())
         pos = self.textCursor().position()
@@ -106,7 +110,12 @@ class PythonScriptEditor(QPlainTextEdit):
         return text
 
     def keyPressEvent(self, event):
+        self.widget.enable_execute()
         if event.key() == Qt.Key_Return:
+            if event.modifiers() & (
+                    Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
+                self.widget.unconditional_commit()
+                return
             text = self.lastLine()
             indent = len(text) - len(text.lstrip())
             if text.strip() == "pass" or text.strip().startswith("return "):
@@ -357,23 +366,23 @@ class OWPythonScript(widget.OWWidget):
     icon = "icons/PythonScript.svg"
     priority = 3150
 
-    inputs_names = ["in_data", "in_learner", "in_classifier", "in_object"]
-
     class Inputs:
-        in_data = Input("in_data", Orange.data.Table, default=True)
-        # in_distance = Input("in_distance", Orange.misc.SymMatrix, default=True)
-        in_learner = Input("in_learner", Learner, default=True)
-        in_classifier = Input("in_classifier", Model, default=True)
-        in_object = Input("in_object", object)
-
-    outputs_names = ["out_data", "out_learner", "out_classifier", "out_object"]
+        data = Input("Data", Table, replaces="in_data",
+                     default=True, multiple=True)
+        learner = Input("Learner", Learner, replaces="in_learner",
+                        default=True, multiple=True)
+        classifier = Input("Classifier", Model, replaces="in_classifier",
+                           default=True, multiple=True)
+        object = Input("Object", object, replaces="in_object",
+                       default=False, multiple=True)
 
     class Outputs:
-        out_data = Output("out_data", Orange.data.Table)
-        # out_distance = Output(("out_distance", Orange.misc.SymMatrix)
-        out_learner = Output("out_learner", Learner)
-        out_classifier = Output("out_classifier", Model)
-        out_object = Output("out_object", object)
+        data = Output("Data", Table, replaces="out_data")
+        learner = Output("Learner", Learner, replaces="out_learner")
+        classifier = Output("Classifier", Model, replaces="out_classifier")
+        object = Output("Object", object, replaces="out_object")
+
+    signal_names = ("data", "learner", "classifier", "object")
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
@@ -387,11 +396,8 @@ class OWPythonScript(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.in_data = None
-        self.in_distance = None
-        self.in_learner = None
-        self.in_classifier = None
-        self.in_object = None
+        for name in self.signal_names:
+            setattr(self, name, {})
 
         for s in self.libraryListSource:
             s.flags = 0
@@ -401,10 +407,10 @@ class OWPythonScript(widget.OWWidget):
         self.infoBox = gui.vBox(self.controlArea, 'Info')
         gui.label(
             self.infoBox, self,
-            "<p>Execute python script.</p><p>Input variables:<ul><li> " + \
-            "<li>".join(name for name in self.inputs_names) + \
-            "</ul></p><p>Output variables:<ul><li>" + \
-            "<li>".join(name for name in self.outputs_names) + \
+            "<p>Execute python script.</p><p>Input variables:<ul><li> " +
+            "<li>".join(map("in_{0}, in_{0}s".format, self.signal_names)) +
+            "</ul></p><p>Output variables:<ul><li>" +
+            "<li>".join(map("out_{0}".format, self.signal_names)) +
             "</ul></p>"
         )
 
@@ -469,9 +475,9 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.execute_button = gui.auto_commit(
-            self.controlArea, self, "auto_execute", "Execute",
-            auto_label="Auto Execute")
+        auto = gui.auto_commit(self.controlArea, self, "auto_execute", "Run",
+                               checkbox_label="Autorun on new data")
+        self.execute_button, self.autobox = auto.button, auto.checkbox
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -513,25 +519,33 @@ class OWPythonScript(widget.OWWidget):
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
 
-    @Inputs.in_data
-    def setExampleTable(self, et):
-        self.in_data = et
+    def enable_execute(self):
+        self.execute_button.setEnabled(True)
 
-    # @Inputs.in_distance
-    def setDistanceMatrix(self, dm):
-        self.in_distance = dm
+    def handle_input(self, obj, id, signal):
+        id = id[0]
+        dic = getattr(self, signal)
+        if obj is None:
+            if id in dic.keys():
+                del dic[id]
+        else:
+            dic[id] = obj
 
-    @Inputs.in_learner
-    def setLearner(self, learner):
-        self.in_learner = learner
+    @Inputs.data
+    def set_data(self, data, id):
+        self.handle_input(data, id, "data")
 
-    @Inputs.in_classifier
-    def setClassifier(self, classifier):
-        self.in_classifier = classifier
+    @Inputs.learner
+    def set_learner(self, data, id):
+        self.handle_input(data, id, "learner")
 
-    @Inputs.in_object
-    def setObject(self, obj):
-        self.in_object = obj
+    @Inputs.classifier
+    def set_classifier(self, data, id):
+        self.handle_input(data, id, "classifier")
+
+    @Inputs.object
+    def set_object(self, data, id):
+        self.handle_input(data, id, "object")
 
     def handleNewSignals(self):
         self.unconditional_commit()
@@ -652,11 +666,18 @@ class OWPythonScript(widget.OWWidget):
             f.close()
 
     def initial_locals_state(self):
-        d = dict([(name, getattr(self, name, None)) for name in self.inputs_names])
-        d.update(dict([(name, None) for name in self.outputs_names]))
+        d = {}
+        for name in self.signal_names:
+            value = getattr(self, name)
+            all_values = list(value.values())
+            one_value = all_values[0] if len(all_values) == 1 else None
+            d["in_" + name + "s"] = all_values
+            d["in_" + name] = one_value
         return d
 
     def commit(self):
+        if self.auto_execute:
+            self.execute_button.setEnabled(False)
         self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()
@@ -665,12 +686,12 @@ class OWPythonScript(widget.OWWidget):
         self.console.write("\nRunning script:\n")
         self.console.push("exec(_script)")
         self.console.new_prompt(sys.ps1)
-        for signal in self.outputs_names:
-            out_var = self.console.locals.get(signal, None)
+        for signal in self.signal_names:
+            out_var = self.console.locals.get("out_" + signal)
             signal_type = getattr(self.Outputs, signal).type
             if not isinstance(out_var, signal_type) and out_var is not None:
                 self.Error.add_message(signal,
-                                       "Variable '{}' has to be an instance of '{}'.".
+                                       "'{}' has to be an instance of '{}'.".
                                        format(signal, signal_type.__name__))
                 getattr(self.Error, signal)()
                 out_var = None
