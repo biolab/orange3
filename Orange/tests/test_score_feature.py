@@ -121,10 +121,9 @@ class FeatureScoringTest(unittest.TestCase):
         weights = scorer(xor, None)
         best = {xor.domain[attr].name for attr in weights.argsort()[-2:]}
         self.assertSetEqual(set(a.name for a in xor.domain.attributes[:2]), best)
-
         weights = scorer(self.housing, None)
         best = {self.housing.domain[attr].name for attr in weights.argsort()[-6:]}
-        for feature in ('LSTAT', 'RM', 'AGE'):
+        for feature in ('LSTAT', 'RM'):
             self.assertIn(feature, best)
 
     def test_fcbf(self):
