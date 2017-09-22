@@ -507,9 +507,9 @@ class SettingsHandler:
         widget : OWWidget
         """
         self.defaults = self.provider.pack(widget)
-        for name, setting in self.known_settings.items():
+        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
             if setting.schema_only:
-                self.defaults.pop(name, None)
+                data.pop(setting.name, None)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):

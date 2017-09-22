@@ -233,17 +233,25 @@ class SettingHandlerTestCase(unittest.TestCase):
         handler.fast_save(widget, 'schema_only_setting', 5)
         self.assertEqual(
             handler.known_settings['schema_only_setting'].default, None)
+        handler.fast_save(widget, 'component.schema_only_setting', 5)
+        self.assertEqual(
+            handler.known_settings['component.schema_only_setting'].default, "only")
 
         # update_defaults should not update defaults
         widget.schema_only_setting = 5
         handler.update_defaults(widget)
         self.assertEqual(
             handler.known_settings['schema_only_setting'].default, None)
+        widget.component.schema_only_setting = 5
+        self.assertEqual(
+            handler.known_settings['component.schema_only_setting'].default, "only")
 
         # pack_data should pack setting
         widget.schema_only_setting = 5
+        widget.component.schema_only_setting = 5
         data = handler.pack_data(widget)
         self.assertEqual(data['schema_only_setting'], 5)
+        self.assertEqual(data['component']['schema_only_setting'], 5)
 
     def test_read_defaults_migrates_settings(self):
         handler = SettingsHandler()
@@ -329,6 +337,7 @@ class SettingHandlerTestCase(unittest.TestCase):
 
 class Component:
     int_setting = Setting(42)
+    schema_only_setting = Setting("only", schema_only=True)
 
 
 class SimpleWidget:
