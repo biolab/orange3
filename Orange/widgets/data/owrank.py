@@ -73,9 +73,9 @@ class TableView(QTableView):
                          selectionBehavior=QTableView.SelectRows,
                          selectionMode=QTableView.ExtendedSelection,
                          sortingEnabled=True,
-                         showGrid=False,
+                         showGrid=True,
                          cornerButtonEnabled=False,
-                         alternatingRowColors=True,
+                         alternatingRowColors=False,
                          **kwargs)
         self.setItemDelegate(gui.ColoredBarItemDelegate(self))
         self.setItemDelegateForColumn(0, QItemDelegate())
