@@ -23,6 +23,18 @@ if not exist "%PREFIX%\python.exe" (
         "%CONDA%" install --yes --copy --quiet --prefix "%PREFIX%" "%CD%\%%f" ^
             || exit /b !ERRORLEVEL!
     )
+
+    rem # `conda create` does not add a conda.bat script when used
+    rem # with a local package, we need to create it manually.
+    echo @echo off           > "%PREFIX%\Scripts\conda.bat"
+    echo call "%CONDA%" %%* >> "%PREFIX%\Scripts\conda.bat"
+
+    rem # Create .condarc file that includes conda-forge channel
+    rem # We need it so add-ons can be installed from conda-forge
+    echo Appending conda-forge channel
+    echo channels:         > "%PREFIX%\.condarc"
+    echo   - defaults     >> "%PREFIX%\.condarc"
+    echo   - conda-forge  >> "%PREFIX%\.condarc"
 )
 
 for %%f in ( *.tar.bz2 ) do (
