@@ -942,16 +942,6 @@ def python_process(args, script_name=None, **kwargs):
         # Don't run the script with a 'gui' (detached) process.
         dirname = os.path.dirname(executable)
         executable = os.path.join(dirname, "python.exe")
-        # by default a new console window would show up when executing the
-        # script
-        startupinfo = subprocess.STARTUPINFO()
-        if hasattr(subprocess, "STARTF_USESHOWWINDOW"):
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        else:
-            # This flag was missing in inital releases of 2.7
-            startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-
-        kwargs["startupinfo"] = startupinfo
 
     if script_name is not None:
         script = script_name
@@ -965,6 +955,12 @@ def python_process(args, script_name=None, **kwargs):
 
 
 def create_process(cmd, executable=None, **kwargs):
+    if hasattr(subprocess, "STARTUPINFO"):
+        # do not open a new console window for command on windows
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        kwargs["startupinfo"] = startupinfo
+
     return subprocess.Popen(
         cmd,
         executable=executable,
