@@ -549,7 +549,7 @@ class OWRank(OWWidget):
         # Saved selected_rows will likely be incorrect
         if version is None or version < 2:
             column, order = 0, Qt.DescendingOrder
-            headerState = settings.pop("headerState")
+            headerState = settings.pop("headerState", None)
 
             # Lacking knowledge of last problemType, use discrete ranks view's ordering
             if isinstance(headerState, (tuple, list)):
