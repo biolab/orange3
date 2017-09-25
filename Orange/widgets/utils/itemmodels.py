@@ -157,6 +157,16 @@ class AbstractSortTableModel(QAbstractTableModel):
         """Invalidates the current sorting"""
         return self.sort(-1)
 
+    def _argsortData(self, data: numpy.ndarray, order):
+        """
+        Return indices of sorted data. May be reimplemented to handle
+        sorting in a certain way, e.g. to sort NaN values last.
+        """
+        indices = numpy.argsort(data, kind="mergesort")
+        if order == Qt.DescendingOrder:
+            indices = indices[::-1]
+        return indices
+
     def sort(self, column: int, order: Qt.SortOrder=Qt.AscendingOrder):
         """
         Sort the data by `column` into `order`.
@@ -184,17 +194,12 @@ class AbstractSortTableModel(QAbstractTableModel):
         indices = None
         if column >= 0:
             data = numpy.asarray(self._sortColumnData(column))
-            if data is not None:
-                if data.dtype == object:
-                    data = data.astype(str)
-                indices = numpy.argsort(data, kind="mergesort")
-            else:
-                indices = numpy.arange(self.rowCount())
+            if data is None:
+                data = numpy.arange(self.rowCount())
+            elif data.dtype == object:
+                data = data.astype(str)
 
-            if order == Qt.DescendingOrder:
-                indices = indices[::-1]
-
-            indices = self.mapToSourceRows(indices)
+            indices = self.mapToSourceRows(self._argsortData(data, order))
 
         if indices is not None:
             self.__sortInd = indices

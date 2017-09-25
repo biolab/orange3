@@ -147,6 +147,13 @@ class TableModel(PyTableModel):
         if yes_reset:
             super().resetSorting()
 
+    def _argsortData(self, data, order):
+        """Always sort NaNs last"""
+        indices = np.argsort(data, kind='mergesort')
+        if order == Qt.DescendingOrder:
+            return np.roll(indices[::-1], -np.isnan(data).sum())
+        return indices
+
 
 class OWRank(OWWidget):
     name = "Rank"

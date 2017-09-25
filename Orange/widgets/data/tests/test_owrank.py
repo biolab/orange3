@@ -231,6 +231,19 @@ class TestOWRank(WidgetTest):
         order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self.assertNotEqual(order1, order2)
 
+    def test_scores_nan_sorting(self):
+        """Check NaNs are sorted last"""
+        data = self.iris.copy()
+        data.get_column_view('petal length')[0][:] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # Assert last row is all nan
+        for order in (Qt.AscendingOrder,
+                      Qt.DescendingOrder):
+            self.widget.ranksView.horizontalHeader().setSortIndicator(1, order)
+            last_row = self.widget.ranksModel[self.widget.ranksModel.mapToSourceRows(...)[-1]]
+            np.testing.assert_array_equal(last_row, np.repeat(np.nan, 3))
+
     def test_data_which_make_scorer_nan(self):
         """
         Tests if widget crashes due to too high (Infinite) calculated values.
