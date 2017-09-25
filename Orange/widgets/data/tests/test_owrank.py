@@ -244,6 +244,11 @@ class TestOWRank(WidgetTest):
             last_row = self.widget.ranksModel[self.widget.ranksModel.mapToSourceRows(...)[-1]]
             np.testing.assert_array_equal(last_row, np.repeat(np.nan, 3))
 
+    def test_default_sort_indicator(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertNotEqual(
+            0, self.widget.ranksView.horizontalHeader().sortIndicatorSection())
+
     def test_data_which_make_scorer_nan(self):
         """
         Tests if widget crashes due to too high (Infinite) calculated values.

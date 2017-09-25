@@ -424,13 +424,14 @@ class OWRank(OWWidget):
 
         self.ranksModel.wrap(model_array.tolist())
         self.ranksModel.setHorizontalHeaderLabels(('#',) + labels)
-        self.ranksView.setColumnWidth(0, 30)
+        self.ranksView.setColumnWidth(0, 40)
 
         # Re-apply sort
         try:
             sort_column, sort_order = self.sorting
             if sort_column < len(labels):
                 self.ranksModel.sort(sort_column + 1, sort_order)  # +1 for '#' (discrete count) column
+                self.ranksView.horizontalHeader().setSortIndicator(sort_column + 1, sort_order)
         except ValueError:
             pass
 
