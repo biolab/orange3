@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import patch, Mock
 
+import numpy as np
+
 from AnyQt.QtWidgets import QRadioButton
 from AnyQt.QtCore import Qt
 
@@ -255,18 +257,6 @@ class TestOWKMeans(WidgetTest):
         widget.update_results()
         self.assertEqual(widget.selected_row(), None)
 
-    def test_get_var_name(self):
-        widget = self.widget
-
-        domain = Domain([ContinuousVariable(x) for x in "abc"])
-        self.send_signal(self.widget.Inputs.data, Table(domain))
-        self.assertEqual(widget._get_var_name(), "Cluster")
-
-        domain = Domain([ContinuousVariable("Cluster"),
-                         ContinuousVariable("Cluster (4)")])
-        self.send_signal(self.widget.Inputs.data, Table(domain))
-        self.assertEqual(widget._get_var_name(), "Cluster (5)")
-
     def test_report(self):
         widget = self.widget
         widget.k = 4
@@ -324,6 +314,26 @@ class TestOWKMeans(WidgetTest):
         for i in range(k_to, k_from, -1):
             self.widget.controls.k_to.setValue(i)
             self.assertEqual(len(self.widget.table_view.model().scores), check(i))
+
+    def test_silhouette_column(self):
+        widget = self.widget
+        widget.k = 4
+        widget.optimize_k = False
+
+        random = np.random.RandomState(0)  # Avoid randomness in the test
+        table = Table(random.rand(5010, 2))
+        self.send_signal(self.widget.Inputs.data, table)
+        outtable = self.get_output(widget.Outputs.annotated_data)
+        outtable = outtable.get_column_view("Silhouette")[0]
+        self.assertTrue(np.all(np.isnan(outtable)))
+        self.assertTrue(widget.Warning.no_silhouettes.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, table[:100])
+        outtable = self.get_output(widget.Outputs.annotated_data)
+        outtable = outtable.get_column_view("Silhouette")[0]
+        np.testing.assert_array_less(outtable, 1.01)
+        np.testing.assert_array_less(-0.01, outtable)
+        self.assertFalse(widget.Warning.no_silhouettes.is_shown())
 
 
 if __name__ == "__main__":
