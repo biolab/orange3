@@ -1,18 +1,12 @@
-import numpy as np
-cimport numpy as np
 import scipy.sparse as sp
 
-from libc.stdio cimport *
-from libc.string cimport *
-from libc.stdlib cimport malloc, free
+from libc.stdio cimport fopen, fclose, fgetc, ungetc, EOF, FILE
+from libc.string cimport strchr
 
-cdef extern from "stdio.h" nogil:
-    int fgetc(FILE *STREAM)
-    int ungetc(char c, FILE *STREAM)
 
 cdef enum State:
     BEGIN_LINE, READ_START_ATOM, READ, QUOTED, END_QUOTED, END_ATOM,
-    COMMENT, CARRIAGE_RETURNED, ESCAPE, EQUALS, END_LINE,
+    COMMENT, CARRIAGE_RETURNED, ESCAPE, EQUALS,
     SET_VALUE, WAIT_VALUE, READ_VALUE, READ_DECS, TO_NEXT
 
 cdef enum ColKinds:
@@ -32,9 +26,7 @@ def sparse_read_float(fname):
         char *atome = atom + 10240
         char *endc
         char f_eof = 0
-        int ii
         int attr_index
-        int row_err
         float value, decs
         char col_kind
 
@@ -74,7 +66,7 @@ def sparse_read_float(fname):
                 col = in_line = 0
                 state = READ_START_ATOM
 
-            if state != END_LINE and state != SET_VALUE:
+            if state != SET_VALUE:
                 ci = fgetc(f)
                 if ci == EOF:
                     f_eof = 1
