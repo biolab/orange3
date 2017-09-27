@@ -39,11 +39,11 @@ cpdef sparse_prescan_fast(fname):
             break
         c = <char>ci
 
-        if c == "\n":
+        if c == b"\n":
             state = BEGIN_LINE
             output_count[0] += 1
             continue
-        if c == "\r":
+        if c == b"\r":
             state = CARRIAGE_RETURNED
             continue
 
@@ -51,7 +51,7 @@ cpdef sparse_prescan_fast(fname):
             state = BEGIN_LINE
             output_count[0] += 1
             # read one more if needed, else not
-            if c == "\n":
+            if c == b"\n":
                 continue
 
         if state == BEGIN_LINE:
@@ -60,22 +60,22 @@ cpdef sparse_prescan_fast(fname):
             state = READ
 
         if state == QUOTED:
-            if c == '"':
+            if c == b'"':
                 state = READ
                 continue
 
         if state == READ:
-            if c == ",":
+            if c == b",":
                 output_count[0] += 1
-            elif c == '"':
+            elif c == b'"':
                 state = QUOTED
-            elif c == "|":
+            elif c == b"|":
                 output_count[0] += 1
                 output_count = &n_classes
-            elif c == ";":
+            elif c == b";":
                 output_count[0] += 1
                 output_count = &n_metas
-            elif c == "#":
+            elif c == b"#":
                 state = COMMENT
 
     fclose(f)
@@ -181,7 +181,7 @@ def sparse_read_float(fname):
                 ci = fgetc(f)
                 if ci == EOF:
                     f_eof = 1
-                    c = "\x00"
+                    c = b"\x00"
                 else:
                     c = <char>ci
                 col += 1
@@ -189,24 +189,24 @@ def sparse_read_float(fname):
             if state == READ_START_ATOM:
                 atomp = atom
                 value = 1
-                if c == "," or c == " " or c == "\t":
+                if c == b"," or c == b" " or c == b"\t":
                     continue
-                elif c == '"':
+                elif c == b'"':
                     state = QUOTED
                     continue
-                elif c == "=":
+                elif c == b"=":
                     raise ValueError("{}:{}:{}: missing value name"
                         .format(fname, cur_line, col))
                 # fall through
                 state = READ
 
             if state == ESCAPE:
-                if c == "t":    c = "\t"
-                elif c == "n":    c = "\n"
-                elif c == "r":    c = "\r"
-                elif c == '"' or c == "'" or c == "\\" or c == " ":
+                if c == b"t":    c = b"\t"
+                elif c == b"n":    c = b"\n"
+                elif c == b"r":    c = b"\r"
+                elif c == b'"' or c == b"'" or c == b"\\" or c == b" ":
                     pass
-                elif c == "\r" or c == "\n":
+                elif c == b"\r" or c == b"\n":
                     raise ValueError("{}:{}:{}: end of line in escape sequence"
                         .format(fname, cur_line, col))
                 elif f_eof:
@@ -219,11 +219,11 @@ def sparse_read_float(fname):
                 state = READ
 
             if state == READ:
-                if c == "\\":
+                if c == b"\\":
                     state = ESCAPE
                     continue
                 endc = strchr(not_in_atom, c)
-                if endc == NULL and c != "=":
+                if endc == NULL and c != b"=":
                     atomp[0] = c
                     atomp += 1
                     if atomp == atome:
@@ -235,7 +235,7 @@ def sparse_read_float(fname):
                     state = END_ATOM
 
             if state == QUOTED:
-                if c == "\r" or c == "\n":
+                if c == b"\r" or c == b"\n":
                     raise ValueError(
                         "{}:{}:{}: end of line within a quoted value"
                         .format(fname, cur_line, col))
@@ -243,7 +243,7 @@ def sparse_read_float(fname):
                     raise ValueError(
                         "{}:{}:{}: end of file within a quoted value"
                         .format(fname, cur_line, col))
-                elif c != '"':
+                elif c != b'"':
                     atomp[0] = c
                     atomp += 1
                     if atomp == atome:
@@ -254,10 +254,10 @@ def sparse_read_float(fname):
                     continue
 
             if state == END_QUOTED:
-                if c == " " or c == "\t":
+                if c == b" " or c == b"\t":
                     continue
                 endc = strchr(not_in_atom, c)
-                if endc == NULL and c != "=":
+                if endc == NULL and c != b"=":
                     raise ValueError("{}:{}:{}: quoted value should be "
                         "followed by value separator or end of line"
                         .format(fname, cur_line, col))
@@ -266,10 +266,10 @@ def sparse_read_float(fname):
 
             if state == END_ATOM:
                 while atomp != atom and (
-                        atomp[-1] == " " or atomp[-1] == "\t"):
+                        atomp[-1] == b" " or atomp[-1] == b"\t"):
                     atomp -= 1
                 if atomp == atom:
-                    if c == "=":
+                    if c == b"=":
                         raise ValueError("{}:{}:{}: empty value name"
                             .format(fname, cur_line, col))
                     else:
@@ -285,7 +285,7 @@ def sparse_read_float(fname):
                     attr_index = t_names.setdefault(b_atom,len(t_names))
 
                     atomp = atom
-                    if c == "=":
+                    if c == b"=":
                         value = 0
                         state = WAIT_VALUE
                         continue
@@ -293,16 +293,16 @@ def sparse_read_float(fname):
                     state = SET_VALUE
 
             if state == WAIT_VALUE:
-                if c == " " or c == "\t":
+                if c == b" " or c == b"\t":
                     continue
                 else:
                     # fall through
                     state = READ_VALUE
 
             if state == READ_VALUE:
-                if "0" <= c <= "9":
+                if b"0" <= c <= b"9":
                     value = value * 10 + (c & 0xf)
-                elif c == ".":
+                elif c == b".":
                     decs = 0.1
                     state = READ_DECS
                 else:
@@ -315,7 +315,7 @@ def sparse_read_float(fname):
                 continue
 
             if state == READ_DECS:
-                if "0" <= c <= "9":
+                if b"0" <= c <= b"9":
                     value = value * decs + (c & 0xf)
                     decs /= 10
                 else:
@@ -347,7 +347,7 @@ def sparse_read_float(fname):
                 state = TO_NEXT
 
             if state == TO_NEXT:
-                if c == "|":
+                if c == b"|":
                     if col_kind != ATTRIBUTE:
                         raise ValueError(
                             "{}:{}:{}: classes should follow attributes"
@@ -355,35 +355,35 @@ def sparse_read_float(fname):
                     col_kind = CLASS
                     t_names = class_indices
                     state = READ_START_ATOM
-                elif c == ";":
+                elif c == b";":
                     if col_kind == META:
                         raise ValueError("{}:{}:{} duplicated semi-colons"
                             .format(fname, cur_line, col))
                     col_kind = META
                     t_names = meta_indices
                     state = READ_START_ATOM
-                elif c == ",":
+                elif c == b",":
                     state = READ_START_ATOM
-                elif c == "#":
+                elif c == b"#":
                     state = COMMENT
-                elif c == "\\":
+                elif c == b"\\":
                     state = ESCAPE
-                elif c == "\n" or f_eof:
+                elif c == b"\n" or f_eof:
                     state = BEGIN_LINE
-                elif c == "\r":
+                elif c == b"\r":
                     state = CARRIAGE_RETURNED
                 else:
                     state = READ_START_ATOM
                 continue
 
             elif state == COMMENT:
-                if c == "\n" or f_eof:
+                if c == b"\n" or f_eof:
                     state = BEGIN_LINE
-                elif c == "\r":
+                elif c == b"\r":
                     state = CARRIAGE_RETURNED
 
             elif state == CARRIAGE_RETURNED:
-                if c != "\n" and not f_eof:
+                if c != b"\n" and not f_eof:
                     ungetc(c, f)
                 state = BEGIN_LINE
     finally:
