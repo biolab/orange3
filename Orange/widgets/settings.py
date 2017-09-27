@@ -424,7 +424,9 @@ class SettingsHandler:
         ----------
         settings_file : file-like object
         """
-        pickle.dump(self.defaults, settings_file, -1)
+        defaults = dict(self.defaults)
+        defaults[VERSION_KEY] = self.widget_class.settings_version
+        pickle.dump(defaults, settings_file, -1)
 
     def _get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
