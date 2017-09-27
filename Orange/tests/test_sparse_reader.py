@@ -29,41 +29,6 @@ abc, g=1, h ,  ij | k  =5,   t # ignore this, foo=42
 """
 
 class TestTabReader(unittest.TestCase):
-    def test_scan_fast_simple(self):
-        f = tempfile.NamedTemporaryFile(delete=False)
-        f.write(simple_file.encode("ascii"))
-        f.close()
-        try:
-            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(f.name.encode("ascii"))
-            # allow for up to one extra occurrence per line
-            self.assertGreaterEqual(n_attrs, 13)
-            self.assertLessEqual(n_attrs, 20)
-            self.assertEqual(n_classes, 0)
-            self.assertEqual(n_metas, 0)
-            self.assertGreaterEqual(n_lines, 3)
-            self.assertLessEqual(n_lines, 5)
-        finally:
-            os.remove(f.name)
-
-    def test_scan_fast_complex(self):
-        f = tempfile.NamedTemporaryFile(delete=False)
-        f.write(complex_file.encode("ascii"))
-        f.close()
-        try:
-            n_attrs, n_classes, n_metas, n_lines = _io.sparse_prescan_fast(f.name.encode("ascii"))
-            # allow for up to one extra occurrence per line
-            self.assertGreaterEqual(n_attrs, 7)
-            self.assertLessEqual(n_attrs, 7 + n_lines)
-            self.assertGreaterEqual(n_classes, 4)
-            self.assertLessEqual(n_classes, 4 + n_lines)
-            self.assertGreaterEqual(n_metas, 2)
-            self.assertLessEqual(n_metas, 2 + n_lines)
-            self.assertGreaterEqual(n_lines, 3)
-            self.assertLessEqual(n_lines, 5)
-        finally:
-            os.remove(f.name)
-
-
     def test_read_simple(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(simple_file.encode("ascii"))
