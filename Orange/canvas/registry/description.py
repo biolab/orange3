@@ -195,6 +195,7 @@ class WidgetDescription(object):
         Widget's background color (in the canvas GUI).
     replaces : list-of-str, optional
         A list of `id`s this widget replaces (optional).
+    allows_cycle: True if the widget allows cycle creation on her
 
     """
     def __init__(self, name, id, category=None, version=None,
@@ -204,7 +205,8 @@ class WidgetDescription(object):
                  help=None, help_ref=None, url=None, keywords=None,
                  priority=sys.maxsize,
                  icon=None, background=None,
-                 replaces=None):
+                 replaces=None,
+                 allows_cycle=False):
 
         if not qualified_name:
             # TODO: Should also check that the name is real.
@@ -228,6 +230,7 @@ class WidgetDescription(object):
         self.icon = icon
         self.background = background
         self.replaces = replaces
+        self.allows_cycle = allows_cycle
 
     def __str__(self):
         return ("WidgetDescription(name=%(name)r, id=%(id)r), "

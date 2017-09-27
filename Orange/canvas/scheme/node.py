@@ -70,6 +70,9 @@ class SchemeNode(QObject):
         self.__state_messages = {}
         self.properties = properties or {}
 
+    def allows_cycle(self):
+        return self.description.allows_cycle
+
     def input_channels(self):
         """
         Return a list of input channels (:class:`InputSignal`) for the node.
