@@ -73,7 +73,7 @@ def create_groups_table(data, selection):
     if data is None:
         return None
     names = [var.name for var in data.domain.variables + data.domain.metas]
-    name = get_next_name(names, "Selection group")
+    name = get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
     metas = data.domain.metas + (
         DiscreteVariable(
             name,
