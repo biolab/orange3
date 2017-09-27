@@ -1,7 +1,6 @@
 import numpy as np
 cimport numpy as np
 import scipy.sparse as sp
-import cython
 
 from libc.stdio cimport *
 from libc.string cimport *
@@ -112,7 +111,6 @@ cdef inline void resize_if_needed(np.ndarray a, size):
 cdef enum ColKinds:
     ATTRIBUTE, CLASS, META
 
-@cython.wraparound(False)
 def sparse_read_float(fname):
     n_attrs, n_classes, n_metas, n_lines = sparse_prescan_fast(fname)
 
