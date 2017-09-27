@@ -424,7 +424,7 @@ class OWScatterPlot(OWWidget):
         self.attr_x = self.xy_model[0] if self.xy_model else None
         self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
             else self.attr_x
-        self.graph.attr_color = domain and self.data.domain.class_var or None
+        self.graph.attr_color = self.data.domain.class_var if domain else None
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
