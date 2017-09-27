@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Domain, ContinuousVariable
 from Orange.widgets.utils.itemmodels import \
-    PyTableModel, PyListModel, DomainModel, _argsort
+    AbstractSortTableModel, PyTableModel, PyListModel, DomainModel, _argsort
 
 
 class TestArgsort(TestCase):
@@ -118,6 +118,20 @@ class TestPyTableModel(TestCase):
         self.assertTrue(Qt.AlignCenter &
                         self.model.data(self.model.index(1, 0),
                                         Qt.TextAlignmentRole))
+
+
+class TestAbstractSortTableModel(TestCase):
+    def setUp(self):
+        assert issubclass(PyTableModel, AbstractSortTableModel)
+        self.model = PyTableModel([[1, 4],
+                                   [2, 3]])
+
+    def test_sorting(self):
+        self.model.sort(1, Qt.AscendingOrder)
+        self.assertSequenceEqual(self.model.mapToSourceRows(...).tolist(), [1, 0])
+
+        self.model.sort(1, Qt.DescendingOrder)
+        self.assertSequenceEqual(self.model.mapToSourceRows(...).tolist(), [0, 1])
 
 
 class TestPyListModel(TestCase):

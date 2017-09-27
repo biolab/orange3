@@ -147,6 +147,13 @@ class TableModel(PyTableModel):
         if yes_reset:
             super().resetSorting()
 
+    def _argsortData(self, data, order):
+        """Always sort NaNs last"""
+        indices = np.argsort(data, kind='mergesort')
+        if order == Qt.DescendingOrder:
+            return np.roll(indices[::-1], -np.isnan(data).sum())
+        return indices
+
 
 class OWRank(OWWidget):
     name = "Rank"
@@ -417,13 +424,14 @@ class OWRank(OWWidget):
 
         self.ranksModel.wrap(model_array.tolist())
         self.ranksModel.setHorizontalHeaderLabels(('#',) + labels)
-        self.ranksView.setColumnWidth(0, 30)
+        self.ranksView.setColumnWidth(0, 40)
 
         # Re-apply sort
         try:
             sort_column, sort_order = self.sorting
             if sort_column < len(labels):
                 self.ranksModel.sort(sort_column + 1, sort_order)  # +1 for '#' (discrete count) column
+                self.ranksView.horizontalHeader().setSortIndicator(sort_column + 1, sort_order)
         except ValueError:
             pass
 
@@ -541,7 +549,7 @@ class OWRank(OWWidget):
         # Saved selected_rows will likely be incorrect
         if version is None or version < 2:
             column, order = 0, Qt.DescendingOrder
-            headerState = settings.pop("headerState")
+            headerState = settings.pop("headerState", None)
 
             # Lacking knowledge of last problemType, use discrete ranks view's ordering
             if isinstance(headerState, (tuple, list)):
