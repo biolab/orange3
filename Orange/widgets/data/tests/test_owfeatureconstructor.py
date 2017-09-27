@@ -1,6 +1,7 @@
 import unittest
 import ast
 import sys
+import math
 
 import numpy as np
 
@@ -8,11 +9,10 @@ from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
-                                                      ContinuousDescriptor,
-                                                      StringDescriptor,
-                                                      construct_variables, OWFeatureConstructor,
-                                                      DiscreteFeatureEditor)
+from Orange.widgets.data.owfeatureconstructor import (
+    DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
+    construct_variables, OWFeatureConstructor,
+    FeatureEditor, DiscreteFeatureEditor)
 
 from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
 
@@ -258,3 +258,9 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+
+class TestFeatureEditor(unittest.TestCase):
+    def test_has_functions(self):
+        self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
+        self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt)

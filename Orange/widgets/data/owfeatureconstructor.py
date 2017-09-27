@@ -93,7 +93,9 @@ def selected_row(view):
 class FeatureEditor(QFrame):
     FUNCTIONS = dict(chain([(key, val) for key, val in math.__dict__.items()
                             if not key.startswith("_")],
-                           [("str", str)]))
+                           [(key, val) for key, val in builtins.__dict__.items()
+                            if key in {"str", "float", "int", "len",
+                                       "abs", "max", "min"}]))
     featureChanged = Signal()
     featureEdited = Signal()
 
