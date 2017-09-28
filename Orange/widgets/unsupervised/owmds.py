@@ -1,38 +1,28 @@
 import sys
 
-from xml.sax.saxutils import escape
-from itertools import chain
-
-import pkg_resources
-
-import numpy
+import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtWidgets import (
-    QFormLayout, QHBoxLayout, QGroupBox, QToolButton, QActionGroup, QAction,
-    QApplication
-)
-from AnyQt.QtGui import (
-    QColor, QPen, QBrush, QPainter, QKeySequence, QCursor, QIcon
-)
+from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtGui import QPainter
 from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
-import pyqtgraph.graphicsItems.ScatterPlotItem
 
 import Orange.data
+from Orange.data import Domain, Table, ContinuousVariable
 import Orange.projection
 from Orange.projection.manifold import torgerson
 import Orange.distance
-from Orange.data.domain import filter_visible
 import Orange.misc
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets import gui, settings
+from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph, InteractiveViewBox
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+                                                 ANNOTATED_DATA_SIGNAL_NAME, get_unique_names)
 
 
 def stress(X, distD):
@@ -40,27 +30,56 @@ def stress(X, distD):
     D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
     D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
     delta = D1 - distD
-    delta_sq = numpy.square(delta, out=delta)
+    delta_sq = np.square(delta, out=delta)
     return delta_sq.sum(axis=0) / 2
 
 
-def make_pen(color, width=1.5, style=Qt.SolidLine, cosmetic=False):
-    pen = QPen(color, width, style)
-    pen.setCosmetic(cosmetic)
-    return pen
+class MDSInteractiveViewBox(InteractiveViewBox):
+    def _dragtip_pos(self):
+        return 10, 10
 
 
-class ScatterPlotItem(pg.ScatterPlotItem):
-    Symbols = pyqtgraph.graphicsItems.ScatterPlotItem.Symbols
+class OWMDSGraph(OWScatterPlotGraph):
+    jitter_size = settings.Setting(0)
 
-    def paint(self, painter, option, widget=None):
-        if self.opts["pxMode"]:
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+    def update_data(self, attr_x, attr_y, reset_view=True):
+        super().update_data(attr_x, attr_y, reset_view=reset_view)
+        for axis in ["left", "bottom"]:
+            self.plot_widget.hideAxis(axis)
+        self.plot_widget.setAspectLocked(True, 1)
 
-        if self.opts["antialias"]:
-            painter.setRenderHint(QPainter.Antialiasing, True)
+    def get_size_index(self):
+        if self.attr_size == "Stress":
+            return -2
+        return super().get_size_index()
 
-        super().paint(painter, option, widget)
+    def compute_sizes(self):
+        def scale(a):
+            dmin, dmax = np.nanmin(a), np.nanmax(a)
+            if dmax - dmin > 0:
+                return (a - dmin) / (dmax - dmin)
+            else:
+                return np.zeros_like(a)
+
+        self.master.Information.missing_size.clear()
+        size_index = self.get_size_index()
+        if size_index == -1:
+            size_data = np.full((self.n_points,), self.point_width,
+                                dtype=float)
+        elif size_index == -2:
+            size_data = scale(stress(self.master.embedding, self.master.effective_matrix))
+            size_data = self.MinShapeSize + size_data * self.point_width
+        else:
+            size_data = \
+                self.MinShapeSize + \
+                self.scaled_data[size_index, self.valid_data] * \
+                self.point_width
+        nans = np.isnan(size_data)
+        if np.any(nans):
+            size_data[nans] = self.MinShapeSize - 2
+            self.master.Information.missing_size(self.attr_size)
+        return size_data
+
 
 #: Maximum number of displayed closest pairs.
 MAX_N_PAIRS = 10000
@@ -80,6 +99,8 @@ class OWMDS(OWWidget):
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
+    settings_version = 2
+
     #: Initialization type
     PCA, Random = 0, 1
 
@@ -93,13 +114,6 @@ class OWMDS(OWWidget):
         ("None", -1)
     ]
 
-    JitterAmount = [
-        ("None", 0),
-        ("0.1 %", 0.1),
-        ("0.5 %", 0.5),
-        ("1 %", 1.0),
-        ("2 %", 2.0)
-    ]
     #: Runtime state
     Running, Finished, Waiting = 1, 2, 3
 
@@ -112,26 +126,20 @@ class OWMDS(OWWidget):
     # output embedding role.
     NoRole, AttrRole, AddAttrRole, MetaRole = 0, 1, 2, 3
 
-    output_embedding_role = settings.Setting(2)
-    autocommit = settings.Setting(True)
+    auto_commit = settings.Setting(True)
 
     selection_indices = settings.Setting(None, schema_only=True)
 
-    color_value = settings.ContextSetting("")
-    shape_value = settings.ContextSetting("")
-    size_value = settings.ContextSetting("")
-    label_value = settings.ContextSetting("")
-    label_only_selected = settings.Setting(False)
-
-    symbol_size = settings.Setting(8)
-    symbol_opacity = settings.Setting(230)
     #: Percentage of all pairs displayed (ranges from 0 to 20)
     connected_pairs = settings.Setting(5)
-    jitter = settings.Setting(0)
 
     legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
-    graph_name = "plot.plotItem"
+    graph = SettingProvider(OWMDSGraph)
+
+    jitter_sizes = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
+
+    graph_name = "graph.plot_widget.plotItem"
 
     class Error(OWWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -157,18 +165,14 @@ class OWMDS(OWWidget):
         #: Input data table
         self.signal_data = None
 
-        self._pen_data = None
-        self._brush_data = None
-        self._shape_data = None
-        self._size_data = None
-        self._label_data = None
         self._similar_pairs = None
-        self._scatter_item = None
-        self._legend_item = None
-        self._selection_mask = None
-        self._subset_mask = None  # type: Optional[numpy.ndarray]
+        self._subset_mask = None  # type: Optional[np.ndarray]
         self._invalidated = False
-        self._effective_matrix = None
+        self.effective_matrix = None
+        self._curve = None
+
+        self.variable_x = ContinuousVariable("mds-x")
+        self.variable_y = ContinuousVariable("mds-y")
 
         self.__update_loop = None
         # timer for scheduling updates
@@ -186,182 +190,98 @@ class OWMDS(OWWidget):
             verticalSpacing=10
         )
 
-        form.addRow("Max iterations:",
-                    gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
+        form.addRow(
+            "Max iterations:",
+            gui.spin(box, self, "max_iter", 10, 10 ** 4, step=1))
 
-        form.addRow("Initialization:",
-                    gui.radioButtons(box, self, "initialization",
-                                     btnLabels=("PCA (Torgerson)", "Random"),
-                                     callback=self.__invalidate_embedding))
+        form.addRow(
+            "Initialization:",
+            gui.radioButtons(box, self, "initialization", btnLabels=("PCA (Torgerson)", "Random"),
+                             callback=self.__invalidate_embedding))
 
         box.layout().addLayout(form)
-        form.addRow("Refresh:",
-                    gui.comboBox(
-                        box, self, "refresh_rate",
-                        items=[t for t, _ in OWMDS.RefreshRate],
-                        callback=self.__invalidate_refresh))
+        form.addRow(
+            "Refresh:",
+            gui.comboBox(box, self, "refresh_rate", items=[t for t, _ in OWMDS.RefreshRate],
+                         callback=self.__invalidate_refresh))
         gui.separator(box, 10)
-        self.runbutton = gui.button(
-            box, self, "Run", callback=self._toggle_run)
+        self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
 
-        box = gui.vBox(self.controlArea, "Graph")
-        self.colorvar_model = itemmodels.VariableListModel()
+        box = gui.vBox(self.mainArea, True, margin=0)
+        self.graph = OWMDSGraph(self, box, "MDSGraph", view_box=MDSInteractiveViewBox)
+        box.layout().addWidget(self.graph.plot_widget)
+        self.plot = self.graph.plot_widget
 
-        common_options = dict(
-            sendSelectedValue=True, valueType=str, orientation=Qt.Horizontal,
-            labelWidth=50, contentsLength=12)
+        g = self.graph.gui
+        box = g.point_properties_box(self.controlArea)
+        self.models = g.points_models
 
-        self.cb_color_value = gui.comboBox(
-            box, self, "color_value", label="Color:",
-            callback=self._on_color_index_changed, **common_options)
-        self.cb_color_value.setModel(self.colorvar_model)
+        gui.hSlider(box, self, "connected_pairs", label="Show similar pairs:", minValue=0,
+                    maxValue=20, createLabel=False, callback=self._on_connected_changed)
+        g.add_widgets(ids=[g.JitterSizeSlider], widget=box)
 
-        self.shapevar_model = itemmodels.VariableListModel()
-        self.cb_shape_value = gui.comboBox(
-            box, self, "shape_value", label="Shape:",
-            callback=self._on_shape_index_changed, **common_options)
-        self.cb_shape_value.setModel(self.shapevar_model)
+        box = gui.vBox(self.controlArea, "Plot Properties")
+        g.add_widgets([g.ShowLegend,
+                       g.ToolTipShowsAll,
+                       g.ClassDensity,
+                       g.LabelOnlySelected], box)
 
-        self.sizevar_model = itemmodels.VariableListModel()
-        self.cb_size_value = gui.comboBox(
-            box, self, "size_value", label="Size:",
-            callback=self._on_size_index_changed, **common_options)
-        self.cb_size_value.setModel(self.sizevar_model)
+        self.controlArea.layout().addStretch(100)
+        self.icons = gui.attributeIconDict
 
-        self.labelvar_model = itemmodels.VariableListModel()
-        self.cb_label_value = gui.comboBox(
-            box, self, "label_value", label="Label:",
-            callback=self._on_label_index_changed, **common_options)
-        self.cb_label_value.setModel(self.labelvar_model)
-        gui.checkBox(
-            gui.indentedBox(box), self, 'label_only_selected',
-            'Label only selected points', callback=self._on_label_index_changed)
-
-        form = QFormLayout(
-            labelAlignment=Qt.AlignLeft,
-            formAlignment=Qt.AlignLeft,
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            verticalSpacing=10
-        )
-        form.addRow("Symbol size:",
-                    gui.hSlider(box, self, "symbol_size",
-                                minValue=1, maxValue=20,
-                                callback=self._on_size_index_changed,
-                                createLabel=False))
-        form.addRow("Symbol opacity:",
-                    gui.hSlider(box, self, "symbol_opacity",
-                                minValue=100, maxValue=255, step=100,
-                                callback=self._on_color_index_changed,
-                                createLabel=False))
-        form.addRow("Show similar pairs:",
-                    gui.hSlider(
-                        gui.hBox(self.controlArea),
-                        self, "connected_pairs", minValue=0, maxValue=20,
-                        createLabel=False,
-                        callback=self._on_connected_changed))
-        form.addRow("Jitter:",
-                    gui.comboBox(
-                        box, self, "jitter",
-                        items=[text for text, _ in self.JitterAmount],
-                        callback=self._update_plot))
-
-        box.layout().addLayout(form)
+        palette = self.graph.plot_widget.palette()
+        self.graph.set_palette(palette)
 
         gui.rubber(self.controlArea)
 
-        box = QGroupBox("Zoom/Select", )
-        box.setLayout(QHBoxLayout())
-        box.layout().setContentsMargins(2, 2, 2, 2)
+        self.graph.box_zoom_select(self.controlArea)
 
-        group = QActionGroup(self, exclusive=True)
-
-        def icon(name):
-            path = "icons/Dlg_{}.png".format(name)
-            path = pkg_resources.resource_filename(widget.__name__, path)
-            return QIcon(path)
-
-        action_select = QAction(
-            "Select", self, checkable=True, checked=True, icon=icon("arrow"),
-            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_1))
-        action_zoom = QAction(
-            "Zoom", self, checkable=True, checked=False, icon=icon("zoom"),
-            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_2))
-        action_pan = QAction(
-            "Pan", self, checkable=True, checked=False, icon=icon("pan_hand"),
-            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_3))
-
-        action_reset_zoom = QAction(
-            "Zoom to fit", self, icon=icon("zoom_reset"),
-            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_0))
-        action_reset_zoom.triggered.connect(
-            lambda: self.plot.autoRange(padding=0.1,
-                                        items=[self._scatter_item]))
-        group.addAction(action_select)
-        group.addAction(action_zoom)
-        group.addAction(action_pan)
-        self.addActions(group.actions() + [action_reset_zoom])
-        action_select.setChecked(True)
-
-        def button(action):
-            b = QToolButton()
-            b.setToolButtonStyle(Qt.ToolButtonIconOnly)
-            b.setDefaultAction(action)
-            return b
-
-        box.layout().addWidget(button(action_select))
-        box.layout().addWidget(button(action_zoom))
-        box.layout().addWidget(button(action_pan))
-        box.layout().addSpacing(4)
-        box.layout().addWidget(button(action_reset_zoom))
-        box.layout().addStretch()
-
-        self.controlArea.layout().addWidget(box)
-
-        box = gui.vBox(self.controlArea, "Output")
-        self.output_combo = gui.comboBox(
-            box, self, "output_embedding_role",
-            items=["Original features only",
-                   "Coordinates only",
-                   "Coordinates as features",
-                   "Coordinates as meta attributes"],
-            callback=self._invalidate_output, addSpace=4)
-        gui.auto_commit(box, self, "autocommit", "Send Selected",
+        gui.auto_commit(box, self, "auto_commit", "Send Selected",
                         checkbox_label="Send selected automatically",
                         box=None)
 
-        self.plot = pg.PlotWidget(background="w", enableMenu=False)
-        self.plot.setAspectLocked(True)
-        self.plot.getPlotItem().hideAxis("bottom")
-        self.plot.getPlotItem().hideAxis("left")
         self.plot.getPlotItem().hideButtons()
         self.plot.setRenderHint(QPainter.Antialiasing)
-        self.mainArea.layout().addWidget(self.plot)
 
-        self.selection_tool = PlotSelectionTool(parent=self)
-        self.zoom_tool = PlotZoomTool(parent=self)
-        self.pan_tool = PlotPanTool(parent=self)
-        self.pinch_tool = PlotPinchZoomTool(parent=self)
-        self.pinch_tool.setViewBox(self.plot.getViewBox())
-        self.selection_tool.setViewBox(self.plot.getViewBox())
-        self.selection_tool.selectionFinished.connect(self.__selection_end)
-        self.current_tool = self.selection_tool
-
-        def activate_tool(action):
-            self.current_tool.setViewBox(None)
-
-            if action is action_select:
-                active, cur = self.selection_tool, Qt.ArrowCursor
-            elif action is action_zoom:
-                active, cur = self.zoom_tool, Qt.ArrowCursor
-            elif action is action_pan:
-                active, cur = self.pan_tool, Qt.OpenHandCursor
-            self.current_tool = active
-            self.current_tool.setViewBox(self.plot.getViewBox())
-            self.plot.getViewBox().setCursor(QCursor(cur))
-
-        group.triggered[QAction].connect(activate_tool)
-
+        self.graph.jitter_continuous = True
         self._initialize()
+
+    def reset_graph_data(self, *_):
+        if self.data is not None:
+            self.graph.rescale_data()
+            self.update_graph()
+        self.connect_pairs()
+
+    def update_colors(self):
+        pass
+
+    def update_density(self):
+        self.update_graph(reset_view=False)
+
+    def update_regression_line(self):
+        self.update_graph(reset_view=False)
+
+    def init_attr_values(self):
+        domain = self.data and len(self.data) and self.data.domain or None
+        for model in self.models:
+            model.set_domain(domain)
+        self.graph.attr_color = self.data.domain.class_var if domain else None
+        self.graph.attr_shape = None
+        self.graph.attr_size = None
+        self.graph.attr_label = None
+        self.models[2][:] = self.models[2][0:1] + ["Stress"] + self.models[2][1:]
+
+    def prepare_data(self):
+        pass
+
+    def update_graph(self, reset_view=True, **_):
+        self.graph.zoomStack = []
+        if self.graph.data is None:
+            return
+        self.graph.update_data(self.variable_x, self.variable_y, True)
+
+    def selection_changed(self):
+        self.commit()
 
     @Inputs.data
     @check_sql_input
@@ -383,11 +303,9 @@ class OWMDS(OWWidget):
         if self.matrix is not None and data is not None and len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
-            self.update_controls()
             self.openContext(data)
         else:
             self._invalidated = True
-        self._selection_mask = None
 
     @Inputs.distances
     def set_disimilarity(self, matrix):
@@ -410,7 +328,6 @@ class OWMDS(OWWidget):
         if matrix is None:
             self.matrix_data = None
         self._invalidated = True
-        self._selection_mask = None
 
     @Inputs.data_subset
     def set_subset_data(self, subset_data):
@@ -422,74 +339,17 @@ class OWMDS(OWWidget):
         """
         self.subset_data = subset_data
         # invalidate the pen/brush when the subset is changed
-        self._pen_data = self._brush_data = None
-        self._subset_mask = None  # type: Optional[numpy.ndarray]
+        self._subset_mask = None  # type: Optional[np.ndarray]
+        self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
     def _clear(self):
-        self._pen_data = None
-        self._brush_data = None
-        self._shape_data = None
-        self._size_data = None
-        self._label_data = None
         self._similar_pairs = None
-
-        self.colorvar_model[:] = ["Same color"]
-        self.shapevar_model[:] = ["Same shape"]
-        self.sizevar_model[:] = ["Same size"]
-        self.labelvar_model[:] = ["No labels"]
-
-        self.color_value = self.colorvar_model[0]
-        self.shape_value = self.shapevar_model[0]
-        self.size_value = self.sizevar_model[0]
-        self.label_value = self.labelvar_model[0]
 
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
 
     def _clear_plot(self):
-        self.plot.clear()
-        self._scatter_item = None
-        if self._legend_item is not None:
-            anchor = legend_anchor_pos(self._legend_item)
-            if anchor is not None:
-                self.legend_anchor = anchor
-            if self._legend_item.scene() is not None:
-                self._legend_item.scene().removeItem(self._legend_item)
-            self._legend_item = None
-
-    def update_controls(self):
-        if self.data is None:
-            axis = getattr(self.matrix, 'axis', 1)
-            attr = ["Column labels", "Row labels"][axis]
-            self.labelvar_model[:] = ["No labels", attr]
-            self.shapevar_model[:] = ["Same shape"]
-            self.colorvar_model[:] = ["Same color"]
-
-            self.color_value = "Same color"
-            self.shape_value = "Same shape"
-        else:
-            domain = self.data.domain
-            all_vars = list(filter_visible(domain.variables + domain.metas))
-            cd_vars = [var for var in all_vars if var.is_primitive()]
-            disc_vars = [var for var in all_vars if var.is_discrete]
-            cont_vars = [var for var in all_vars if var.is_continuous]
-            shape_vars = [var for var in disc_vars
-                          if len(var.values) <= len(ScatterPlotItem.Symbols) - 1]
-            self.colorvar_model[:] = chain(["Same color"],
-                                           [self.colorvar_model.Separator] if cd_vars else [],
-                                           cd_vars)
-            self.shapevar_model[:] = chain(["Same shape"],
-                                           [self.shapevar_model.Separator] if shape_vars else [],
-                                           shape_vars)
-            self.sizevar_model[:] = chain(["Same size", "Stress"],
-                                          [self.sizevar_model.Separator] if cont_vars else [],
-                                          cont_vars)
-            self.labelvar_model[:] = chain(["No labels"],
-                                           [self.labelvar_model.Separator] if all_vars else [],
-                                           all_vars)
-
-            if domain.class_var is not None:
-                self.color_value = domain.class_var.name
+        self.graph.plot_widget.clear()
 
     def _initialize(self):
         # clear everything
@@ -497,7 +357,7 @@ class OWMDS(OWWidget):
         self._clear()
         self.Error.clear()
         self.data = None
-        self._effective_matrix = None
+        self.effective_matrix = None
         self.embedding = None
 
         # if no data nor matrix is present reset plot
@@ -516,19 +376,18 @@ class OWMDS(OWWidget):
             self.data = self.matrix_data
 
         if self.matrix is not None:
-            self._effective_matrix = self.matrix
+            self.effective_matrix = self.matrix
             if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
         elif self.data.domain.attributes:
             preprocessed_data = Orange.projection.MDS().preprocess(self.data)
-            self._effective_matrix = Orange.distance.Euclidean(preprocessed_data)
+            self.effective_matrix = Orange.distance.Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
             return
 
-        self.update_controls()
+        self.init_attr_values()
         self.openContext(self.data)
-        self.select_indices(self.selection_indices)
 
     def _toggle_run(self):
         if self.__state == OWMDS.Running:
@@ -544,7 +403,7 @@ class OWMDS(OWWidget):
             # Resume/continue from a previous run
             self.__start()
         elif self.__state == OWMDS.Waiting and \
-                self._effective_matrix is not None:
+                self.effective_matrix is not None:
             self.__start()
 
     def stop(self):
@@ -553,7 +412,7 @@ class OWMDS(OWWidget):
 
     def __start(self):
         self.__draw_similar_pairs = False
-        X = self._effective_matrix
+        X = self.effective_matrix
         init = self.embedding
 
         # number of iterations per single GUI update step
@@ -568,7 +427,7 @@ class OWMDS(OWWidget):
             # NOTE: this code MUST NOT call into QApplication.processEvents
             done = False
             iterations_done = 0
-            oldstress = numpy.finfo(numpy.float).max
+            oldstress = np.finfo(np.float).max
             init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
 
             while not done:
@@ -582,7 +441,7 @@ class OWMDS(OWWidget):
                 iterations_done += step_iter
 
                 embedding, stress = mdsfit.embedding_, mdsfit.stress_
-                stress /= numpy.sqrt(numpy.sum(embedding ** 2, axis=1)).sum()
+                stress /= np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
 
                 if iterations_done >= max_iter:
                     done = True
@@ -651,7 +510,6 @@ class OWMDS(OWWidget):
             self.unconditional_commit()
             self.__draw_similar_pairs = True
             self._update_plot()
-            self.plot.autoRange(padding=0.1, items=[self._scatter_item])
         except MemoryError:
             self.Error.out_of_memory()
             self.__set_update_loop(None)
@@ -664,7 +522,6 @@ class OWMDS(OWWidget):
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.embedding = embedding
             self._update_plot()
-            self.plot.autoRange(padding=0.1, items=[self._scatter_item])
             # schedule next update
             self.__timer.start()
 
@@ -679,15 +536,14 @@ class OWMDS(OWWidget):
         if self.__update_loop is not None:
             self.__set_update_loop(None)
 
-        X = self._effective_matrix
+        X = self.effective_matrix
 
         if self.initialization == OWMDS.PCA:
             self.embedding = torgerson(X)
         else:
-            self.embedding = numpy.random.rand(len(X), 2)
+            self.embedding = np.random.rand(len(X), 2)
 
         self._update_plot()
-        self.plot.autoRange(padding=0.1, items=[self._scatter_item])
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -714,281 +570,90 @@ class OWMDS(OWWidget):
 
         if self._subset_mask is None and self.subset_data is not None and \
                 self.data is not None:
-            self._subset_mask = numpy.in1d(self.data.ids, self.subset_data.ids)
+            self._subset_mask = np.in1d(self.data.ids, self.subset_data.ids)
 
-        self._update_plot()
-        self.plot.autoRange(padding=0.1)
+        self._update_plot(new=True)
         self.unconditional_commit()
 
     def _invalidate_output(self):
         self.commit()
 
-    def _on_color_index_changed(self):
-        self._pen_data = None
-        self._update_plot()
-
-    def _on_shape_index_changed(self):
-        self._shape_data = None
-        self._update_plot()
-
-    def _on_size_index_changed(self):
-        self._size_data = None
-        self._update_plot()
-
-    def _on_label_index_changed(self):
-        self._label_data = None
-        self._update_plot()
-
     def _on_connected_changed(self):
         self._similar_pairs = None
         self._update_plot()
 
-    def _update_plot(self):
+    def _update_plot(self, new=False):
         self._clear_plot()
 
         if self.embedding is not None:
-            self._setup_plot()
-
-    def _setup_plot(self):
-        have_data = self.data is not None
-        have_matrix_transposed = self.matrix is not None and not self.matrix.axis
-        plotstyle = Mdsplotutils.plotstyle
-
-        size = self._effective_matrix.shape[0]
-
-        def column(data, variable, dtype=None):
-            a, _ = data.get_column_view(variable)
-            if dtype is not None:
-                a = a.astype(dtype)
-            return a.ravel()
-
-        def attributes(matrix):
-            if matrix.row_items and matrix.row_items.domain:
-                return matrix.row_items.domain.attributes
-            return [x + 1 for x in range(len(matrix))]
-
-        def scale(a):
-            dmin, dmax = numpy.nanmin(a), numpy.nanmax(a)
-            if dmax - dmin > 0:
-                return (a - dmin) / (dmax - dmin)
-            else:
-                return numpy.zeros_like(a)
-
-        def jitter(x, factor=1, rstate=None):
-            if rstate is None:
-                rstate = numpy.random.RandomState()
-            elif not isinstance(rstate, numpy.random.RandomState):
-                rstate = numpy.random.RandomState(rstate)
-            span = numpy.nanmax(x) - numpy.nanmin(x)
-            if span < numpy.finfo(x.dtype).eps * 100:
-                span = 1
-            a = factor * span / 100.
-            return x + (rstate.random_sample(x.shape) - 0.5) * a
-
-        if self._pen_data is None:
-            if self._selection_mask is not None:
-                pointflags = numpy.where(
-                    self._selection_mask,
-                    Mdsplotutils.Selected, Mdsplotutils.NoFlags)
-            else:
-                pointflags = None
-
-            color_index = self.cb_color_value.currentIndex()
-            if have_data and color_index > 0:
-                color_var = self.colorvar_model[color_index]
-                if color_var.is_discrete:
-                    palette = colorpalette.ColorPaletteGenerator(
-                        len(color_var.values)
-                    )
-                    plotstyle = plotstyle.updated(discrete_palette=palette)
-                else:
-                    palette = None
-
-                color_data = Mdsplotutils.color_data(
-                    self.data, color_var, plotstyle=plotstyle)
-                color_data = numpy.hstack(
-                    (color_data,
-                     numpy.full((len(color_data), 1), self.symbol_opacity,
-                                dtype=float))
-                )
-                pen_data = Mdsplotutils.pen_data(color_data * 0.8, pointflags)
-                brush_data = Mdsplotutils.brush_data(color_data)
-            else:
-                pen_data = make_pen(QColor(Qt.darkGray), cosmetic=True)
-                if self._selection_mask is not None:
-                    pen_data = numpy.array(
-                        [pen_data, plotstyle.selected_pen])
-                    pen_data = pen_data[self._selection_mask.astype(int)]
-                else:
-                    pen_data = numpy.full(self._effective_matrix.shape[0], pen_data,
-                                          dtype=object)
-                brush_data = numpy.full(
-                    size, pg.mkColor((192, 192, 192, self.symbol_opacity)),
-                    dtype=object)
-
-            if self._subset_mask is not None and have_data and \
-                    self._subset_mask.shape == (size, ):
-                # clear brush fill for non subset data
-                brush_data[~self._subset_mask] = QBrush(Qt.NoBrush)
-
-            self._pen_data = pen_data
-            self._brush_data = brush_data
-
-        if self._shape_data is None:
-            shape_index = self.cb_shape_value.currentIndex()
-            if have_data and shape_index > 0:
-                Symbols = ScatterPlotItem.Symbols
-                symbols = numpy.array(list(Symbols.keys()))
-
-                shape_var = self.shapevar_model[shape_index]
-                data = column(self.data, shape_var, dtype=numpy.float)
-                data = data % (len(Symbols) - 1)
-                data[numpy.isnan(data)] = len(Symbols) - 1
-                shape_data = symbols[data.astype(int)]
-            else:
-                shape_data = "o"
-            self._shape_data = shape_data
-
-        if self._size_data is None:
-            MinPointSize = 3
-            point_size = self.symbol_size + MinPointSize
-            size_index = self.cb_size_value.currentIndex()
-            if have_data and size_index == 1:
-                # size by stress
-                size_data = stress(self.embedding, self._effective_matrix)
-                size_data = scale(size_data)
-                size_data = MinPointSize + size_data * point_size
-            elif have_data and size_index > 0:
-                size_var = self.sizevar_model[size_index]
-                size_data = column(self.data, size_var, dtype=float)
-                size_data = scale(size_data)
-                size_data = MinPointSize + size_data * point_size
-                size_data[numpy.isnan(size_data)] = 1  # maybe 0?
-            else:
-                size_data = point_size
-            self._size_data = size_data
-
-        if self._label_data is None:
-            label_index = self.cb_label_value.currentIndex()
-            if have_data and label_index > 0:
-                label_var = self.labelvar_model[label_index]
-                label_data = column(self.data, label_var)
-                label_data = [label_var.str_val(val) for val in label_data]
-                label_items = [pg.TextItem(text, anchor=(0.5, 0), color=0.0)
-                               for text in label_data]
-            elif self.matrix is not None and label_index:
-                attr = attributes(self.matrix)
-                label_items = [pg.TextItem(str(text), anchor=(0.5, 0),
-                                           color=0.0)
-                               for text in attr]
-            else:
-                label_items = None
-            self._label_data = label_items
-
-        emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
-        if self.jitter > 0:
-            _, jitter_factor = self.JitterAmount[self.jitter]
-            emb_x = jitter(emb_x, jitter_factor, rstate=42)
-            emb_y = jitter(emb_y, jitter_factor, rstate=667)
-
-        if self.connected_pairs and self.__draw_similar_pairs:
-            if self._similar_pairs is None:
-                # This code requires storing lower triangle of X (n x n / 2
-                # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
-                # argsort result. If this becomes an issue, it can be reduced to
-                # n x n argsort indices by argsorting the entire X. Then we
-                # take the first n + 2 * p indices. We compute their coordinates
-                # i, j in the original matrix. We keep those for which i < j.
-                # n + 2 * p will suffice to exclude the diagonal (i = j). If the
-                # number of those for which i < j is smaller than p, we instead
-                # take i > j. Among those that remain, we take the first p.
-                # Assuming that MDS can't show so many points that memory could
-                # become an issue, I preferred using simpler code.
-                m = self._effective_matrix
-                n = len(m)
-                p = min(n * (n - 1) // 2 * self.connected_pairs // 100,
-                        MAX_N_PAIRS * self.connected_pairs // 20)
-                indcs = numpy.triu_indices(n, 1)
-                sorted = numpy.argsort(m[indcs])[:p]
-                self._similar_pairs = fpairs = numpy.empty(2 * p, dtype=int)
-                fpairs[::2] = indcs[0][sorted]
-                fpairs[1::2] = indcs[1][sorted]
-            emb_x_pairs = emb_x[self._similar_pairs].reshape((-1, 2))
-            emb_y_pairs = emb_y[self._similar_pairs].reshape((-1, 2))
-
-            # Filter out zero distance lines (in embedding coords).
-            # Null (zero length) line causes bad rendering artifacts
-            # in Qt when using the raster graphics system (see gh-issue: 1668).
-            (x1, x2), (y1, y2) = (emb_x_pairs.T, emb_y_pairs.T)
-            pairs_mask = ~(numpy.isclose(x1, x2) & numpy.isclose(y1, y2))
-            emb_x_pairs = emb_x_pairs[pairs_mask, :]
-            emb_y_pairs = emb_y_pairs[pairs_mask, :]
-
-            curve = pg.PlotCurveItem(
-                emb_x_pairs.ravel(), emb_y_pairs.ravel(),
-                pen=pg.mkPen(0.8, width=2, cosmetic=True),
-                connect="pairs", antialias=True)
-            self.plot.addItem(curve)
-
-        data = numpy.arange(size)
-        self._scatter_item = item = ScatterPlotItem(
-            x=emb_x, y=emb_y,
-            pen=self._pen_data, brush=self._brush_data, symbol=self._shape_data,
-            size=self._size_data, data=data,
-            antialias=True
-        )
-        self.plot.addItem(item)
-
-        if self._label_data is not None:
-            if self.label_only_selected:
-                if self._selection_mask is not None:
-                    for (x, y), text_item, selected \
-                            in zip(self.embedding, self._label_data,
-                                   self._selection_mask):
-                        if selected:
-                            self.plot.addItem(text_item)
-                            text_item.setPos(x, y)
-            else:
-                for (x, y), text_item in zip(self.embedding, self._label_data):
-                    self.plot.addItem(text_item)
-                    text_item.setPos(x, y)
-
-        self._legend_item = LegendItem()
-        viewbox = self.plot.getViewBox()
-        self._legend_item.setParentItem(self.plot.getViewBox())
-        self._legend_item.setZValue(viewbox.zValue() + 10)
-        self._legend_item.restoreAnchor(self.legend_anchor)
-
-        color_var = shape_var = None
-        color_index = self.cb_color_value.currentIndex()
-        if have_data and 1 <= color_index < len(self.colorvar_model):
-            color_var = self.colorvar_model[color_index]
-            assert isinstance(color_var, Orange.data.Variable)
-        shape_index = self.cb_shape_value.currentIndex()
-        if have_data and 1 <= shape_index < len(self.shapevar_model):
-            shape_var = self.shapevar_model[shape_index]
-            assert isinstance(shape_var, Orange.data.Variable)
-
-        if shape_var is not None or \
-                (color_var is not None and color_var.is_discrete):
-
-            legend_data = Mdsplotutils.legend_data(
-                color_var, shape_var, plotstyle=plotstyle)
-
-            for color, symbol, text in legend_data:
-                self._legend_item.addItem(
-                    ScatterPlotItem(pen=color, brush=color, symbol=symbol,
-                                    size=10),
-                    escape(text)
-                )
+            self._setup_plot(new=new)
         else:
-            self._legend_item.hide()
+            self.graph.new_data(None)
+
+    def connect_pairs(self):
+        if not (self.connected_pairs and self.__draw_similar_pairs):
+            return
+        emb_x, emb_y = self.graph.get_xy_data_positions(
+            self.variable_x, self.variable_y, self.graph.valid_data)
+        if self._similar_pairs is None:
+            # This code requires storing lower triangle of X (n x n / 2
+            # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
+            # argsort result. If this becomes an issue, it can be reduced to
+            # n x n argsort indices by argsorting the entire X. Then we
+            # take the first n + 2 * p indices. We compute their coordinates
+            # i, j in the original matrix. We keep those for which i < j.
+            # n + 2 * p will suffice to exclude the diagonal (i = j). If the
+            # number of those for which i < j is smaller than p, we instead
+            # take i > j. Among those that remain, we take the first p.
+            # Assuming that MDS can't show so many points that memory could
+            # become an issue, I preferred using simpler code.
+            m = self.effective_matrix
+            n = len(m)
+            p = min(n * (n - 1) // 2 * self.connected_pairs // 100,
+                    MAX_N_PAIRS * self.connected_pairs // 20)
+            indcs = np.triu_indices(n, 1)
+            sorted = np.argsort(m[indcs])[:p]
+            self._similar_pairs = fpairs = np.empty(2 * p, dtype=int)
+            fpairs[::2] = indcs[0][sorted]
+            fpairs[1::2] = indcs[1][sorted]
+        emb_x_pairs = emb_x[self._similar_pairs].reshape((-1, 2))
+        emb_y_pairs = emb_y[self._similar_pairs].reshape((-1, 2))
+
+        # Filter out zero distance lines (in embedding coords).
+        # Null (zero length) line causes bad rendering artifacts
+        # in Qt when using the raster graphics system (see gh-issue: 1668).
+        (x1, x2), (y1, y2) = (emb_x_pairs.T, emb_y_pairs.T)
+        pairs_mask = ~(np.isclose(x1, x2) & np.isclose(y1, y2))
+        emb_x_pairs = emb_x_pairs[pairs_mask, :]
+        emb_y_pairs = emb_y_pairs[pairs_mask, :]
+        if self._curve:
+            self.graph.plot_widget.removeItem(self._curve)
+        self._curve = pg.PlotCurveItem(
+            emb_x_pairs.ravel(), emb_y_pairs.ravel(),
+            pen=pg.mkPen(0.8, width=2, cosmetic=True),
+            connect="pairs", antialias=True)
+        self.graph.plot_widget.addItem(self._curve)
+
+    def _setup_plot(self, new=False):
+        emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
+        coords = np.vstack((emb_x, emb_y)).T
+        attributes = () + self.data.domain.attributes + (self.variable_x, self.variable_y)
+        domain = Domain(attributes=attributes,
+                        class_vars=self.data.domain.class_vars,
+                        metas=self.data.domain.metas)
+        data = Table.from_numpy(domain, X=np.hstack((self.data.X, coords)),
+                                Y=self.data.Y,
+                                metas=self.data.metas)
+        subset_data = data[self._subset_mask] if self._subset_mask is not None else None
+        self.graph.new_data(data, subset_data=subset_data, new=new)
+        self.graph.update_data(self.variable_x, self.variable_y, True)
+        self.connect_pairs()
 
     def commit(self):
         if self.embedding is not None:
+            names = get_unique_names([v.name for v in self.data.domain], ["mds-x", "mds-y"])
             output = embedding = Orange.data.Table.from_numpy(
-                Orange.data.Domain([Orange.data.ContinuousVariable("X"),
-                                    Orange.data.ContinuousVariable("Y")]),
+                Orange.data.Domain([ContinuousVariable(names[0]), ContinuousVariable(names[1])]),
                 self.embedding
             )
         else:
@@ -996,357 +661,77 @@ class OWMDS(OWWidget):
 
         if self.embedding is not None and self.data is not None:
             domain = self.data.domain
-            attrs = domain.attributes
-            class_vars = domain.class_vars
-            metas = domain.metas
-
-            if self.output_embedding_role == OWMDS.AttrRole:
-                attrs = embedding.domain.attributes
-            elif self.output_embedding_role == OWMDS.AddAttrRole:
-                attrs = domain.attributes + embedding.domain.attributes
-            elif self.output_embedding_role == OWMDS.MetaRole:
-                metas += embedding.domain.attributes
-
-            domain = Orange.data.Domain(attrs, class_vars, metas)
+            domain = Orange.data.Domain(domain.attributes,
+                                        domain.class_vars,
+                                        domain.metas + embedding.domain.attributes)
             output = self.data.transform(domain)
+            output.metas[:, -2:] = embedding.X
 
-            if self.output_embedding_role == OWMDS.AttrRole:
-                output.X[:] = embedding.X
-            if self.output_embedding_role == OWMDS.AddAttrRole:
-                output.X[:, -2:] = embedding.X
-            elif self.output_embedding_role == OWMDS.MetaRole:
-                output.metas[:, -2:] = embedding.X
-
-        if output is not None and self._selection_mask is not None and \
-                numpy.any(self._selection_mask):
-            subset = output[self._selection_mask]
-            self.selection_indices = numpy.flatnonzero(self._selection_mask)
+        selection = self.graph.get_selection()
+        if output is not None and len(selection) > 0:
+            selected = output[selection]
         else:
-            self.selection_indices = subset = None
-        self.Outputs.selected_data.send(subset)
-        self.Outputs.annotated_data.send(create_annotated_table(output, self._selection_mask))
+            selected = None
+        self.Outputs.selected_data.send(selected)
+        self.Outputs.annotated_data.send(create_annotated_table(output, selection))
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
         self._clear_plot()
         self._clear()
 
-    def __selection_end(self, path):
-        self.select(path)
-        self._pen_data = None
-        self._update_plot()
-        self._invalidate_output()
-
-    def select(self, region):
-        item = self._scatter_item
-        if item is None:
-            return
-
-        indices = numpy.array(
-            [spot.data() for spot in item.points()
-             if region.contains(spot.pos())],
-            dtype=int)
-
-        if not QApplication.keyboardModifiers():
-            self._selection_mask = None
-
-        self.select_indices(indices, QApplication.keyboardModifiers())
-
-    def select_indices(self, indices, modifiers=Qt.NoModifier):
-        if self.data is None or indices is None:
-            return
-
-        if self._selection_mask is None or \
-                not modifiers & (Qt.ControlModifier | Qt.ShiftModifier |
-                                 Qt.AltModifier):
-            self._selection_mask = numpy.zeros(len(self.data), dtype=bool)
-
-        if modifiers & Qt.AltModifier:
-            self._selection_mask[indices] = False
-        elif modifiers & Qt.ControlModifier:
-            self._selection_mask[indices] = ~self._selection_mask[indices]
-        else:
-            self._selection_mask[indices] = True
-
     def send_report(self):
         if self.data is None:
             return
-        self.report_plot()
+
+        def name(var):
+            return var and var.name
+
         caption = report.render_items_vert((
-            ("Color", self.color_value != "Same color" and self.color_value),
-            ("Shape", self.shape_value != "Same shape" and self.shape_value),
-            ("Size", self.size_value != "Same size" and self.size_value),
-            ("Labels", self.label_value != "No labels" and self.label_value)))
+            ("Color", name(self.graph.attr_color)),
+            ("Label", name(self.graph.attr_label)),
+            ("Shape", name(self.graph.attr_shape)),
+            ("Size", name(self.graph.attr_size)),
+            ("Jittering", self.graph.jitter_size != 0 and "{} %".format(self.graph.jitter_size))))
+        self.report_plot()
         if caption:
             self.report_caption(caption)
-        self.report_items((("Output", self.output_combo.currentText()),))
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_graph = {}
+            for old, new in (("label_only_selected", "label_only_selected"),
+                             ("symbol_opacity", "alpha_value"),
+                             ("symbol_size", "point_width"),
+                             ("jitter", "jitter_size")):
+                settings_graph[new] = settings_[old]
+            settings_["graph"] = settings_graph
+            settings_["auto_commit"] = settings_["autocommit"]
 
 
-
-def colors(data, variable, palette=None):
-    if palette is None:
-        if variable.is_discrete:
-            palette = colorpalette.ColorPaletteGenerator(len(variable.values))
-        elif variable.is_continuous:
-            palette = colorpalette.ColorPaletteBW()
-            palette = colorpalette.ContinuousPaletteGenerator(
-                QColor(220, 220, 220),
-                QColor(0, 0, 0),
-                False
-            )
-        else:
-            raise TypeError()
-
-    x = data[:, variable]
-    if variable in data.domain.metas:
-        x = numpy.array(x.metas, dtype='float').ravel()
-    else:
-        x = numpy.array(x).ravel()
-
-    if variable.is_discrete:
-        nvalues = len(variable.values)
-        x[numpy.isnan(x)] = nvalues
-        color_index = palette.getRGB(numpy.arange(nvalues + 1))
-        # Unknown values as gray
-        # TODO: This should already be a part of palette
-        color_index[nvalues] = (128, 128, 128)
-        colors = color_index[x.astype(int)]
-    else:
-        x, _ = scaled(x)
-        mask = numpy.isnan(x)
-        colors = numpy.empty((len(x), 3))
-        colors[mask] = (128, 128, 128)
-        colors[~mask] = [palette.getRGB(v) for v in x[~mask]]
-#         colors[~mask] = interpolate(palette, x[~mask], left=Qt.gray)
-
-    return colors
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            domain = context.ordered_domain
+            n_domain = [t for t in context.ordered_domain if t[1] == 2]
+            c_domain = [t for t in context.ordered_domain if t[1] == 1]
+            context_values_graph = {}
+            for _, old_val, new_val in ((domain, "color_value", "attr_color"),
+                                        (c_domain, "shape_value", "attr_shape"),
+                                        (n_domain, "size_value", "attr_size"),
+                                        (domain, "label_value", "attr_label")):
+                tmp = context.values[old_val]
+                if tmp[1] >= 0:
+                    context_values_graph[new_val] = (tmp[0], tmp[1] + 100)
+                elif tmp[0] != "Stress":
+                    context_values_graph[new_val] = None
+                else:
+                    context_values_graph[new_val] = tmp
+            context.values["graph"] = context_values_graph
 
 
-def scaled(a):
-    amin, amax = numpy.nanmin(a), numpy.nanmax(a)
-    span = amax - amin
-    return (a - amin) / (span or 1), (amin, amax)
-
-from types import SimpleNamespace as namespace
-
-from Orange.widgets.visualize.owlinearprojection import \
-    PlotSelectionTool, PlotZoomTool, PlotPanTool, PlotPinchZoomTool, \
-    LegendItem, legend_anchor_pos
-from Orange.widgets.visualize.owlinearprojection import plotutils
-
-
-class Namespace(namespace):
-    def updated(self, **kwargs):
-        ns = self.__dict__.copy()
-        ns.update(**kwargs)
-        return Namespace(**ns)
-
-
-class Mdsplotutils(plotutils):
-    NoFlags, Selected, Highlight = 0, 1, 2
-    NoFill, Filled = 0, 1
-
-    plotstyle = Namespace(
-        selected_pen=make_pen(Qt.yellow, width=3, cosmetic=True),
-        highligh_pen=QPen(Qt.blue, 1),
-        selected_brush=None,
-        default_color=QColor(Qt.darkGray).rgba(),
-        discrete_palette=colorpalette.ColorPaletteGenerator(),
-        continuous_palette=colorpalette.ContinuousPaletteGenerator(
-            QColor(220, 220, 220),
-            QColor(0, 0, 0),
-            False
-        ),
-        symbols=ScatterPlotItem.Symbols,
-        point_size=10,
-        min_point_size=5,
-    )
-
-    @staticmethod
-    def column_data(table, var, mask=None):
-        col, _ = table.get_column_view(var)
-        dtype = float if var.is_primitive() else object
-        col = numpy.asarray(col, dtype=dtype)
-        if mask is not None:
-            mask = numpy.asarray(mask, dtype=bool)
-            return col[mask]
-        else:
-            return col
-
-    @staticmethod
-    def color_data(table, var=None, mask=None, plotstyle=None):
-        N = len(table)
-        if mask is not None:
-            mask = numpy.asarray(mask, dtype=bool)
-            N = numpy.count_nonzero(mask)
-
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        if var is None:
-            col = numpy.zeros(N, dtype=float)
-            color_data = numpy.full(N, plotstyle.default_color, dtype=object)
-        elif var.is_primitive():
-            col = Mdsplotutils.column_data(table, var, mask)
-            if var.is_discrete:
-                palette = plotstyle.discrete_palette
-                if len(var.values) >= palette.number_of_colors:
-                    palette = colorpalette.ColorPaletteGenerator(len(var.values))
-
-                color_data = plotutils.discrete_colors(
-                    col, nvalues=len(var.values), palette=palette)
-            elif var.is_continuous:
-                color_data = plotutils.continuous_colors(
-                    col, palette=plotstyle.continuous_palette)
-        else:
-            raise TypeError("Categorical/Numeric variable or None expected.")
-
-        return color_data
-
-    @staticmethod
-    def pen_data(basecolors, flags=None, plotstyle=None):
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        pens = numpy.array(
-            [Mdsplotutils.make_pen(QColor(*rgba), width=1)
-             for rgba in basecolors],
-            dtype=object)
-
-        if flags is None:
-            return pens
-
-        selected_mask = flags & Mdsplotutils.Selected
-        if numpy.any(selected_mask):
-            pens[selected_mask.astype(bool)] = plotstyle.selected_pen
-
-        highlight_mask = flags & Mdsplotutils.Highlight
-        if numpy.any(highlight_mask):
-            pens[highlight_mask.astype(bool)] = plotstyle.hightlight_pen
-
-        return pens
-
-    @staticmethod
-    def brush_data(basecolors, flags=None, plotstyle=None):
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        brush = numpy.array(
-            [Mdsplotutils.make_brush(QColor(*c))
-             for c in basecolors],
-            dtype=object)
-
-        if flags is None:
-            return brush
-
-        fill_mask = flags & Mdsplotutils.Filled
-
-        if not numpy.all(fill_mask):
-            brush[~fill_mask] = QBrush(Qt.NoBrush)
-        return brush
-
-    @staticmethod
-    def shape_data(table, var, mask=None, plotstyle=None):
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        N = len(table)
-        if mask is not None:
-            mask = numpy.asarray(mask, dtype=bool)
-            N = numpy.nonzero(mask)
-
-        if var is None:
-            return numpy.full(N, "o", dtype=object)
-        elif var.is_discrete:
-            shape_data = Mdsplotutils.column_data(table, var, mask)
-            maxsymbols = len(plotstyle.symbols) - 1
-            validmask = numpy.isfinite(shape_data)
-            shape = shape_data % (maxsymbols - 1)
-            shape[~validmask] = maxsymbols  # Special symbol for unknown values
-            symbols = numpy.array(list(plotstyle.symbols))
-            shape_data = symbols[numpy.asarray(shape, dtype=int)]
-
-            if mask is None:
-                return shape_data
-            else:
-                return shape_data[mask]
-        else:
-            raise TypeError()
-
-    @staticmethod
-    def size_data(table, var, mask=None, plotstyle=None):
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        N = len(table)
-        if mask is not None:
-            mask = numpy.asarray(mask, dtype=bool)
-            N = numpy.nonzero(mask)
-
-        if var is None:
-            return numpy.full(N, plotstyle.point_size, dtype=float)
-        else:
-            size_data = Mdsplotutils.column_data(table, var, mask)
-            size_data = Mdsplotutils.normalized(size_data)
-            size_mask = numpy.isnan(size_data)
-            size_data = size_data * plotstyle.point_size + \
-                        plotstyle.min_point_size
-            size_data[size_mask] = plotstyle.min_point_size - 2
-
-            if mask is None:
-                return size_data
-            else:
-                return size_data[mask]
-
-    @staticmethod
-    def legend_data(color_var=None, shape_var=None, plotstyle=None):
-        if plotstyle is None:
-            plotstyle = Mdsplotutils.plotstyle
-
-        if color_var is not None and not color_var.is_discrete:
-            color_var = None
-        assert shape_var is None or shape_var.is_discrete
-        if color_var is None and shape_var is None:
-            return []
-
-        if color_var is not None:
-            palette = plotstyle.discrete_palette
-            if len(color_var.values) >= palette.number_of_colors:
-                palette = colorpalette.ColorPaletteGenerator(len(color_var.values))
-        else:
-            palette = None
-
-        symbols = list(plotstyle.symbols)
-
-        if shape_var is color_var:
-            items = [(palette[i], symbols[i], name)
-                     for i, name in enumerate(color_var.values)]
-        else:
-            colors = shapes = []
-            if color_var is not None:
-                colors = [(palette[i], "o", name)
-                          for i, name in enumerate(color_var.values)]
-            if shape_var is not None:
-                shapes = [(QColor(Qt.gray),
-                           symbols[i % (len(symbols) - 1)], name)
-                          for i, name in enumerate(shape_var.values)]
-            items = colors + shapes
-
-        return items
-
-    @staticmethod
-    def make_pen(color, width=1, cosmetic=True):
-        pen = QPen(color)
-        pen.setWidthF(width)
-        pen.setCosmetic(cosmetic)
-        return pen
-
-    @staticmethod
-    def make_brush(color, ):
-        return QBrush(color, )
-
-
-def main_test(argv=None):
+def main(argv=None):
     if argv is None:
         argv = sys.argv
     import gc
@@ -1360,7 +745,7 @@ def main_test(argv=None):
     data = Orange.data.Table(filename)
     w = OWMDS()
     w.set_data(data)
-    w.set_subset_data(data[numpy.random.choice(len(data), 10)])
+    w.set_subset_data(data[np.random.choice(len(data), 10)])
     w.handleNewSignals()
 
     w.show()
@@ -1380,4 +765,4 @@ def main_test(argv=None):
     return rval
 
 if __name__ == "__main__":
-    sys.exit(main_test())
+    sys.exit(main())
