@@ -68,7 +68,7 @@ INSTALL_REQUIRES = sorted(set(
 
 
 EXTRAS_REQUIRE = {
-    ':python_version<="3.4"': ["typing"],
+    ':python_version>="3.4"': ["typing"],
 }
 
 ENTRY_POINTS = {
@@ -82,7 +82,7 @@ ENTRY_POINTS = {
 
 
 EXTRAS_REQUIRE = {
-    ':python_version<="3.4"': ["typing"],
+    ':python_version>="3.4"': ["typing"],
 }
 
 # Return the git revision as a string
