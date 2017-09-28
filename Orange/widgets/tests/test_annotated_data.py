@@ -5,12 +5,12 @@ import numpy as np
 
 from Orange.data import Table, Variable
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_FEATURE_NAME)
+                                                 ANNOTATED_DATA_FEATURE_NAME, get_unique_names)
 
 
 class TestAnnotatedData(unittest.TestCase):
     def setUp(self):
-        Variable._clear_all_caches()
+        Variable._clear_all_caches()  # pylint: disable=protected-access
         random.seed(42)
         self.zoo = Table("zoo")
 
@@ -100,3 +100,9 @@ class TestAnnotatedData(unittest.TestCase):
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 3))
         self.assertEqual(data.domain.metas[1].name,
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 4))
+
+    def test_get_unique_names(self):
+        names = ["charlie", "bravo", "charlie (2)", "charlie (3)", "bravo (2)", "charlie (4)",
+                 "bravo (3)"]
+        self.assertEqual(get_unique_names(names, ["bravo", "charlie"]),
+                         ["bravo (5)", "charlie (5)"])

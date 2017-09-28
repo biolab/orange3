@@ -1,11 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import random
 from unittest.mock import patch, Mock
 
 import numpy as np
+from AnyQt.QtCore import QRectF, QPointF
 
 from Orange.distance import Euclidean
+from Orange.widgets.settings import Context
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.tests.utils import simulate
@@ -24,6 +25,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
     def setUp(self):
         self.widget = self.create_widget(
             OWMDS, stored_settings={
+                "__version__": 2,
                 "max_iter": 10,
                 "initialization": OWMDS.PCA,
             }
@@ -34,11 +36,8 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         super().tearDown()
 
     def _select_data(self):
-        random.seed(42)
-        points = random.sample(range(0, len(self.data)), 20)
-        self.widget.select_indices(points)
-        self.widget.commit()
-        return sorted(points)
+        self.widget.graph.select_by_rectangle(QRectF(QPointF(-20, -20), QPointF(20, 20)))
+        return self.widget.graph.get_selection()
 
     def test_pca_init(self):
         self.send_signal(self.signal_name, self.signal_data)
@@ -49,30 +48,29 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
              [-2.90244761, -0.13630526],
              [-2.75281107, -0.33854819]]
         )
-        np.testing.assert_array_almost_equal(output.X[:4, 4:], expected)
+        np.testing.assert_array_almost_equal(output.metas[:4, :2], expected)
 
     def test_nan_plot(self):
+        def combobox_run_through_all():
+            cb = self.widget.graph.controls
+            simulate.combobox_run_through_all(cb.attr_color)
+            # simulate.combobox_run_through_all(cb.attr_shape)
+            simulate.combobox_run_through_all(cb.attr_size)
+            # simulate.combobox_run_through_all(cb.attr_label)
+
         data = datasets.missing_data_1()
         self.send_signal(self.widget.Inputs.data, data, wait=1000)
-
-        simulate.combobox_run_through_all(self.widget.cb_color_value)
-        simulate.combobox_run_through_all(self.widget.cb_color_value)
-        simulate.combobox_run_through_all(self.widget.cb_shape_value)
-        simulate.combobox_run_through_all(self.widget.cb_size_value)
-        simulate.combobox_run_through_all(self.widget.cb_label_value)
+        combobox_run_through_all()
 
         self.send_signal(self.widget.Inputs.data, None)
+        combobox_run_through_all()
 
         data.X[:, 0] = np.nan
         data.Y[:] = np.nan
         data.metas[:, 1] = np.nan
 
-        self.send_signal("Data", data, wait=1000)
-
-        simulate.combobox_run_through_all(self.widget.cb_color_value)
-        simulate.combobox_run_through_all(self.widget.cb_shape_value)
-        simulate.combobox_run_through_all(self.widget.cb_size_value)
-        simulate.combobox_run_through_all(self.widget.cb_label_value)
+        self.send_signal(self.widget.Inputs.data, data, wait=1000)
+        combobox_run_through_all()
 
     @patch("Orange.projection.MDS.__call__", Mock(side_effect=MemoryError))
     def test_out_of_memory(self):
@@ -107,3 +105,72 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         signal_data = Euclidean(self.data, axis=1)
         signal_data.row_items = None
         self.send_signal("Distances", signal_data)
+
+    def test_send_report(self):
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.send_report()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.send_report()
+
+    def test_small_data(self):
+        data = self.data[:1]
+        self.assertFalse(self.widget.Error.not_enough_rows.is_shown())
+        self.send_signal(self.widget.Inputs.data, data)
+        # self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
+
+    def test_subset_data(self):
+        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+    def test_run(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.runbutton.click()
+        self.widget.initialization = 0
+        self.widget._OWMDS__invalidate_embedding()  # pylint: disable=protected-access
+
+    def test_migrate_settings_from_version_1(self):
+        context_settings = [
+            Context(attributes={'iris': 1,
+                                'petal length': 2, 'petal width': 2,
+                                'sepal length': 2, 'sepal width': 2},
+                    metas={},
+                    ordered_domain=[('sepal length', 2),
+                                    ('sepal width', 2),
+                                    ('petal length', 2),
+                                    ('petal width', 2),
+                                    ('iris', 1)],
+                    time=1500000000,
+                    values={'__version__': 1,
+                            'color_value': ('iris', 1),
+                            'shape_value': ('iris', 2),
+                            'size_value': ('Stress', -2),
+                            'label_value': ('sepal length', 2)})]
+        settings = {
+            '__version__': 1,
+            'autocommit': False,
+            'connected_pairs': 5,
+            'initialization': 0,
+            'jitter': 0.5,
+            'label_only_selected': True,
+            'legend_anchor': ((1, 0), (1, 0)),
+            'max_iter': 300,
+            'refresh_rate': 3,
+            'symbol_opacity': 230,
+            'symbol_size': 8,
+            'context_settings': context_settings,
+            'savedWidgetGeometry': None
+        }
+        w = self.create_widget(OWMDS, stored_settings=settings)
+        data = self.data
+        self.send_signal(w.Inputs.data, data, widget=w)
+        g = w.graph
+        for a, value in ((g.attr_color, "iris"),
+                         (g.attr_shape, "iris"),
+                         (g.attr_size, "Stress"),
+                         (g.attr_label, "sepal length"),
+                         (g.label_only_selected, True),
+                         (g.alpha_value, 230),
+                         (g.point_width, 8),
+                         (g.jitter_size, 0.5)):
+            self.assertTrue(a, value)
+        self.assertFalse(w.auto_commit)
