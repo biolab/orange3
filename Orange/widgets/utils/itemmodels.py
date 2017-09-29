@@ -26,6 +26,7 @@ from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
+from Orange.util import deprecated
 
 
 class _store(dict):
@@ -152,6 +153,14 @@ class AbstractSortTableModel(QAbstractTableModel):
                 new_rows.setflags(write=False)
             rows = new_rows
         return rows
+
+    @deprecated('Orange.widgets.utils.itemmodels.AbstractSortTableModel.mapFromSourceRows')
+    def mapFromTableRows(self, rows):
+        return self.mapFromSourceRows(rows)
+
+    @deprecated('Orange.widgets.utils.itemmodels.AbstractSortTableModel.mapToSourceRows')
+    def mapToTableRows(self, rows):
+        return self.mapToSourceRows(rows)
 
     def resetSorting(self):
         """Invalidates the current sorting"""
