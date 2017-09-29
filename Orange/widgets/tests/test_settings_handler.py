@@ -56,6 +56,7 @@ class SettingHandlerTestCase(unittest.TestCase):
         fd, settings_file = mkstemp(suffix='.ini')
 
         handler = SettingsHandler()
+        handler.widget_class = SimpleWidget
         handler.defaults = {'a': 5, 'b': {1: 5}}
         handler._get_settings_filename = lambda: settings_file
         handler.write_defaults()
@@ -64,7 +65,9 @@ class SettingHandlerTestCase(unittest.TestCase):
             default_settings = pickle.load(f)
         os.close(fd)
 
-        self.assertEqual(handler.defaults, default_settings)
+        self.assertEqual(default_settings.pop(VERSION_KEY, -0xBAD),
+                         handler.widget_class.settings_version,)
+        self.assertEqual(default_settings, handler.defaults)
 
         os.remove(settings_file)
 
@@ -327,7 +330,10 @@ class SettingHandlerTestCase(unittest.TestCase):
         h.widget_class = widget
         h.defaults = defaults
         filename = h._get_settings_filename()
-        h.write_defaults()
+
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "wb") as f:
+            pickle.dump(defaults, f)
 
         yield
 

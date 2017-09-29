@@ -163,6 +163,24 @@ class TestContextHandler(TestCase):
         for c in settings["context_settings"]:
             self.assertIn(VERSION_KEY, c.values)
 
+    def test_write_defaults_stores_version(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        widget.current_context = None
+        widget.context_settings = [DummyContext() for _ in range(3)]
+        handler.update_defaults(widget)
+
+        f = BytesIO()
+        f.close = lambda: None
+        with patch("builtins.open", Mock(return_value=f)):
+            handler.write_defaults()
+            f.seek(0)
+            pickle.load(f)  # settings
+            contexts = pickle.load(f)
+            for c in contexts:
+                self.assertEqual(c.values.get("__version__", 0xBAD), 1)
+
 
 class TestSettingsPrinter(TestCase):
     def test_formats_contexts(self):

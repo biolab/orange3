@@ -424,7 +424,9 @@ class SettingsHandler:
         ----------
         settings_file : file-like object
         """
-        pickle.dump(self.defaults, settings_file, -1)
+        defaults = dict(self.defaults)
+        defaults[VERSION_KEY] = self.widget_class.settings_version
+        pickle.dump(defaults, settings_file, -1)
 
     def _get_settings_filename(self):
         """Return the name of the file with default settings for the widget"""
@@ -628,7 +630,15 @@ class ContextHandler(SettingsHandler):
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""
         super().write_defaults_file(settings_file)
-        pickle.dump(self.global_contexts, settings_file, -1)
+
+        def add_version(context):
+            context = copy.copy(context)
+            context.values = dict(context.values)
+            context.values[VERSION_KEY] = self.widget_class.settings_version
+            return context
+
+        pickle.dump([add_version(context) for context in self.global_contexts],
+                    settings_file, -1)
 
     def pack_data(self, widget):
         """Call the inherited method, then add local contexts to the dict."""
