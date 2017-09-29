@@ -6,6 +6,36 @@ Change Log
 * ...
 
 
+[3.6.0] - 2017-09-29
+--------------------
+##### Enhancements
+* PythonScript: Multiple inputs ([#2506](../../pull/2506))
+* DomainEditor: Add horizontal header ([#2579](../../pull/2579))
+* Feature Constructor: Support additional functions () ([#2611](../../pull/2611))
+* Miniconda installer: Install conda executable ([#2616](../../pull/2616))
+* Datasets: New widget ([#2557](../../pull/2557))
+
+##### Bugfixes
+* settings: Store settings version in the serialized defaults ([#2631](../../pull/2631))
+* canvas/stackedwidget: Check if the new geometry is the same as the old ([#2636](../../pull/2636))
+* OWRank: sort NaNs last; fix sort indicator ([#2618](../../pull/2618))
+* Schema-only settings in components ([#2613](../../pull/2613))
+* OWBaseLearner: Save learner name in workflow ([#2608](../../pull/2608))
+* Saving of multiple selections in ScatterPlot ([#2598](../../pull/2598))
+* OWBoxPlot: Faster selection ([#2595](../../pull/2595))
+* preprocess.randomization: Do not use the same seed for X, Y, and meta ([#2603](../../pull/2603))
+* Slow Rank ([#2494](../../pull/2494))
+* setup: Increase required setuptools version ([#2602](../../pull/2602))
+* Disable pyqtgraph's exit cleanup handler ([#2597](../../pull/2597))
+* ScatterPlotGraph: fix labelling when there are missing data ([#2590](../../pull/2590))
+* canvas: Fix link runtime state modeling ([#2591](../../pull/2591))
+* Tree: Reintroduce preprocessors. ([#2566](../../pull/2566))
+* canvas/preview: Fix workflow preview rendering ([#2586](../../pull/2586))
+* Fix saving reports on Python 3.6 ([#2584](../../pull/2584))
+* Fix failing report tests ([#2574](../../pull/2574))
+* widgets/tests: Compatibility with Python 3.5.{0,1} ([#2575](../../pull/2575))
+
+
 [3.5.0] - 2017-09-04
 --------------------
 ##### Enhancements
@@ -609,8 +639,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.5...HEAD
-[3.4.5]: https://github.com/biolab/orange3/compare/3.4.5...3.5
+[next]: https://github.com/biolab/orange3/compare/3.6...HEAD
+[3.6]: https://github.com/biolab/orange3/compare/3.5...3.6
+[3.5]: https://github.com/biolab/orange3/compare/3.4.5...3.5
 [3.4.5]: https://github.com/biolab/orange3/compare/3.4.4...3.4.5
 [3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
 [3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
