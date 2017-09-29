@@ -397,6 +397,7 @@ class UnsupervisedScorer(Scorer):
     """
     Simple unsupervised scorer for datasets without target variable.
     """
+    feature_type = Variable
 
     def __call__(self, data, feature=None):
         if feature is not None:
@@ -419,14 +420,15 @@ class UnsupervisedScorer(Scorer):
 class MeanScorer(UnsupervisedScorer):
     """
     Simple scorer returning mean of the features.
+    Return NA for non-continuos columns to enable mixtures of discrete and continuous variables.
     """
     supports_sparse_data = True
     friendly_name = "Mean"
-    feature_type = ContinuousVariable
 
     def score_data(self, data, feature):
-        cols = np.array([a.is_continuous for a in data.domain.attributes])
-        weights = data.X[:, cols].mean(axis = 0)
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+        weights[conts] = data.X[:,conts].mean(axis = 0)
 
         if feature:
             return weights[0]
@@ -437,13 +439,13 @@ class VarianceScorer(UnsupervisedScorer):
     """
     Simple scorer returning variance of the features.
     """
-    supports_sparse_data = True
+    supports_sparse_data = False
     friendly_name = "Variance"
-    feature_type = ContinuousVariable
 
     def score_data(self, data, feature):
-        cols = np.array([a.is_continuous for a in data.domain.attributes])
-        weights = np.var(data.X[:, cols], axis=0)
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+        weights[conts] = np.var(data.X[:, conts], axis=0)
 
         if feature:
             return weights[0]
@@ -454,16 +456,17 @@ class DispersionScorer(UnsupervisedScorer):
     """
     Simple scorer returning approximate dispersion (variance / mean) of the features.
     """
-    supports_sparse_data = True
+    supports_sparse_data = False
     friendly_name = "Dispersion"
-    feature_type = ContinuousVariable
 
     def score_data(self, data, feature):
-        cols = np.array([a.is_continuous for a in data.domain.attributes])
-        means = data.X[:, cols].mean(axis = 0)
-        vars = np.var(data.X[:, cols], axis=0)
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+
+        means = data.X[:, conts].mean(axis = 0)
+        vars = np.var(data.X[:, conts], axis=0)
         means[means == 0] = 1
-        weights = vars / means
+        weights[conts] = vars / means
 
         if feature:
             return weights[0]
