@@ -640,8 +640,8 @@ Change Log
 
 
 [next]: https://github.com/biolab/orange3/compare/3.6...HEAD
-[3.6]: https://github.com/biolab/orange3/compare/3.5...3.6
-[3.5]: https://github.com/biolab/orange3/compare/3.4.5...3.5
+[3.6.0]: https://github.com/biolab/orange3/compare/3.5...3.6
+[3.5.0]: https://github.com/biolab/orange3/compare/3.4.5...3.5
 [3.4.5]: https://github.com/biolab/orange3/compare/3.4.4...3.4.5
 [3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
 [3.4.3]: https://github.com/biolab/orange3/compare/3.4.2...3.4.3
