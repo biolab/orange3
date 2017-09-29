@@ -1144,6 +1144,10 @@ class TableModel(AbstractSortTableModel):
     def sortColumnData(self, column):
         return self._columnSortKeyData(column, TableModel.ValueRole)
 
+    @deprecated('Orange.widgets.utils.itemmodels.TableModel.sortColumnData')
+    def columnSortKeyData(self, column, role):
+        return self._columnSortKeyData(column, role)
+
     def _columnSortKeyData(self, column, role):
         """
         Return a sequence of source table objects which can be used as
