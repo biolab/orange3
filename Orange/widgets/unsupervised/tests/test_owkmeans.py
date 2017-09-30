@@ -13,7 +13,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
 import Orange.clustering
 
-from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data import Table
 
 
 class TestClusterTableModel(unittest.TestCase):

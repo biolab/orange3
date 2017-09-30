@@ -5,7 +5,7 @@ from Orange.data import Domain, DiscreteVariable
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
-RE_FIND_INDEX = "(^{} \()(\d{{1,}})(\)$)"
+RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
 def add_columns(domain, attributes=(), class_vars=(), metas=()):
