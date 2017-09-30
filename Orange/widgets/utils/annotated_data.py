@@ -55,7 +55,7 @@ def get_next_name(names, name):
     indexes = get_indices(names, name)
     if name not in names and not indexes:
         return name
-    return "{} ({})".format(name, max(indexes, default=1) + 1)
+    return "{} ({})".format(name, max(indexes, default=0) + 1)
 
 
 def get_unique_names(names, proposed):
