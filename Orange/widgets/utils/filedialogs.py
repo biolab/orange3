@@ -235,8 +235,6 @@ class RecentPath:
                 path = os.path.join(base, self.relpath)
                 if os.path.exists(path):
                     return os.path.normpath(path)
-        else:
-            return None
 
     def resolve(self, searchpaths):
         if self.prefix is None and os.path.exists(self.abspath):
@@ -371,7 +369,7 @@ class RecentPathsWidgetMixin:
 
     def last_path(self):
         """Return the most recent absolute path or `None` if there is none"""
-        return self.recent_paths and self.recent_paths[0].abspath or None
+        return self.recent_paths[0].abspath if self.recent_paths else None
 
 
 class RecentPathsWComboMixin(RecentPathsWidgetMixin):

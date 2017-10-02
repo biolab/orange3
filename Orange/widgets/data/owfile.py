@@ -10,7 +10,6 @@ from AnyQt.QtWidgets import \
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import StringVariable
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.widgets import widget, gui
@@ -18,7 +17,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats, \
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog
 from Orange.widgets.widget import Output
 
@@ -41,7 +40,7 @@ def add_origin(examples, filename):
         return
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if var.is_string]
-    dir_name, basename = os.path.split(filename)
+    dir_name, _ = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
             var.attributes["origin"] = dir_name
