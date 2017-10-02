@@ -2,6 +2,7 @@ Orange
 ======
 
 [![Join the chat at https://gitter.im/biolab/orange3](https://badges.gitter.im/biolab/orange3.svg)](https://gitter.im/biolab/orange3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fbiolab%2Forange3.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fbiolab%2Forange3?ref=badge_shield)
 
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
 [![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
@@ -117,3 +118,7 @@ Install [Visual Studio compiler]. Then go to Orange3 folder and run:
 [Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
 
     python setup.py build_ext -i --compiler=msvc install
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fbiolab%2Forange3.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fbiolab%2Forange3?ref=badge_large)
