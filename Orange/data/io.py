@@ -10,6 +10,7 @@ import warnings
 from ast import literal_eval
 from collections import OrderedDict, Counter
 from functools import lru_cache
+from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
 from numbers import Number
@@ -761,6 +762,17 @@ class FileFormat(metaclass=FileFormatMeta):
                    var.repr_val(val) if isinstance(var, TimeVariable) else
                    val
                    for var, val in zip(vars, flatten(row))])
+
+    @classmethod
+    def qualified_name(cls):
+        return cls.__module__ + '.' + cls.__name__
+
+
+def class_from_qualified_name(format_name):
+    """ File format class from qualified name. """
+    elements = format_name.split(".")
+    m = import_module(".".join(elements[:-1]))
+    return getattr(m, elements[-1])
 
 
 class CSVReader(FileFormat):

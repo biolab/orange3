@@ -16,9 +16,10 @@ from AnyQt.QtWidgets import QComboBox
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
+from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
-from Orange.widgets.utils.filedialogs import dialog_formats, RecentPath
+from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
@@ -251,6 +252,35 @@ a
         with named_file("name\nc\n\nstring", suffix=".tab") as fn:
             self.open_dataset(fn)
         self.assertTrue(self.widget.Error.unknown.is_shown())
+
+    def test_read_format(self):
+        iris = Table("iris")
+
+        def open_iris_with_no_specific_format(a, b, c, filters, e):
+            return iris.__file__, filters.split(";;")[0]
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   open_iris_with_no_specific_format):
+            self.widget.browse_file()
+
+        self.assertIsNone(self.widget.recent_paths[0].file_format)
+
+        def open_iris_with_tab(a, b, c, filters, e):
+            return iris.__file__, format_filter(TabReader)
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   open_iris_with_tab):
+            self.widget.browse_file()
+
+        self.assertEqual(self.widget.recent_paths[0].file_format, "Orange.data.io.TabReader")
+
+    def test_no_specified_reader(self):
+        with named_file("", suffix=".tab") as fn:
+            no_class = RecentPath(fn, None, None, file_format="not.a.file.reader.class")
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [no_class]})
+            self.widget.load_data()
+        self.assertTrue(self.widget.Error.missing_reader.is_shown())
 
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris")

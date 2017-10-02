@@ -5,20 +5,21 @@ from urllib.parse import urlparse
 
 import numpy as np
 from AnyQt.QtWidgets import \
-    QStyle, QComboBox, QMessageBox, QFileDialog, QGridLayout, QLabel, \
+    QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data import StringVariable
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, UrlReader
+from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats, \
+    open_filename_dialog
 from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
@@ -268,11 +269,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filename, _ = QFileDialog.getOpenFileName(
-            self, 'Open Orange Data File', start_file, dialog_formats())
+        filename, reader, _ = open_filename_dialog(start_file, None, FileFormat.readers)
         if not filename:
             return
         self.add_path(filename)
+        if reader is not None:
+            self.recent_paths[0].file_format = reader.qualified_name()
+
         self.source = self.LOCAL_FILE
         self.load_data()
 
@@ -335,7 +338,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         FileFormat
         """
         if self.source == self.LOCAL_FILE:
-            reader = FileFormat.get_reader(self.last_path())
+            path = self.last_path()
+            if self.recent_paths and self.recent_paths[0].file_format:
+                qname = self.recent_paths[0].file_format
+                reader_class = class_from_qualified_name(qname)
+                reader = reader_class(path)
+            else:
+                reader = FileFormat.get_reader(path)
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
