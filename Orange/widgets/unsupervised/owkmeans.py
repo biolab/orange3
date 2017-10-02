@@ -1,14 +1,17 @@
 import re
 from itertools import chain
 
+import numpy as np
+
 from AnyQt.QtWidgets import QGridLayout, QTableView
 from AnyQt.QtGui import QIntValidator
 from AnyQt.QtCore import Qt, QTimer, QAbstractTableModel, QModelIndex
 
 from Orange.clustering import KMeans
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.annotated_data import get_next_name
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
 
@@ -69,6 +72,10 @@ class OWKMeans(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         failed = widget.Msg("Clustering failed\nError: {}")
+
+    class Warning(widget.OWWidget.Warning):
+        no_silhouettes = widget.Msg(
+            "Silhouette scores are not computed for >5000 samples")
 
     INIT_METHODS = "Initialize with KMeans++", "Random initialization"
 
@@ -286,18 +293,6 @@ class OWKMeans(widget.OWWidget):
     def select_row(self):
         self.send_data()
 
-    def _get_var_name(self):
-        domain = self.data.domain
-        re_cluster = re.compile(r"Cluster \((\d+)\)")
-        names = [var.name for var in chain(domain, domain.metas)]
-        matches = (re_cluster.fullmatch(name) for name in names)
-        matches = [m for m in matches if m]
-        name = "Cluster"
-        if matches or "Cluster" in names:
-            last_num = max((int(m.group(1)) for m in matches), default=0)
-            name += " ({})".format(last_num + 1)
-        return name
-
     def send_data(self):
         if self.optimize_k:
             row = self.selected_row()
@@ -310,14 +305,27 @@ class OWKMeans(widget.OWWidget):
             self.Outputs.centroids.send(None)
             return
 
-        clust_var = DiscreteVariable(
-            self._get_var_name(), values=["C%d" % (x + 1) for x in range(km.k)])
-        clust_ids = km(self.data)
         domain = self.data.domain
+        existing_vars = [var.name for var in chain(domain, domain.metas)]
+        clust_var = DiscreteVariable(
+            get_next_name(existing_vars, "Cluster"),
+            values=["C%d" % (x + 1) for x in range(km.k)])
+        clust_ids = km(self.data)
+        silhouette_var = ContinuousVariable(
+            get_next_name(existing_vars, "Silhouette"))
+        if km.silhouette_samples is not None:
+            self.Warning.no_silhouettes.clear()
+            scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
+        else:
+            self.Warning.no_silhouettes()
+            scores = np.nan
         new_domain = Domain(
-            domain.attributes, [clust_var], domain.metas + domain.class_vars)
+            domain.attributes,
+            [clust_var, silhouette_var],
+            domain.metas + domain.class_vars)
         new_table = self.data.transform(new_domain)
         new_table.get_column_view(clust_var)[0][:] = clust_ids.X.ravel()
+        new_table.get_column_view(silhouette_var)[0][:] = scores
 
         centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
 

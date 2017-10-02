@@ -1,6 +1,6 @@
 import numpy as np
 import sklearn.cluster as skl_cluster
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_samples, silhouette_score
 
 from Orange.data import Table, DiscreteVariable, Domain, Instance
 from Orange.projection import SklProjector, Projection
@@ -26,7 +26,14 @@ class KMeans(SklProjector):
         proj.silhouette = np.nan
         try:
             if self._compute_silhouette and 2 <= proj.n_clusters < X.shape[0]:
-                proj.silhouette = silhouette_score(X, proj.labels_, sample_size=5000)
+                if len(X) <= 5000:
+                    proj.silhouette_samples = \
+                        silhouette_samples(X, proj.labels_)
+                    proj.silhouette = np.mean(proj.silhouette_samples)
+                else:
+                    proj.silhouette_samples = None
+                    proj.silhouette = \
+                        silhouette_score(X, proj.labels_, sample_size=5000)
         except MemoryError:  # Pairwise dist in silhouette fails for large data
             pass
         proj.inertia = proj.inertia_ / X.shape[0]

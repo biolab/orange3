@@ -4,8 +4,17 @@ import unittest
 import numpy as np
 
 from Orange.data import Table, Variable
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_FEATURE_NAME, get_unique_names)
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, get_next_name, get_unique_names,
+    ANNOTATED_DATA_FEATURE_NAME)
+
+
+class TestGetNextName(unittest.TestCase):
+    def test_get_var_name(self):
+        self.assertEqual(get_next_name(["a"], "XX"), "XX")
+        self.assertEqual(get_next_name(["a", "XX"], "XX"), "XX (1)")
+        self.assertEqual(get_next_name(["a", "XX (4)"], "XX"), "XX (5)")
+        self.assertEqual(get_next_name(["a", "XX", "XX (4)"], "XX"), "XX (5)")
 
 
 class TestAnnotatedData(unittest.TestCase):
@@ -66,7 +75,7 @@ class TestAnnotatedData(unittest.TestCase):
             self.assertIn(self.zoo.domain.metas[0], data.domain.metas)
             self.assertIn(ANNOTATED_DATA_FEATURE_NAME,
                           [m.name for m in data.domain.metas])
-            for j in range(2, i + 3):
+            for j in range(1, i + 2):
                 self.assertIn("{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, j),
                               [m.name for m in data.domain.metas])
 

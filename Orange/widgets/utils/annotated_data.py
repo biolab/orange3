@@ -5,7 +5,7 @@ from Orange.data import Domain, DiscreteVariable
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
-RE_FIND_INDEX = "(^{} \()(\d{{1,}})(\)$)"
+RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
 def add_columns(domain, attributes=(), class_vars=(), metas=()):
@@ -55,7 +55,7 @@ def get_next_name(names, name):
     indexes = get_indices(names, name)
     if name not in names and not indexes:
         return name
-    return "{} ({})".format(name, max(indexes, default=1) + 1)
+    return "{} ({})".format(name, max(indexes, default=0) + 1)
 
 
 def get_unique_names(names, proposed):
