@@ -360,6 +360,7 @@ class OWMDS(OWWidget):
         self.data = None
         self.effective_matrix = None
         self.embedding = None
+        self.init_attr_values()
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
