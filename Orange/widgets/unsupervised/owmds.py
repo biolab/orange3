@@ -341,6 +341,7 @@ class OWMDS(OWWidget):
         # invalidate the pen/brush when the subset is changed
         self._subset_mask = None  # type: Optional[np.ndarray]
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
+        self._invalidated = True
 
     def _clear(self):
         self._similar_pairs = None
