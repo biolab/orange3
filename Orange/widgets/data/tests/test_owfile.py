@@ -54,6 +54,15 @@ class WithWarnings(FileFormat):
         return Orange.data.Table("iris")
 
 
+class MyCustomTabReader(FileFormat):
+    EXTENSIONS = ('.tab',)
+    DESCRIPTION = "Always return iris"
+    PRIORITY = 999999
+
+    def read(self):
+        return Orange.data.Table("iris")
+
+
 class TestOWFile(WidgetTest):
     # Attribute used to store event data so it does not get garbage
     # collected before event is processed.
@@ -229,6 +238,17 @@ a
             for i in range(4):
                 vartype_delegate.setEditorData(combo, idx(i))
                 self.assertEqual(combo.count(), counts[i])
+
+    def test_reader_custom_tab(self):
+        with named_file("", suffix=".tab") as fn:
+            qname = MyCustomTabReader.qualified_name()
+            reader = RecentPath(fn, None, None, file_format=qname)
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [reader]})
+            self.widget.load_data()
+        self.assertFalse(self.widget.Error.missing_reader.is_shown())
+        outdata = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(outdata), 150)  # loaded iris
 
     def test_no_reader_extension(self):
         with named_file("", suffix=".xyz_unknown") as fn:

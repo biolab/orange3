@@ -269,7 +269,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filename, reader, _ = open_filename_dialog(start_file, None, FileFormat.readers)
+        readers = [f for f in FileFormat.formats
+                   if getattr(f, 'read', None) and getattr(f, "EXTENSIONS", None)]
+        filename, reader, _ = open_filename_dialog(start_file, None, readers)
         if not filename:
             return
         self.add_path(filename)

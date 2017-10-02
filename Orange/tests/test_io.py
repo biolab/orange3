@@ -9,6 +9,7 @@ import shutil
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
 from Orange.data.table import get_sample_datasets_dir
 
+
 class WildcardReader(FileFormat):
     EXTENSIONS = ('.wild', '.wild[0-9]')
     DESCRIPTION = "Dummy reader for testing extensions"
@@ -35,6 +36,30 @@ class TestChooseReader(unittest.TestCase):
             FileFormat.get_reader("t.wild2a")
 
 
+class SameExtension(FileFormat):
+    PRIORITY = 100
+    EXTENSIONS = ('.same_extension',)
+    DESCRIPTION = "Same extension, different priority"
+
+    def read(self):
+        pass
+
+
+class SameExtensionPreferred(SameExtension):
+    PRIORITY = 90
+
+
+class SameExtensionL(SameExtension):
+    PRIORITY = 110
+
+
+class TestMultipleSameExtension(unittest.TestCase):
+
+    def test_find_reader(self):
+        reader = FileFormat.get_reader("some.same_extension")
+        self.assertIsInstance(reader, SameExtensionPreferred)
+
+
 class TestLocate(unittest.TestCase):
 
     def test_locate_sample_datasets(self):
@@ -48,7 +73,6 @@ class TestLocate(unittest.TestCase):
         iris = FileFormat.locate("iris",
                                  search_dirs=[get_sample_datasets_dir()])
         self.assertEqual(os.path.basename(iris), "iris.tab")
-
 
     def test_locate_wildcard_extension(self):
         tempdir = tempfile.mkdtemp()

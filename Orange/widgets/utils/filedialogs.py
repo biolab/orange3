@@ -115,13 +115,13 @@ def open_filename_dialog(start_dir, start_filter, file_formats, title="Open...",
     Args:
         start_dir (str): initial directory, optionally including the filename
         start_filter (str): initial filter
-        file_formats (dict {extension: Orange.data.io.FileFormat}): file formats
+        file_formats (a list of Orange.data.io.FileFormat): file formats
         title (str): title of the dialog
         dialog: a function that creates a QT dialog
     Returns:
         (filename, file_format, filter), or `(None, None, None)` on cancel
     """
-    file_formats = sorted(set(file_formats.values()), key=lambda w: w.PRIORITY)
+    file_formats = sorted(set(file_formats), key=lambda w: (w.PRIORITY, w.DESCRIPTION))
     filters = [format_filter(f) for f in file_formats]
 
     # add all readable files option
