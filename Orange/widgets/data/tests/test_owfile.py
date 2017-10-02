@@ -4,7 +4,7 @@ from os import path, remove
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
-
+import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -18,7 +18,7 @@ from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
-from Orange.widgets.utils.filedialogs import dialog_formats
+from Orange.widgets.utils.filedialogs import dialog_formats, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
@@ -31,6 +31,26 @@ class AddedFormat(FileFormat):
 
     def read(self):
         pass
+
+
+class FailedSheetsFormat(FileFormat):
+    EXTENSIONS = ('.failed_sheet',)
+    DESCRIPTION = "Make a sheet function that fails"
+
+    def read(self):
+        pass
+
+    def sheets(self):
+        raise Exception("Not working")
+
+
+class WithWarnings(FileFormat):
+    EXTENSIONS = ('.with_warning',)
+    DESCRIPTION = "Warning"
+
+    def read(self):
+        warnings.warn("Some warning")
+        return Orange.data.Table("iris")
 
 
 class TestOWFile(WidgetTest):
@@ -208,6 +228,29 @@ a
             for i in range(4):
                 vartype_delegate.setEditorData(combo, idx(i))
                 self.assertEqual(combo.count(), counts[i])
+
+    def test_no_reader_extension(self):
+        with named_file("", suffix=".xyz_unknown") as fn:
+            no_reader = RecentPath(fn, None, None)
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [no_reader]})
+            self.widget.load_data()
+        self.assertTrue(self.widget.Error.missing_reader.is_shown())
+
+    def test_fail_sheets(self):
+        with named_file("", suffix=".failed_sheet") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Error.sheet_error.is_shown())
+
+    def test_with_warnings(self):
+        with named_file("", suffix=".with_warning") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Warning.load_warning.is_shown())
+
+    def test_fail(self):
+        with named_file("name\nc\n\nstring", suffix=".tab") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Error.unknown.is_shown())
 
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris")
