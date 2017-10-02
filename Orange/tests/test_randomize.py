@@ -106,7 +106,9 @@ class TestRandomizer(unittest.TestCase):
         x = np.array([[0, 0, 3, 0],
                       [1, 0, 2, 0],
                       [4, 5, 6, 7]])
-        randomized = Randomize(rand_seed=1).randomize(sp.csr_matrix(x))
+        randomize = Randomize().randomize
+
+        randomized = randomize(sp.csr_matrix(x), rand_state=1)
         randomized = randomized.toarray()
         # Data is shuffled (rand_seed=1 should always shuffle it)
         self.assertFalse(np.all(x == randomized))
@@ -116,3 +118,18 @@ class TestRandomizer(unittest.TestCase):
         # Do not shuffle entire rows
         randomized = np.array(sorted(list(map(list, randomized))), dtype=int)
         self.assertFalse(np.all(randomized == x))
+
+        # Test that shuffle is not sparse structure dependent
+        x = np.array([[1, 2, 3, 4],
+                      [0, 0, 0, 0],
+                      [0, 0, 0, 0],
+                      [0, 0, 0, 0]])
+
+        randomized = randomize(sp.csr_matrix(x), rand_state=0x393f)
+        self.assertFalse(np.all(x == randomized.todense()))
+
+        # Do not just assign some indices. I.e. make sure that the shuffling is
+        # dependent in the input's non-zero indices.
+        r_once = randomize(sp.csr_matrix(x), rand_state=1)
+        r_twice = randomize(r_once.copy(), rand_state=1)
+        self.assertFalse(np.all(r_once.todense() == r_twice.todense()))

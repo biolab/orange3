@@ -368,14 +368,12 @@ class Randomize(Preprocess):
     def randomize(self, table, rand_state=None):
         rstate = np.random.RandomState(rand_state)
         if sp.issparse(table):
-            table = table.tocsc()
-            rnd_indices = np.arange(table.shape[0], dtype=table.indices.dtype)
+            table = table.tocsc()  # type: sp.spmatrix
             for i in range(table.shape[1]):
+                permutation = rstate.permutation(table.shape[0])
                 col_indices = \
                     table.indices[table.indptr[i]: table.indptr[i + 1]]
-                new_indices = rnd_indices[:len(col_indices)]
-                rstate.shuffle(new_indices)
-                col_indices[:] = new_indices
+                col_indices[:] = permutation[col_indices]
         elif len(table.shape) > 1:
             for i in range(table.shape[1]):
                 rstate.shuffle(table[:, i])
