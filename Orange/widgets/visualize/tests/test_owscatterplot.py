@@ -303,6 +303,42 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         """
         domain = Table("iris").domain
         self.send_signal(self.widget.Inputs.features, domain)
+        self.send_signal(self.widget.Inputs.features, None)
+
+    def test_features_and_data(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.features, data.domain)
+
+    def test_send_report(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.report_button.click()
+
+    def test_update_density(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.cb_class_density.click()
+
+    def test_vizrank(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        n_states = len(data.domain.attributes)
+        n_states = n_states * (n_states - 1) / 2
+        states = [state for state in vizrank.iterate_states(None)]
+        self.assertEqual(len(states), n_states)
+        self.assertEqual(len(set(states)), n_states)
+        self.assertIsNotNone(vizrank.compute_score(states[0]))
+        self.send_signal(self.widget.Inputs.data, data[:9])
+        self.assertIsNone(vizrank.compute_score(states[0]))
+
+        data = Table("housing")[::10]
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        states = [state for state in vizrank.iterate_states(None)]
+        self.assertIsNotNone(vizrank.compute_score(states[0]))
+
 
 
 if __name__ == "__main__":

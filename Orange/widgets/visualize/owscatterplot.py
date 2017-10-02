@@ -2,7 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtGui import QPen, QFont, QFontInfo, QPalette
+from AnyQt.QtGui import QPen, QPalette
 from AnyQt.QtWidgets import QApplication
 
 from sklearn.neighbors import NearestNeighbors
@@ -24,20 +24,6 @@ from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME,
                                                  create_groups_table)
-
-
-def font_resize(font, factor, minsize=None, maxsize=None):
-    font = QFont(font)
-    fontinfo = QFontInfo(font)
-    size = fontinfo.pointSizeF() * factor
-
-    if minsize is not None:
-        size = max(size, minsize)
-    if maxsize is not None:
-        size = min(size, maxsize)
-
-    font.setPointSizeF(size)
-    return font
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
@@ -221,21 +207,6 @@ class OWScatterPlot(OWWidget):
         super().keyReleaseEvent(event)
         self.graph.update_tooltip(event.modifiers())
 
-    # def settingsFromWidgetCallback(self, handler, context):
-    #     context.selectionPolygons = []
-    #     for curve in self.graph.selectionCurveList:
-    #         xs = [curve.x(i) for i in range(curve.dataSize())]
-    #         ys = [curve.y(i) for i in range(curve.dataSize())]
-    #         context.selectionPolygons.append((xs, ys))
-
-    # def settingsToWidgetCallback(self, handler, context):
-    #     selections = getattr(context, "selectionPolygons", [])
-    #     for (xs, ys) in selections:
-    #         c = SelectionCurve("")
-    #         c.setData(xs,ys)
-    #         c.attach(self.graph)
-    #         self.graph.selectionCurveList.append(c)
-
     def reset_graph_data(self, *_):
         if self.data is not None:
             self.graph.rescale_data()
@@ -414,9 +385,6 @@ class OWScatterPlot(OWWidget):
         else:
             self.attribute_selection_list = None
 
-    def get_shown_attributes(self):
-        return self.attr_x, self.attr_y
-
     def init_attr_values(self):
         domain = self.data and self.data.domain
         for model in self.models:
@@ -424,7 +392,7 @@ class OWScatterPlot(OWWidget):
         self.attr_x = self.xy_model[0] if self.xy_model else None
         self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
             else self.attr_x
-        self.graph.attr_color = domain and self.data.domain.class_var or None
+        self.graph.attr_color = self.data.domain.class_var if domain else None
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
