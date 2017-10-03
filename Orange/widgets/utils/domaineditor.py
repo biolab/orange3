@@ -35,7 +35,7 @@ class VarTableModel(QAbstractTableModel):
     DISCRETE_VALUE_DISPLAY_LIMIT = 20
 
     places = "feature", "target", "meta", "skip"
-    typenames = "categorical", "numeric", "string", "datetime"
+    typenames = "categorical", "numeric", "text", "datetime"
     vartypes = DiscreteVariable, ContinuousVariable, StringVariable, TimeVariable
     name2type = dict(zip(typenames, vartypes))
     type2name = dict(zip(vartypes, typenames))

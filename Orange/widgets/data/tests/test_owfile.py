@@ -95,7 +95,7 @@ class TestOWFile(WidgetTest):
 
         self.open_dataset("iris")
         idx = self.widget.domain_editor.model().createIndex(4, 1)
-        self.widget.domain_editor.model().setData(idx, "string", Qt.EditRole)
+        self.widget.domain_editor.model().setData(idx, "text", Qt.EditRole)
         self.widget.apply_button.click()
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(data.domain["iris"], StringVariable)
@@ -263,7 +263,7 @@ a
                 self.assertEqual(str(a), model.data(model.createIndex(i, 0), Qt.DisplayRole))
             # make conversions
             model.setData(model.createIndex(0, 1), "categorical", Qt.EditRole)
-            model.setData(model.createIndex(1, 1), "string", Qt.EditRole)
+            model.setData(model.createIndex(1, 1), "text", Qt.EditRole)
             model.setData(model.createIndex(2, 1), "numeric", Qt.EditRole)
             model.setData(model.createIndex(3, 1), "numeric", Qt.EditRole)
             model.setData(model.createIndex(6, 1), "numeric", Qt.EditRole)
