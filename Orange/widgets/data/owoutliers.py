@@ -170,7 +170,7 @@ class OWOutliers(widget.OWWidget):
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
         if self.data is not None and len(self.data) > 0:
-            if self.data.Y.ndim > 1:
+            if self.data.Y.ndim > 1 and self.data.Y.shape[1] > 1:
                 self.Error.multiclass_error()
             else:
                 inliers, outliers = self._get_outliers()
