@@ -170,6 +170,8 @@ class OWMDS(OWWidget):
         self._invalidated = False
         self.effective_matrix = None
         self._curve = None
+        self._primitive_metas = ()
+        self._data_metas = None
 
         self.variable_x = ContinuousVariable("mds-x")
         self.variable_y = ContinuousVariable("mds-y")
@@ -306,6 +308,13 @@ class OWMDS(OWWidget):
             self.openContext(data)
         else:
             self._invalidated = True
+        if data is not None:
+            self._primitive_metas = tuple(a for a in data.domain.metas if a.is_primitive())
+            keys = [k for k, a in enumerate(data.domain.metas) if a.is_primitive()]
+            self._data_metas = data.metas[:, keys]
+        else:
+            self._primitive_metas = ()
+            self._data_metas = None
 
     @Inputs.distances
     def set_disimilarity(self, matrix):
@@ -639,13 +648,16 @@ class OWMDS(OWWidget):
     def _setup_plot(self, new=False):
         emb_x, emb_y = self.embedding[:, 0], self.embedding[:, 1]
         coords = np.vstack((emb_x, emb_y)).T
-        attributes = () + self.data.domain.attributes + (self.variable_x, self.variable_y)
+        attributes = self.data.domain.attributes + (self.variable_x, self.variable_y) + \
+                     self._primitive_metas
         domain = Domain(attributes=attributes,
-                        class_vars=self.data.domain.class_vars,
-                        metas=self.data.domain.metas)
-        data = Table.from_numpy(domain, X=np.hstack((self.data.X, coords)),
-                                Y=self.data.Y,
-                                metas=self.data.metas)
+                        class_vars=self.data.domain.class_vars)
+        if self._data_metas is not None:
+            data_x = (self.data.X, coords, self._data_metas)
+        else:
+            data_x = (self.data.X, coords)
+        data = Table.from_numpy(domain, X=np.hstack(data_x),
+                                Y=self.data.Y)
         subset_data = data[self._subset_mask] if self._subset_mask is not None else None
         self.graph.new_data(data, subset_data=subset_data, new=new)
         self.graph.update_data(self.variable_x, self.variable_y, True)
