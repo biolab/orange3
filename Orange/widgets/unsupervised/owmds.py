@@ -341,6 +341,7 @@ class OWMDS(OWWidget):
         # invalidate the pen/brush when the subset is changed
         self._subset_mask = None  # type: Optional[np.ndarray]
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
+        self._invalidated = True
 
     def _clear(self):
         self._similar_pairs = None
@@ -359,6 +360,7 @@ class OWMDS(OWWidget):
         self.data = None
         self.effective_matrix = None
         self.embedding = None
+        self.init_attr_values()
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
