@@ -265,7 +265,7 @@ class TestDomainContextHandler(TestCase):
 
 class SimpleWidget:
     text = ContextSetting("", not_attribute=True)
-    with_metas = ContextSetting([])
+    with_metas = ContextSetting([], required=ContextSetting.OPTIONAL)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
         selected='selected')

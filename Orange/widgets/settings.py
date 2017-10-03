@@ -554,7 +554,7 @@ class ContextSetting(Setting):
     # something with the attributes. Large majority does, so this greatly
     # simplifies the declaration of settings in widget at no (visible)
     # cost to those settings that don't need it
-    def __init__(self, default, *, not_attribute=False, required=0,
+    def __init__(self, default, *, not_attribute=False, required=2,
                  exclude_attributes=False, exclude_metas=False, **data):
         super().__init__(default, **data)
         self.not_attribute = not_attribute
@@ -1052,6 +1052,8 @@ class DomainContextHandler(ContextHandler):
 
         if self._var_exists(setting, value, attrs, metas):
             return 1, 1
+        elif setting.required == setting.OPTIONAL:
+            return 0, 1
         else:
             raise IncompatibleContext()
 
