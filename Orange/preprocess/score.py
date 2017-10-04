@@ -21,7 +21,10 @@ __all__ = ["Chi2",
            "Gini",
            "ReliefF",
            "RReliefF",
-           "FCBF"]
+           "FCBF",
+           "MeanScorer",
+           "VarianceScorer",
+           "DispersionScorer"]
 
 
 class Scorer(_RefuseDataInConstructor, Reprable):
@@ -385,6 +388,86 @@ class RReliefF(Scorer):
                                       self.n_iterations, self.k_nearest,
                                       np.array([a.is_discrete for a in data.domain.attributes]),
                                       rstate))
+        if feature:
+            return weights[0]
+        return weights
+
+
+class UnsupervisedScorer(Scorer):
+    """
+    Simple unsupervised scorer for datasets without target variable.
+    """
+    feature_type = Variable
+
+    def __call__(self, data, feature=None):
+        if feature is not None:
+            f = data.domain[feature]
+            data = data.transform(Domain([f], data.domain.class_vars))
+
+        for pp in self.preprocessors:
+            data = pp(data)
+
+        for var in data.domain.attributes:
+            if not isinstance(var, self.feature_type):
+                raise ValueError(
+                    "{} cannot score {} variables."
+                    .format(self.friendly_name,
+                            self._friendly_vartype_name(type(var))))
+
+        return self.score_data(data, feature)
+
+
+class MeanScorer(UnsupervisedScorer):
+    """
+    Simple scorer returning mean of the features.
+    Return NA for non-continuos columns to enable mixtures of discrete and continuous variables.
+    """
+    supports_sparse_data = True
+    friendly_name = "Mean"
+
+    def score_data(self, data, feature):
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+        weights[conts] = data.X[:,conts].mean(axis = 0)
+
+        if feature:
+            return weights[0]
+        return weights
+
+
+class VarianceScorer(UnsupervisedScorer):
+    """
+    Simple scorer returning variance of the features.
+    """
+    supports_sparse_data = False
+    friendly_name = "Variance"
+
+    def score_data(self, data, feature):
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+        weights[conts] = np.var(data.X[:, conts], axis=0)
+
+        if feature:
+            return weights[0]
+        return weights
+
+
+class DispersionScorer(UnsupervisedScorer):
+    """
+    Simple scorer returning approximate dispersion (variance / mean) of the features.
+    """
+    supports_sparse_data = False
+    friendly_name = "Dispersion"
+
+    def score_data(self, data, feature):
+        weights = np.nan + np.zeros((len(data.domain.attributes)))
+        conts = np.array([a.is_continuous for a in data.domain.attributes])
+
+        means = data.X[:, conts].mean(axis = 0)
+        vars = np.var(data.X[:, conts], axis=0)
+        means[means == 0] = 1
+        weights[conts] = vars / means
+
         if feature:
             return weights[0]
         return weights

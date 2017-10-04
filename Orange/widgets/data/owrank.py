@@ -64,7 +64,13 @@ REG_SCORES = [
     ScoreMeta("Univariate Regression", "Univar. reg.", score.UnivariateLinearRegression, ProblemType.REGRESSION, True),
     ScoreMeta("RReliefF", "RReliefF", score.RReliefF, ProblemType.REGRESSION, True)
 ]
-SCORES = CLS_SCORES + REG_SCORES
+UNSUP_SCORES = [
+    ScoreMeta("Mean", "Mean", score.MeanScorer, ProblemType.UNSUPERVISED, False),
+    ScoreMeta("Variance", "Variance", score.VarianceScorer, ProblemType.UNSUPERVISED, False),
+    ScoreMeta("Dispersion", "Dispersion", score.DispersionScorer, ProblemType.UNSUPERVISED, False),
+]
+
+SCORES = CLS_SCORES + REG_SCORES + UNSUP_SCORES
 
 
 class TableView(QTableView):
@@ -226,6 +232,7 @@ class OWRank(OWWidget):
 
         for scoring_methods in (CLS_SCORES,
                                 REG_SCORES,
+                                UNSUP_SCORES,
                                 []):
             box = gui.vBox(None, "Scoring Methods" if scoring_methods else None)
             stacked.addWidget(box)
