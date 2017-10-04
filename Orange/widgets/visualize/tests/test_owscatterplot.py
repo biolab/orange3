@@ -339,6 +339,21 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         states = [state for state in vizrank.iterate_states(None)]
         self.assertIsNotNone(vizrank.compute_score(states[0]))
 
+    def test_auto_send_selection(self):
+        """
+        Scatter Plot automatically sends selection only when the checkbox Send automatically
+        is checked.
+        GH-2649
+        GH-2646
+        """
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.controls.auto_send_selection.setChecked(False)
+        self.assertEqual(False, self.widget.controls.auto_send_selection.isChecked())
+        self._select_data()
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.widget.controls.auto_send_selection.setChecked(True)
+        self.assertIsInstance(self.get_output(self.widget.Outputs.selected_data), Table)
 
 
 if __name__ == "__main__":
