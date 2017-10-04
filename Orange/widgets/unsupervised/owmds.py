@@ -42,6 +42,11 @@ class MDSInteractiveViewBox(InteractiveViewBox):
 class OWMDSGraph(OWScatterPlotGraph):
     jitter_size = settings.Setting(0)
 
+    def __init__(self, scatter_widget, parent=None, name="None", view_box=None):
+        super().__init__(scatter_widget, parent=parent, _=name, view_box=view_box)
+        for axis_loc in ["left", "bottom"]:
+            self.plot_widget.hideAxis(axis_loc)
+
     def update_data(self, attr_x, attr_y, reset_view=True):
         super().update_data(attr_x, attr_y, reset_view=reset_view)
         for axis in ["left", "bottom"]:
