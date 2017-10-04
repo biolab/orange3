@@ -217,7 +217,7 @@ class DomainEditor(QTableView):
     @staticmethod
     def _to_column(x, to_sparse, dtype=None):
         """Transform list of values to sparse/dense column array."""
-        x = np.array(x, dtype=dtype).reshape(-1, 1)
+        x = np.asarray(x, dtype=dtype).reshape(-1, 1)
         if to_sparse:
             x = sp.csc_matrix(x)
         return x
@@ -254,6 +254,22 @@ class DomainEditor(QTableView):
         places = [[], [], []]  # attributes, class_vars, metas
         cols = [[], [], []]  # Xcols, Ycols, Mcols
 
+        def numbers_are_round(var, col_data):
+            if type(var) == ContinuousVariable:
+                data = np.asarray(col_data.data)  # Works for dense and sparse
+                data = data[~np.isnan(data)]
+                return (data == data.astype(int)).all()
+            return False
+
+        # Exit early with original domain if the user didn't actually change anything
+        if all((name == orig_var.name and tpe == type(orig_var) and place == orig_plc)
+               for (name, tpe, place, _, _), (orig_var, orig_plc) in \
+                       zip(variables,
+                           chain(((at, Place.feature) for at in domain.attributes),
+                                 ((cl, Place.class_var) for cl in domain.class_vars),
+                                 ((mt, Place.meta) for mt in domain.metas)))):
+            return domain, [data.X, data.Y, data.metas]
+
         for (name, tpe, place, _, may_be_numeric), (orig_var, orig_plc) in \
                 zip(variables,
                         chain([(at, Place.feature) for at in domain.attributes],
@@ -265,9 +281,6 @@ class DomainEditor(QTableView):
             col_data = self._get_column(data, orig_var, orig_plc)
             is_sparse = sp.issparse(col_data)
 
-            cont_ints = type(orig_var) == ContinuousVariable and \
-                        all(x.is_integer() for x in self._iter_vals(col_data) if not np.isnan(x))
-
             if name == orig_var.name and tpe == type(orig_var):
                 var = orig_var
             elif tpe == type(orig_var):
@@ -276,9 +289,10 @@ class DomainEditor(QTableView):
                 var = orig_var
             elif tpe == DiscreteVariable:
                 values = list(str(i) for i in unique(col_data) if not self._is_missing(i))
+                round_numbers = numbers_are_round(orig_var, col_data)
                 col_data = [np.nan if self._is_missing(x) else values.index(str(x))
                             for x in self._iter_vals(col_data)]
-                if cont_ints:
+                if round_numbers:
                     values = [str(int(float(v))) for v in values]
                 var = tpe(name, values)
                 col_data = self._to_column(col_data, is_sparse)
@@ -288,7 +302,8 @@ class DomainEditor(QTableView):
                     col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
                                 for x in self._iter_vals(col_data)]
                 elif type(orig_var) == ContinuousVariable:
-                    col_data = [str(int(x)) if cont_ints else orig_var.repr_val(x)
+                    round_numbers = numbers_are_round(orig_var, col_data)
+                    col_data = [str(int(x)) if round_numbers else orig_var.repr_val(x)
                                 if not np.isnan(x) else ""
                                 for x in self._iter_vals(col_data)]
                 # don't obey sparsity for StringVariable since they are
