@@ -22,8 +22,6 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
-import pyqtgraph as pg
-
 import Orange.data
 from Orange.data.util import get_unique_names
 import Orange.distance
@@ -34,13 +32,14 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.graphicsscene import GraphicsScene
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
-from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils import itemmodels, apply_all
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.graphicstextlist import TextListWidget
 from Orange.widgets.utils.graphicslayoutitem import SimpleLayoutItem
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -180,7 +179,7 @@ class OWSilhouettePlot(widget.OWWidget):
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         self.scene = GraphicsScene(self)
-        self.view = StickyGraphicsView(self.scene)
+        self.view = StyledGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.mainArea.layout().addWidget(self.view)
@@ -570,6 +569,28 @@ class _SilhouettePlotTextListWidget(TextListWidget):
         return
 
 
+class StyledGraphicsView(StickyGraphicsView):
+    """
+    Propagate style and palette changes to the visualized scene.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ensurePolished()
+        if self.scene() is not None:
+            self.scene().setPalette(self.palette())
+
+    def setScene(self, scene):
+        super().setScene(scene)
+        if self.scene() is not None:
+            self.scene().setPalette(self.palette())
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange and \
+                self.scene() is not None and self.scene().parent() is self:
+            self.scene().setPalette(self.palette())
+        super().changeEvent(event)
+
+
 class SilhouettePlot(QGraphicsWidget):
     """
     A silhouette plot widget.
@@ -589,8 +610,8 @@ class SilhouettePlot(QGraphicsWidget):
         self.__pen = QPen(Qt.NoPen)
         self.__layout = QGraphicsGridLayout()
         self.__hoveredItem = None
-        self.__topScale = None     # type: Optional[pg.AxisItem]
-        self.__bottomScale = None  # type: Optional[pg.AxisItem]
+        self.__topScale = None     # type: Optional[AxisItem]
+        self.__bottomScale = None  # type: Optional[AxisItem]
         self.__layout.setColumnSpacing(0, 1.)
         self.setLayout(self.__layout)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -721,10 +742,8 @@ class SilhouettePlot(QGraphicsWidget):
 
         font = self.font()
         font.setPixelSize(self.__barHeight)
-        axispen = QPen(Qt.black)
-
-        ax = pg.AxisItem(parent=self, orientation="top", maxTickLength=7,
-                         pen=axispen)
+        foreground = self.palette().brush(QPalette.Foreground)
+        ax = AxisItem(parent=self, orientation="top", maxTickLength=7)
         ax.setRange(smin, smax)
         self.__topScale = ax
         layout = self.__layout
@@ -746,6 +765,8 @@ class SilhouettePlot(QGraphicsWidget):
                 label = QGraphicsSimpleTextItem(
                     "{} ({})".format(group.label, len(group.scores)), self
                 )
+                label.setBrush(foreground)
+                label.setPen(QPen(Qt.NoPen))
                 label.setRotation(-90)
                 item = SimpleLayoutItem(
                     label,
@@ -772,8 +793,7 @@ class SilhouettePlot(QGraphicsWidget):
 
             layout.addItem(textlist, i + 1, 3)
 
-        ax = pg.AxisItem(parent=self, orientation="bottom", maxTickLength=7,
-                         pen=axispen)
+        ax = AxisItem(parent=self, orientation="bottom", maxTickLength=7)
         ax.setRange(smin, smax)
         self.__bottomScale = ax
         layout.addItem(ax, len(self.__groups) + 1, 2)
@@ -799,6 +819,14 @@ class SilhouettePlot(QGraphicsWidget):
         for axis in self.__axisItems():
             axis.setMaximumWidth(mwidth)
             axis.setMinimumWidth(mwidth)
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.PaletteChange:
+            brush = self.palette().brush(QPalette.Text)
+            labels = [it for it in self.childItems()
+                      if isinstance(it, QGraphicsSimpleTextItem)]
+            apply_all(labels, lambda it: it.setBrush(brush))
+        super().changeEvent(event)
 
     def event(self, event: QEvent) -> bool:
         # Reimplemented
@@ -1122,11 +1150,8 @@ class Line(QGraphicsWidget):
 
     def paint(self, painter, option, widget=None):
         # type: (QPainter, QStyleOptionGraphicsItem, Optional[QWidget]) -> None
-        palette = option.palette  # type: QPalette
-        role = QPalette.WindowText
-        if widget is not None:
-            role = widget.foregroundRole()
-        color = palette.color(role)
+        palette = self.palette()  # type: QPalette
+        color = palette.color(QPalette.Foreground)
         painter.setPen(QPen(color, 1))
         rect = self.contentsRect()
         center = rect.center()
