@@ -326,20 +326,14 @@ class OWSilhouettePlot(widget.OWWidget):
 
             self.scene.addItem(silplot)
             self._update_annotations()
-
-            silplot.resize(silplot.effectiveSizeHint(Qt.PreferredSize))
             silplot.selectionChanged.connect(self.commit)
-
-            self.scene.setSceneRect(
-                QRectF(QPointF(0, 0),
-                       self._silplot.effectiveSizeHint(Qt.PreferredSize)))
+            silplot.layout().activate()
+            self._update_scene_rect()
+            silplot.geometryChanged.connect(self._update_scene_rect)
 
     def _update_bar_size(self):
         if self._silplot is not None:
             self._set_bar_height()
-            self.scene.setSceneRect(
-                QRectF(QPointF(0, 0),
-                       self._silplot.effectiveSizeHint(Qt.PreferredSize)))
 
     def _update_annotations(self):
         if 0 < self.annotation_var_idx < len(self.annotation_var_model):
@@ -359,6 +353,9 @@ class OWSilhouettePlot(widget.OWWidget):
                     [annot_var.str_val(value) for value in column])
             else:
                 self._silplot.setRowNames(None)
+
+    def _update_scene_rect(self):
+        self.scene.setSceneRect(self._silplot.geometry())
 
     def commit(self):
         """
@@ -541,6 +538,7 @@ class SilhouettePlot(QGraphicsWidget):
             self.__rowNamesVisible = visible
             for item in self.__textItems():
                 item.setVisible(visible)
+            self.updateGeometry()
 
     def rowNamesVisible(self):
         return self.__rowNamesVisible
