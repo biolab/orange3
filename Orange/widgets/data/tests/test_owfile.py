@@ -4,7 +4,7 @@ from os import path, remove
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
-
+import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -16,9 +16,10 @@ from AnyQt.QtWidgets import QComboBox
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
+from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
-from Orange.widgets.utils.filedialogs import dialog_formats
+from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
@@ -31,6 +32,35 @@ class AddedFormat(FileFormat):
 
     def read(self):
         pass
+
+
+class FailedSheetsFormat(FileFormat):
+    EXTENSIONS = ('.failed_sheet',)
+    DESCRIPTION = "Make a sheet function that fails"
+
+    def read(self):
+        pass
+
+    def sheets(self):
+        raise Exception("Not working")
+
+
+class WithWarnings(FileFormat):
+    EXTENSIONS = ('.with_warning',)
+    DESCRIPTION = "Warning"
+
+    def read(self):
+        warnings.warn("Some warning")
+        return Orange.data.Table("iris")
+
+
+class MyCustomTabReader(FileFormat):
+    EXTENSIONS = ('.tab',)
+    DESCRIPTION = "Always return iris"
+    PRIORITY = 999999
+
+    def read(self):
+        return Orange.data.Table("iris")
 
 
 class TestOWFile(WidgetTest):
@@ -208,6 +238,69 @@ a
             for i in range(4):
                 vartype_delegate.setEditorData(combo, idx(i))
                 self.assertEqual(combo.count(), counts[i])
+
+    def test_reader_custom_tab(self):
+        with named_file("", suffix=".tab") as fn:
+            qname = MyCustomTabReader.qualified_name()
+            reader = RecentPath(fn, None, None, file_format=qname)
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [reader]})
+            self.widget.load_data()
+        self.assertFalse(self.widget.Error.missing_reader.is_shown())
+        outdata = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(outdata), 150)  # loaded iris
+
+    def test_no_reader_extension(self):
+        with named_file("", suffix=".xyz_unknown") as fn:
+            no_reader = RecentPath(fn, None, None)
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [no_reader]})
+            self.widget.load_data()
+        self.assertTrue(self.widget.Error.missing_reader.is_shown())
+
+    def test_fail_sheets(self):
+        with named_file("", suffix=".failed_sheet") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Error.sheet_error.is_shown())
+
+    def test_with_warnings(self):
+        with named_file("", suffix=".with_warning") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Warning.load_warning.is_shown())
+
+    def test_fail(self):
+        with named_file("name\nc\n\nstring", suffix=".tab") as fn:
+            self.open_dataset(fn)
+        self.assertTrue(self.widget.Error.unknown.is_shown())
+
+    def test_read_format(self):
+        iris = Table("iris")
+
+        def open_iris_with_no_specific_format(a, b, c, filters, e):
+            return iris.__file__, filters.split(";;")[0]
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   open_iris_with_no_specific_format):
+            self.widget.browse_file()
+
+        self.assertIsNone(self.widget.recent_paths[0].file_format)
+
+        def open_iris_with_tab(a, b, c, filters, e):
+            return iris.__file__, format_filter(TabReader)
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   open_iris_with_tab):
+            self.widget.browse_file()
+
+        self.assertEqual(self.widget.recent_paths[0].file_format, "Orange.data.io.TabReader")
+
+    def test_no_specified_reader(self):
+        with named_file("", suffix=".tab") as fn:
+            no_class = RecentPath(fn, None, None, file_format="not.a.file.reader.class")
+            self.widget = self.create_widget(OWFile,
+                                             stored_settings={"recent_paths": [no_class]})
+            self.widget.load_data()
+        self.assertTrue(self.widget.Error.missing_reader.is_shown())
 
     def test_domain_edit_on_sparse_data(self):
         iris = Table("iris")

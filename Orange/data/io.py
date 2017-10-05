@@ -10,6 +10,7 @@ import warnings
 from ast import literal_eval
 from collections import OrderedDict, Counter
 from functools import lru_cache
+from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
 from numbers import Number
@@ -293,11 +294,18 @@ class FileFormatMeta(Registry):
         """
         Return ``{ext: `attr`, ...}`` dict if ``cls`` has `attr2`.
         If `attr` is '', return ``{ext: cls, ...}`` instead.
+
+        If there are multiple formats for an extension, return a format
+        with the lowest priority.
         """
-        return OrderedDict((ext, getattr(cls, attr, cls))
-                           for cls in cls.registry.values()
-                           if hasattr(cls, attr2)
-                           for ext in getattr(cls, 'EXTENSIONS', []))
+        formats = OrderedDict()
+        for format in sorted(cls.registry.values(), key=lambda x: x.PRIORITY):
+            if not hasattr(format, attr2):
+                continue
+            for ext in getattr(format, 'EXTENSIONS', []):
+                # Only adds if not yet registered
+                formats.setdefault(ext, getattr(format, attr, format))
+        return formats
 
     @property
     def names(cls):
@@ -343,7 +351,9 @@ class FileFormat(metaclass=FileFormatMeta):
     iterable (list (rows) of lists of values (cols)).
     """
 
-    PRIORITY = 10000  # Sort order in OWSave widget combo box, lower is better
+    # Priority when multiple formats support the same extension. Also
+    # the sort order in file open/save combo boxes. Lower is better.
+    PRIORITY = 10000
 
     def __init__(self, filename):
         """
@@ -761,6 +771,17 @@ class FileFormat(metaclass=FileFormatMeta):
                    var.repr_val(val) if isinstance(var, TimeVariable) else
                    val
                    for var, val in zip(vars, flatten(row))])
+
+    @classmethod
+    def qualified_name(cls):
+        return cls.__module__ + '.' + cls.__name__
+
+
+def class_from_qualified_name(format_name):
+    """ File format class from qualified name. """
+    elements = format_name.split(".")
+    m = import_module(".".join(elements[:-1]))
+    return getattr(m, elements[-1])
 
 
 class CSVReader(FileFormat):
