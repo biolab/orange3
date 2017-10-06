@@ -22,7 +22,7 @@ class OWTranspose(OWWidget):
     resizing_enabled = False
     want_main_area = False
 
-    settingsHandler = DomainContextHandler(metas_in_res=True)
+    settingsHandler = DomainContextHandler()
     feature_type = ContextSetting(0)
     feature_names_column = ContextSetting(None)
     auto_apply = Setting(True)

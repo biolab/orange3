@@ -201,10 +201,10 @@ class OWLinearProjection(widget.OWWidget):
 
     variable_state = settings.ContextSetting({})
 
-    attr_color = settings.ContextSetting(None, exclude_metas=False)
-    attr_label = settings.ContextSetting(None, exclude_metas=False)
-    attr_shape = settings.ContextSetting(None, exclude_metas=False)
-    attr_size = settings.ContextSetting(None, exclude_metas=False)
+    attr_color = settings.ContextSetting(None)
+    attr_label = settings.ContextSetting(None)
+    attr_shape = settings.ContextSetting(None)
+    attr_size = settings.ContextSetting(None)
 
     selection_indices = settings.Setting(None, schema_only=True)
 

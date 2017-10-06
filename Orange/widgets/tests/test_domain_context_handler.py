@@ -1,7 +1,9 @@
+import warnings
 from unittest import TestCase
 from unittest.mock import Mock
 from Orange.data import Domain, DiscreteVariable
 from Orange.data import ContinuousVariable
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import vartype
 
@@ -23,13 +25,12 @@ class TestDomainContextHandler(TestCase):
                      {'c1': Continuous, 'd1': Discrete,
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
-        self.handler = DomainContextHandler(metas_in_res=True)
+        self.handler = DomainContextHandler()
         self.handler.read_defaults = lambda: None
 
     def test_encode_domain_with_match_none(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_NONE,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_NONE)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
@@ -40,8 +41,7 @@ class TestDomainContextHandler(TestCase):
 
     def test_encode_domain_with_match_class(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_CLASS,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_CLASS)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
@@ -52,8 +52,7 @@ class TestDomainContextHandler(TestCase):
 
     def test_encode_domain_with_match_all(self):
         handler = DomainContextHandler(
-            match_values=DomainContextHandler.MATCH_VALUES_ALL,
-            metas_in_res=True)
+            match_values=DomainContextHandler.MATCH_VALUES_ALL)
 
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
@@ -62,26 +61,6 @@ class TestDomainContextHandler(TestCase):
                           'd2': list('def'), 'd3': list('ghi')})
         self.assertEqual(encoded_metas,
                          {'c2': Continuous, 'd4': list('jkl')})
-
-    def test_encode_domain_with_false_attributes_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=False,
-                                       metas_in_res=True)
-
-        encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
-
-        self.assertEqual(encoded_attributes, {})
-        self.assertEqual(encoded_metas, {'c2': Continuous, 'd4': Discrete})
-
-    def test_encode_domain_with_false_metas_in_res(self):
-        handler = DomainContextHandler(attributes_in_res=True,
-                                       metas_in_res=False)
-
-        encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
-
-        self.assertEqual(encoded_attributes,
-                         {'c1': Continuous, 'd1': Discrete,
-                          'd2': Discrete, 'd3': Discrete})
-        self.assertEqual(encoded_metas, {})
 
     def test_match_returns_2_on_perfect_match(self):
         context = Mock(
@@ -175,10 +154,6 @@ class TestDomainContextHandler(TestCase):
         context = widget.current_context
         self.assertEqual(context.attributes, self.args[1])
         self.assertEqual(context.metas, self.args[2])
-        self.assertSequenceEqual(context.ordered_domain,
-                                 (('c1', Continuous), ('d1', Discrete),
-                                  ('d2', Discrete), ('d3', Discrete),
-                                  ('c2', Continuous), ('d4', Discrete)))
 
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
@@ -204,10 +179,6 @@ class TestDomainContextHandler(TestCase):
         context = widget.current_context
         self.assertEqual(context.attributes, self.args[1])
         self.assertEqual(context.metas, self.args[2])
-        self.assertSequenceEqual(context.ordered_domain,
-                                 (('c1', Continuous), ('d1', Discrete),
-                                  ('d2', Discrete), ('d3', Discrete),
-                                  ('c2', Continuous), ('d4', Discrete)))
 
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
@@ -229,10 +200,6 @@ class TestDomainContextHandler(TestCase):
         context = widget.current_context
         self.assertEqual(context.attributes, self.args[1])
         self.assertEqual(context.metas, self.args[2])
-        self.assertSequenceEqual(context.ordered_domain,
-                                 (('c1', Continuous), ('d1', Discrete),
-                                  ('d2', Discrete), ('d3', Discrete),
-                                  ('c2', Continuous), ('d4', Discrete)))
         self.assertEqual(context.values['text'], ('u', -2))
 
     def test_filter_value(self):
@@ -279,6 +246,13 @@ class TestDomainContextHandler(TestCase):
                                           all_metas_domain)
         self.assertIs(val, var)
 
+    def test_backward_compatible_params(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            DomainContextHandler(metas_in_res=True)
+            self.assertIn(OrangeDeprecationWarning,
+                          [x.category for x in w])
+
     def create_context(self, domain, values):
         if not domain:
             domain = Domain([])
@@ -291,7 +265,7 @@ class TestDomainContextHandler(TestCase):
 
 class SimpleWidget:
     text = ContextSetting("", not_attribute=True)
-    with_metas = ContextSetting([], exclude_metas=False)
+    with_metas = ContextSetting([], required=ContextSetting.OPTIONAL)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
         selected='selected')

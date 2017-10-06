@@ -340,6 +340,58 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNotNone(vizrank.compute_score(states[0]))
 
 
+    def test_color_is_optional(self):
+        zoo = Table("zoo")
+        backbone, breathes, airborne, type = \
+            [zoo.domain[x] for x in ["backbone", "breathes", "airborne", "type"]]
+        default_x, default_y, default_color = \
+            zoo.domain[0], zoo.domain[1], zoo.domain.class_var
+        attr_x = self.widget.controls.attr_x
+        attr_y = self.widget.controls.attr_y
+        attr_color = self.widget.controls.graph.attr_color
+
+        # Send dataset, ensure defaults are what we expect them to be
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.assertEqual(attr_x.currentText(), default_x.name)
+        self.assertEqual(attr_y.currentText(), default_y.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+        # Select different values
+        simulate.combobox_activate_item(attr_x, backbone.name)
+        simulate.combobox_activate_item(attr_y, breathes.name)
+        simulate.combobox_activate_item(attr_color, airborne.name)
+
+        # Send compatible dataset, values should not change
+        zoo2 = zoo[:, (backbone, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo2)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), airborne.name)
+
+        # Send dataset without color variable
+        # x and y should remain, color reset to default
+        zoo3 = zoo[:, (backbone, breathes, type)]
+        self.send_signal(self.widget.Inputs.data, zoo3)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+
+        # Send dataset without x
+        # y and color should be the same as with zoo
+        zoo4 = zoo[:, (default_x, default_y, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo4)
+        self.assertEqual(attr_x.currentText(), default_x.name)
+        self.assertEqual(attr_y.currentText(), default_y.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+
+        # Send dataset compatible with zoo2 and zoo3
+        # Color should reset to one in zoo3, as it was used more
+        # recently
+        zoo5 = zoo[:, (default_x, backbone, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo5)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), type.name)
+
 
 if __name__ == "__main__":
     import unittest

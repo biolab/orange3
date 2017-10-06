@@ -41,6 +41,7 @@ from operator import itemgetter
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.utils import vartype
 
 log = logging.getLogger(__name__)
@@ -555,9 +556,8 @@ class ContextSetting(Setting):
     # something with the attributes. Large majority does, so this greatly
     # simplifies the declaration of settings in widget at no (visible)
     # cost to those settings that don't need it
-    # TODO: exclude_metas should be disabled by default
-    def __init__(self, default, not_attribute=False, required=0,
-                 exclude_attributes=False, exclude_metas=True, **data):
+    def __init__(self, default, *, not_attribute=False, required=2,
+                 exclude_attributes=False, exclude_metas=False, **data):
         super().__init__(default, **data)
         self.not_attribute = not_attribute
         self.exclude_attributes = exclude_attributes
@@ -879,27 +879,15 @@ class DomainContextHandler(ContextHandler):
 
     MATCH_VALUES_NONE, MATCH_VALUES_CLASS, MATCH_VALUES_ALL = range(3)
 
-    def __init__(self, max_vars_to_pickle=100, match_values=0,
-                 reservoir=None, attributes_in_res=True, metas_in_res=False):
+    def __init__(self, *, match_values=0, **kwargs):
         super().__init__()
-        self.max_vars_to_pickle = max_vars_to_pickle
         self.match_values = match_values
-        self.reservoir = reservoir
-        self.attributes_in_res = attributes_in_res
-        self.metas_in_res = metas_in_res
 
-        self.has_ordinary_attributes = attributes_in_res
-        self.has_meta_attributes = metas_in_res
-
-        self.known_settings = {}
-
-    def analyze_setting(self, prefix, setting):
-        super().analyze_setting(prefix, setting)
-        if isinstance(setting, ContextSetting) and not setting.not_attribute:
-            if not setting.exclude_attributes:
-                self.has_ordinary_attributes = True
-            if not setting.exclude_metas:
-                self.has_meta_attributes = True
+        for name in kwargs:
+            warnings.warn(
+                "{} is not a valid parameter for DomainContextHandler"
+                .format(name), OrangeDeprecationWarning
+            )
 
     def encode_domain(self, domain):
         """
@@ -910,19 +898,13 @@ class DomainContextHandler(ContextHandler):
 
         match = self.match_values
         encode = self.encode_variables
-        if self.has_ordinary_attributes:
-            if match == self.MATCH_VALUES_CLASS:
-                attributes = encode(domain.attributes, False)
-                attributes.update(encode(domain.class_vars, True))
-            else:
-                attributes = encode(domain, match == self.MATCH_VALUES_ALL)
+        if match == self.MATCH_VALUES_CLASS:
+            attributes = encode(domain.attributes, False)
+            attributes.update(encode(domain.class_vars, True))
         else:
-            attributes = {}
+            attributes = encode(domain, match == self.MATCH_VALUES_ALL)
 
-        if self.has_meta_attributes:
-            metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
-        else:
-            metas = {}
+        metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
 
         return attributes, metas
 
@@ -942,13 +924,6 @@ class DomainContextHandler(ContextHandler):
         context = super().new_context()
         context.attributes = attributes
         context.metas = metas
-        context.ordered_domain = []
-        if self.has_ordinary_attributes:
-            context.ordered_domain += [(attr.name, vartype(attr))
-                                       for attr in domain]
-        if self.has_meta_attributes:
-            context.ordered_domain += [(attr.name, vartype(attr))
-                                       for attr in domain.metas]
         return context
 
     def open_context(self, widget, domain):
@@ -986,7 +961,6 @@ class DomainContextHandler(ContextHandler):
             return
 
         widget.retrieveSpecificSettings()
-        excluded = set()
 
         for setting, data, instance in \
                 self.provider.traverse_settings(data=context.values, instance=widget):
@@ -997,26 +971,6 @@ class DomainContextHandler(ContextHandler):
             setattr(instance, setting.name, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
-
-            if isinstance(value, list):
-                try:
-                    excluded |= set(value)
-                except Exception:
-                    # Some values in the list were not hashable so they will
-                    # be included in the reservoir. Since no one uses
-                    # reservoirs anyway, pretend nothing happened.
-                    pass
-            else:
-                if setting.not_attribute:
-                    excluded.add(value)
-
-        if self.reservoir is not None:
-            get_attribute = lambda name: context.attributes.get(name, None)
-            get_meta = lambda name: context.metas.get(name, None)
-            ll = [a for a in context.ordered_domain if a not in excluded and (
-                self.attributes_in_res and get_attribute(a[0]) == a[1] or
-                self.metas_in_res and get_meta(a[0]) == a[1])]
-            setattr(widget, self.reservoir, ll)
 
     def encode_setting(self, context, setting, value):
         if isinstance(value, list):
@@ -1033,7 +987,7 @@ class DomainContextHandler(ContextHandler):
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
-            if 100 <= value[1]:
+            if value[1] >= 100:
                 if domain is None:
                     raise ValueError("Cannot decode variable without domain")
                 return domain[value[0]]
@@ -1047,7 +1001,7 @@ class DomainContextHandler(ContextHandler):
             return False
 
         attr_name, attr_type = value
-        if 100 <= attr_type:
+        if attr_type >= 100:
             attr_type -= 100
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
@@ -1108,6 +1062,8 @@ class DomainContextHandler(ContextHandler):
 
         if self._var_exists(setting, value, attrs, metas):
             return 1, 1
+        elif setting.required == setting.OPTIONAL:
+            return 0, 1
         else:
             raise IncompatibleContext()
 
