@@ -13,7 +13,7 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtWidgets import (
     QSizePolicy, QAction, QUndoCommand, QUndoStack, QGridLayout,
-    QFormLayout, QToolButton, QActionGroup
+    QFormLayout, QToolButton, QActionGroup, QMenu
 )
 
 from AnyQt.QtCore import Qt, QObject, QTimer, QSize, QSizeF, QPointF, QRectF
@@ -895,6 +895,11 @@ class OWPaintData(OWWidget):
         redo.setShortcut(QKeySequence.Redo)
 
         self.addActions([undo, redo])
+        mb = self.menuBar()
+        editm = mb.findChild(QMenu, "menu-edit")
+        if editm is not None:
+            editm.addActions([undo, redo])
+
         self.undo_stack.indexChanged.connect(lambda _: self.invalidate())
 
         gui.separator(tBox)

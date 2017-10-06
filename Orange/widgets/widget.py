@@ -12,8 +12,9 @@ from typing import Optional, Union
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
-    QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX
+    QSplitter, QSplitterHandle, QPushButton, QStatusBar,
+    QProgressBar, QAction, QFrame, QStyleOption, QMenuBar, QMenu,
+    QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
@@ -218,18 +219,81 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__was_shown = False
 
         self.__statusMessage = ""
-
-        self.__msgwidget = None
+        self.__info_ns = None  # type: Optional[StateInfo]
+        self.__msgwidget = None  # type: Optional[MessageOverlayWidget]
         self.__msgchoice = 0
+        self.__statusbar = None  # type: Optional[QStatusBar]
+        self.__statusbar_action = None  # type: Optional[QAction]
 
         self.__help_action = QAction(
             "Help", self, objectName="action-help", toolTip="Show help",
             enabled=False, visible=False, shortcut=QKeySequence(Qt.Key_F1)
         )
         self.addAction(self.__help_action)
-        self.__statusbar = None  # type: Optional[QStatusBar]
-        self.__statusbar_action = None  # type: Optional[QAction]
-        self.__info_ns = None  # type: Optional[StateInfo]
+
+        self.__report_action = QAction(
+            "Report", self, objectName="action-report", toolTip="Report",
+            enabled=False, visible=False,
+            shortcut=QKeySequence(Qt.AltModifier | Qt.Key_R)
+        )
+        if hasattr(self, "send_report"):
+            self.__report_action.triggered.connect(self.show_report)
+            self.__report_action.setEnabled(True)
+            self.__report_action.setVisible(True)
+
+        self.__save_image_action = QAction(
+            "Save Image", self, objectName="action-save-image",
+            toolTip="Save image",
+            shortcut=QKeySequence(Qt.AltModifier | Qt.Key_S),
+        )
+        self.__save_image_action.triggered.connect(self.save_graph)
+        self.__save_image_action.setEnabled(bool(self.graph_name))
+        self.__save_image_action.setVisible(bool(self.graph_name))
+
+        self.__copy_action = QAction(
+            "Copy to Clipboard", self, objectName="action-copy-to-clipboard",
+            shortcut=QKeySequence.Copy, enabled=False, visible=False
+        )
+        self.__copy_action.triggered.connect(self.copy_to_clipboard)
+        if bool(self.graph_name):
+            self.__copy_action.setEnabled(True)
+            self.__copy_action.setVisible(True)
+            self.__copy_action.setText("Copy Image to Clipboard")
+
+        # macOS Minimize action
+        self.__minimize_action = QAction(
+            "Minimize", self, shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_M)
+        )
+        self.__minimize_action.triggered.connect(self.showMinimized)
+        # macOS Zoom close window action
+        self.__close_action = QAction(
+            "Close", self, objectName="action-close-window",
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_W)
+        )
+        self.__close_action.triggered.connect(self.hide)
+
+        self.__menubar = mb = QMenuBar(self)
+        fileaction = mb.addMenu(_Menu("&File", mb, objectName="menu-file"))
+        fileaction.setVisible(False)
+        fileaction.menu().addSeparator()
+        fileaction.menu().addAction(self.__report_action)
+        fileaction.menu().addAction(self.__save_image_action)
+        editaction = mb.addMenu(_Menu("&Edit", mb, objectName="menu-edit"))
+        editaction.setVisible(False)
+
+        editaction.menu().addAction(self.__copy_action)
+        viewaction = mb.addMenu(_Menu("&View", mb, objectName="menu-view"))
+        viewaction.setVisible(False)
+        windowaction = mb.addMenu(_Menu("&Window", mb, objectName="menu-window"))
+        windowaction.setVisible(False)
+
+        if sys.platform == "darwin":
+            windowaction.menu().addAction(self.__close_action)
+            windowaction.menu().addAction(self.__minimize_action)
+            windowaction.menu().addSeparator()
+
+        helpaction = mb.addMenu(_Menu("&Help", mb, objectName="help-menu"))
+        helpaction.menu().addAction(self.__help_action)
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
@@ -237,26 +301,36 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__splitter = None
         if self.want_basic_layout:
             self.set_basic_layout()
+            self.layout().setMenuBar(mb)
 
-        sc = QShortcut(QKeySequence(Qt.ShiftModifier | Qt.Key_F1), self)
-        sc.activated.connect(self.__quicktip)
-
-        sc = QShortcut(QKeySequence.Copy, self)
-        sc.activated.connect(self.copy_to_clipboard)
+        self.__quick_help_action = QAction(
+            "Quick Help Tip", self, objectName="action-quick-help-tip",
+            shortcut=QKeySequence(Qt.ShiftModifier | Qt.Key_F1)
+        )
+        self.__quick_help_action.setEnabled(bool(self.UserAdviceMessages))
+        self.__quick_help_action.setVisible(bool(self.UserAdviceMessages))
+        self.__quick_help_action.triggered.connect(self.__quicktip)
+        helpaction.menu().addAction(self.__quick_help_action)
 
         if self.controlArea is not None:
             # Otherwise, the first control has focus
             self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
 
-        if self.__splitter is not None:
-            self.__splitter.handleClicked.connect(
-                self.__toggleControlArea
+        if self.__splitter is not None and self.__splitter.count() > 1:
+            action = QAction(
+                "Show Control Area", self, objectName="action-show-control-area",
+                shortcut=QKeySequence(Qt.ControlModifier | Qt.ShiftModifier |
+                                      Qt.Key_D),
+                checkable=True,
             )
-            sc = QShortcut(
-                QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_D),
-                self, autoRepeat=False)
-            sc.activated.connect(self.__toggleControlArea)
+            action.setChecked(True)
+            action.triggered[bool].connect(self.__setControlAreaVisible)
+            self.__splitter.handleClicked.connect(self.__toggleControlArea)
+            viewaction.menu().addAction(action)
         return self
+
+    def menuBar(self):
+        return self.__menubar
 
     # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
@@ -623,6 +697,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if self.__splitter is None or self.__splitter.count() < 2:
             return
         self.controlAreaVisible = visible
+        action = self.findChild(QAction, "action-show-control-area")
+        if action is not None:
+            action.setChecked(visible)
         splitter = self.__splitter  # type: QSplitter
         w = splitter.widget(0)
         # Set minimum width to 1 (overrides minimumSizeHint) when control area
@@ -947,16 +1024,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         else:
             QDialog.keyPressEvent(self, e)
 
-
     defaultKeyActions = {}
-
-    if sys.platform == "darwin":
-        defaultKeyActions = {
-            (Qt.ControlModifier, Qt.Key_M):
-                lambda self: self.showMaximized
-                if self.isMinimized() else self.showMinimized(),
-            (Qt.ControlModifier, Qt.Key_W):
-                lambda self: self.setVisible(not self.isVisible())}
 
     def setBlocking(self, state=True):
         """
@@ -1204,6 +1272,22 @@ class _StatusBar(QStatusBar):
         style.drawPrimitive(QStyle.PE_PanelStatusBar, opt, painter, None)
         # Do not draw any PE_FrameStatusBarItem frames.
         painter.end()
+
+
+class _Menu(QMenu):
+    """
+    A QMenu managing self-visibility in a parent menu or menu bar.
+
+    The menu is visible if it has at least one visible action.
+    """
+    def actionEvent(self, event):
+        super().actionEvent(event)
+        ma = self.menuAction()
+        if ma is not None:
+            ma.setVisible(
+                any(ac.isVisible() and not ac.isSeparator()
+                    for ac in self.actions())
+            )
 
 
 class Message(object):

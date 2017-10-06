@@ -14,10 +14,10 @@ import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
-    QStyle, QStylePainter, QStyledItemDelegate
+    QTableView, QHeaderView, QAbstractButton, QAction, QMenu, QApplication,
+    QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QClipboard
+from AnyQt.QtGui import QColor, QKeySequence, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
@@ -446,8 +446,14 @@ class OWDataTable(widget.OWWidget):
         self.tabs = gui.tabWidget(self.mainArea)
         self.tabs.currentChanged.connect(self._on_current_tab_changed)
 
-    def copy_to_clipboard(self):
-        self.copy()
+        copy = QAction(
+            "Copy Selection to Clipboard", self,
+            shortcut=QKeySequence.Copy, triggered=self.copy)
+        self.addAction(copy)
+        mb = self.menuBar()
+        editm = mb.findChild(QMenu, "menu-edit")
+        if editm is not None:
+            editm.addAction(copy)
 
     def sizeHint(self):
         return QSize(800, 500)
