@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 
 import sip
 
-from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy
+from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
@@ -514,8 +514,11 @@ class WidgetManager(QObject):
             node.set_progress(widget.progressBarValue)
 
         # Install a help shortcut on the widget
-        help_shortcut = QShortcut(QKeySequence("F1"), widget)
-        help_shortcut.activated.connect(self.__on_help_request)
+        help_action = widget.findChild(QAction, "action-help")
+        if help_action is not None:
+            help_action.setEnabled(True)
+            help_action.setVisible(True)
+            help_action.triggered.connect(self.__on_help_request)
 
         # Up shortcut (activate/open parent)
         up_shortcut = QShortcut(

@@ -3,6 +3,8 @@
 
 from unittest.mock import patch, MagicMock
 
+from AnyQt.QtWidgets import QAction
+
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
 from Orange.widgets.tests.base import WidgetTest
@@ -68,6 +70,12 @@ class WidgetTestCase(WidgetTest):
 
         widget2 = self.create_widget(MyWidget)
         self.assertEqual(widget2.field, 42)
+
+    def test_widget_help_action(self):
+        widget = self.create_widget(MyWidget)
+        help_action = widget.findChild(QAction, "action-help")
+        help_action.setEnabled(True)
+        help_action.setVisible(True)
 
 
 class WidgetMsgTestCase(WidgetTest):
