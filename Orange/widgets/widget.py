@@ -4,6 +4,7 @@
 import sys
 import os
 import types
+from operator import attrgetter
 
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
@@ -221,6 +222,12 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if self.controlArea is not None:
             # Otherwise, the first control has focus
             self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
+
+        if self.splitter is not None:
+            sc = QShortcut(
+                QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_D),
+                self)
+            sc.activated.connect(self.splitter.flip)
         return self
 
     # pylint: disable=super-init-not-called
@@ -248,17 +255,40 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
     class _Splitter(QSplitter):
+        controlAreaVisibilityChanged = Signal(int)
+
+        def _adjusted_size(self, size_method):
+            size = size_method(super())()
+            height = max((size_method(self.widget(i))().height()
+                          for i in range(self.count()) if self.sizes()[i]),
+                         default=0)
+            size.setHeight(height)
+            return size
+
+        def sizeHint(self):
+            return self._adjusted_size(attrgetter("sizeHint"))
+
+        def minimumSizeHint(self):
+            return self._adjusted_size(attrgetter("minimumSizeHint"))
+
         def createHandle(self):
             """Create splitter handle"""
             return self._Handle(
                 self.orientation(), self, cursor=Qt.PointingHandCursor)
 
+        def flip(self):
+            if self.count() == 1:  # Prevent hiding control area by shortcut
+                return
+            new_state = int(self.sizes()[0] == 0)
+            self.setSizes([new_state, 100000])
+            self.controlAreaVisibilityChanged.emit(new_state)
+            self.updateGeometry()
+
         class _Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
                 """Resize on left button"""
                 if event.button() == Qt.LeftButton:
-                    splitter = self.splitter()
-                    splitter.setSizes([int(splitter.sizes()[0] == 0), 100000])
+                    self.splitter().flip()
                 super().mouseReleaseEvent(event)
 
             def mouseMoveEvent(self, event):
