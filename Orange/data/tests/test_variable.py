@@ -443,6 +443,8 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
+        self.assertEqual(hash(abc), hash(abc1))
+        self.assertEqual(hash(abc1), hash(abc2))
 
         abcx = DiscreteVariable("abc", values="abc", ordered=True)
         self.assertNotEqual(abc, abcx)
@@ -469,6 +471,8 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
+        self.assertEqual(hash(abc), hash(abc1))
+        self.assertEqual(hash(abc1), hash(abc2))
 
     def test_proxy_has_separate_colors(self):
         abc = ContinuousVariable("abc")

@@ -311,7 +311,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         return hasattr(other, "master") and self.master is other.master
 
     def __hash__(self):
-        return super().__hash__()
+        if self.master is not self:
+            return hash(self.master)
+        else:
+            return super().__hash__()
 
     @classmethod
     def make(cls, name):
