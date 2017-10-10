@@ -474,7 +474,7 @@ class OWMDS(OWWidget):
         MDS points, `stress` is the current stress and `progress` a float
         ratio (0 <= progress <= 1)
 
-        If an existing update coroutine loop is already in palace it is
+        If an existing update coroutine loop is already in place it is
         interrupted (i.e. closed).
 
         .. note::
