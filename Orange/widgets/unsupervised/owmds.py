@@ -21,8 +21,9 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.canvas import report
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph, InteractiveViewBox
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME, get_unique_names)
+from Orange.widgets.utils.annotated_data import (
+    ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table, create_groups_table,
+    get_unique_names)
 
 
 def stress(X, distD):
@@ -474,7 +475,7 @@ class OWMDS(OWWidget):
         MDS points, `stress` is the current stress and `progress` a float
         ratio (0 <= progress <= 1)
 
-        If an existing update coroutine loop is already in palace it is
+        If an existing update coroutine loop is already in place it is
         interrupted (i.e. closed).
 
         .. note::
@@ -692,8 +693,12 @@ class OWMDS(OWWidget):
             selected = output[selection]
         else:
             selected = None
+        if self.graph.selection is not None and np.max(self.graph.selection) > 1:
+            annotated = create_groups_table(output, self.graph.selection)
+        else:
+            annotated = create_annotated_table(output, selection)
         self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(create_annotated_table(output, selection))
+        self.Outputs.annotated_data.send(annotated)
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
