@@ -260,8 +260,8 @@ class TestContinuousVariable(VariableTest):
         age1 = ContinuousVariable.make("age")
         age2 = ContinuousVariable.make("age")
         age3 = ContinuousVariable("age")
-        self.assertIs(age1, age2)
-        self.assertIsNot(age1, age3)
+        self.assertEqual(age1, age2)
+        self.assertNotEqual(age1, age3)
 
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
