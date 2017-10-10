@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
+from os.path import dirname
 
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
@@ -70,6 +71,10 @@ class TestOWFile(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWFile)  # type: OWFile
+        dataset_dirs.append(dirname(__file__))
+
+    def tearDown(self):
+        dataset_dirs.pop()
 
     def test_dragEnterEvent_accepts_urls(self):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
@@ -379,3 +384,21 @@ a
             self.widget.url_combo.activated.emit(0)
 
         mock_urlreader.assert_called_once_with('http://' + url)
+
+    def test_adds_origin(self):
+        self.open_dataset("origin1/images")
+        data1 = self.get_output(self.widget.Outputs.data)
+        attrs = data1.domain["image"].attributes
+        self.assertIn("origin", attrs)
+        self.assertIn("origin1", attrs["origin"])
+
+        self.open_dataset("origin2/images")
+        data2 = self.get_output(self.widget.Outputs.data)
+        attrs = data2.domain["image"].attributes
+        self.assertIn("origin", attrs)
+        self.assertIn("origin2", attrs["origin"])
+
+        # Make sure that variable in data1 still contains correct origin
+        attrs = data1.domain["image"].attributes
+        self.assertIn("origin", attrs)
+        self.assertIn("origin1", attrs["origin"])
