@@ -2,7 +2,7 @@ import sys
 from functools import partial
 
 from AnyQt.QtWidgets import (
-    QWidget, QListView, QLineEdit, QCompleter, QSizePolicy, QGridLayout)
+    QWidget, QListView, QLineEdit, QCompleter, QGridLayout)
 from AnyQt.QtGui import QDrag
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QModelIndex,
@@ -388,12 +388,9 @@ class OWSelectAttributes(widget.OWWidget):
 
         autobox = gui.auto_commit(None, self, "auto_commit", "Send")
         layout.addWidget(autobox, 3, 0, 1, 3)
-        reset = gui.button(None, self, "Reset", callback=self.reset)
-        autobox.layout().insertWidget(0, self.report_button)
-        autobox.layout().insertWidget(1, reset)
-        autobox.layout().insertSpacing(2, 10)
-        reset.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        self.report_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        reset = gui.button(None, self, "Reset", callback=self.reset, width=120)
+        autobox.layout().insertWidget(0, reset)
+        autobox.layout().insertStretch(1, 20)
 
         layout.setRowStretch(0, 4)
         layout.setRowStretch(1, 0)

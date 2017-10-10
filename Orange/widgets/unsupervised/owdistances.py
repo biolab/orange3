@@ -64,11 +64,7 @@ class OWDistances(OWWidget):
                                           items=[m[0] for m in METRICS],
                                           callback=self._invalidate
                                          )
-        box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              box=False, checkbox_label="Apply automatically")
-        box.layout().insertWidget(0, self.report_button)
-        box.layout().insertSpacing(1, 8)
-
+        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
     @Inputs.data

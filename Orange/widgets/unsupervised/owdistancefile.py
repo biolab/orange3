@@ -58,9 +58,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         gui.button(
             box, self, "Browse documentation data sets",
             callback=lambda: self.browse_file(True), autoDefault=False)
-        gui.rubber(box)
-        box.layout().addWidget(self.report_button)
-        self.report_button.setFixedWidth(170)
+        box.layout().addSpacing(200)
 
         self.set_file_list()
         QTimer.singleShot(0, self.open_file)
