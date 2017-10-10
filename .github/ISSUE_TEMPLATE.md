@@ -2,7 +2,7 @@
 This is an issue template. Please fill in the relevant details in the
 sections below.
 
-Wrap code and verbatim terminal window ouput into tripple backticks, see:
+Wrap code and verbatim terminal window output into triple backticks, see:
 https://help.github.com/articles/basic-writing-and-formatting-syntax/#quoting-code
 -->
 
