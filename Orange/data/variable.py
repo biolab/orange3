@@ -302,6 +302,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         """
         var = self.__class__()
         var.__dict__.update(self.__dict__)
+        var.attributes = dict(self.attributes)
         var.master = self.master
         return var
 
