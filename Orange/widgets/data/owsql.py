@@ -141,7 +141,7 @@ class OWSql(OWWidget):
         if index != -1:
             self.tablecombo.setCurrentIndex(index)
         # set up the callback to select_table in case of selection change
-        self.tablecombo.activated[int].connect(self.select_table) 
+        self.tablecombo.activated[int].connect(self.select_table)
 
         self.connectbutton = gui.button(
             tables, self, '↻', callback=self.connect)

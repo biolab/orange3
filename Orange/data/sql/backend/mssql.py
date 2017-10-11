@@ -124,9 +124,9 @@ class PymssqlBackend(Backend):
                     cur.execute(query)
                     result = cur.fetchone()
                     return int(self.EST_ROWS_RE.search(result[0]).group(1))
-                except AttributeError: 
-                    # This is to catch a bug from SQL Server 2012
-                    # (the StatementEstRows=float instead of an int)
+                except AttributeError:
+                # This is to catch a bug from SQL Server 2012
+                # resulting StatementEstRows is float instead of int
                     pass
                 finally:
                     cur.execute("SET SHOWPLAN_XML OFF")
