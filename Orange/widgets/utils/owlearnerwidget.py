@@ -269,11 +269,9 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             orientation=Qt.Horizontal, callback=self.learner_name_changed)
 
     def add_bottom_buttons(self):
-        box = gui.hBox(self.controlArea, True)
-        box.layout().addWidget(self.report_button)
-        gui.separator(box, 15)
-        self.apply_button = gui.auto_commit(box, self, 'auto_apply', '&Apply',
-                                            box=False, commit=self.apply)
+        self.apply_button = gui.auto_commit(
+            self.controlArea, self, 'auto_apply', '&Apply',
+            box=True, commit=self.apply)
 
     def send(self, signalName, value, id=None):
         # A subclass might still use the old syntax to send outputs

@@ -201,9 +201,10 @@ class OWImpute(OWWidget):
 
         box = gui.auto_commit(
             self.controlArea, self, "autocommit", "Apply",
-            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
-        box.layout().insertSpacing(0, 80)
-        box.layout().insertWidget(0, self.report_button)
+            orientation=Qt.Horizontal,
+            checkbox_label="Apply automatically")
+        box.button.setFixedWidth(180)
+        box.layout().insertStretch(0)
 
         self.data = None
         self.learner = None

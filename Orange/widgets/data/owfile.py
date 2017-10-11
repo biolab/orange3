@@ -204,8 +204,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             box, self, "Browse documentation data sets",
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
-        box.layout().addWidget(self.report_button)
-        self.report_button.setFixedWidth(170)
 
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)

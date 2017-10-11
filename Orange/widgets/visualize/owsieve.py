@@ -122,10 +122,6 @@ class OWSieveDiagram(OWWidget):
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        box = gui.hBox(self.mainArea)
-        box.layout().addWidget(self.graphButton)
-        box.layout().addWidget(self.report_button)
-
     def sizeHint(self):
         return QSize(450, 550)
 

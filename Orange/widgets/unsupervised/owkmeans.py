@@ -150,7 +150,6 @@ class OWKMeans(widget.OWWidget):
         self.apply_button = gui.auto_commit(
             self.buttonsArea, self, "auto_run", "Apply", box=None,
             commit=self.apply)
-        self.buttonsArea.layout().addWidget(self.report_button)
         gui.rubber(self.controlArea)
 
         box = gui.vBox(self.mainArea, box="Silhouette Scores")

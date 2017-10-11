@@ -74,9 +74,6 @@ class OWRuleViewer(widget.OWWidget):
         gui.checkBox(widget=bottom_box, master=self, value="compact_view",
                      label="Compact view", callback=self.on_update)
 
-        self.report_button.setFixedWidth(180)
-        bottom_box.layout().addWidget(self.report_button)
-
     @Inputs.data
     def set_data(self, data):
         self.data = data
