@@ -15,7 +15,7 @@ from Orange.data.util import SharedComputeValue
 from Orange.data import Variable
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
-from Orange.projection import SklProjector, Projection
+from Orange.projection import SklProjector, Projection, LinearCombinationSql
 from Orange.preprocess.score import LearnerScorer
 
 __all__ = ["PCA", "SparsePCA", "IncrementalPCA", "TruncatedSVD"]
@@ -68,20 +68,6 @@ class SparsePCA(SklProjector):
         return PCAModel(proj, self.domain)
 
 
-class _LinearCombination:
-    def __init__(self, attrs, weights, mean=None):
-        self.attrs = attrs
-        self.weights = weights
-        self.mean = mean
-
-    def __call__(self):
-        if self.mean is None:
-            return ' + '.join('{} * {}'.format(w, a.to_sql())
-                              for a, w in zip(self.attrs, self.weights))
-        return ' + '.join('{} * ({} - {})'.format(w, a.to_sql(), m, w)
-                          for a, m, w in zip(self.attrs, self.mean, self.weights))
-
-
 class _PCATransformDomain:
     """Computation common for all PCA variables."""
 
@@ -103,7 +89,7 @@ class PCAModel(Projection, metaclass=WrapperMeta):
             v = Orange.data.ContinuousVariable(
                 'PC%d' % (i + 1),
                 compute_value=Projector(self, i, pca_transform))
-            v.to_sql = _LinearCombination(
+            v.to_sql = LinearCombinationSql(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
             return v
