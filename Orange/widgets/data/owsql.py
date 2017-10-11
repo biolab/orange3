@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 import sys
 from collections import OrderedDict
@@ -30,7 +29,7 @@ class TableModels(PyListModel):
         return super().data(index, role)
 
 
-class BackendModels(PyListModel):
+class BackendModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
         if role == Qt.DisplayRole:
@@ -87,10 +86,10 @@ class OWSql(OWWidget):
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         box = gui.vBox(vbox)
 
-        self.backendmodels = BackendModels(Backend.available_backends())
+        self.backends = BackendModel(Backend.available_backends())
         self.backendcombo = QComboBox(box)
-        if len(self.backendmodels):
-            self.backendcombo.setModel(self.backendmodels)
+        if len(self.backends):
+            self.backendcombo.setModel(self.backends)
         else:
             self.Error.no_backends()
             box.setEnabled(False)
@@ -141,7 +140,8 @@ class OWSql(OWWidget):
         index = self.tablecombo.findText(str(self.table))
         if index != -1:
             self.tablecombo.setCurrentIndex(index)
-        self.tablecombo.activated[int].connect(self.select_table) # set up the callback to select_table in case of selection change
+        # set up the callback to select_table in case of selection change
+        self.tablecombo.activated[int].connect(self.select_table) 
 
         self.connectbutton = gui.button(
             tables, self, '↻', callback=self.connect)
@@ -226,7 +226,7 @@ class OWSql(OWWidget):
         try:
             if self.backendcombo.currentIndex() < 0:
                 return
-            backend = self.backendmodels[self.backendcombo.currentIndex()]
+            backend = self.backends[self.backendcombo.currentIndex()]
             self.backend = backend(dict(
                 host=self.host,
                 port=self.port,
@@ -258,8 +258,8 @@ class OWSql(OWWidget):
         self.tablemodels.append("Custom SQL")
         self.tablemodels.extend(self.backend.list_tables(self.schema))
 
+    # Called on tablecombo selection change:
     def select_table(self):
-        "Called on tablecombo selection change"
         curIdx = self.tablecombo.currentIndex()
         if self.tablecombo.itemText(curIdx) != "Custom SQL":
             self.custom_sql.setVisible(False)
@@ -360,7 +360,7 @@ class OWSql(OWWidget):
                 domain = s.get_domain(inspect_values=True)
                 self.Information.data_sampled()
             else:
-#
+
                 domain = table.get_domain(inspect_values=True)
             QApplication.restoreOverrideCursor()
             table.domain = domain

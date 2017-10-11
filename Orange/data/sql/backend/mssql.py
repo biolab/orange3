@@ -117,17 +117,26 @@ class PymssqlBackend(Backend):
     EST_ROWS_RE = re.compile(r'StatementEstRows="(\d+)"')
 
     def count_approx(self, query):
-        try:
-            with self.connection.cursor() as cur:
+        with self.connection.cursor() as cur:
+            try:
                 cur.execute("SET SHOWPLAN_XML ON")
                 try:
                     cur.execute(query)
                     result = cur.fetchone()
                     return int(self.EST_ROWS_RE.search(result[0]).group(1))
+                except AttributeError: 
+                    # This is to catch a bug from SQL Server 2012
+                    # (the StatementEstRows=float instead of an int)
+                    pass
                 finally:
                     cur.execute("SET SHOWPLAN_XML OFF")
-        except pymssql.Error as ex:
-            if "SHOWPLAN permission denied" in str(ex):
-                warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
-                return None
-            raise BackendError(str(ex)) from ex
+            except pymssql.Error as ex:
+                if "SHOWPLAN permission denied" in str(ex):
+                    warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
+                    return None
+                raise BackendError(str(ex)) from ex
+            # In case of an AttributeError, give a second chance:
+            # Use the long method for counting (or upgrade SQL Server version :) ) 
+            cur.execute("SELECT count(*) FROM ( {} ) x".format(query))
+            result = cur.fetchone()
+            return result[0]
