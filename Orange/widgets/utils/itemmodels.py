@@ -101,6 +101,7 @@ class AbstractSortTableModel(QAbstractTableModel):
             data = numpy.array([self.index(row, column).data()
                                 for row in range(self.rowCount())])
 
+        assert data.ndim == 1, 'Data should be 1-dimensional'
         data = data[self.mapToSourceRows(Ellipsis)]
         return data
 
