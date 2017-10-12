@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from Orange.data import Table
+from Orange.preprocess import Continuize
 from Orange.projection import FreeViz
 
 
@@ -72,3 +73,29 @@ class TestFreeviz(unittest.TestCase):
         FreeViz.init_radial(2)
         FreeViz.init_radial(3)
         FreeViz.init_random(2, 4, 5)
+
+    def test_transform_changed_domain(self):
+        """
+        1. Open data, apply some preprocessor, splits the data into two parts,
+        use FreeViz on the first part, and then transform the second part.
+
+        2. Open data, split into two parts, apply the same preprocessor and
+        FreeViz only on the first part, and then transform the second part.
+
+        The transformed second part in (1) and (2) has to be the same.
+        """
+        data = Table("titanic")[::10]
+        normalize = Continuize()
+        freeviz = FreeViz(maxiter=40)
+
+        # normalize all
+        ndata = normalize(data)
+        model = freeviz(ndata[:100])
+        result_1 = model(ndata[100:])
+
+        # normalize only the "training" part
+        ndata = normalize(data[:100])
+        model = freeviz(ndata)
+        result_2 = model(data[100:])
+
+        np.testing.assert_almost_equal(result_1.X, result_2.X)
