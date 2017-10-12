@@ -9,8 +9,7 @@ from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting, Setting
-from Orange.widgets.utils.listfilter import VariablesListItemView, slices, \
-    VariablesFilter
+from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
 from Orange.widgets.widget import Input, Output
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
@@ -108,15 +107,14 @@ class OWSelectAttributes(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Available Variables",
                        addToLayout=False)
 
-        variables_filter = VariablesFilter(parent=self, model=VariableListModel(enable_dnd=True))
-        box.layout().addWidget(variables_filter.filter_edit)
+        self.available_attrs = VariableListModel(enable_dnd=True)
+        filter_edit, self.available_attrs_view = variables_filter(
+            parent=self, model=self.available_attrs)
+        box.layout().addWidget(filter_edit)
 
         def dropcompleted(action):
             if action == Qt.MoveAction:
                 self.commit()
-
-        self.available_attrs_view = variables_filter.available_attrs_view
-        self.available_attrs = variables_filter.available_attrs
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
             partial(self.update_interface_state, self.available_attrs_view))

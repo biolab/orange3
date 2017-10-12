@@ -168,68 +168,68 @@ class CompleterNavigator(QObject):
             return False
 
 
-class VariablesFilter:
-    def __init__(self, parent=None, model=None):
-        self.original_completer_items = []
-        super().__init__()
-        self.filter_edit = QLineEdit()
-        self.filter_edit.setToolTip("Filter the list of available variables.")
-        if hasattr(self.filter_edit, "setPlaceholderText"):
-            self.filter_edit.setPlaceholderText("Filter")
-
-        self.completer = QCompleter()
-        self.completer.setCompletionMode(QCompleter.InlineCompletion)
-        self.completer_model = QStringListModel()
-        self.completer.setModel(self.completer_model)
-        self.completer.setModelSorting(
-            QCompleter.CaseSensitivelySortedModel)
-
-        self.filter_edit.setCompleter(self.completer)
-        self.completer_navigator = CompleterNavigator(parent)
-        self.filter_edit.installEventFilter(self.completer_navigator)
-
-        self.available_attrs = model
-        self.available_attrs_proxy = VariableFilterProxyModel()
-        self.available_attrs_proxy.setSourceModel(self.available_attrs)
-        self.available_attrs_view = VariablesListItemView(
-            acceptedType=Orange.data.Variable)
-        self.available_attrs_view.setModel(self.available_attrs_proxy)
-
-        aa = self.available_attrs
-        aa.dataChanged.connect(self.update_completer_model)
-        aa.rowsInserted.connect(self.update_completer_model)
-        aa.rowsRemoved.connect(self.update_completer_model)
-
-        self.filter_edit.textChanged.connect(self.update_completer_prefix)
-        self.filter_edit.textChanged.connect(
-            self.available_attrs_proxy.set_filter_string)
-
-    def update_completer_model(self, *_):
+def variables_filter(model, parent=None):
+    """
+    GUI components: ListView with a lineedit which works as a filter. One can write
+    a variable name in a edit box and possible matches are then shown in a listview.
+    """
+    def update_completer_model():
         """ This gets called when the model for available attributes changes
         through either drag/drop or the left/right button actions.
 
         """
-        vars = list(self.available_attrs)
-        items = [var.name for var in vars]
-        items += ["%s=%s" % item for v in vars for item in v.attributes.items()]
+        nonlocal original_completer_items
+        items = [var.name for var in model]
+        items += ["%s=%s" % item for v in model for item in v.attributes.items()]
 
         new = sorted(set(items))
-        if new != self.original_completer_items:
-            self.original_completer_items = new
-            self.completer_model.setStringList(self.original_completer_items)
+        if new != original_completer_items:
+            original_completer_items = new
+            completer_model.setStringList(original_completer_items)
 
-    def update_completer_prefix(self, filter):
+    def update_completer_prefix():
         """ Prefixes all items in the completer model with the current
         already done completion to enable the completion of multiple keywords.
         """
-        prefix = str(self.completer.completionPrefix())
+        nonlocal original_completer_items
+        prefix = str(completer.completionPrefix())
         if not prefix.endswith(" ") and " " in prefix:
             prefix, _ = prefix.rsplit(" ", 1)
             items = [prefix + " " + item
-                     for item in self.original_completer_items]
+                     for item in original_completer_items]
         else:
-            items = self.original_completer_items
-        old = list(map(str, self.completer_model.stringList()))
+            items = original_completer_items
+        old = list(map(str, completer_model.stringList()))
 
         if set(old) != set(items):
-            self.completer_model.setStringList(items)
+            completer_model.setStringList(items)
+
+    original_completer_items = []
+
+    filter_edit = QLineEdit()
+    filter_edit.setToolTip("Filter the list of available variables.")
+    if hasattr(filter_edit, "setPlaceholderText"):
+        filter_edit.setPlaceholderText("Filter")
+
+    completer_model = QStringListModel()
+    completer = QCompleter(completer_model)
+    completer.setCompletionMode(QCompleter.InlineCompletion)
+    completer.setModelSorting(QCompleter.CaseSensitivelySortedModel)
+
+    filter_edit.setCompleter(completer)
+    completer_navigator = CompleterNavigator(parent)
+    filter_edit.installEventFilter(completer_navigator)
+
+    proxy = VariableFilterProxyModel()
+    proxy.setSourceModel(model)
+    view = VariablesListItemView(acceptedType=Orange.data.Variable)
+    view.setModel(proxy)
+
+    model.dataChanged.connect(update_completer_model)
+    model.rowsInserted.connect(update_completer_model)
+    model.rowsRemoved.connect(update_completer_model)
+
+    filter_edit.textChanged.connect(update_completer_prefix)
+    filter_edit.textChanged.connect(proxy.set_filter_string)
+
+    return filter_edit, view
