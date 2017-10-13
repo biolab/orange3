@@ -425,7 +425,7 @@ class OWScatterPlot(OWWidget):
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def selection_changed(self):
-        self.send_data()
+        self.commit()
 
     def send_data(self):
         selected = None
