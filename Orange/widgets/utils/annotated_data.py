@@ -1,4 +1,5 @@
 import re
+from itertools import chain
 
 import numpy as np
 from Orange.data import Domain, DiscreteVariable
@@ -52,6 +53,11 @@ def get_next_name(names, name):
     :param name: str
     :return: str
     """
+    if isinstance(names, Domain):
+        names = [
+            var.name
+            for var in chain(names.attributes, names.class_vars, names.metas)
+        ]
     indexes = get_indices(names, name)
     if name not in names and not indexes:
         return name
