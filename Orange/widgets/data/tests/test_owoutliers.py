@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table
 from Orange.widgets.data.owoutliers import OWOutliers
 from Orange.widgets.tests.base import WidgetTest
 
@@ -24,20 +24,6 @@ class TestOWOutliers(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output("Data"))
-
-    def test_multiclass(self):
-        """Check widget for multiclass dataset"""
-        attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        class_vars = [DiscreteVariable("cls", ["a", "b", "c"]),
-                      DiscreteVariable("cls", ["aa", "bb", "cc"])]
-        domain = Domain(attrs, class_vars)
-        X = np.arange(12).reshape(6, 2)
-        Y = np.array([[0, 1], [2, 1], [0, 2], [1, 1], [1, 2], [2, 0]])
-        data = Table(domain, X, Y)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.assertTrue(self.widget.Error.multiclass_error.is_shown())
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Error.multiclass_error.is_shown())
 
     def test_memory_error(self):
         """
