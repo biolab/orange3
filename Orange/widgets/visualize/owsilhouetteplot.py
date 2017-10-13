@@ -5,18 +5,17 @@ import enum
 from xml.sax.saxutils import escape
 from types import SimpleNamespace as namespace
 
-if sys.version_info > (3, 5):
-    from typing import Optional
+from typing import Optional
 
 import numpy as np
 import sklearn.metrics
 
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
-    QGraphicsProxyWidget, QGraphicsItemGroup, QGraphicsSimpleTextItem,
-    QGraphicsRectItem, QFrame, QSizePolicy
+    QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
+    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX
 )
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -327,20 +326,14 @@ class OWSilhouettePlot(widget.OWWidget):
 
             self.scene.addItem(silplot)
             self._update_annotations()
-
-            silplot.resize(silplot.effectiveSizeHint(Qt.PreferredSize))
             silplot.selectionChanged.connect(self.commit)
-
-            self.scene.setSceneRect(
-                QRectF(QPointF(0, 0),
-                       self._silplot.effectiveSizeHint(Qt.PreferredSize)))
+            silplot.layout().activate()
+            self._update_scene_rect()
+            silplot.geometryChanged.connect(self._update_scene_rect)
 
     def _update_bar_size(self):
         if self._silplot is not None:
             self._set_bar_height()
-            self.scene.setSceneRect(
-                QRectF(QPointF(0, 0),
-                       self._silplot.effectiveSizeHint(Qt.PreferredSize)))
 
     def _update_annotations(self):
         if 0 < self.annotation_var_idx < len(self.annotation_var_model):
@@ -360,6 +353,9 @@ class OWSilhouettePlot(widget.OWWidget):
                     [annot_var.str_val(value) for value in column])
             else:
                 self._silplot.setRowNames(None)
+
+    def _update_scene_rect(self):
+        self.scene.setSceneRect(self._silplot.geometry())
 
     def commit(self):
         """
@@ -542,6 +538,7 @@ class SilhouettePlot(QGraphicsWidget):
             self.__rowNamesVisible = visible
             for item in self.__textItems():
                 item.setVisible(visible)
+            self.updateGeometry()
 
     def rowNamesVisible(self):
         return self.__rowNamesVisible
@@ -608,10 +605,7 @@ class SilhouettePlot(QGraphicsWidget):
             self.layout().addItem(silhouettegroup, i + 1, 2)
 
             if group.label:
-                line = QFrame(frameShape=QFrame.VLine)
-                proxy = QGraphicsProxyWidget(self)
-                proxy.setWidget(line)
-                self.layout().addItem(proxy, i + 1, 1)
+                self.layout().addItem(Line(orientation=Qt.Vertical), i + 1, 1)
                 label = QGraphicsSimpleTextItem(self)
                 label.setText("{} ({})".format(escape(group.label),
                                                len(group.scores)))
@@ -891,6 +885,75 @@ class SilhouettePlot(QGraphicsWidget):
 
     def selection(self):
         return np.asarray(self.__selection, dtype=int)
+
+
+class Line(QGraphicsWidget):
+    """
+    A line separator graphics widget
+    """
+    def __init__(self, parent=None, orientation=Qt.Horizontal, **kwargs):
+        sizePolicy = kwargs.pop("sizePolicy", None)
+        super().__init__(None, **kwargs)
+        self.__orientation = Qt.Horizontal
+        if sizePolicy is None:
+            sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            sizePolicy.setControlType(QSizePolicy.Frame)
+            self.setSizePolicy(sizePolicy)
+        else:
+            self.setSizePolicy(sizePolicy)
+
+        self.setOrientation(orientation)
+
+        if parent is not None:
+            self.setParentItem(parent)
+
+    def setOrientation(self, orientation):
+        if self.__orientation != orientation:
+            self.__orientation = orientation
+            sp = self.sizePolicy()
+            if orientation == Qt.Vertical:
+                sp.setVerticalPolicy(QSizePolicy.Expanding)
+                sp.setHorizontalPolicy(QSizePolicy.Fixed)
+            else:
+                sp.setVerticalPolicy(QSizePolicy.Fixed)
+                sp.setHorizontalPolicy(QSizePolicy.Expanding)
+            self.setSizePolicy(sp)
+            self.updateGeometry()
+
+    def sizeHint(self, which, constraint=QRectF()):
+        # type: (Qt.SizeHint, QSizeF) -> QSizeF
+        pw = 1.
+        sh = QSizeF()
+        if which == Qt.MinimumSize:
+            sh = QSizeF(pw, pw)
+        elif which == Qt.PreferredSize:
+            sh = QSizeF(pw, 30.)
+        elif which == Qt.MaximumSize:
+            sh = QSizeF(pw, QWIDGETSIZE_MAX)
+
+        if self.__orientation == Qt.Horizontal:
+            sh = sh.transposed()
+        return sh
+
+    def paint(self, painter, option, widget=None):
+        # type: (QPainter, QStyleOptionGraphicsItem, Optional[QWidget]) -> None
+        palette = option.palette  # type: QPalette
+        role = QPalette.WindowText
+        if widget is not None:
+            role = widget.foregroundRole()
+        color = palette.color(role)
+        painter.setPen(QPen(color, 1))
+        rect = self.contentsRect()
+        center = rect.center()
+        if self.__orientation == Qt.Vertical:
+            p1 = QPointF(center.x(), rect.top())
+            p2 = QPointF(center.x(), rect.bottom())
+        elif self.__orientation == Qt.Horizontal:
+            p1 = QPointF(rect.left(), center.y())
+            p2 = QPointF(rect.right(), center.y())
+        else:
+            assert False
+        painter.drawLine(p1, p2)
 
 
 class BarPlotItem(QGraphicsWidget):
