@@ -6,7 +6,21 @@ from Orange.base import _ReprableWithPreprocessors
 from Orange.misc.wrapper_meta import WrapperMeta
 import Orange.preprocess
 
-__all__ = ["Projector", "Projection", "SklProjector"]
+__all__ = ["LinearCombinationSql", "Projector", "Projection", "SklProjector"]
+
+
+class LinearCombinationSql:
+    def __init__(self, attrs, weights, mean=None):
+        self.attrs = attrs
+        self.weights = weights
+        self.mean = mean
+
+    def __call__(self):
+        if self.mean is None:
+            return ' + '.join('{} * {}'.format(w, a.to_sql())
+                              for a, w in zip(self.attrs, self.weights))
+        return ' + '.join('{} * ({} - {})'.format(w, a.to_sql(), m, w)
+                          for a, m, w in zip(self.attrs, self.mean, self.weights))
 
 
 class Projector(_ReprableWithPreprocessors):
