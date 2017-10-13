@@ -49,7 +49,7 @@ class TestSqlTable(PostgresTest):
     def test_make_attributes(self):
         table1 = SqlTable(self.conn, self.iris)
         table2 = SqlTable(self.conn, self.iris)
-        self.assertIs(table1.domain[0], table2.domain[0])
+        self.assertEqual(table1.domain[0], table2.domain[0])
 
     def test_len(self):
         with self.sql_table_from_data(zip(self.float_variable(26))) as table:

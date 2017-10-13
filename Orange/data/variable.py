@@ -302,6 +302,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         """
         var = self.__class__()
         var.__dict__.update(self.__dict__)
+        var.attributes = dict(self.attributes)
         var.master = self.master
         return var
 
@@ -310,7 +311,10 @@ class Variable(Reprable, metaclass=VariableMeta):
         return hasattr(other, "master") and self.master is other.master
 
     def __hash__(self):
-        return super().__hash__()
+        if self.master is not self:
+            return hash(self.master)
+        else:
+            return super().__hash__()
 
     @classmethod
     def make(cls, name):
@@ -320,7 +324,8 @@ class Variable(Reprable, metaclass=VariableMeta):
         """
         if not name:
             raise ValueError("Variables without names cannot be stored or made")
-        return cls._all_vars.get(name) or cls(name)
+        var = cls._all_vars.get(name) or cls(name)
+        return var.make_proxy()
 
     @classmethod
     def _clear_cache(cls):
@@ -420,7 +425,13 @@ class Variable(Reprable, metaclass=VariableMeta):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
 
-        return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
+        # Use make to unpickle variables.
+        # "master" attribute is removed from the dict since make will point
+        # it to the correct variable. If we did not remove it, the (pickled)
+        # value would replace the one set by make.
+        __dict__ = dict(self.__dict__)
+        __dict__.pop("master", None)
+        return make_variable, (self.__class__, self._compute_value, self.name), __dict__
 
     def copy(self, compute_value):
         var = type(self)(self.name, compute_value=compute_value)

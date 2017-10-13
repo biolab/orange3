@@ -130,4 +130,4 @@ class TestOWPCA(WidgetTest):
         data = Table("iris.tab")
         self.widget.set_data(data)
         ndata = Table("iris.tab")
-        self.assertIs(data.domain[0], ndata.domain[0])
+        self.assertEqual(data.domain[0], ndata.domain[0])
