@@ -149,6 +149,7 @@ class OWOutliers(widget.OWWidget):
         except ValueError:
             self.Error.singular_cov()
             self.in_out_info_label.setText(self.in_out_info_default)
+            return None, None
         except MemoryError:
             self.Error.memory_error()
             return None, None
