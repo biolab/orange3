@@ -107,13 +107,14 @@ class TestVariable(unittest.TestCase):
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
 
-
     def test_strange_eq(self):
         a = ContinuousVariable()
         b = ContinuousVariable()
         self.assertEqual(a, a)
         self.assertNotEqual(a, b)
         self.assertNotEqual(a, "somestring")
+        # It the next assert ever fails (randomly) blame @janezd
+        self.assertNotEqual(hash(a), hash(b))
 
 
 def variabletest(varcls):
