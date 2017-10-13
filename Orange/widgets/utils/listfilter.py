@@ -208,8 +208,7 @@ def variables_filter(model, parent=None):
 
     filter_edit = QLineEdit()
     filter_edit.setToolTip("Filter the list of available variables.")
-    if hasattr(filter_edit, "setPlaceholderText"):
-        filter_edit.setPlaceholderText("Filter")
+    filter_edit.setPlaceholderText("Filter")
 
     completer_model = QStringListModel()
     completer = QCompleter(completer_model)
