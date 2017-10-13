@@ -2,6 +2,7 @@ import sklearn.covariance as skl_covariance
 
 from Orange.base import SklLearner, SklModel
 from Orange.data import Table
+from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute
 
 __all__ = ["EllipticEnvelopeLearner"]
 
@@ -27,6 +28,7 @@ class EllipticEnvelopeClassifier(SklModel):
 class EllipticEnvelopeLearner(SklLearner):
     __wraps__ = skl_covariance.EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
+    preprocessors = [Continuize(), RemoveNaNColumns(), SklImpute()]
 
     def __init__(self, store_precision=True, assume_centered=False,
                  support_fraction=None, contamination=0.1,

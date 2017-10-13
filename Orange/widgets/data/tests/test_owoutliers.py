@@ -37,3 +37,11 @@ class TestOWOutliers(WidgetTest):
             side_effect=MemoryError):
             self.send_signal("Data", data)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
+
+    def test_nans(self):
+        """Widget does not crash with nans"""
+        a = np.arange(20, dtype=float).reshape(4, 5)
+        a[0, 0] = np.nan
+        data = Table(a)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIsNot(self.get_output(self.widget.Outputs.inliers), None)
