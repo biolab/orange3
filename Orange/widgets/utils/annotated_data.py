@@ -103,19 +103,22 @@ def create_annotated_table(data, selected_indices):
     return table
 
 
-def create_groups_table(data, selection):
+def create_groups_table(data, selection,
+                        include_unselected=True,
+                        var_name=ANNOTATED_DATA_FEATURE_NAME):
     if data is None:
         return None
-    names = [var.name for var in data.domain.variables + data.domain.metas]
-    name = get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
-    metas = data.domain.metas + (
-        DiscreteVariable(
-            name,
-            ["Unselected"] + ["G{}".format(i + 1)
-                              for i in range(np.max(selection))]),
-    )
+    values = ["G{}".format(i + 1) for i in range(np.max(selection))]
+    if include_unselected:
+        values.insert(0, "Unselected")
+    else:
+        mask = np.flatnonzero(selection)
+        data = data[mask]
+        selection = selection[mask] - 1
+
+    var_name = get_next_name(data.domain, var_name)
+    metas = data.domain.metas + (DiscreteVariable(var_name, values), )
     domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
     table = data.transform(domain)
-    table.metas[:, len(data.domain.metas):] = \
-        selection.reshape(len(data), 1)
+    table.metas[:, len(data.domain.metas):] = selection.reshape(len(data), 1)
     return table

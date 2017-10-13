@@ -21,9 +21,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME,
-                                                 create_groups_table)
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME)
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
@@ -428,25 +427,26 @@ class OWScatterPlot(OWWidget):
         self.commit()
 
     def send_data(self):
-        selected = None
-        selection = None
         # TODO: Implement selection for sql data
+        def _get_selected():
+            if not len(selection):
+                return None
+            return create_groups_table(data, graph.selection, False, "Group")
+
+        def _get_annotated():
+            if graph.selection is not None and np.max(graph.selection) > 1:
+                return create_groups_table(data, graph.selection)
+            else:
+                return create_annotated_table(data, selection)
+
         graph = self.graph
-        if isinstance(self.data, SqlTable):
-            selected = self.data
-        elif self.data is not None:
-            selection = graph.get_selection()
-            if len(selection) > 0:
-                selected = self.data[selection]
-        if graph.selection is not None and np.max(graph.selection) > 1:
-            annotated = create_groups_table(self.data, graph.selection)
-        else:
-            annotated = create_annotated_table(self.data, selection)
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
+        data = self.data
+        selection = graph.get_selection()
+        self.Outputs.annotated_data.send(_get_annotated())
+        self.Outputs.selected_data.send(_get_selected())
 
         # Store current selection in a setting that is stored in workflow
-        if selection is not None and len(selection):
+        if len(selection):
             self.selection_group = list(zip(selection, graph.selection[selection]))
         else:
             self.selection_group = None
