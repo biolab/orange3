@@ -385,13 +385,17 @@ class InteractiveViewBox(ViewBox):
         self.tag_history()
 
     def tag_history(self):
-        #add current view to history if it differs from the last view
+        # add current view to history if it differs from the last view
         if self.axHistory:
             currentview = self.viewRect()
             lastview = self.axHistory[self.axHistoryPointer]
             inters = currentview & lastview
             united = currentview.united(lastview)
-            if inters.width()*inters.height()/(united.width()*united.height()) > 0.95:
+            divide = united.width() * united.height()
+            if divide == 0 or np.isinf(divide):
+                self.graph.reset_button_clicked()
+                return
+            if inters.width() * inters.height() / divide > 0.95:
                 return
         self.axHistoryPointer += 1
         self.axHistory = self.axHistory[:self.axHistoryPointer] + \
