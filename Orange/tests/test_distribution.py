@@ -165,13 +165,13 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         disc = distribution.Discrete(d, "type")
         self.assertEqual(str(disc.modus()), "mammal")
 
-    def test_random(self):
-        d = data.Table("zoo")
-        disc = distribution.Discrete(d, "type")
-        ans = set()
-        for i in range(1000):
-            ans.add(int(disc.random()))
-        self.assertEqual(ans, set(range(len(d.domain.class_var.values))))
+    def test_sample(self):
+        ans = self.num.sample((500, 2), replace=True)
+        np.testing.assert_equal(np.unique(ans), [0, 1, 2])
+
+        # Check that samping a single value works too
+        self.assertIn(self.num.sample(), [0, 1, 2])
+
 
 
 class Distribution_ContinuousTestCase(unittest.TestCase):
@@ -276,7 +276,7 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc = distribution.Continuous(d, "petal length")
         ans = set()
         for i in range(1000):
-            v = disc.random()
+            v = disc.sample()
             self.assertIn(v, self.freqs)
             ans.add(v)
         self.assertGreater(len(ans), 10)
