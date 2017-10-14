@@ -1,43 +1,39 @@
-import math
 import numpy as np
+
 from Orange import data
 
 
-def _get_variable(variable, dat, attr_name,
-                  expected_type=None, expected_name=""):
+def _get_variable(variable, dat, attr_name, expected_type=None, expected_name=""):
     failed = False
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
-            raise ValueError("variable does not match the variable"
-                             "in the data")
+            raise ValueError("variable does not match the variable in the data")
     elif hasattr(dat, "domain"):
         variable = dat.domain[variable]
     elif hasattr(dat, attr_name):
         variable = dat.variable
     else:
         failed = True
-    if failed or (expected_type is not None and
-                  not isinstance(variable, expected_type)):
+    if failed or (expected_type is not None and not isinstance(variable, expected_type)):
         if not expected_type or isinstance(variable, data.Variable):
-            raise ValueError(
-                "expected %s variable not %s" % (expected_name, variable))
+            raise ValueError("expected %s variable not %s" % (expected_name, variable))
         else:
-            raise ValueError("expected %s, not '%s'" %
-                             (expected_type.__name__, type(variable).__name__))
+            raise ValueError("expected %s, not '%s'" % (
+                expected_type.__name__, type(variable).__name__))
     return variable
 
 
-def create_discrete(cls, *args):
+def _create_discrete(cls, *args):
     return cls(*args)
 
 
 class Discrete(np.ndarray):
-    def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None, unknown_rows=None):
+    def __new__(cls, dat=None, col_variable=None, row_variable=None,
+                unknowns=None, unknown_rows=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                raise TypeError("incompatible arguments (data storage and 'unknowns'")
             return cls.from_data(dat, col_variable, row_variable)
 
         if row_variable is not None:
@@ -60,24 +56,20 @@ class Discrete(np.ndarray):
             self.unknown_rows = unknown_rows or 0
         else:
             self[...] = dat
-            self.unknowns = (unknowns if unknowns is not None
-                             else getattr(dat, "unknowns", 0))
+            self.unknowns = unknowns if unknowns is not None else getattr(dat, "unknowns", 0)
             self.unknown_rows = unknown_rows if unknown_rows is not None else 0
         return self
-
 
     @classmethod
     def from_data(cls, data, col_variable, row_variable=None):
         if row_variable is None:
             row_variable = data.domain.class_var
             if row_variable is None:
-                raise ValueError("row_variable needs to be specified (data "
-                                 "has no class)")
+                raise ValueError("row_variable needs to be specified (data has no class)")
         row_variable = _get_variable(row_variable, data, "row_variable")
         col_variable = _get_variable(col_variable, data, "col_variable")
         try:
-            conts, unknown_rows = data._compute_contingency(
-                            [col_variable], row_variable)
+            conts, unknown_rows = data._compute_contingency([col_variable], row_variable)
             dist, unknowns = conts[0]
 
             self = super().__new__(cls, dist.shape)
@@ -95,10 +87,10 @@ class Discrete(np.ndarray):
             for row in data:
                 rval, cval = row[rind], row[cind]
                 w = row.weight
-                if math.isnan(rval):
+                if np.isnan(rval):
                     self.unknown_rows += w
                     continue
-                if math.isnan(cval):
+                if np.isnan(cval):
                     self.unknowns[cval] += w
                 else:
                     self[int(rval), int(cval)] += w
@@ -106,12 +98,11 @@ class Discrete(np.ndarray):
         self.col_variable = col_variable
         return self
 
-
     def __eq__(self, other):
-        return np.array_equal(self, other) and (
-            not hasattr(other, "unknowns") or
-            np.array_equal(self.unknowns, other.unknowns))
-
+        return (
+            np.array_equal(self, other) and
+            (not hasattr(other, "unknowns") or np.array_equal(self.unknowns, other.unknowns))
+        )
 
     def __getitem__(self, index):
         if isinstance(index, str):
@@ -148,7 +139,6 @@ class Discrete(np.ndarray):
                 index = (index[0], self.col_variable.to_val(index[1]))
         super().__setitem__(index, value)
 
-
     def normalize(self, axis=None):
         t = np.sum(self, axis=axis)
         if t > 1e-6:
@@ -157,7 +147,10 @@ class Discrete(np.ndarray):
                 self.unknowns /= t
 
     def __reduce__(self):
-        return create_discrete, (Discrete, np.copy(self), self.col_variable, self.row_variable, self.unknowns)
+        return (
+            _create_discrete,
+            (Discrete, np.copy(self), self.col_variable, self.row_variable, self.unknowns)
+        )
 
 
 class Continuous:
@@ -165,8 +158,7 @@ class Continuous:
                  unknowns=None, unknown_rows=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                raise TypeError("incompatible arguments (data storage and 'unknowns'")
             return self.from_data(dat, col_variable, row_variable)
 
         if row_variable is not None:
@@ -191,30 +183,27 @@ class Continuous:
         else:
             self.unknown_rows = None
 
-
     def from_data(self, data, col_variable, row_variable=None):
         if row_variable is None:
             row_variable = data.domain.class_var
             if row_variable is None:
-                raise ValueError("row_variable needs to be specified (data"
-                                 "has no class)")
+                raise ValueError("row_variable needs to be specified (data has no class)")
         self.row_variable = _get_variable(row_variable, data, "row_variable")
         self.col_variable = _get_variable(col_variable, data, "col_variable")
         try:
-            conts, self.unknown_rows = data._compute_contingency(
-                [col_variable], row_variable)
+            conts, self.unknown_rows = data._compute_contingency([col_variable], row_variable)
             (self.values, self.counts), self.unknowns = conts[0]
         except NotImplementedError:
-            raise NotImplementedError("Fallback method for computation of "
-                                      "contingencies is not implemented yet")
-
+            raise NotImplementedError(
+                "Fallback method for computation of contingencies is not implemented yet"
+            )
 
     def __eq__(self, other):
-        return (np.array_equal(self.values, other.values) and
-                np.array_equal(self.counts, other.counts) and
-                (not hasattr(other, "unknowns") or
-                 np.array_equal(self.unknowns, other.unknowns)))
-
+        return (
+            np.array_equal(self.values, other.values) and
+            np.array_equal(self.counts, other.counts) and
+            (not hasattr(other, "unknowns") or np.array_equal(self.unknowns, other.unknowns))
+        )
 
     def __getitem__(self, index):
         """ Return contingencies for a given class value. """
@@ -224,15 +213,14 @@ class Continuous:
         ind = C > 0
         return np.vstack((self.values[ind], C[ind]))
 
-
     def __len__(self):
         return self.counts.shape[0]
 
-
     def __setitem__(self, index, value):
-        raise NotImplementedError("Setting individual class contingencies is "
-                                  "not implemented yet. Set .values and .counts.")
-
+        raise NotImplementedError(
+            "Setting individual class contingencies is not implemented yet. "
+            "Set .values and .counts."
+        )
 
     def normalize(self, axis=None):
         if axis is None:
@@ -241,8 +229,9 @@ class Continuous:
                 for x in self:
                     x[:, 1] /= t
         elif axis != 1:
-            raise ValueError("contingencies can be normalized only with axis=1"
-                             " or without axis")
+            raise ValueError(
+                "contingencies can be normalized only with axis=1 or without axis"
+            )
         else:
             for i, x in enumerate(self):
                 t = np.sum(x[:, 1])
@@ -261,20 +250,19 @@ def get_contingency(dat, col_variable, row_variable=None, unknowns=None, unknown
     elif variable.is_continuous:
         return Continuous(dat, col_variable, row_variable, unknowns, unknown_rows)
     else:
-        raise TypeError("cannot compute distribution of '%s'" %
-                        type(variable).__name__)
+        raise TypeError("cannot compute distribution of '%s'" % type(variable).__name__)
 
 
-def get_contingencies(dat, skipDiscrete=False, skipContinuous=False):
+def get_contingencies(dat, skip_discrete=False, skip_continuous=False):
     vars = dat.domain.attributes
     row_var = dat.domain.class_var
     if row_var is None:
         raise ValueError("data has no target variable")
-    if skipDiscrete:
-        if skipContinuous:
+    if skip_discrete:
+        if skip_continuous:
             return []
         columns = [i for i, var in enumerate(vars) if var.is_continuous]
-    elif skipContinuous:
+    elif skip_continuous:
         columns = [i for i, var in enumerate(vars) if var.is_discrete]
     else:
         columns = None
