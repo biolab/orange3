@@ -270,7 +270,6 @@ class Continuous(Distribution):
         val = np.argmax(self[1, :])
         return self[0, val]
 
-    # TODO implement __getitem__ that will return a normal array, not Continuous
     def min(self):
         return self[0, 0]
 

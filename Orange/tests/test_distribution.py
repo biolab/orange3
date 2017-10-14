@@ -200,6 +200,17 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.iris = data.Table("iris")
 
+        cls.data = data.Table.from_numpy(
+            data.Domain(
+                attributes=[
+                    data.ContinuousVariable('n1'),
+                    data.ContinuousVariable('n2'),
+                ]
+            ),
+            X=np.array([range(10), [1, 1, 1, 5, 5, 8, 9, np.nan, 9, 9]]).T
+        )
+        cls.n1, cls.n2 = distribution.get_distributions(cls.data)
+
     def setUp(self):
         self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
                                (1.5, 14), (1.6, 7), (1.7, 4), (1.9, 2), (3.0, 1),
@@ -301,6 +312,12 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
             self.assertIn(v, self.freqs)
             ans.add(v)
         self.assertGreater(len(ans), 10)
+
+    def test_min_max(self):
+        self.assertEqual(self.n1.min(), 0)
+        self.assertFalse(isinstance(self.n1.min(), distribution.Continuous))
+        self.assertEqual(self.n1.max(), 9)
+        self.assertFalse(isinstance(self.n1.max(), distribution.Continuous))
 
 
 class TestClassDistribution(unittest.TestCase):
