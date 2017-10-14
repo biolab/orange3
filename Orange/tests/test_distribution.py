@@ -439,5 +439,6 @@ class TestDomainDistribution(unittest.TestCase):
         np.testing.assert_almost_equal(dist, [2, 3, 2])
         self.assertEqual(nanc, 1)
 
+
 if __name__ == "__main__":
     unittest.main()
