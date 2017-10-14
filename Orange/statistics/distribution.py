@@ -7,35 +7,47 @@ from Orange import data
 
 
 def _get_variable(dat, variable, expected_type=None, expected_name=""):
+    """Get the variable instance from data."""
     failed = False
     if isinstance(variable, data.Variable):
         datvar = getattr(dat, "variable", None)
         if datvar is not None and datvar is not variable:
-            raise ValueError("variable does not match the variable"
-                             "in the data")
+            raise ValueError("variable does not match the variable in the data")
     elif hasattr(dat, "domain"):
         variable = dat.domain[variable]
     elif hasattr(dat, "variable"):
         variable = dat.variable
     else:
         failed = True
-    if failed or (expected_type is not None
-                  and not isinstance(variable, expected_type)):
+    if failed or (expected_type is not None and not isinstance(variable, expected_type)):
         if isinstance(variable, data.Variable):
-            raise ValueError(
-                "expected %s variable not %s" % (expected_name, variable))
+            raise ValueError("expected %s variable not %s" % (expected_name, variable))
         else:
-            raise ValueError("expected %s, not '%s'" %
-                             (expected_type.__name__, type(variable).__name__))
+            raise ValueError("expected %s, not '%s'" % (
+                expected_type.__name__, type(variable).__name__))
     return variable
 
 
-class Discrete(np.ndarray):
+class Distribution(np.ndarray):
+    def __eq__(self, other):
+        return (
+            np.array_equal(self, other) and
+            (not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return zlib.adler32(self) ^ hash(self.unknowns)
+
+
+
+class Discrete(Distribution):
     def __new__(cls, dat, variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                raise TypeError("incompatible arguments (data storage and 'unknowns'")
             return cls.from_data(dat, variable)
 
         if variable is not None:
@@ -51,10 +63,8 @@ class Discrete(np.ndarray):
             self.unknowns = unknowns or 0
         else:
             self[:] = dat
-            self.unknowns = (unknowns if unknowns is not None
-                             else getattr(dat, "unknowns", 0))
+            self.unknowns = unknowns if unknowns is not None else getattr(dat, "unknowns", 0)
         return self
-
 
     @classmethod
     def from_data(cls, data, variable):
@@ -85,53 +95,35 @@ class Discrete(np.ndarray):
         self.variable = variable
         return self
 
-
-    def __eq__(self, other):
-        return np.array_equal(self, other) and (
-            not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
-
-    def __ne__(self, other):
-        return not self == other
-
     def __getitem__(self, index):
         if isinstance(index, str):
             index = self.variable.to_val(index)
         return super().__getitem__(index)
-
 
     def __setitem__(self, index, value):
         if isinstance(index, str):
             index = self.variable.to_val(index)
         super().__setitem__(index, value)
 
-
-    def __hash__(self):
-        return zlib.adler32(self) ^ hash(self.unknowns)
-
-
     def __add__(self, other):
         s = super().__add__(other)
         s.unknowns = self.unknowns + getattr(other, "unknowns", 0)
         return s
-
 
     def __iadd__(self, other):
         super().__iadd__(other)
         self.unknowns += getattr(other, "unknowns", 0)
         return self
 
-
     def __sub__(self, other):
         s = super().__sub__(other)
         s.unknowns = self.unknowns - getattr(other, "unknowns", 0)
         return s
 
-
     def __isub__(self, other):
         super().__isub__(other)
         self.unknowns -= getattr(other, "unknowns", 0)
         return self
-
 
     def __mul__(self, other):
         s = super().__mul__(other)
@@ -139,13 +131,11 @@ class Discrete(np.ndarray):
             s.unknowns = self.unknowns / other
         return s
 
-
     def __imul__(self, other):
         super().__imul__(other)
         if isinstance(other, Real):
             self.unknowns *= other
         return self
-
 
     def __div__(self, other):
         s = super().__mul__(other)
@@ -153,13 +143,11 @@ class Discrete(np.ndarray):
             s.unknowns = self.unknowns / other
         return s
 
-
     def __idiv__(self, other):
         super().__imul__(other)
         if isinstance(other, Real):
             self.unknowns /= other
         return self
-
 
     def normalize(self):
         normalized = Discrete(self, self.variable, self.unknowns)
@@ -171,12 +159,9 @@ class Discrete(np.ndarray):
             normalized = 1 / self.shape[0]
         return normalized
 
-
     def modus(self):
         val = np.argmax(self)
-        return data.Value(self.variable,
-                          val) if self.variable is not None else val
-
+        return data.Value(self.variable, val) if self.variable is not None else val
 
     def random(self):
         v = random.random() * np.sum(self)
@@ -188,12 +173,11 @@ class Discrete(np.ndarray):
         return data.Value(self.variable, i) if self.variable is not None else i
 
 
-class Continuous(np.ndarray):
+class Continuous(Distribution):
     def __new__(cls, dat, variable=None, unknowns=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
-                raise TypeError(
-                    "incompatible arguments (data storage and 'unknowns'")
+                raise TypeError("incompatible arguments (data storage and 'unknowns'")
             return cls.from_data(variable, dat)
         if isinstance(dat, int):
             self = super().__new__(cls, (2, dat))
@@ -204,8 +188,7 @@ class Continuous(np.ndarray):
                 dat = np.asarray(dat)
             self = super().__new__(cls, dat.shape)
             self[:] = dat
-            self.unknowns = (unknowns if unknowns is not None
-                             else getattr(dat, "unknowns", 0))
+            self.unknowns = (unknowns if unknowns is not None else getattr(dat, "unknowns", 0))
         self.variable = variable
         return self
 
@@ -235,13 +218,6 @@ class Continuous(np.ndarray):
         self.unknowns = unknowns
         self.variable = variable
         return self
-
-    def __eq__(self, other):
-        return np.array_equal(self, other) and (
-            not hasattr(other, "unknowns") or self.unknowns == other.unknowns)
-
-    def __hash__(self):
-        return zlib.adler32(self) ^ hash(self.unknowns)
 
     def normalize(self):
         normalized = Continuous(self, self.variable, self.unknowns)
@@ -277,14 +253,14 @@ class Continuous(np.ndarray):
 
     def variance(self):
         avg = self.mean()
-        return sum([((x-avg)**2)*w for x, w in zip(self[0], self[1])])/sum(self[1])
+        return sum(((x - avg) ** 2) * w for x, w in zip(self[0], self[1])) / sum(self[1])
 
     def standard_deviation(self):
         return math.sqrt(self.variance())
 
 
-
 def class_distribution(data):
+    """Get the distribution of the class variable(s)."""
     if data.domain.class_var:
         return get_distribution(data, data.domain.class_var)
     elif data.domain.class_vars:
@@ -294,17 +270,18 @@ def class_distribution(data):
 
 
 def get_distribution(dat, variable, unknowns=None):
+    """Get the distribution of the given variable."""
     variable = _get_variable(dat, variable)
     if variable.is_discrete:
         return Discrete(dat, variable, unknowns)
     elif variable.is_continuous:
         return Continuous(dat, variable, unknowns)
     else:
-        raise TypeError("cannot compute distribution of '%s'" %
-                        type(variable).__name__)
+        raise TypeError("cannot compute distribution of '%s'" % type(variable).__name__)
 
 
 def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
+    """Get the distributions of all variables in the data."""
     vars = dat.domain.variables
     if skipDiscrete:
         if skipContinuous:
@@ -329,19 +306,18 @@ def get_distributions(dat, skipDiscrete=False, skipContinuous=False):
 
 
 def get_distributions_for_columns(data, columns):
-    """
-    Compute the distributions for columns.
+    """Compute the distributions for columns.
 
-    :param Orange.data.Table data:
-    :param list columns:
+    Parameters
+    ----------
+    data : data.Table
         List of column indices into the `data.domain` (indices can be
         :class:`int` or instances of `Orange.data.Variable`)
 
     """
     domain = data.domain
     # Normailze the columns to int indices
-    columns = [col if isinstance(col, int) else domain.index(col)
-               for col in columns]
+    columns = [col if isinstance(col, int) else domain.index(col) for col in columns]
     try:
         # Try the optimized code path (query the table|storage directly).
         dist_unks = data._compute_distributions(columns)
