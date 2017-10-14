@@ -12,8 +12,7 @@ from numpy cimport NPY_FLOAT64 as NPY_float64
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def valuecount(np.ndarray[np.float64_t, ndim=2] a not None):
-    """
-    Count the occurrences of each value.
+    """Count the occurrences of each value.
 
     It does so in-place, on a 2-d array of shape (2, N); the first row
     contains values and the second contains weights (1's, if unweighted).
@@ -22,10 +21,13 @@ def valuecount(np.ndarray[np.float64_t, ndim=2] a not None):
     consecutive columns with the same value in the first row, and adding
     the corresponding weights in the second row.
 
+    Examples
+    --------
     >>> a = np.array([[1, 1, 2, 3, 3], [0.1, 0.2, 0.3, 0.4, 0.5]])
     >>> _orange.valuecount(a)
     [[ 1.   2.   3. ]
      [ 0.3  0.3  0.9]]
+
     """
     cdef np.npy_intp *dim
     dim = np.PyArray_DIMS(a)
