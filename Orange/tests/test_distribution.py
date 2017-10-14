@@ -13,7 +13,7 @@ from Orange import data
 from Orange.tests import test_filename
 
 
-class Distribution_DiscreteTestCase(unittest.TestCase):
+class TestDiscreteDistribution(unittest.TestCase):
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
         s = sum(self.freqs)
@@ -195,7 +195,7 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         self.assertEqual(self.num.max(), '3')
 
 
-class Distribution_ContinuousTestCase(unittest.TestCase):
+class TestContinuousDistribution(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = data.Table("iris")
