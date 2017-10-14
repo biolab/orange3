@@ -57,6 +57,10 @@ class Distribution(np.ndarray):
         """
         raise NotImplementedError
 
+    def normalize(self):
+        """Normalize the distribution to a probability distribution."""
+        raise NotImplementedError
+
 
 
 class Discrete(Distribution):
@@ -261,7 +265,7 @@ class Continuous(Distribution):
         return sum(((x - mean) ** 2) * w for x, w in zip(self[0], self[1])) / sum(self[1])
 
     def standard_deviation(self):
-        return math.sqrt(self.variance())
+        return np.sqrt(self.variance())
 
 
 def class_distribution(data):
