@@ -136,7 +136,7 @@ class PymssqlBackend(Backend):
                     return None
                 raise BackendError(str(ex)) from ex
             # In case of an AttributeError, give a second chance:
-            # Use the long method for counting 
+            # Use the long method for counting
             cur.execute("SELECT count(*) FROM ( {} ) x".format(query))
             result = cur.fetchone()
             return result[0]
