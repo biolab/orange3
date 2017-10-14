@@ -329,6 +329,27 @@ class TestClassDistribution(unittest.TestCase):
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
+    def test_multiple_target_variables(self):
+        d = data.Table.from_numpy(
+            data.Domain(
+                attributes=[data.ContinuousVariable('n1')],
+                class_vars=[
+                    data.DiscreteVariable('c1', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('c2', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('c3', values=['r', 'g', 'b', 'a']),
+                ]
+            ),
+            X=np.array([range(5)]).T,
+            Y=np.array([
+                [0, 1, 2, 3, 4],
+                [0, 1, 2, 3, 4],
+                [0, 1, 2, 3, 4],
+            ]).T
+        )
+        dists = distribution.class_distribution(d)
+        self.assertEqual(len(dists), 3)
+        self.assertTrue(all(isinstance(dist, distribution.Discrete) for dist in dists))
+
 class TestGetDistribution(unittest.TestCase):
     def test_get_distribution(self):
         d = data.Table("iris")

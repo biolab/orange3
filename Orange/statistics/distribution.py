@@ -305,7 +305,7 @@ def class_distribution(data):
     if data.domain.class_var:
         return get_distribution(data, data.domain.class_var)
     elif data.domain.class_vars:
-        return [get_distribution(cls, data) for cls in data.domain.class_vars]
+        return [get_distribution(data, cls) for cls in data.domain.class_vars]
     else:
         raise ValueError("domain has no class attribute")
 
