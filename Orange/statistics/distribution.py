@@ -162,12 +162,14 @@ class Discrete(np.ndarray):
 
 
     def normalize(self):
+        normalized = Discrete(self, self.variable, self.unknowns)
         t = np.sum(self)
         if t > 1e-6:
-            self[:] /= t
-            self.unknowns /= t
+            normalized /= t
+            normalized.unknowns /= t
         elif self.shape[0]:
-            self[:] = 1 / self.shape[0]
+            normalized = 1 / self.shape[0]
+        return normalized
 
 
     def modus(self):
@@ -242,12 +244,14 @@ class Continuous(np.ndarray):
         return zlib.adler32(self) ^ hash(self.unknowns)
 
     def normalize(self):
+        normalized = Continuous(self, self.variable, self.unknowns)
         t = np.sum(self[1, :])
         if t > 1e-6:
-            self[1, :] /= t
-            self.unknowns /= t
+            normalized[1, :] /= t
+            normalized.unknowns /= t
         elif self.shape[1]:
-            self[1, :] = 1 / self.shape[1]
+            normalized[1, :] = 1 / self.shape[1]
+        return normalized
 
     def modus(self):
         val = np.argmax(self[1, :])
