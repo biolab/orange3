@@ -1,8 +1,9 @@
-import random
-import zlib
-import math
+from collections import Iterable
 from numbers import Real
+
 import numpy as np
+import zlib
+
 from Orange import data
 
 
@@ -40,6 +41,21 @@ class Distribution(np.ndarray):
 
     def __hash__(self):
         return zlib.adler32(self) ^ hash(self.unknowns)
+
+    def sample(self, size=None, replace=True):
+        """Get a random sample from the distribution.
+
+        Parameters
+        ----------
+        size : Optional[Union[int, Tuple[int, ...]]]
+        replace : bool
+
+        Returns
+        -------
+        Union[float, data.Value, np.ndarray]
+
+        """
+        raise NotImplementedError
 
 
 
@@ -163,14 +179,12 @@ class Discrete(Distribution):
         val = np.argmax(self)
         return data.Value(self.variable, val) if self.variable is not None else val
 
-    def random(self):
-        v = random.random() * np.sum(self)
-        s = i = 0
-        for i, e in enumerate(self):
-            s += e
-            if s > v:
-                break
-        return data.Value(self.variable, i) if self.variable is not None else i
+    def sample(self, size=None, replace=True):
+        value_indices = np.random.choice(range(len(self)), size, replace, self.normalize())
+        if isinstance(value_indices, Iterable):
+            to_value = np.vectorize(lambda idx: data.Value(self.variable, idx))
+            return to_value(value_indices)
+        return data.Value(self.variable, value_indices)
 
 
 class Continuous(Distribution):
@@ -240,13 +254,8 @@ class Continuous(Distribution):
     def max(self):
         return self[0, -1]
 
-    def random(self):
-        v = random.random() * np.sum(self[1, :])
-        s = 0
-        for x, prob in self.T:
-            s += prob
-            if s > v:
-                return x
+    def sample(self, size=None, replace=True):
+        return np.random.choice(self[0, :], size, replace, self.normalize()[1, :])
 
     def mean(self):
         return np.average(np.asarray(self[0]), weights=np.asarray(self[1]))
