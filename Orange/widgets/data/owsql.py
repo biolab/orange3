@@ -21,7 +21,7 @@ from Orange.widgets.widget import OWWidget, Output, Msg
 MAX_DL_LIMIT = 1000000
 
 
-class TableModels(PyListModel):
+class TableModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
         if role == Qt.DisplayRole:
@@ -125,14 +125,14 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.passwordtext)
 
         self._load_credentials()
-        self.tablemodels = TableModels()
+        self.tables = TableModel()
 
         tables = gui.hBox(box)
         self.tablecombo = QComboBox(
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
-        self.tablecombo.setModel(self.tablemodels)
+        self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
         self.connect()
@@ -248,15 +248,15 @@ class OWSql(OWWidget):
             self.tablecombo.clear()
 
     def refresh_tables(self):
-        self.tablemodels.clear()
+        self.tables.clear()
         self.Error.missing_extension.clear()
         if self.backend is None:
             self.data_desc_table = None
             return
 
-        self.tablemodels.append("Select a table")
-        self.tablemodels.append("Custom SQL")
-        self.tablemodels.extend(self.backend.list_tables(self.schema))
+        self.tables.append("Select a table")
+        self.tables.append("Custom SQL")
+        self.tables.extend(self.backend.list_tables(self.schema))
 
     # Called on tablecombo selection change:
     def select_table(self):
@@ -291,7 +291,7 @@ class OWSql(OWWidget):
             return
 
         if self.tablecombo.itemText(curIdx) != "Custom SQL":
-            self.table = self.tablemodels[self.tablecombo.currentIndex()]
+            self.table = self.tables[self.tablecombo.currentIndex()]
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
@@ -360,7 +360,6 @@ class OWSql(OWWidget):
                 domain = s.get_domain(inspect_values=True)
                 self.Information.data_sampled()
             else:
-
                 domain = table.get_domain(inspect_values=True)
             QApplication.restoreOverrideCursor()
             table.domain = domain

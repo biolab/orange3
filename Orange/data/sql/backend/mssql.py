@@ -125,8 +125,8 @@ class PymssqlBackend(Backend):
                     result = cur.fetchone()
                     return int(self.EST_ROWS_RE.search(result[0]).group(1))
                 except AttributeError:
-                # This is to catch a bug from SQL Server 2012
-                # resulting StatementEstRows is float instead of int
+                # This is to catch a float received in StatementEstRows
+                # a float is received when the server's statistics are out of date.
                     pass
                 finally:
                     cur.execute("SET SHOWPLAN_XML OFF")
@@ -136,7 +136,7 @@ class PymssqlBackend(Backend):
                     return None
                 raise BackendError(str(ex)) from ex
             # In case of an AttributeError, give a second chance:
-            # Use the long method for counting (or upgrade SQL Server version :) ) 
+            # Use the long method for counting 
             cur.execute("SELECT count(*) FROM ( {} ) x".format(query))
             result = cur.fetchone()
             return result[0]
