@@ -61,6 +61,21 @@ class Distribution(np.ndarray):
         """Normalize the distribution to a probability distribution."""
         raise NotImplementedError
 
+    def min(self):
+        """Get the smallest value for the distribution.
+
+        If the variable is not ordinal, return None.
+
+        """
+        raise NotImplementedError
+
+    def max(self):
+        """Get the largest value for the distribution.
+
+        If the variable is not ordinal, return None.
+
+        """
+        raise NotImplementedError
 
 
 class Discrete(Distribution):
@@ -187,6 +202,14 @@ class Discrete(Distribution):
             to_value = np.vectorize(lambda idx: data.Value(self.variable, idx))
             return to_value(value_indices)
         return data.Value(self.variable, value_indices)
+
+    def min(self):
+        if self.variable.ordered:
+            return self.variable.values[0]
+
+    def max(self):
+        if self.variable.ordered:
+            return self.variable.values[-1]
 
 
 class Continuous(Distribution):
