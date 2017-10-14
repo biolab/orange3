@@ -18,6 +18,20 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         s = sum(self.freqs)
         self.rfreqs = [x/s for x in self.freqs]
 
+        self.data = data.Table.from_numpy(
+            data.Domain(
+                attributes=[
+                    data.DiscreteVariable('rgb', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('num', values=['1', '2', '3'], ordered=True),
+                ]
+            ),
+            X=np.array([
+                [0, 2, 0, 1, 1, 0, np.nan, 1],
+                [0, 2, 0, np.nan, 1, 2, np.nan, 1],
+            ]).T
+        )
+        self.rgb, self.num = distribution.get_distributions(self.data)
+
     def test_from_table(self):
         d = data.Table("zoo")
         disc = distribution.Discrete(d, "type")
@@ -171,6 +185,13 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         # Check that samping a single value works too
         self.assertIn(self.num.sample(), [0, 1, 2])
 
+    def test_min_max(self):
+        # Min and max don't make sense in the context of nominal variables
+        self.assertEqual(self.rgb.min(), None)
+        self.assertEqual(self.rgb.max(), None)
+        # Min and max should work for ordinal variables
+        self.assertEqual(self.num.min(), '1')
+        self.assertEqual(self.num.max(), '3')
 
 
 class Distribution_ContinuousTestCase(unittest.TestCase):
