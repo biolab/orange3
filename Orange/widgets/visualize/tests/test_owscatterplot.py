@@ -308,7 +308,25 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_features_and_data(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.features, data.domain)
+        self.send_signal(self.widget.Inputs.features, data.domain[2:])
+        self.assertIs(self.widget.attr_x, data.domain[2])
+        self.assertIs(self.widget.attr_y, data.domain[3])
+
+    def test_output_features(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # This doesn't work because combo's callbacks are connected to signal
+        # `activated`, which is only triggered by user interaction, and not to
+        # `currentIndexChanged`
+        # combo_y = self.widget.controls.attr_y
+        # combo_y.setCurrentIndex(combo_y.model().indexOf(data.domain[3]))
+        # This is a workaround
+        self.widget.attr_y = data.domain[3]
+        self.widget.update_attr()
+
+        features = self.get_output(self.widget.Outputs.features)
+        self.assertEqual(features, [data.domain[0], data.domain[3]])
 
     def test_send_report(self):
         data = Table("iris")

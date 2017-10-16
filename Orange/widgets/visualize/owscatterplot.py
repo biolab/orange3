@@ -9,8 +9,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
 import Orange
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
-    DiscreteVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
@@ -101,7 +100,7 @@ class OWScatterPlot(OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        features = Output("Features", Table, dynamic=False)
+        features = Output("Features", AttributeList, dynamic=False)
 
     settings_version = 2
     settingsHandler = DomainContextHandler()
@@ -452,12 +451,8 @@ class OWScatterPlot(OWWidget):
             self.selection_group = None
 
     def send_features(self):
-        features = None
-        if self.attr_x or self.attr_y:
-            dom = Domain([], metas=(StringVariable(name="feature"),))
-            features = Table(dom, [[self.attr_x], [self.attr_y]])
-            features.name = "Features"
-        self.Outputs.features.send(features)
+        features = [attr for attr in [self.attr_x, self.attr_y] if attr]
+        self.Outputs.features.send(features or None)
 
     def commit(self):
         self.send_data()
