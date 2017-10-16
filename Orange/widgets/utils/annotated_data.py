@@ -80,6 +80,19 @@ def get_unique_names(names, proposed):
     return proposed
 
 
+def _table_with_annotation_column(data, values, column_data, var_name):
+    var = DiscreteVariable(get_next_name(data.domain, var_name), values)
+    class_vars, metas = data.domain.class_vars, data.domain.metas
+    if not data.domain.class_vars:
+        class_vars += (var, )
+    else:
+        metas += (var, )
+    domain = Domain(data.domain.attributes, class_vars, metas)
+    table = data.transform(domain)
+    table[:, var] = column_data.reshape((len(data), 1))
+    return table
+
+
 def create_annotated_table(data, selected_indices):
     """
     Returns data with concatenated flag column. Flag column represents
@@ -92,15 +105,11 @@ def create_annotated_table(data, selected_indices):
     """
     if data is None:
         return None
-    names = [var.name for var in data.domain.variables + data.domain.metas]
-    name = get_next_name(names, ANNOTATED_DATA_FEATURE_NAME)
-    domain = add_columns(data.domain, metas=[DiscreteVariable(name, ("No", "Yes"))])
     annotated = np.zeros((len(data), 1))
     if selected_indices is not None:
         annotated[selected_indices] = 1
-    table = data.transform(domain)
-    table[:, name] = annotated
-    return table
+    return _table_with_annotation_column(
+        data, ("No", "Yes"), annotated, ANNOTATED_DATA_FEATURE_NAME)
 
 
 def create_groups_table(data, selection,
@@ -115,10 +124,4 @@ def create_groups_table(data, selection,
         mask = np.flatnonzero(selection)
         data = data[mask]
         selection = selection[mask] - 1
-
-    var_name = get_next_name(data.domain, var_name)
-    metas = data.domain.metas + (DiscreteVariable(var_name, values), )
-    domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-    table = data.transform(domain)
-    table.metas[:, len(data.domain.metas):] = selection.reshape(len(data), 1)
-    return table
+    return _table_with_annotation_column(data, values, selection, var_name)
