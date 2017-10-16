@@ -851,7 +851,7 @@ class VariableListModel(PyListModel):
         return text
 
     def string_variable_tooltip(self, var):
-        text = "<b>%s</b><br/>String" % safe_text(var.name)
+        text = "<b>%s</b><br/>Text" % safe_text(var.name)
         text += self.variable_labels_tooltip(var)
         return text
 
