@@ -570,12 +570,26 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.__statusbar_action = statusbar_action = QAction(
                 "Show status bar", self, objectName="action-show-status-bar",
                 toolTip="Show status bar", checkable=True,
-                enabled=False, visible=False,
                 shortcut=QKeySequence(
                     Qt.ShiftModifier | Qt.ControlModifier | Qt.Key_Backslash)
             )
             statusbar_action.toggled[bool].connect(statusbar.setVisible)
             self.addAction(statusbar_action)
+
+            # Ensure the status bar and the message widget are visible on
+            # warning and errors.
+            def message_activated(msg):
+                # type: (Msg) -> None
+                if msg.group.severity >= 2:
+                    statusbar.setVisible(True)
+            self.messageActivated.connect(message_activated)
+
+            self.addAction(statusbar_action)
+            if self.__menubar is not None:
+                viewm = self.findChild(QMenu, "menu-view")
+                if viewm is not None:
+                    viewm.addAction(statusbar_action)
+
         return statusbar
 
     def __updateStatusBarOnChange(self):
