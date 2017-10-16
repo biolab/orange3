@@ -514,8 +514,7 @@ class OWRank(OWWidget):
                 self.selectButtons.button(self.selectionMethod).setChecked(True)
             selected_attrs = [attributes[i]
                               for i in self.selected_rows]
-
-        if self.data is None or not selected_attrs:
+        if not selected_attrs:
             self.Outputs.reduced_data.send(None)
             self.out_domain_desc = None
         else:
