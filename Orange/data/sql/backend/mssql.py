@@ -123,11 +123,17 @@ class PymssqlBackend(Backend):
                 try:
                     cur.execute(query)
                     result = cur.fetchone()
-                    return int(self.EST_ROWS_RE.search(result[0]).group(1))
-                except AttributeError:
-                # This is to catch a float received in StatementEstRows
-                # a float is received when the server's statistics are out of date.
-                    pass
+                    match = self.EST_ROWS_RE.search(result[0])
+                    if not match:
+                    # Either StatementEstRows was not found or
+                    # a float is received.
+                    # If it is a float then it is most probable 
+                    # that the server's statistics are out of date
+                    # and the result is false. In that case
+                    # it is preferable to return None so 
+                    # an exact count be used.
+                        return None
+                    return int(match.group(1))
                 finally:
                     cur.execute("SET SHOWPLAN_XML OFF")
             except pymssql.Error as ex:
@@ -135,8 +141,3 @@ class PymssqlBackend(Backend):
                     warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
                     return None
                 raise BackendError(str(ex)) from ex
-            # In case of an AttributeError, give a second chance:
-            # Use the long method for counting
-            cur.execute("SELECT count(*) FROM ( {} ) x".format(query))
-            result = cur.fetchone()
-            return result[0]
