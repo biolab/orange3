@@ -127,10 +127,10 @@ class PymssqlBackend(Backend):
                     if not match:
                     # Either StatementEstRows was not found or
                     # a float is received.
-                    # If it is a float then it is most probable 
+                    # If it is a float then it is most probable
                     # that the server's statistics are out of date
                     # and the result is false. In that case
-                    # it is preferable to return None so 
+                    # it is preferable to return None so
                     # an exact count be used.
                         return None
                     return int(match.group(1))
