@@ -787,17 +787,6 @@ class ContextHandler(SettingsHandler):
         if widget.current_context is None:
             return
 
-        # Clear schema-only settings when *closing* the context
-        # FIXME: Sadly, schema-only settings aren't cleared when non-contextual
-        # SettingsHandler is used. Example: widget has non-contextual
-        # SettingsHandler, user loads schema that includes widget, user
-        # passes new data to widget => widget's schema-only settings still
-        # have previous values because equivalent of below reset was never
-        # called (i.e. `close_context()`).
-        for name, setting in self.known_settings.items():
-            if setting.schema_only:
-                setattr(widget, name, setting.default)
-
         self.settings_from_widget(widget)
         widget.current_context = None
 
