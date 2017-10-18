@@ -266,6 +266,10 @@ class WidgetTest(GuiTest):
                             "Failed to get output in the specified timeout")
         if not isinstance(output, str):
             output = output.name
+        # widget.outputs are old-style signals; if empty, use new style
+        outputs = widget.outputs or widget.Outputs.__dict__.values()
+        assert output in (out.name for out in outputs), \
+            "widget {} has no output {}".format(widget.name, output)
         return self.signal_manager.outputs.get((widget, output), None)
 
 
