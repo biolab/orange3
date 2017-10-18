@@ -23,7 +23,7 @@ class TestOWOutliers(WidgetTest):
         self.assertEqual(len(self.get_output(self.widget.Outputs.outliers)), 74)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.data, None)
-        self.assertIsNone(self.get_output("Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.inliers))
 
     def test_multiclass(self):
         """Check widget for multiclass dataset"""

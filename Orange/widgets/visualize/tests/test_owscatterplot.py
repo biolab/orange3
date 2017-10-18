@@ -7,6 +7,7 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QRectF, Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.widgets.widget import AttributeList
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owscatterplot import \
     OWScatterPlot, ScatterPlotVizRank
@@ -302,13 +303,14 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2384
         """
         domain = Table("iris").domain
-        self.send_signal(self.widget.Inputs.features, domain)
+        self.send_signal(self.widget.Inputs.features, AttributeList(domain))
         self.send_signal(self.widget.Inputs.features, None)
 
     def test_features_and_data(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.features, data.domain[2:])
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(data.domain[2:]))
         self.assertIs(self.widget.attr_x, data.domain[2])
         self.assertIs(self.widget.attr_y, data.domain[3])
 

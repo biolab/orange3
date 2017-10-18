@@ -500,18 +500,19 @@ class WidgetLearnerTestMixin:
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
-        self.send_signal("Preprocessor", Randomize)
+        randomize = Randomize()
+        self.send_signal("Preprocessor", randomize)
         self.assertEqual(
-            Randomize, self.widget.preprocessors,
+            randomize, self.widget.preprocessors,
             'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
         self.assertEqual(
-            (Randomize,), self.widget.learner.preprocessors,
+            (randomize,), self.widget.learner.preprocessors,
             'Preprocessors were not passed to the learner')
 
     def test_input_preprocessors(self):
         """Check multiple preprocessors on input"""
-        pp_list = PreprocessorList([Randomize, RemoveNaNColumns])
+        pp_list = PreprocessorList([Randomize(), RemoveNaNColumns()])
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
         self.assertEqual(
@@ -520,9 +521,10 @@ class WidgetLearnerTestMixin:
 
     def test_input_preprocessor_disconnect(self):
         """Check learner's preprocessors after disconnecting pp from input"""
-        self.send_signal("Preprocessor", Randomize)
+        randomize = Randomize()
+        self.send_signal("Preprocessor", randomize)
         self.widget.apply_button.button.click()
-        self.assertEqual(Randomize, self.widget.preprocessors)
+        self.assertEqual(randomize, self.widget.preprocessors)
 
         self.send_signal("Preprocessor", None)
         self.widget.apply_button.button.click()
