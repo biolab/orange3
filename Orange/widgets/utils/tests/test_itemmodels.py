@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from AnyQt.QtCore import Qt
 
-from Orange.data import Domain, ContinuousVariable
+from Orange.data import Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.itemmodels import \
     AbstractSortTableModel, PyTableModel, PyListModel, DomainModel, _argsort
 
@@ -288,3 +288,25 @@ class TestDomainModel(TestCase):
                          sorted(attrs + metas, key=lambda x: x.name) +
                          [sep] +
                          sorted(classes, key=lambda x: x.name))
+
+    def test_filtering(self):
+        cont = [ContinuousVariable(n) for n in "abc"]
+        disc = [DiscreteVariable(n) for n in "def"]
+        attrs = cont + disc
+
+        model = DomainModel(valid_types=(ContinuousVariable, ))
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), cont)
+
+        model = DomainModel(valid_types=(DiscreteVariable, ))
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc)
+
+        disc[0].attributes["hidden"] = True
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc[1:])
+
+        model = DomainModel(valid_types=(DiscreteVariable, ),
+                            skip_hidden_vars=False)
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc)

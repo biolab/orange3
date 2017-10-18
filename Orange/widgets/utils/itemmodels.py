@@ -1,4 +1,3 @@
-import pickle
 from numbers import Number, Integral
 from math import isnan, isinf
 
@@ -23,6 +22,7 @@ from AnyQt.QtWidgets import (
 import numpy
 
 from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
+from Orange.data.domain import filter_visible
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
 from Orange.statistics import basic_stats
@@ -870,7 +870,7 @@ class DomainModel(VariableListModel):
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
     def __init__(self, order=SEPARATED, placeholder=None,
-                 valid_types=None, alphabetical=False, **kwargs):
+                 valid_types=None, alphabetical=False, skip_hidden_vars=True, **kwargs):
         super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
             order = (order,)
@@ -883,6 +883,7 @@ class DomainModel(VariableListModel):
         self.order = order
         self.valid_types = valid_types
         self.alphabetical = alphabetical
+        self.skip_hidden_vars = skip_hidden_vars
         self.set_domain(None)
 
     def set_domain(self, domain):
@@ -903,6 +904,8 @@ class DomainModel(VariableListModel):
                     *(vars for i, vars in enumerate(
                         (domain.attributes, domain.class_vars, domain.metas))
                       if (1 << i) & section)))
+                if self.skip_hidden_vars:
+                    to_add = list(filter_visible(to_add))
                 if self.valid_types is not None:
                     to_add = [var for var in to_add
                               if isinstance(var, self.valid_types)]
