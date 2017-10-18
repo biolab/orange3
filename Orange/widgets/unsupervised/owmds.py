@@ -601,6 +601,8 @@ class OWMDS(OWWidget):
             self.graph.new_data(None)
 
     def connect_pairs(self):
+        if self._curve:
+            self.graph.plot_widget.removeItem(self._curve)
         if not (self.connected_pairs and self.__draw_similar_pairs):
             return
         emb_x, emb_y = self.graph.get_xy_data_positions(
@@ -636,8 +638,6 @@ class OWMDS(OWWidget):
         pairs_mask = ~(np.isclose(x1, x2) & np.isclose(y1, y2))
         emb_x_pairs = emb_x_pairs[pairs_mask, :]
         emb_y_pairs = emb_y_pairs[pairs_mask, :]
-        if self._curve:
-            self.graph.plot_widget.removeItem(self._curve)
         self._curve = pg.PlotCurveItem(
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
             pen=pg.mkPen(0.8, width=2, cosmetic=True),
