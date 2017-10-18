@@ -396,6 +396,19 @@ class OWScatterPlot(OWWidget):
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def selection_changed(self):
+
+        # Store current selection in a setting that is stored in workflow
+        if isinstance(self.data, SqlTable):
+            selection = None
+        elif self.data is not None:
+            selection = self.graph.get_selection()
+        else:
+            selection = None
+        if selection is not None and len(selection):
+            self.selection_group = list(zip(selection, self.graph.selection[selection]))
+        else:
+            self.selection_group = None
+
         self.commit()
 
     def send_data(self):
@@ -416,12 +429,6 @@ class OWScatterPlot(OWWidget):
         selection = graph.get_selection()
         self.Outputs.annotated_data.send(_get_annotated())
         self.Outputs.selected_data.send(_get_selected())
-
-        # Store current selection in a setting that is stored in workflow
-        if len(selection):
-            self.selection_group = list(zip(selection, graph.selection[selection]))
-        else:
-            self.selection_group = None
 
     def send_features(self):
         features = [attr for attr in [self.attr_x, self.attr_y] if attr]

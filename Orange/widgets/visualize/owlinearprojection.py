@@ -947,6 +947,7 @@ class OWLinearProjection(widget.OWWidget):
             self._selection_mask[indices] = True
 
         self._on_color_change()
+        self.selection_indices = numpy.flatnonzero(self._selection_mask).tolist()
         self.commit()
 
     def commit(self):
@@ -956,9 +957,7 @@ class OWLinearProjection(widget.OWWidget):
             indices = numpy.flatnonzero(self._selection_mask)
             if len(indices) > 0:
                 subset = self.data[indices]
-            indices = indices.tolist()
 
-        self.selection_indices = indices
         self.Outputs.selected_data.send(subset)
         self.Outputs.annotated_data.send(create_annotated_table(self.data, indices))
 
