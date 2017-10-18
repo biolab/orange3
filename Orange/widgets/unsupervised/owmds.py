@@ -590,7 +590,7 @@ class OWMDS(OWWidget):
 
     def _on_connected_changed(self):
         self._similar_pairs = None
-        self._update_plot()
+        self.connect_pairs()
 
     def _update_plot(self, new=False):
         self._clear_plot()
