@@ -55,11 +55,6 @@ class OWMDSGraph(OWScatterPlotGraph):
             self.plot_widget.hideAxis(axis)
         self.plot_widget.setAspectLocked(True, 1)
 
-    def get_size_index(self):
-        if self.attr_size == "Stress":
-            return -2
-        return super().get_size_index()
-
     def compute_sizes(self):
         def scale(a):
             dmin, dmax = np.nanmin(a), np.nanmax(a)
@@ -69,17 +64,16 @@ class OWMDSGraph(OWScatterPlotGraph):
                 return np.zeros_like(a)
 
         self.master.Information.missing_size.clear()
-        size_index = self.get_size_index()
-        if size_index == -1:
+        if self.attr_size is None:
             size_data = np.full((self.n_points,), self.point_width,
                                 dtype=float)
-        elif size_index == -2:
+        elif self.attr_size == "Stress":
             size_data = scale(stress(self.master.embedding, self.master.effective_matrix))
             size_data = self.MinShapeSize + size_data * self.point_width
         else:
             size_data = \
                 self.MinShapeSize + \
-                self.scaled_data[size_index, self.valid_data] * \
+                self.scaled_data.get_column_view(self.attr_size)[0][self.valid_data] * \
                 self.point_width
         nans = np.isnan(size_data)
         if np.any(nans):
@@ -270,11 +264,6 @@ class OWMDS(OWWidget):
 
     def init_attr_values(self):
         domain = self.data and len(self.data) and self.data.domain or None
-        if domain is not None:
-            domain = Domain(
-                attributes=domain.attributes,
-                class_vars=domain.class_vars,
-                metas=tuple(a for a in domain.metas if a.is_primitive()))
         for model in self.models:
             model.set_domain(domain)
         self.graph.attr_color = self.data.domain.class_var if domain else None
@@ -653,21 +642,12 @@ class OWMDS(OWWidget):
         coords = np.vstack((emb_x, emb_y)).T
 
         data = self.data
-
-        primitive_metas = tuple(a for a in data.domain.metas if a.is_primitive())
-        keys = [k for k, a in enumerate(data.domain.metas) if a.is_primitive()]
-        data_metas = data.metas[:, keys].astype(float)
-
-        attributes = self.data.domain.attributes + (self.variable_x, self.variable_y) + \
-                     primitive_metas
+        attributes = data.domain.attributes + (self.variable_x, self.variable_y)
         domain = Domain(attributes=attributes,
-                        class_vars=self.data.domain.class_vars)
-        if data_metas is not None:
-            data_x = (self.data.X, coords, data_metas)
-        else:
-            data_x = (self.data.X, coords)
-        data = Table.from_numpy(domain, X=hstack(data_x),
-                                Y=self.data.Y)
+                        class_vars=data.domain.class_vars,
+                        metas=data.domain.metas)
+        data = Table.from_numpy(domain, X=hstack((data.X, coords)),
+                                Y=data.Y, metas=data.metas)
         subset_data = data[self._subset_mask] if self._subset_mask is not None else None
         self.graph.new_data(data, subset_data=subset_data, new=new)
         self.graph.update_data(self.variable_x, self.variable_y, True)
