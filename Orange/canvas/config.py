@@ -121,6 +121,9 @@ spec = \
 
      ("error-reporting/machine-id", str, '',
      "Report custom name instead of machine ID"),
+
+     ("add-ons/allow-conda-experimental", bool, False,
+      "Install add-ons with conda"),
      ]
 
 spec = [config_slot(*t) for t in spec]

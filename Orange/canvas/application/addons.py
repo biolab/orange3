@@ -38,8 +38,8 @@ from AnyQt.QtGui import (
 
 from AnyQt.QtCore import (
     QSortFilterProxyModel, QItemSelectionModel,
-    Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG
-)
+    Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG,
+    QSettings)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from ..gui.utils import message_warning, message_information, \
@@ -861,7 +861,12 @@ class PipInstaller:
 
 class CondaInstaller:
     def __init__(self):
-        self.conda = self._find_conda()
+        enabled = QSettings().value('add-ons/allow-conda-experimental',
+                                    False, type=bool)
+        if enabled:
+            self.conda = self._find_conda()
+        else:
+            self.conda = None
 
     def _find_conda(self):
         executable = sys.executable
