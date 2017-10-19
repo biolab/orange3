@@ -886,11 +886,11 @@ class CondaInstaller:
             return conda
 
     def install(self, pkg):
-        cmd = ["conda", "install", "--yes", pkg.name]
+        cmd = ["conda", "install", "--yes", "--quiet", pkg.name]
         run_command(cmd, raise_on_fail=False)
 
     def upgrade(self, pkg):
-        cmd = ["conda", "upgrade", "--yes", pkg.name]
+        cmd = ["conda", "upgrade", "--yes", "--quiet", pkg.name]
         run_command(cmd, raise_on_fail=False)
 
     def uninstall(self, dist):
@@ -932,6 +932,7 @@ def run_command(command, raise_on_fail=True):
     if process.returncode != 0:
         log.info("Command %s failed with %s",
                  " ".join(command), process.returncode)
+        log.debug("Output:\n%s", "\n".join(output))
         if raise_on_fail:
             raise CommandFailed(command, process.returncode, output)
 
