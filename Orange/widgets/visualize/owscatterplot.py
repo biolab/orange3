@@ -47,9 +47,12 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def compute_score(self, state):
         graph = self.master.graph
-        ind12 = [graph.domain.index(self.attrs[x]) for x in state]
-        valid = graph.get_valid_list(ind12)
-        X = graph.jittered_data[ind12, :][:, valid].T
+        attrs = [self.attrs[x] for x in state]
+        valid = graph.get_valid_list(attrs)
+        cols = []
+        for var in attrs:
+            cols.append(graph.jittered_data.get_column_view(var)[0][valid])
+        X = np.column_stack(cols)
         Y = self.master.data.Y[valid]
         if X.shape[0] < self.minK:
             return
@@ -66,7 +69,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return max(0, -score)
 
     def score_heuristic(self):
-        X = self.master.graph.jittered_data.T
+        X = self.master.graph.jittered_data.X
         Y = self.master.data.Y
         mdomain = self.master.data.domain
         dom = Domain([ContinuousVariable(str(i)) for i in range(X.shape[1])],
