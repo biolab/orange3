@@ -12,11 +12,25 @@ from Orange.statistics import distribution
 from Orange import data
 from Orange.tests import test_filename
 
-class Distribution_DiscreteTestCase(unittest.TestCase):
+class TestDiscreteDistribution(unittest.TestCase):
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
         s = sum(self.freqs)
         self.rfreqs = [x/s for x in self.freqs]
+
+        self.data = data.Table.from_numpy(
+            data.Domain(
+                attributes=[
+                    data.DiscreteVariable('rgb', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('num', values=['1', '2', '3'], ordered=True),
+                ]
+            ),
+            X=np.array([
+                [0, 2, 0, 1, 1, 0, np.nan, 1],
+                [0, 2, 0, np.nan, 1, 2, np.nan, 1],
+            ]).T
+        )
+        self.rgb, self.num = distribution.get_distributions(self.data)
 
     def test_from_table(self):
         d = data.Table("zoo")
@@ -149,13 +163,13 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
     def test_normalize(self):
         d = data.Table("zoo")
         disc = distribution.Discrete(d, "type")
-        disc.normalize()
+        disc = disc.normalize()
         self.assertEqual(disc, self.rfreqs)
-        disc.normalize()
+        disc = disc.normalize()
         self.assertEqual(disc, self.rfreqs)
 
         disc1 = distribution.Discrete(None, d.domain.class_var)
-        disc1.normalize()
+        disc1 = disc1.normalize()
         v = len(d.domain.class_var.values)
         np.testing.assert_almost_equal(disc1, [1/v]*v)
 
@@ -164,19 +178,37 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
         disc = distribution.Discrete(d, "type")
         self.assertEqual(str(disc.modus()), "mammal")
 
-    def test_random(self):
-        d = data.Table("zoo")
-        disc = distribution.Discrete(d, "type")
-        ans = set()
-        for i in range(1000):
-            ans.add(int(disc.random()))
-        self.assertEqual(ans, set(range(len(d.domain.class_var.values))))
+    def test_sample(self):
+        ans = self.num.sample((500, 2), replace=True)
+        np.testing.assert_equal(np.unique(ans), [0, 1, 2])
+
+        # Check that samping a single value works too
+        self.assertIn(self.num.sample(), [0, 1, 2])
+
+    def test_min_max(self):
+        # Min and max don't make sense in the context of nominal variables
+        self.assertEqual(self.rgb.min(), None)
+        self.assertEqual(self.rgb.max(), None)
+        # Min and max should work for ordinal variables
+        self.assertEqual(self.num.min(), '1')
+        self.assertEqual(self.num.max(), '3')
 
 
-class Distribution_ContinuousTestCase(unittest.TestCase):
+class TestContinuousDistribution(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = data.Table("iris")
+
+        cls.data = data.Table.from_numpy(
+            data.Domain(
+                attributes=[
+                    data.ContinuousVariable('n1'),
+                    data.ContinuousVariable('n2'),
+                ]
+            ),
+            X=np.array([range(10), [1, 1, 1, 5, 5, 8, 9, np.nan, 9, 9]]).T
+        )
+        cls.n1, cls.n2 = distribution.get_distributions(cls.data)
 
     def setUp(self):
         self.freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
@@ -255,12 +287,12 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc = distribution.Continuous(d, "petal length")
 
         np.testing.assert_almost_equal(disc, self.freqs)
-        disc.normalize()
+        disc = disc.normalize()
         self.freqs[1, :] /= 150
         np.testing.assert_almost_equal(disc, self.freqs)
 
         disc1 = distribution.Continuous(10, petal_length)
-        disc1.normalize()
+        disc1 = disc1.normalize()
         f = np.zeros((2, 10))
         f[1, :] = 0.1
         np.testing.assert_almost_equal(disc1, f)
@@ -275,10 +307,16 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc = distribution.Continuous(d, "petal length")
         ans = set()
         for i in range(1000):
-            v = disc.random()
+            v = disc.sample()
             self.assertIn(v, self.freqs)
             ans.add(v)
         self.assertGreater(len(ans), 10)
+
+    def test_min_max(self):
+        self.assertEqual(self.n1.min(), 0)
+        self.assertFalse(isinstance(self.n1.min(), distribution.Continuous))
+        self.assertEqual(self.n1.max(), 9)
+        self.assertFalse(isinstance(self.n1.max(), distribution.Continuous))
 
 
 class TestClassDistribution(unittest.TestCase):
@@ -290,6 +328,27 @@ class TestClassDistribution(unittest.TestCase):
         self.assertEqual(disc.unknowns, 0)
         np.testing.assert_array_equal(disc,
                                       [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
+
+    def test_multiple_target_variables(self):
+        d = data.Table.from_numpy(
+            data.Domain(
+                attributes=[data.ContinuousVariable('n1')],
+                class_vars=[
+                    data.DiscreteVariable('c1', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('c2', values=['r', 'g', 'b', 'a']),
+                    data.DiscreteVariable('c3', values=['r', 'g', 'b', 'a']),
+                ]
+            ),
+            X=np.array([range(5)]).T,
+            Y=np.array([
+                [0, 1, 2, 3, 4],
+                [0, 1, 2, 3, 4],
+                [0, 1, 2, 3, 4],
+            ]).T
+        )
+        dists = distribution.class_distribution(d)
+        self.assertEqual(len(dists), 3)
+        self.assertTrue(all(isinstance(dist, distribution.Discrete) for dist in dists))
 
 class TestGetDistribution(unittest.TestCase):
     def test_get_distribution(self):
@@ -438,6 +497,7 @@ class TestDomainDistribution(unittest.TestCase):
         dist, nanc = d._compute_distributions([variable])[0]
         np.testing.assert_almost_equal(dist, [2, 3, 2])
         self.assertEqual(nanc, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
