@@ -131,10 +131,11 @@ def bincount(x, weights=None, max_val=None, minlength=None):
         bc = np.bincount(
             x.astype(np.int32, copy=False), weights=weights, minlength=minlength
         ).astype(float)
-        # Since `csr_matrix.values` only contain non-zero values, we must count
-        # those separately and set the appropriate bin
+        # Since `csr_matrix.values` only contain non-zero values or explicit
+        # zeros, we must count implicit zeros separately and add them to the
+        # explicit ones found before
         if sp.issparse(x_original):
-            bc[0] = zero_weights
+            bc[0] += zero_weights
 
     return bc, nans
 

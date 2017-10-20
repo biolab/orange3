@@ -1,6 +1,6 @@
 import unittest
 import warnings
-from functools import wraps
+from functools import wraps, partial
 from itertools import chain
 
 import numpy as np
@@ -16,9 +16,21 @@ def dense_sparse(test_case):
     """Run a single test case on both dense and sparse data."""
     @wraps(test_case)
     def _wrapper(self):
+
+        def sparse_with_explicit_zero(x, array):
+            """Inject one explicit zero into a sparse array."""
+            np_array, sp_array = np.atleast_2d(x), array(x)
+            assert issparse(sp_array), 'Can not inject explicit zero into non-sparse matrix'
+
+            zero_indices = np.argwhere(np_array == 0)
+            if zero_indices.size:
+                sp_array[tuple(zero_indices[0])] = 0
+
+            return sp_array
+
         test_case(self, lambda x: np.array(x))
-        test_case(self, lambda x: csr_matrix(x))
-        test_case(self, lambda x: csc_matrix(x))
+        test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
+        test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
 
     return _wrapper
 
