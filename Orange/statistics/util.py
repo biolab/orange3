@@ -30,21 +30,21 @@ def _count_nans_per_row_sparse(X, weights, dtype=None):
     return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=dtype)
 
 
-def sparse_count_zeros(x):
+def sparse_count_implicit_zeros(x):
     """ Count the number of implicit zeros in a sparse matrix. """
     if not sp.issparse(x):
         raise TypeError('The matrix provided was not sparse.')
     return np.prod(x.shape) - x.nnz
 
 
-def sparse_has_zeros(x):
+def sparse_has_implicit_zeros(x):
     """ Check if sparse matrix contains any implicit zeros. """
     if not sp.issparse(x):
         raise TypeError('The matrix provided was not sparse.')
     return np.prod(x.shape) != x.nnz
 
 
-def sparse_zero_weights(x, weights):
+def sparse_implicit_zero_weights(x, weights):
     """ Extract the weight values of all zeros in a sparse matrix. """
     if not sp.issparse(x):
         raise TypeError('The matrix provided was not sparse.')
@@ -103,10 +103,10 @@ def bincount(x, weights=None, max_val=None, minlength=None):
     if sp.issparse(x):
         x = x.tocsr()
         if weights is not None:
-            zero_weights = sparse_zero_weights(x, weights).sum()
+            zero_weights = sparse_implicit_zero_weights(x, weights).sum()
             weights = weights[x.indices]
         else:
-            zero_weights = sparse_count_zeros(x)
+            zero_weights = sparse_count_implicit_zeros(x)
 
         x = x.data
 
@@ -343,7 +343,7 @@ def _nan_min_max(x, func, axis=0):
         return func(x, axis=axis)
     if axis is None:
         extreme = func(x.data, axis=axis) if x.nnz else float('nan')
-        if sparse_has_zeros(x):
+        if sparse_has_implicit_zeros(x):
             extreme = func([0, extreme])
         return extreme
     if axis == 0:
@@ -356,7 +356,7 @@ def _nan_min_max(x, func, axis=0):
     for row in x:
         values = row.data
         extreme = func(values) if values.size else float('nan')
-        if sparse_has_zeros(row):
+        if sparse_has_implicit_zeros(row):
             extreme = func([0, extreme])
         r.append(extreme)
     return np.array(r)
@@ -422,7 +422,7 @@ def unique(x, return_counts=False):
     if not sp.issparse(x):
         return np.unique(x, return_counts=return_counts)
 
-    implicit_zeros = sparse_count_zeros(x)
+    implicit_zeros = sparse_count_implicit_zeros(x)
     explicit_zeros = not np.all(x.data)
     r = np.unique(x.data, return_counts=return_counts)
     if not implicit_zeros:
