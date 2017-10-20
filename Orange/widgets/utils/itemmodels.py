@@ -869,8 +869,26 @@ class DomainModel(VariableListModel):
                  ATTRIBUTES)
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
-    def __init__(self, order=SEPARATED, placeholder=None,
+    def __init__(self, order=SEPARATED, separators=True, placeholder=None,
                  valid_types=None, alphabetical=False, skip_hidden_vars=True, **kwargs):
+        """
+
+        Parameters
+        ----------
+        order: tuple, can be also int
+            How attributes, metas and classes are ordered and where between
+            them are separators.
+        separators: bool
+            Ignore separators when set to False despite being set in order.
+        placeholder: str
+            Placeholder is the text that is shown when no variable is selected.
+        valid_types: tuple (Variable, ContinuousVariable, DiscreteVariable, etc.)
+            Continuous, discrete, etc. variables.
+        alphabetical: bool
+            If true, variables are sorted alphabetically.
+        skip_hidden_vars: bool
+            If true, variables marked as "hidden" are skipped.
+        """
         super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
             order = (order,)
@@ -880,6 +898,8 @@ class DomainModel(VariableListModel):
             order = (None,) + \
                     (self.Separator, ) * (self.Separator in order) + \
                     order
+        if not separators:
+            order = [e for e in order if e is not self.Separator]
         self.order = order
         self.valid_types = valid_types
         self.alphabetical = alphabetical

@@ -310,3 +310,21 @@ class TestDomainModel(TestCase):
                             skip_hidden_vars=False)
         model.set_domain(Domain(attrs))
         self.assertEqual(list(model), disc)
+
+    def test_no_separators(self):
+        """
+        GH-2697
+        """
+        attrs = [ContinuousVariable(n) for n in "abg"]
+        classes = [ContinuousVariable(n) for n in "deh"]
+        metas = [ContinuousVariable(n) for n in "ijf"]
+
+        model = DomainModel(order=DomainModel.SEPARATED, separators=False)
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(list(model), classes + metas + attrs)
+
+        model = DomainModel(order=DomainModel.SEPARATED, separators=True)
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(
+            list(model),
+            classes + [PyListModel.Separator] + metas + [PyListModel.Separator] + attrs)
