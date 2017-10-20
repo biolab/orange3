@@ -8,7 +8,8 @@ import scipy as sp
 from scipy.sparse import csr_matrix, issparse, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
+    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var, vstack, \
+    hstack
 
 
 def dense_sparse(test_case):
@@ -191,6 +192,46 @@ class TestUtil(unittest.TestCase):
                     var(csr_matrix(data), axis=axis),
                     np.var(data, axis=axis)
                 )
+
+    def assert_correct_array_type(self, array, shape, sparsity):
+        self.assertEqual(array.shape, shape)
+        self.assertEqual(["dense", "sparse"][issparse(array)], sparsity)
+
+    def test_vstack(self):
+        numpy = np.array([[1., 2.], [3., 4.]])
+        csr = csr_matrix(numpy)
+        csc = csc_matrix(numpy)
+
+        self.assert_correct_array_type(
+            vstack([numpy, numpy]),
+            shape=(4, 2), sparsity="dense")
+        self.assert_correct_array_type(
+            vstack([csr, numpy]),
+            shape=(4, 2), sparsity="sparse")
+        self.assert_correct_array_type(
+            vstack([numpy, csc]),
+            shape=(4, 2), sparsity="sparse")
+        self.assert_correct_array_type(
+            vstack([csc, csr]),
+            shape=(4, 2), sparsity="sparse")
+
+    def test_hstack(self):
+        numpy = np.array([[1., 2.], [3., 4.]])
+        csr = csr_matrix(numpy)
+        csc = csc_matrix(numpy)
+
+        self.assert_correct_array_type(
+            hstack([numpy, numpy]),
+            shape=(2, 4), sparsity="dense")
+        self.assert_correct_array_type(
+            hstack([csr, numpy]),
+            shape=(2, 4), sparsity="sparse")
+        self.assert_correct_array_type(
+            hstack([numpy, csc]),
+            shape=(2, 4), sparsity="sparse")
+        self.assert_correct_array_type(
+            hstack([csc, csr]),
+            shape=(2, 4), sparsity="sparse")
 
 
 class TestDigitize(unittest.TestCase):
