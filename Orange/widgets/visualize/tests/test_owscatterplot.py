@@ -18,12 +18,18 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def setUpClass(cls):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
+        cls.same_input_output_domain = False
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
 
     def setUp(self):
         self.widget = self.create_widget(OWScatterPlot)
+
+    def _compare_selected_annotated_domains(self, selected, annotated):
+        # Base class tests that selected.domain is a subset of annotated.domain
+        # In scatter plot, the two domains are unrelated, so we disable the test
+        pass
 
     def test_set_data(self):
         # Connect iris to scatter plot
@@ -154,6 +160,9 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         def selectedx():
             return self.get_output(self.widget.Outputs.selected_data).X
 
+        def selected_groups():
+            return self.get_output(self.widget.Outputs.selected_data).metas[:, 0]
+
         def annotated():
             return self.get_output(self.widget.Outputs.annotated_data).metas
 
@@ -163,6 +172,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         # Select 0:5
         graph.select(points[:5])
         np.testing.assert_equal(selectedx(), x[:5])
+        np.testing.assert_equal(selected_groups(), np.zeros(5))
         sel_column[:5] = 1
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -171,6 +181,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier):
             graph.select(points[5:10])
         np.testing.assert_equal(selectedx(), x[:10])
+        np.testing.assert_equal(selected_groups(), np.array([0] * 5 + [1] * 5))
         sel_column[5:10] = 2
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
@@ -180,12 +191,14 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         sel_column = np.zeros((len(self.data), 1))
         sel_column[15:20] = 1
         np.testing.assert_equal(selectedx(), x[15:20])
+        np.testing.assert_equal(selected_groups(), np.zeros(5))
         self.assertEqual(annotations(), ["No", "Yes"])
 
         # Alt-select (remove) 10:17; we have 17:20
         with self.modifiers(Qt.AltModifier):
             graph.select(points[10:17])
         np.testing.assert_equal(selectedx(), x[17:20])
+        np.testing.assert_equal(selected_groups(), np.zeros(3))
         sel_column[15:17] = 0
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -194,6 +207,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
             graph.select(points[20:25])
         np.testing.assert_equal(selectedx(), x[17:25])
+        np.testing.assert_equal(selected_groups(), np.zeros(8))
         sel_column[20:25] = 1
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -205,6 +219,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
             graph.select(points[35:40])
         sel_column[30:40] = 2
+        np.testing.assert_equal(selected_groups(), np.array([0] * 8 + [1] * 10))
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
 
