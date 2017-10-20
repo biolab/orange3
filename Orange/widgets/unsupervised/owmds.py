@@ -350,7 +350,6 @@ class OWMDS(OWWidget):
         # invalidate the pen/brush when the subset is changed
         self._subset_mask = None  # type: Optional[np.ndarray]
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
-        self._invalidated = True
 
     def _clear(self):
         self._similar_pairs = None
@@ -574,10 +573,10 @@ class OWMDS(OWWidget):
 
     def handleNewSignals(self):
         if self._invalidated:
+            self.__draw_similar_pairs = False
             self._invalidated = False
             self._initialize()
             self.start()
-        self.__draw_similar_pairs = False
 
         if self._subset_mask is None and self.subset_data is not None and \
                 self.data is not None:
@@ -591,7 +590,7 @@ class OWMDS(OWWidget):
 
     def _on_connected_changed(self):
         self._similar_pairs = None
-        self._update_plot()
+        self.connect_pairs()
 
     def _update_plot(self, new=False):
         self._clear_plot()
@@ -602,6 +601,8 @@ class OWMDS(OWWidget):
             self.graph.new_data(None)
 
     def connect_pairs(self):
+        if self._curve:
+            self.graph.plot_widget.removeItem(self._curve)
         if not (self.connected_pairs and self.__draw_similar_pairs):
             return
         emb_x, emb_y = self.graph.get_xy_data_positions(
@@ -637,8 +638,6 @@ class OWMDS(OWWidget):
         pairs_mask = ~(np.isclose(x1, x2) & np.isclose(y1, y2))
         emb_x_pairs = emb_x_pairs[pairs_mask, :]
         emb_y_pairs = emb_y_pairs[pairs_mask, :]
-        if self._curve:
-            self.graph.plot_widget.removeItem(self._curve)
         self._curve = pg.PlotCurveItem(
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
             pen=pg.mkPen(0.8, width=2, cosmetic=True),
