@@ -43,7 +43,6 @@ class OWOutliers(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         singular_cov = Msg("Singular covariance matrix.")
-        multiclass_error = Msg("Multiple class data is not supported")
         memory_error = Msg("Not enough memory")
 
     def __init__(self):
@@ -149,6 +148,7 @@ class OWOutliers(widget.OWWidget):
         except ValueError:
             self.Error.singular_cov()
             self.in_out_info_label.setText(self.in_out_info_default)
+            return None, None
         except MemoryError:
             self.Error.memory_error()
             return None, None
@@ -170,10 +170,7 @@ class OWOutliers(widget.OWWidget):
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
         if self.data is not None and len(self.data) > 0:
-            if self.data.Y.ndim > 1 and self.data.Y.shape[1] > 1:
-                self.Error.multiclass_error()
-            else:
-                inliers, outliers = self._get_outliers()
+            inliers, outliers = self._get_outliers()
 
         self.Outputs.inliers.send(inliers)
         self.Outputs.outliers.send(outliers)
@@ -188,8 +185,9 @@ class OWOutliers(widget.OWWidget):
                 support_fraction=self.support_fraction
                 if self.empirical_covariance else None,
                 contamination=self.cont / 100.)
-        model = learner(self.data)
-        y_pred = model(self.data)
+        data = self.data.transform(Domain(self.data.domain.attributes))
+        model = learner(data)
+        y_pred = model(data)
         self.add_metas(model)
         return np.array(y_pred)
 
