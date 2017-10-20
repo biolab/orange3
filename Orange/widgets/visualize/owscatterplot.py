@@ -1,5 +1,4 @@
 import numpy as np
-import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtGui import QPen, QPalette
@@ -323,8 +322,7 @@ class OWScatterPlot(OWWidget):
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
-                            self.sparse_to_dense(self.subset_data))
+        self.graph.new_data(self.data_metas_X, self.subset_data)
         if self.attribute_selection_list and self.graph.domain and \
                 all(attr in self.graph.domain
                         for attr in self.attribute_selection_list):
@@ -336,36 +334,6 @@ class OWScatterPlot(OWWidget):
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.apply_selection()
         self.unconditional_commit()
-
-    def prepare_data(self):
-        """
-        Only when dealing with sparse matrices.
-        GH-2152
-        """
-        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
-                            self.sparse_to_dense(self.subset_data),
-                            new=False)
-
-    def sparse_to_dense(self, input_data=None):
-        if input_data is None or not input_data.is_sparse():
-            return input_data
-        keys = []
-        attrs = {self.attr_x,
-                 self.attr_y,
-                 self.graph.attr_color,
-                 self.graph.attr_shape,
-                 self.graph.attr_size,
-                 self.graph.attr_label}
-        for i, attr in enumerate(input_data.domain):
-            if attr in attrs:
-                keys.append(i)
-        new_domain = input_data.domain.select_columns(keys)
-        dmx = input_data.transform(new_domain)
-        dmx.X = dmx.X.toarray()
-        # TODO: remove once we make sure Y is always dense.
-        if sp.issparse(dmx.Y):
-            dmx.Y = dmx.Y.toarray()
-        return dmx
 
     def apply_selection(self):
         """Apply selection saved in workflow."""
@@ -400,14 +368,12 @@ class OWScatterPlot(OWWidget):
         self.update_attr()
 
     def update_attr(self):
-        self.prepare_data()
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.send_features()
 
     def update_colors(self):
-        self.prepare_data()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):

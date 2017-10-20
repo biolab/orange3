@@ -4,6 +4,7 @@ from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
+import scipy.sparse as sp
 from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
@@ -20,7 +21,6 @@ from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
 from pyqtgraph.graphicsItems.InfiniteLine import InfiniteLine
 from pyqtgraph.Point import Point
-
 
 from Orange.widgets import gui
 from Orange.widgets.utils import classdensity, get_variable_values_sorted
@@ -500,7 +500,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.plot_widget.sizeHint = lambda: QSize(500, 500)
         scene = self.plot_widget.scene()
         self._create_drag_tooltip(scene)
-
+        self._data = None  # Original Table as passed from widget to new_data before transformations
+        self.attr_x = None
+        self.attr_y = None
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
@@ -605,7 +607,32 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.subset_indices = set(e.id for e in subset_data) if subset_data else None
 
+        self._data = data
+        data = self.sparse_to_dense()
         self.set_data(data, **args)
+
+    def sparse_to_dense(self):
+        data = self._data
+        if data is None or not data.is_sparse():
+            return data
+
+        attrs = {self.attr_x,
+                 self.attr_y,
+                 self.attr_color,
+                 self.attr_shape,
+                 self.attr_size,
+                 self.attr_label}
+        domain = data.domain
+        all_attrs = domain.variables + domain.metas
+        attrs = list(set(all_attrs) & attrs)
+        selected_data = data[:, attrs]
+        if sp.issparse(selected_data.X):
+            selected_data.X = selected_data.X.toarray()
+        if sp.issparse(selected_data.Y):
+            selected_data.Y = selected_data.Y.toarray()
+        if sp.issparse(selected_data.metas):
+            selected_data.metas = selected_data.metas.toarray()
+        return selected_data
 
     def _clear_plot_widget(self):
         self.remove_legend()
@@ -628,6 +655,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_axis_title("left", "")
 
     def update_data(self, attr_x, attr_y, reset_view=True):
+        self.attr_x = attr_x
+        self.attr_y = attr_y
+        if attr_x not in self.data.domain or attr_y not in self.data.domain:
+            data = self.sparse_to_dense()
+            self.set_data(data)
+
         self.master.Warning.missing_coords.clear()
         self.master.Information.missing_coords.clear()
         self._clear_plot_widget()
@@ -782,7 +815,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         return size_data
 
     def update_sizes(self):
-        self.master.prepare_data()
+        self.set_data(self.sparse_to_dense())
         self.update_point_size()
 
     def update_point_size(self):
@@ -915,6 +948,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def update_colors(self, keep_colors=False):
         self.master.update_colors()
+        self.set_data(self.sparse_to_dense())
         self.update_alpha_value(keep_colors)
 
     def update_alpha_value(self, keep_colors=False):
@@ -999,7 +1033,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def assure_attribute_present(self, attr):
         if self.data is not None and attr not in self.data.domain:
-            self.master.prepare_data()
+            self.set_data(self.sparse_to_dense())
 
     def update_grid(self):
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)

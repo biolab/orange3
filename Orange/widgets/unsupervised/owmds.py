@@ -11,6 +11,7 @@ import pyqtgraph as pg
 
 import Orange.data
 from Orange.data import Domain, Table, ContinuousVariable
+from Orange.data.util import hstack
 import Orange.projection
 from Orange.projection.manifold import torgerson
 import Orange.distance
@@ -176,8 +177,6 @@ class OWMDS(OWWidget):
         self._invalidated = False
         self.effective_matrix = None
         self._curve = None
-        self._primitive_metas = ()
-        self._data_metas = None
 
         self.variable_x = ContinuousVariable("mds-x")
         self.variable_y = ContinuousVariable("mds-y")
@@ -271,6 +270,11 @@ class OWMDS(OWWidget):
 
     def init_attr_values(self):
         domain = self.data and len(self.data) and self.data.domain or None
+        if domain is not None:
+            domain = Domain(
+                attributes=domain.attributes,
+                class_vars=domain.class_vars,
+                metas=tuple(a for a in domain.metas if a.is_primitive()))
         for model in self.models:
             model.set_domain(domain)
         self.graph.attr_color = self.data.domain.class_var if domain else None
@@ -652,7 +656,7 @@ class OWMDS(OWWidget):
 
         primitive_metas = tuple(a for a in data.domain.metas if a.is_primitive())
         keys = [k for k, a in enumerate(data.domain.metas) if a.is_primitive()]
-        data_metas = data.metas[:, keys]
+        data_metas = data.metas[:, keys].astype(float)
 
         attributes = self.data.domain.attributes + (self.variable_x, self.variable_y) + \
                      primitive_metas
@@ -662,7 +666,7 @@ class OWMDS(OWWidget):
             data_x = (self.data.X, coords, data_metas)
         else:
             data_x = (self.data.X, coords)
-        data = Table.from_numpy(domain, X=np.hstack(data_x),
+        data = Table.from_numpy(domain, X=hstack(data_x),
                                 Y=self.data.Y)
         subset_data = data[self._subset_mask] if self._subset_mask is not None else None
         self.graph.new_data(data, subset_data=subset_data, new=new)
