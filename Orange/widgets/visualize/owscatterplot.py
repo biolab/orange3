@@ -139,7 +139,6 @@ class OWScatterPlot(OWWidget):
 
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
-        self.data_metas_X = None  # self.data, where primitive metas are moved to X
         self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
         self.__timer = QTimer(self, interval=1200)
@@ -243,7 +242,6 @@ class OWScatterPlot(OWWidget):
         same_domain = (self.data and data and
                        data.domain.checksum() == self.data.domain.checksum())
         self.data = data
-        self.data_metas_X = self.move_primitive_metas_to_X(data)
 
         if not same_domain:
             self.init_attr_values()
@@ -295,7 +293,6 @@ class OWScatterPlot(OWWidget):
             data_sample.download_data(2000, partial=True)
             data = Table(data_sample)
             self.data = Table.concatenate((self.data, data), axis=0)
-            self.data_metas_X = self.move_primitive_metas_to_X(self.data)
             self.handleNewSignals()
 
     def switch_sampling(self):
@@ -303,15 +300,6 @@ class OWScatterPlot(OWWidget):
         if self.auto_sample and self.sql_data:
             self.add_data()
             self.__timer.start()
-
-    def move_primitive_metas_to_X(self, data):
-        if data is not None:
-            new_attrs = [a for a in data.domain.attributes + data.domain.metas
-                         if a.is_primitive()]
-            new_metas = [m for m in data.domain.metas if not m.is_primitive()]
-            new_domain = Domain(new_attrs, data.domain.class_vars, new_metas)
-            data = data.transform(new_domain)
-        return data
 
     @Inputs.data_subset
     def set_subset_data(self, subset_data):
@@ -322,12 +310,11 @@ class OWScatterPlot(OWWidget):
             else:
                 self.warning("Data subset does not support large Sql tables")
                 subset_data = None
-        self.subset_data = self.move_primitive_metas_to_X(subset_data)
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.new_data(self.data_metas_X, self.subset_data)
+        self.graph.new_data(self.data, self.subset_data)
         if self.attribute_selection_list and self.graph.domain and \
                 all(attr in self.graph.domain
                         for attr in self.attribute_selection_list):
