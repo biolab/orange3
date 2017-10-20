@@ -49,7 +49,7 @@ def sparse_implicit_zero_weights(x, weights):
     if not sp.issparse(x):
         raise TypeError('The matrix provided was not sparse.')
 
-    x = x.tocsr()
+    x = x.tocsc()
 
     if weights.ndim == 1:
         n_items = np.prod(x.shape)
@@ -101,7 +101,7 @@ def bincount(x, weights=None, max_val=None, minlength=None):
     # Store the original matrix before any manipulation to check for sparse
     x_original = x
     if sp.issparse(x):
-        x = x.tocsr()
+        x = x.tocsc()
         if weights is not None:
             zero_weights = sparse_implicit_zero_weights(x, weights).sum()
             weights = weights[x.indices]
