@@ -750,7 +750,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def draw_regression_line(self, x_data, y_data, min_x, max_x):
         if self.show_reg_line and self.can_draw_regresssion_line():
-            slope, intercept, _, _, _ = linregress(x_data, y_data)
+            slope, intercept, rvalue, _, _ = linregress(x_data, y_data)
             start_y = min_x * slope + intercept
             end_y = max_x * slope + intercept
             angle = np.degrees(np.arctan((end_y - start_y) / (max_x - min_x)))
@@ -760,7 +760,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                           rotateAxis=(1, 0), movable=True)
             self.reg_line_item = InfiniteLine(
                 pos=QPointF(min_x, start_y), pen=pg.mkPen(color=color, width=1),
-                angle=angle, label="r = {:.2f}".format(slope), labelOpts=l_opts)
+                angle=angle, label="r = {:.2f}".format(rvalue), labelOpts=l_opts)
             if rotate:
                 self.reg_line_item.label.angle = 180
                 self.reg_line_item.label.updateTransform()
