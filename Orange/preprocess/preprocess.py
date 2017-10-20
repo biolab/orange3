@@ -488,7 +488,7 @@ class Scale(Preprocess):
         return data.transform(domain)
 
 
-class PreprocessorList(Reprable):
+class PreprocessorList(Preprocess):
     """
     Store a list of preprocessors and on call apply them to the data set.
 
