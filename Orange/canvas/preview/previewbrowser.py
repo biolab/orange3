@@ -6,7 +6,7 @@ Preview Browser Widget.
 from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
-    QWidget, QLabel, QListView, QAction, QVBoxLayout, QHBoxLayout, QSizePolicy,
+    QWidget, QLabel, QAction, QVBoxLayout, QHBoxLayout, QSizePolicy,
     QStyleOption, QStylePainter
 )
 from AnyQt.QtSvg import QSvgWidget
@@ -17,6 +17,7 @@ from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..utils import check_type
 from ..gui.dropshadow import DropShadowFrame
+from ..gui.iconview import LinearIconView
 from . import previewmodel
 
 
@@ -35,59 +36,6 @@ DESCRIPTION_TEMPLATE = """
 """
 
 PREVIEW_SIZE = (440, 295)
-
-
-class LinearIconView(QListView):
-    """
-    An list view (in QListView.IconMode) with no item wrapping.
-
-    Suitable for displaying large(ish) icons with text underneath single
-    horizontal line layout.
-    """
-    def __init__(self, *args, **kwargs):
-        QListView.__init__(self, *args, **kwargs)
-
-        self.setViewMode(QListView.IconMode)
-        self.setWrapping(False)
-        self.setWordWrap(True)
-
-        self.setSelectionMode(QListView.SingleSelection)
-        self.setEditTriggers(QListView.NoEditTriggers)
-        self.setMovement(QListView.Static)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setSizePolicy(QSizePolicy.Expanding,
-                           QSizePolicy.Fixed)
-
-        self.setIconSize(QSize(120, 80))
-
-    def sizeHint(self):
-        """
-        Reimplemented.
-
-        Provide sensible vertical size hint based on the view's contents.
-        """
-        if not self.model().rowCount():
-            return QSize(200, 140)
-        else:
-            scrollHint = self.horizontalScrollBar().sizeHint()
-            # Sample the first 10 items for a size hint. The objective is to
-            # get a representative height due to the word wrapping
-            samplesize = min(10, self.model().rowCount())
-            contentheight = max(self.sizeHintForRow(i)
-                                for i in range(samplesize))
-            height = contentheight + scrollHint.height()
-            _, top, _, bottom = self.getContentsMargins()
-            return QSize(200, height + top + bottom + self.verticalOffset())
-
-    def updateGeometries(self):
-        """Reimplemented"""
-        QListView.updateGeometries(self)
-        self.updateGeometry()
-
-    def dataChanged(self, topLeft, bottomRight, roles=[]):
-        """Reimplemented"""
-        QListView.dataChanged(self, topLeft, bottomRight)
-        self.updateGeometry()
 
 
 class TextLabel(QWidget):
@@ -232,7 +180,10 @@ class PreviewBrowser(QWidget):
         vlayout.addLayout(path_layout)
 
         # An list view with small preview icons.
-        self.__previewList = LinearIconView(objectName="preview-list-view")
+        self.__previewList = LinearIconView(
+            objectName="preview-list-view",
+            wordWrap=True
+        )
         self.__previewList.doubleClicked.connect(self.__onDoubleClicked)
 
         vlayout.addWidget(self.__previewList)
