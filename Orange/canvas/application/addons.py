@@ -776,20 +776,24 @@ class Installer(QObject):
                 self.setStatusMessage(
                     "Installing {}".format(pkg.installable.name))
                 if self.conda:
-                    self.conda.install(pkg.installable)
+                    self.conda.install(pkg.installable, raise_on_fail=False)
                 self.pip.install(pkg.installable)
             elif command == Upgrade:
                 self.setStatusMessage(
                     "Upgrading {}".format(pkg.installable.name))
                 if self.conda:
-                    self.conda.upgrade(pkg.installable)
+                    self.conda.upgrade(pkg.installable, raise_on_fail=False)
                 self.pip.upgrade(pkg.installable)
             elif command == Uninstall:
                 self.setStatusMessage(
                     "Uninstalling {}".format(pkg.local.project_name))
                 if self.conda:
-                    self.conda.uninstall(pkg.local)
-                self.pip.uninstall(pkg.local)
+                    try:
+                        self.conda.uninstall(pkg.local, raise_on_fail=True)
+                    except CommandFailed:
+                        self.pip.uninstall(pkg.local)
+                else:
+                    self.pip.uninstall(pkg.local)
         except CommandFailed as ex:
             self.error.emit(
                 "Command failed: python {}".format(ex.cmd),
@@ -885,17 +889,26 @@ class CondaInstaller:
             os.environ["CONDA_DEFAULT_ENV"] = bin
             return conda
 
-    def install(self, pkg):
-        cmd = ["conda", "install", "--yes", "--quiet", pkg.name]
-        run_command(cmd, raise_on_fail=False)
+    def install(self, pkg, raise_on_fail=False):
+        cmd = ["conda", "install", "--yes", "--quiet",
+               self._normalize(pkg.name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
 
-    def upgrade(self, pkg):
-        cmd = ["conda", "upgrade", "--yes", "--quiet", pkg.name]
-        run_command(cmd, raise_on_fail=False)
+    def upgrade(self, pkg, raise_on_fail=False):
+        cmd = ["conda", "upgrade", "--yes", "--quiet",
+               self._normalize(pkg.name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
 
-    def uninstall(self, dist):
-        cmd = ["conda", "uninstall", "--yes", dist.project_name]
-        run_command(cmd, raise_on_fail=False)
+    def uninstall(self, dist, raise_on_fail=False):
+        cmd = ["conda", "uninstall", "--yes",
+               self._normalize(dist.project_name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
+
+    def _normalize(self, name):
+        # Conda 4.3.30 is inconsistent, upgrade command is case sensitive
+        # while install and uninstall are not. We assume that all conda
+        # package names are lowercase which fixes the problems (for now)
+        return name.lower()
 
     def __bool__(self):
         return bool(self.conda)
