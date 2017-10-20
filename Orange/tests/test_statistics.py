@@ -5,7 +5,7 @@ from itertools import chain
 
 import numpy as np
 import scipy as sp
-from scipy.sparse import csr_matrix, issparse
+from scipy.sparse import csr_matrix, issparse, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
     nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
@@ -18,6 +18,7 @@ def dense_sparse(test_case):
     def _wrapper(self):
         test_case(self, lambda x: np.array(x))
         test_case(self, lambda x: csr_matrix(x))
+        test_case(self, lambda x: csc_matrix(x))
 
     return _wrapper
 
