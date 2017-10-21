@@ -1,11 +1,9 @@
 import unittest
-import warnings
-from functools import wraps, partial
 from itertools import chain
+from functools import partial, wraps
 
 import numpy as np
-import scipy as sp
-from scipy.sparse import csr_matrix, issparse, csc_matrix
+from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
     nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
@@ -127,44 +125,6 @@ class TestUtil(unittest.TestCase):
                 np.testing.assert_array_equal(
                     nanmax(X_sparse, axis=axis),
                     np.nanmax(X, axis=axis))
-
-    def test_unique(self):
-        for X in self.data:
-            X_sparse = csr_matrix(X)
-            np.testing.assert_array_equal(
-                unique(X_sparse, return_counts=False),
-                np.unique(X, return_counts=False))
-
-            for a1, a2 in zip(unique(X_sparse, return_counts=True),
-                              np.unique(X, return_counts=True)):
-                np.testing.assert_array_equal(a1, a2)
-
-    def test_unique_explicit_zeros(self):
-        x1 = csr_matrix(np.eye(3))
-        x2 = csr_matrix(np.eye(3))
-
-        # set some of-diagonal to explicit zeros
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore",
-                                    category=sp.sparse.SparseEfficiencyWarning)
-            x2[0, 1] = 0
-            x2[1, 0] = 0
-
-        np.testing.assert_array_equal(
-            unique(x1, return_counts=False),
-            unique(x2, return_counts=False),
-        )
-        np.testing.assert_array_equal(
-            unique(x1, return_counts=True),
-            unique(x2, return_counts=True),
-        )
-
-    def test_nanunique(self):
-        x = csr_matrix(np.array([0, 1, 1, np.nan]))
-        np.testing.assert_array_equal(
-            nanunique(x),
-            np.array([0, 1])
-        )
 
     def test_mean(self):
         for X in self.data:
@@ -420,3 +380,59 @@ class TestBincount(unittest.TestCase):
 
         expected = [3, 0, 2, 1]
         np.testing.assert_equal(bincount(x, w)[0], expected)
+
+
+class TestUnique(unittest.TestCase):
+    @dense_sparse
+    def test_returns_unique_values(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [-1, 0, 1, 2, 3, 5, 6, 7, np.nan, np.nan]
+
+        np.testing.assert_equal(unique(x, return_counts=False), expected)
+
+    @dense_sparse
+    def test_returns_counts(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [2, 6, 2, 1, 2, 1, 1, 1, 1, 1]
+
+        np.testing.assert_equal(unique(x, return_counts=True)[1], expected)
+
+    def test_sparse_explicit_zeros(self):
+        # Use `lil_matrix` to fix sparse warning for matrix construction
+        x = lil_matrix(np.eye(3))
+        x[0, 1] = 0
+        x[1, 0] = 0
+        x = x.tocsr()
+        # Test against identity matrix
+        y = csr_matrix(np.eye(3))
+
+        np.testing.assert_array_equal(
+            unique(y, return_counts=True),
+            unique(x, return_counts=True),
+        )
+
+    @dense_sparse
+    def test_nanunique_ignores_nans_in_values(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [-1, 0, 1, 2, 3, 5, 6, 7]
+
+        np.testing.assert_equal(nanunique(x, return_counts=False), expected)
+
+    @dense_sparse
+    def test_nanunique_ignores_nans_in_counts(self, array):
+        # pylint: disable=bad-whitespace
+        x = array([[-1., 1., 0., 2., 3., np.nan],
+                   [ 0., 0., 0., 3., 5., np.nan],
+                   [-1., 0., 0., 1., 7.,     6.]])
+        expected = [2, 6, 2, 1, 2, 1, 1, 1]
+
+        np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)

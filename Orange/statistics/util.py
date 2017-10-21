@@ -437,22 +437,31 @@ def unique(x, return_counts=False):
     r = np.unique(x.data, return_counts=return_counts)
     if not implicit_zeros:
         return r
+
     if return_counts:
+        zero_index = np.searchsorted(r[0], 0)
         if explicit_zeros:
             r[1][r[0] == 0.] += implicit_zeros
             return r
-        return np.insert(r[0], 0, 0), np.insert(r[1], 0, implicit_zeros)
+        return np.insert(r[0], zero_index, 0), np.insert(r[1], zero_index, implicit_zeros)
     else:
         if explicit_zeros:
             return r
-        return np.insert(r, 0, 0)
+        zero_index = np.searchsorted(r, 0)
+        return np.insert(r, zero_index, 0)
 
 
-def nanunique(x):
+def nanunique(*args, **kwargs):
     """ Return unique values while disregarding missing (np.nan) values.
     Supports sparse or dense matrices. """
-    r = unique(x)
-    return r[~np.isnan(r)]
+    result = unique(*args, **kwargs)
+
+    if isinstance(result, tuple):
+        result, counts = result
+        non_nan_mask = ~np.isnan(result)
+        return result[non_nan_mask], counts[non_nan_mask]
+
+    return result[~np.isnan(result)]
 
 
 def digitize(x, bins, right=False):
