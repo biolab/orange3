@@ -2,7 +2,7 @@
 Preview Browser Widget.
 
 """
-
+import os
 from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
@@ -308,10 +308,38 @@ class PreviewBrowser(QWidget):
 
         self.__label.setText(desc_text)
 
-        self.__path.setText(path)
+        self.__path.setText(contractuser(path))
 
         if not svg:
             svg = NO_PREVIEW_SVG
 
         if svg:
             self.__image.load(QByteArray(svg.encode("utf-8")))
+
+
+def contractuser(path):
+    # type: (str) -> str
+    """
+    Inverse of `expanduser(join("~", path))`
+
+    Return the path unmodified if not under user's home dir.
+
+    Parameters
+    ----------
+    path : str
+
+    Returns
+    -------
+    path : str
+
+    Examples
+    --------
+    >>> contractuser(os.path.expanduser("~/hello"))
+    '~/hello'
+    """
+    home = os.path.expanduser("~/")
+    pathnorm = os.path.normcase(os.path.normpath(path))
+    homenorm = os.path.normcase(os.path.normpath(home))
+    if pathnorm.startswith(homenorm):
+        path = os.path.join("~", os.path.relpath(path, home))
+    return path
