@@ -211,6 +211,9 @@ class Domain:
     def metas(self):
         return self._metas
 
+    def filter(self, pred):
+        return [v for v in chain(self, self.metas) if pred(v)]
+
     def __len__(self):
         """The number of variables (features and class attributes)."""
         return len(self._variables)
