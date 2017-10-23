@@ -275,8 +275,7 @@ class TreeGraphicsScene(QGraphicsScene):
         if not x or not y:
             x, y = self._HSPACING, self._VSPACING
         self._fix_pos(node, x, y)
-        rect = self.itemsBoundingRect().adjusted(-10, -10, 20, 20)
-        self.setSceneRect(rect)
+        self.setSceneRect(QRectF(0, 0, self.gx, self.gy).adjusted(-10, -10, 100, 100))
         self.update()
 
     def _fix_pos(self, node, x, y):
