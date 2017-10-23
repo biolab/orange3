@@ -236,6 +236,9 @@ class OWLinearProjection(widget.OWWidget):
         self.__legend = None
         self.__selection_item = None
         self.__replot_requested = False
+        #: Remember the saved state to restore
+        self.__pending_selection_restore = self.selection_indices
+        self.selection_indices = None
 
         box = gui.vBox(self.controlArea, "Axes")
 
@@ -425,6 +428,7 @@ class OWLinearProjection(widget.OWWidget):
 
     def clear(self):
         self.data = None
+        self.selection_indices = None
         self._subset_mask = None
         self._selection_mask = None
         self.varmodel_selected[:] = []
@@ -515,8 +519,9 @@ class OWLinearProjection(widget.OWWidget):
             if set(selected_keys).issubset(set(state.keys())):
                 pass
 
-            if self.selection_indices is not None:
-                self.select_indices(self.selection_indices)
+            if self.__pending_selection_restore is not None:
+                self.select_indices(self.__pending_selection_restore)
+                self.__pending_selection_restore = None
 
             # update the defaults state (the encoded state must contain
             # all variables in the input domain)
@@ -942,6 +947,7 @@ class OWLinearProjection(widget.OWWidget):
             self._selection_mask[indices] = True
 
         self._on_color_change()
+        self.selection_indices = numpy.flatnonzero(self._selection_mask).tolist()
         self.commit()
 
     def commit(self):
@@ -952,7 +958,6 @@ class OWLinearProjection(widget.OWWidget):
             if len(indices) > 0:
                 subset = self.data[indices]
 
-        self.selection_indices = indices
         self.Outputs.selected_data.send(subset)
         self.Outputs.annotated_data.send(create_annotated_table(self.data, indices))
 

@@ -109,6 +109,8 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
+
+    #: Serialized selection state to be restored
     selection_group = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
@@ -142,6 +144,9 @@ class OWScatterPlot(OWWidget):
         self.attribute_selection_list = None  # list of Orange.data.Variable
         self.__timer = QTimer(self, interval=1200)
         self.__timer.timeout.connect(self.add_data)
+        #: Remember the saved state to restore
+        self.__pending_selection_restore = self.selection_group
+        self.selection_group = None
 
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
@@ -332,14 +337,16 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
-        self.apply_selection()
+        if self.data is not None and self.__pending_selection_restore is not None:
+            self.apply_selection(self.__pending_selection_restore)
+            self.__pending_selection_restore = None
         self.unconditional_commit()
 
-    def apply_selection(self):
-        """Apply selection saved in workflow."""
-        if self.data is not None and self.selection_group is not None:
+    def apply_selection(self, selection):
+        """Apply `selection` to the current plot."""
+        if self.data is not None:
             self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
-            self.selection_group = [x for x in self.selection_group if x[0] < len(self.data)]
+            self.selection_group = [x for x in selection if x[0] < len(self.data)]
             selection_array = np.array(self.selection_group).T
             self.graph.selection[selection_array[0]] = selection_array[1]
             self.graph.update_colors(keep_colors=True)
@@ -389,6 +396,19 @@ class OWScatterPlot(OWWidget):
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def selection_changed(self):
+
+        # Store current selection in a setting that is stored in workflow
+        if isinstance(self.data, SqlTable):
+            selection = None
+        elif self.data is not None:
+            selection = self.graph.get_selection()
+        else:
+            selection = None
+        if selection is not None and len(selection):
+            self.selection_group = list(zip(selection, self.graph.selection[selection]))
+        else:
+            self.selection_group = None
+
         self.commit()
 
     def send_data(self):
@@ -409,12 +429,6 @@ class OWScatterPlot(OWWidget):
         selection = graph.get_selection()
         self.Outputs.annotated_data.send(_get_annotated())
         self.Outputs.selected_data.send(_get_selected())
-
-        # Store current selection in a setting that is stored in workflow
-        if len(selection):
-            self.selection_group = list(zip(selection, graph.selection[selection]))
-        else:
-            self.selection_group = None
 
     def send_features(self):
         features = [attr for attr in [self.attr_x, self.attr_y] if attr]

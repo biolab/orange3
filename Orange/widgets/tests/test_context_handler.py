@@ -15,6 +15,7 @@ class SimpleWidget:
     settings_version = 1
 
     setting = Setting(42)
+    schema_only_setting = Setting(None, schema_only=True)
 
     context_setting = ContextSetting(42)
 
@@ -180,6 +181,17 @@ class TestContextHandler(TestCase):
             contexts = pickle.load(f)
             for c in contexts:
                 self.assertEqual(c.values.get("__version__", 0xBAD), 1)
+
+    def test_close_context(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        widget.storeSpecificSettings = Mock()
+        handler.initialize(widget)
+        widget.schema_only_setting = 0xD06F00D
+        widget.current_context = handler.new_context()
+        handler.close_context(widget)
+        self.assertEqual(widget.schema_only_setting, 0xD06F00D)
 
 
 class TestSettingsPrinter(TestCase):
