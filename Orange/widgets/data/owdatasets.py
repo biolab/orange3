@@ -12,10 +12,9 @@ from types import SimpleNamespace as namespace
 from typing import Optional, Dict, Tuple
 
 from AnyQt.QtWidgets import (
-    QLabel, QTextBrowser, QSplitter, QTreeView,
+    QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
     QStyleOptionViewItem, QStyledItemDelegate, QApplication
 )
-
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
     Qt, QSize, QObject, QThread, QModelIndex, QSortFilterProxyModel,
@@ -26,11 +25,11 @@ from AnyQt.QtCore import (
 from serverfiles import LocalFiles, ServerFiles, sizeformat
 
 import Orange.data
-
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.widget import Msg
+
 
 INDEX_URL = "http://datasets.orange.biolab.si/"
 log = logging.getLogger(__name__)
@@ -141,6 +140,12 @@ class OWDataSets(widget.OWWidget):
         self.infolabel = QLabel(text="Initializing...\n\n")
         box.layout().addWidget(self.infolabel)
 
+        gui.widgetLabel(self.mainArea, "Filter")
+        self.filterLineEdit = QLineEdit(
+            textChanged=self.filter
+        )
+        self.mainArea.layout().addWidget(self.filterLineEdit)
+
         self.splitter = QSplitter(orientation=Qt.Vertical)
 
         self.view = QTreeView(
@@ -150,6 +155,7 @@ class OWDataSets(widget.OWWidget):
             rootIsDecorated=False,
             editTriggers=QTreeView.NoEditTriggers,
         )
+
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
@@ -181,7 +187,9 @@ class OWDataSets(widget.OWWidget):
         model.setHorizontalHeaderLabels(HEADER)
         proxy = QSortFilterProxyModel()
         proxy.setSourceModel(model)
-        self.view.setModel(model)
+        proxy.setFilterKeyColumn(-1)
+        proxy.setFilterCaseSensitivity(False)
+        self.view.setModel(proxy)
 
         if self.splitter_state:
             self.splitter.restoreState(self.splitter_state)
@@ -294,8 +302,8 @@ class OWDataSets(widget.OWWidget):
                 current_index = i
 
         hs = self.view.header().saveState()
-        model_ = self.view.model()
-        self.view.setModel(model)
+        model_ = self.view.model().sourceModel()
+        self.view.model().setSourceModel(model)
         self.view.header().restoreState(hs)
         model_.deleteLater()
         model_.setParent(None)
@@ -343,6 +351,12 @@ class OWDataSets(widget.OWWidget):
         else:
             info = None
         return info
+
+    def filter(self):
+        filter_string = self.filterLineEdit.text().strip()
+        proxyModel = self.view.model()
+        if proxyModel:
+            proxyModel.setFilterFixedString(filter_string)
 
     def __on_selection(self):
         # Main data sets view selection has changed
