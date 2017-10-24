@@ -792,10 +792,10 @@ class datasets:
         return Table(cls.path("missing_data_3.tab"))
 
     @classmethod
-    def data_one_column_nans(cls):
+    def data_one_column_vals(cls, value=np.nan):
         """
         Data set with two continuous features and one discrete. One continuous
-        columns has missing values (NaN).
+        columns has custom set values (default nan).
 
         Returns
         -------
@@ -812,4 +812,21 @@ class datasets:
                 ["", "", "", ""],
                 "ynyn"
             )))
+        table[:, 1] = value
         return table
+
+    @classmethod
+    def data_one_column_nans(cls):
+        """
+        Data set with two continuous features and one discrete. One continuous
+        columns has missing values (NaN).
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return cls.data_one_column_vals(value=np.nan)
+
+    @classmethod
+    def data_one_column_infs(cls):
+        return cls.data_one_column_vals(value=np.inf)
