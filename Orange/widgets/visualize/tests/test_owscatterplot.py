@@ -126,6 +126,17 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
         self.widget.update_graph()
 
+    def test_data_column_infs(self):
+        """
+        Scatter Plot should not crash on data with infinity values
+        GH-2707
+        GH-2684
+        """
+        table = datasets.data_one_column_infs()
+        self.send_signal(self.widget.Inputs.data, table)
+        attr_x = self.widget.controls.attr_x
+        simulate.combobox_activate_item(attr_x, "b")
+
     def test_regression_line(self):
         """It is possible to draw the line only for pair of continuous attrs"""
         self.send_signal(self.widget.Inputs.data, self.data)

@@ -49,7 +49,7 @@ class ScaleData:
         Y = data.Y if data.Y.ndim == 2 else np.atleast_2d(data.Y).T
         self.original_data = np.hstack((data.X, Y)).T
         self.scaled_data = no_jit = self.original_data.copy()
-        self.valid_data_array = ~np.isnan(no_jit)
+        self.valid_data_array = np.isfinite(no_jit)
         for index in range(len(data.domain)):
             attr = data.domain[index]
             if attr.is_discrete:
