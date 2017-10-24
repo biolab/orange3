@@ -38,8 +38,8 @@ from AnyQt.QtGui import (
 
 from AnyQt.QtCore import (
     QSortFilterProxyModel, QItemSelectionModel,
-    Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG
-)
+    Qt, QObject, QMetaObject, QEvent, QSize, QTimer, QThread, Q_ARG,
+    QSettings)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from ..gui.utils import message_warning, message_information, \
@@ -736,6 +736,15 @@ def _env_with_proxies():
 Install, Upgrade, Uninstall = 1, 2, 3
 
 
+class CommandFailed(Exception):
+    def __init__(self, cmd, retcode, output):
+        if not isinstance(cmd, str):
+            cmd = " ".join(map(shlex.quote, cmd))
+        self.cmd = cmd
+        self.retcode = retcode
+        self.output = output
+
+
 class Installer(QObject):
     installStatusChanged = Signal(str)
     started = Signal()
@@ -746,7 +755,8 @@ class Installer(QObject):
         QObject.__init__(self, parent)
         self.__interupt = False
         self.__queue = deque(steps)
-        self.__user_install = user_install
+        self.pip = PipInstaller(user_install)
+        self.conda = CondaInstaller()
 
     def start(self):
         QTimer.singleShot(0, self._next)
@@ -760,127 +770,189 @@ class Installer(QObject):
 
     @Slot()
     def _next(self):
-        def fmt_cmd(cmd):
-            return "Command failed: python " + " ".join(map(shlex.quote, cmd))
-
         command, pkg = self.__queue.popleft()
-        if command == Install:
-            inst = pkg.installable
-            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
-            self.setStatusMessage("Installing {}".format(inst.name))
-
-            cmd = (["-m", "pip", "install"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-        elif command == Upgrade:
-            inst = pkg.installable
-            inst_name = inst.name if inst.package_url.startswith("http://") else inst.package_url
-            self.setStatusMessage("Upgrading {}".format(inst.name))
-
-            cmd = (["-m", "pip", "install", "--upgrade", "--no-deps"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-            # Why is this here twice??
-            cmd = (["-m", "pip", "install"] +
-                   (["--user"] if self.__user_install else []) +
-                   [inst_name])
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
-
-        elif command == Uninstall:
-            dist = pkg.local
-            self.setStatusMessage("Uninstalling {}".format(dist.project_name))
-
-            cmd = ["-m", "pip", "uninstall", "--yes", dist.project_name]
-            process = python_process(cmd,
-                                     bufsize=-1,
-                                     universal_newlines=True,
-                                     env=_env_with_proxies()
-                                    )
-            retcode, output = self.__subprocessrun(process)
-
-            if self.__user_install:
-                # Remove the package forcefully; pip doesn't (yet) uninstall
-                # --user packages (or any package outside sys.prefix?)
-                # google: pip "Not uninstalling ?" "outside environment"
-                install_path = os.path.join(
-                    USER_SITE, re.sub('[^\w]', '_', dist.project_name))
-                pip_record = next(iglob(install_path + '*.dist-info/RECORD'),
-                                  None)
-                if pip_record:
-                    with open(pip_record) as f:
-                        files = [line.rsplit(',', 2)[0] for line in f]
+        try:
+            if command == Install:
+                self.setStatusMessage(
+                    "Installing {}".format(pkg.installable.name))
+                if self.conda:
+                    self.conda.install(pkg.installable, raise_on_fail=False)
+                self.pip.install(pkg.installable)
+            elif command == Upgrade:
+                self.setStatusMessage(
+                    "Upgrading {}".format(pkg.installable.name))
+                if self.conda:
+                    self.conda.upgrade(pkg.installable, raise_on_fail=False)
+                self.pip.upgrade(pkg.installable)
+            elif command == Uninstall:
+                self.setStatusMessage(
+                    "Uninstalling {}".format(pkg.local.project_name))
+                if self.conda:
+                    try:
+                        self.conda.uninstall(pkg.local, raise_on_fail=True)
+                    except CommandFailed:
+                        self.pip.uninstall(pkg.local)
                 else:
-                    files = [os.path.join(
-                        USER_SITE, 'orangecontrib',
-                        dist.project_name.split('-')[-1].lower()),]
-                for match in itertools.chain(files, iglob(install_path + '*')):
-                    print('rm -rf', match)
-                    if os.path.isdir(match):
-                        shutil.rmtree(match)
-                    elif os.path.exists(match):
-                        os.unlink(match)
-
-            if retcode != 0:
-                self.error.emit(fmt_cmd(cmd), pkg, retcode, output)
-                return
+                    self.pip.uninstall(pkg.local)
+        except CommandFailed as ex:
+            self.error.emit(
+                "Command failed: python {}".format(ex.cmd),
+                pkg, ex.retcode, ex.output
+            )
+            return
 
         if self.__queue:
             QTimer.singleShot(0, self._next)
         else:
             self.finished.emit()
 
-    def __subprocessrun(self, process):
-        output = []
-        while process.poll() is None:
-            try:
-                line = process.stdout.readline()
-            except IOError as ex:
-                if ex.errno != errno.EINTR:
-                    raise
-            else:
-                output.append(line)
-                print(line, end="")
-        # Read remaining output if any
-        line = process.stdout.read()
-        if line:
+
+class PipInstaller:
+    def __init__(self, user_install=False):
+        self.user_install = user_install
+
+    def install(self, pkg):
+        cmd = ["python", "-m", "pip", "install"]
+        if self.user_install:
+            cmd.append("--user")
+        cmd.append(pkg.name)
+
+        run_command(cmd)
+
+    def upgrade(self, package):
+        # This is done in two steps to avoid upgrading
+        # all of the dependencies - faster
+        self.upgrade_no_deps(package)
+        self.install(package)
+
+    def upgrade_no_deps(self, package):
+        cmd = ["python", "-m", "pip", "install", "--upgrade", "--no-deps"]
+        if self.user_install:
+            cmd.append("--user")
+        cmd.append(package.name)
+
+        run_command(cmd)
+
+    def uninstall(self, dist):
+        cmd = ["python", "-m", "pip", "uninstall", "--yes", dist.project_name]
+        run_command(cmd)
+
+        if self.user_install:
+            # Remove the package forcefully; pip doesn't (yet) uninstall
+            # --user packages (or any package outside sys.prefix?)-
+            # google: pip "Not uninstalling ?" "outside environment"
+            self.manual_uninstall(dist)
+
+    def manual_uninstall(self, dist):
+        install_path = os.path.join(
+            USER_SITE, re.sub('[^\w]', '_', dist.project_name))
+        pip_record = next(iglob(install_path + '*.dist-info/RECORD'),
+                          None)
+        if pip_record:
+            with open(pip_record) as f:
+                files = [line.rsplit(',', 2)[0] for line in f]
+        else:
+            files = [os.path.join(
+                USER_SITE, 'orangecontrib',
+                dist.project_name.split('-')[-1].lower()), ]
+        for match in itertools.chain(files, iglob(install_path + '*')):
+            print('rm -rf', match)
+            if os.path.isdir(match):
+                shutil.rmtree(match)
+            elif os.path.exists(match):
+                os.unlink(match)
+
+
+class CondaInstaller:
+    def __init__(self):
+        enabled = QSettings().value('add-ons/allow-conda-experimental',
+                                    False, type=bool)
+        if enabled:
+            self.conda = self._find_conda()
+        else:
+            self.conda = None
+
+    def _find_conda(self):
+        executable = sys.executable
+        bin = os.path.dirname(executable)
+
+        # posix
+        conda = os.path.join(bin, "conda")
+        if os.path.exists(conda):
+            return conda
+
+        # windows
+        conda = os.path.join(bin, "Scripts", "conda.bat")
+        if os.path.exists(conda):
+            # "activate" conda environment orange is running in
+            os.environ["CONDA_PREFIX"] = bin
+            os.environ["CONDA_DEFAULT_ENV"] = bin
+            return conda
+
+    def install(self, pkg, raise_on_fail=False):
+        cmd = ["conda", "install", "--yes", "--quiet",
+               self._normalize(pkg.name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
+
+    def upgrade(self, pkg, raise_on_fail=False):
+        cmd = ["conda", "upgrade", "--yes", "--quiet",
+               self._normalize(pkg.name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
+
+    def uninstall(self, dist, raise_on_fail=False):
+        cmd = ["conda", "uninstall", "--yes",
+               self._normalize(dist.project_name)]
+        run_command(cmd, raise_on_fail=raise_on_fail)
+
+    def _normalize(self, name):
+        # Conda 4.3.30 is inconsistent, upgrade command is case sensitive
+        # while install and uninstall are not. We assume that all conda
+        # package names are lowercase which fixes the problems (for now)
+        return name.lower()
+
+    def __bool__(self):
+        return bool(self.conda)
+
+
+def run_command(command, raise_on_fail=True):
+    """Run command in a subprocess.
+
+    Return `process` return code and output once it completes.
+    """
+    log.info("Running %s", " ".join(command))
+
+    if command[0] == "python":
+        process = python_process(command[1:])
+    else:
+        process = create_process(command)
+
+    output = []
+    while process.poll() is None:
+        try:
+            line = process.stdout.readline()
+        except IOError as ex:
+            if ex.errno != errno.EINTR:
+                raise
+        else:
             output.append(line)
             print(line, end="")
+    # Read remaining output if any
+    line = process.stdout.read()
+    if line:
+        output.append(line)
+        print(line, end="")
 
-        return process.returncode, output
+    if process.returncode != 0:
+        log.info("Command %s failed with %s",
+                 " ".join(command), process.returncode)
+        log.debug("Output:\n%s", "\n".join(output))
+        if raise_on_fail:
+            raise CommandFailed(command, process.returncode, output)
+
+    return process.returncode, output
 
 
-def python_process(args, script_name=None, cwd=None, env=None, **kwargs):
+def python_process(args, script_name=None, **kwargs):
     """
     Run a `sys.executable` in a subprocess with `args`.
     """
@@ -889,30 +961,33 @@ def python_process(args, script_name=None, cwd=None, env=None, **kwargs):
         # Don't run the script with a 'gui' (detached) process.
         dirname = os.path.dirname(executable)
         executable = os.path.join(dirname, "python.exe")
-        # by default a new console window would show up when executing the
-        # script
-        startupinfo = subprocess.STARTUPINFO()
-        if hasattr(subprocess, "STARTF_USESHOWWINDOW"):
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        else:
-            # This flag was missing in inital releases of 2.7
-            startupinfo.dwFlags |= subprocess._subprocess.STARTF_USESHOWWINDOW
-
-        kwargs["startupinfo"] = startupinfo
 
     if script_name is not None:
         script = script_name
     else:
         script = executable
 
-    process = subprocess.Popen(
+    return create_process(
         [script] + args,
-        executable=executable,
-        cwd=cwd,
-        env=env,
-        stderr=subprocess.STDOUT,
-        stdout=subprocess.PIPE,
-        **kwargs
+        executable=executable
     )
 
-    return process
+
+def create_process(cmd, executable=None, **kwargs):
+    if hasattr(subprocess, "STARTUPINFO"):
+        # do not open a new console window for command on windows
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        kwargs["startupinfo"] = startupinfo
+
+    return subprocess.Popen(
+        cmd,
+        executable=executable,
+        cwd=None,
+        env=_env_with_proxies(),
+        stderr=subprocess.STDOUT,
+        stdout=subprocess.PIPE,
+        bufsize=-1,
+        universal_newlines=True,
+        **kwargs
+    )
