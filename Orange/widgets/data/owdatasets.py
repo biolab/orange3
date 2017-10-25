@@ -320,7 +320,7 @@ class OWDataSets(widget.OWWidget):
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
     def __update_cached_state(self):
-        model = self.view.model()
+        model = self.view.model().sourceModel()
         localinfo = list_local()
         assert isinstance(model, QStandardItemModel)
         allinfo = []
