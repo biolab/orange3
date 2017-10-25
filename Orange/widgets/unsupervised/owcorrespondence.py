@@ -10,10 +10,12 @@ from AnyQt.QtCore import QEvent, QItemSelectionModel, QItemSelection
 
 import pyqtgraph as pg
 import Orange.data
+from Orange.data import DiscreteVariable
 from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.itemmodels import DomainModel
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
 from Orange.widgets.widget import Input
@@ -71,9 +73,9 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.component_y = 1
 
         box = gui.vBox(self.controlArea, "Variables")
-        self.varlist = itemmodels.VariableListModel()
+        self.model = DomainModel(valid_types=DiscreteVariable)
         self.varview = view = QListView(selectionMode=QListView.MultiSelection)
-        view.setModel(self.varlist)
+        view.setModel(self.model)
         view.selectionModel().selectionChanged.connect(self._var_changed)
 
         box.layout().addWidget(view)
@@ -111,15 +113,14 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         self.data = data
         if data is not None:
-            self.varlist[:] = [var for var in data.domain.variables
-                               if var.is_discrete]
-            if not len(self.varlist[:]):
+            self.model.set_domain(data.domain)
+            if not len(self.model[:]):
                 self.Error.no_disc_vars()
                 self.data = None
             else:
-                self.selected_var_indices = [0, 1][:len(self.varlist)]
+                self.selected_var_indices = [0, 1][:len(self.model)]
                 self.component_x = 0
-                self.component_y = int(len(self.varlist[self.selected_var_indices[-1]].values) > 1)
+                self.component_y = int(len(self.model[self.selected_var_indices[-1]].values) > 1)
                 self.openContext(data)
                 self._restore_selection()
         self._update_CA()
@@ -128,12 +129,12 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.data = None
         self.ca = None
         self.plot.clear()
-        self.varlist[:] = []
+        self.model.set_domain(None)
 
     def selected_vars(self):
         rows = sorted(
             ind.row() for ind in self.varview.selectionModel().selectedRows())
-        return [self.varlist[i] for i in rows]
+        return [self.model[i] for i in rows]
 
     def _restore_selection(self):
         def restore(view, indices):
