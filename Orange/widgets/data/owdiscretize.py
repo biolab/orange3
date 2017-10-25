@@ -7,9 +7,11 @@ from AnyQt.QtCore import Qt
 
 import Orange.data
 import Orange.preprocess.discretize as disc
+from Orange.data import ContinuousVariable
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils import vartype
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWDiscretize"]
@@ -204,7 +206,8 @@ class OWDiscretize(widget.OWWidget):
         # List view with all attributes
         self.varview = QListView(selectionMode=QListView.ExtendedSelection)
         self.varview.setItemDelegate(DiscDelegate())
-        self.varmodel = itemmodels.VariableListModel()
+        self.varmodel = DomainModel(order=(DomainModel.CLASSES, DomainModel.ATTRIBUTES),
+                                    valid_types=ContinuousVariable)
         self.varview.setModel(self.varmodel)
         self.varview.selectionModel().selectionChanged.connect(
             self._var_selection_changed
@@ -256,9 +259,7 @@ class OWDiscretize(widget.OWWidget):
     def _initialize(self, data):
         # Initialize the default variable states for new data.
         self.class_var = data.domain.class_var
-        cvars = [var for var in data.domain.variables
-                 if var.is_continuous]
-        self.varmodel[:] = cvars
+        self.varmodel.set_domain(data.domain)
 
         has_disc_class = data.domain.has_discrete_class
 
@@ -300,7 +301,7 @@ class OWDiscretize(widget.OWWidget):
 
     def _clear(self):
         self.data = None
-        self.varmodel[:] = []
+        self.varmodel.set_domain(None)
         self.var_state = {}
         self.saved_var_states = {}
         self.default_bbox.buttons[self.MDL - 1].setEnabled(True)
