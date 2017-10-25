@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,protected-access
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, Variable
 from Orange.data.table import dataset_dirs
 from Orange.tests import test_dirname
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -34,7 +34,7 @@ class TestOWDistributions(WidgetTest):
         # select meta attribute
 
         w.cb_disc_cont.setChecked(True)
-        w.variable_idx = 2
+        w.var = self.data.domain.metas[0]
         w._setup()
 
     def test_remove_data(self):
@@ -42,7 +42,7 @@ class TestOWDistributions(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.data, self.iris)
         self.assertEqual(w.cb_prob.count(), 5)
-        self.assertEqual(w.groupvarview.count(), 2)
+        self.assertEqual(w.groupvarview.count(), 3)  # placeholder ("None"), separator, one Variable
         self.send_signal(w.Inputs.data, None)
         self.assertEqual(w.cb_prob.count(), 0)
         self.assertEqual(w.groupvarview.count(), 0)
@@ -59,17 +59,17 @@ class TestOWDistributions(WidgetTest):
         widget.varview.selectionModel().select(
             widget.varview.model().index(4, 0))
         self.assertIsInstance(widget.var, DiscreteVariable)
-        self.assertEqual(widget.var.name, mdomain.metas[0].name)
+        self.assertEqual(widget.var.name, mdomain.attributes[2].name)
 
     def test_variable_group_combinations(self):
         """Check widget for all combinations of variable and group for dataset
         with constant columns and missing data"""
         w = self.widget
         self.send_signal(w.Inputs.data, Table(datasets.path("testing_dataset_cls")))
-        for groupvar_idx in range(len(w.groupvarmodel)):
-            w.groupvar_idx = groupvar_idx
-            for var_idx in range(len(w.varmodel)):
-                w.variable_idx = var_idx
+        for groupvar in [var for var in w.groupvarmodel if isinstance(var, Variable)]:
+            w.cvar = groupvar
+            for var in w.varmodel:
+                w.var = var
                 w._setup()
 
     def test_no_distributions(self):

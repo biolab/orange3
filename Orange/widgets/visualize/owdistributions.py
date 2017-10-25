@@ -18,29 +18,30 @@ import numpy as np
 import pyqtgraph as pg
 
 import Orange.data
+from Orange.data import DiscreteVariable
 from Orange.preprocess import Discretize, EqualWidth
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import Input
 from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 
 from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
 
 
-def selected_index(view):
-    """Return the selected integer `index` (row) in the view.
+def selected_variable(view):
+    """Return the selected Variable `var` (row) in the view.
 
-    If no index is selected return -1
+    If no index is selected return None
 
     `view` must be in single selection mode.
     """
     indices = view.selectedIndexes()
     assert len(indices) < 2, "View must be in single selection mode"
     if indices:
-        return indices[0].row()
-    else:
-        return -1
+        return indices[0].data(Qt.EditRole)
+    return None
 
 
 class DistributionBarItem(pg.GraphicsObject):
@@ -91,9 +92,9 @@ class OWDistributions(widget.OWWidget):
     settingsHandler = settings.DomainContextHandler(
         match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)
     #: Selected variable index
-    variable_idx = settings.ContextSetting(-1)
+    var = settings.ContextSetting(None)
     #: Selected group variable
-    groupvar_idx = settings.ContextSetting(0)
+    group_var = settings.ContextSetting(None)
 
     relative_freq = settings.Setting(False)
     disc_cont = settings.Setting(False)
@@ -114,11 +115,10 @@ class OWDistributions(widget.OWWidget):
 
         self.distributions = None
         self.contingencies = None
-        self.var = self.cvar = None
         varbox = gui.vBox(self.controlArea, "Variable")
 
-        self.varmodel = itemmodels.VariableListModel()
-        self.groupvarmodel = []
+        self.varmodel = DomainModel(separators=False, valid_types=DomainModel.PRIMITIVE)
+        self.groupvarmodel = DomainModel(placeholder="(None)", valid_types=DiscreteVariable)
 
         self.varview = QListView(
             selectionMode=QListView.SingleSelection)
@@ -128,7 +128,7 @@ class OWDistributions(widget.OWWidget):
         self.varview.setSelectionModel(
             itemmodels.ListSingleSelectionModel(self.varmodel))
         self.varview.selectionModel().selectionChanged.connect(
-            self._on_variable_idx_changed)
+            self._on_variable_changed)
         varbox.layout().addWidget(self.varview)
 
         box = gui.vBox(self.controlArea, "Precision")
@@ -145,15 +145,16 @@ class OWDistributions(widget.OWWidget):
         self.cb_disc_cont = gui.checkBox(
             gui.indentedBox(box, sep=4),
             self, "disc_cont", "Bin numeric variables",
-            callback=self._on_groupvar_idx_changed,
+            callback=self._on_groupvar_changed,
             tooltip="Show numeric variables as categorical.")
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
         self.groupvarview = gui.comboBox(
-            box, self, "groupvar_idx",
-            callback=self._on_groupvar_idx_changed,
-            valueType=str, contentsLength=12)
+            box, self, "group_var",
+            callback=self._on_groupvar_changed,
+            valueType=str, contentsLength=12,
+            sendSelectedValue=True, model=self.groupvarmodel)
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
@@ -227,34 +228,25 @@ class OWDistributions(widget.OWWidget):
                 self.warning("Empty input data cannot be visualized")
                 return
             domain = self.data.domain
-            self.varmodel[:] = list(domain.variables) + \
-                               [meta for meta in domain.metas
-                                if meta.is_continuous or meta.is_discrete]
+            self.varmodel.set_domain(domain)
             self.groupvarview.clear()
-            self.groupvarmodel = \
-                ["(None)"] + [var for var in domain.variables if var.is_discrete] + \
-                [meta for meta in domain.metas if meta.is_discrete]
-            self.groupvarview.addItem("(None)")
-            for var in self.groupvarmodel[1:]:
-                self.groupvarview.addItem(self.icons[var], var.name)
+            self.groupvarmodel.set_domain(domain)
             if domain.has_discrete_class:
-                self.groupvar_idx = \
-                    self.groupvarmodel[1:].index(domain.class_var) + 1
+                self.group_var = domain.class_var
             self.openContext(domain)
-            self.variable_idx = min(max(self.variable_idx, 0),
-                                    len(self.varmodel) - 1)
-            self.groupvar_idx = min(max(self.groupvar_idx, 0),
-                                    len(self.groupvarmodel) - 1)
-            itemmodels.select_row(self.varview, self.variable_idx)
+            self.group_var = None if self.group_var not in self.groupvarmodel else self.group_var
+            self.var = self.var if self.var in self.varmodel else None
+            self.group_var = self.group_var if self.group_var in self.groupvarmodel else None
+            itemmodels.select_row(self.varview, self.var)
             self._setup()
 
     def clear(self):
         self.plot.clear()
         self.plot_prob.clear()
-        self.varmodel[:] = []
-        self.groupvarmodel = []
-        self.variable_idx = -1
-        self.groupvar_idx = 0
+        self.varmodel.set_domain(None)
+        self.groupvarmodel.set_domain(None)
+        self.var = None
+        self.group_var = None
         self._legend.clear()
         self._legend.hide()
         self.groupvarview.clear()
@@ -281,34 +273,29 @@ class OWDistributions(widget.OWWidget):
         self._legend.clear()
         self._legend.hide()
 
-        varidx = self.variable_idx
-        self.var = self.cvar = None
-        if varidx >= 0:
-            self.var = self.varmodel[varidx]
-        if self.groupvar_idx > 0:
-            self.cvar = self.groupvarmodel[self.groupvar_idx]
+        if self.group_var is not None:
             self.cb_prob.clear()
             self.cb_prob.addItem("(None)")
-            self.cb_prob.addItems(self.cvar.values)
+            self.cb_prob.addItems(self.group_var.values)
             self.cb_prob.addItem("(All)")
             self.show_prob = min(max(self.show_prob, 0),
-                                 len(self.cvar.values) + 1)
+                                 len(self.group_var.values) + 1)
         data = self.data
         self._setup_smoothing()
         if self.var is None:
             return
         if self.disc_cont:
             domain = Orange.data.Domain(
-                [self.var, self.cvar] if self.cvar else [self.var])
+                [self.var, self.group_var] if self.group_var else [self.var])
             data = Orange.data.Table(domain, data)
             disc = EqualWidth(n=self.bins[self.smoothing_index])
             data = Discretize(method=disc, remove_const=False)(data)
             self.var = data.domain[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
-        if self.cvar:
+        if self.group_var:
             self.contingencies = \
-                contingency.get_contingency(data, self.var, self.cvar)
+                contingency.get_contingency(data, self.var, self.group_var)
             self.display_contingency()
         else:
             self.distributions = \
@@ -374,7 +361,7 @@ class OWDistributions(widget.OWWidget):
 
     def _on_relative_freq_changed(self):
         self.set_left_axis_name()
-        if self.cvar and self.cvar.is_discrete:
+        if self.group_var and self.group_var.is_discrete:
             self.display_contingency()
         else:
             self.display_distribution()
@@ -385,7 +372,7 @@ class OWDistributions(widget.OWWidget):
         Set the contingency to display.
         """
         cont = self.contingencies
-        var, cvar = self.var, self.cvar
+        var, group_var = self.var, self.group_var
         if cont is None or not len(cont):
             return
         self.plot.clear()
@@ -402,19 +389,19 @@ class OWDistributions(widget.OWWidget):
         bottomaxis.setLabel(var.name)
         bottomaxis.resizeEvent()
 
-        cvar_values = cvar.values
-        colors = [QColor(*col) for col in cvar.colors]
+        group_var_values = group_var.values
+        colors = [QColor(*col) for col in group_var.colors]
 
         if var and var.is_continuous:
             bottomaxis.setTicks(None)
 
-            weights, cols, cvar_values, curves = [], [], [], []
+            weights, cols, group_var_values, curves = [], [], [], []
             for i, dist in enumerate(cont):
                 v, W = dist
                 if len(v):
                     weights.append(np.sum(W))
                     cols.append(colors[i])
-                    cvar_values.append(cvar.values[i])
+                    group_var_values.append(group_var.values[i])
                     curves.append(ash_curve(
                         dist, cont, m=OWDistributions.ASH_HIST,
                         smoothing_factor=self.smoothing_factor))
@@ -433,7 +420,7 @@ class OWDistributions(widget.OWWidget):
                 curvesline.append((X, Y))
 
             for t in ["fill", "line"]:
-                curve_data = list(zip(curvesline, colors, weights, cvar_values))
+                curve_data = list(zip(curvesline, colors, weights, group_var_values))
                 for (X, Y), color, w, cval in reversed(curve_data):
                     item = pg.PlotCurveItem()
                     pen = QPen(QBrush(color), 3)
@@ -448,7 +435,7 @@ class OWDistributions(widget.OWWidget):
                     if t == "line":
                         item.tooltip = "{}\n{}={}".format(
                             "Normalized density " if self.relative_freq else "Density ",
-                            cvar.name, cval)
+                            group_var.name, cval)
                         self.tooltip_items.append((self.plot, item))
 
             if self.show_prob:
@@ -460,7 +447,7 @@ class OWDistributions(widget.OWWidget):
 
                 i = len(curvesinterp) + 1
                 show_all = self.show_prob == i
-                for Y, color, cval in reversed(list(zip(curvesinterp, colors, cvar_values))):
+                for Y, color, cval in reversed(list(zip(curvesinterp, colors, group_var_values))):
                     i -= 1
                     if show_all or self.show_prob == i:
                         item = pg.PlotCurveItem()
@@ -471,7 +458,7 @@ class OWDistributions(widget.OWWidget):
                             inter_X[legal], prob, antialias=True, stepMode=False,
                             fillLevel=None, brush=None, pen=pen)
                         self.plot_prob.addItem(item)
-                        item.tooltip = "Probability that \n" + cvar.name + "=" + cval
+                        item.tooltip = "Probability that \n" + group_var.name + "=" + cval
                         self.tooltip_items.append((self.plot_prob, item))
 
         elif var and var.is_discrete:
@@ -481,28 +468,28 @@ class OWDistributions(widget.OWWidget):
 
             maxh = 0 #maximal column height
             maxrh = 0 #maximal relative column height
-            scvar = cont.sum(axis=1)
-            #a cvar with sum=0 with allways have distribution counts 0,
+            sgroup_var = cont.sum(axis=1)
+            #a group_var with sum=0 with allways have distribution counts 0,
             #therefore we can divide it by anything
-            scvar[scvar == 0] = 1
+            sgroup_var[sgroup_var == 0] = 1
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 maxh = max(maxh, max(dist))
-                maxrh = max(maxrh, max(dist/scvar))
+                maxrh = max(maxrh, max(dist/sgroup_var))
 
             for i, (value, dist) in enumerate(zip(var.values, cont.T)):
                 dsum = sum(dist)
                 geom = QRectF(i - 0.333, 0, 0.666,
                               maxrh if self.relative_freq else maxh)
-                item = DistributionBarItem(geom, dist/scvar/maxrh
+                item = DistributionBarItem(geom, dist/sgroup_var/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
                 self.plot.addItem(item)
                 tooltip = "\n".join(
                     "%s: %.*f" % (n, 3 if self.relative_freq else 1, v)
-                    for n, v in zip(cvar_values, dist/scvar if self.relative_freq else dist))
+                    for n, v in zip(group_var_values, dist/sgroup_var if self.relative_freq else dist))
                 item.tooltip = "{} ({}={}):\n{}".format(
                     "Normalized frequency " if self.relative_freq else "Frequency ",
-                    cvar.name, value, tooltip)
+                    group_var.name, value, tooltip)
                 self.tooltip_items.append((self.plot, item))
 
                 if self.show_prob:
@@ -518,7 +505,7 @@ class OWDistributions(widget.OWWidget):
                         if not 1e-6 < prob < 1 - 1e-6:
                             continue
                         ci = 1.96 * sqrt(prob * (1 - prob) / dsum)
-                        item.tooltip += "\n%s: %.3f ± %.3f" % (cvar_values[ic], prob, ci)
+                        item.tooltip += "\n%s: %.3f ± %.3f" % (group_var_values[ic], prob, ci)
                         mark = pg.ScatterPlotItem()
                         errorbar = pg.ErrorBarItem()
                         pen = QPen(QBrush(QColor(0)), 1)
@@ -534,7 +521,7 @@ class OWDistributions(widget.OWWidget):
                         self.plot_prob.addItem(errorbar)
                         self.plot_prob.addItem(mark)
 
-        for color, name in zip(colors, cvar_values):
+        for color, name in zip(colors, group_var_values):
             self._legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
                 escape(name)
@@ -546,22 +533,22 @@ class OWDistributions(widget.OWWidget):
         set_label = leftaxis.setLabel
         if self.var and self.var.is_continuous:
             set_label(["Density", "Relative density"]
-                      [self.cvar is not None and self.relative_freq])
+                      [self.group_var is not None and self.relative_freq])
         else:
             set_label(["Frequency", "Relative frequency"]
-                      [self.cvar is not None and self.relative_freq])
+                      [self.group_var is not None and self.relative_freq])
         leftaxis.resizeEvent()
 
     def enable_disable_rel_freq(self):
-        self.cb_prob.setDisabled(self.var is None or self.cvar is None)
+        self.cb_prob.setDisabled(self.var is None or self.group_var is None)
         self.cb_rel_freq.setDisabled(
-            self.var is None or self.cvar is None)
+            self.var is None or self.group_var is None)
 
-    def _on_variable_idx_changed(self):
-        self.variable_idx = selected_index(self.varview)
+    def _on_variable_changed(self):
+        self.var = selected_variable(self.varview)
         self._setup()
 
-    def _on_groupvar_idx_changed(self):
+    def _on_groupvar_changed(self):
         self._setup()
 
     def _on_set_smoothing(self):
@@ -572,18 +559,17 @@ class OWDistributions(widget.OWWidget):
         super().onDeleteWidget()
 
     def get_widget_name_extension(self):
-        if self.variable_idx >= 0:
-            return self.varmodel[self.variable_idx]
+        if self.var is not None:
+            return self.var
 
     def send_report(self):
         self.plotview.scene().setSceneRect(self.plotview.sceneRect())
-        if self.variable_idx < 0:
+        if self.var is None:
             return
         self.report_plot()
-        text = "Distribution of '{}'".format(
-            self.varmodel[self.variable_idx])
-        if self.groupvar_idx:
-            group_var = self.groupvarmodel[self.groupvar_idx]
+        text = "Distribution of '{}'".format(self.var)
+        if self.group_var:
+            group_var = self.group_var
             prob = self.cb_prob
             indiv_probs = 0 < prob.currentIndex() < prob.count() - 1
             if not indiv_probs or self.relative_freq:
