@@ -10,8 +10,7 @@ from warnings import warn
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
-    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex,
-    QItemSelectionModel, QByteArray
+    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex, QItemSelectionModel
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
@@ -177,7 +176,7 @@ class AbstractSortTableModel(QAbstractTableModel):
             indices = indices[::-1]
         return indices
 
-    def sort(self, column: int, order: Qt.SortOrder=Qt.AscendingOrder):
+    def sort(self, column: int, order: Qt.SortOrder = Qt.AscendingOrder):
         """
         Sort the data by `column` into `order`.
 
@@ -662,7 +661,7 @@ class PyListModel(QAbstractListModel):
                                flags=self._flags,
                                list_item_role=self.list_item_role,
                                supportedDropActions=self.supportedDropActions()
-                               )
+                              )
         new_list._other_data = list(self._other_data)
         new_list.extend(iterable)
         return new_list
@@ -672,7 +671,7 @@ class PyListModel(QAbstractListModel):
 
     def __delitem__(self, s):
         if isinstance(s, slice):
-            start, stop, step = _as_contiguous_range(s, len(self))
+            start, stop, _ = _as_contiguous_range(s, len(self))
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
             s = operator.index(s)
@@ -1215,7 +1214,7 @@ class TableModel(AbstractSortTableModel):
                                    VariableRole,
                                    DomainRole,
                                    VariableStatsRole]),
-             ):
+            ):
         """
         Reimplemented from `QAbstractItemModel.data`
         """

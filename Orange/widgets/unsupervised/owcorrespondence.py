@@ -328,9 +328,8 @@ def burt_table(data, variables):
     counts = [len(attr.values) for attr in variables]
     offsets = np.r_[0, np.cumsum(counts)]
 
-    for i in range(len(variables)):
+    for i, var1 in enumerate(variables):
         for j in range(i + 1):
-            var1 = variables[i]
             var2 = variables[j]
 
             cm = contingency.get_contingency(data, var2, var1)

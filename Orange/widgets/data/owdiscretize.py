@@ -41,8 +41,7 @@ _dispatch = {
     EqualFreq: lambda m, data, var: disc.EqualFreq(m.k)(data, var),
     EqualWidth: lambda m, data, var: disc.EqualWidth(m.k)(data, var),
     Remove: lambda m, data, var: None,
-    Custom: lambda m, data, var:
-        disc.Discretizer.create_discretized_var(var, m.points)
+    Custom: lambda m, data, var: disc.Discretizer.create_discretized_var(var, m.points)
 }
 
 
@@ -261,7 +260,6 @@ class OWDiscretize(widget.OWWidget):
                  if var.is_continuous]
         self.varmodel[:] = cvars
 
-        class_var = data.domain.class_var
         has_disc_class = data.domain.has_discrete_class
 
         self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)

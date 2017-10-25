@@ -20,29 +20,32 @@ class TestOWDistributions(WidgetTest):
         self.widget = self.create_widget(OWDistributions)
 
     def test_metas(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.data)
 
         # check metas in list views
         for meta in self.data.domain.metas:
             if meta.is_discrete or meta.is_continuous:
-                self.assertIn(meta, self.widget.varmodel)
+                self.assertIn(meta, w.varmodel)
         for meta in self.data.domain.metas:
             if meta.is_discrete:
-                self.assertIn(meta, self.widget.groupvarmodel)
+                self.assertIn(meta, w.groupvarmodel)
 
         # select meta attribute
-        self.widget.cb_disc_cont.setChecked(True)
-        self.widget.variable_idx = 2
-        self.widget._setup()
+
+        w.cb_disc_cont.setChecked(True)
+        w.variable_idx = 2
+        w._setup()
 
     def test_remove_data(self):
         """Check widget when data is removed"""
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(self.widget.cb_prob.count(), 5)
-        self.assertEqual(self.widget.groupvarview.count(), 2)
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(self.widget.cb_prob.count(), 0)
-        self.assertEqual(self.widget.groupvarview.count(), 0)
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertEqual(w.cb_prob.count(), 5)
+        self.assertEqual(w.groupvarview.count(), 2)
+        self.send_signal(w.Inputs.data, None)
+        self.assertEqual(w.cb_prob.count(), 0)
+        self.assertEqual(w.groupvarview.count(), 0)
 
     def test_discretize_meta(self):
         """The widget discretizes continuous meta attributes"""
@@ -61,12 +64,13 @@ class TestOWDistributions(WidgetTest):
     def test_variable_group_combinations(self):
         """Check widget for all combinations of variable and group for dataset
         with constant columns and missing data"""
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
-        for groupvar_idx in range(len(self.widget.groupvarmodel)):
-            self.widget.groupvar_idx = groupvar_idx
-            for var_idx in range(len(self.widget.varmodel)):
-                self.widget.variable_idx = var_idx
-                self.widget._setup()
+        w = self.widget
+        self.send_signal(w.Inputs.data, Table(datasets.path("testing_dataset_cls")))
+        for groupvar_idx in range(len(w.groupvarmodel)):
+            w.groupvar_idx = groupvar_idx
+            for var_idx in range(len(w.varmodel)):
+                w.variable_idx = var_idx
+                w._setup()
 
     def test_no_distributions(self):
         """
