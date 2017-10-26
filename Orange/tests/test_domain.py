@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
+import warnings
 from time import time
 from numbers import Real
 from itertools import starmap
@@ -16,6 +16,7 @@ from Orange.data import (
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
 from Orange.tests.base import create_pickling_tests
+from Orange.util import OrangeDeprecationWarning
 
 
 def create_domain(*ss):
@@ -266,14 +267,21 @@ class TestDomainInit(unittest.TestCase):
             [] in d
 
     def test_iter(self):
-        d = Domain((age, gender, income), metas=(ssn,))
-        self.assertEqual([var for var in d], [age, gender, income])
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("error")
 
-        d = Domain((age, ), metas=(ssn,))
-        self.assertEqual([var for var in d], [age])
+            d = Domain((age, gender, income), metas=(ssn,))
+            with self.assertRaises(OrangeDeprecationWarning):
+                list(d)
 
-        d = Domain((), metas=(ssn,))
-        self.assertEqual([var for var in d], [])
+            warnings.simplefilter("ignore")
+            self.assertEqual([var for var in d], [age, gender, income])
+
+            d = Domain((age, ), metas=(ssn,))
+            self.assertEqual([var for var in d], [age])
+
+            d = Domain((), metas=(ssn,))
+            self.assertEqual([var for var in d], [])
 
     def test_str(self):
         cases = (
