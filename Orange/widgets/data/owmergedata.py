@@ -143,7 +143,7 @@ class OWMergeData(widget.OWWidget):
         if data is None:
             model[:] = []
             return
-        model[:] = list(chain([INDEX], data.domain, data.domain.metas))
+        model[:] = list(chain([INDEX], data.domain.variables, data.domain.metas))
 
     def _add_instanceid_to_models(self):
         needs_id = self.data is not None and self.extra_data is not None and \

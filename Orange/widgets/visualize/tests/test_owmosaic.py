@@ -290,7 +290,7 @@ class MosaicVizRankTests(WidgetTest):
                    [1, 2, 6], [1, 3, 7], [1, 4, 7]]
         table = Table("titanic")
         self.send_signal(self.widget.Inputs.data, table)
-        color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain]
+        color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain.variables]
         for i, cv in enumerate(color_vars):
             idx = self.widget.cb_attr_color.findText(cv)
             self.widget.cb_attr_color.setCurrentIndex(idx)

@@ -50,7 +50,7 @@ class TestTabReader(unittest.TestCase):
             file.close()
             table = CSVReader(filename).read()
 
-            f1, f2, f3 = table.domain
+            f1, f2, f3 = table.domain.variables
             self.assertIsInstance(f1, DiscreteVariable)
             self.assertEqual(f1.name, name + "1")
             self.assertIsInstance(f2, ContinuousVariable)

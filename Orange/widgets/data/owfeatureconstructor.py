@@ -591,7 +591,7 @@ class OWFeatureConstructor(OWWidget):
 
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
-        source_vars = tuple(self.data.domain) + self.data.domain.metas
+        source_vars = self.data.domain.variables + self.data.domain.metas
         new_variables = construct_variables(desc, source_vars)
 
         attrs = [var for var in new_variables if var.is_primitive()]

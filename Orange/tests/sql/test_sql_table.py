@@ -30,7 +30,7 @@ class TestSqlTable(PostgresTest):
             self.assertEqual(len(table.domain), 2)
             self.assertEqual(len(table.domain.metas), 1)
 
-            float_attr, discrete_attr = table.domain
+            float_attr, discrete_attr = table.domain.variables
             string_attr, = table.domain.metas
 
             self.assertIsInstance(float_attr, ContinuousVariable)

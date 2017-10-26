@@ -73,7 +73,7 @@ class DomainContinuizer(_RefuseDataInConstructor, Reprable):
 
         domain = data if isinstance(data, Domain) else data.domain
         if (treat == Continuize.ReportError and
-                any(var.is_discrete and len(var.values) > 2 for var in domain)):
+                any(var.is_discrete and len(var.values) > 2 for var in domain.variables)):
             raise ValueError("data has multinomial attributes")
         needs_discrete = (treat == Continuize.FrequentAsBase and
                           domain.has_discrete_attributes(transform_class))

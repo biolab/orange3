@@ -335,7 +335,8 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2384
         """
         domain = Table("iris").domain
-        self.send_signal(self.widget.Inputs.features, AttributeList(domain))
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(domain.variables))
         self.send_signal(self.widget.Inputs.features, None)
 
     def test_features_and_data(self):
