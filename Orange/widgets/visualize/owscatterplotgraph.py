@@ -1236,14 +1236,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def zoom_actions(self, parent):
         def zoom(s):
-            """Zoom in/out by factor `s`."""
-            viewbox = self.plot.getViewBox()
-            # scaleBy scales the view's bounds (the axis range)
-            viewbox.scaleBy((1 / s, 1 / s))
+            """
+            Zoom in/out by factor `s`.
+            scaleBy scales the view's bounds (the axis range)
+            """
+            self.view_box.scaleBy((1 / s, 1 / s))
 
         def fit_to_view():
-            viewbox = self.plot.getViewBox()
-            viewbox.autoRange()
+            self.viewbox.autoRange()
 
         zoom_in = QAction(
             "Zoom in", parent, triggered=lambda: zoom(1.25)
