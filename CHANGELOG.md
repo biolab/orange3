@@ -6,6 +6,43 @@ Change Log
 * ...
 
 
+[3.7.0] - 2017-10-27
+--------------------
+##### Enhancements
+* Data Sets: Add filter ([#2695](../../pull/2695))
+* Add-on installation with Conda ([#2561](../../pull/2561))
+* Add Groups column to Selected Data in Scatter plot output ([#2678](../../pull/2678))
+* DomainModel: Don't Show Hidden Variables by Default ([#2690](../../pull/2690))
+* FreeViz: new widget ([#2512](../../pull/2512))
+* FreeViz script ([#2563](../../pull/2563))
+* Boxplot: Allow hiding labels ([#2654](../../pull/2654))
+* owmds: Support selection/output of multiple groups ([#2666](../../pull/2666))
+* Widget status bar buttons ([#2514](../../pull/2514))
+* owfile: allow multiple readers with same extension ([#2644](../../pull/2644))
+
+##### Bugfixes
+* Tree Viewer: reset view to top left ([#2705](../../pull/2705))
+* ScatterPlot Crashes on Data With Infinity Values ([#2709](../../pull/2709))
+* Scatter Plot: regression line: show r instead of k ([#2701](../../pull/2701))
+* settings: Do not clear schema_only settings on close_context ([#2691](../../pull/2691))
+* Statistics.unique: Fix Sparse Return Order For Negative Numbers ([#2572](../../pull/2572))
+* Statistics.countnans/bincount: Fix NaN Counting, Consider Implicit Zeros ([#2698](../../pull/2698))
+* MDS: No optimization when subset data ([#2675](../../pull/2675))
+* Outliers widget no longer checks classes and doesn't crash on singular covariances matrices ([#2677](../../pull/2677))
+* OWRank: Fix autocommit ([#2685](../../pull/2685))
+* OWScatterPlot: Change output Feature to AttributeList ([#2689](../../pull/2689))
+* OWSql does not save selected table/query ([#2659](../../pull/2659))
+* Scatter Plot: Scatter Plot automatically sends selection ([#2649](../../pull/2649))
+* Silhouette plot rendering ([#2656](../../pull/2656))
+* Variable.make returns proxies ([#2667](../../pull/2667))
+* owhierarchicalclustering: Fix performance on deselection ([#2670](../../pull/2670))
+* Report Table: Make Table Headers Bold ([#2668](../../pull/2668))
+* MDS: primitive metas, init_attr_values ([#2661](../../pull/2661))
+* MDS: Primitive metas ([#2648](../../pull/2648))
+* MDS: similar pairs and combos not cleared ([#2643](../../pull/2643))
+* Scatter Plot: remove dead and commented code, tests ([#2627](../../pull/2627))
+
+
 [3.6.0] - 2017-09-29
 --------------------
 ##### Enhancements
@@ -639,8 +676,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.6...HEAD
-[3.6.0]: https://github.com/biolab/orange3/compare/3.5...3.6
+[next]: https://github.com/biolab/orange3/compare/3.7.0...HEAD
+[3.7.0]: https://github.com/biolab/orange3/compare/3.6.0...3.7.0
+[3.6.0]: https://github.com/biolab/orange3/compare/3.5.0...3.6.0
 [3.5.0]: https://github.com/biolab/orange3/compare/3.4.5...3.5
 [3.4.5]: https://github.com/biolab/orange3/compare/3.4.4...3.4.5
 [3.4.4]: https://github.com/biolab/orange3/compare/3.4.3...3.4.4
