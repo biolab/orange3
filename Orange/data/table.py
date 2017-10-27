@@ -158,7 +158,7 @@ class RowInstance(Instance):
 
 class Columns:
     def __init__(self, domain):
-        for v in chain(domain, domain.metas):
+        for v in chain(domain.variables, domain.metas):
             setattr(self, v.name.replace(" ", "_"), v)
 
 

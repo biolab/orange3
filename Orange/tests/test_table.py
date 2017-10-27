@@ -727,7 +727,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         dom = data.Domain(["petal length", "sepal length", "iris"],
                           source=d.domain)
-        d_ref = d[:10, dom]
+        d_ref = d[:10, dom.variables]
         self.assertEqual(d_ref.domain.class_var, d.domain.class_var)
         self.assertEqual(d_ref[0, "petal length"], d[0, "petal length"])
         self.assertEqual(d_ref[0, "sepal length"], d[0, "sepal length"])

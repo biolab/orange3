@@ -53,19 +53,19 @@ class TestOWMergeData(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataA)
-        data_items = list(chain([INDEX], domainA, domainA.metas))
+        data_items = list(chain([INDEX], domainA.variables, domainA.metas))
         extra_items = list(chain(
             [INDEX], domainA.variables[::2], domainA.metas[1:]))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
-        extra_items = list(chain([INDEX], domainB, domainB.metas))
+        extra_items = list(chain([INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
         self.send_signal(self.widget.Inputs.data, self.dataB)
-        data_items = list(chain([INDEX], domainB, domainB.metas))
+        data_items = list(chain([INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
@@ -87,13 +87,13 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         data_items = list(chain(
             [INDEX], domainA.variables[::2], domainA.metas[1:]))
-        extra_items = list(chain([INDEX], domainB, domainB.metas))
+        extra_items = list(chain([INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
         self.send_signal(self.widget.Inputs.data, self.dataB)
         data_items = extra_items = list(chain(
-            [INSTANCEID, INDEX], domainB, domainB.metas))
+            [INSTANCEID, INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
@@ -115,13 +115,13 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         data_items = list(chain(
             [INDEX], domainA.variables[::2], domainA.metas[1:]))
-        extra_items = list(chain([INDEX], domainB, domainB.metas))
+        extra_items = list(chain([INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 
         self.send_signal(self.widget.Inputs.data, self.dataB)
         data_items = extra_items = list(chain(
-            [INSTANCEID, INDEX], domainB, domainB.metas))
+            [INSTANCEID, INDEX], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
 

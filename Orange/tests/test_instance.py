@@ -262,7 +262,7 @@ class TestInstance(unittest.TestCase):
             "[{}]".format(", ".join("{:.3f}".format(x)
                                     for x in range(len(self.attributes)))))
 
-        for attr in domain:
+        for attr in domain.variables:
             attr.number_of_decimals = 0
         self.assertEqual(
             str(inst),
@@ -274,7 +274,7 @@ class TestInstance(unittest.TestCase):
         inst = Instance(domain, range(len(self.attributes)))
         self.assertEqual(repr(inst), "[0.000, 1.000, 2.000, 3.000, 4.000, ...]")
 
-        for attr in domain:
+        for attr in domain.variables:
             attr.number_of_decimals = 0
         self.assertEqual(repr(inst), "[0, 1, 2, 3, 4, ...]")
 

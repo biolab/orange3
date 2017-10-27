@@ -10,6 +10,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
+from Orange.util import deprecated
 
 __all__ = ["DomainConversion", "Domain"]
 
@@ -242,9 +243,16 @@ class Domain:
         """
         return item in self._indices
 
+    @deprecated("Domain.variables")
     def __iter__(self):
         """
         Return an iterator through variables (features and class attributes).
+
+        The current behaviour is confusing, as `x in domain` returns True
+        for meta variables, but iter(domain) does not yield them.
+        This will be consolidated eventually (in 3.12?), the code that
+        currently iterates over domain should iterate over domain.variables
+        instead.
         """
         return iter(self._variables)
 

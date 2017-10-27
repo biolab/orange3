@@ -473,7 +473,7 @@ class OWEditDomain(widget.OWWidget):
 
     def _initialize(self):
         domain = self.data.domain
-        self.input_vars = tuple(domain) + domain.metas
+        self.input_vars = domain.variables + domain.metas
         self.domain_model[:] = list(self.input_vars)
 
     def _restore(self):

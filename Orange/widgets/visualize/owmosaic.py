@@ -362,9 +362,9 @@ class OWMosaicDisplay(OWWidget):
         if (data is None or
                 not len(data) or
                 not any(attr.is_discrete or attr.is_continuous
-                        for attr in chain(data.domain, data.domain.metas))):
+                        for attr in chain(data.domain.variables, data.domain.metas))):
             return None
-        elif any(attr.is_continuous for attr in data.domain):
+        elif any(attr.is_continuous for attr in data.domain.variables):
             return Discretize(
                 method=EqualFreq(n=4), remove_const=False, discretize_classes=True,
                 discretize_metas=True)(data)
@@ -382,7 +382,7 @@ class OWMosaicDisplay(OWWidget):
             combo.addItem("(None)")
 
         icons = gui.attributeIconDict
-        for attr in chain(data.domain, data.domain.metas):
+        for attr in chain(data.domain.variables, data.domain.metas):
             if attr.is_primitive:
                 for combo in self.attr_combos:
                     combo.addItem(icons[attr], attr.name)

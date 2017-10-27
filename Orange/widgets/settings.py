@@ -891,7 +891,7 @@ class DomainContextHandler(ContextHandler):
             attributes = encode(domain.attributes, False)
             attributes.update(encode(domain.class_vars, True))
         else:
-            attributes = encode(domain, match == self.MATCH_VALUES_ALL)
+            attributes = encode(domain.variables, match == self.MATCH_VALUES_ALL)
 
         metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
 
