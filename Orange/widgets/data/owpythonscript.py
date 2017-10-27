@@ -367,20 +367,20 @@ class OWPythonScript(widget.OWWidget):
     priority = 3150
 
     class Inputs:
-        data = Input("Data", Table, replaces="in_data",
+        data = Input("Data", Table, replaces=["in_data"],
                      default=True, multiple=True)
-        learner = Input("Learner", Learner, replaces="in_learner",
+        learner = Input("Learner", Learner, replaces=["in_learner"],
                         default=True, multiple=True)
-        classifier = Input("Classifier", Model, replaces="in_classifier",
+        classifier = Input("Classifier", Model, replaces=["in_classifier"],
                            default=True, multiple=True)
-        object = Input("Object", object, replaces="in_object",
+        object = Input("Object", object, replaces=["in_object"],
                        default=False, multiple=True)
 
     class Outputs:
-        data = Output("Data", Table, replaces="out_data")
-        learner = Output("Learner", Learner, replaces="out_learner")
-        classifier = Output("Classifier", Model, replaces="out_classifier")
-        object = Output("Object", object, replaces="out_object")
+        data = Output("Data", Table, replaces=["out_data"])
+        learner = Output("Learner", Learner, replaces=["out_learner"])
+        classifier = Output("Classifier", Model, replaces=["out_classifier"])
+        object = Output("Object", object, replaces=["out_object"])
 
     signal_names = ("data", "learner", "classifier", "object")
 
