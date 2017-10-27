@@ -343,28 +343,13 @@ class Variable(Reprable, metaclass=VariableMeta):
             cls._clear_cache()
 
     @classmethod
-    def is_primitive(cls):
+    def is_primitive(cls, var=None):
         """
         `True` if the variable's values are stored as floats.
         Non-primitive variables can appear in the data only as meta attributes.
         """
-        return issubclass(cls, (DiscreteVariable, ContinuousVariable))
-
-    @property
-    def is_discrete(self):
-        return isinstance(self, DiscreteVariable)
-
-    @property
-    def is_continuous(self):
-        return isinstance(self, ContinuousVariable)
-
-    @property
-    def is_string(self):
-        return isinstance(self, StringVariable)
-
-    @property
-    def is_time(self):
-        return isinstance(self, TimeVariable)
+        to_check = cls if var is None else type(var)
+        return issubclass(to_check, (DiscreteVariable, ContinuousVariable))
 
     def repr_val(self, val):
         """
@@ -1019,3 +1004,34 @@ class TimeVariable(ContinuousVariable):
             return self.parse(s)
         else:
             return super().to_val(s)
+
+
+class _TypeIndicatorDescriptor:
+    """
+    Descriptor that can be used on classes and on instances.
+
+    On an instance, the descriptor is used as a property of a variable,
+    e.g. `var.is_discrete`.
+
+    As a class attribute, the descriptor returns a predicate that can
+    be called as `Variable.is_discrete(var)` or, for a more common use,
+    `filter(Variable.is_discrete, domain)`.
+    """
+    def __init__(self, atype):
+        def __check_type(instance):
+            return isinstance(instance, atype)
+
+        self.check_type = __check_type
+
+    def __get__(self, instance, owner):
+        if instance is not None:
+            return self.check_type(instance)
+        else:
+            return self.check_type
+
+# These properties of Variable require its subclasses, hence they have to
+# inserted into the class later.
+Variable.is_discrete = _TypeIndicatorDescriptor(DiscreteVariable)
+Variable.is_continuous = _TypeIndicatorDescriptor(ContinuousVariable)
+Variable.is_string = _TypeIndicatorDescriptor(StringVariable)
+Variable.is_time = _TypeIndicatorDescriptor(TimeVariable)

@@ -107,6 +107,19 @@ class TestVariable(unittest.TestCase):
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
 
+    def test_properties_as_predicates(self):
+        a = ContinuousVariable()
+        self.assertTrue(Variable.is_continuous(a))
+        self.assertFalse(Variable.is_discrete(a))
+        self.assertFalse(Variable.is_string(a))
+        self.assertTrue(Variable.is_primitive(a))
+
+        a = StringVariable()
+        self.assertFalse(Variable.is_continuous(a))
+        self.assertFalse(Variable.is_discrete(a))
+        self.assertTrue(Variable.is_string(a))
+        self.assertFalse(Variable.is_primitive(a))
+
     def test_strange_eq(self):
         a = ContinuousVariable()
         b = ContinuousVariable()
