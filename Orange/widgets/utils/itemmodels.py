@@ -875,15 +875,14 @@ class DomainModel(VariableListModel):
 
         Parameters
         ----------
-        order: tuple, can be also int
-            How attributes, metas and classes are ordered and where between
-            them are separators.
+        order: tuple or int
+            Order of attributes, metas, classes, separators and other options
         separators: bool
-            Ignore separators when set to False despite being set in order.
+            If False, remove separators from `order`.
         placeholder: str
-            Placeholder is the text that is shown when no variable is selected.
-        valid_types: tuple (Variable, ContinuousVariable, DiscreteVariable, etc.)
-            Continuous, discrete, etc. variables.
+            The text that is shown when no variable is selected
+        valid_types: tuple
+            (Sub)types of `Variable` that are included in the model
         alphabetical: bool
             If true, variables are sorted alphabetically.
         skip_hidden_vars: bool
