@@ -156,7 +156,8 @@ class PreviewBrowser(QWidget):
                               alignment=Qt.AlignTop | Qt.AlignLeft)
 
         self.__label.setWordWrap(True)
-        self.__label.setFixedSize(220, PREVIEW_SIZE[1])
+        self.__label.setMinimumWidth(PREVIEW_SIZE[0] // 2)
+        self.__label.setMaximumHeight(PREVIEW_SIZE[1])
 
         self.__image = QSvgWidget(self, objectName="preview-image")
         self.__image.setFixedSize(*PREVIEW_SIZE)
