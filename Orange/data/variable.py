@@ -12,7 +12,7 @@ from Orange.data import _variable
 from Orange.util import Registry, color_to_hex, hex_to_color, Reprable
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
-           "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
+           "Value", "Variable", "PrimitiveVariable", "ContinuousVariable", "DiscreteVariable",
            "StringVariable", "TimeVariable"]
 
 
@@ -348,7 +348,7 @@ class Variable(Reprable, metaclass=VariableMeta):
         `True` if the variable's values are stored as floats.
         Non-primitive variables can appear in the data only as meta attributes.
         """
-        return issubclass(cls, (DiscreteVariable, ContinuousVariable))
+        return issubclass(cls, PrimitiveVariable)
 
     @property
     def is_discrete(self):
@@ -439,7 +439,11 @@ class Variable(Reprable, metaclass=VariableMeta):
         return var
 
 
-class ContinuousVariable(Variable):
+class PrimitiveVariable(Variable):
+    TYPE_HEADERS = ()
+
+
+class ContinuousVariable(PrimitiveVariable):
     """
     Descriptor for continuous variables.
 
@@ -536,7 +540,7 @@ class ContinuousVariable(Variable):
         return var
 
 
-class DiscreteVariable(Variable):
+class DiscreteVariable(PrimitiveVariable):
     """
     Descriptor for symbolic, discrete variables. Values of discrete variables
     are stored as floats; the numbers corresponds to indices in the list of
