@@ -1,5 +1,6 @@
 import os
 import logging
+from collections import OrderedDict
 
 import pkg_resources
 import pickle
@@ -305,11 +306,19 @@ class OWReport(OWWidget):
 
     def save_report(self):
         """Save report"""
-        filename, _ = QFileDialog.getSaveFileName(
-            self, "Save Report", self.save_dir,
-            "HTML (*.html);;PDF (*.pdf);;Report (*.report)")
+        formats = OrderedDict((('HTML (*.html)', '.html'),
+                               ('PDF (*.pdf)', '.pdf'),
+                               ('Report (*.report)', '.report')))
+
+        filename, selected_format = QFileDialog.getSaveFileName(
+            self, "Save Report", self.save_dir, ';;'.join(formats.keys()))
         if not filename:
             return QDialog.Rejected
+
+        # Set appropriate extension if not set by the user
+        expect_ext = formats[selected_format]
+        if not filename.endswith(expect_ext):
+            filename += expect_ext
 
         self.save_dir = os.path.dirname(filename)
         self.saveSettings()
@@ -319,7 +328,7 @@ class OWReport(OWWidget):
             printer.setPageSize(QPrinter.A4)
             printer.setOutputFormat(QPrinter.PdfFormat)
             printer.setOutputFileName(filename)
-            self.report_view.print_(printer)
+            self._print_to_printer(printer)
         elif extension == ".report":
             self.save(filename)
         else:
@@ -334,13 +343,29 @@ class OWReport(OWWidget):
         self.report_changed = False
         return QDialog.Accepted
 
+    def _print_to_printer(self, printer):
+        filename = printer.outputFileName()
+        if filename:
+            try:
+                # QtWebEngine
+                return self.report_view.page().printToPdf(filename)
+            except AttributeError:
+                try:
+                    # QtWebKit
+                    return self.report_view.print_(printer)
+                except AttributeError:
+                    # QtWebEngine 5.6
+                    pass
+        # Fallback to printing widget as an image
+        self.report_view.render(printer)
+
     def _print_report(self):
         printer = QPrinter()
         print_dialog = QPrintDialog(printer, self)
         print_dialog.setWindowTitle("Print report")
         if print_dialog.exec_() != QDialog.Accepted:
             return
-        self.report_view.print_(printer)
+        self._print_to_printer(printer)
 
     def open_report(self):
         filename, _ = QFileDialog.getOpenFileName(
