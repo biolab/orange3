@@ -890,17 +890,17 @@ class CondaInstaller:
             return conda
 
     def install(self, pkg, raise_on_fail=False):
-        cmd = ["conda", "install", "--yes", "--quiet",
+        cmd = [self.conda, "install", "--yes", "--quiet",
                self._normalize(pkg.name)]
         run_command(cmd, raise_on_fail=raise_on_fail)
 
     def upgrade(self, pkg, raise_on_fail=False):
-        cmd = ["conda", "upgrade", "--yes", "--quiet",
+        cmd = [self.conda, "upgrade", "--yes", "--quiet",
                self._normalize(pkg.name)]
         run_command(cmd, raise_on_fail=raise_on_fail)
 
     def uninstall(self, dist, raise_on_fail=False):
-        cmd = ["conda", "uninstall", "--yes",
+        cmd = [self.conda, "uninstall", "--yes",
                self._normalize(dist.project_name)]
         run_command(cmd, raise_on_fail=raise_on_fail)
 
