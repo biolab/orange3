@@ -39,6 +39,17 @@ REPORT_POST_URL = 'https://qa.orange.biolab.si/error_report/v1/'
 log = logging.getLogger()
 
 
+def get_installed_distributions():
+    for dist in pkg_resources.working_set:  # type: pkg_resources.Distribution
+        name = dist.project_name
+        try:
+            version = dist.version
+        except ValueError:
+            # PKG-INFO/METADATA is not available or parsable.
+            version = "Unknown"
+        yield "{name}=={version}".format(name=name, version=version)
+
+
 class ErrorReporting(QDialog):
     _cache = set()  # For errors already handled during one session
 
@@ -191,8 +202,7 @@ class ErrorReporting(QDialog):
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
 
-        packages = ', '.join(sorted("%s==%s" % (dist.project_name, dist.version)
-                                    for dist in pkg_resources.working_set))
+        packages = ', '.join(sorted(get_installed_distributions()))
 
         machine_id = QSettings().value('error-reporting/machine-id', '', type=str)
 
