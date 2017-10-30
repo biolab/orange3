@@ -242,3 +242,20 @@ class TestOWSelectRows(WidgetTest):
         settings = dict(context_settings=[context])
 
         return self.create_widget(OWSelectRows, settings)
+
+    def test_output_filter(self):
+        """
+        None on output when there is no data.
+        GH-2726
+        """
+        data = Table("iris")[:10]
+        len_data = len(data)
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.enterFilter(data.domain[0], "is below", "-1")
+        self.assertIsNone(self.get_output("Matching Data"))
+        self.assertEqual(len(self.get_output("Unmatched Data")), len_data)
+        self.widget.remove_all_button.click()
+        self.enterFilter(data.domain[0], "is below", "10")
+        self.assertIsNone(self.get_output("Unmatched Data"))
+        self.assertEqual(len(self.get_output("Matching Data")), len_data)
