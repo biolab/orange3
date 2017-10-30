@@ -51,3 +51,20 @@ class TestOWCorrespondence(WidgetTest):
             [(0,), (0,), (0,)]
         )
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_no_discrete_variables(self):
+        """
+        Do not crash when there are no discrete (categorical) variable(s).
+        GH-2723
+        """
+        table = Table(
+            Domain(
+                [ContinuousVariable("a")]
+            ),
+            [(1,), (2,), (3,)]
+        )
+        self.assertFalse(self.widget.Error.no_disc_vars.is_shown())
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertTrue(self.widget.Error.no_disc_vars.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.no_disc_vars.is_shown())

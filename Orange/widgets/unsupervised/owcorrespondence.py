@@ -61,6 +61,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         empty_data = widget.Msg("Empty data set")
+        no_disc_vars = widget.Msg("Correspondence Analysis needs categorical variables")
 
     def __init__(self):
         super().__init__()
@@ -102,6 +103,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.clear()
+        self.Error.no_disc_vars.clear()
 
         if data is not None and not len(data):
             self.Error.empty_data()
@@ -113,12 +115,14 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         if data is not None:
             self.varlist[:] = [var for var in data.domain.variables
                                if var.is_discrete]
-            self.selected_var_indices = [0, 1][:len(self.varlist)]
-            self.component_x = 0
-            self.component_y = int(len(self.varlist[self.selected_var_indices[-1]].values) > 1)
-            self.openContext(data)
-            self._restore_selection()
-#             self._invalidate()
+            if not len(self.varlist[:]):
+                self.Error.no_disc_vars()
+            else:
+                self.selected_var_indices = [0, 1][:len(self.varlist)]
+                self.component_x = 0
+                self.component_y = int(len(self.varlist[self.selected_var_indices[-1]].values) > 1)
+                self.openContext(data)
+                self._restore_selection()
         self._update_CA()
 
     def clear(self):
