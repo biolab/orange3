@@ -1,5 +1,4 @@
 import os
-import pip
 import sys
 import time
 import logging
@@ -15,6 +14,8 @@ from collections import OrderedDict
 from urllib.parse import urljoin, urlencode
 from urllib.request import pathname2url, urlopen, build_opener
 from unittest.mock import patch
+
+import pkg_resources
 
 from AnyQt.QtCore import pyqtSlot, QSettings, Qt
 from AnyQt.QtGui import QDesktopServices, QFont
@@ -190,8 +191,8 @@ class ErrorReporting(QDialog):
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
 
-        packages = ', '.join(sorted("%s==%s" % (i.project_name, i.version)
-                                    for i in pip.get_installed_distributions()))
+        packages = ', '.join(sorted("%s==%s" % (dist.project_name, dist.version)
+                                    for dist in pkg_resources.working_set))
 
         machine_id = QSettings().value('error-reporting/machine-id', '', type=str)
 
