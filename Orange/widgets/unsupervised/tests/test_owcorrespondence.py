@@ -68,3 +68,8 @@ class TestOWCorrespondence(WidgetTest):
         self.assertTrue(self.widget.Error.no_disc_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_disc_vars.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertTrue(self.widget.Error.no_disc_vars.is_shown())
+        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        self.assertFalse(self.widget.Error.no_disc_vars.is_shown())
