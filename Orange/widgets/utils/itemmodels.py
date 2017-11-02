@@ -118,7 +118,7 @@ class AbstractSortTableModel(QAbstractTableModel):
 
         Parameters
         ----------
-        rows : int or list of int or numpy.ndarray or Ellipsis
+        rows : int or list of int or numpy.ndarray of dtype=int or Ellipsis
             View (sorted) rows.
 
         Returns
@@ -127,7 +127,10 @@ class AbstractSortTableModel(QAbstractTableModel):
             Source rows matching input rows. If they are the same,
             simply input `rows` is returned.
         """
-        if self.__sortInd is not None:
+        # self.__sortInd[rows] fails if `rows` is an empty list or array
+        if self.__sortInd is not None \
+                and (isinstance(rows, (Integral, type(Ellipsis)))
+                     or len(rows)):
             new_rows = self.__sortInd[rows]
             if rows is Ellipsis:
                 new_rows.setflags(write=False)
@@ -139,7 +142,7 @@ class AbstractSortTableModel(QAbstractTableModel):
 
         Parameters
         ----------
-        rows : int or list of int or numpy.ndarray or Ellipsis
+        rows : int or list of int or numpy.ndarray of dtype=int or Ellipsis
             Source model rows.
 
         Returns
@@ -148,7 +151,10 @@ class AbstractSortTableModel(QAbstractTableModel):
             ModelIndex (sorted) rows matching input source rows.
             If they are the same, simply input `rows` is returned.
         """
-        if self.__sortIndInv is not None:
+        # self.__sortInd[rows] fails if `rows` is an empty list or array
+        if self.__sortIndInv is not None \
+                and (isinstance(rows, (Integral, type(Ellipsis)))
+                     or len(rows)):
             new_rows = self.__sortIndInv[rows]
             if rows is Ellipsis:
                 new_rows.setflags(write=False)
