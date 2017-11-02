@@ -104,7 +104,7 @@ class CUR(Projector):
         m.domain = self.domain
         return m
 
-    def transform(self, X, axis):
+    def transform(self, X, axis=0):
         if axis == 0:
             return X[:, self.features_]
         else:
