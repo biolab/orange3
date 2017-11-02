@@ -25,6 +25,8 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QWidget
 )
 
+from Orange.util import try_
+
 try:
     from Orange.widgets.widget import OWWidget
     from Orange.version import full_version as VERSION_STR
@@ -193,7 +195,8 @@ class ErrorReporting(QDialog):
             err_module = '{}:{}'.format(
                 frame.tb_frame.f_globals.get('__name__', frame.tb_frame.f_code.co_filename),
                 frame.tb_lineno)
-            err_locals = pformat(OrderedDict(sorted(frame.tb_frame.f_locals.items())))
+            err_locals = OrderedDict(sorted(frame.tb_frame.f_locals.items()))
+            err_locals = try_(lambda: pformat(err_locals), try_(lambda: str(err_locals)))
 
         def _find_widget_frame(tb):
             while tb:
