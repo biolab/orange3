@@ -30,7 +30,8 @@ try:
     from Orange.version import full_version as VERSION_STR
 except ImportError:
     # OWWidget (etc.) is not available because this is not Orange
-    class OWWidget: pass
+    class OWWidget:
+        pass
     VERSION_STR = '???'
 
 
@@ -74,8 +75,10 @@ class ErrorReporting(QDialog):
                               data.get(F.WIDGET_MODULE)),
                       filename=data.get(F.WIDGET_SCHEME)):
             self._cache.add(key)
-            try: os.remove(filename)
-            except Exception: pass
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
 
         super().__init__(None, Qt.Window, modal=True,
                          sizeGripEnabled=True, windowIcon=icon,
@@ -134,7 +137,8 @@ class ErrorReporting(QDialog):
         buttons = QWidget(self)
         buttons_layout = QHBoxLayout(self)
         buttons.setLayout(buttons_layout)
-        buttons_layout.addWidget(QPushButton('Send Report (Thanks!)', default=True, clicked=self.accept))
+        buttons_layout.addWidget(
+            QPushButton('Send Report (Thanks!)', default=True, clicked=self.accept))
         buttons_layout.addWidget(QPushButton("Don't Send", default=False, clicked=self.reject))
         layout.addWidget(buttons)
 
