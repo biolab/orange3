@@ -490,6 +490,18 @@ class TestDomainInit(unittest.TestCase):
 
         self.assertLessEqual(time() - start, 1)
 
+    def test_copy(self):
+        age.number_of_decimals = 5
+        attributes = (age, gender, income)
+
+        domain = Domain(attributes, [race], [ssn])
+
+        new_domain = domain.copy()
+        new_domain[age].number_of_decimals = 10
+
+        self.assertEqual(domain[age].number_of_decimals, 5)
+        self.assertEqual(new_domain[age].number_of_decimals, 10)
+
 
 class TestDomainFilter(unittest.TestCase):
     def setUp(self):

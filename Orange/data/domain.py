@@ -444,6 +444,21 @@ class Domain:
     def checksum(self):
         return hash(self)
 
+    def copy(self):
+        """
+        Make a copy of the domain. New features are proxies of the old ones,
+        hence the new domain can be used anywhere the old domain was used.
+
+        Returns:
+            Domain: a copy of the domain.
+        """
+        return Domain(
+            attributes=[a.make_proxy() for a in self.attributes],
+            class_vars=[a.make_proxy() for a in self.class_vars],
+            metas=[a.make_proxy() for a in self.metas],
+            source=self,
+        )
+
     def __eq__(self, other):
         if not isinstance(other, Domain):
             return False
