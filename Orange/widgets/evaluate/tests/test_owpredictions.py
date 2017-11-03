@@ -27,7 +27,6 @@ class TestOWPredictions(WidgetTest):
         data = self.iris[::10].copy()
         data.Y[1] = np.nan
         yvec, _ = data.get_column_view(data.domain.class_var)
-        nanmask = np.isnan(yvec)
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
         pred = self.get_output(self.widget.Outputs.predictions)
