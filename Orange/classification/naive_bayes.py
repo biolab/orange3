@@ -3,7 +3,7 @@ import numpy as np
 from Orange.classification import Learner, Model
 from Orange.data import Instance, Storage
 from Orange.statistics import contingency
-from Orange.preprocess import Discretize, RemoveNaNColumns
+from Orange.preprocess import Discretize, RemoveNaNColumns, Impute
 
 __all__ = ["NaiveBayesLearner"]
 
@@ -19,7 +19,7 @@ class NaiveBayesLearner(Learner):
         An ordered list of preprocessors applied to data before training
         or testing.
     """
-    preprocessors = [RemoveNaNColumns(), Discretize()]
+    preprocessors = [RemoveNaNColumns(), Impute(), Discretize()]
     name = 'naive bayes'
 
     def fit_storage(self, table):
