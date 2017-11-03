@@ -1848,7 +1848,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_domain = data.domain.Domain(
             iris.domain.attributes[:2], iris.domain.class_vars,
             iris.domain.attributes[2:], source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_iris = iris.transform(new_domain)
 
         self.assertTrue(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
@@ -1856,7 +1856,7 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(new_iris.metas.shape, (len(iris), 2))
 
         # move back
-        back_iris = data.Table.from_table(iris.domain, new_iris)
+        back_iris = new_iris.transform(iris.domain)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
         self.assertFalse(sp.issparse(back_iris.metas))
@@ -1868,7 +1868,7 @@ class CreateTableWithDomainAndTable(TableTests):
         new_domain = data.domain.Domain(
             [], iris.domain.class_vars, iris.domain.attributes,
             source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_iris = iris.transform(new_domain)
 
         self.assertFalse(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
@@ -1876,7 +1876,7 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(new_iris.metas.shape, (len(iris), 4))
 
         # move back
-        back_iris = data.Table.from_table(iris.domain, new_iris)
+        back_iris = new_iris.transform(iris.domain)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
         self.assertFalse(sp.issparse(back_iris.metas))
