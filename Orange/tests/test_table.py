@@ -640,8 +640,7 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(np.all(t.metas == copy.metas))
 
     def test_copy_sparse(self):
-        t = data.Table('iris')
-        t.X = sp.csr_matrix(t.X)
+        t = data.Table('iris').to_sparse()
         copy = t.copy()
 
         self.assertEqual((t.X != copy.X).nnz, 0)      # sparse matrices match by content
@@ -1845,8 +1844,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
 
     def test_from_table_sparse_move_some_to_empty_metas(self):
-        iris = data.Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = data.Table("iris").to_sparse()
         new_domain = data.domain.Domain(
             iris.domain.attributes[:2], iris.domain.class_vars,
             iris.domain.attributes[2:], source=iris.domain)
@@ -1861,19 +1859,18 @@ class CreateTableWithDomainAndTable(TableTests):
         back_iris = data.Table.from_table(iris.domain, new_iris)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
-        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertFalse(sp.issparse(back_iris.metas))
         self.assertEqual(back_iris.X.shape, iris.X.shape)
         self.assertEqual(back_iris.metas.shape, iris.metas.shape)
 
     def test_from_table_sparse_move_all_to_empty_metas(self):
-        iris = data.Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = data.Table("iris").to_sparse()
         new_domain = data.domain.Domain(
             [], iris.domain.class_vars, iris.domain.attributes,
             source=iris.domain)
         new_iris = data.Table.from_table(new_domain, iris)
 
-        self.assertTrue(sp.issparse(new_iris.X))
+        self.assertFalse(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
         self.assertEqual(new_iris.X.shape, (len(iris), 0))
         self.assertEqual(new_iris.metas.shape, (len(iris), 4))
@@ -1882,13 +1879,12 @@ class CreateTableWithDomainAndTable(TableTests):
         back_iris = data.Table.from_table(iris.domain, new_iris)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
-        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertFalse(sp.issparse(back_iris.metas))
         self.assertEqual(back_iris.X.shape, iris.X.shape)
         self.assertEqual(back_iris.metas.shape, iris.metas.shape)
 
     def test_from_table_sparse_move_to_nonempty_metas(self):
-        brown = data.Table("brown-selected")
-        brown.X = sp.csr_matrix(brown.X)
+        brown = data.Table("brown-selected").to_sparse()
         n_attr = len(brown.domain.attributes)
         n_metas = len(brown.domain.metas)
         new_domain = data.domain.Domain(

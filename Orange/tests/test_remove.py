@@ -4,7 +4,6 @@
 import unittest
 
 import numpy as np
-import scipy.sparse as sp
 
 from Orange.data import Table
 from Orange.preprocess import Remove
@@ -138,8 +137,7 @@ class TestRemover(unittest.TestCase):
 
     def test_remove_unused_values_attr_sparse(self):
         data = self.test8
-        data = data[1:]
-        data.X = sp.csr_matrix(data.X)
+        data = data[1:].to_sparse()
         remover = Remove(Remove.RemoveUnusedValues)
         new_data = remover(data)
         attr_res = remover.attr_results
