@@ -361,6 +361,8 @@ class Table(MutableSequence, Storage):
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
+                    # since sparse flags are not considered when checking for domain equality, fix manually.
+                    table = assure_domain_conversion_sparsity(table, source)
                     return table
 
                 if isinstance(row_indices, slice):
@@ -1739,3 +1741,23 @@ def _rxc_ix(rows, cols):
     else:
         r, c = np.ix_(rows, cols)
         return np.asarray(r, int), np.asarray(c, int)
+
+
+def assure_domain_conversion_sparsity(target, source):
+    """
+    Assure that the table obeys the domain conversion's suggestions about sparsity.
+
+    Args:
+        target (Table): the target table.
+        source (Table): the source table.
+
+    Returns:
+        Table: with fixed sparsity. The sparsity is set as it is recommended by domain conversion
+            for transformation from source to the target domain.
+    """
+    conversion = target.domain.get_conversion(source.domain)
+    match_density = [assure_array_dense, assure_array_sparse]
+    target.X = match_density[conversion.sparse_X](target.X)
+    target.Y = match_density[conversion.sparse_Y](target.Y)
+    target.metas = match_density[conversion.sparse_metas](target.metas)
+    return target
