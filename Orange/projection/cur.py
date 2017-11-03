@@ -111,7 +111,7 @@ class CUR(Projector):
             return X[self.samples_, :]
 
     def _select_columns(self, X, UsV):
-        U, s, V = UsV
+        _, _, V = UsV
         lev = self._score_leverage(V)
         c = self.rank * np.log(self.rank) / self.max_error**2
         prob = np.minimum(1., c * lev)
@@ -173,19 +173,13 @@ class Projector:
 
 
 if __name__ == '__main__':
-    import numpy as np
-    import scipy.sparse.linalg as sla
-
-    import Orange.data
-    import Orange.projection
-
     np.random.seed(42)
     X = np.random.rand(60, 100)
     rank = 5
     max_error = 1
 
     data = Orange.data.Table(X)
-    cur = Orange.projection.CUR(rank=rank, max_error=max_error, compute_U=True)
+    cur = CUR(rank=rank, max_error=max_error, compute_U=True)
     cur_model = cur(data)
 
     transformed_data = cur_model(data, axis=0)
