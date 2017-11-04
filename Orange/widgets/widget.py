@@ -67,6 +67,7 @@ class WidgetMetaClass(type(QDialog)):
         return cls
 
 
+# pylint: disable=too-many-instance-attributes
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                WidgetMessagesMixin, WidgetSignalsMixin,
                metaclass=WidgetMetaClass):
@@ -156,6 +157,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     settings_version = 1
 
     savedWidgetGeometry = settings.Setting(None)
+    controlAreaVisible = settings.Setting(True, schema_only=True)
 
     #: A list of advice messages (:class:`Message`) to display to the user.
     #: When a widget is first shown a message from this list is selected
@@ -233,6 +235,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
 
         if self.splitter is not None:
+            self.splitter.controlAreaVisibilityChanged.connect(
+                self.storeControlAreaVisibility)
             sc = QShortcut(
                 QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_D),
                 self)
@@ -288,10 +292,17 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         def flip(self):
             if self.count() == 1:  # Prevent hiding control area by shortcut
                 return
-            new_state = int(self.sizes()[0] == 0)
-            self.setSizes([new_state, 100000])
-            self.controlAreaVisibilityChanged.emit(new_state)
+            self.setControlAreaVisible(not self.controlAreaVisible())
+
+        def setControlAreaVisible(self, visible):
+            if self.controlAreaVisible() == visible:
+                return
+            self.setSizes([int(visible), 100000])
+            self.controlAreaVisibilityChanged.emit(visible)
             self.updateGeometry()
+
+        def controlAreaVisible(self):
+            return bool(self.sizes()[0])
 
         class _Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
@@ -459,6 +470,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 return
             ClipboardFormat.write_image(None, graph_obj)
 
+    def storeControlAreaVisibility(self, visible):
+        self.controlAreaVisible = visible
+
     def __restoreWidgetGeometry(self):
 
         def _fullscreen_to_maximized(geometry):
@@ -558,6 +572,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         QDialog.showEvent(self, event)
         if self.save_position and not self.__was_restored:
             # Restore saved geometry on (first) show
+            self.splitter.setControlAreaVisible(self.controlAreaVisible)
             self.__restoreWidgetGeometry()
             self.__was_restored = True
         self.__quicktipOnce()
