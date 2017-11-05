@@ -51,6 +51,7 @@ Change Log
 * Feature Constructor: Support additional functions () ([#2611](../../pull/2611))
 * Miniconda installer: Install conda executable ([#2616](../../pull/2616))
 * Datasets: New widget ([#2557](../../pull/2557))
+* Neural Network widget ([#2553](../../pull/2553))
 
 ##### Bugfixes
 * settings: Store settings version in the serialized defaults ([#2631](../../pull/2631))
