@@ -6,6 +6,7 @@ import unittest
 from Orange.classification import NaiveBayesLearner
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import CrossValidation, CA
+from Orange.widgets.evaluate.owpredictions import OWPredictions
 
 
 class TestNaiveBayesLearner(unittest.TestCase):
@@ -45,3 +46,12 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self.assertEqual(model.domain.attributes, ())
         self.assertEqual(model(t[0]), 1)
         self.assertTrue(all(model(t) == 1))
+
+    def test_data_impute(self):
+        """
+        Some data contain missing values.
+        GH-2740
+        GH-2741
+        """
+        data = Table("voting")
+        OWPredictions.predict(self.learner(data), data)
