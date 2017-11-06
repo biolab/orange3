@@ -1426,21 +1426,29 @@ class CanvasMainWindow(QMainWindow):
         dlg.setAttribute(Qt.WA_DeleteOnClose)
         dlg.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
         main = welcomedialog.FancyWelcomeScreen()
-        main.setImage(QImage("canvas_icons:orange-start-background.png"))
+        spec = config.welcome_screen_specs()
+        if spec.image:
+            background = QImage(spec.image)
+        else:
+            background = QImage("canvas_icons:orange-start-background.png")
+        main.setImage(background)
+
+        if spec.css:
+            main.setStyleSheet(spec.css)
+        else:
+            main.setStyleSheet(
+                "StartItem { background-color: rgb(123, 164, 214) }"
+            )
 
         def decorate_icon(icon):
             return welcomedialog.decorate_welcome_icon(icon, "antiquewhite")
-        icon = canvas_icons("orange-canvas.svg")
 
-        main.setStyleSheet(
-            "StartItem { background-color: rgb(123, 164, 214) }"
-        )
-        main.setItemText(0, "Lorem ipsum")
-        main.setItemIcon(0, decorate_icon(icon))
-        main.setItemText(1, "Dolor Sit")
-        main.setItemIcon(1, decorate_icon(icon))
-        main.setItemText(2, "Amet Con.. something")
-        main.setItemIcon(2, decorate_icon(icon))
+        for i, item in zip(range(3), spec.items):
+            main.setItemText(i, item.text)
+            main.setItemToolTip(i, item.tooltip)
+            main.setItemIcon(i, decorate_icon(QIcon(item.icon)))
+            main.item(i).setProperty("path", item.path)
+
         main.setCurrentIndex(0)
         main.activated.connect(lambda: openselectedbutton.click())
 
