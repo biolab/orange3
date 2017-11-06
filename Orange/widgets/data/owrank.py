@@ -285,7 +285,7 @@ class OWRank(OWWidget):
 
     @Inputs.data
     @check_sql_input
-    def setData(self, data):
+    def set_data(self, data):
         self.closeContext()
         self.selected_rows = []
         self.ranksModel.clear()
