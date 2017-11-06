@@ -12,16 +12,17 @@ from AnyQt.QtWidgets import (
     QFrame
 )
 from AnyQt.QtGui import (
-    QFont, QIcon, QPixmap, QPainter, QColor, QBrush,
-    QStandardItemModel, QStandardItem
+    QFont, QIcon, QPixmap, QImage, QPainter, QColor, QBrush,
+    QStandardItemModel, QStandardItem, QDesktopServices
 )
 
 from AnyQt.QtCore import (  # pylint: disable=unused-import
-    Qt, QEvent, QRect, QSize, QPoint, QModelIndex, QItemSelectionModel
+    Qt, QEvent, QRect, QSize, QPoint, QModelIndex, QItemSelectionModel, QUrl
 )
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from ..gui.iconview import LinearIconView
+from ..gui.dropshadow import DropShadowFrame
 from ..canvas.items.utils import radial_gradient
 from ..registry import NAMED_COLORS
 
@@ -522,3 +523,325 @@ class PagedDialog(QDialog):
         Return a QDialogButtonBox instance.
         """
         return self.__buttons
+
+
+def pixmap_from_image(image):
+    # type: (QImage) -> QPixmap
+    pixmap = QPixmap.fromImage(image)  # type: QPixmap
+    if hasattr(pixmap, "setDevicePixelRatio"):
+        pixmap.setDevicePixelRatio(image.logicalDpiX() / 72)
+    else:
+        pixmap = pixmap.scaled(
+            (image.size() * 72) / image.logicalDpiX(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
+        )
+    return pixmap
+
+
+class FancyWelcomeScreen(QWidget):
+    """
+    Fancy welcome screen.
+
+    +-----------+
+    |  Welcome  |
+    +-----------+
+    | A | B | C |
+    +---+---+---+
+
+    The upper part consist of static image while the lower items select some
+    prespecified action.
+
+    """
+    class StartItem(QWidget):
+        """
+        An active item in the bottom row of the welcome screen.
+        """
+        def __init__(self, *args, text="", icon=QIcon(), iconSize=QSize(),
+                     **kwargs):
+            self.__iconSize = QSize()
+            self.__icon = QIcon()
+            self.__text = ""
+            super().__init__(*args, **kwargs)
+            self.setAutoFillBackground(True)
+            font = self.font()
+            font.setPointSize(21)
+            self.setFont(font)
+            self.setAttribute(Qt.WA_SetFont, False)
+            self.setText(text)
+            self.setIcon(icon)
+            self.setIconSize(iconSize)
+
+        def iconSize(self):
+            if not self.__iconSize.isValid():
+                size = self.style().pixelMetric(
+                    QStyle.PM_LargeIconSize, None, self) * 2
+                return QSize(size, size)
+            else:
+                return QSize(self.__iconSize)
+
+        def setIconSize(self, size):
+            if size != self.__iconSize:
+                self.__iconSize = QSize(size)
+                self.updateGeometry()
+
+        iconSize_ = Property(QSize, iconSize, setIconSize, designable=True)
+
+        def icon(self):
+            return QIcon(self.__icon)
+
+        def setIcon(self, icon):
+            self.__icon = QIcon(icon)
+            self.update()
+
+        icon_ = Property(QIcon, icon, setIcon, designable=True)
+
+        def sizeHint(self):
+            style = self.style()
+            option = QStyleOptionViewItem()
+            self.initStyleOption(option)
+
+            sh = style.sizeFromContents(
+                QStyle.CT_ItemViewItem, option, QSize(), self)
+
+            return sh
+
+        def setText(self, text):
+            if self.__text != text:
+                self.__text = text
+                self.updateGeometry()
+                self.update()
+
+        def text(self):
+            return self.__text
+
+        text_ = Property(str, text, setText, designable=True)
+
+        def initStyleOption(self, option):
+            # type: (QStyleOptionViewItem) -> None
+            option.initFrom(self)
+            option.backgroundBrush = option.palette.brush(self.backgroundRole())
+            option.font = self.font()
+            option.text = self.text()
+            option.icon = self.icon()
+
+            option.decorationPosition = QStyleOptionViewItem.Top
+            option.decorationAlignment = Qt.AlignCenter
+            option.decorationSize = self.iconSize()
+            option.displayAlignment = Qt.AlignCenter
+            option.features = (
+                QStyleOptionViewItem.WrapText |
+                QStyleOptionViewItem.HasDecoration |
+                QStyleOptionViewItem.HasDisplay
+            )
+            option.showDecorationSelected = True
+            option.widget = self
+            pos = self.property("-position")
+            if isinstance(pos, int):
+                option.viewItemPosition = pos
+            selected = self.property("-selected")
+
+            if isinstance(selected, bool) and selected:
+                option.state |= QStyle.State_Selected
+                parent = self.parent()
+                if parent is not None and parent.hasFocus():
+                    option.state |= QStyle.State_HasFocus
+
+        def paintEvent(self, event):
+            style = self.style()  # type: QStyle
+            painter = QPainter(self)
+            option = QStyleOption()
+            option.initFrom(self)
+            style.drawPrimitive(QStyle.PE_Widget, option, painter, self)
+
+            option = QStyleOptionViewItem()
+            self.initStyleOption(option)
+            style.drawControl(QStyle.CE_ItemViewItem, option, painter, self)
+
+    #: Signal emitted when the current selected item in changes.
+    currentChanged = Signal(int)
+
+    #: Signal emitted when the item is double clicked.
+    activated = Signal(int)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFocusPolicy(Qt.TabFocus)
+        vlayout = QVBoxLayout(spacing=1)
+        vlayout.setContentsMargins(0, 0, 0, 0)
+        self.__currentIndex = -1
+
+        self.__contents = QLabel(
+            sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        )
+        vlayout.addWidget(self.__contents)
+
+        hlayout = QHBoxLayout(spacing=1)
+        hlayout.setContentsMargins(0, 0, 0, 0)
+
+        self.__items = items = [
+            FancyWelcomeScreen.StartItem(objectName="item"),
+            FancyWelcomeScreen.StartItem(objectName="item"),
+            FancyWelcomeScreen.StartItem(objectName="item"),
+        ]
+        items[0].setProperty("-position", QStyleOptionViewItem.Beginning)
+        items[1].setProperty("-position", QStyleOptionViewItem.Middle)
+        items[-1].setProperty("-position", QStyleOptionViewItem.End)
+
+        for item in items:
+            hlayout.addWidget(item)
+
+        vlayout.addLayout(hlayout)
+        self.setLayout(vlayout)
+        self.setCurrentIndex(0)
+
+    def setImage(self, image):
+        # type: (QImage) -> None
+        """
+        Set the welcome image.
+
+        Parameters
+        ----------
+        image : QImage
+        """
+        pixmap = pixmap_from_image(image)
+        self.__contents.setPixmap(pixmap)
+
+    def setItem(self, index, image):
+        item = self.layout().itemAt(1).layout().itemAt(index)
+        widget = item.widget()  # type: FancyWelcomeScreen.StartItem
+        widget.setIcon(image)
+
+    def item(self, index):
+        item = self.layout().itemAt(1).layout().itemAt(index)
+        return item.widget()
+
+    def setItemText(self, index, text):
+        item = self.layout().itemAt(1).layout().itemAt(index)
+        widget = item.widget()  # type: FancyWelcomeScreen.StartItem
+        widget.setText(text)
+
+    def setItemIcon(self, index, icon):
+        item = self.item(index)
+        item.setIcon(icon)
+
+    def setItemToolTip(self, index, tip):
+        item = self.item(index)
+        item.setToolTip(tip)
+
+    def setCurrentIndex(self, index):
+        if self.__currentIndex != index:
+            for i, item in enumerate(self.__items):
+                item.setProperty("-selected", i == index)
+                item.update()
+            self.__currentIndex = index
+            self.currentChanged.emit(index)
+
+    def currentIndex(self):
+        return self.__currentIndex
+
+    def __indexAtPos(self, pos):
+        # type: (QPoint) -> int
+        for i, item in enumerate(self.__items):
+            if item.geometry().contains(pos):
+                return i
+        return -1
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            index = self.__indexAtPos(event.pos())
+            if index != -1:
+                self.setCurrentIndex(index)
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            index = self.__indexAtPos(event.pos())
+            if index != -1:
+                self.setCurrentIndex(index)
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            index = self.__indexAtPos(event.pos())
+            if index != -1:
+                self.setCurrentIndex(index)
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            index = self.__indexAtPos(event.pos())
+            if index != -1:
+                self.activated.emit(index)
+            event.accept()
+        else:
+            event.ignore()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Right:
+            direction = 1
+        elif event.key() == Qt.Key_Left:
+            direction = -1
+        else:
+            super().keyPressEvent(event)
+            return
+
+        event.accept()
+        if len(self.__items):
+            index = self.__currentIndex + direction
+            self.setCurrentIndex(max(0, min(index, len(self.__items) - 1)))
+
+
+class SingleLinkPage(QFrame):
+    """
+    An simple (overly) large image with a external link
+    """
+    def __init__(self, *args, image=QImage(), heading="", link=QUrl(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.__link = QUrl()
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.setLayout(layout)
+        self.__heading = QLabel()
+        self.__content = QLabel()
+
+        self.layout().addWidget(self.__heading)
+        self.layout().addWidget(self.__content, 10, Qt.AlignCenter)
+
+        self.__shadow = DropShadowFrame()
+        self.__shadow.setWidget(self.__content)
+
+        self.setImage(image)
+        self.setHeading(heading)
+        self.setLink(link)
+
+    def setHeading(self, heading):
+        self.__heading.setText("<h2>{}</h2>".format(heading))
+
+    def setImage(self, image):
+        pm = pixmap_from_image(image)
+        self.__content.setPixmap(pm)
+
+    def setLink(self, url):
+        self.__link = QUrl(url)
+        if not self.__link.isEmpty():
+            self.__content.setCursor(Qt.PointingHandCursor)
+        else:
+            self.__content.unsetCursor()
+        self.__content.setToolTip(self.__link.toString())
+
+    def mousePressEvent(self, event):
+        if self.__content.geometry().contains(event.pos()) and \
+                not self.__link.isEmpty():
+            QDesktopServices.openUrl(self.__link)
+            event.accept()
+        else:
+            super().mousePressEvent(event)

@@ -2,12 +2,16 @@
 Test for welcome screen.
 """
 
+from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QImage
 from AnyQt.QtWidgets import QAction, QLabel
 from AnyQt.QtTest import QSignalSpy
 
 from ...resources import icon_loader
 
-from ..welcomedialog import WelcomeDialog, PagedDialog, decorate_welcome_icon
+from ..welcomedialog import (
+    WelcomeDialog, PagedDialog, FancyWelcomeScreen, decorate_welcome_icon
+)
 
 from ...gui.test import QAppTestCase
 
@@ -68,4 +72,35 @@ class TestPagedDialog(QAppTestCase):
         assert d.currentIndex() == 1
 
         d.show()
+        self.app.exec()
+
+
+class TestFancyWelcome(QAppTestCase):
+    def test_widget(self):
+        w = FancyWelcomeScreen()
+        image = QImage(256, 256, QImage.Format_ARGB32)
+        image.fill(Qt.white)
+        w.setImage(image)
+        w.setItemText(0, "Hello")
+        w.setItemText(1, "Hello")
+        w.setItemText(2, "Hello")
+        w.setStyleSheet("""
+            StartItem::item {
+                background: #424a7d;
+                color: red;
+            }
+            StartItem::item:hover {
+                background: white;
+            }
+            StartItem::item:selected {
+                border: 1px solid blue;
+            }
+            StartItem::item:first {
+                color: green;
+            }
+            StartItem::item:last {
+                color: black;
+            }
+        """)
+        w.show()
         self.app.exec()
