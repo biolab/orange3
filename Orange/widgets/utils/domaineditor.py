@@ -303,8 +303,9 @@ class DomainEditor(QTableView):
                                 for x in self._iter_vals(col_data)]
                 elif type(orig_var) == ContinuousVariable:
                     round_numbers = numbers_are_round(orig_var, col_data)
-                    col_data = [str(int(x)) if round_numbers else orig_var.repr_val(x)
-                                if not np.isnan(x) else ""
+                    col_data = ['' if np.isnan(x) else
+                                str(int(x)) if round_numbers else
+                                orig_var.repr_val(x)
                                 for x in self._iter_vals(col_data)]
                 # don't obey sparsity for StringVariable since they are
                 # in metas which are transformed to dense below
