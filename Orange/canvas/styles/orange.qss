@@ -15,11 +15,10 @@ CanvasMainWindow {
     background-color: #E9EFF2;
 }
 
-QMainWindow::separator {
+CanvasMainWindow::separator {
     width: 1px; /* when vertical */
     height: 1px; /* when horizontal */
 }
-
 
 /* The widget buttons in the dock tool box */
 
