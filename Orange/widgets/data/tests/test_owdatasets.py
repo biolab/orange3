@@ -55,3 +55,13 @@ class TestOWDataSets(WidgetTest):
         w.unconditional_commit()
         iris = self.get_output(w.Outputs.data, w)
         self.assertEqual(len(iris), 150)
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(side_effect=requests.exceptions.ConnectionError))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={('dir1', 'dir2', 'foo.tab'): {},
+                              ('bar.tab',): {}}))
+    @patch("Orange.widgets.data.owdatasets.log", Mock())
+    def test_dir_depth(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.assertEqual(w.view.model().rowCount(), 2)

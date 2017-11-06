@@ -241,17 +241,19 @@ class OWDataSets(widget.OWWidget):
             allkeys = allkeys | set(allinforemote)
         allkeys = sorted(allkeys)
 
-        def info(prefix, filename):
-            if (prefix, filename) in allinforemote:
-                info = allinforemote[prefix, filename]
+        def info(file_path):
+            if file_path in allinforemote:
+                info = allinforemote[file_path]
             else:
-                info = allinfolocal[prefix, filename]
-            islocal = (prefix, filename) in allinfolocal
-            isremote = (prefix, filename) in allinforemote
+                info = allinfolocal[file_path]
+            islocal = file_path in allinfolocal
+            isremote = file_path in allinforemote
             outdated = islocal and isremote and (
-                allinforemote[prefix, filename].get('version', '') !=
-                allinfolocal[prefix, filename].get('version', ''))
+                allinforemote[file_path].get('version', '') !=
+                allinfolocal[file_path].get('version', ''))
             islocal &= not outdated
+            prefix = os.path.join('', *file_path[:-1])
+            filename = file_path[-1]
 
             return namespace(
                 prefix=prefix, filename=filename,
@@ -276,8 +278,8 @@ class OWDataSets(widget.OWWidget):
         model.setHorizontalHeaderLabels(HEADER)
 
         current_index = -1
-        for i, (prefix, filename) in enumerate(allkeys):
-            datainfo = info(prefix, filename)
+        for i, file_path in enumerate(allkeys):
+            datainfo = info(file_path)
             item1 = QStandardItem()
             item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
             item1.setData(datainfo, Qt.UserRole)
@@ -298,7 +300,7 @@ class OWDataSets(widget.OWWidget):
             row = [item1, item2, item3, item4, item5, item6, item7]
             model.appendRow(row)
 
-            if (prefix, filename) == self.selected_id:
+            if os.path.join(*file_path) == self.selected_id:
                 current_index = i
 
         hs = self.view.header().saveState()
@@ -367,7 +369,7 @@ class OWDataSets(widget.OWWidget):
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            self.selected_id = (di.prefix, di.filename)
+            self.selected_id = os.path.join(di.prefix, di.filename)
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
