@@ -414,3 +414,85 @@ QuickMenu QLineEdit QToolButton {
     margin: 0px;
     icon-size: 23px;
 }
+
+/* Paged Welcome dialog */
+
+CanvasMainWindow PagedDialog QWidget#contents {
+    background-color: #E9EFF2;
+}
+
+CanvasMainWindow PagedDialog TabView {
+    background-color: #E9EFF2;
+    font-weight: bold;
+    border-right: 1px solid palette(dark);
+    border-left: none;
+    border-top: none;
+    border-bottom: none;
+}
+
+CanvasMainWindow PagedDialog TabView::item {
+    padding-top: 0.5em;
+    border-top: 1px solid transparent;
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+    border-bottom: 1px solid palette(dark);
+}
+
+CanvasMainWindow PagedDialog TabView::item:selected {
+    background: qradialgradient(cx: 0.5, cy: 0.33, radius: 0.5, fx: 0.5, fy: 0.33,
+                                stop:0 rgb(255, 229, 197),
+                                stop:1 rgb(243, 171, 86));
+}
+
+CanvasMainWindow PagedDialog TabView::item:selected:focus {
+    border: 1px solid palette(highlight);
+}
+
+CanvasMainWindow PagedDialog PagedWidget {
+    border-bottom: 1px solid palette(dark);
+    border-left: none;
+    border-right: none;
+    border-top: none;
+}
+
+CanvasMainWindow PagedDialog PreviewBrowser TextLabel#path-text {
+    font-size: 12px;
+}
+
+CanvasMainWindow PagedDialog PreviewBrowser QLabel#path-label {
+    font-size: 12px;
+}
+
+CanvasMainWindow PagedDialog DropShadowFrame {
+    qproperty-radius_: 10;
+    qproperty-color_: palette(dark)
+}
+
+CanvasMainWindow PagedDialog PreviewBrowser LinearIconView {
+    border-top: 1px solid palette(dark);
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    font-size: 12px;
+}
+
+CanvasMainWindow PagedDialog StartItem {
+    font-size: 21pt;
+    color: white;
+    qproperty-iconSize_: 84px 84px;
+}
+
+CanvasMainWindow PagedDialog StartItem::item {
+    border: 1px solid transparent;  /* reserve space */
+    padding-top: 1.5em;
+    color: white;
+}
+
+CanvasMainWindow PagedDialog StartItem::item:selected {
+    background-color: palette(highlight);
+    color: palette(highlighted-text);
+}
+
+CanvasMainWindow PagedDialog StartItem::item:selected:focus {
+    border: 1px inset palette(shadow);
+}
