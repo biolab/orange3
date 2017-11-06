@@ -292,6 +292,10 @@ PreviewDialog PreviewBrowser * {
     color: #1A1A1A;
 }
 
+PreviewDialog PreviewBrowser LinearIconView {
+    font-size: 12px;
+}
+
 PreviewDialog PreviewBrowser TextLabel#path-text {
     font-size: 12px;
 }
