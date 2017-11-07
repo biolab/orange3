@@ -3,6 +3,7 @@ import io
 import numpy as np
 
 from Orange.data.io import TabReader
+from Orange.projection import CUR
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
@@ -27,7 +28,6 @@ class TestOWPredictions(WidgetTest):
         data = self.iris[::10].copy()
         data.Y[1] = np.nan
         yvec, _ = data.get_column_view(data.domain.class_var)
-        nanmask = np.isnan(yvec)
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
         pred = self.get_output(self.widget.Outputs.predictions)
@@ -170,3 +170,15 @@ class TestOWPredictions(WidgetTest):
         cl_data = ConstantLearner()(data)
         self.send_signal(self.widget.Inputs.predictors, cl_data, 1)
         self.send_signal(self.widget.Inputs.data, data)
+
+    def test_cur_learner(self):
+        """
+        Predictions can now use CUR.
+        GH-2738
+        """
+        data = Table("iris")[::30]
+        self.send_signal(self.widget.Inputs.data, data)
+        cur = CUR()
+        cur_model = cur(data)
+        data2 = cur_model(data)
+        self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data2))
