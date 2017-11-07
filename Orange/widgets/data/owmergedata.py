@@ -8,7 +8,7 @@ import scipy.sparse as sp
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable
-from Orange.data.util import hstack
+from Orange.statistics.util import hstack
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input

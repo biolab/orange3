@@ -17,10 +17,11 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack
+from Orange.data.util import SharedComputeValue
 from Orange.statistics.util import bincount, countnans, contingency, \
-    stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
-    sparse_implicit_zero_weights
+    stats as fast_stats, sparse_has_implicit_zeros, \
+    sparse_count_implicit_zeros, \
+    sparse_implicit_zero_weights, vstack, hstack
 from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]

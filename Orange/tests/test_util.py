@@ -8,7 +8,6 @@ import scipy.sparse as sp
 from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
     OrangeDeprecationWarning
 from Orange.data import Table
-from Orange.data.util import vstack, hstack
 from Orange.statistics.util import stats
 
 SOMETHING = 0xf00babe
@@ -62,46 +61,6 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(deepgetattr(a, 'l.__len__.__call__'), a.l.__len__.__call__)
         self.assertTrue(deepgetattr(a, 'l.__nx__.__x__', 42), 42)
         self.assertRaises(AttributeError, lambda: deepgetattr(a, 'l.__nx__.__x__'))
-
-    def test_vstack(self):
-        numpy = np.array([[1., 2.], [3., 4.]])
-        csr = sp.csr_matrix(numpy)
-        csc = sp.csc_matrix(numpy)
-
-        self.assertCorrectArrayType(
-            vstack([numpy, numpy]),
-            shape=(4, 2), sparsity="dense")
-        self.assertCorrectArrayType(
-            vstack([csr, numpy]),
-            shape=(4, 2), sparsity="sparse")
-        self.assertCorrectArrayType(
-            vstack([numpy, csc]),
-            shape=(4, 2), sparsity="sparse")
-        self.assertCorrectArrayType(
-            vstack([csc, csr]),
-            shape=(4, 2), sparsity="sparse")
-
-    def test_hstack(self):
-        numpy = np.array([[1., 2.], [3., 4.]])
-        csr = sp.csr_matrix(numpy)
-        csc = sp.csc_matrix(numpy)
-
-        self.assertCorrectArrayType(
-            hstack([numpy, numpy]),
-            shape=(2, 4), sparsity="dense")
-        self.assertCorrectArrayType(
-            hstack([csr, numpy]),
-            shape=(2, 4), sparsity="sparse")
-        self.assertCorrectArrayType(
-            hstack([numpy, csc]),
-            shape=(2, 4), sparsity="sparse")
-        self.assertCorrectArrayType(
-            hstack([csc, csr]),
-            shape=(2, 4), sparsity="sparse")
-
-    def assertCorrectArrayType(self, array, shape, sparsity):
-        self.assertEqual(array.shape, shape)
-        self.assertEqual(["dense", "sparse"][sp.issparse(array)], sparsity)
 
     @unittest.skipUnless(os.environ.get('ORANGE_DEPRECATIONS_ERROR'),
                          'ORANGE_DEPRECATIONS_ERROR not set')

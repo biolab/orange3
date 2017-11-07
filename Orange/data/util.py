@@ -1,9 +1,10 @@
 """
 Data-manipulation utilities.
 """
-import numpy as np
 import bottleneck as bn
-from scipy import sparse as sp
+import numpy as np
+# Backwards compatibility
+from Orange.statistics.util import hstack, vstack  # pylint: disable=unused-import
 
 
 def one_hot(values, dtype=float):
@@ -63,29 +64,3 @@ class SharedComputeValue:
         """Given precomputed shared data, perform variable-specific
         part of computation and return new variable values."""
         raise NotImplementedError
-
-
-def vstack(arrays):
-    """vstack that supports sparse and dense arrays
-
-    If all arrays are dense, result is dense. Otherwise,
-    result is a sparse (csr) array.
-    """
-    if any(sp.issparse(arr) for arr in arrays):
-        arrays = [sp.csr_matrix(arr) for arr in arrays]
-        return sp.vstack(arrays)
-    else:
-        return np.vstack(arrays)
-
-
-def hstack(arrays):
-    """hstack that supports sparse and dense arrays
-
-    If all arrays are dense, result is dense. Otherwise,
-    result is a sparse (csc) array.
-    """
-    if any(sp.issparse(arr) for arr in arrays):
-        arrays = [sp.csc_matrix(arr) for arr in arrays]
-        return sp.hstack(arrays)
-    else:
-        return np.hstack(arrays)

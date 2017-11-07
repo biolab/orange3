@@ -528,3 +528,29 @@ def var(x, axis=None):
     result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
     result = np.squeeze(np.asarray(result))
     return result
+
+
+def vstack(arrays):
+    """vstack that supports sparse and dense arrays
+
+    If all arrays are dense, result is dense. Otherwise,
+    result is a sparse (csr) array.
+    """
+    if any(sp.issparse(arr) for arr in arrays):
+        arrays = [sp.csr_matrix(arr) for arr in arrays]
+        return sp.vstack(arrays)
+    else:
+        return np.vstack(arrays)
+
+
+def hstack(arrays):
+    """hstack that supports sparse and dense arrays
+
+    If all arrays are dense, result is dense. Otherwise,
+    result is a sparse (csc) array.
+    """
+    if any(sp.issparse(arr) for arr in arrays):
+        arrays = [sp.csc_matrix(arr) for arr in arrays]
+        return sp.hstack(arrays)
+    else:
+        return np.hstack(arrays)
