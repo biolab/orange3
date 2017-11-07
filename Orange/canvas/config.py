@@ -314,6 +314,9 @@ def application_icon():
     return QIcon(path)
 
 
+FEEDBACK_URL = "http://orange.biolab.si/survey/long.html"
+
+
 class WelcomeScreenSpecs(SimpleNamespace):
     class Item(SimpleNamespace):
         path = ""  # type: str

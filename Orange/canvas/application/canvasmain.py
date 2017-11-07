@@ -710,6 +710,12 @@ class CanvasMainWindow(QMainWindow):
         self.help_menu.addAction(self.welcome_action)
         self.help_menu.addAction(self.tutorials_action)
         self.help_menu.addAction(self.examples_action)
+        self.help_menu.addSeparator()
+        if config.FEEDBACK_URL:
+            a = self.help_menu.addAction("Help us improve...")
+            a.triggered.connect(
+                lambda: QDesktopServices.openUrl(QUrl(config.FEEDBACK_URL)))
+
         menu_bar.addMenu(self.help_menu)
 
         self.setMenuBar(menu_bar)

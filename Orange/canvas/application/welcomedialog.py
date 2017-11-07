@@ -25,6 +25,7 @@ from ..gui.iconview import LinearIconView
 from ..gui.dropshadow import DropShadowFrame
 from ..canvas.items.utils import radial_gradient
 from ..registry import NAMED_COLORS
+from .. import config
 
 
 def decorate_welcome_icon(icon, background_color):
@@ -127,7 +128,7 @@ class WelcomeDialog(QDialog):
         self.__showAtStartupCheck = check
 
         feedback = QLabel(
-            '<a href="http://orange.biolab.si/survey/long.html">Help us improve!</a>')
+            '<a href="{}">Help us improve!</a>'.format(config.FEEDBACK_URL))
         feedback.setTextInteractionFlags(Qt.TextBrowserInteraction)
         feedback.setOpenExternalLinks(True)
 
