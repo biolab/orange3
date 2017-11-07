@@ -774,19 +774,19 @@ class Installer(QObject):
         try:
             if command == Install:
                 self.setStatusMessage(
-                    "Installing {}".format(pkg.installable.name))
+                    "Installing {}".format(cleanup(pkg.installable.name)))
                 if self.conda:
                     self.conda.install(pkg.installable, raise_on_fail=False)
                 self.pip.install(pkg.installable)
             elif command == Upgrade:
                 self.setStatusMessage(
-                    "Upgrading {}".format(pkg.installable.name))
+                    "Upgrading {}".format(cleanup(pkg.installable.name)))
                 if self.conda:
                     self.conda.upgrade(pkg.installable, raise_on_fail=False)
                 self.pip.upgrade(pkg.installable)
             elif command == Uninstall:
                 self.setStatusMessage(
-                    "Uninstalling {}".format(pkg.local.project_name))
+                    "Uninstalling {}".format(cleanup(pkg.local.project_name)))
                 if self.conda:
                     try:
                         self.conda.uninstall(pkg.local, raise_on_fail=True)
