@@ -21,7 +21,7 @@ from AnyQt.QtWidgets import (
     QGraphicsTextItem
 )
 from AnyQt.QtGui import (
-    QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QBrush, QIcon,
+    QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QIcon,
     QWhatsThisClickedEvent, QPalette
 )
 
@@ -1657,11 +1657,10 @@ class SchemeEditWidget(QWidget):
 
     def __signalManagerStateChanged(self, state):
         if state == signalmanager.SignalManager.Running:
-            self.__view.setBackgroundBrush(QBrush(Qt.NoBrush))
-#            self.__view.setBackgroundIcon(QIcon())
-        elif state == signalmanager.SignalManager.Paused:
-            self.__view.setBackgroundBrush(QBrush(QColor(235, 235, 235)))
-#            self.__view.setBackgroundIcon(QIcon("canvas_icons:Pause.svg"))
+            role = QPalette.Base
+        else:
+            role = QPalette.Window
+        self.__view.viewport().setBackgroundRole(role)
 
 
 def geometry_from_annotation_item(item):
