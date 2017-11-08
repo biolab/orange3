@@ -22,7 +22,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import (
     QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QBrush, QIcon,
-    QWhatsThisClickedEvent
+    QWhatsThisClickedEvent, QPalette
 )
 
 from AnyQt.QtCore import (
@@ -399,7 +399,7 @@ class SchemeEditWidget(QWidget):
         )
 
         scene.setFont(self.font())
-
+        scene.setPalette(self.palette())
         scene.installEventFilter(self)
 
         scene.set_registry(self.__registry)
@@ -977,6 +977,9 @@ class SchemeEditWidget(QWidget):
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
             self.__updateFont()
+        elif event.type() == QEvent.PaletteChange:
+            if self.__scene is not None:
+                self.__scene.setPalette(self.palette())
 
         QWidget.changeEvent(self, event)
 
