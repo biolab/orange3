@@ -14,7 +14,7 @@ from operator import eq, attrgetter
 from AnyQt.QtWidgets import (
     QWidget, QFrame, QSizePolicy, QStyle, QStyleOptionToolButton,
     QStyleOptionToolBox, QScrollArea, QVBoxLayout, QToolButton,
-    QAction, QActionGroup
+    QAction, QActionGroup, QApplication
 )
 from AnyQt.QtGui import (
     QIcon, QFontMetrics, QPainter, QPalette, QBrush, QPen, QColor,
@@ -68,8 +68,21 @@ class ToolBoxTabButton(QToolButton):
         self.__nativeStyling = False
         self.position = QStyleOptionToolBox.OnlyOneTab
         self.selected = QStyleOptionToolBox.NotAdjacent
+        font = kwargs.pop("font", None)
+        palette = kwargs.pop("palette", None)
 
         QToolButton.__init__(self, *args, **kwargs)
+
+        if font is None:
+            self.setFont(QApplication.font("QAbstractButton"))
+            self.setAttribute(Qt.WA_SetFont, False)
+        else:
+            self.setFont(font)
+        if palette is None:
+            self.setPalette(QApplication.palette("QAbstractButton"))
+            self.setAttribute(Qt.WA_SetPalette, False)
+        else:
+            self.setPalette(palette)
 
     def paintEvent(self, event):
         if self.__nativeStyling:
