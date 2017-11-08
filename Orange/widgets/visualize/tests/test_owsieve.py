@@ -1,6 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import os
 from math import isnan
+import unittest
 from unittest.mock import patch
 import numpy as np
 import scipy.sparse as sp
@@ -15,6 +17,7 @@ from Orange.widgets.visualize.owsieve import ChiSqStats
 from Orange.widgets.visualize.owsieve import Discretize
 
 
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):

@@ -1,4 +1,6 @@
 import time
+import unittest
+import os
 from os.path import dirname
 
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
@@ -11,6 +13,7 @@ from Orange.widgets.utils.webview import WebviewWidget, HAVE_WEBKIT, wait
 SOME_URL = WebviewWidget.toFileURL(dirname(__file__))
 
 
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class WebviewWidgetTest(WidgetTest):
     def test_base(self):
         w = WebviewWidget()

@@ -1,3 +1,4 @@
+import os
 import time
 import unittest
 import numpy as np
@@ -16,6 +17,7 @@ except RuntimeError:
 
 
 @unittest.skipIf(QT_TOO_OLD, "not supported in Qt <5.3")
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class TestOWMap(WidgetTest):
     @classmethod
     def setUpClass(cls):
