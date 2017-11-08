@@ -11,7 +11,8 @@ from AnyQt.QtWidgets import (
     QGraphicsDropShadowEffect, QMenu, QAction, QActionGroup
 )
 from AnyQt.QtGui import (
-    QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen, QBrush
+    QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen, QBrush,
+    QPalette
 )
 from AnyQt.QtCore import (
     Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, QMetaObject, QT_VERSION
@@ -269,6 +270,9 @@ class TextAnnotation(Annotation):
         self.__textItem.setTextInteractionFlags(self.__defaultInteractionFlags)
         self.__textItem.setFont(self.font())
         self.__textItem.editingFinished.connect(self.__textEditingFinished)
+        self.__textItem.setDefaultTextColor(
+            self.palette().color(QPalette.Text)
+        )
         if self.__textItem.scene() is not None:
             self.__textItem.installSceneEventFilter(self)
         layout = self.__textItem.document().documentLayout()
@@ -481,7 +485,10 @@ class TextAnnotation(Annotation):
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
             self.__textItem.setFont(self.font())
-
+        elif event.type() == QEvent.PaletteChange:
+            self.__textItem.setDefaultTextColor(
+                self.palette().color(QPalette.Text)
+            )
         Annotation.changeEvent(self, event)
 
     @Slot()
