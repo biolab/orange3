@@ -392,6 +392,29 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         states = [state for state in vizrank.iterate_states(None)]
         self.assertIsNotNone(vizrank.compute_score(states[0]))
 
+    def test_vizrank_class_nan(self):
+        """
+        When class values are nan, vizrank should be disabled. It should behave like
+        the class column is missing.
+        GH-2757
+        """
+        def assert_vizrank_enabled(data, is_enabled):
+            self.send_signal(self.widget.Inputs.data, data)
+            self.assertEqual(is_enabled, self.widget.vizrank_button.isEnabled())
+
+        data1 = Table("iris")[::30]
+        data2 = Table("iris")[::30]
+        data2.Y[:] = np.nan
+        domain = Domain(
+            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=[]))
+        data2 = Table(domain, data2.X, Y=data2.Y)
+        data3 = Table("iris")[::30]
+        data3.Y[:] = np.nan
+
+        for data, is_enabled in zip([data1, data2, data1, data3, data1],
+                                    [True, False, True, False, True]):
+            assert_vizrank_enabled(data, is_enabled)
+
     def test_auto_send_selection(self):
         """
         Scatter Plot automatically sends selection only when the checkbox Send automatically
