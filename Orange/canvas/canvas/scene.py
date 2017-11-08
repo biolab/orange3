@@ -869,19 +869,6 @@ class CanvasScene(QGraphicsScene):
         if handler:
             handler.start()
 
-    def event(self, event):
-        # TODO: change the base class of Node/LinkItem to QGraphicsWidget.
-        # It already handles font changes.
-        if event.type() == QEvent.FontChange:
-            self.__update_font()
-
-        return QGraphicsScene.event(self, event)
-
-    def __update_font(self):
-        font = self.font()
-        for item in self.__node_items + self.__link_items:
-            item.setFont(font)
-
     def __str__(self):
         return "%s(objectName=%r, ...)" % \
                 (type(self).__name__, str(self.objectName()))
