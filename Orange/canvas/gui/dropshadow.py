@@ -58,17 +58,14 @@ class DropShadowFrame(QWidget):
         Shadow radius.
 
     """
-    def __init__(self, parent=None, color=None, radius=5,
+    def __init__(self, parent=None, color=QColor(), radius=5,
                  **kwargs):
         QWidget.__init__(self, parent, **kwargs)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_NoChildEventsForParent, True)
         self.setFocusPolicy(Qt.NoFocus)
 
-        if color is None:
-            color = self.palette().color(QPalette.Dark)
-
-        self.__color = color
+        self.__color = QColor(color)
         self.__radius = radius
 
         self.__widget = None
@@ -89,8 +86,14 @@ class DropShadowFrame(QWidget):
     def color(self):
         """
         Return the color of the drop shadow.
+
+        By default this is a color from the `palette` (for
+        `self.foregroundRole()`)
         """
-        return QColor(self.__color)
+        if self.__color.isValid():
+            return QColor(self.__color)
+        else:
+            return self.palette().color(self.foregroundRole())
 
     color_ = Property(QColor, fget=color, fset=setColor, designable=True,
                       doc="Drop shadow color")
