@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import os
 import time
 import unittest
 
@@ -96,12 +97,14 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         assertCount(1, [0, 0, 0, 0], 0)
 
+
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
 
 # These tests are rather crude: the main challenge of this widget is to handle
 # user interactions and interrupts, e.g. changing the widget settings or
 # getting new data while the computation is running.
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class MosaicVizRankTests(WidgetTest):
     @classmethod
     def setUpClass(cls):
@@ -219,7 +222,7 @@ class MosaicVizRankTests(WidgetTest):
             item.data(self.vizrank._AttrRole),
             tuple(self.vizrank.attr_ordering[i] for i in [0, 1, 3]))
 
-    @unittest.skip("Appveyor sometimes fails.")
+    @unittest.skip("This fails.")  # FIXME
     def test_does_not_crash(self):
         """MosaicVizrank computes rankings without crashing"""
         widget = self.widget

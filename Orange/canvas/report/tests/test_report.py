@@ -65,6 +65,7 @@ VISUALIZATION_WIDGETS = get_owwidgets('Orange.widgets.visualize')
 MODEL_WIDGETS = get_owwidgets('Orange.widgets.model')
 
 
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class TestReport(WidgetTest):
     def test_report(self):
         count = 5
@@ -152,6 +153,7 @@ class TestReport(WidgetTest):
             os.rmdir(temp_dir)
 
 
+@unittest.skipIf(os.environ.get('APPVEYOR'), 'Segfaults on Appveyor')
 class TestReportWidgets(WidgetTest):
     model_widgets = MODEL_WIDGETS
     data_widgets = DATA_WIDGETS
