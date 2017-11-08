@@ -3,8 +3,6 @@
 
 from unittest import TestCase
 
-import numpy as np
-
 from AnyQt.QtCore import Qt
 
 from Orange.data import Domain, ContinuousVariable, DiscreteVariable
@@ -123,31 +121,17 @@ class TestPyTableModel(TestCase):
 
 
 class TestAbstractSortTableModel(TestCase):
-    def test_sorting(self):
+    def setUp(self):
         assert issubclass(PyTableModel, AbstractSortTableModel)
-        model = PyTableModel([[1, 4],
-                              [2, 2],
-                              [3, 3]])
-        model.sort(1, Qt.AscendingOrder)
-        # mapToSourceRows
-        self.assertSequenceEqual(model.mapToSourceRows(...).tolist(), [1, 2, 0])
-        self.assertEqual(model.mapToSourceRows(1).tolist(), 2)
-        self.assertSequenceEqual(model.mapToSourceRows([1, 2]).tolist(), [2, 0])
-        self.assertSequenceEqual(model.mapToSourceRows([]), [])
-        self.assertSequenceEqual(model.mapToSourceRows(np.array([], dtype=int)).tolist(), [])
-        self.assertRaises(IndexError, model.mapToSourceRows, np.r_[0.])
+        self.model = PyTableModel([[1, 4],
+                                   [2, 3]])
 
-        # mapFromSourceRows
-        self.assertSequenceEqual(model.mapFromSourceRows(...).tolist(), [2, 0, 1])
-        self.assertEqual(model.mapFromSourceRows(1).tolist(), 0)
-        self.assertSequenceEqual(model.mapFromSourceRows([1, 2]).tolist(), [0, 1])
-        self.assertSequenceEqual(model.mapFromSourceRows([]), [])
-        self.assertSequenceEqual(model.mapFromSourceRows(np.array([], dtype=int)).tolist(), [])
-        self.assertRaises(IndexError, model.mapFromSourceRows, np.r_[0.])
+    def test_sorting(self):
+        self.model.sort(1, Qt.AscendingOrder)
+        self.assertSequenceEqual(self.model.mapToSourceRows(...).tolist(), [1, 0])
 
-        model.sort(1, Qt.DescendingOrder)
-        self.assertSequenceEqual(model.mapToSourceRows(...).tolist(), [0, 2, 1])
-        self.assertSequenceEqual(model.mapFromSourceRows(...).tolist(), [0, 2, 1])
+        self.model.sort(1, Qt.DescendingOrder)
+        self.assertSequenceEqual(self.model.mapToSourceRows(...).tolist(), [0, 1])
 
 
 class TestPyListModel(TestCase):
