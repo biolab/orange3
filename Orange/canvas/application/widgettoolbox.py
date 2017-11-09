@@ -381,20 +381,26 @@ class WidgetToolBox(ToolBox):
         self.insertItem(index, grid, text, icon, tooltip)
         button = self.tabButton(index)
 
-        # Set the 'highlight' color
+        # Set the 'highlight' color if applicable
+        highlight = None
+        highlight_foreground = None
         if item.data(Qt.BackgroundRole) is not None:
-            brush = item.background()
+            highlight = item.background()
         elif item.data(QtWidgetRegistry.BACKGROUND_ROLE) is not None:
-            brush = item.data(QtWidgetRegistry.BACKGROUND_ROLE)
-        else:
-            brush = self.palette().brush(QPalette.Button)
+            highlight = item.data(QtWidgetRegistry.BACKGROUND_ROLE)
 
-        if not brush.gradient():
-            gradient = create_gradient(brush.color())
-            brush = QBrush(gradient)
+        if isinstance(highlight, QBrush) and highlight.style() != Qt.NoBrush:
+            if not highlight.gradient():
+                value = highlight.color().value()
+                gradient = create_gradient(highlight.color())
+                highlight = QBrush(gradient)
+                highlight_foreground = Qt.black if value > 128 else Qt.white
 
         palette = button.palette()
-        palette.setBrush(QPalette.Highlight, brush)
+        if highlight is not None:
+            palette.setBrush(QPalette.Highlight, highlight)
+        if highlight_foreground is not None:
+            palette.setBrush(QPalette.HighlightedText, highlight_foreground)
         button.setPalette(palette)
 
     def __on_itemChanged(self, item):
