@@ -9,7 +9,7 @@ import itertools
 import warnings
 import logging
 from types import LambdaType
-from collections import defaultdict
+from collections import defaultdict, Sequence
 
 import pkg_resources
 
@@ -1084,7 +1084,7 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
         connectControl(master, value, callback,
                        view.selectionModel().selectionChanged,
                        CallFrontListView(view),
-                       CallBackListView(model, master, value))
+                       CallBackListView(model, view, master, value))
     misc.setdefault('addSpace', True)
     miscellanea(view, bg, widget, **misc)
     return view
@@ -2270,20 +2270,25 @@ class FunctionCallback:
 
 
 class CallBackListView(ControlledCallback):
-    def __init__(self, model, widget, attribute):
+    def __init__(self, model, view, widget, attribute):
         super().__init__(widget, attribute)
         self.model = model
+        self.view = view
 
     # triggered by selectionModel().selectionChanged()
-    def __call__(self, newSelection, _):
+    def __call__(self, *_):
         # This must be imported locally to avoid circular imports
         from Orange.widgets.utils.itemmodels import PyListModel
-        indexes = newSelection.indexes()
-        if indexes:
-            value = newSelection.indexes()[0].row()
+        values = [i.row()
+                  for i in self.view.selectionModel().selection().indexes()]
+        if values:
+            # FIXME: irrespective of PyListModel check, this might/should always
+            # callback with values!
             if isinstance(self.model, PyListModel):
-                value = self.model[value]
-            self.acyclic_setattr(value)
+                values = [self.model[i] for i in values]
+            if self.view.selectionMode() == self.view.SingleSelection:
+                values = values[0]
+            self.acyclic_setattr(values)
 
 
 class CallBackListBox:
@@ -2467,22 +2472,34 @@ class CallFrontRadioButtons(ControlledCallFront):
 
 
 class CallFrontListView(ControlledCallFront):
-    def action(self, value):
-        model = self.control.model()
-        if not isinstance(value, int):
-            if isinstance(value, str):
-                search_role = Qt.DisplayRole
-            elif isinstance(value, Variable):
-                search_role = TableVariable
-            else:
-                search_role = Qt.DisplayRole
-                value = str(value)
-            for i in range(model.rowCount()):
-                if model.data(model.index(i), search_role) == value:
-                    value = i
-                    break
-        sel_model = self.control.selectionModel()
-        sel_model.select(model.index(value), sel_model.ClearAndSelect)
+    def action(self, values):
+        view = self.control
+        model = view.model()
+        sel_model = view.selectionModel()
+
+        if view.selectionMode == view.SingleSelection:
+            flags = sel_model.ClearAndSelect
+        else:
+            sel_model.clearSelection()
+            flags = sel_model.Select
+
+        if not isinstance(values, Sequence):
+            values = [values]
+
+        for value in values:
+            if not isinstance(value, int):
+                if isinstance(value, str):
+                    search_role = Qt.DisplayRole
+                elif isinstance(value, Variable):
+                    search_role = TableVariable
+                else:
+                    search_role = Qt.DisplayRole
+                    value = str(value)
+                for i in range(model.rowCount()):
+                    if model.data(model.index(i), search_role) == value:
+                        value = i
+                        break
+            sel_model.select(model.index(value), flags)
 
 
 class CallFrontListBox(ControlledCallFront):

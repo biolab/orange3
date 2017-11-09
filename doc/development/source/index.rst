@@ -13,6 +13,7 @@ Widget Development
     widget
     gui
     testing
+    plotly
 
 API
 ---

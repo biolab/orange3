@@ -100,6 +100,7 @@ if HAVE_WEBENGINE:
                              sizeHint=QSize(500, 400),
                              sizePolicy=QSizePolicy(QSizePolicy.Expanding,
                                                     QSizePolicy.Expanding),
+                             visible=False,
                              **kwargs)
             self.bridge = bridge
             self.debug = debug
@@ -138,6 +139,10 @@ if HAVE_WEBENGINE:
             channel.registerObject('__bridge', _QWidgetJavaScriptWrapper(self))
 
             self.page().setWebChannel(channel)
+
+            # Delay showing the widget. Observation indicate this results in
+            # fewer window resizes.
+            QTimer.singleShot(1, self.show)
 
         def _onloadJS(self, code, name='', injection_point=QWebEngineScript.DocumentReady):
             script = QWebEngineScript()

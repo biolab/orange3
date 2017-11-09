@@ -1,0 +1,28 @@
+html, body, #container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.modebar-btn path {
+    fill: #bbb !important;
+}
+
+.modebar-btn.active path {
+    fill: #59c !important;
+}
+
+.modebar {
+    zoom: 1.1;
+    right: 1em !important;
+    top: 1em !important;
+}
+
+.select-outline {
+    fill: 'gray' !important;
+    opacity: .6;
+}

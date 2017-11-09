@@ -1,224 +1,358 @@
-import sys
+import itertools
+import textwrap
 
-from AnyQt.QtCore import Qt
+from os import path
 
-from Orange.canvas.registry.description import Default
-import Orange.data
-from Orange.data import Table
-from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
-from Orange.widgets.gui import attributeIconDict
-from Orange.widgets.settings import DomainContextHandler, Setting, SettingProvider
-from Orange.widgets.utils.plot import xBottom
-from Orange.widgets.utils import checksum
-from Orange.widgets.utils.toolbar import ZoomSelectToolbar, ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION
-from Orange.widgets.visualize.owparallelgraph import OWParallelGraph
-from Orange.widgets.visualize.owviswidget import OWVisWidget
-from Orange.widgets.widget import AttributeList
-from Orange.widgets import gui, widget
+import numpy as np
+from scipy.stats import kendalltau
+
+from Orange.data import Table, TimeVariable
+from Orange.util import color_to_hex
+from Orange.widgets import gui, widget, settings
+from Orange.widgets.utils.annotated_data import create_annotated_table
+from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.plotly_widget import Plotly
+
+from AnyQt.QtCore import Qt, QObject, pyqtSlot
+from AnyQt.QtWidgets import QMessageBox
+
+from plotly.graph_objs import Parcoords
 
 
-class OWParallelCoordinates(OWVisWidget):
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+
+class ParallelCoordinates(Plotly):
+    BASEDIR = path.join(path.dirname(__file__),
+                        '_' + path.splitext(path.basename(__file__))[0])
+    CSS_FILE = path.join(BASEDIR, 'style.css')
+    JS_FILE = path.join(BASEDIR, 'script.js')
+
+    def __init__(self, parent):
+
+        class _Bridge(QObject):
+            @pyqtSlot('QVariantList')
+            def update_axes_info(_, axes_info):
+                self._owwidget.selected_attrs = [name for name, _ in axes_info]
+                self._owwidget.constraint_range = {name: range
+                                                   for name, range in axes_info
+                                                   if range}
+                self._owwidget.commit()
+
+        self._owwidget = parent
+        super().__init__(parent, _Bridge(),
+                         style=self.CSS_FILE, javascript=self.JS_FILE)
+
+    def plot(self, data, *, padding_right=0):
+        return super().plot(data, scroll_zoom=False,
+                            layout=dict(margin=dict(l=50, t=50, b=10, r=20 + padding_right)),
+                            modeBarButtons=[])
+
+
+class OWParallelCoordinates(widget.OWWidget):
     name = "Parallel Coordinates"
     description = "Parallel coordinates display of multi-dimensional data."
     icon = "icons/ParallelCoordinates.svg"
     priority = 900
-    inputs = [("Data", Orange.data.Table, 'set_data', Default),
-              ("Data Subset", Orange.data.Table, 'set_subset_data'),
-              ("Features", AttributeList, 'set_shown_attributes')]
-    outputs = [("Selected Data", Orange.data.Table, widget.Default),
-               ("Other Data", Orange.data.Table),
-               ("Features", AttributeList)]
+    inputs = [("Data", Table, 'set_data', widget.Default),
+              ("Features", widget.AttributeList, 'set_shown_attributes')]
+    outputs = [("Selected Data", Table, widget.Default),
+               ("Annotated Data", Table),
+               ("Features", widget.AttributeList)]
 
-    settingsHandler = DomainContextHandler()
+    graph_name = 'graph'
+    settingsHandler = settings.DomainContextHandler()
 
-    show_all_attributes = Setting(default=False)
-    auto_send_selection = Setting(default=True)
+    autocommit = settings.Setting(True)
+    selected_attrs = settings.ContextSetting([])
+    color_attr = settings.ContextSetting('')
+    constraint_range = settings.ContextSetting({})
 
-    jitterSizeNums = [0, 2, 5, 10, 15, 20, 30]
+    autocommit = settings.Setting(default=True)
 
-    graph = SettingProvider(OWParallelGraph)
-    zoom_select_toolbar = SettingProvider(ZoomSelectToolbar)
+    UserAdviceMessages = [
+        widget.Message('You can select subsets of data based on value intervals '
+                       'by dragging on the corresponding dimensions\' axes.\n\n'
+                       'You can reset the selection by clicking somewhere '
+                       'outside the selected interval on the axis.',
+                       'subset-selection')
+    ]
 
-    __ignore_updates = True
+    class Warning(widget.OWWidget.Warning):
+        too_many_selected_dimensions = widget.Msg(
+            'Too many dimensions selected ({}). Only first {} shown.')
+
+    class Information(widget.OWWidget.Information):
+        dataset_sampled = widget.Msg('Showing a random sample of your data.')
+
+    OPTIMIZATION_N_DIMS = (3, 9)
+    MAX_N_DIMS = 20
 
     def __init__(self):
         super().__init__()
-        #add a graph widget
-        self.graph = OWParallelGraph(self, self.mainArea)
+        self.graph = ParallelCoordinates(self)
         self.mainArea.layout().addWidget(self.graph)
 
-        self.data = None
-        self.subset_data = None
-        self.discrete_attribute_order = "Unordered"
-        self.continuous_attribute_order = "Unordered"
-        self.middle_labels = "Correlations"
+        self.model = DomainModel(valid_types=DomainModel.PRIMITIVE)
+        self.colormodel = DomainModel(valid_types=DomainModel.PRIMITIVE)
 
-        self.create_control_panel()
+        box = gui.vBox(self.controlArea, 'Lines')
+        combo = gui.comboBox(box, self, 'color_attr',
+                             sendSelectedValue=True,
+                             label='Color:', orientation=Qt.Horizontal,
+                             callback=self.update_plot)
+        combo.setModel(self.colormodel)
 
-        self.resize(900, 700)
+        box = gui.vBox(self.controlArea, 'Dimensions')
+        view = gui.listView(box, self, 'selected_attrs', model=self.model,
+                            callback=self.update_plot)
+        view.setSelectionMode(view.ExtendedSelection)
+        # Prevent drag selection. Otherwise, each new addition to selectio`n
+        # the mouse passes over triggers a webview redraw. Sending lots of data
+        # around multiple times on large datasets results in stalling and crashes.
+        view.mouseMoveEvent = (lambda event:
+            None if view.state() == view.DragSelectingState else
+                super(view.__class__, view).mouseMoveEvent(event))
 
-        self.__ignore_updates = False
+        self.optimize_button = gui.button(
+            box, self, 'Optimize Selected Dimensions',
+            callback=self.optimize,
+            tooltip='Optimize visualized dimensions by maximizing cumulative '
+                    'Kendall rank correlation coefficient.')
 
-    #noinspection PyAttributeOutsideInit
-    def create_control_panel(self):
-        self.add_attribute_selection_area(self.controlArea)
-        self.add_visual_settings(self.controlArea)
-        #self.add_annotation_settings(self.        controlArea)
-        self.add_group_settings(self.controlArea)
-        self.add_zoom_select_toolbar(self.controlArea)
-        self.icons = attributeIconDict
+        gui.auto_commit(self.controlArea, self, 'autocommit', '&Apply')
 
-    def add_attribute_selection_area(self, parent):
-        super().add_attribute_selection_area(parent)
-        self.shown_attributes_listbox.itemDoubleClicked.connect(self.flip_attribute)
-
-    #noinspection PyAttributeOutsideInit
-    def add_zoom_select_toolbar(self, parent):
-        buttons = (ZOOM, PAN, SPACE, REMOVE_ALL, SEND_SELECTION)
-        self.zoom_select_toolbar = ZoomSelectToolbar(self, parent, self.graph, self.auto_send_selection,
-                                                     buttons=buttons)
-        self.zoom_select_toolbar.buttonSendSelections.clicked.connect(self.sendSelections)
-
-    def add_visual_settings(self, parent):
-        box = gui.vBox(parent, "Visual Settings")
-        gui.checkBox(box, self, 'graph.show_attr_values', 'Show attribute values', callback=self.update_graph)
-        gui.checkBox(box, self, 'graph.use_splines', 'Show splines', callback=self.update_graph,
-                     tooltip="Show lines using splines")
-        self.graph.gui.show_legend_check_box(box)
-
-    def add_annotation_settings(self, parent):
-        box = gui.vBox(parent, "Statistical Information")
-        gui.comboBox(box, self, "graph.show_statistics", label="Statistics: ",
-                     orientation=Qt.Horizontal, labelWidth=90,
-                     items=["No statistics", "Means, deviations", "Median, quartiles"], callback=self.update_graph,
-                     sendSelectedValue=False, valueType=int)
-        gui.checkBox(box, self, 'graph.show_distributions', 'Show distributions', callback=self.update_graph,
-                     tooltip="Show bars with distribution of class values "
-                             "(only for categorical attributes)")
-
-    def add_group_settings(self, parent):
-        box = gui.vBox(parent, "Groups")
-        box2 = gui.hBox(box)
-        gui.checkBox(box2, self, "graph.group_lines", "Group lines into", tooltip="Show clusters instead of lines",
-                     callback=self.update_graph)
-        gui.spin(box2, self, "graph.number_of_groups", 0, 30, callback=self.update_graph)
-        gui.label(box2, self, "groups")
-        box2 = gui.hBox(box)
-        gui.spin(box2, self, "graph.number_of_steps", 0, 100, label="In no more than", callback=self.update_graph)
-        gui.label(box2, self, "steps")
-
-    def flip_attribute(self, item):
-        if self.graph.flip_attribute(str(item.text())):
-            self.update_graph()
-            self.information()
-        else:
-            self.information("To flip a numeric feature, disable"
-                             "'Global value scaling'")
-
-    def update_graph(self):
-        self.graph.update_data(self.shown_attributes)
-
-    def increase_axes_distance(self):
-        m, M = self.graph.bounds_for_axis(xBottom)
-        if (M - m) == 0:
-            return # we have not yet updated the axes (self.graph.updateAxes())
-        self.graph.setAxisScale(xBottom, m, M - (M - m) / 10., 1)
-        self.graph.replot()
-
-    def decrease_axes_distance(self):
-        m, M = self.graph.bounds_for_axis(xBottom)
-        if (M - m) == 0:
-            return # we have not yet updated the axes (self.graph.updateAxes())
-
-        self.graph.setAxisScale(xBottom, m, min(len(self.graph.attributes) - 1, M + (M - m) / 10.), 1)
-        self.graph.replot()
-
-    # ------------- SIGNALS --------------------------
-    # receive new data and update all fields
     def set_data(self, data):
-        if type(data) == SqlTable and data.approx_len() > LARGE_TABLE:
-            data = data.sample_time(DEFAULT_SAMPLE_TIME)
-
-        if data and (not bool(data) or len(data.domain) == 0):
-            data = None
-        if checksum(data) == checksum(self.data):
-            return # check if the new data set is the same as the old one
-
-        self.__ignore_updates = True
-        self.closeContext()
-        same_domain = self.data and data and data.domain.checksum() == self.data.domain.checksum() # preserve attribute choice if the domain is the same
         self.data = data
+        self.graph.clear()
 
-        if not same_domain:
-            self.shown_attributes = None
+        self.closeContext()
 
-        self.openContext(self.data)
-        self.__ignore_updates = False
+        model = self.model
+        colormodel = self.colormodel
 
-    def set_subset_data(self, subset_data):
-        self.subset_data = subset_data
+        self.sample = None
+        self.selected_attrs = None
+        self.color_attr = None
 
-    # attribute selection signal - list of attributes to show
-    def set_shown_attributes(self, shown_attributes):
-        self.new_shown_attributes = shown_attributes
-
-    new_shown_attributes = None
-
-    # this is called by OWBaseWidget after setData and setSubsetData are called. this way the graph is updated only once
-    def handleNewSignals(self):
-        self.__ignore_updates = True
-        self.graph.set_data(self.data, self.subset_data)
-        if self.new_shown_attributes:
-            self.shown_attributes = self.new_shown_attributes
-            self.new_shown_attributes = None
+        if data is not None and len(data) and len(data.domain.variables):
+            self.sample = slice(None) if len(data) < 2000 else np.random.choice(np.arange(len(data)), 2000, replace=False)
+            model.set_domain(data.domain)
+            colormodel.set_domain(data.domain)
+            self.color_attr = None
+            selected_attrs = (model.data(model.index(i, 0))
+                              for i in range(min(self.OPTIMIZATION_N_DIMS[1],
+                                                 model.rowCount())))
+            self.selected_attrs = [attr for attr in selected_attrs
+                                   if isinstance(attr, str)]
         else:
-            self.shown_attributes = self._shown_attributes
-            # trust open context to take care of this?
-            # self.shown_attributes = None
-        self.update_graph()
-        self.sendSelections()
-        self.__ignore_updates = False
+            model.set_domain(None)
+            colormodel.set_domain(None)
 
-    def send_shown_attributes(self, attributes=None):
-        if attributes is None:
-            attributes = self.shown_attributes
-        self.send("Features", attributes)
+        self.Information.dataset_sampled(
+            shown=False if data is None else len(data))
 
-    def selectionChanged(self):
-        self.zoom_select_toolbar.buttonSendSelections.setEnabled(not self.auto_send_selection)
-        if self.auto_send_selection:
-            self.sendSelections()
+        self.openContext(data.domain)
 
-    # send signals with selected and unselected examples as two datasets
-    def sendSelections(self):
-        return
+        self.update_plot()
+        self.commit()
 
-    # jittering options
-    def setJitteringSize(self):
-        self.graph.rescale_data()
-        self.update_graph()
+    def clear(self):
+        self.graph.clear()
+        self.commit()
 
-    def attributes_changed(self):
-        if not self.__ignore_updates:
-            self.graph.removeAllSelections()
-            self.update_graph()
+    def update_plot(self):
+        data = self.data
+        if data is None or not len(data):
+            self.clear()
+            return
 
-            self.send_shown_attributes()
+        self.optimize_button.setDisabled(not self.is_optimization_valid())
+
+        self.Warning.too_many_selected_dimensions(
+            len(self.selected_attrs), self.MAX_N_DIMS,
+            shown=len(self.selected_attrs) > self.MAX_N_DIMS)
+        selected_attrs = self.selected_attrs[:self.MAX_N_DIMS]
+
+        sample = self.sample
+
+        dimensions = []
+        for attr in selected_attrs:
+            attr = data.domain[attr]
+            values = data.get_column_view(attr)[0][sample]
+            dim = dict(label=attr.name,
+                       values=values,
+                       constraintrange=self.constraint_range.get(attr.name))
+            if attr.is_discrete:
+                dim.update(tickvals=np.arange(len(attr.values)),
+                           ticktext=attr.values)
+            elif isinstance(attr, TimeVariable):
+                tickvals = [np.nanmin(values),
+                            np.nanmedian(values),
+                            np.nanmax(values)]
+                ticktext = [attr.repr_val(i)
+                            for i in tickvals]
+                dim.update(tickvals=tickvals,
+                           ticktext=ticktext)
+            dimensions.append(dim)
+
+        # Compute color legend
+        line = dict()
+        padding_right = 40
+        if self.color_attr:
+            attr = data.domain[self.color_attr]
+            values = data.get_column_view(attr)[0][sample]
+            line.update(color=values, showscale=True)
+            title = '<br>'.join(textwrap.wrap(attr.name.strip(), width=7,
+                                              max_lines=4, placeholder='…'))
+            if attr.is_discrete:
+                padding_right = 90
+                colors = [color_to_hex(i) for i in attr.colors]
+                values_short = [textwrap.fill(value, width=9,
+                                              max_lines=1, placeholder='…')
+                                for value in attr.values]
+                self.graph.exposeObject('discrete_colorbar',
+                                        dict(colors=colors,
+                                             title=title,
+                                             values=attr.values,
+                                             values_short=values_short))
+                line.update(showscale=False,
+                            colorscale=list(zip(np.linspace(0, 1, len(attr.values)),
+                                                colors)))
+            else:
+                padding_right = 0
+                self.graph.exposeObject('discrete_colorbar', {})
+                line.update(colorscale=list(zip((0, 1),
+                                                (color_to_hex(i) for i in attr.colors[:-1]))),
+                            colorbar=dict(title=title))
+                if isinstance(attr, TimeVariable):
+                    tickvals = [np.nanmin(values),
+                                np.nanmedian(values),
+                                np.nanmax(values)]
+                    ticktext = [attr.repr_val(i)
+                                for i in tickvals]
+                    line.update(colorbar=dict(title=title,
+                                              tickangle=-90,
+                                              tickvals=tickvals,
+                                              ticktext=ticktext))
+        self.graph.plot([Parcoords(line=line,
+                                   dimensions=dimensions)],
+                        padding_right=padding_right)
+
+    def set_shown_attributes(self, attrs):
+        self.selected_attrs = attrs
+        self.update_plot()
+
+    def commit(self):
+        selected_data, annotated_data = None, None
+        data = self.data
+        if data is not None and len(data):
+
+            mask = np.ones(len(data), dtype=bool)
+            for attr, (min, max) in self.constraint_range.items():
+                values = data.get_column_view(attr)[0]
+                mask &= (values >= min) & (values <= max)
+
+            selected_data = data[mask]
+            annotated_data = create_annotated_table(data, mask)
+
+        self.send('Selected Data', selected_data)
+        self.send('Annotated Data', annotated_data)
+        self.send('Features', widget.AttributeList(self.selected_attrs))
+
+    def is_optimization_valid(self):
+        return (self.OPTIMIZATION_N_DIMS[0] <= len(self.selected_attrs) <= self.OPTIMIZATION_N_DIMS[1])
+
+    def optimize(self):
+        """ Optimizes the order of selected dimensions. """
+        data = self.data
+        if data is None or not len(data):
+            return
+
+        if not self.is_optimization_valid():
+            QMessageBox(QMessageBox.Warning,
+                        "Parallel Coordinates Optimization",
+                        "Can only optimize when the number of selected dimensions "
+                        "is between {} and {}. "
+                        "Sorry.".format(*self.OPTIMIZATION_N_DIMS),
+                        QMessageBox.Abort, self).exec()
+            return
+
+        self.optimize_button.blockSignals(True)
+
+        R = {}
+        Rc = {}
+        sample = slice(None) if len(data) < 300 else np.random.choice(np.arange(len(data)), 300, replace=False)
+
+        for attr1 in self.selected_attrs:
+            if self.color_attr:
+                Rc[attr1] = kendalltau(data.get_column_view(attr1)[0][sample],
+                                       data.get_column_view(self.color_attr)[0][sample],
+                                       nan_policy='omit')[0]
+            for attr2 in self.selected_attrs:
+                if (attr1, attr2) in R or attr1 == attr2:
+                    continue
+                R[(attr1, attr2)] = R[(attr2, attr1)] = \
+                    kendalltau(data.get_column_view(attr1)[0][sample],
+                               data.get_column_view(attr2)[0][sample],
+                               nan_policy='omit')[0]
+
+        # First dimension is the one with the highest correlation with the
+        # color attribute; the last dimension the one with the lowest
+        # correlation with the first dimension.
+        # If there is no color attribute, first and last are the two dimensions
+        # with the lowest correlation.
+        # In either case, the rest are filled in in the order of maximal
+        # cumulative correlation.
+        if self.color_attr:
+            head = max(Rc.items(), key=lambda i: i[1])[0]
+            tail = min(((key, value)
+                        for key, value in R.items()
+                        if key[0] == head), key=lambda i: i[1])[0][1]
+        else:
+            head, tail = min(R.items(), key=lambda i: i[1])[0]
+
+        def cumsum(permutation):
+            return sum(R[(attr1, attr2)]
+                       for attr1, attr2 in pairwise((head,) + permutation + (tail,)))
+
+        body = max(itertools.permutations(set(self.selected_attrs) - set([head, tail])),
+                   key=cumsum)
+
+        self.selected_attrs = (head,) + body + (tail,)
+        self.update_plot()
+
+        self.optimize_button.blockSignals(False)
 
     def send_report(self):
-        self.report_plot(self.graph)
+        self.report_items((
+            ('Dimensions', [i.name for i in self.selected_attrs]),
+            ('Color', self.color_attr)))
+        self.report_plot()
 
 
-#test widget appearance
 if __name__ == "__main__":
     from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
+    from Orange.data import Domain, ContinuousVariable, DiscreteVariable
+    a = QApplication([])
     ow = OWParallelCoordinates()
     ow.show()
-    ow.graph.group_lines = True
-    ow.graph.number_of_groups = 10
-    ow.graph.number_of_steps = 30
-    data = Orange.data.Table("iris")
+
+    N_RANDOM = 15
+    x = np.random.random(size=10000) * 10
+    X = np.column_stack((x, -x, np.sin(x), np.cos(x), np.arctan(x), np.exp(x), x*x, np.sqrt(x), x > 5,
+                         np.random.random((len(x), N_RANDOM))))
+    domain = Domain([ContinuousVariable(i)
+                     for i in 'x -x sin(x) cos(x) atan(x) exp(x) x*x sqrt(x)'.split()] +
+                    [DiscreteVariable('x > 5', values=['false', 'true'])] +
+                    [ContinuousVariable('random ' + str(i))
+                     for i in range(N_RANDOM)])
+    data = Table(domain, X)
+
     ow.set_data(data)
     ow.handleNewSignals()
 

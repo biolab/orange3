@@ -1,0 +1,56 @@
+.axisTitle,
+.cbtitle > text {
+    font-weight: bold !important;
+}
+
+.axisTitle {
+    width: 8em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.axisExtent {
+    display: none;
+}
+
+#filterBarPattern > rect {
+    stroke: black;
+    fill: black !important;
+    stroke-width: 3;
+}
+
+.axis > .domain {
+    stroke-opacity: .6;
+    stroke-width: 2px;
+}
+
+.tick text {
+    fill: black !important;
+}
+
+
+.discrete-legend {
+    cursor: default !important;
+    position: fixed;
+    top: 20em;
+    right: 1em;
+    width: 7em;
+    font-size: 8pt;
+}
+.discrete-legend > .title {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    font-weight: bold;
+}
+.discrete-legend > div {
+    margin-top: .6em;
+}
+.discrete-legend > div > span {
+    display: inline-block;
+    width: 1.3em;
+    height: 1.3em;
+    position: relative;
+    top: 3px;
+}

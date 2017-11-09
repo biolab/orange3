@@ -194,11 +194,11 @@ PACKAGE_DATA = {
     "Orange.widgets.evaluate": ["icons/*.svg"],
     "Orange.widgets.model": ["icons/*.svg"],
     "Orange.widgets.visualize": ["icons/*.svg",
-                                 "_owmap/*"],
+                                 "_owmap/*",
+                                 "_owparallelcoordinates/*"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
-    "Orange.widgets.utils": ["_webview/*.js"],
-    "Orange.widgets.utils.plot": ["*.fs", "*.gs", "*.vs"],
-    "Orange.widgets.utils.plot.primitives": ["*.obj"],
+    "Orange.widgets.utils": ["_webview/*.js",
+                             "_plotly/*"],
     "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
 }
 
