@@ -2701,11 +2701,16 @@ class TestTableTranspose(unittest.TestCase):
                           for x in table2.domain.metas])
 
 
-class TestTableSparseDenseTransformations(unittest.TestCase):
+class SparseCV:
+    def __call__(self, data):
+        return sp.csr_matrix((len(data), 1))
+
+
+class TestTableSparseDense(unittest.TestCase):
     def setUp(self):
         self.iris = Table('iris')
 
-    def test_conversion(self):
+    def test_sparse_dense_transformation(self):
         iris = Table('iris')
         iris_sparse = iris.to_sparse(sparse_attributes=True)
         self.assertTrue(sp.issparse(iris_sparse.X))
@@ -2722,6 +2727,54 @@ class TestTableSparseDenseTransformations(unittest.TestCase):
         self.assertFalse(sp.issparse(dense_iris.Y))
         self.assertFalse(sp.issparse(dense_iris.metas))
 
+    def test_from_table_add_one_sparse_column(self):
+        # add one sparse feature, should remain dense
+        domain = self.iris.domain.copy()
+        domain.attributes += (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertFalse(sp.issparse(d.X))
+
+    def test_from_table_add_lots_of_sparse_columns(self):
+        n_attrs = len(self.iris.domain.attributes)
+
+        # add 2*n_attrs+1 sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain.attributes += tuple(
+            ContinuousVariable('S' + str(i), compute_value=SparseCV(), sparse=True)
+            for i in range(2*n_attrs + 1)
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.X))
+
+    def test_from_table_replace_attrs_with_sparse(self):
+        # replace attrs with a sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain.attributes = (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.X))
+
+    def test_from_table_sparse_metas(self):
+        # replace metas with a sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain._metas = (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.metas))
+
+    def test_from_table_sparse_metas_with_strings(self):
+        # replace metas with text and 100 sparse features, should be dense
+        domain = self.iris.domain.copy()
+        domain._metas = (StringVariable('text'),) + tuple(
+            ContinuousVariable('S' + str(i), compute_value=SparseCV(), sparse=True)
+            for i in range(100)
+        )
+        d = self.iris.transform(domain)
+        self.assertFalse(sp.issparse(d.metas))
 
 if __name__ == "__main__":
     unittest.main()
