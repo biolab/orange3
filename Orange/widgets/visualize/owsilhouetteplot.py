@@ -932,7 +932,7 @@ class Line(QGraphicsWidget):
             sh = QSizeF(pw, QWIDGETSIZE_MAX)
 
         if self.__orientation == Qt.Horizontal:
-            sh = sh.transposed()
+            sh.transpose()  # Qt4 compatible
         return sh
 
     def paint(self, painter, option, widget=None):
