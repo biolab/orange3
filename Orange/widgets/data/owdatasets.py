@@ -31,32 +31,17 @@ from Orange.widgets.utils.signals import Output
 from Orange.widgets.widget import Msg
 
 
-INDEX_URL = "http://datasets.orange.biolab.si/"
 log = logging.getLogger(__name__)
 
 
-def local_cache_path():
-    return os.path.join(data_dir(), "datasets")
-
-
-def ensure_local(domain, filename, force=False, progress_advance=None):
-    localfiles = LocalFiles(local_cache_path(),
-                            serverfiles=ServerFiles(server=INDEX_URL))
+def ensure_local(index_url, domain, filename, local_cache_path,
+                 force=False, progress_advance=None):
+    localfiles = LocalFiles(local_cache_path,
+                            serverfiles=ServerFiles(server=index_url))
     if force:
         localfiles.download(domain, filename, callback=progress_advance)
     return localfiles.localpath_download(
         domain, filename, callback=progress_advance)
-
-
-def list_remote():
-    # type: () -> Dict[Tuple[str, str], dict]
-    client = ServerFiles(server=INDEX_URL)
-    return client.allinfo()
-
-
-def list_local():
-    # type: () -> Dict[Tuple[str, str], dict]
-    return LocalFiles(local_cache_path()).allinfo()
 
 
 def format_info(n_all, n_cached):
@@ -79,6 +64,7 @@ class Header(enum.IntEnum):
     Variables = 4
     Target = 5
     Tags = 6
+
 
 HEADER = ["", "Title", "Size", "Instances", "Variables", "Target", "Tags"]
 
@@ -111,6 +97,12 @@ class OWDataSets(widget.OWWidget):
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
 
+    # The following constants can be overridden in a subclass
+    # to reuse this widget for a different repository
+    # Take care when refactoring! (used in e.g. single-cell)
+    INDEX_URL = "http://datasets.orange.biolab.si/"
+    DATASET_DIR = "datasets"
+
     class Error(widget.OWWidget.Error):
         no_remote_datasets = Msg("Could not fetch data set list")
 
@@ -132,6 +124,7 @@ class OWDataSets(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.local_cache_path = os.path.join(data_dir(), self.DATASET_DIR)
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
@@ -212,7 +205,7 @@ class OWDataSets(widget.OWWidget):
         self.setStatusMessage("Initializing")
 
         self._executor = ThreadPoolExecutor(max_workers=1)
-        f = self._executor.submit(list_remote)
+        f = self._executor.submit(self.list_remote)
         w = FutureWatcher(f, parent=self)
         w.done.connect(self.__set_index)
 
@@ -224,7 +217,7 @@ class OWDataSets(widget.OWWidget):
         assert f.done()
         self.setBlocking(False)
         self.setStatusMessage("")
-        allinfolocal = list_local()
+        allinfolocal = self.list_local()
         try:
             res = f.result()
         except Exception:
@@ -323,7 +316,7 @@ class OWDataSets(widget.OWWidget):
 
     def __update_cached_state(self):
         model = self.view.model().sourceModel()
-        localinfo = list_local()
+        localinfo = self.list_local()
         assert isinstance(model, QStandardItemModel)
         allinfo = []
         for i in range(model.rowCount()):
@@ -411,7 +404,8 @@ class OWDataSets(widget.OWWidget):
                 self.setBlocking(True)
 
                 f = self._executor.submit(
-                    ensure_local, di.prefix, di.filename, force=di.outdated,
+                    ensure_local, self.INDEX_URL, di.prefix, di.filename,
+                    self.local_cache_path, force=di.outdated,
                     progress_advance=callback)
                 w = FutureWatcher(f, parent=self)
                 w.done.connect(self.__commit_complete)
@@ -454,7 +448,7 @@ class OWDataSets(widget.OWWidget):
         self.Outputs.data.send(data)
 
     def commit_cached(self, prefix, filename):
-        path = LocalFiles(local_cache_path()).localpath(prefix, filename)
+        path = LocalFiles(self.local_cache_path).localpath(prefix, filename)
         self.Outputs.data.send(Orange.data.Table(path))
 
     @Slot()
@@ -476,6 +470,15 @@ class OWDataSets(widget.OWWidget):
         self.splitter_state = bytes(self.splitter.saveState())
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
+
+    def list_remote(self):
+        # type: () -> Dict[Tuple[str, str], dict]
+        client = ServerFiles(server=self.INDEX_URL)
+        return client.allinfo()
+
+    def list_local(self):
+        # type: () -> Dict[Tuple[str, str], dict]
+        return LocalFiles(self.local_cache_path).allinfo()
 
 
 class FutureWatcher(QObject):
