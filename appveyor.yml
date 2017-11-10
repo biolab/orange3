@@ -20,7 +20,8 @@ environment:
     # (https://github.com/numpy/numpy/issues/7607)
     BUILD_GLOBAL_OPTIONS: build -j1
     BUILD_ENV: wheel==0.29.0 pip==9.0.1 numpy==1.9.3
-    TEST_ENV: numpy==1.12.1 scipy==1.0.0b1 scikit-learn PyQt5~=5.9.0
+    # SIP 4.19.4+ with PyQt5==5.9.1+ segfault our tests (GH-2756)
+    TEST_ENV: sip==4.19.3 PyQt5==5.9 numpy==1.12.1 scipy==1.0.0b1 scikit-learn
 
   matrix:
     - PYTHON: C:\Python34
@@ -73,6 +74,7 @@ test_script:
   - cd build\.test
   # Pre-populate the test environment
   - python -m pip install pip~=9.0.1 wheel~=0.29.0
+
   - python -m pip install %TEST_ENV_INDEX% %TEST_ENV%
   - python -m pip install --pre -f ..\..\dist orange3==%VERSION%
   - python -m pip list --format=freeze
