@@ -460,6 +460,25 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(attr_y.currentText(), breathes.name)
         self.assertEqual(attr_color.currentText(), type.name)
 
+    def test_handle_metas(self):
+        """
+        Scatter Plot Graph can handle metas
+        GH-2699
+        """
+        w = self.widget
+        data = Table("iris")
+        domain = Domain(
+            attributes=data.domain.attributes[:2],
+            class_vars=data.domain.class_vars,
+            metas=data.domain.attributes[2:]
+        )
+        data = data.transform(domain)
+        # Sometimes floats in metas are saved as objects
+        data.metas = data.metas.astype(object)
+        self.send_signal(w.Inputs.data, data)
+        simulate.combobox_activate_item(w.cb_attr_x, data.domain.metas[1].name)
+        simulate.combobox_activate_item(w.controls.graph.attr_color, data.domain.metas[0].name)
+        w.update_graph()
 
 if __name__ == "__main__":
     import unittest
