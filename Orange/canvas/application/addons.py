@@ -815,7 +815,11 @@ class PipInstaller:
         cmd = ["python", "-m", "pip", "install"]
         if self.user_install:
             cmd.append("--user")
-        cmd.append(pkg.name)
+        if pkg.package_url.startswith("http://"):
+            cmd.append(pkg.name)
+        else:
+            # Package url is path to the (local) wheel
+            cmd.append(pkg.package_url)
 
         run_command(cmd)
 
