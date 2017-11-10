@@ -344,3 +344,32 @@ class TestDomainModel(TestCase):
         self.assertEqual(
             list(model),
             classes + [PyListModel.Separator] + metas + [PyListModel.Separator] + attrs)
+
+    def test_read_only(self):
+        model = DomainModel()
+        domain = Domain([ContinuousVariable(x) for x in "abc"])
+        model.set_domain(domain)
+        index = model.index(0, 0)
+
+        self.assertRaises(TypeError, model.append, 42)
+        self.assertRaises(TypeError, model.extend, [42])
+        self.assertRaises(TypeError, model.insert, 0, 42)
+        self.assertRaises(TypeError, model.remove, 0)
+        self.assertRaises(TypeError, model.pop)
+        self.assertRaises(TypeError, model.clear)
+        self.assertRaises(TypeError, model.reverse)
+        self.assertRaises(TypeError, model.sort)
+        with self.assertRaises(TypeError):
+            model[0] = 1
+        with self.assertRaises(TypeError):
+            del model[0]
+
+        self.assertRaises(TypeError, model.setData, index, domain[0])
+        self.assertTrue(model.setData(index, "foo", Qt.ToolTipRole))
+
+        self.assertRaises(TypeError, model.setItemData, index,
+                          {Qt.EditRole: domain[0], Qt.ToolTipRole: "foo"})
+        self.assertTrue(model.setItemData(index, {Qt.ToolTipRole: "foo"}))
+
+        self.assertRaises(TypeError, model.insertRows, 0, 0)
+        self.assertRaises(TypeError, model.removeRows, 0, 0)

@@ -4,7 +4,7 @@ from math import isnan, isinf
 import operator
 from collections import namedtuple, Sequence, defaultdict
 from contextlib import contextmanager
-from functools import reduce, partial, lru_cache
+from functools import reduce, partial, lru_cache, wraps
 from itertools import chain
 from warnings import warn
 from xml.sax.saxutils import escape
@@ -566,15 +566,15 @@ class PyListModel(QAbstractListModel):
         return QModelIndex()
 
     def setData(self, index, value, role=Qt.EditRole):
-        if role == Qt.EditRole and self._is_index_valid_for(index, self):
-            self[index.row()] = value  # Will emit proper dataChanged signal
-            return True
+        if role == Qt.EditRole:
+            if self._is_index_valid_for(index, self):
+                self[index.row()] = value  # Will emit proper dataChanged signal
+                return True
         elif self._is_index_valid_for(index, self._other_data):
             self._other_data[index.row()][role] = value
             self.dataChanged.emit(index, index)
             return True
-        else:
-            return False
+        return False
 
     def setItemData(self, index, data):
         data = dict(data)
@@ -909,6 +909,7 @@ class DomainModel(VariableListModel):
         self.valid_types = valid_types
         self.alphabetical = alphabetical
         self.skip_hidden_vars = skip_hidden_vars
+        self._within_set_domain = False
         self.set_domain(None)
 
     def set_domain(self, domain):
@@ -945,8 +946,64 @@ class DomainModel(VariableListModel):
                     content.append(self.Separator)
                     add_separator = False
                 content += to_add
-        self[:] = content
+        try:
+            self._within_set_domain = True
+            self[:] = content
+        finally:
+            self._within_set_domain = False
         self.endResetModel()
+
+    def prevent_modification(method):  # pylint: disable=no-self-argument
+        @wraps(method)
+        # pylint: disable=protected-access
+        def e(self, *args, **kwargs):
+            if self._within_set_domain:
+                method(self, *args, **kwargs)
+            else:
+                raise TypeError(
+                    "{} can be modified only by calling 'set_domain'".
+                    format(type(self).__name__))
+        return e
+
+    @prevent_modification
+    def extend(self, iterable):
+        return super().extend(iterable)
+
+    @prevent_modification
+    def append(self, item):
+        return super().append(item)
+
+    @prevent_modification
+    def insert(self, i, val):
+        return super().insert(i, val)
+
+    @prevent_modification
+    def remove(self, val):
+        return super().remove(val)
+
+    @prevent_modification
+    def pop(self, i):
+        return super().pop(i)
+
+    @prevent_modification
+    def clear(self):
+        return super().clear()
+
+    @prevent_modification
+    def __delitem__(self, s):
+        return super().__delitem__(s)
+
+    @prevent_modification
+    def __setitem__(self, s, value):
+        return super().__setitem__(s, value)
+
+    @prevent_modification
+    def reverse(self):
+        return super().reverse()
+
+    @prevent_modification
+    def sort(self, *args, **kwargs):
+        return super().sort(*args, **kwargs)
 
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
