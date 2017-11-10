@@ -501,8 +501,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         scene = self.plot_widget.scene()
         self._create_drag_tooltip(scene)
         self._data = None  # Original Table as passed from widget to new_data before transformations
-        self.attr_x = None
-        self.attr_y = None
 
         self.replot = self.plot_widget.replot
         ScaleScatterPlotData.__init__(self)
@@ -616,8 +614,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if data is None or not data.is_sparse():
             return data
 
-        attrs = {self.attr_x,
-                 self.attr_y,
+        attrs = {self.shown_x,
+                 self.shown_y,
                  self.attr_color,
                  self.attr_shape,
                  self.attr_size,
@@ -655,12 +653,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.set_axis_title("left", "")
 
     def update_data(self, attr_x, attr_y, reset_view=True):
-        self.attr_x = attr_x
-        self.attr_y = attr_y
-        if attr_x not in self.data.domain or attr_y not in self.data.domain:
-            data = self.sparse_to_dense()
-            self.set_data(data)
-
         self.master.Warning.missing_coords.clear()
         self.master.Information.missing_coords.clear()
         self._clear_plot_widget()
@@ -672,13 +664,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             yaxis.textWidth = 30
 
         self.shown_x, self.shown_y = attr_x, attr_y
+        if attr_x not in self.data.domain or attr_y not in self.data.domain:
+            data = self.sparse_to_dense()
+            self.set_data(data)
 
         if self.jittered_data is None or not len(self.jittered_data):
             self.valid_data = None
         else:
             index_x = self.domain.index(attr_x)
             index_y = self.domain.index(attr_y)
-            self.valid_data = self.get_valid_list([index_x, index_y])
+            self.valid_data = self.get_valid_list([attr_x, attr_y])
             if not np.any(self.valid_data):
                 self.valid_data = None
         if self.valid_data is None:
@@ -724,7 +719,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.plot_widget.addItem(self.density_img)
 
         self.data_indices = np.flatnonzero(self.valid_data)
-        if len(self.data_indices) != self.original_data.shape[1]:
+        if len(self.data_indices) != len(self.data):
             self.master.Information.missing_coords(
                 self.shown_x.name, self.shown_y.name)
 
@@ -799,14 +794,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
-        size_index = self.get_size_index()
-        if size_index == -1:
+        if self.attr_size is None:
             size_data = np.full((self.n_points,), self.point_width,
                                 dtype=float)
         else:
             size_data = \
                 self.MinShapeSize + \
-                self.scaled_data[size_index, self.valid_data] * \
+                self.scaled_data.get_column_view(self.attr_size)[0][self.valid_data] * \
                 self.point_width
         nans = np.isnan(size_data)
         if np.any(nans):
@@ -824,16 +818,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.scatterplot_item.setSize(size_data)
             self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
-    def get_color_index(self):
+    def get_color(self):
         if self.attr_color is None:
-            return -1
+            return None
         colors = self.attr_color.colors
         if self.attr_color.is_discrete:
             self.discrete_palette = ColorPaletteGenerator(
                 number_of_colors=len(colors), rgb_colors=colors)
         else:
             self.continuous_palette = ContinuousPaletteGenerator(*colors)
-        return self.domain.index(self.attr_color)
+        return self.attr_color
 
     def compute_colors_sel(self, keep_colors=False):
         if not keep_colors:
@@ -868,7 +862,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def compute_colors(self, keep_colors=False):
         if not keep_colors:
             self.pen_colors = self.brush_colors = None
-        color_index = self.get_color_index()
+        self.get_color()
 
         def make_pen(color, width):
             p = QPen(color, width)
@@ -880,7 +874,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             subset = np.array([ex.id in self.subset_indices
                                for ex in self.data[self.valid_data]])
 
-        if color_index == -1:  # same color
+        if self.attr_color is None:  # same color
             color = self.plot_widget.palette().color(OWPalette.Data)
             pen = [make_pen(color, 1.5)] * self.n_points
             if subset is not None:
@@ -892,8 +886,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         * self.n_points
             return pen, brush
 
-        c_data = self.original_data[color_index, self.valid_data]
-        if self.domain[color_index].is_continuous:
+        c_data = self.data.get_column_view(self.attr_color)[0][self.valid_data]
+        if self.attr_color.is_continuous:
             if self.pen_colors is None:
                 self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
                 c_data -= self.scale.offset
@@ -1004,19 +998,18 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for label, text in zip(self.labels, label_data):
                 label.setText(text, black)
 
-    def get_shape_index(self):
+    def get_shape(self):
         if self.attr_shape is None or \
                 len(self.attr_shape.values) > len(self.CurveSymbols):
-            return -1
-        return self.domain.index(self.attr_shape)
+            return None
+        return self.attr_shape
 
     def compute_symbols(self):
         self.master.Information.missing_shape.clear()
-        shape_index = self.get_shape_index()
-        if shape_index == -1:
+        if self.get_shape() is None:
             shape_data = self.CurveSymbols[np.zeros(self.n_points, dtype=int)]
         else:
-            shape_data = self.original_data[shape_index, self.valid_data]
+            shape_data = self.data.get_column_view(self.attr_shape)[0][self.valid_data]
             nans = np.isnan(shape_data)
             if np.any(nans):
                 shape_data[nans] = len(self.CurveSymbols) - 1
@@ -1068,16 +1061,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         self.update_legend()
 
     def make_color_legend(self):
-        color_index = self.get_color_index()
-        if color_index == -1:
+        if self.attr_color is None:
             return
-        color_var = self.domain[color_index]
-        use_shape = self.get_shape_index() == color_index
-        if color_var.is_discrete:
+        use_shape = self.get_shape() == self.get_color()
+        if self.attr_color.is_discrete:
             if not self.legend:
                 self.create_legend()
             palette = self.discrete_palette
-            for i, value in enumerate(color_var.values):
+            for i, value in enumerate(self.attr_color.values):
                 color = QColor(*palette.getRGB(i))
                 brush = color.lighter(self.DarkerValue)
                 self.legend.addItem(
@@ -1095,15 +1086,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             legend.setGeometry(label.boundingRect())
 
     def make_shape_legend(self):
-        shape_index = self.get_shape_index()
-        if shape_index == -1 or shape_index == self.get_color_index():
+        shape = self.get_shape()
+        if shape is None or shape == self.get_color():
             return
         if not self.legend:
             self.create_legend()
-        shape_var = self.domain[shape_index]
         color = QColor(0, 0, 0)
         color.setAlpha(self.alpha_value)
-        for i, value in enumerate(shape_var.values):
+        for i, value in enumerate(self.attr_shape.values):
             self.legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10,
                                 symbol=self.CurveSymbols[i]), escape(value))
