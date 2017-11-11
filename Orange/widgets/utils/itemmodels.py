@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
     Qt, QAbstractListModel, QAbstractTableModel, QModelIndex,
-    QItemSelectionModel, QByteArray
+    QItemSelectionModel
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
@@ -183,7 +183,7 @@ class AbstractSortTableModel(QAbstractTableModel):
             indices = indices[::-1]
         return indices
 
-    def sort(self, column: int, order: Qt.SortOrder=Qt.AscendingOrder):
+    def sort(self, column: int, order: Qt.SortOrder = Qt.AscendingOrder):
         """
         Sort the data by `column` into `order`.
 
@@ -374,8 +374,8 @@ class PyTableModel(AbstractSortTableModel):
     def removeRows(self, row, count, parent=QModelIndex()):
         if not parent.isValid():
             del self[row:row + count]
-            for row in range(row, row + count):
-                self._roleData.pop(row, None)
+            for rowidx in range(row, row + count):
+                self._roleData.pop(rowidx, None)
             return True
         return False
 
@@ -667,8 +667,8 @@ class PyListModel(QAbstractListModel):
                                self.parent(),
                                flags=self._flags,
                                list_item_role=self.list_item_role,
-                               supportedDropActions=self.supportedDropActions()
-                               )
+                               supportedDropActions=self.supportedDropActions())
+        # pylint: disable=protected-access
         new_list._other_data = list(self._other_data)
         new_list.extend(iterable)
         return new_list
@@ -678,7 +678,7 @@ class PyListModel(QAbstractListModel):
 
     def __delitem__(self, s):
         if isinstance(s, slice):
-            start, stop, step = _as_contiguous_range(s, len(self))
+            start, stop, _ = _as_contiguous_range(s, len(self))
             self.beginRemoveRows(QModelIndex(), start, stop - 1)
         else:
             s = operator.index(s)
@@ -1133,6 +1133,8 @@ class TableModel(AbstractSortTableModel):
     Basket = namedtuple(
         "Basket", ["vars", "role", "background", "density", "format"])
 
+    # The class uses the same names (X_density etc) as Table
+    # pylint: disable=invalid-name
     def __init__(self, sourcedata, parent=None):
         super().__init__(parent)
         self.source = sourcedata
@@ -1270,15 +1272,14 @@ class TableModel(AbstractSortTableModel):
              _VariableStatsRole=VariableStatsRole,
              # Some cached local precomputed values.
              # All of the above roles we respond to
-             _recognizedRoles=set([Qt.DisplayRole,
-                                   Qt.EditRole,
-                                   Qt.BackgroundRole,
-                                   ValueRole,
-                                   ClassValueRole,
-                                   VariableRole,
-                                   DomainRole,
-                                   VariableStatsRole]),
-             ):
+             _recognizedRoles=frozenset([Qt.DisplayRole,
+                                         Qt.EditRole,
+                                         Qt.BackgroundRole,
+                                         ValueRole,
+                                         ClassValueRole,
+                                         VariableRole,
+                                         DomainRole,
+                                         VariableStatsRole])):
         """
         Reimplemented from `QAbstractItemModel.data`
         """
@@ -1308,7 +1309,6 @@ class TableModel(AbstractSortTableModel):
             return instance[coldesc.var]
         elif role == _Qt_BackgroundRole:
             return coldesc.background
-            return self.color_for_role[coldesc.role]
         elif role == _ValueRole and isinstance(coldesc, TableModel.Column):
             return instance[coldesc.var]
         elif role == _ClassValueRole:

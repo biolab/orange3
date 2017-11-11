@@ -180,10 +180,10 @@ class TestPyListModel(TestCase):
         self.assertSequenceEqual(model, [1, 42, 3, 42])
 
         with self.assertRaises(IndexError):
-            model[4]
+            model[4]  # pylint: disable=pointless-statement
 
         with self.assertRaises(IndexError):
-            model[-5]
+            model[-5]  # pylint: disable=pointless-statement
 
         model = PyListModel([1, 2, 3, 4])
         model[0:0] = [-1, 0]
