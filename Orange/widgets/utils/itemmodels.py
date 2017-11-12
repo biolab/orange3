@@ -10,7 +10,7 @@ from warnings import warn
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
-    Qt, QAbstractListModel, QAbstractTableModel, QModelIndex,
+    Qt, QObject, QAbstractListModel, QAbstractTableModel, QModelIndex,
     QItemSelectionModel
 )
 from AnyQt.QtCore import pyqtSignal as Signal
@@ -668,7 +668,8 @@ class PyListModel(QAbstractListModel):
 
     def __add__(self, iterable):
         new_list = PyListModel(list(self._list),
-                               self.parent(),
+                               # method parent is overloaded in Model
+                               QObject.parent(self),
                                flags=self._flags,
                                list_item_role=self.list_item_role,
                                supportedDropActions=self.supportedDropActions())
@@ -679,6 +680,7 @@ class PyListModel(QAbstractListModel):
 
     def __iadd__(self, iterable):
         self.extend(iterable)
+        return self
 
     def __delitem__(self, s):
         if isinstance(s, slice):
