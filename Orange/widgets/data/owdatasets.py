@@ -114,7 +114,7 @@ class OWDataSets(widget.OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected data set id
-    selected_id = settings.Setting(None)   # type: Optional[Tuple[str, str]]
+    selected_id = settings.Setting(None)   # type: Optional[str]
 
     auto_commit = settings.Setting(False)  # type: bool
 
@@ -311,7 +311,7 @@ class OWDataSets(widget.OWWidget):
         if current_index != -1:
             selmodel = self.view.selectionModel()
             selmodel.select(
-                model.index(current_index, 0),
+                self.view.model().mapFromSource(model.index(current_index, 0)),
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
     def __update_cached_state(self):
@@ -359,6 +359,7 @@ class OWDataSets(widget.OWWidget):
         assert 0 <= len(rows) <= 1
         current = rows[0] if rows else None  # type: Optional[QModelIndex]
         if current is not None:
+            current = self.view.model().mapToSource(current)
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
