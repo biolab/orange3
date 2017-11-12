@@ -716,7 +716,7 @@ class ColoredListModel(itemmodels.PyListModel):
             len(colorpalette.DefaultRGBColors))
 
     def data(self, index, role=Qt.DisplayRole):
-        if self._is_index_valid_for(index, self) and \
+        if self._is_index_valid(index) and \
                 role == Qt.DecorationRole and \
                 0 <= index.row() < self.colors.number_of_colors:
             return gui.createAttributePixmap("", self.colors[index.row()])

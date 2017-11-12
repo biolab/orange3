@@ -506,12 +506,16 @@ class PyListModel(QAbstractListModel):
         if iterable is not None:
             self.extend(iterable)
 
-    def _is_index_valid_for(self, index, list_like):
+    def _is_index_valid(self, index):
+        # This error would happen if one wraps a list into a model and then
+        # modifies a list instead of a model
+        if len(self) != len(self._other_data):
+            raise RuntimeError("Mismatched length of model and its _other_data")
         if isinstance(index, QModelIndex) and index.isValid():
             row, column = index.row(), index.column()
-            return 0 <= row < len(list_like) and not column
+            return 0 <= row < len(self) and column == 0
         elif isinstance(index, int):
-            return -len(self) < index < len(list_like)
+            return -len(self) <= index < len(self)
         else:
             return False
 
@@ -527,7 +531,7 @@ class PyListModel(QAbstractListModel):
 
     # noinspection PyMethodOverriding
     def index(self, row, column=0, parent=QModelIndex()):
-        if self._is_index_valid_for(row, self) and column == 0:
+        if self._is_index_valid(row) and column == 0:
             return QAbstractListModel.createIndex(self, row, column, parent)
         else:
             return QModelIndex()
@@ -547,14 +551,14 @@ class PyListModel(QAbstractListModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
         if role in [self.list_item_role, Qt.EditRole] \
-                and self._is_index_valid_for(index, self):
+                and self._is_index_valid(index):
             return self[row]
-        elif self._is_index_valid_for(row, self._other_data):
+        elif self._is_index_valid(row):
             return self._other_data[row].get(role, None)
 
     def itemData(self, index):
         mapping = QAbstractListModel.itemData(self, index)
-        if self._is_index_valid_for(index, self._other_data):
+        if self._is_index_valid(index):
             items = list(self._other_data[index.row()].items())
         else:
             items = []
@@ -567,10 +571,10 @@ class PyListModel(QAbstractListModel):
 
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
-            if self._is_index_valid_for(index, self):
+            if self._is_index_valid(index):
                 self[index.row()] = value  # Will emit proper dataChanged signal
                 return True
-        elif self._is_index_valid_for(index, self._other_data):
+        elif self._is_index_valid(index):
             self._other_data[index.row()][role] = value
             self.dataChanged.emit(index, index)
             return True
@@ -581,16 +585,16 @@ class PyListModel(QAbstractListModel):
         with signal_blocking(self):
             for role, value in data.items():
                 if role == Qt.EditRole and \
-                        self._is_index_valid_for(index, self):
+                        self._is_index_valid(index):
                     self[index.row()] = value
-                elif self._is_index_valid_for(index, self._other_data):
+                elif self._is_index_valid(index):
                     self._other_data[index.row()][role] = value
 
         self.dataChanged.emit(index, index)
         return True
 
     def flags(self, index):
-        if self._is_index_valid_for(index, self._other_data):
+        if self._is_index_valid(index):
             return self._other_data[index.row()].get("flags", self._flags)
         else:
             return self._flags | Qt.ItemIsDropEnabled
@@ -802,7 +806,7 @@ class VariableListModel(PyListModel):
         self.placeholder = placeholder
 
     def data(self, index, role=Qt.DisplayRole):
-        if self._is_index_valid_for(index, self):
+        if self._is_index_valid(index):
             var = self[index.row()]
             if var is None and role == Qt.DisplayRole:
                 return self.placeholder or "None"
