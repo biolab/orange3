@@ -867,11 +867,6 @@ class VariableListModel(PyListModel):
         text += self.variable_labels_tooltip(var)
         return text
 
-    def python_variable_tooltip(self, var):
-        text = "<b>%s</b><br/>Python" % safe_text(var.name)
-        text += self.variable_labels_tooltip(var)
-        return text
-
 
 class DomainModel(VariableListModel):
     ATTRIBUTES, CLASSES, METAS = 1, 2, 4
