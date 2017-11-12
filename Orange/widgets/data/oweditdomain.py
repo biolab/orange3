@@ -352,7 +352,7 @@ class DiscreteVariableEditor(VariableEditor):
         """Clear the model state.
         """
         VariableEditor.clear(self)
-        self.values_model.wrap([])
+        self.values_model.clear()
 
     @Slot()
     def on_values_changed(self):
