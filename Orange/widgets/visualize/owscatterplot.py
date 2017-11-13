@@ -313,6 +313,7 @@ class OWScatterPlot(OWWidget):
             else:
                 self.warning("Data subset does not support large Sql tables")
                 subset_data = None
+        self.subset_data = subset_data
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
     # called when all signals are received, so the graph is updated only once

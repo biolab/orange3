@@ -503,6 +503,30 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         simulate.combobox_activate_item(w.controls.graph.attr_color, data.domain.metas[0].name)
         w.update_graph()
 
+    def test_subset_data(self):
+        """
+        Scatter Plot subset data is sent to Scatter Plot Graph
+        GH-2773
+        """
+        data = Table("iris")
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.data_subset, data[::30])
+        self.assertEqual(len(w.graph.subset_indices), 5)
+
+    def test_sparse_subset_data(self):
+        """
+        Scatter Plot can handle sparse subset data.
+        GH-2773
+        """
+        data = Table("iris")
+        w = self.widget
+        data.X = sp.csr_matrix(data.X)
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.data_subset, data[::30])
+        self.assertEqual(len(w.graph.subset_indices), 5)
+
+
 if __name__ == "__main__":
     import unittest
     unittest.main()
