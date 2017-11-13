@@ -13,7 +13,7 @@ from collections import namedtuple
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate, QApplication
+    QStyleOptionViewItem, QStyledItemDelegate, QStyle, QApplication
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
@@ -73,6 +73,19 @@ class NumericalDelegate(QStyledItemDelegate):
         if align is None and isinstance(data, numbers.Number):
             # Right align if the model does not specify otherwise
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
+
+
+class UniformHeightIndicatorDelegate(gui.IndicatorItemDelegate):
+    def sizeHint(self, option, index):
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        # Always include space for the icon in the size hint
+        opt.features |= QStyleOptionViewItem.HasDecoration
+        widget = option.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        sh = style.sizeFromContents(
+            QStyle.CT_ItemViewItem, opt, QSize(), widget)
+        return sh
 
 
 class Namespace(SimpleNamespace):
@@ -176,6 +189,7 @@ class OWDataSets(widget.OWWidget):
             alternatingRowColors=True,
             rootIsDecorated=False,
             editTriggers=QTreeView.NoEditTriggers,
+            uniformRowHeights=True,
         )
 
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
@@ -229,19 +243,19 @@ class OWDataSets(widget.OWWidget):
     def assign_delegates(self):
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
-            gui.IndicatorItemDelegate(self, role=Qt.DisplayRole)
+            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole)
         )
         self.view.setItemDelegateForColumn(
             self.Header.size,
-            Orange.widgets.data.owdatasets.SizeDelegate(self))
-
+            SizeDelegate(self)
+        )
         self.view.setItemDelegateForColumn(
             self.Header.instances,
-            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+            NumericalDelegate(self)
         )
         self.view.setItemDelegateForColumn(
             self.Header.variables,
-            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+            NumericalDelegate(self)
         )
 
     def _parse_info(self, file_path):
