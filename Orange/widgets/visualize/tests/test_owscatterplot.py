@@ -526,6 +526,20 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data_subset, data[::30])
         self.assertEqual(len(w.graph.subset_indices), 5)
 
+    def test_metas_zero_column(self):
+        """
+        Prevent crash when metas column is zero.
+        GH-2775
+        """
+        data = Table("iris")
+        domain = data.domain
+        domain = Domain(domain.attributes[:3], domain.class_vars, domain.attributes[3:])
+        data = data.transform(domain)
+        data.metas[:, 0] = 0
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        simulate.combobox_activate_item(w.controls.attr_x, domain.metas[0].name)
+
 
 if __name__ == "__main__":
     import unittest

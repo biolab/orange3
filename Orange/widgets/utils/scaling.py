@@ -49,11 +49,7 @@ class ScaleData:
             return
 
         Y = data.Y if data.Y.ndim == 2 else np.atleast_2d(data.Y).T
-        if np.any(data.metas):
-            all_data = (data.X, Y, data.metas)
-        else:
-            all_data = (data.X, Y)
-        all_data = np.hstack(all_data).T
+        all_data = np.hstack((data.X, Y, data.metas)).T
         self.scaled_data = self.data.copy()
         self.valid_data_array = np.isfinite(all_data)
         domain = self.domain
