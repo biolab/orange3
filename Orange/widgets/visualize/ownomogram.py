@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy, QApplication,
+    QSizePolicy, QApplication, QDesktopWidget,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
@@ -50,7 +50,7 @@ class MovableToolTip(QLabel):
         self.adjustSize()
 
         x, y = pos.x(), (pos.y() + 15 if change_y else self.y())
-        avail = QApplication.focusWindow().screen().availableGeometry()
+        avail = QDesktopWidget().availableGeometry(self)
         if x + self.width() > avail.right():
             x -= self.width()
         if y + self.height() > avail.bottom():
@@ -113,7 +113,7 @@ class ProbabilitiesDotItem(DotItem):
         self.setBrush(QColor(150, 150, 150, 255))
         self.setPen(QPen(QBrush(QColor(75, 75, 75, 255)), 2))
 
-    def move_to_sum(self, invisible_sum: float=None):
+    def move_to_sum(self, invisible_sum: float = None):
         total = sum(item.value for item in self.movable_dot_items)
 
         if invisible_sum is not None:

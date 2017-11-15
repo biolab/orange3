@@ -2,13 +2,16 @@
 # pylint: disable=missing-docstring
 import numpy as np
 
+from AnyQt.QtCore import QPoint
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
 )
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.ownomogram import (
-    OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem
+    OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
+    MovableToolTip
 )
 
 
@@ -201,3 +204,8 @@ class TestOWNomogram(WidgetTest):
             ordered = [self.widget.nomogram_main.layout().itemAt(i).childItems()[0].toPlainText()
                        for i in range(self.widget.nomogram_main.layout().count())]
             self.assertListEqual(names[i], ordered)
+
+    def test_tooltip(self):
+        # had problems on PyQt4
+        m = MovableToolTip()
+        m.show(QPoint(0, 0), "Some text.")
