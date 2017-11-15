@@ -493,11 +493,6 @@ class OWDistributions(widget.OWWidget):
                 dsum = sum(dist)
                 geom = QRectF(i - 0.333, 0, 0.666,
                               maxrh if self.relative_freq else maxh)
-                if self.show_prob:
-                    prob = dist / dsum
-                    ci = 1.96 * np.sqrt(prob * (1 - prob) / dsum)
-                else:
-                    ci = None
                 item = DistributionBarItem(geom, dist/scvar/maxrh
                                            if self.relative_freq
                                            else dist/maxh, colors)
