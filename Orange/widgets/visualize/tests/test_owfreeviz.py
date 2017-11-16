@@ -115,3 +115,12 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
         w = self.widget
         self.send_signal(w.Inputs.data, None)
         w.rslider.setSliderPosition(3)
+
+    def test_update_graph_no_data(self):
+        """
+        Widget should not crash when there is no data and one wants to change class density etc.
+        GH-2780
+        """
+        w = self.widget
+        self.send_signal(w.Inputs.data, None)
+        w.cb_class_density.click()

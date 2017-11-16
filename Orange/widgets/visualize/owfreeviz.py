@@ -815,6 +815,8 @@ class OWFreeViz(widget.OWWidget):
         self.graph.update_data(self.variable_x, self.variable_y, reset_view)
 
     def update_density(self):
+        if self.graph.data is None:
+            return
         self._update_graph(reset_view=False)
 
     def selection_changed(self):
