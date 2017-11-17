@@ -54,7 +54,23 @@ def format_exception(error):
     return "\n".join(traceback.format_exception_only(type(error), error))
 
 
-class SizeDelegate(QStyledItemDelegate):
+class UniformHeightDelegate(QStyledItemDelegate):
+    """
+    Item delegate that always includes the icon size in the size hint.
+    """
+    def sizeHint(self, option, index):
+        # type: (QStyleOptionViewItem, QModelIndex) -> QSize
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        opt.features |= QStyleOptionViewItem.HasDecoration
+        widget = option.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        sh = style.sizeFromContents(
+            QStyle.CT_ItemViewItem, opt, QSize(), widget)
+        return sh
+
+
+class SizeDelegate(UniformHeightDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
@@ -64,7 +80,7 @@ class SizeDelegate(QStyledItemDelegate):
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
 
-class NumericalDelegate(QStyledItemDelegate):
+class NumericalDelegate(UniformHeightDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
@@ -75,17 +91,9 @@ class NumericalDelegate(QStyledItemDelegate):
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
 
-class UniformHeightIndicatorDelegate(gui.IndicatorItemDelegate):
-    def sizeHint(self, option, index):
-        opt = QStyleOptionViewItem(option)
-        self.initStyleOption(option, index)
-        # Always include space for the icon in the size hint
-        opt.features |= QStyleOptionViewItem.HasDecoration
-        widget = option.widget
-        style = widget.style() if widget is not None else QApplication.style()
-        sh = style.sizeFromContents(
-            QStyle.CT_ItemViewItem, opt, QSize(), widget)
-        return sh
+class UniformHeightIndicatorDelegate(
+        UniformHeightDelegate, gui.IndicatorItemDelegate):
+    pass
 
 
 class Namespace(SimpleNamespace):
@@ -191,7 +199,6 @@ class OWDataSets(widget.OWWidget):
             editTriggers=QTreeView.NoEditTriggers,
             uniformRowHeights=True,
         )
-
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
@@ -241,6 +248,11 @@ class OWDataSets(widget.OWWidget):
         w.done.connect(self.__set_index)
 
     def assign_delegates(self):
+        # NOTE: All columns must have size hinting delegates.
+        # QTreeView queries only the columns displayed in the viewport so
+        # the layout would be different depending in the horizontal scroll
+        # position
+        self.view.setItemDelegate(UniformHeightDelegate(self))
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
             UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole)
@@ -257,6 +269,7 @@ class OWDataSets(widget.OWWidget):
             self.Header.variables,
             NumericalDelegate(self)
         )
+        self.view.resizeColumnToContents(self.Header.islocal)
 
     def _parse_info(self, file_path):
         if file_path in self.allinfo_remote:
