@@ -1406,7 +1406,7 @@ class CanvasMainWindow(QMainWindow):
             if self.recent_scheme() == QDialog.Accepted:
                 dialog.accept()
 
-        def tutorial():
+        def open_examples():
             if self.tutorial_scheme() == QDialog.Accepted:
                 dialog.accept()
 
@@ -1437,6 +1437,13 @@ class CanvasMainWindow(QMainWindow):
                     icon=canvas_icons("Recent.svg")
                     )
 
+        examples_action = \
+            QAction(self.examples_action.text(), dialog,
+                    icon=self.examples_action.icon(),
+                    toolTip=self.examples_action.toolTip(),
+                    whatsThis=self.examples_action.whatsThis(),
+                    triggered=open_examples,
+                    )
         tutorials_action = \
             QAction(self.tr("Tutorials"), self,
                     objectName="tutorials-action",
@@ -1445,7 +1452,7 @@ class CanvasMainWindow(QMainWindow):
                     icon=canvas_icons("YouTube.svg")
                     )
 
-        bottom_row = [tutorials_action, self.examples_action,
+        bottom_row = [tutorials_action, examples_action,
                       self.get_started_action]
 
         self.new_action.triggered.connect(dialog.accept)
