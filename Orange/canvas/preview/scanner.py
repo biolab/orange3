@@ -2,7 +2,7 @@
 Scheme file preview parser.
 
 """
-import sys
+import io
 import logging
 
 from xml.sax import make_parser, handler, saxutils, SAXParseException
@@ -67,6 +67,50 @@ def preview_parse(scheme_file):
             saxutils.unescape(svg_data))
 
 
+def filter_properties(stream):
+    # type: (io.BinaryIO) -> bytes
+    """
+    Filter out the '<properties>' section from the .ows xml stream.
+
+    Parameters
+    ----------
+    stream : io.BinaryIO
+
+    Returns
+    -------
+    xml : bytes
+        ows xml without the '<properties>' nodes.
+    """
+    class PropertiesFilter(saxutils.XMLFilterBase):
+        _in_properties = False
+
+        def startElement(self, tag, attrs):
+            if tag == "properties":
+                self._in_properties = True
+            else:
+                super().startElement(tag, attrs)
+
+        def characters(self, content):
+            if self._in_properties:
+                pass
+            else:
+                super().characters(content)
+
+        def endElement(self, name):
+            if name == "properties":
+                self._in_properties = False
+            else:
+                super().endElement(name)
+
+    buffer = io.BytesIO()
+    writer = saxutils.XMLGenerator(out=buffer, encoding="utf-8")
+
+    filter = PropertiesFilter(parent=make_parser())
+    filter.setContentHandler(writer)
+    filter.parse(stream)
+    return buffer.getvalue()
+
+
 def scheme_svg_thumbnail(scheme_file):
     """Load the scheme scheme from a file and return it's svg image
     representation.
@@ -78,7 +122,10 @@ def scheme_svg_thumbnail(scheme_file):
 
     scheme = scheme.Scheme()
     errors = []
-    scheme_load(scheme, scheme_file, error_handler=errors.append)
+    with open(scheme_file, "rb") as f:
+        filtered_contents = filter_properties(f)
+
+    scheme_load(scheme, io.BytesIO(filtered_contents), error_handler=errors.append)
 
     tmp_scene = scene.CanvasScene()
     tmp_scene.set_channel_names_visible(False)
