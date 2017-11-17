@@ -17,25 +17,62 @@ class TestDoubleSpin(GuiTest):
 
 
 class TestListModel(GuiTest):
-    def test_select(self):
-        widget = OWWidget()
-        widget.foo = None
+    def setUp(self):
+        self.widget = OWWidget()
+        self.widget.foo = None
         self.attrs = VariableListModel()
-        view = gui.listView(widget.controlArea, widget, "foo", model=self.attrs)
+        self.view = gui.listView(
+            self.widget.controlArea, self.widget, "foo", model=self.attrs)
+
+    def test_select_callback(self):
+        widget = self.widget
+        view = self.view
+
         self.assertIsNone(widget.foo)
+
         a, b, c = (ContinuousVariable(x) for x in "abc")
         self.attrs[:] = [a, b, c]
+
         view.setCurrentIndex(self.attrs.index(0, 0))
         self.assertIs(widget.foo, a)
         view.setCurrentIndex(self.attrs.index(2, 0))
         self.assertIs(widget.foo, c)
+
+        view.setSelectionMode(view.MultiSelection)
+        sel_model = view.selectionModel()
+        sel_model.clear()
+        view.setCurrentIndex(self.attrs.index(1, 0))
+        self.assertEqual(widget.foo, [b])
+
+    def test_select_callfront(self):
+        widget = self.widget
+        view = self.view
+
+        a, b, c = (ContinuousVariable(x) for x in "abc")
+        self.attrs[:] = [a, b, c]
 
         widget.foo = b
         selection = view.selectedIndexes()
         self.assertEqual(len(selection), 1)
         self.assertEqual(selection[0].row(), 1)
 
-class ComboBoxText(GuiTest):
+        view.setSelectionMode(view.MultiSelection)
+        widget.foo = [a, c]
+        selection = view.selectedIndexes()
+        self.assertEqual(len(selection), 2)
+        self.assertEqual({selection[0].row(), selection[1].row()}, {0, 2})
+
+        widget.foo = []
+        selection = view.selectedIndexes()
+        self.assertEqual(len(selection), 0)
+
+        widget.foo = [2, "b"]
+        selection = view.selectedIndexes()
+        self.assertEqual(len(selection), 2)
+        self.assertEqual({selection[0].row(), selection[1].row()}, {1, 2})
+
+
+class ComboBoxTest(GuiTest):
     def test_set_initial_value(self):
         widget = OWWidget()
         variables = [ContinuousVariable(x) for x in "abc"]

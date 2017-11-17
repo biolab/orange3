@@ -14,7 +14,7 @@ from collections import defaultdict, Sequence
 import pkg_resources
 
 from AnyQt import QtWidgets, QtCore, QtGui
-from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QSize, QItemSelection, pyqtSignal as Signal
 from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
@@ -2477,20 +2477,13 @@ class CallFrontListView(ControlledCallFront):
         model = view.model()
         sel_model = view.selectionModel()
 
-        if view.selectionMode == view.SingleSelection:
-            flags = sel_model.ClearAndSelect
-        else:
-            sel_model.clearSelection()
-            flags = sel_model.Select
-
         if not isinstance(values, Sequence):
             values = [values]
 
+        selection = QItemSelection()
         for value in values:
             if not isinstance(value, int):
-                if isinstance(value, str):
-                    search_role = Qt.DisplayRole
-                elif isinstance(value, Variable):
+                if isinstance(value, Variable):
                     search_role = TableVariable
                 else:
                     search_role = Qt.DisplayRole
@@ -2499,7 +2492,8 @@ class CallFrontListView(ControlledCallFront):
                     if model.data(model.index(i), search_role) == value:
                         value = i
                         break
-            sel_model.select(model.index(value), flags)
+            selection.select(model.index(value), model.index(value))
+        sel_model.select(selection, sel_model.ClearAndSelect)
 
 
 class CallFrontListBox(ControlledCallFront):
