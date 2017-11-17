@@ -6,6 +6,18 @@ Change Log
 * ...
 
 
+[3.7.1] - 2017-11-17
+--------------------
+##### Enhancements
+* MDS: Support showing textual features as labels ([#2699](../../pull/2699))
+
+##### Bugfixes
+* canvas/canvasmain: Fix 'Examples' action handling in the welcome dialog ([#2779](../../pull/2779))
+* Nomogram on PyQt4 ([#2763](../../pull/2763))
+* Broken installation of Installation of wheels ([#2765](../../pull/2765))
+* Add-on installation crashes (when conda not in PATH) ([#2725](../../pull/2725))
+
+
 [3.7.0] - 2017-10-27
 --------------------
 ##### Enhancements
@@ -676,7 +688,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.7.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.7.1...HEAD
+[3.7.1]: https://github.com/biolab/orange3/compare/3.7.0...3.7.1
 [3.7.0]: https://github.com/biolab/orange3/compare/3.6.0...3.7.0
 [3.6.0]: https://github.com/biolab/orange3/compare/3.5.0...3.6.0
 [3.5.0]: https://github.com/biolab/orange3/compare/3.4.5...3.5
