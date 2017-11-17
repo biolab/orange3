@@ -89,3 +89,34 @@ def hstack(arrays):
         return sp.hstack(arrays)
     else:
         return np.hstack(arrays)
+
+
+def assure_array_dense(a):
+    if sp.issparse(a):
+        a = a.toarray()
+    return a
+
+
+def assure_array_sparse(a):
+    if not sp.issparse(a):
+        # since x can be a list, cast to np.array
+        # since x can come from metas with string, cast to float
+        a = np.asarray(a).astype(np.float)
+        return sp.csc_matrix(a)
+    return a
+
+
+def assure_column_sparse(a):
+    a = assure_array_sparse(a)
+    # if x of shape (n, ) is passed to csc_matrix constructor,
+    # the resulting matrix is of shape (1, n) and hence we
+    # need to transpose it to make it a column
+    if a.shape[0] == 1:
+        a = a.T
+    return a
+
+
+def assure_column_dense(a):
+    a = assure_array_dense(a)
+    # column assignments must be of shape (n,) and not (n, 1)
+    return np.ravel(a)
