@@ -308,8 +308,7 @@ a
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
 
     def test_domain_edit_on_sparse_data(self):
-        iris = Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = Table("iris").to_sparse()
 
         f = tempfile.NamedTemporaryFile(suffix='.pickle', delete=False)
         pickle.dump(iris, f)

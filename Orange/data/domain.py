@@ -44,6 +44,18 @@ class DomainConversion:
     .. attribute:: metas
 
         Indices for meta attributes
+
+    .. attribute:: sparse_X
+
+        Flag whether the resulting X matrix should be sparse.
+
+    .. attribute:: sparse_Y
+
+        Flag whether the resulting Y matrix should be sparse.
+
+    .. attribute:: sparse_metas
+
+        Flag whether the resulting metas matrix should be sparse.
     """
 
     def __init__(self, source, destination):
@@ -62,6 +74,21 @@ class DomainConversion:
         self.metas = [
             source.index(var) if var in source
             else var.compute_value for var in destination.metas]
+
+        def should_be_sparse(feats):
+            """
+            For a matrix to be stored in sparse, more than 2/3 of columns
+            should be marked as sparse and there should be no string columns
+            since Scipy's sparse matrices don't support dtype=object.
+            """
+            fraction_sparse = sum(f.sparse for f in feats) / max(len(feats), 1)
+            contain_strings = any(f.is_string for f in feats)
+            return fraction_sparse > 2/3 and not contain_strings
+
+        # check whether X, Y or metas should be sparse
+        self.sparse_X = should_be_sparse(destination.attributes)
+        self.sparse_Y = should_be_sparse(destination.class_vars)
+        self.sparse_metas = should_be_sparse(destination.metas)
 
 
 def filter_visible(feats):

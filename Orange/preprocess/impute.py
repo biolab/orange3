@@ -157,7 +157,7 @@ class ReplaceUnknownsModel(Reprable):
             column = np.array([float(data[self.variable])])
         else:
             column = np.array(data.get_column_view(self.variable)[0],
-                                 copy=True)
+                              copy=True)
 
         mask = np.isnan(column)
         if not np.any(mask):

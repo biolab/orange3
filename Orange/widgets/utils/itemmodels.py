@@ -1105,7 +1105,7 @@ class TableModel(AbstractSortTableModel):
             elif role == TableModel.ClassVar:
                 getter = operator.attrgetter("sparse_y")
             elif role == TableModel.Meta:
-                getter = operator.attrgetter("sparse_meta")
+                getter = operator.attrgetter("sparse_metas")
             return partial(formater, vars, getter)
 
         def make_basket(vars, density, role):
