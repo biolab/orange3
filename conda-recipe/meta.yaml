@@ -50,6 +50,7 @@ requirements:
     - python.app    # [osx]
     - dill          # pickle anything
     - commonmark
+    - serverfiles
 
 test:
   # Python imports

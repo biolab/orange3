@@ -10,6 +10,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
+from Orange.util import deprecated
 
 __all__ = ["DomainConversion", "Domain"]
 
@@ -43,6 +44,18 @@ class DomainConversion:
     .. attribute:: metas
 
         Indices for meta attributes
+
+    .. attribute:: sparse_X
+
+        Flag whether the resulting X matrix should be sparse.
+
+    .. attribute:: sparse_Y
+
+        Flag whether the resulting Y matrix should be sparse.
+
+    .. attribute:: sparse_metas
+
+        Flag whether the resulting metas matrix should be sparse.
     """
 
     def __init__(self, source, destination):
@@ -61,6 +74,21 @@ class DomainConversion:
         self.metas = [
             source.index(var) if var in source
             else var.compute_value for var in destination.metas]
+
+        def should_be_sparse(feats):
+            """
+            For a matrix to be stored in sparse, more than 2/3 of columns
+            should be marked as sparse and there should be no string columns
+            since Scipy's sparse matrices don't support dtype=object.
+            """
+            fraction_sparse = sum(f.sparse for f in feats) / max(len(feats), 1)
+            contain_strings = any(f.is_string for f in feats)
+            return fraction_sparse > 2/3 and not contain_strings
+
+        # check whether X, Y or metas should be sparse
+        self.sparse_X = should_be_sparse(destination.attributes)
+        self.sparse_Y = should_be_sparse(destination.class_vars)
+        self.sparse_metas = should_be_sparse(destination.metas)
 
 
 def filter_visible(feats):
@@ -242,9 +270,16 @@ class Domain:
         """
         return item in self._indices
 
+    @deprecated("Domain.variables")
     def __iter__(self):
         """
         Return an iterator through variables (features and class attributes).
+
+        The current behaviour is confusing, as `x in domain` returns True
+        for meta variables, but iter(domain) does not yield them.
+        This will be consolidated eventually (in 3.12?), the code that
+        currently iterates over domain should iterate over domain.variables
+        instead.
         """
         return iter(self._variables)
 
@@ -435,6 +470,21 @@ class Domain:
 
     def checksum(self):
         return hash(self)
+
+    def copy(self):
+        """
+        Make a copy of the domain. New features are proxies of the old ones,
+        hence the new domain can be used anywhere the old domain was used.
+
+        Returns:
+            Domain: a copy of the domain.
+        """
+        return Domain(
+            attributes=[a.make_proxy() for a in self.attributes],
+            class_vars=[a.make_proxy() for a in self.class_vars],
+            metas=[a.make_proxy() for a in self.metas],
+            source=self,
+        )
 
     def __eq__(self, other):
         if not isinstance(other, Domain):

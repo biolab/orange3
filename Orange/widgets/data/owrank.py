@@ -147,6 +147,13 @@ class TableModel(PyTableModel):
         if yes_reset:
             super().resetSorting()
 
+    def _argsortData(self, data, order):
+        """Always sort NaNs last"""
+        indices = np.argsort(data, kind='mergesort')
+        if order == Qt.DescendingOrder:
+            return np.roll(indices[::-1], -np.isnan(data).sum())
+        return indices
+
 
 class OWRank(OWWidget):
     name = "Rank"
@@ -186,6 +193,7 @@ class OWRank(OWWidget):
     class Error(OWWidget.Error):
         invalid_type = Msg("Cannot handle target variable type {}")
         inadequate_learner = Msg("Scorer {} inadequate: {}")
+        no_attributes = Msg("Data does not have a single attribute.")
 
     def __init__(self):
         super().__init__()
@@ -205,7 +213,7 @@ class OWRank(OWWidget):
         self.mainArea.layout().addWidget(view)
         view.setModel(model)
         view.setColumnWidth(0, 30)
-        view.selectionModel().selectionChanged.connect(self.commit)
+        view.selectionModel().selectionChanged.connect(self.on_select)
 
         def _set_select_manual():
             self.setSelectionMethod(OWRank.SelectManual)
@@ -278,7 +286,7 @@ class OWRank(OWWidget):
 
     @Inputs.data
     @check_sql_input
-    def setData(self, data):
+    def set_data(self, data):
         self.closeContext()
         self.selected_rows = []
         self.ranksModel.clear()
@@ -292,6 +300,9 @@ class OWRank(OWWidget):
         self.Information.missings_imputed(
             shown=data is not None and data.has_missing())
 
+        if data is not None and not len(data.domain.attributes):
+            data = None
+            self.Error.no_attributes()
         self.data = data
         self.switchProblemType(ProblemType.CLASSIFICATION)
         if self.data is not None:
@@ -324,7 +335,7 @@ class OWRank(OWWidget):
         self.setStatusMessage('Running')
         self.updateScores()
         self.setStatusMessage('')
-        self.commit()
+        self.on_select()
 
     @Inputs.scorer
     def set_learner(self, scorer, id):
@@ -417,25 +428,32 @@ class OWRank(OWWidget):
 
         self.ranksModel.wrap(model_array.tolist())
         self.ranksModel.setHorizontalHeaderLabels(('#',) + labels)
-        self.ranksView.setColumnWidth(0, 30)
+        self.ranksView.setColumnWidth(0, 40)
 
         # Re-apply sort
         try:
             sort_column, sort_order = self.sorting
             if sort_column < len(labels):
                 self.ranksModel.sort(sort_column + 1, sort_order)  # +1 for '#' (discrete count) column
+                self.ranksView.horizontalHeader().setSortIndicator(sort_column + 1, sort_order)
         except ValueError:
             pass
 
         self.autoSelection()
         self.Outputs.scores.send(self.create_scores_table(labels))
 
+    def on_select(self):
+        # Save indices of attributes in the original, unsorted domain
+        self.selected_rows = self.ranksModel.mapToSourceRows([
+            i.row() for i in self.ranksView.selectionModel().selectedRows(0)])
+        self.commit()
+
     def setSelectionMethod(self, method):
         if self.selectionMethod != method:
             self.selectionMethod = method
             self.selectButtons.button(method).setChecked(True)
         self.autoSelection()
-        self.commit()
+        self.on_select()
 
     def autoSelection(self):
         selModel = self.ranksView.selectionModel()
@@ -492,10 +510,6 @@ class OWRank(OWWidget):
             self.report_items("Output", self.out_domain_desc)
 
     def commit(self):
-        # Save indices of attributes in the original, unsorted domain
-        self.selected_rows = self.ranksModel.mapToSourceRows([
-            i.row() for i in self.ranksView.selectionModel().selectedRows(0)])
-
         selected_attrs = []
         if self.data is not None:
             attributes = self.data.domain.attributes
@@ -504,8 +518,7 @@ class OWRank(OWWidget):
                 self.selectButtons.button(self.selectionMethod).setChecked(True)
             selected_attrs = [attributes[i]
                               for i in self.selected_rows]
-
-        if self.data is None or not selected_attrs:
+        if not selected_attrs:
             self.Outputs.reduced_data.send(None)
             self.out_domain_desc = None
         else:
@@ -541,7 +554,7 @@ class OWRank(OWWidget):
         # Saved selected_rows will likely be incorrect
         if version is None or version < 2:
             column, order = 0, Qt.DescendingOrder
-            headerState = settings.pop("headerState")
+            headerState = settings.pop("headerState", None)
 
             # Lacking knowledge of last problemType, use discrete ranks view's ordering
             if isinstance(headerState, (tuple, list)):

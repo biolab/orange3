@@ -126,9 +126,10 @@ class OWConcatenate(widget.OWWidget):
         cb.makeConsistent()
 
         box = gui.auto_commit(
-            self.controlArea, self, "auto_commit", "Apply", commit=self.apply)
-        box.layout().insertWidget(0, self.report_button)
-        box.layout().insertSpacing(1, 20)
+            self.controlArea, self, "auto_commit", "Apply", commit=self.apply,
+            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
+        box.button.setFixedWidth(180)
+        box.layout().insertStretch(0)
 
     @Inputs.primary_data
     @check_sql_input

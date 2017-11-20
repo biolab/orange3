@@ -659,7 +659,7 @@ def pairwise(iterable):
 # even if they have exactly the same variables).
 # TODO: What about metas.
 def domain_eq(d1, d2):
-    return tuple(d1) == tuple(d2)
+    return d1.variables == d2.variables
 
 
 # Comparing/hashing Orange.data.Instance across domains ignoring metas.

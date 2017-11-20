@@ -248,8 +248,6 @@ class OWDistanceMatrix(widget.OWWidget):
         self.annot_combo.setModel(VariableListModel())
         self.annot_combo.model()[:] = ["None", "Enumeration"]
         gui.rubber(settings_box)
-        settings_box.layout().addWidget(self.report_button)
-        gui.separator(settings_box, 40)
         acb = gui.auto_commit(settings_box, self, "auto_commit",
                               "Send Selected", "Send Automatically", box=None)
         acb.setFixedWidth(200)
@@ -279,7 +277,7 @@ class OWDistanceMatrix(widget.OWWidget):
             self.annotation_idx = 2
         elif isinstance(items, Table):
             annotations.extend(
-                itertools.chain(items.domain, items.domain.metas))
+                itertools.chain(items.domain.variables, items.domain.metas))
             if items.domain.class_var:
                 self.annotation_idx = 2 + len(items.domain.attributes)
         self.annot_combo.model()[:] = annotations

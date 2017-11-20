@@ -4,13 +4,22 @@ import unittest
 import numpy as np
 
 from Orange.data import Table, Variable
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_FEATURE_NAME)
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, get_next_name, get_unique_names,
+    ANNOTATED_DATA_FEATURE_NAME)
+
+
+class TestGetNextName(unittest.TestCase):
+    def test_get_var_name(self):
+        self.assertEqual(get_next_name(["a"], "XX"), "XX")
+        self.assertEqual(get_next_name(["a", "XX"], "XX"), "XX (1)")
+        self.assertEqual(get_next_name(["a", "XX (4)"], "XX"), "XX (5)")
+        self.assertEqual(get_next_name(["a", "XX", "XX (4)"], "XX"), "XX (5)")
 
 
 class TestAnnotatedData(unittest.TestCase):
     def setUp(self):
-        Variable._clear_all_caches()
+        Variable._clear_all_caches()  # pylint: disable=protected-access
         random.seed(42)
         self.zoo = Table("zoo")
 
@@ -66,7 +75,7 @@ class TestAnnotatedData(unittest.TestCase):
             self.assertIn(self.zoo.domain.metas[0], data.domain.metas)
             self.assertIn(ANNOTATED_DATA_FEATURE_NAME,
                           [m.name for m in data.domain.metas])
-            for j in range(2, i + 3):
+            for j in range(1, i + 2):
                 self.assertIn("{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, j),
                               [m.name for m in data.domain.metas])
 
@@ -100,3 +109,9 @@ class TestAnnotatedData(unittest.TestCase):
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 3))
         self.assertEqual(data.domain.metas[1].name,
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 4))
+
+    def test_get_unique_names(self):
+        names = ["charlie", "bravo", "charlie (2)", "charlie (3)", "bravo (2)", "charlie (4)",
+                 "bravo (3)"]
+        self.assertEqual(get_unique_names(names, ["bravo", "charlie"]),
+                         ["bravo (5)", "charlie (5)"])

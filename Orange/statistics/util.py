@@ -5,85 +5,199 @@ and once used from the bottlechest package (fork of bottleneck).
 It also patches bottleneck to contain these functions.
 """
 from warnings import warn
-import numpy as np
-import scipy.sparse as sp
+
 import bottleneck as bn
+import numpy as np
+from scipy import sparse as sp
 
 
-def _count_nans_per_row_sparse(X, weights):
+def _count_nans_per_row_sparse(X, weights, dtype=None):
     """ Count the number of nans (undefined) values per row. """
-    items_per_row = 1 if X.ndim == 1 else X.shape[1]
-    counts = np.ones(X.shape[0]) * items_per_row
-    nnz_per_row = np.bincount(X.indices, minlength=len(counts))
-    counts -= nnz_per_row
     if weights is not None:
-        counts *= weights
-    return np.sum(counts)
+        X = X.tocoo(copy=False)
+        nonzero_mask = np.isnan(X.data)
+        nan_rows, nan_cols = X.row[nonzero_mask], X.col[nonzero_mask]
+
+        if weights.ndim == 1:
+            data_weights = weights[nan_rows]
+        else:
+            data_weights = weights[nan_rows, nan_cols]
+
+        w = sp.coo_matrix((data_weights, (nan_rows, nan_cols)), shape=X.shape)
+        w = w.tocsr()
+
+        return np.fromiter((np.sum(row.data) for row in w), dtype=dtype)
+
+    return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=dtype)
 
 
-def bincount(X, max_val=None, weights=None, minlength=None):
+def sparse_count_implicit_zeros(x):
+    """ Count the number of implicit zeros in a sparse matrix. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+    return np.prod(x.shape) - x.nnz
+
+
+def sparse_has_implicit_zeros(x):
+    """ Check if sparse matrix contains any implicit zeros. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+    return np.prod(x.shape) != x.nnz
+
+
+def sparse_implicit_zero_weights(x, weights):
+    """ Extract the weight values of all zeros in a sparse matrix. """
+    if not sp.issparse(x):
+        raise TypeError('The matrix provided was not sparse.')
+
+    if weights.ndim == 1:
+        # Match weights and x axis so `indices` will be set appropriately
+        if x.shape[0] == weights.shape[0]:
+            x = x.tocsc()
+        elif x.shape[1] == weights.shape[0]:
+            x = x.tocsr()
+        n_items = np.prod(x.shape)
+        zero_indices = np.setdiff1d(np.arange(n_items), x.indices, assume_unique=True)
+        return weights[zero_indices]
+    else:
+        # Can easily be implemented using a coo_matrix
+        raise NotImplementedError(
+            'Computing zero weights on ndimensinal weight matrix is not implemented'
+        )
+
+
+def bincount(x, weights=None, max_val=None, minlength=None):
     """Return counts of values in array X.
 
     Works kind of like np.bincount(), except that it also supports floating
     arrays with nans.
-    """
-    if sp.issparse(X):
-        minlength = max_val + 1
-        bin_weights = weights[X.indices] if weights is not None else None
-        return (np.bincount(X.data.astype(int),
-                            weights=bin_weights,
-                            minlength=minlength, ),
-                _count_nans_per_row_sparse(X, weights))
 
-    X = np.asanyarray(X)
-    if X.dtype.kind == 'f' and bn.anynan(X):
-        nonnan = ~np.isnan(X)
-        X = X[nonnan]
+    Parameters
+    ----------
+    x : array_like, 1 dimension, nonnegative ints
+        Input array.
+    weights : array_like, optional
+        Weights, array of the same shape as x.
+    max_val : int, optional
+        Indicates the maximum value we expect to find in X and sets the result
+        array size accordingly. E.g. if we set `max_val=2` yet the largest
+        value in X is 1, the result will contain a bin for the value 2, and
+        will be set to 0. See examples for usage.
+    minlength : int, optional
+        A minimum number of bins for the output array. See numpy docs for info.
+
+    Returns
+    -------
+    Tuple[np.ndarray, int]
+        Returns the bincounts and the number of NaN values.
+
+    Examples
+    --------
+    In case `max_val` is provided, the return shape includes bins for these
+    values as well, even if they do not appear in the data. However, this will
+    not truncate the bincount if values larger than `max_count` are found.
+    >>> bincount([0, 0, 1, 1, 2], max_val=4)
+    (array([ 2.,  2.,  1.,  0.,  0.]), 0.0)
+    >>> bincount([0, 1, 2, 3, 4], max_val=2)
+    (array([ 1.,  1.,  1.,  1.,  1.]), 0.0)
+
+    """
+    # Store the original matrix before any manipulation to check for sparse
+    x_original = x
+    if sp.issparse(x):
+        if weights is not None:
+            # Match weights and x axis so `indices` will be set appropriately
+            if x.shape[0] == weights.shape[0]:
+                x = x.tocsc()
+            elif x.shape[1] == weights.shape[0]:
+                x = x.tocsr()
+
+            zero_weights = sparse_implicit_zero_weights(x, weights).sum()
+            weights = weights[x.indices]
+        else:
+            zero_weights = sparse_count_implicit_zeros(x)
+
+        x = x.data
+
+    x = np.asanyarray(x)
+    if x.dtype.kind == 'f' and bn.anynan(x):
+        nonnan = ~np.isnan(x)
+        x = x[nonnan]
         if weights is not None:
             nans = (~nonnan * weights).sum(axis=0)
             weights = weights[nonnan]
         else:
             nans = (~nonnan).sum(axis=0)
     else:
-        nans = 0. if X.ndim == 1 else np.zeros(X.shape[1], dtype=float)
+        nans = 0. if x.ndim == 1 else np.zeros(x.shape[1], dtype=float)
+
     if minlength is None and max_val is not None:
         minlength = max_val + 1
-    bc = np.array([]) if minlength is not None and minlength <= 0 else \
-        np.bincount(X.astype(np.int32, copy=False),
-                    weights=weights, minlength=minlength).astype(float)
+
+    if minlength is not None and minlength <= 0:
+        bc = np.array([])
+    else:
+        bc = np.bincount(
+            x.astype(np.int32, copy=False), weights=weights, minlength=minlength
+        ).astype(float)
+        # Since `csr_matrix.values` only contain non-zero values or explicit
+        # zeros, we must count implicit zeros separately and add them to the
+        # explicit ones found before
+        if sp.issparse(x_original):
+            bc[0] += zero_weights
+
     return bc, nans
 
 
-def countnans(X, weights=None, axis=None, dtype=None, keepdims=False):
+def countnans(x, weights=None, axis=None, dtype=None, keepdims=False):
     """
-    Count the undefined elements in arr along given axis.
+    Count the undefined elements in an array along given axis.
 
     Parameters
     ----------
-    X : array_like
-    weights : array_like
+    x : array_like
+    weights : array_like, optional
         Weights to weight the nans with, before or after counting (depending
         on the weights shape).
+    axis : int, optional
+    dtype : dtype, optional
+        The data type of the returned array.
 
     Returns
     -------
-    counts
+    Union[np.ndarray, float]
+
     """
-    if not sp.issparse(X):
-        X = np.asanyarray(X)
-        isnan = np.isnan(X)
-        if weights is not None and weights.shape == X.shape:
+    if not sp.issparse(x):
+        x = np.asanyarray(x)
+        isnan = np.isnan(x)
+        if weights is not None and weights.shape == x.shape:
             isnan = isnan * weights
+
         counts = isnan.sum(axis=axis, dtype=dtype, keepdims=keepdims)
-        if weights is not None and weights.shape != X.shape:
+        if weights is not None and weights.shape != x.shape:
             counts = counts * weights
     else:
-        if any(attr is not None for attr in [axis, dtype]) or \
-                        keepdims is not False:
-            raise ValueError('Arguments axis, dtype and keepdims'
-                             'are not yet supported on sparse data!')
+        assert axis in [None, 0, 1], 'Only axis 0 and 1 are currently supported'
+        # To have consistent behaviour with dense matrices, raise error when
+        # `axis=1` and the array is 1d (e.g. [[1 2 3]])
+        if x.shape[0] == 1 and axis == 1:
+            raise ValueError('Axis %d is out of bounds' % axis)
 
-        counts = _count_nans_per_row_sparse(X, weights)
+        arr = x if axis == 1 else x.T
+
+        if weights is not None:
+            weights = weights if axis == 1 else weights.T
+
+        arr = arr.tocsr()
+        counts = _count_nans_per_row_sparse(arr, weights, dtype=dtype)
+
+        # We want a scalar value if `axis=None` or if the sparse matrix is
+        # actually a vector (e.g. [[1 2 3]]), but has `ndim=2` due to scipy
+        # implementation
+        if axis is None or x.shape[0] == 1:
+            counts = counts.sum(dtype=dtype)
+
     return counts
 
 
@@ -234,17 +348,12 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[0] - nans))
 
 
-def _sparse_has_zeros(x):
-    """ Check if sparse matrix contains any implicit zeros. """
-    return np.prod(x.shape) != x.nnz
-
-
 def _nan_min_max(x, func, axis=0):
     if not sp.issparse(x):
         return func(x, axis=axis)
     if axis is None:
         extreme = func(x.data, axis=axis) if x.nnz else float('nan')
-        if _sparse_has_zeros(x):
+        if sparse_has_implicit_zeros(x):
             extreme = func([0, extreme])
         return extreme
     if axis == 0:
@@ -257,7 +366,7 @@ def _nan_min_max(x, func, axis=0):
     for row in x:
         values = row.data
         extreme = func(values) if values.size else float('nan')
-        if _sparse_has_zeros(row):
+        if sparse_has_implicit_zeros(row):
             extreme = func([0, extreme])
         r.append(extreme)
     return np.array(r)
@@ -323,27 +432,36 @@ def unique(x, return_counts=False):
     if not sp.issparse(x):
         return np.unique(x, return_counts=return_counts)
 
-    implicit_zeros = np.prod(x.shape) - x.nnz
+    implicit_zeros = sparse_count_implicit_zeros(x)
     explicit_zeros = not np.all(x.data)
     r = np.unique(x.data, return_counts=return_counts)
     if not implicit_zeros:
         return r
+
     if return_counts:
+        zero_index = np.searchsorted(r[0], 0)
         if explicit_zeros:
             r[1][r[0] == 0.] += implicit_zeros
             return r
-        return np.insert(r[0], 0, 0), np.insert(r[1], 0, implicit_zeros)
+        return np.insert(r[0], zero_index, 0), np.insert(r[1], zero_index, implicit_zeros)
     else:
         if explicit_zeros:
             return r
-        return np.insert(r, 0, 0)
+        zero_index = np.searchsorted(r, 0)
+        return np.insert(r, zero_index, 0)
 
 
-def nanunique(x):
+def nanunique(*args, **kwargs):
     """ Return unique values while disregarding missing (np.nan) values.
     Supports sparse or dense matrices. """
-    r = unique(x)
-    return r[~np.isnan(r)]
+    result = unique(*args, **kwargs)
+
+    if isinstance(result, tuple):
+        result, counts = result
+        non_nan_mask = ~np.isnan(result)
+        return result[non_nan_mask], counts[non_nan_mask]
+
+    return result[~np.isnan(result)]
 
 
 def digitize(x, bins, right=False):

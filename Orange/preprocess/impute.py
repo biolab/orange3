@@ -157,7 +157,7 @@ class ReplaceUnknownsModel(Reprable):
             column = np.array([float(data[self.variable])])
         else:
             column = np.array(data.get_column_view(self.variable)[0],
-                                 copy=True)
+                              copy=True)
 
         mask = np.isnan(column)
         if not np.any(mask):
@@ -246,7 +246,8 @@ class AsValue(BaseImputeMethod):
                 compute_value=Lookup(
                     variable,
                     np.arange(len(variable.values), dtype=int),
-                    unknown=len(variable.values))
+                    unknown=len(variable.values)),
+                sparse=variable.sparse,
                 )
             return var
 
@@ -255,7 +256,9 @@ class AsValue(BaseImputeMethod):
             indicator_var = Orange.data.DiscreteVariable(
                 fmt.format(var=variable),
                 values=("undef", "def"),
-                compute_value=IsDefined(variable))
+                compute_value=IsDefined(variable),
+                sparse=variable.sparse,
+            )
             stats = basic_stats.BasicStats(data, variable)
             return (variable.copy(compute_value=ReplaceUnknowns(variable,
                                                                 stats.mean)),

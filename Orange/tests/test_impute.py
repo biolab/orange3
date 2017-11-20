@@ -192,7 +192,7 @@ class TestAsValue(unittest.TestCase):
         vars = reduce(lambda acc, v:
                       acc + (list(v) if isinstance(v, (tuple, list))
                              else [v]),
-                      [impute.AsValue()(table, var) for var in table.domain],
+                      [impute.AsValue()(table, var) for var in table.domain.variables],
                       [])
         domain = data.Domain(vars)
         idata = table.from_table(domain, table)

@@ -69,9 +69,9 @@ def get_file_name(start_dir, start_filter, file_formats):
     Args:
         start_dir (str): initial directory, optionally including the filename
         start_filter (str): initial filter
-        file_formats (list of Orange.data.io.FileFormat): file formats
+        file_formats (dict {extension: Orange.data.io.FileFormat}): file formats
     Returns:
-        (filename, filter, writer), or `(None, None, None)` on cancel
+        (filename, writer, filter), or `(None, None, None)` on cancel
     """
     writers = sorted(set(file_formats.values()), key=lambda w: w.PRIORITY)
     filters = [format_filter(w) for w in writers]
@@ -104,14 +104,57 @@ def get_file_name(start_dir, start_filter, file_formats):
         return filename, writer, filter
 
 
+def open_filename_dialog(start_dir, start_filter, file_formats, title="Open...",
+                         dialog=None):
+    """
+    Open file dialog with file formats.
+
+    Function also returns the format and filter to cover the case where the
+    same extension appears in multiple filters.
+
+    Args:
+        start_dir (str): initial directory, optionally including the filename
+        start_filter (str): initial filter
+        file_formats (a list of Orange.data.io.FileFormat): file formats
+        title (str): title of the dialog
+        dialog: a function that creates a QT dialog
+    Returns:
+        (filename, file_format, filter), or `(None, None, None)` on cancel
+    """
+    file_formats = sorted(set(file_formats), key=lambda w: (w.PRIORITY, w.DESCRIPTION))
+    filters = [format_filter(f) for f in file_formats]
+
+    # add all readable files option
+    all_extensions = set()
+    for f in file_formats:
+        all_extensions.update(f.EXTENSIONS)
+    file_formats.insert(0, None)
+    filters.insert(0, "All readable files (*{})".format(
+        ' *'.join(sorted(all_extensions))))
+
+    if start_filter not in filters:
+        start_filter = filters[0]
+
+    if dialog is None:
+        dialog = QFileDialog.getOpenFileName
+    filename, filter = dialog(
+        None, title, start_dir, ';;'.join(filters), start_filter)
+    if not filename:
+        return None, None, None
+
+    file_format = file_formats[filters.index(filter)]
+    return filename, file_format, filter
+
+
 class RecentPath:
     abspath = ''
     prefix = None   #: Option[str]  # BASEDIR | SAMPLE-DATASETS | ...
     relpath = ''  #: Option[str]  # path relative to `prefix`
     title = ''    #: Option[str]  # title of filename (e.g. from URL)
     sheet = ''    #: Option[str]  # sheet
+    file_format = None  #: Option[str]  # file format as a string
 
-    def __init__(self, abspath, prefix, relpath, title='', sheet=''):
+    def __init__(self, abspath, prefix, relpath, title='', sheet='', file_format=None):
         if os.name == "nt":
             # always use a cross-platform pathname component separator
             abspath = abspath.replace(os.path.sep, "/")
@@ -122,6 +165,7 @@ class RecentPath:
         self.relpath = relpath
         self.title = title
         self.sheet = sheet
+        self.file_format = file_format
 
     def __eq__(self, other):
         return (self.abspath == other.abspath or
@@ -191,8 +235,6 @@ class RecentPath:
                 path = os.path.join(base, self.relpath)
                 if os.path.exists(path):
                     return os.path.normpath(path)
-        else:
-            return None
 
     def resolve(self, searchpaths):
         if self.prefix is None and os.path.exists(self.abspath):
@@ -203,7 +245,8 @@ class RecentPath:
                     path = os.path.join(base, self.relpath)
                     if os.path.exists(path):
                         return RecentPath(
-                            os.path.normpath(path), self.prefix, self.relpath)
+                            os.path.normpath(path), self.prefix, self.relpath,
+                            file_format=self.file_format)
         return None
 
     @property
@@ -285,7 +328,7 @@ class RecentPathsWidgetMixin:
         search_paths = self._search_paths()
         rec = []
         for recent in self.recent_paths:
-            kwargs = dict(title=recent.title, sheet=recent.sheet)
+            kwargs = dict(title=recent.title, sheet=recent.sheet, file_format=recent.file_format)
             resolved = recent.resolve(search_paths)
             if resolved is not None:
                 rec.append(
@@ -326,7 +369,7 @@ class RecentPathsWidgetMixin:
 
     def last_path(self):
         """Return the most recent absolute path or `None` if there is none"""
-        return self.recent_paths and self.recent_paths[0].abspath or None
+        return self.recent_paths[0].abspath if self.recent_paths else None
 
 
 class RecentPathsWComboMixin(RecentPathsWidgetMixin):

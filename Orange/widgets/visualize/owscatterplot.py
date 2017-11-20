@@ -1,16 +1,14 @@
 import numpy as np
-import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtGui import QPen, QFont, QFontInfo, QPalette
+from AnyQt.QtGui import QPen, QPalette
 from AnyQt.QtWidgets import QApplication
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
 import Orange
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
-    DiscreteVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
@@ -21,23 +19,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME,
-                                                 create_groups_table)
-
-
-def font_resize(font, factor, minsize=None, maxsize=None):
-    font = QFont(font)
-    fontinfo = QFontInfo(font)
-    size = fontinfo.pointSizeF() * factor
-
-    if minsize is not None:
-        size = max(size, minsize)
-    if maxsize is not None:
-        size = min(size, maxsize)
-
-    font.setPointSizeF(size)
-    return font
+from Orange.widgets.utils.annotated_data import (
+    create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME)
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
@@ -64,9 +47,12 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def compute_score(self, state):
         graph = self.master.graph
-        ind12 = [graph.domain.index(self.attrs[x]) for x in state]
-        valid = graph.get_valid_list(ind12)
-        X = graph.jittered_data[ind12, :][:, valid].T
+        attrs = [self.attrs[x] for x in state]
+        valid = graph.get_valid_list(attrs)
+        cols = []
+        for var in attrs:
+            cols.append(graph.jittered_data.get_column_view(var)[0][valid])
+        X = np.column_stack(cols)
         Y = self.master.data.Y[valid]
         if X.shape[0] < self.minK:
             return
@@ -83,7 +69,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return max(0, -score)
 
     def score_heuristic(self):
-        X = self.master.graph.jittered_data.T
+        X = self.master.graph.jittered_data.X
         Y = self.master.data.Y
         mdomain = self.master.data.domain
         dom = Domain([ContinuousVariable(str(i)) for i in range(X.shape[1])],
@@ -115,7 +101,7 @@ class OWScatterPlot(OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        features = Output("Features", Table, dynamic=False)
+        features = Output("Features", AttributeList, dynamic=False)
 
     settings_version = 2
     settingsHandler = DomainContextHandler()
@@ -126,6 +112,8 @@ class OWScatterPlot(OWWidget):
 
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
+
+    #: Serialized selection state to be restored
     selection_group = Setting(None, schema_only=True)
 
     graph = SettingProvider(OWScatterPlotGraph)
@@ -154,11 +142,13 @@ class OWScatterPlot(OWWidget):
 
         self.data = None  # Orange.data.Table
         self.subset_data = None  # Orange.data.Table
-        self.data_metas_X = None  # self.data, where primitive metas are moved to X
         self.sql_data = None  # Orange.data.sql.table.SqlTable
         self.attribute_selection_list = None  # list of Orange.data.Variable
         self.__timer = QTimer(self, interval=1200)
         self.__timer.timeout.connect(self.add_data)
+        #: Remember the saved state to restore
+        self.__pending_selection_restore = self.selection_group
+        self.selection_group = None
 
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
@@ -221,21 +211,6 @@ class OWScatterPlot(OWWidget):
         super().keyReleaseEvent(event)
         self.graph.update_tooltip(event.modifiers())
 
-    # def settingsFromWidgetCallback(self, handler, context):
-    #     context.selectionPolygons = []
-    #     for curve in self.graph.selectionCurveList:
-    #         xs = [curve.x(i) for i in range(curve.dataSize())]
-    #         ys = [curve.y(i) for i in range(curve.dataSize())]
-    #         context.selectionPolygons.append((xs, ys))
-
-    # def settingsToWidgetCallback(self, handler, context):
-    #     selections = getattr(context, "selectionPolygons", [])
-    #     for (xs, ys) in selections:
-    #         c = SelectionCurve("")
-    #         c.setData(xs,ys)
-    #         c.attach(self.graph)
-    #         self.graph.selectionCurveList.append(c)
-
     def reset_graph_data(self, *_):
         if self.data is not None:
             self.graph.rescale_data()
@@ -270,7 +245,6 @@ class OWScatterPlot(OWWidget):
         same_domain = (self.data and data and
                        data.domain.checksum() == self.data.domain.checksum())
         self.data = data
-        self.data_metas_X = self.move_primitive_metas_to_X(data)
 
         if not same_domain:
             self.init_attr_values()
@@ -278,7 +252,7 @@ class OWScatterPlot(OWWidget):
         self.vizrank.attrs = self.data.domain.attributes if self.data is not None else []
         self.vizrank_button.setEnabled(
             self.data is not None and not self.data.is_sparse() and
-            self.data.domain.class_var is not None and
+            self.data.domain.class_var is not None and not np.isnan(self.data.Y).all() and
             len(self.data.domain.attributes) > 1 and len(self.data) > 1)
         if self.data is not None and self.data.domain.class_var is None \
             and len(self.data.domain.attributes) > 1 and len(self.data) > 1:
@@ -322,7 +296,6 @@ class OWScatterPlot(OWWidget):
             data_sample.download_data(2000, partial=True)
             data = Table(data_sample)
             self.data = Table.concatenate((self.data, data), axis=0)
-            self.data_metas_X = self.move_primitive_metas_to_X(self.data)
             self.handleNewSignals()
 
     def switch_sampling(self):
@@ -330,15 +303,6 @@ class OWScatterPlot(OWWidget):
         if self.auto_sample and self.sql_data:
             self.add_data()
             self.__timer.start()
-
-    def move_primitive_metas_to_X(self, data):
-        if data is not None:
-            new_attrs = [a for a in data.domain.attributes + data.domain.metas
-                         if a.is_primitive()]
-            new_metas = [m for m in data.domain.metas if not m.is_primitive()]
-            new_domain = Domain(new_attrs, data.domain.class_vars, new_metas)
-            data = data.transform(new_domain)
-        return data
 
     @Inputs.data_subset
     def set_subset_data(self, subset_data):
@@ -349,13 +313,12 @@ class OWScatterPlot(OWWidget):
             else:
                 self.warning("Data subset does not support large Sql tables")
                 subset_data = None
-        self.subset_data = self.move_primitive_metas_to_X(subset_data)
+        self.subset_data = subset_data
         self.controls.graph.alpha_value.setEnabled(subset_data is None)
 
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
-        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
-                            self.sparse_to_dense(self.subset_data))
+        self.graph.new_data(self.data, self.subset_data)
         if self.attribute_selection_list and self.graph.domain and \
                 all(attr in self.graph.domain
                         for attr in self.attribute_selection_list):
@@ -365,44 +328,16 @@ class OWScatterPlot(OWWidget):
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
-        self.apply_selection()
+        if self.data is not None and self.__pending_selection_restore is not None:
+            self.apply_selection(self.__pending_selection_restore)
+            self.__pending_selection_restore = None
         self.unconditional_commit()
 
-    def prepare_data(self):
-        """
-        Only when dealing with sparse matrices.
-        GH-2152
-        """
-        self.graph.new_data(self.sparse_to_dense(self.data_metas_X),
-                            self.sparse_to_dense(self.subset_data),
-                            new=False)
-
-    def sparse_to_dense(self, input_data=None):
-        if input_data is None or not input_data.is_sparse():
-            return input_data
-        keys = []
-        attrs = {self.attr_x,
-                 self.attr_y,
-                 self.graph.attr_color,
-                 self.graph.attr_shape,
-                 self.graph.attr_size,
-                 self.graph.attr_label}
-        for i, attr in enumerate(input_data.domain):
-            if attr in attrs:
-                keys.append(i)
-        new_domain = input_data.domain.select_columns(keys)
-        dmx = input_data.transform(new_domain)
-        dmx.X = dmx.X.toarray()
-        # TODO: remove once we make sure Y is always dense.
-        if sp.issparse(dmx.Y):
-            dmx.Y = dmx.Y.toarray()
-        return dmx
-
-    def apply_selection(self):
-        """Apply selection saved in workflow."""
-        if self.data is not None and self.selection_group is not None:
+    def apply_selection(self, selection):
+        """Apply `selection` to the current plot."""
+        if self.data is not None:
             self.graph.selection = np.zeros(len(self.data), dtype=np.uint8)
-            self.selection_group = [x for x in self.selection_group if x[0] < len(self.data)]
+            self.selection_group = [x for x in selection if x[0] < len(self.data)]
             selection_array = np.array(self.selection_group).T
             self.graph.selection[selection_array[0]] = selection_array[1]
             self.graph.update_colors(keep_colors=True)
@@ -414,9 +349,6 @@ class OWScatterPlot(OWWidget):
         else:
             self.attribute_selection_list = None
 
-    def get_shown_attributes(self):
-        return self.attr_x, self.attr_y
-
     def init_attr_values(self):
         domain = self.data and self.data.domain
         for model in self.models:
@@ -424,7 +356,7 @@ class OWScatterPlot(OWWidget):
         self.attr_x = self.xy_model[0] if self.xy_model else None
         self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
             else self.attr_x
-        self.graph.attr_color = domain and self.data.domain.class_var or None
+        self.graph.attr_color = self.data.domain.class_var if domain else None
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
@@ -434,14 +366,12 @@ class OWScatterPlot(OWWidget):
         self.update_attr()
 
     def update_attr(self):
-        self.prepare_data()
         self.update_graph()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
         self.cb_reg_line.setEnabled(self.graph.can_draw_regresssion_line())
         self.send_features()
 
     def update_colors(self):
-        self.prepare_data()
         self.cb_class_density.setEnabled(self.graph.can_draw_density())
 
     def update_density(self):
@@ -457,39 +387,43 @@ class OWScatterPlot(OWWidget):
         self.graph.update_data(self.attr_x, self.attr_y, reset_view)
 
     def selection_changed(self):
-        self.send_data()
-
-    def send_data(self):
-        selected = None
-        selection = None
-        # TODO: Implement selection for sql data
-        graph = self.graph
-        if isinstance(self.data, SqlTable):
-            selected = self.data
-        elif self.data is not None:
-            selection = graph.get_selection()
-            if len(selection) > 0:
-                selected = self.data[selection]
-        if graph.selection is not None and np.max(graph.selection) > 1:
-            annotated = create_groups_table(self.data, graph.selection)
-        else:
-            annotated = create_annotated_table(self.data, selection)
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
 
         # Store current selection in a setting that is stored in workflow
+        if isinstance(self.data, SqlTable):
+            selection = None
+        elif self.data is not None:
+            selection = self.graph.get_selection()
+        else:
+            selection = None
         if selection is not None and len(selection):
-            self.selection_group = list(zip(selection, graph.selection[selection]))
+            self.selection_group = list(zip(selection, self.graph.selection[selection]))
         else:
             self.selection_group = None
 
+        self.commit()
+
+    def send_data(self):
+        # TODO: Implement selection for sql data
+        def _get_selected():
+            if not len(selection):
+                return None
+            return create_groups_table(data, graph.selection, False, "Group")
+
+        def _get_annotated():
+            if graph.selection is not None and np.max(graph.selection) > 1:
+                return create_groups_table(data, graph.selection)
+            else:
+                return create_annotated_table(data, selection)
+
+        graph = self.graph
+        data = self.data
+        selection = graph.get_selection()
+        self.Outputs.annotated_data.send(_get_annotated())
+        self.Outputs.selected_data.send(_get_selected())
+
     def send_features(self):
-        features = None
-        if self.attr_x or self.attr_y:
-            dom = Domain([], metas=(StringVariable(name="feature"),))
-            features = Table(dom, [[self.attr_x], [self.attr_y]])
-            features.name = "Features"
-        self.Outputs.features.send(features)
+        features = [attr for attr in [self.attr_x, self.attr_y] if attr]
+        self.Outputs.features.send(features or None)
 
     def commit(self):
         self.send_data()

@@ -331,9 +331,10 @@ class ReliefF(Scorer):
     supports_sparse_data = False
     friendly_name = "ReliefF"
 
-    def __init__(self, n_iterations=50, k_nearest=10):
+    def __init__(self, n_iterations=50, k_nearest=10, random_state=None):
         self.n_iterations = n_iterations
         self.k_nearest = k_nearest
+        self.random_state = random_state
 
     def score_data(self, data, feature):
         if len(data.domain.class_vars) != 1:
@@ -343,11 +344,16 @@ class ReliefF(Scorer):
                              'for regression')
         if len(data.domain.class_var.values) == 1:  # Single-class value non-problem
             return 0 if feature else np.zeros(data.X.shape[1])
+        if isinstance(self.random_state, np.random.RandomState):
+            rstate = self.random_state
+        else:
+            rstate = np.random.RandomState(self.random_state)
 
         from Orange.preprocess._relieff import relieff
         weights = np.asarray(relieff(data.X, data.Y,
                                      self.n_iterations, self.k_nearest,
-                                     np.array([a.is_discrete for a in data.domain.attributes])))
+                                     np.array([a.is_discrete for a in data.domain.attributes]),
+                                     rstate))
         if feature:
             return weights[0]
         return weights
@@ -359,9 +365,10 @@ class RReliefF(Scorer):
     supports_sparse_data = False
     friendly_name = "RReliefF"
 
-    def __init__(self, n_iterations=50, k_nearest=50):
+    def __init__(self, n_iterations=50, k_nearest=50, random_state=None):
         self.n_iterations = n_iterations
         self.k_nearest = k_nearest
+        self.random_state = random_state
 
     def score_data(self, data, feature):
         if len(data.domain.class_vars) != 1:
@@ -369,11 +376,15 @@ class RReliefF(Scorer):
         if not data.domain.class_var.is_continuous:
             raise ValueError('RReliefF supports regression; use ReliefF '
                              'for classification')
-
+        if isinstance(self.random_state, np.random.RandomState):
+            rstate = self.random_state
+        else:
+            rstate = np.random.RandomState(self.random_state)
         from Orange.preprocess._relieff import rrelieff
         weights = np.asarray(rrelieff(data.X, data.Y,
                                       self.n_iterations, self.k_nearest,
-                                      np.array([a.is_discrete for a in data.domain.attributes])))
+                                      np.array([a.is_discrete for a in data.domain.attributes]),
+                                      rstate))
         if feature:
             return weights[0]
         return weights

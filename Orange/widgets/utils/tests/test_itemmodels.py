@@ -3,11 +3,13 @@
 
 from unittest import TestCase
 
+import numpy as np
+
 from AnyQt.QtCore import Qt
 
-from Orange.data import Domain, ContinuousVariable
+from Orange.data import Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.utils.itemmodels import \
-    PyTableModel, PyListModel, DomainModel, _argsort
+    AbstractSortTableModel, PyTableModel, PyListModel, DomainModel, _argsort
 
 
 class TestArgsort(TestCase):
@@ -118,6 +120,34 @@ class TestPyTableModel(TestCase):
         self.assertTrue(Qt.AlignCenter &
                         self.model.data(self.model.index(1, 0),
                                         Qt.TextAlignmentRole))
+
+
+class TestAbstractSortTableModel(TestCase):
+    def test_sorting(self):
+        assert issubclass(PyTableModel, AbstractSortTableModel)
+        model = PyTableModel([[1, 4],
+                              [2, 2],
+                              [3, 3]])
+        model.sort(1, Qt.AscendingOrder)
+        # mapToSourceRows
+        self.assertSequenceEqual(model.mapToSourceRows(...).tolist(), [1, 2, 0])
+        self.assertEqual(model.mapToSourceRows(1).tolist(), 2)
+        self.assertSequenceEqual(model.mapToSourceRows([1, 2]).tolist(), [2, 0])
+        self.assertSequenceEqual(model.mapToSourceRows([]), [])
+        self.assertSequenceEqual(model.mapToSourceRows(np.array([], dtype=int)).tolist(), [])
+        self.assertRaises(IndexError, model.mapToSourceRows, np.r_[0.])
+
+        # mapFromSourceRows
+        self.assertSequenceEqual(model.mapFromSourceRows(...).tolist(), [2, 0, 1])
+        self.assertEqual(model.mapFromSourceRows(1).tolist(), 0)
+        self.assertSequenceEqual(model.mapFromSourceRows([1, 2]).tolist(), [0, 1])
+        self.assertSequenceEqual(model.mapFromSourceRows([]), [])
+        self.assertSequenceEqual(model.mapFromSourceRows(np.array([], dtype=int)).tolist(), [])
+        self.assertRaises(IndexError, model.mapFromSourceRows, np.r_[0.])
+
+        model.sort(1, Qt.DescendingOrder)
+        self.assertSequenceEqual(model.mapToSourceRows(...).tolist(), [0, 2, 1])
+        self.assertSequenceEqual(model.mapFromSourceRows(...).tolist(), [0, 2, 1])
 
 
 class TestPyListModel(TestCase):
@@ -274,3 +304,43 @@ class TestDomainModel(TestCase):
                          sorted(attrs + metas, key=lambda x: x.name) +
                          [sep] +
                          sorted(classes, key=lambda x: x.name))
+
+    def test_filtering(self):
+        cont = [ContinuousVariable(n) for n in "abc"]
+        disc = [DiscreteVariable(n) for n in "def"]
+        attrs = cont + disc
+
+        model = DomainModel(valid_types=(ContinuousVariable, ))
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), cont)
+
+        model = DomainModel(valid_types=(DiscreteVariable, ))
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc)
+
+        disc[0].attributes["hidden"] = True
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc[1:])
+
+        model = DomainModel(valid_types=(DiscreteVariable, ),
+                            skip_hidden_vars=False)
+        model.set_domain(Domain(attrs))
+        self.assertEqual(list(model), disc)
+
+    def test_no_separators(self):
+        """
+        GH-2697
+        """
+        attrs = [ContinuousVariable(n) for n in "abg"]
+        classes = [ContinuousVariable(n) for n in "deh"]
+        metas = [ContinuousVariable(n) for n in "ijf"]
+
+        model = DomainModel(order=DomainModel.SEPARATED, separators=False)
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(list(model), classes + metas + attrs)
+
+        model = DomainModel(order=DomainModel.SEPARATED, separators=True)
+        model.set_domain(Domain(attrs, classes, metas))
+        self.assertEqual(
+            list(model),
+            classes + [PyListModel.Separator] + metas + [PyListModel.Separator] + attrs)

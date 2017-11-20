@@ -7,6 +7,7 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QRectF, Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.widgets.widget import AttributeList
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owscatterplot import \
     OWScatterPlot, ScatterPlotVizRank
@@ -18,12 +19,18 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def setUpClass(cls):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
+        cls.same_input_output_domain = False
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
 
     def setUp(self):
         self.widget = self.create_widget(OWScatterPlot)
+
+    def _compare_selected_annotated_domains(self, selected, annotated):
+        # Base class tests that selected.domain is a subset of annotated.domain
+        # In scatter plot, the two domains are unrelated, so we disable the test
+        pass
 
     def test_set_data(self):
         # Connect iris to scatter plot
@@ -119,6 +126,17 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
         self.widget.update_graph()
 
+    def test_data_column_infs(self):
+        """
+        Scatter Plot should not crash on data with infinity values
+        GH-2707
+        GH-2684
+        """
+        table = datasets.data_one_column_infs()
+        self.send_signal(self.widget.Inputs.data, table)
+        attr_x = self.widget.controls.attr_x
+        simulate.combobox_activate_item(attr_x, "b")
+
     def test_regression_line(self):
         """It is possible to draw the line only for pair of continuous attrs"""
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -154,6 +172,9 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         def selectedx():
             return self.get_output(self.widget.Outputs.selected_data).X
 
+        def selected_groups():
+            return self.get_output(self.widget.Outputs.selected_data).metas[:, 0]
+
         def annotated():
             return self.get_output(self.widget.Outputs.annotated_data).metas
 
@@ -163,6 +184,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         # Select 0:5
         graph.select(points[:5])
         np.testing.assert_equal(selectedx(), x[:5])
+        np.testing.assert_equal(selected_groups(), np.zeros(5))
         sel_column[:5] = 1
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -171,6 +193,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier):
             graph.select(points[5:10])
         np.testing.assert_equal(selectedx(), x[:10])
+        np.testing.assert_equal(selected_groups(), np.array([0] * 5 + [1] * 5))
         sel_column[5:10] = 2
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
@@ -180,12 +203,14 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         sel_column = np.zeros((len(self.data), 1))
         sel_column[15:20] = 1
         np.testing.assert_equal(selectedx(), x[15:20])
+        np.testing.assert_equal(selected_groups(), np.zeros(5))
         self.assertEqual(annotations(), ["No", "Yes"])
 
         # Alt-select (remove) 10:17; we have 17:20
         with self.modifiers(Qt.AltModifier):
             graph.select(points[10:17])
         np.testing.assert_equal(selectedx(), x[17:20])
+        np.testing.assert_equal(selected_groups(), np.zeros(3))
         sel_column[15:17] = 0
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -194,6 +219,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
             graph.select(points[20:25])
         np.testing.assert_equal(selectedx(), x[17:25])
+        np.testing.assert_equal(selected_groups(), np.zeros(8))
         sel_column[20:25] = 1
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(annotations(), ["No", "Yes"])
@@ -205,6 +231,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
             graph.select(points[35:40])
         sel_column[30:40] = 2
+        np.testing.assert_equal(selected_groups(), np.array([0] * 8 + [1] * 10))
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
 
@@ -234,7 +261,10 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_points_selection(self):
         # Opening widget with saved selection should restore it
-        self.widget.selection_group = [(i, 1) for i in range(50)]
+        self.widget = self.create_widget(
+            OWScatterPlot, stored_settings={
+                "selection_group": [(i, 1) for i in range(50)]}
+        )
         self.send_signal(self.widget.Inputs.data, self.data)  # iris
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected_data), 50)
@@ -253,7 +283,10 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_invalid_points_selection(self):
         # if selection contains rows that are not present in the current
         # dataset, widget should select what can be selected.
-        self.widget.selection_group = [(i, 1) for i in range(50)]
+        self.widget = self.create_widget(
+            OWScatterPlot, stored_settings={
+                "selection_group": [(i, 1) for i in range(50)]}
+        )
         self.send_signal(self.widget.Inputs.data, self.data[:10])
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(len(selected_data), 10)
@@ -284,11 +317,8 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2152
         GH-2157
         """
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
-        self.assertTrue(sp.issparse(table.X))
-        table.Y = sp.csr_matrix(table._Y)  # pylint: disable=protected-access
-        self.assertTrue(sp.issparse(table.Y))
+        table = Table("iris").to_sparse(sparse_attributes=True,
+                                        sparse_class=True)
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.set_subset_data(table[:30])
         data = self.get_output("Data")
@@ -302,7 +332,210 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         GH-2384
         """
         domain = Table("iris").domain
-        self.send_signal(self.widget.Inputs.features, domain)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(domain.variables))
+        self.send_signal(self.widget.Inputs.features, None)
+
+    def test_features_and_data(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(data.domain[2:]))
+        self.assertIs(self.widget.attr_x, data.domain[2])
+        self.assertIs(self.widget.attr_y, data.domain[3])
+
+    def test_output_features(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # This doesn't work because combo's callbacks are connected to signal
+        # `activated`, which is only triggered by user interaction, and not to
+        # `currentIndexChanged`
+        # combo_y = self.widget.controls.attr_y
+        # combo_y.setCurrentIndex(combo_y.model().indexOf(data.domain[3]))
+        # This is a workaround
+        self.widget.attr_y = data.domain[3]
+        self.widget.update_attr()
+
+        features = self.get_output(self.widget.Outputs.features)
+        self.assertEqual(features, [data.domain[0], data.domain[3]])
+
+    def test_send_report(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.report_button.click()
+
+    def test_update_density(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.cb_class_density.click()
+
+    def test_vizrank(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        n_states = len(data.domain.attributes)
+        n_states = n_states * (n_states - 1) / 2
+        states = [state for state in vizrank.iterate_states(None)]
+        self.assertEqual(len(states), n_states)
+        self.assertEqual(len(set(states)), n_states)
+        self.assertIsNotNone(vizrank.compute_score(states[0]))
+        self.send_signal(self.widget.Inputs.data, data[:9])
+        self.assertIsNone(vizrank.compute_score(states[0]))
+
+        data = Table("housing")[::10]
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        states = [state for state in vizrank.iterate_states(None)]
+        self.assertIsNotNone(vizrank.compute_score(states[0]))
+
+    def test_vizrank_class_nan(self):
+        """
+        When class values are nan, vizrank should be disabled. It should behave like
+        the class column is missing.
+        GH-2757
+        """
+        def assert_vizrank_enabled(data, is_enabled):
+            self.send_signal(self.widget.Inputs.data, data)
+            self.assertEqual(is_enabled, self.widget.vizrank_button.isEnabled())
+
+        data1 = Table("iris")[::30]
+        data2 = Table("iris")[::30]
+        data2.Y[:] = np.nan
+        domain = Domain(
+            attributes=data2.domain.attributes[:4], class_vars=DiscreteVariable("iris", values=[]))
+        data2 = Table(domain, data2.X, Y=data2.Y)
+        data3 = Table("iris")[::30]
+        data3.Y[:] = np.nan
+
+        for data, is_enabled in zip([data1, data2, data1, data3, data1],
+                                    [True, False, True, False, True]):
+            assert_vizrank_enabled(data, is_enabled)
+
+    def test_auto_send_selection(self):
+        """
+        Scatter Plot automatically sends selection only when the checkbox Send automatically
+        is checked.
+        GH-2649
+        GH-2646
+        """
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.controls.auto_send_selection.setChecked(False)
+        self.assertEqual(False, self.widget.controls.auto_send_selection.isChecked())
+        self._select_data()
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        self.widget.controls.auto_send_selection.setChecked(True)
+        self.assertIsInstance(self.get_output(self.widget.Outputs.selected_data), Table)
+
+    def test_color_is_optional(self):
+        zoo = Table("zoo")
+        backbone, breathes, airborne, type = \
+            [zoo.domain[x] for x in ["backbone", "breathes", "airborne", "type"]]
+        default_x, default_y, default_color = \
+            zoo.domain[0], zoo.domain[1], zoo.domain.class_var
+        attr_x = self.widget.controls.attr_x
+        attr_y = self.widget.controls.attr_y
+        attr_color = self.widget.controls.graph.attr_color
+
+        # Send dataset, ensure defaults are what we expect them to be
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.assertEqual(attr_x.currentText(), default_x.name)
+        self.assertEqual(attr_y.currentText(), default_y.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+        # Select different values
+        simulate.combobox_activate_item(attr_x, backbone.name)
+        simulate.combobox_activate_item(attr_y, breathes.name)
+        simulate.combobox_activate_item(attr_color, airborne.name)
+
+        # Send compatible dataset, values should not change
+        zoo2 = zoo[:, (backbone, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo2)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), airborne.name)
+
+        # Send dataset without color variable
+        # x and y should remain, color reset to default
+        zoo3 = zoo[:, (backbone, breathes, type)]
+        self.send_signal(self.widget.Inputs.data, zoo3)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+
+        # Send dataset without x
+        # y and color should be the same as with zoo
+        zoo4 = zoo[:, (default_x, default_y, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo4)
+        self.assertEqual(attr_x.currentText(), default_x.name)
+        self.assertEqual(attr_y.currentText(), default_y.name)
+        self.assertEqual(attr_color.currentText(), default_color.name)
+
+        # Send dataset compatible with zoo2 and zoo3
+        # Color should reset to one in zoo3, as it was used more
+        # recently
+        zoo5 = zoo[:, (default_x, backbone, breathes, airborne, type)]
+        self.send_signal(self.widget.Inputs.data, zoo5)
+        self.assertEqual(attr_x.currentText(), backbone.name)
+        self.assertEqual(attr_y.currentText(), breathes.name)
+        self.assertEqual(attr_color.currentText(), type.name)
+
+    def test_handle_metas(self):
+        """
+        Scatter Plot Graph can handle metas
+        GH-2699
+        """
+        w = self.widget
+        data = Table("iris")
+        domain = Domain(
+            attributes=data.domain.attributes[:2],
+            class_vars=data.domain.class_vars,
+            metas=data.domain.attributes[2:]
+        )
+        data = data.transform(domain)
+        # Sometimes floats in metas are saved as objects
+        data.metas = data.metas.astype(object)
+        self.send_signal(w.Inputs.data, data)
+        simulate.combobox_activate_item(w.cb_attr_x, data.domain.metas[1].name)
+        simulate.combobox_activate_item(w.controls.graph.attr_color, data.domain.metas[0].name)
+        w.update_graph()
+
+    def test_subset_data(self):
+        """
+        Scatter Plot subset data is sent to Scatter Plot Graph
+        GH-2773
+        """
+        data = Table("iris")
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.data_subset, data[::30])
+        self.assertEqual(len(w.graph.subset_indices), 5)
+
+    def test_sparse_subset_data(self):
+        """
+        Scatter Plot can handle sparse subset data.
+        GH-2773
+        """
+        data = Table("iris")
+        w = self.widget
+        data.X = sp.csr_matrix(data.X)
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.data_subset, data[::30])
+        self.assertEqual(len(w.graph.subset_indices), 5)
+
+    def test_metas_zero_column(self):
+        """
+        Prevent crash when metas column is zero.
+        GH-2775
+        """
+        data = Table("iris")
+        domain = data.domain
+        domain = Domain(domain.attributes[:3], domain.class_vars, domain.attributes[3:])
+        data = data.transform(domain)
+        data.metas[:, 0] = 0
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        simulate.combobox_activate_item(w.controls.attr_x, domain.metas[0].name)
 
 
 if __name__ == "__main__":

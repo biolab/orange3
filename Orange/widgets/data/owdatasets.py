@@ -12,10 +12,9 @@ from types import SimpleNamespace as namespace
 from typing import Optional, Dict, Tuple
 
 from AnyQt.QtWidgets import (
-    QLabel, QTextBrowser, QSplitter, QTreeView,
+    QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
     QStyleOptionViewItem, QStyledItemDelegate, QApplication
 )
-
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
     Qt, QSize, QObject, QThread, QModelIndex, QSortFilterProxyModel,
@@ -26,38 +25,23 @@ from AnyQt.QtCore import (
 from serverfiles import LocalFiles, ServerFiles, sizeformat
 
 import Orange.data
-
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.widget import Msg
 
-INDEX_URL = "http://datasets.orange.biolab.si/"
+
 log = logging.getLogger(__name__)
 
 
-def local_cache_path():
-    return os.path.join(data_dir(), "datasets")
-
-
-def ensure_local(domain, filename, force=False, progress_advance=None):
-    localfiles = LocalFiles(local_cache_path(),
-                            serverfiles=ServerFiles(server=INDEX_URL))
+def ensure_local(index_url, domain, filename, local_cache_path,
+                 force=False, progress_advance=None):
+    localfiles = LocalFiles(local_cache_path,
+                            serverfiles=ServerFiles(server=index_url))
     if force:
         localfiles.download(domain, filename, callback=progress_advance)
     return localfiles.localpath_download(
         domain, filename, callback=progress_advance)
-
-
-def list_remote():
-    # type: () -> Dict[Tuple[str, str], dict]
-    client = ServerFiles(server=INDEX_URL)
-    return client.allinfo()
-
-
-def list_local():
-    # type: () -> Dict[Tuple[str, str], dict]
-    return LocalFiles(local_cache_path()).allinfo()
 
 
 def format_info(n_all, n_cached):
@@ -80,6 +64,7 @@ class Header(enum.IntEnum):
     Variables = 4
     Target = 5
     Tags = 6
+
 
 HEADER = ["", "Title", "Size", "Instances", "Variables", "Target", "Tags"]
 
@@ -112,6 +97,12 @@ class OWDataSets(widget.OWWidget):
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
 
+    # The following constants can be overridden in a subclass
+    # to reuse this widget for a different repository
+    # Take care when refactoring! (used in e.g. single-cell)
+    INDEX_URL = "http://datasets.orange.biolab.si/"
+    DATASET_DIR = "datasets"
+
     class Error(widget.OWWidget.Error):
         no_remote_datasets = Msg("Could not fetch data set list")
 
@@ -123,7 +114,7 @@ class OWDataSets(widget.OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected data set id
-    selected_id = settings.Setting(None)   # type: Optional[Tuple[str, str]]
+    selected_id = settings.Setting(None)   # type: Optional[str]
 
     auto_commit = settings.Setting(False)  # type: bool
 
@@ -133,6 +124,7 @@ class OWDataSets(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.local_cache_path = os.path.join(data_dir(), self.DATASET_DIR)
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
@@ -140,6 +132,12 @@ class OWDataSets(widget.OWWidget):
 
         self.infolabel = QLabel(text="Initializing...\n\n")
         box.layout().addWidget(self.infolabel)
+
+        gui.widgetLabel(self.mainArea, "Filter")
+        self.filterLineEdit = QLineEdit(
+            textChanged=self.filter
+        )
+        self.mainArea.layout().addWidget(self.filterLineEdit)
 
         self.splitter = QSplitter(orientation=Qt.Vertical)
 
@@ -150,6 +148,7 @@ class OWDataSets(widget.OWWidget):
             rootIsDecorated=False,
             editTriggers=QTreeView.NoEditTriggers,
         )
+
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
@@ -181,7 +180,9 @@ class OWDataSets(widget.OWWidget):
         model.setHorizontalHeaderLabels(HEADER)
         proxy = QSortFilterProxyModel()
         proxy.setSourceModel(model)
-        self.view.setModel(model)
+        proxy.setFilterKeyColumn(-1)
+        proxy.setFilterCaseSensitivity(False)
+        self.view.setModel(proxy)
 
         if self.splitter_state:
             self.splitter.restoreState(self.splitter_state)
@@ -204,7 +205,7 @@ class OWDataSets(widget.OWWidget):
         self.setStatusMessage("Initializing")
 
         self._executor = ThreadPoolExecutor(max_workers=1)
-        f = self._executor.submit(list_remote)
+        f = self._executor.submit(self.list_remote)
         w = FutureWatcher(f, parent=self)
         w.done.connect(self.__set_index)
 
@@ -216,7 +217,7 @@ class OWDataSets(widget.OWWidget):
         assert f.done()
         self.setBlocking(False)
         self.setStatusMessage("")
-        allinfolocal = list_local()
+        allinfolocal = self.list_local()
         try:
             res = f.result()
         except Exception:
@@ -233,17 +234,19 @@ class OWDataSets(widget.OWWidget):
             allkeys = allkeys | set(allinforemote)
         allkeys = sorted(allkeys)
 
-        def info(prefix, filename):
-            if (prefix, filename) in allinforemote:
-                info = allinforemote[prefix, filename]
+        def info(file_path):
+            if file_path in allinforemote:
+                info = allinforemote[file_path]
             else:
-                info = allinfolocal[prefix, filename]
-            islocal = (prefix, filename) in allinfolocal
-            isremote = (prefix, filename) in allinforemote
+                info = allinfolocal[file_path]
+            islocal = file_path in allinfolocal
+            isremote = file_path in allinforemote
             outdated = islocal and isremote and (
-                allinforemote[prefix, filename].get('version', '') !=
-                allinfolocal[prefix, filename].get('version', ''))
+                allinforemote[file_path].get('version', '') !=
+                allinfolocal[file_path].get('version', ''))
             islocal &= not outdated
+            prefix = os.path.join('', *file_path[:-1])
+            filename = file_path[-1]
 
             return namespace(
                 prefix=prefix, filename=filename,
@@ -268,8 +271,8 @@ class OWDataSets(widget.OWWidget):
         model.setHorizontalHeaderLabels(HEADER)
 
         current_index = -1
-        for i, (prefix, filename) in enumerate(allkeys):
-            datainfo = info(prefix, filename)
+        for i, file_path in enumerate(allkeys):
+            datainfo = info(file_path)
             item1 = QStandardItem()
             item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
             item1.setData(datainfo, Qt.UserRole)
@@ -290,12 +293,12 @@ class OWDataSets(widget.OWWidget):
             row = [item1, item2, item3, item4, item5, item6, item7]
             model.appendRow(row)
 
-            if (prefix, filename) == self.selected_id:
+            if os.path.join(*file_path) == self.selected_id:
                 current_index = i
 
         hs = self.view.header().saveState()
-        model_ = self.view.model()
-        self.view.setModel(model)
+        model_ = self.view.model().sourceModel()
+        self.view.model().setSourceModel(model)
         self.view.header().restoreState(hs)
         model_.deleteLater()
         model_.setParent(None)
@@ -308,12 +311,12 @@ class OWDataSets(widget.OWWidget):
         if current_index != -1:
             selmodel = self.view.selectionModel()
             selmodel.select(
-                model.index(current_index, 0),
+                self.view.model().mapFromSource(model.index(current_index, 0)),
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
 
     def __update_cached_state(self):
-        model = self.view.model()
-        localinfo = list_local()
+        model = self.view.model().sourceModel()
+        localinfo = self.list_local()
         assert isinstance(model, QStandardItemModel)
         allinfo = []
         for i in range(model.rowCount()):
@@ -344,16 +347,23 @@ class OWDataSets(widget.OWWidget):
             info = None
         return info
 
+    def filter(self):
+        filter_string = self.filterLineEdit.text().strip()
+        proxyModel = self.view.model()
+        if proxyModel:
+            proxyModel.setFilterFixedString(filter_string)
+
     def __on_selection(self):
         # Main data sets view selection has changed
         rows = self.view.selectionModel().selectedRows(0)
         assert 0 <= len(rows) <= 1
         current = rows[0] if rows else None  # type: Optional[QModelIndex]
         if current is not None:
+            current = self.view.model().mapToSource(current)
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            self.selected_id = (di.prefix, di.filename)
+            self.selected_id = os.path.join(di.prefix, di.filename)
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
@@ -395,7 +405,8 @@ class OWDataSets(widget.OWWidget):
                 self.setBlocking(True)
 
                 f = self._executor.submit(
-                    ensure_local, di.prefix, di.filename, force=di.outdated,
+                    ensure_local, self.INDEX_URL, di.prefix, di.filename,
+                    self.local_cache_path, force=di.outdated,
                     progress_advance=callback)
                 w = FutureWatcher(f, parent=self)
                 w.done.connect(self.__commit_complete)
@@ -438,7 +449,7 @@ class OWDataSets(widget.OWWidget):
         self.Outputs.data.send(data)
 
     def commit_cached(self, prefix, filename):
-        path = LocalFiles(local_cache_path()).localpath(prefix, filename)
+        path = LocalFiles(self.local_cache_path).localpath(prefix, filename)
         self.Outputs.data.send(Orange.data.Table(path))
 
     @Slot()
@@ -460,6 +471,15 @@ class OWDataSets(widget.OWWidget):
         self.splitter_state = bytes(self.splitter.saveState())
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
+
+    def list_remote(self):
+        # type: () -> Dict[Tuple[str, str], dict]
+        client = ServerFiles(server=self.INDEX_URL)
+        return client.allinfo()
+
+    def list_local(self):
+        # type: () -> Dict[Tuple[str, str], dict]
+        return LocalFiles(self.local_cache_path).allinfo()
 
 
 class FutureWatcher(QObject):

@@ -24,7 +24,8 @@ from Orange.canvas.report.owreport import OWReport
 from Orange.classification.base_classification import (
     LearnerClassification, ModelClassification
 )
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable,\
+    Variable
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize
 from Orange.preprocess.preprocess import PreprocessorList
@@ -100,6 +101,7 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
+        Variable._clear_all_caches()
 
     def tearDown(self):
         """Process any pending events before the next test is executed."""
@@ -231,6 +233,11 @@ class WidgetTest(GuiTest):
             raise RuntimeError("'send_signal' called but the widget is in "
                                "blocking state and does not accept inputs.")
         handler = getattr(widget, input.handler)
+
+        # Assert sent input is of correct class
+        assert isinstance(value, (input.type, type(None))), \
+            '{} should be {}'.format(value.__class__.__mro__, input.type)
+
         handler(value, *args)
         widget.handleNewSignals()
         if wait >= 0 and widget.isBlocking():
@@ -261,6 +268,10 @@ class WidgetTest(GuiTest):
                             "Failed to get output in the specified timeout")
         if not isinstance(output, str):
             output = output.name
+        # widget.outputs are old-style signals; if empty, use new style
+        outputs = widget.outputs or widget.Outputs.__dict__.values()
+        assert output in (out.name for out in outputs), \
+            "widget {} has no output {}".format(widget.name, output)
         return self.signal_manager.outputs.get((widget, output), None)
 
 
@@ -491,18 +502,19 @@ class WidgetLearnerTestMixin:
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
-        self.send_signal("Preprocessor", Randomize)
+        randomize = Randomize()
+        self.send_signal("Preprocessor", randomize)
         self.assertEqual(
-            Randomize, self.widget.preprocessors,
+            randomize, self.widget.preprocessors,
             'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
         self.assertEqual(
-            (Randomize,), self.widget.learner.preprocessors,
+            (randomize,), self.widget.learner.preprocessors,
             'Preprocessors were not passed to the learner')
 
     def test_input_preprocessors(self):
         """Check multiple preprocessors on input"""
-        pp_list = PreprocessorList([Randomize, RemoveNaNColumns])
+        pp_list = PreprocessorList([Randomize(), RemoveNaNColumns()])
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
         self.assertEqual(
@@ -511,9 +523,10 @@ class WidgetLearnerTestMixin:
 
     def test_input_preprocessor_disconnect(self):
         """Check learner's preprocessors after disconnecting pp from input"""
-        self.send_signal("Preprocessor", Randomize)
+        randomize = Randomize()
+        self.send_signal("Preprocessor", randomize)
         self.widget.apply_button.button.click()
-        self.assertEqual(Randomize, self.widget.preprocessors)
+        self.assertEqual(randomize, self.widget.preprocessors)
 
         self.send_signal("Preprocessor", None)
         self.widget.apply_button.button.click()
@@ -676,6 +689,7 @@ class WidgetOutputsTestMixin:
     """
 
     def init(self):
+        Variable._clear_all_caches()
         self.data = Table("iris")
         self.same_input_output_domain = True
 
@@ -781,10 +795,10 @@ class datasets:
         return Table(cls.path("missing_data_3.tab"))
 
     @classmethod
-    def data_one_column_nans(cls):
+    def data_one_column_vals(cls, value=np.nan):
         """
         Data set with two continuous features and one discrete. One continuous
-        columns has missing values (NaN).
+        columns has custom set values (default nan).
 
         Returns
         -------
@@ -801,4 +815,21 @@ class datasets:
                 ["", "", "", ""],
                 "ynyn"
             )))
+        table[:, 1] = value
         return table
+
+    @classmethod
+    def data_one_column_nans(cls):
+        """
+        Data set with two continuous features and one discrete. One continuous
+        columns has missing values (NaN).
+
+        Returns
+        -------
+        data : Orange.data.Table
+        """
+        return cls.data_one_column_vals(value=np.nan)
+
+    @classmethod
+    def data_one_column_infs(cls):
+        return cls.data_one_column_vals(value=np.inf)

@@ -67,7 +67,7 @@ class TestOWPythonScript(WidgetTest):
             self.send_signal(signal, data, (1, ))
             self.widget.text.setPlainText("out_{} = 42".format(lsignal))
             self.widget.execute_button.click()
-            self.assertEqual(self.get_output(lsignal), None)
+            self.assertEqual(self.get_output(signal), None)
             self.assertTrue(hasattr(self.widget.Error, lsignal))
             self.assertTrue(getattr(self.widget.Error, lsignal).is_shown())
 

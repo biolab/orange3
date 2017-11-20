@@ -9,7 +9,7 @@ from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtWidgets import QCheckBox
 
 
@@ -231,6 +231,24 @@ class TestOWRank(WidgetTest):
         order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self.assertNotEqual(order1, order2)
 
+    def test_scores_nan_sorting(self):
+        """Check NaNs are sorted last"""
+        data = self.iris.copy()
+        data.get_column_view('petal length')[0][:] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+
+        # Assert last row is all nan
+        for order in (Qt.AscendingOrder,
+                      Qt.DescendingOrder):
+            self.widget.ranksView.horizontalHeader().setSortIndicator(1, order)
+            last_row = self.widget.ranksModel[self.widget.ranksModel.mapToSourceRows(...)[-1]]
+            np.testing.assert_array_equal(last_row, np.repeat(np.nan, 3))
+
+    def test_default_sort_indicator(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertNotEqual(
+            0, self.widget.ranksView.horizontalHeader().sortIndicatorSection())
+
     def test_data_which_make_scorer_nan(self):
         """
         Tests if widget crashes due to too high (Infinite) calculated values.
@@ -277,3 +295,47 @@ class TestOWRank(WidgetTest):
         w = self.create_widget(OWRank, stored_settings=settings)
 
         self.assertEqual(w.sorting, (0, Qt.AscendingOrder))
+
+    def test_auto_send(self):
+        widget = self.widget
+        model = widget.ranksModel
+        selectionModel = widget.ranksView.selectionModel()
+
+        # Auto-send disabled
+        widget.controls.auto_apply.setChecked(False)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertIsNone(self.get_output(widget.Outputs.reduced_data))
+
+        # Make selection, but auto-send disabled
+        selection = QItemSelection(model.index(1, 0),
+                                   model.index(1, model.columnCount() - 1))
+        selectionModel.select(selection, selectionModel.ClearAndSelect)
+        self.assertIsNone(self.get_output(widget.Outputs.reduced_data))
+
+        # Enable auto-send: should output data
+        widget.controls.auto_apply.setChecked(True)
+        reduced_data = self.get_output(widget.Outputs.reduced_data)
+        self.assertEqual(reduced_data.domain.attributes,
+                         (self.iris.domain["petal width"], ))
+
+        # Change selection: should change the output immediately
+        selection = QItemSelection(model.index(0, 0),
+                                   model.index(0, model.columnCount() - 1))
+        selectionModel.select(selection, selectionModel.ClearAndSelect)
+        reduced_data = self.get_output(widget.Outputs.reduced_data)
+        self.assertEqual(reduced_data.domain.attributes,
+                         (self.iris.domain["petal length"], ))
+
+    def test_no_attributes(self):
+        """
+        Rank should not fail on data with no attributes.
+        GH-2745
+        """
+        data = Table("iris")[::30]
+        domain = Domain(attributes=[], class_vars=data.domain.class_vars)
+        new_data = data.transform(domain)
+        self.assertFalse(self.widget.Error.no_attributes.is_shown())
+        self.send_signal(self.widget.Inputs.data, new_data)
+        self.assertTrue(self.widget.Error.no_attributes.is_shown())
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Error.no_attributes.is_shown())

@@ -96,7 +96,7 @@ class FeatureScoringTest(unittest.TestCase):
 
     def test_relieff(self):
         old_monk = self.monk.copy()
-        weights = ReliefF()(self.monk, None)
+        weights = ReliefF(random_state=42)(self.monk, None)
         found = [self.monk.domain[attr].name for attr in reversed(weights.argsort()[-3:])]
         reference = ['a', 'b', 'e']
         self.assertEqual(sorted(found), reference)
@@ -104,7 +104,7 @@ class FeatureScoringTest(unittest.TestCase):
         np.testing.assert_equal(old_monk.X, self.monk.X)
         np.testing.assert_equal(old_monk.Y, self.monk.Y)
         # Ensure it doesn't crash on adult dataset
-        weights = ReliefF()(self.adult, None)
+        weights = ReliefF(random_state=42)(self.adult, None)
         found = [self.adult.domain[attr].name for attr in weights.argsort()[-2:]]
         # some leeway for randomness in relieff random instance selection
         self.assertIn('marital-status', found)
@@ -112,12 +112,17 @@ class FeatureScoringTest(unittest.TestCase):
         old_monk.Y[0] = np.nan
         weights = ReliefF()(old_monk, None)
 
+        np.testing.assert_array_equal(
+            ReliefF(random_state=1)(self.monk, None),
+            ReliefF(random_state=1)(self.monk, None)
+        )
+
     def test_rrelieff(self):
         X = np.random.random((100, 5))
         y = ((X[:, 0] > .5) ^ (X[:, 1] < .5) - 1).astype(float)
         xor = Table.from_numpy(Domain.from_numpy(X, y), X, y)
 
-        scorer = RReliefF()
+        scorer = RReliefF(random_state=42)
         weights = scorer(xor, None)
         best = {xor.domain[attr].name for attr in weights.argsort()[-2:]}
         self.assertSetEqual(set(a.name for a in xor.domain.attributes[:2]), best)
@@ -125,6 +130,11 @@ class FeatureScoringTest(unittest.TestCase):
         best = {self.housing.domain[attr].name for attr in weights.argsort()[-6:]}
         for feature in ('LSTAT', 'RM'):
             self.assertIn(feature, best)
+
+        np.testing.assert_array_equal(
+            RReliefF(random_state=1)(self.housing, None),
+            RReliefF(random_state=1)(self.housing, None)
+        )
 
     def test_fcbf(self):
         scorer = FCBF()

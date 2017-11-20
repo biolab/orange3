@@ -1,3 +1,4 @@
+import time
 import unittest
 import numpy as np
 
@@ -67,11 +68,18 @@ class TestOWMap(WidgetTest):
         self.widget.map.selected_area(90, 180, -90, -180)
         self.widget.map.set_map_provider(next(iter(self.widget.TILE_PROVIDERS.values())))
         self.widget.map.set_clustering(True)
+        self.widget.map.set_clustering(False)
         self.widget.map.set_jittering(5)
         self.widget.map.set_marker_color('latitude')
         self.widget.map.set_marker_label('latitude')
         self.widget.map.set_marker_shape('foo')
         self.widget.map.set_marker_size('latitude')
+        self.process_events(
+            until=lambda start_time=time.clock(): time.clock() - start_time > .2)
+        self.widget.map.set_marker_color(None)
+        self.widget.map.set_marker_label(None)
+        self.widget.map.set_marker_shape(None)
+        self.widget.map.set_marker_size(None)
         self.widget.map.set_marker_size_coefficient(50)
         self.widget.map.set_marker_opacity(20)
         self.widget.map.recompute_heatmap(np.random.random((20, 2)))
@@ -81,6 +89,14 @@ class TestOWMap(WidgetTest):
         # Force non-JS overlay redrawing
         self.widget.map.N_POINTS_PER_ITER = 5
         self.widget.map.redraw_markers_overlay_image(*args, new_image=True)
+        # pylint: disable=protected-access
+        assert (not np.isnan(self.widget.map._image_token) and
+                self.widget.map._image_token is not None)
         self.process_events(until=lambda: self.widget.map._image_token is None)
+
+        self.widget.map.bridge.fit_to_bounds()
+        self.widget.map.bridge.selected_area(10, 20, 10, 20)
+        self.widget.map.bridge.recompute_heatmap(np.random.random((30, 2)))
+        self.widget.map.bridge.redraw_markers_overlay_image(1, 2, 3, 4, 5, 6, 7, [1, 2], [3, 4])
 
         self.widget.clear()

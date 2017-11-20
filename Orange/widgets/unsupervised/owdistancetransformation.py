@@ -56,10 +56,7 @@ class OWDistanceTransformation(widget.OWWidget):
                          btnLabels=[x[0] for x in self.inversion_options],
                          callback=self._invalidate)
 
-        box = gui.auto_commit(self.buttonsArea, self, "autocommit", "Apply",
-                              checkbox_label="Apply automatically", box=None)
-        box.layout().insertWidget(0, self.report_button)
-        box.layout().insertSpacing(1, 8)
+        gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
 
     @Inputs.distances
     def set_data(self, data):

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 48 48">
+ <path id="frame" stroke-linejoin="round" d="m43.5 4.5h-39v39h39z" stroke="#231f20" stroke-linecap="square" stroke-miterlimit="10" stroke-width="3" fill="none"/>
+ <path id="pie" fill="#231f20" d="m22.06 12.39c-.61809-.44656-1.3186-.79883-2.0895-1.0294-3.681-1.1009-7.5604.99704-8.6635 4.6855-1.1038 3.6905.98662 7.574 4.6676 8.6749s7.5593-.99735 8.6631-4.6879c.35549-1.1886.37899-2.3972.12562-3.5265l-6.7905 1.5332"/>
+ <path id="pie-piece" fill="#231f20" d="m26.508 10.015c1.2565 1.1262 2.0486 2.6822 2.2445 4.3496l-6.8526.87264 4.6082-5.2222z"/>
+ <g stroke="#231f20" stroke-miterlimit="10" stroke-width="3" fill="none">
+  <path d="m12 28.495278h24"/>
+  <path d="m12 33.174h24"/>
+  <path d="m11.948574 37.429703 24.111.006"/>
+ </g>
+</svg>

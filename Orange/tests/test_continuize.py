@@ -39,7 +39,7 @@ class TestDomainContinuizer(unittest.TestCase):
             dom = DomainContinuizer(transform_class=True)
             dom = dom(inp)
             self.assertTrue(all(attr.is_continuous
-                                for attr in dom))
+                                for attr in dom.variables))
             self.assertIsNot(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
@@ -140,7 +140,7 @@ class TestDomainContinuizer(unittest.TestCase):
         dom = dom(self.data.domain)
         self.assertTrue(all(attr.is_continuous
                             for attr in dom.attributes))
-        self.assertEqual([attr.name for attr in dom],
+        self.assertEqual([attr.name for attr in dom.variables],
                          ["c1", "c2", "d2=b", "cl1"])
 
     def test_multi_ignore_class(self):
@@ -170,7 +170,7 @@ class TestDomainContinuizer(unittest.TestCase):
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom],
+            self.assertEqual([attr.name for attr in dom.variables],
                              ["c1", "c2", "d2", "d3", "cl1"])
 
             dat2 = Table(dom, self.data)
@@ -189,7 +189,7 @@ class TestDomainContinuizer(unittest.TestCase):
             self.assertTrue(dom.has_continuous_class)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom],
+            self.assertEqual([attr.name for attr in dom.variables],
                              ["c1", "c2", "d2", "d3", "cl1"])
 
             dat2 = Table(dom, self.data)
@@ -207,7 +207,7 @@ class TestDomainContinuizer(unittest.TestCase):
             self.assertIs(dom.class_var, self.data.domain.class_var)
             self.assertIs(dom[0], self.data.domain[0])
             self.assertIs(dom[1], self.data.domain[1])
-            self.assertEqual([attr.name for attr in dom],
+            self.assertEqual([attr.name for attr in dom.variables],
                              ["c1", "c2", "d2", "d3", "cl1"])
 
             dat2 = Table(dom, self.data)

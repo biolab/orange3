@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 from collections import OrderedDict
 
@@ -43,7 +44,7 @@ class OWSql(OWWidget):
     icon = "icons/SQLTable.svg"
     priority = 30
     category = "Data"
-    keywords = ["data", "file", "load", "read"]
+    keywords = ["data", "file", "load", "read", "SQL"]
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
@@ -85,10 +86,10 @@ class OWSql(OWWidget):
         vbox = gui.vBox(self.controlArea, "Server", addSpace=True)
         box = gui.vBox(vbox)
 
-        self.backendmodel = BackendModel(Backend.available_backends())
+        self.backends = BackendModel(Backend.available_backends())
         self.backendcombo = QComboBox(box)
-        if len(self.backendmodel):
-            self.backendcombo.setModel(self.backendmodel)
+        if len(self.backends):
+            self.backendcombo.setModel(self.backends)
         else:
             self.Error.no_backends()
             box.setEnabled(False)
@@ -124,17 +125,24 @@ class OWSql(OWWidget):
         box.layout().addWidget(self.passwordtext)
 
         self._load_credentials()
+        self.tables = TableModel()
 
         tables = gui.hBox(box)
-        self.tablemodel = TableModel()
         self.tablecombo = QComboBox(
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength
         )
-        self.tablecombo.setModel(self.tablemodel)
+        self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
+        self.connect()
+
+        index = self.tablecombo.findText(str(self.table))
+        if index != -1:
+            self.tablecombo.setCurrentIndex(index)
+        # set up the callback to select_table in case of selection change
         self.tablecombo.activated[int].connect(self.select_table)
+
         self.connectbutton = gui.button(
             tables, self, '↻', callback=self.connect)
         self.connectbutton.setSizePolicy(
@@ -167,7 +175,8 @@ class OWSql(OWWidget):
                      callback=self.open_table)
 
         gui.rubber(self.buttonsArea)
-        QTimer.singleShot(0, self.connect)
+
+        QTimer.singleShot(0, self.select_table)
 
     def _load_credentials(self):
         self._parse_host_port()
@@ -182,8 +191,8 @@ class OWSql(OWWidget):
 
     def _save_credentials(self):
         cm = self._credential_manager(self.host, self.port)
-        cm.username = self.username
-        cm.password = self.password
+        cm.username = self.username or ''
+        cm.password = self.password or ''
 
     def _credential_manager(self, host, port):
         return CredentialManager("SQL Table: {}:{}".format(host, port))
@@ -217,7 +226,7 @@ class OWSql(OWWidget):
         try:
             if self.backendcombo.currentIndex() < 0:
                 return
-            backend = self.backendmodel[self.backendcombo.currentIndex()]
+            backend = self.backends[self.backendcombo.currentIndex()]
             self.backend = backend(dict(
                 host=self.host,
                 port=self.port,
@@ -232,7 +241,6 @@ class OWSql(OWWidget):
                 ("Database", self.database), ("User name", self.username)
             ))
             self.refresh_tables()
-            self.select_table()
         except BackendError as err:
             error = str(err).split('\n')[0]
             self.Error.connection(error)
@@ -240,16 +248,17 @@ class OWSql(OWWidget):
             self.tablecombo.clear()
 
     def refresh_tables(self):
-        self.tablemodel.clear()
+        self.tables.clear()
         self.Error.missing_extension.clear()
         if self.backend is None:
             self.data_desc_table = None
             return
 
-        self.tablemodel.append("Select a table")
-        self.tablemodel.extend(self.backend.list_tables(self.schema))
-        self.tablemodel.append("Custom SQL")
+        self.tables.append("Select a table")
+        self.tables.append("Custom SQL")
+        self.tables.extend(self.backend.list_tables(self.schema))
 
+    # Called on tablecombo selection change:
     def select_table(self):
         curIdx = self.tablecombo.currentIndex()
         if self.tablecombo.itemText(curIdx) != "Custom SQL":
@@ -260,6 +269,8 @@ class OWSql(OWWidget):
             self.data_desc_table = None
             self.database_desc["Table"] = "(None)"
             self.table = None
+            if len(str(self.sql)) > 14:
+                return self.open_table()
 
         #self.Error.missing_extension(
         #    's' if len(missing) > 1 else '',
@@ -272,19 +283,22 @@ class OWSql(OWWidget):
         self.Outputs.data.send(table)
 
     def get_table(self):
-        if self.tablecombo.currentIndex() <= 0:
+        curIdx = self.tablecombo.currentIndex()
+        if curIdx <= 0:
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
             self.data_desc_table = None
             return
 
-        if self.tablecombo.currentIndex() < self.tablecombo.count() - 1:
-            self.table = self.tablemodel[self.tablecombo.currentIndex()]
+        if self.tablecombo.itemText(curIdx) != "Custom SQL":
+            self.table = self.tables[self.tablecombo.currentIndex()]
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
+            what = self.table
         else:
-            self.sql = self.table = self.sqltext.toPlainText()
+            what = self.sql = self.sqltext.toPlainText()
+            self.table = "Custom SQL"
             if self.materialize:
                 import psycopg2
                 if not self.materialize_table_name:
@@ -297,11 +311,10 @@ class OWSql(OWWidget):
                         pass
                     with self.backend.execute_sql_query("CREATE TABLE " +
                                                         self.materialize_table_name +
-                                                        " AS " + self.table):
+                                                        " AS " + self.sql):
                         pass
                     with self.backend.execute_sql_query("ANALYZE " + self.materialize_table_name):
                         pass
-                    self.table = self.materialize_table_name
                 except (psycopg2.ProgrammingError, BackendError) as ex:
                     self.Error.connection(str(ex))
                     return
@@ -312,7 +325,7 @@ class OWSql(OWWidget):
                                   database=self.database,
                                   user=self.username,
                                   password=self.password),
-                             self.table,
+                             what,
                              backend=type(self.backend),
                              inspect_values=False)
         except BackendError as ex:
@@ -321,8 +334,8 @@ class OWSql(OWWidget):
 
         self.Error.connection.clear()
 
-
         sample = False
+
         if table.approx_len() > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
             confirm.setIcon(QMessageBox.Warning)

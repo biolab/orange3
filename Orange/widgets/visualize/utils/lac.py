@@ -196,7 +196,7 @@ def create_contingencies(X, callback=None):
 
 def get_bin_centers(X_):
     m = []
-    for i, var in enumerate(X_.domain):
+    for i, var in enumerate(X_.domain.variables):
         cleaned_values = [tuple(map(str.strip, v.strip('[]()<>=≥').split('-')))
                           for v in var.values]
         try:

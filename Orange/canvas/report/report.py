@@ -241,7 +241,7 @@ class Report:
                     bgcolor = 'transparent'
 
                 font = data(Qt.FontRole)
-                weight = 'bold' if font and font.bold() else 'normal'
+                weight = 'font-weight: bold;' if font and font.bold() else ''
 
                 alignment = data(Qt.TextAlignmentRole) or Qt.AlignLeft
                 halign = ('left' if alignment & Qt.AlignLeft else
@@ -254,7 +254,7 @@ class Report:
                         'color:{fgcolor};'
                         'border:{border};'
                         'background:{bgcolor};'
-                        'font-weight:{weight};'
+                        '{weight}'
                         'text-align:{halign};'
                         'vertical-align:{valign};">{text}</{tag}>'.format(
                             tag='th' if row is None or col is None else 'td',

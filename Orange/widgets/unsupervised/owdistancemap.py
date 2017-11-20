@@ -266,7 +266,7 @@ class OWDistanceMap(widget.OWWidget):
     color_low = settings.Setting(0.0)
     color_high = settings.Setting(1.0)
 
-    annotation_idx = settings.ContextSetting(0, exclude_metas=False)
+    annotation_idx = settings.ContextSetting(0)
 
     autocommit = settings.Setting(True)
 
@@ -447,7 +447,7 @@ class OWDistanceMap(widget.OWWidget):
         elif not axis:
             model[:] = ["None", "Enumeration", "Attribute names"]
         elif isinstance(items, Orange.data.Table):
-            annot_vars = list(filter_visible(items.domain)) + list(items.domain.metas)
+            annot_vars = list(filter_visible(items.domain.variables)) + list(items.domain.metas)
             model[:] = ["None", "Enumeration"] + annot_vars
             self.annotation_idx = 0
             self.openContext(items.domain)

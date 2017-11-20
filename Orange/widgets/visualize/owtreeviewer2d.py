@@ -275,8 +275,7 @@ class TreeGraphicsScene(QGraphicsScene):
         if not x or not y:
             x, y = self._HSPACING, self._VSPACING
         self._fix_pos(node, x, y)
-        rect = self.itemsBoundingRect().adjusted(-10, -10, 20, 20)
-        self.setSceneRect(rect)
+        self.setSceneRect(QRectF(0, 0, self.gx, self.gy).adjusted(-10, -10, 100, 100))
         self.update()
 
     def _fix_pos(self, node, x, y):
@@ -464,13 +463,14 @@ class OWTreeViewer2D(OWWidget):
         tree_adapter = self.root_node.tree_adapter
         root_instances = tree_adapter.num_samples(self.root_node.node_inst)
         width = 3
+        OFFSET = 0.20
         for edge in self.scene.edges():
             num_inst = tree_adapter.num_samples(edge.node2.node_inst)
             if self.line_width_method == 1:
-                width = 8 * num_inst / root_instances
+                width = 8 * num_inst / root_instances + OFFSET
             elif self.line_width_method == 2:
                 width = 8 * num_inst / tree_adapter.num_samples(
-                    edge.node1.node_inst)
+                    edge.node1.node_inst) + OFFSET
             edge.setPen(QPen(Qt.gray, width, Qt.SolidLine, Qt.RoundCap))
         self.scene.update()
 

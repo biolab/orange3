@@ -170,7 +170,9 @@ def merge_transforms(exp):
                 exp.var.name,
                 values=exp.var.values,
                 ordered=exp.var.ordered,
-                compute_value=merge_lookup(A, B))
+                compute_value=merge_lookup(A, B),
+                sparse=exp.var.sparse,
+            )
             assert isinstance(prev.sub, Var)
             return Transformed(prev.sub, new_var)
         else:
@@ -253,7 +255,8 @@ def remove_unused_values(var, data):
     return DiscreteVariable("{}".format(var.name),
                             values=used_values,
                             base_value=base_value,
-                            compute_value=Lookup(var, translation_table)
+                            compute_value=Lookup(var, translation_table),
+                            sparse=var.sparse,
                             )
 
 
@@ -268,7 +271,8 @@ def sort_var_values(var):
     )
 
     return DiscreteVariable(var.name, values=newvalues,
-                            compute_value=Lookup(var, translation_table))
+                            compute_value=Lookup(var, translation_table),
+                            sparse=var.sparse)
 
 
 def merge_lookup(A, B):

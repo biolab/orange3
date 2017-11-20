@@ -242,8 +242,8 @@ if HAVE_WEBKIT:
 def _to_primitive_types(d):
     # pylint: disable=too-many-return-statements
     if isinstance(d, QWidget):
-        warnings.warn("Don't expose QWidgets in WebView. Construct minimal "
-                      "QObjects instead.", OrangeDeprecationWarning, stacklevel=3)
+        raise ValueError("Don't expose QWidgets in WebView. Construct minimal "
+                         "QObjects instead.")
     if isinstance(d, Integral):
         return int(d)
     if isinstance(d, Real):
@@ -389,6 +389,23 @@ class _WebViewBase:
             super().contextMenuEvent(event)
 
 
+def wait(until: callable, timeout=5000):
+    """Process events until condition is satisfied
+
+    Parameters
+    ----------
+    until: callable
+        Returns True when condition is satisfied.
+    timeout: int
+        Milliseconds to wait until TimeoutError is raised.
+    """
+    started = time.clock()
+    while not until():
+        qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
+        if (time.clock() - started) * 1000 > timeout:
+            raise TimeoutError()
+
+
 if HAVE_WEBKIT:
 
     class _JSObject(QObject):
@@ -475,21 +492,6 @@ elif HAVE_WEBENGINE:
         def remove(self, id):
             with self.lock:
                 self.ids.remove(id)
-
-
-    def wait(until: callable, timeout=5000):
-        """Process events until condition is satisfied
-
-        Parameters
-        ----------
-        until: callable that returns True when condition is satisfied
-        timeout: number of milliseconds to wait until TimeoutError is raised
-        """
-        started = time.clock()
-        while not until():
-            qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-            if (time.clock() - started) * 1000 > timeout:
-                raise TimeoutError()
 
 
     class _JSObjectChannel(QObject):

@@ -18,7 +18,7 @@ called principal components.
 Example
 =======
 
-    >>> from Orange.projection.pca import PCA
+    >>> from Orange.projection import PCA
     >>> from Orange.data import Table
     >>> iris = Table('iris')
     >>> pca = PCA()
@@ -44,3 +44,42 @@ Example
 .. autoclass:: Orange.projection.pca.SparsePCA
 .. autoclass:: Orange.projection.pca.IncrementalPCA
 
+
+
+FreeViz
+-------
+
+FreeViz uses a paradigm borrowed from particle physics: points in the same class attract each
+other, those from different class repel each other, and the resulting forces are exerted on the
+anchors of the attributes, that is, on unit vectors of each of the dimensional axis. The points
+cannot move (are projected in the projection space), but the attribute anchors can, so the
+optimization process is a hill-climbing optimization where at the end the anchors are placed such
+that forces are in equilibrium.
+
+
+Example
+=======
+
+    >>> from Orange.projection import FreeViz
+    >>> from Orange.data import Table
+    >>> iris = Table('iris')
+    >>> freeviz = FreeViz()
+    >>> model = freeviz(iris)
+    >>> model.components_    # FreeViz components
+    array([[  3.83487853e-01,   1.38777878e-17],
+       [ -6.95058218e-01,   7.18953457e-01],
+       [  2.16525357e-01,  -2.65741729e-01],
+       [  9.50450079e-02,  -4.53211728e-01]])
+    >>> transformed_data = model(iris)    # transformed data
+    >>> transformed_data
+    [[-0.157, 2.053 | Iris-setosa],
+    [0.114, 1.694 | Iris-setosa],
+    [-0.123, 1.864 | Iris-setosa],
+    [-0.048, 1.740 | Iris-setosa],
+    [-0.265, 2.125 | Iris-setosa],
+    ...
+    ]
+
+
+
+.. autoclass:: Orange.projection.freeviz.FreeViz

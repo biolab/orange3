@@ -323,11 +323,14 @@ class OWColor(widget.OWWidget):
         self.cont_model.dataChanged.connect(self._on_data_changed)
         box.layout().addWidget(cont_view)
 
-        box = gui.auto_commit(self.controlArea, self, "auto_apply", "Apply",
-                              orientation=Qt.Horizontal,
-                              checkbox_label="Apply automatically")
-        box.layout().insertSpacing(0, 20)
-        box.layout().insertWidget(0, self.report_button)
+        box = gui.auto_commit(
+            self.controlArea, self, "auto_apply", "Apply",
+            orientation=Qt.Horizontal, checkbox_label="Apply automatically")
+        box.button.setFixedWidth(180)
+        box.layout().insertStretch(0)
+
+    def sizeHint(self):
+        return QSize(500, 570)
 
     def _create_proxies(self, variables):
         part_vars = []

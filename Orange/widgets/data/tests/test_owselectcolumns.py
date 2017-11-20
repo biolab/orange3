@@ -28,7 +28,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
                       'd2': Discrete, 'd3': Discrete},
                      {'c2': Continuous, 'd4': Discrete, })
 
-        self.handler = SelectAttributesDomainContextHandler(metas_in_res=True)
+        self.handler = SelectAttributesDomainContextHandler()
         self.handler.read_defaults = lambda: None
 
     def test_open_context(self):
@@ -99,7 +99,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
 
 
 class SimpleWidget:
-    domain_role_hints = ContextSetting({}, exclude_metas=False)
+    domain_role_hints = ContextSetting({})
     required = ContextSetting("", required=ContextSetting.REQUIRED)
 
     def retrieveSpecificSettings(self):

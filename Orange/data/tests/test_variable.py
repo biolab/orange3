@@ -107,13 +107,14 @@ class TestVariable(unittest.TestCase):
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
 
-
     def test_strange_eq(self):
         a = ContinuousVariable()
         b = ContinuousVariable()
         self.assertEqual(a, a)
         self.assertNotEqual(a, b)
         self.assertNotEqual(a, "somestring")
+        # It the next assert ever fails (randomly) blame @janezd
+        self.assertNotEqual(hash(a), hash(b))
 
 
 def variabletest(varcls):
@@ -260,8 +261,8 @@ class TestContinuousVariable(VariableTest):
         age1 = ContinuousVariable.make("age")
         age2 = ContinuousVariable.make("age")
         age3 = ContinuousVariable("age")
-        self.assertIs(age1, age2)
-        self.assertIsNot(age1, age3)
+        self.assertEqual(age1, age2)
+        self.assertNotEqual(age1, age3)
 
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
@@ -429,8 +430,10 @@ PickleStringVariable = create_pickling_tests(
 )
 
 
-@variabletest(DiscreteVariable)
 class VariableTestMakeProxy(unittest.TestCase):
+    def setUp(self):
+        Variable._clear_all_caches()
+
     def test_make_proxy_disc(self):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
         abc1 = abc.make_proxy()
@@ -441,6 +444,8 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
+        self.assertEqual(hash(abc), hash(abc1))
+        self.assertEqual(hash(abc1), hash(abc2))
 
         abcx = DiscreteVariable("abc", values="abc", ordered=True)
         self.assertNotEqual(abc, abcx)
@@ -467,6 +472,37 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
+        self.assertEqual(hash(abc), hash(abc1))
+        self.assertEqual(hash(abc1), hash(abc2))
+
+    def test_proxy_has_separate_colors(self):
+        abc = ContinuousVariable("abc")
+        abc1 = abc.make_proxy()
+        abc2 = abc1.make_proxy()
+
+        original_colors = abc.colors
+        red_to_green = (255, 0, 0), (0, 255, 0), False
+        blue_to_red = (0, 0, 255), (255, 0, 0), False
+
+        abc1.colors = red_to_green
+        abc2.colors = blue_to_red
+        self.assertEqual(abc.colors, original_colors)
+        self.assertEqual(abc1.colors, red_to_green)
+        self.assertEqual(abc2.colors, blue_to_red)
+
+    def test_proxy_has_separate_attributes(self):
+        image = StringVariable("image")
+        image1 = image.make_proxy()
+        image2 = image1.make_proxy()
+
+        image.attributes["origin"] = "a"
+        image1.attributes["origin"] = "b"
+        image2.attributes["origin"] = "c"
+
+        self.assertEqual(image.attributes["origin"], "a")
+        self.assertEqual(image1.attributes["origin"], "b")
+        self.assertEqual(image2.attributes["origin"], "c")
+
 
 if __name__ == "__main__":
     unittest.main()

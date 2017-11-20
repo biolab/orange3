@@ -1,4 +1,8 @@
-from AnyQt.QtWidgets import QPushButton, QStyle, QStyleOptionButton
+from AnyQt.QtWidgets import (
+    QPushButton, QAbstractButton, QFocusFrame, QStyle, QStylePainter,
+    QStyleOptionButton
+)
+from AnyQt.QtGui import QPalette, QIcon
 from AnyQt.QtCore import Qt, QSize
 
 
@@ -59,3 +63,68 @@ class VariableTextPushButton(QPushButton):
                 style.sizeFromContents(QStyle.CT_PushButton, option,
                                        size, self))
         return sh
+
+
+class SimpleButton(QAbstractButton):
+    """
+    A simple icon button widget.
+    """
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.__focusframe = None
+
+    def focusInEvent(self, event):
+        # reimplemented
+        event.accept()
+        if self.__focusframe is None:
+            self.__focusframe = QFocusFrame(self)
+            self.__focusframe.setWidget(self)
+            palette = self.palette()
+            palette.setColor(QPalette.Foreground,
+                             palette.color(QPalette.Highlight))
+            self.__focusframe.setPalette(palette)
+
+    def focusOutEvent(self, event):
+        # reimplemented
+        event.accept()
+        if self.__focusframe is not None:
+            self.__focusframe.hide()
+            self.__focusframe.deleteLater()
+            self.__focusframe = None
+
+    def sizeHint(self):
+        # reimplemented
+        self.ensurePolished()
+        iconsize = self.iconSize()
+        icon = self.icon()
+        if not icon.isNull():
+            iconsize = icon.actualSize(iconsize)
+        return iconsize
+
+    def minimumSizeHint(self):
+        # reimplemented
+        return self.sizeHint()
+
+    def paintEvent(self, event):
+        painter = QStylePainter(self)
+        option = QStyleOptionButton()
+        option.initFrom(self)
+        option.text = ""
+        option.icon = self.icon()
+        option.iconSize = self.iconSize()
+        option.features = QStyleOptionButton.Flat
+        if self.isDown():
+            option.state |= QStyle.State_Sunken
+            painter.drawPrimitive(QStyle.PE_PanelButtonBevel, option)
+
+        if not option.icon.isNull():
+            if option.state & QStyle.State_Active:
+                mode = (QIcon.Normal if option.state & QStyle.State_MouseOver
+                        else QIcon.Active)
+            else:
+                mode = QIcon.Disabled
+            if self.isChecked():
+                state = QIcon.On
+            else:
+                state = QIcon.Off
+            option.icon.paint(painter, option.rect, Qt.AlignCenter, mode, state)

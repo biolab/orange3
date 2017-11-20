@@ -93,7 +93,9 @@ def selected_row(view):
 class FeatureEditor(QFrame):
     FUNCTIONS = dict(chain([(key, val) for key, val in math.__dict__.items()
                             if not key.startswith("_")],
-                           [("str", str)]))
+                           [(key, val) for key, val in builtins.__dict__.items()
+                            if key in {"str", "float", "int", "len",
+                                       "abs", "max", "min"}]))
     featureChanged = Signal()
     featureEdited = Signal()
 
@@ -453,8 +455,6 @@ class OWFeatureConstructor(OWWidget):
         box.layout().addLayout(layout, 1)
 
         box = gui.hBox(self.controlArea)
-        box.layout().addWidget(self.report_button)
-        self.report_button.setMinimumWidth(180)
         gui.rubber(box)
         commit = gui.button(box, self, "Send", callback=self.apply,
                             default=True)
@@ -591,7 +591,7 @@ class OWFeatureConstructor(OWWidget):
 
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
-        source_vars = tuple(self.data.domain) + self.data.domain.metas
+        source_vars = self.data.domain.variables + self.data.domain.metas
         new_variables = construct_variables(desc, source_vars)
 
         attrs = [var for var in new_variables if var.is_primitive()]

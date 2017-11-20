@@ -439,6 +439,7 @@ class DendrogramWidget(QGraphicsWidget):
         if item in self._selection:
             if state == False:
                 self._remove_selection(item)
+                self._re_enumerate_selections()
                 self.selectionChanged.emit()
         else:
             # If item is already inside another selected item,
@@ -455,11 +456,11 @@ class DendrogramWidget(QGraphicsWidget):
 
             if state:
                 self._add_selection(item)
-                self._re_enumerate_selections()
 
             elif item in self._selection:
                 self._remove_selection(item)
 
+            self._re_enumerate_selections()
             self.selectionChanged.emit()
 
     def _add_selection(self, item):
@@ -498,8 +499,6 @@ class DendrogramWidget(QGraphicsWidget):
             self.scene().removeItem(selection_item)
 
         del self._selection[item]
-
-        self._re_enumerate_selections()
 
     def _selected_sub_items(self, item):
         """Return all selected subclusters under item."""
@@ -773,7 +772,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     #: Selected linkage
     linkage = settings.Setting(1)
     #: Index of the selected annotation item (variable, ...)
-    annotation = settings.ContextSetting("Enumeration", exclude_metas=False)
+    annotation = settings.ContextSetting("Enumeration")
     #: Out-of-context setting for the case when the "Name" option is available
     annotation_if_names = settings.Setting("Name")
     #: Out-of-context setting for the case with just "Enumerate" and "None"

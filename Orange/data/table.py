@@ -17,9 +17,11 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack
+from Orange.data.util import SharedComputeValue, vstack, hstack, assure_array_dense, assure_array_sparse, \
+    assure_column_dense, assure_column_sparse
 from Orange.statistics.util import bincount, countnans, contingency, \
-    stats as fast_stats
+    stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
+    sparse_implicit_zero_weights
 from Orange.util import flatten
 
 __all__ = ["dataset_dirs", "get_sample_datasets_dir", "RowInstance", "Table"]
@@ -157,7 +159,7 @@ class RowInstance(Instance):
 
 class Columns:
     def __init__(self, domain):
-        for v in chain(domain, domain.metas):
+        for v in chain(domain.variables, domain.metas):
             setattr(self, v.name.replace(" ", "_"), v)
 
 
@@ -279,44 +281,38 @@ class Table(MutableSequence, Storage):
 
         global _conversion_cache
 
-        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64,
-                        is_sparse=False):
-
+        def get_columns(row_indices, src_cols, n_rows, dtype=np.float64, is_sparse=False):
             if not len(src_cols):
                 if is_sparse:
                     return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
                 else:
                     return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
+            # match density for subarrays
+            match_density = assure_array_sparse if is_sparse else assure_array_dense
             n_src_attrs = len(source.domain.attributes)
             if all(isinstance(x, Integral) and 0 <= x < n_src_attrs
                    for x in src_cols):
-                return _subarray(source.X, row_indices, src_cols)
+                return match_density(_subarray(source.X, row_indices, src_cols))
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
-                arr = _subarray(source.metas, row_indices,
-                                [-1 - x for x in src_cols])
+                arr = match_density(_subarray(source.metas, row_indices,
+                                            [-1 - x for x in src_cols]))
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr
             if all(isinstance(x, Integral) and x >= n_src_attrs
                    for x in src_cols):
-                return _subarray(source._Y, row_indices,
-                                 [x - n_src_attrs for x in src_cols])
+                return match_density(_subarray(
+                    source._Y, row_indices,
+                    [x - n_src_attrs for x in src_cols]))
 
+            # initialize final array & set `match_density` for columns
             if is_sparse:
                 a = sp.dok_matrix((n_rows, len(src_cols)), dtype=dtype)
+                match_density = assure_column_sparse
             else:
                 a = np.empty((n_rows, len(src_cols)), dtype=dtype)
-
-            def match_type(x):
-                """ Assure that matrix and column are both dense or sparse. """
-                if is_sparse == sp.issparse(x):
-                    return x
-                elif is_sparse:
-                    x = np.asarray(x)
-                    return sp.csc_matrix(x.reshape(-1, 1).astype(np.float))
-                else:
-                    return np.ravel(x.toarray())
+                match_density = assure_column_dense
 
             shared_cache = _conversion_cache
             for i, col in enumerate(src_cols):
@@ -329,22 +325,22 @@ class Table(MutableSequence, Storage):
                                 col.compute_shared(source)
                         shared = shared_cache[id(col.compute_shared), id(source)]
                         if row_indices is not ...:
-                            a[:, i] = match_type(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared)[row_indices])
                         else:
-                            a[:, i] = match_type(
+                            a[:, i] = match_density(
                                 col(source, shared_data=shared))
                     else:
                         if row_indices is not ...:
-                            a[:, i] = match_type(col(source)[row_indices])
+                            a[:, i] = match_density(col(source)[row_indices])
                         else:
-                            a[:, i] = match_type(col(source))
+                            a[:, i] = match_density(col(source))
                 elif col < 0:
-                    a[:, i] = match_type(source.metas[row_indices, -1 - col])
+                    a[:, i] = match_density(source.metas[row_indices, -1 - col])
                 elif col < n_src_attrs:
-                    a[:, i] = match_type(source.X[row_indices, col])
+                    a[:, i] = match_density(source.X[row_indices, col])
                 else:
-                    a[:, i] = match_type(
+                    a[:, i] = match_density(
                         source._Y[row_indices, col - n_src_attrs])
 
             if is_sparse:
@@ -365,6 +361,8 @@ class Table(MutableSequence, Storage):
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
+                    # since sparse flags are not considered when checking for domain equality, fix manually.
+                    table = assure_domain_conversion_sparsity(table, source)
                     return table
 
                 if isinstance(row_indices, slice):
@@ -381,18 +379,19 @@ class Table(MutableSequence, Storage):
                 self.domain = domain
                 conversion = domain.get_conversion(source.domain)
                 self.X = get_columns(row_indices, conversion.attributes, n_rows,
-                                     is_sparse=sp.issparse(source.X))
+                                     is_sparse=conversion.sparse_X)
                 if self.X.ndim == 1:
                     self.X = self.X.reshape(-1, len(self.domain.attributes))
+
                 self.Y = get_columns(row_indices, conversion.class_vars, n_rows,
-                                     is_sparse=sp.issparse(source.Y))
+                                     is_sparse=conversion.sparse_Y)
 
                 dtype = np.float64
                 if any(isinstance(var, StringVariable) for var in domain.metas):
                     dtype = np.object
                 self.metas = get_columns(row_indices, conversion.metas,
                                          n_rows, dtype,
-                                         is_sparse=sp.issparse(source.metas))
+                                         is_sparse=conversion.sparse_metas)
                 if self.metas.ndim == 1:
                     self.metas = self.metas.reshape(-1, len(self.domain.metas))
                 if source.has_weights():
@@ -1384,42 +1383,58 @@ class Table(MutableSequence, Storage):
             columns = range(len(self.domain.variables))
         else:
             columns = [self.domain.index(var) for var in columns]
+
         distributions = []
         if sp.issparse(self.X):
             self.X = self.X.tocsc()
+
         W = self.W.ravel() if self.has_weights() else None
+
         for col in columns:
-            var = self.domain[col]
+            variable = self.domain[col]
+
+            # Select the correct data column from X, Y or metas
             if 0 <= col < self.X.shape[1]:
-                m = self.X[:, col]
+                x = self.X[:, col]
             elif col < 0:
-                m = self.metas[:, col * (-1) - 1]
-                if np.issubdtype(m.dtype, np.dtype(object)):
-                    m = m.astype(float)
+                x = self.metas[:, col * (-1) - 1]
+                if np.issubdtype(x.dtype, np.dtype(object)):
+                    x = x.astype(float)
             else:
-                m = self._Y[:, col - self.X.shape[1]]
-            if var.is_discrete:
-                dist, unknowns = bincount(m, len(var.values) - 1, W)
-            elif not m.shape[0]:
+                x = self._Y[:, col - self.X.shape[1]]
+
+            if variable.is_discrete:
+                dist, unknowns = bincount(x, weights=W, max_val=len(variable.values) - 1)
+            elif not x.shape[0]:
                 dist, unknowns = np.zeros((2, 0)), 0
             else:
                 if W is not None:
-                    unknowns = countnans(m, W)
-                    if sp.issparse(m):
-                        arg_sort = np.argsort(m.data)
-                        ranks = m.indices[arg_sort]
-                        vals = np.vstack((m.data[arg_sort], W[ranks]))
+                    if sp.issparse(x):
+                        arg_sort = np.argsort(x.data)
+                        ranks = x.indices[arg_sort]
+                        vals = np.vstack((x.data[arg_sort], W[ranks]))
                     else:
-                        ranks = np.argsort(m)
-                        vals = np.vstack((m[ranks], W[ranks]))
+                        ranks = np.argsort(x)
+                        vals = np.vstack((x[ranks], W[ranks]))
                 else:
-                    unknowns = countnans(m.astype(float))
-                    if sp.issparse(m):
-                        m = m.data
-                    vals = np.ones((2, m.shape[0]))
-                    vals[0, :] = m
+                    x_values = x.data if sp.issparse(x) else x
+                    vals = np.ones((2, x_values.shape[0]))
+                    vals[0, :] = x_values
                     vals[0, :].sort()
+
                 dist = np.array(_valuecount.valuecount(vals))
+                # If sparse, then 0s will not be counted with `valuecount`, so
+                # we have to add them to the result manually.
+                if sp.issparse(x) and sparse_has_implicit_zeros(x):
+                    if W is not None:
+                        zero_weights = sparse_implicit_zero_weights(x, W).sum()
+                    else:
+                        zero_weights = sparse_count_implicit_zeros(x)
+                    zero_vec = [0, zero_weights]
+                    dist = np.insert(dist, np.searchsorted(dist[0], 0), zero_vec, axis=1)
+                # Since `countnans` assumes vector shape to be (1, n) and `x`
+                # shape is (n, 1), we pass the transpose
+                unknowns = countnans(x.T, W)
             distributions.append((dist, unknowns))
 
         return distributions
@@ -1634,6 +1649,40 @@ class Table(MutableSequence, Storage):
         self.attributes["old_domain"] = table.domain
         return self
 
+    def to_sparse(self, sparse_attributes=True, sparse_class=False,
+                  sparse_metas=False):
+        def sparsify(features):
+            for f in features:
+                f.sparse = True
+
+        new_domain = self.domain.copy()
+
+        if sparse_attributes:
+            sparsify(new_domain.attributes)
+        if sparse_class:
+            sparsify(new_domain.class_vars)
+        if sparse_metas:
+            sparsify(new_domain.metas)
+        return self.transform(new_domain)
+
+    def to_dense(self, dense_attributes=True, dense_class=True,
+                 dense_metas=True):
+        def densify(features):
+            for f in features:
+                f.sparse = False
+
+        new_domain = self.domain.copy()
+
+        if dense_attributes:
+            densify(new_domain.attributes)
+        if dense_class:
+            densify(new_domain.class_vars)
+        if dense_metas:
+            densify(new_domain.metas)
+        t = self.transform(new_domain)
+        t.ids = self.ids    # preserve indices
+        return t
+
 
 def _check_arrays(*arrays, dtype=None):
     checked = []
@@ -1655,7 +1704,7 @@ def _check_arrays(*arrays, dtype=None):
 
         if ninstances(array) != shape_1:
             raise ValueError("Leading dimension mismatch (%d != %d)"
-                             % (len(array), shape_1))
+                             % (ninstances(array), shape_1))
 
         if sp.issparse(array):
             array.data = np.asarray(array.data)
@@ -1726,3 +1775,23 @@ def _rxc_ix(rows, cols):
     else:
         r, c = np.ix_(rows, cols)
         return np.asarray(r, int), np.asarray(c, int)
+
+
+def assure_domain_conversion_sparsity(target, source):
+    """
+    Assure that the table obeys the domain conversion's suggestions about sparsity.
+
+    Args:
+        target (Table): the target table.
+        source (Table): the source table.
+
+    Returns:
+        Table: with fixed sparsity. The sparsity is set as it is recommended by domain conversion
+            for transformation from source to the target domain.
+    """
+    conversion = target.domain.get_conversion(source.domain)
+    match_density = [assure_array_dense, assure_array_sparse]
+    target.X = match_density[conversion.sparse_X](target.X)
+    target.Y = match_density[conversion.sparse_Y](target.Y)
+    target.metas = match_density[conversion.sparse_metas](target.metas)
+    return target

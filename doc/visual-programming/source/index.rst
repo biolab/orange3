@@ -73,6 +73,7 @@ Visualize
    widgets/visualize/treeviewer
    widgets/visualize/geomap
    widgets/visualize/nomogram
+   widgets/visualize/freeviz
 
 
 Model

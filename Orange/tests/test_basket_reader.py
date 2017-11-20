@@ -54,14 +54,6 @@ class TestBasketReader(unittest.TestCase):
         self.assertEqual(len(table.domain.variables), 3)
         self.assertEqual(set(x for x in table[0]), {1, 2, 3})
 
-    @with_file("""a=1, b=2, a=3""")
-    def test_handles_duplicate_variables(self, fname):
-        self.assertRaises(ValueError, read_basket, fname)
-
-    @with_file("""a, b, b, a, a, c, c, d, e""")
-    def test_handles_duplicate_variables2(self, fname):
-        self.assertRaises(ValueError, read_basket, fname)
-
     @with_file("""a=1, b=2\na=1, b=4""")
     def test_variables_can_be_listed_in_any_order(self, fname):
         table = read_basket(fname)
@@ -88,6 +80,12 @@ class TestBasketReader(unittest.TestCase):
     def test_handles_quote(self, fname):
         table = read_basket(fname)
         self.assertEqual(len(table.domain.variables), 4)
+
+    @with_file("""a,a,b\nb=2,b=3,c""")
+    def test_sums_duplicates(self, fname):
+        table = read_basket(fname)
+        np.testing.assert_array_equal(table.X.toarray(), [[2, 1, 0.],
+                                                          [0, 5, 1]])
 
     def test_data_name(self):
         filename = os.path.join(os.path.dirname(__file__), 'iris_basket.basket')

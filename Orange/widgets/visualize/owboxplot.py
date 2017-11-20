@@ -139,6 +139,7 @@ class OWBoxPlot(widget.OWWidget):
     stattest = Setting(0)
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
+    show_labels = Setting(True)
     auto_commit = Setting(True)
 
     _sorting_criteria_attrs = {
@@ -226,10 +227,15 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.layout_changed)
 
         # The vertical size policy is needed to let only the list views expand
-        self.stretching_box = gui.checkBox(
-            self.controlArea, self, 'stretched', "Stretch bars", box='Display',
-            callback=self.display_changed,
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum)).box
+        self.stretching_box = box = gui.vBox(
+            self.controlArea, box="Display",
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
+        gui.checkBox(
+            box, self, 'stretched', "Stretch bars",
+            callback=self.display_changed)
+        gui.checkBox(
+            box, self, 'show_labels', "Show box labels",
+            callback=self.display_changed)
 
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
@@ -544,7 +550,7 @@ class OWBoxPlot(widget.OWWidget):
                 label.setPos(right + 10, y - b.height() / 2)
                 self.box_scene.addItem(label)
 
-            if self.attribute is not self.group_var:
+            if self.show_labels and self.attribute is not self.group_var:
                 for text_item, bar_part in zip(box[1::2], box[::2]):
                     label = QGraphicsSimpleTextItem(
                         text_item.toPlainText())

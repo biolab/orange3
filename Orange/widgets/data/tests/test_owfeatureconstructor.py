@@ -1,6 +1,7 @@
 import unittest
 import ast
 import sys
+import math
 
 import numpy as np
 
@@ -8,11 +9,10 @@ from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.data.owfeatureconstructor import (DiscreteDescriptor,
-                                                      ContinuousDescriptor,
-                                                      StringDescriptor,
-                                                      construct_variables, OWFeatureConstructor,
-                                                      DiscreteFeatureEditor)
+from Orange.widgets.data.owfeatureconstructor import (
+    DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
+    construct_variables, OWFeatureConstructor,
+    FeatureEditor, DiscreteFeatureEditor)
 
 from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
 
@@ -31,7 +31,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                 values=values, base_value=-1, ordered=False)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(desc, data.domain),
+                            construct_variables(desc, data.domain.variables),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
@@ -48,7 +48,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   number_of_decimals=2)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(featuremodel, data.domain),
+                            construct_variables(featuremodel, data.domain.variables),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
@@ -66,7 +66,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table(Domain(data.domain.attributes,
                             data.domain.class_vars,
                             list(data.domain.metas) +
-                            construct_variables(desc, data.domain)),
+                            construct_variables(desc, data.domain.variables)),
                      data)
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
@@ -82,7 +82,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   expression="_0_1 + _1",
                                   number_of_decimals=3)]
         )
-        nv = construct_variables(desc, data.domain)
+        nv = construct_variables(desc, data.domain.variables)
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
@@ -258,3 +258,9 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertFalse(self.widget.Error.more_values_needed.is_shown())
         self.widget.apply()
         self.assertTrue(self.widget.Error.more_values_needed.is_shown())
+
+
+class TestFeatureEditor(unittest.TestCase):
+    def test_has_functions(self):
+        self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
+        self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt)

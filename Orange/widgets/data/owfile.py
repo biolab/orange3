@@ -5,20 +5,20 @@ from urllib.parse import urlparse
 
 import numpy as np
 from AnyQt.QtWidgets import \
-    QStyle, QComboBox, QMessageBox, QFileDialog, QGridLayout, QLabel, \
+    QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
-from Orange.data import StringVariable
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, UrlReader
+from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, dialog_formats
+from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
+    open_filename_dialog
 from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
@@ -40,7 +40,7 @@ def add_origin(examples, filename):
         return
     vars = examples.domain.variables + examples.domain.metas
     strings = [var for var in vars if var.is_string]
-    dir_name, basename = os.path.split(filename)
+    dir_name, _ = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
             var.attributes["origin"] = dir_name
@@ -112,9 +112,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     class Warning(widget.OWWidget.Warning):
         file_too_big = widget.Msg("The file is too large to load automatically."
                                   " Press Reload to load.")
+        load_warning = widget.Msg("Read warning:\n{}")
 
     class Error(widget.OWWidget.Error):
         file_not_found = widget.Msg("File not found.")
+        missing_reader = widget.Msg("Missing reader.")
+        sheet_error = widget.Msg("Error listing available sheets.")
+        unknown = widget.Msg("Read error:\n{}")
 
     def __init__(self):
         super().__init__()
@@ -200,8 +204,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             box, self, "Browse documentation data sets",
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
-        box.layout().addWidget(self.report_button)
-        self.report_button.setFixedWidth(170)
 
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
@@ -264,11 +266,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             start_file = self.last_path() or os.path.expanduser("~/")
 
-        filename, _ = QFileDialog.getOpenFileName(
-            self, 'Open Orange Data File', start_file, dialog_formats())
+        readers = [f for f in FileFormat.formats
+                   if getattr(f, 'read', None) and getattr(f, "EXTENSIONS", None)]
+        filename, reader, _ = open_filename_dialog(start_file, None, readers)
         if not filename:
             return
         self.add_path(filename)
+        if reader is not None:
+            self.recent_paths[0].file_format = reader.qualified_name()
+
         self.source = self.LOCAL_FILE
         self.load_data()
 
@@ -276,46 +282,44 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def load_data(self):
         # We need to catch any exception type since anything can happen in
         # file readers
-        # pylint: disable=broad-except
         self.closeContext()
         self.domain_editor.set_domain(None)
         self.apply_button.setEnabled(False)
         self.clear_messages()
         self.set_file_list()
-        if self.last_path() and not os.path.exists(self.last_path()):
-            self.Error.file_not_found()
+
+        error = self._try_load()
+        if error:
+            error()
+            self.data = None
+            self.sheet_box.hide()
             self.Outputs.data.send(None)
             self.info.setText("No data.")
-            return
 
-        error = None
+    def _try_load(self):
+        # pylint: disable=broad-except
+        if self.last_path() and not os.path.exists(self.last_path()):
+            return self.Error.file_not_found
+
         try:
             self.reader = self._get_reader()
-            if self.reader is None:
-                self.data = None
-                self.Outputs.data.send(None)
-                self.info.setText("No data.")
-                self.sheet_box.hide()
-                return
-        except Exception as ex:
-            error = ex
+            assert self.reader is not None
+        except Exception:
+            return self.Error.missing_reader
 
-        if not error:
+        try:
             self._update_sheet_combo()
-            with catch_warnings(record=True) as warnings:
-                try:
-                    data = self.reader.read()
-                except Exception as ex:
-                    log.exception(ex)
-                    error = ex
-                self.warning(warnings[-1].message.args[0] if warnings else '')
+        except Exception:
+            return self.Error.sheet_error
 
-        if error:
-            self.data = None
-            self.Outputs.data.send(None)
-            self.info.setText("An error occurred:\n{}".format(error))
-            self.sheet_box.hide()
-            return
+        with catch_warnings(record=True) as warnings:
+            try:
+                data = self.reader.read()
+            except Exception as ex:
+                log.exception(ex)
+                return lambda x=ex: self.Error.unknown(str(x))
+            if warnings:
+                self.Warning.load_warning(warnings[-1].message.args[0])
 
         self.info.setText(self._describe(data))
 
@@ -333,7 +337,13 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         FileFormat
         """
         if self.source == self.LOCAL_FILE:
-            reader = FileFormat.get_reader(self.last_path())
+            path = self.last_path()
+            if self.recent_paths and self.recent_paths[0].file_format:
+                qname = self.recent_paths[0].file_format
+                reader_class = class_from_qualified_name(qname)
+                reader = reader_class(path)
+            else:
+                reader = FileFormat.get_reader(path)
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader

@@ -213,14 +213,10 @@ class OWCreateClass(widget.OWWidget):
             optionsbox, self, "case_sensitive", "Case sensitive",
             callback=self.options_changed)
 
-        layout = QGridLayout()
-        gui.widgetBox(self.controlArea, orientation=layout)
-        for i in range(3):
-            layout.setColumnStretch(i, 1)
-        layout.addWidget(self.report_button, 0, 0)
-        apply = gui.button(None, self, "Apply", autoDefault=False,
-                           callback=self.apply)
-        layout.addWidget(apply, 0, 2)
+        box = gui.hBox(self.controlArea)
+        gui.rubber(box)
+        gui.button(box, self, "Apply", autoDefault=False, width=180,
+                   callback=self.apply)
 
         # TODO: Resizing upon changing the number of rules does not work
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
