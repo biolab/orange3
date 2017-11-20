@@ -1,3 +1,5 @@
+from operator import attrgetter
+
 import numpy as np
 
 from AnyQt.QtCore import Qt, QTimer
@@ -8,7 +10,7 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
 import Orange
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.canvas import report
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
@@ -46,40 +48,31 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         yield from super().iterate_states(initial_state)
 
     def compute_score(self, state):
-        graph = self.master.graph
-        attrs = [self.attrs[x] for x in state]
-        valid = graph.get_valid_list(attrs)
-        cols = []
-        for var in attrs:
-            cols.append(graph.jittered_data.get_column_view(var)[0][valid])
-        X = np.column_stack(cols)
-        Y = self.master.data.Y[valid]
-        if X.shape[0] < self.minK:
+        attrs = [self.attrs[i] for i in state]
+        data = self.master.graph.scaled_data
+        data = data.transform(Domain(attrs, data.domain.class_var))
+        data = data[~np.isnan(data.X).any(axis=1) & ~np.isnan(data.Y).T]
+        if len(data) < self.minK:
             return
-        n_neighbors = min(self.minK, len(X) - 1)
-        knn = NearestNeighbors(n_neighbors=n_neighbors).fit(X)
+        n_neighbors = min(self.minK, len(data) - 1)
+        knn = NearestNeighbors(n_neighbors=n_neighbors).fit(data.X)
         ind = knn.kneighbors(return_distance=False)
         if self.master.data.domain.has_discrete_class:
-            return -np.sum(Y[ind] == Y.reshape(-1, 1)) / n_neighbors / len(Y)
+            return -np.sum(data.Y[ind] == data.Y.reshape(-1, 1)) / n_neighbors / len(data.Y)
         else:
-            return -r2_score(Y, np.mean(Y[ind], axis=1)) * \
-                   (len(Y) / len(self.master.data))
+            return -r2_score(data.Y, np.mean(data.Y[ind], axis=1)) * \
+                   (len(data.Y) / len(self.master.data))
 
     def bar_length(self, score):
         return max(0, -score)
 
     def score_heuristic(self):
-        X = self.master.graph.jittered_data.X
-        Y = self.master.data.Y
-        mdomain = self.master.data.domain
-        dom = Domain([ContinuousVariable(str(i)) for i in range(X.shape[1])],
-                     mdomain.class_vars)
-        data = Table(dom, X, Y)
-        relief = ReliefF if isinstance(dom.class_var, DiscreteVariable) \
-            else RReliefF
+        master_domain = self.master.graph.scaled_data.domain
+        domain = Domain(master_domain.attributes + master_domain.metas, master_domain.class_vars)
+        data = self.master.graph.scaled_data.transform(domain)
+        relief = ReliefF if isinstance(domain.class_var, DiscreteVariable) else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
-        attrs = sorted(zip(weights, mdomain.attributes),
-                       key=lambda x: (-x[0], x[1].name))
+        attrs = sorted(zip(weights, master_domain.attributes), key=lambda x: (-x[0], x[1].name))
         return [a for _, a in attrs]
 
 
