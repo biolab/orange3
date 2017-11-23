@@ -182,6 +182,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         def deleteEvent():
             vizrank.keep_running = False
+            if vizrank._thread is not None and vizrank._thread.isRunning():
+                vizrank._thread.quit()
+                vizrank._thread.wait()
+
             master_delete_event()
 
         master.closeEvent = closeEvent
