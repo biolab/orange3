@@ -22,7 +22,7 @@ from Orange.widgets import settings, gui
 # be used; use Input and Output instead
 from Orange.canvas.registry import description as widget_description, \
     WidgetDescription, OutputSignal, InputSignal
-from Orange.canvas.report import Report
+from Orange.widgets.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler

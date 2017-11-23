@@ -7,7 +7,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt, QTimer
 
-from Orange.canvas import report
+from Orange.widgets import report
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import BackendError

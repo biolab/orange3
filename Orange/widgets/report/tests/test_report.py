@@ -14,7 +14,7 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
-from Orange.canvas.report.owreport import OWReport
+from Orange.widgets.report.owreport import OWReport
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.tests.base import WidgetTest
@@ -124,7 +124,7 @@ class TestReport(WidgetTest):
         GH-2147
         """
         rep = OWReport.get_instance()
-        patch_target_1 = "Orange.canvas.report.owreport.open"
+        patch_target_1 = "Orange.widgets.report.owreport.open"
         patch_target_2 = "AnyQt.QtWidgets.QFileDialog.getSaveFileName"
         patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
         filenames = ["f.report", "f.html"]

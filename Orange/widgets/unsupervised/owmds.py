@@ -19,7 +19,7 @@ import Orange.misc
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.canvas import report
+from Orange.widgets import report
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph, InteractiveViewBox
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.widgets.utils.annotated_data import (

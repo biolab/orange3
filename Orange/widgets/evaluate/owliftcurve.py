@@ -20,7 +20,7 @@ from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
 from Orange.widgets.widget import Input
-from Orange.canvas import report
+from Orange.widgets import report
 
 
 CurvePoints = namedtuple(

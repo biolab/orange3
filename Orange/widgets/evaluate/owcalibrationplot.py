@@ -16,7 +16,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.widget import Input
-from Orange.canvas import report
+from Orange.widgets import report
 
 
 Curve = namedtuple(

@@ -85,7 +85,7 @@ class OWTreeLearner(OWBaseLearner):
         return self.LEARNER(**self.learner_kwargs())
 
     def get_learner_parameters(self):
-        from Orange.canvas.report import plural_w
+        from Orange.widgets.report import plural_w
         items = OrderedDict()
         items["Pruning"] = ", ".join(s for s, c in (
             (plural_w("at least {number} instance{s} in leaves",

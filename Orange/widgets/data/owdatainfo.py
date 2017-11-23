@@ -8,7 +8,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.widget import Input
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
-from Orange.canvas import report
+from Orange.widgets import report
 try:
     from Orange.data.sql.table import SqlTable
 except ImportError:
