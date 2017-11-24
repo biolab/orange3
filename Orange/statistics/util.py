@@ -394,7 +394,7 @@ def mean(x):
 
 
 def _apply_func(x, dense_func, sparse_func, axis=None):
-    """ Equivalent of np.nanmean that supports sparse or dense matrices. """
+    """ General wrapper for a function depending on sparse or dense matrices. """
     if not sp.issparse(x):
         return dense_func(x, axis=axis)
     if axis is None:
@@ -406,6 +406,14 @@ def _apply_func(x, dense_func, sparse_func, axis=None):
                            dtype=np.double, count=arr.shape[0])
     else:
         raise NotImplementedError
+
+
+def nansum(x, axis=None):
+    """ Equivalent of np.nansum that supports sparse or dense matrices. """
+    def nansum_sparse(x):
+        return np.nansum(x.data)
+
+    return _apply_func(x, np.nansum, nansum_sparse, axis=axis)
 
 
 def nanmean(x, axis=None):
@@ -425,6 +433,24 @@ def nanvar(x, axis=None):
         return np.nansum((x.data - mean) ** 2) / n_values
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
+
+
+def nanmedian(x, axis=None):
+    """ Equivalent of np.nanmedian that supports sparse or dense matrices. """
+    def nanmedian_sparse(x):
+        nz = np.logical_not(np.isnan(x.data))
+        n_nan = sum(np.isnan(x.data))
+        n_nonzero = sum(x.data[nz] != 0)
+        n_zeros = np.prod(x.shape) - n_nonzero - n_nan
+        if n_zeros > n_nonzero:
+            # Typical case if use of sparse matrices make sense
+            return 0
+        else:
+            # Possibly contains NaNs and
+            # more nz values than zeros, so allocating memory should not be too problematic
+            return np.nanmedian(x.toarray())
+
+    return _apply_func(x, np.nanmedian, nanmedian_sparse, axis=axis)
 
 
 def unique(x, return_counts=False):

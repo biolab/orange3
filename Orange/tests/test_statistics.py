@@ -6,7 +6,7 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var
+    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var, nansum, nanmedian
 
 
 def dense_sparse(test_case):
@@ -126,6 +126,14 @@ class TestUtil(unittest.TestCase):
                     nanmax(X_sparse, axis=axis),
                     np.nanmax(X, axis=axis))
 
+    @dense_sparse
+    def test_nansum(self, array):
+        for X in self.data:
+            X_sparse = array(X)
+            np.testing.assert_array_equal(
+                nansum(X_sparse),
+                np.nansum(X))
+
     def test_mean(self):
         for X in self.data:
             X_sparse = csr_matrix(X)
@@ -142,6 +150,25 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanmean(X_sparse),
                 np.nanmean(X))
+
+    @dense_sparse
+    def test_nanmedian(self, array):
+        for X in self.data:
+            X_sparse = array(X)
+            np.testing.assert_array_equal(
+                nanmedian(X_sparse),
+                np.nanmedian(X))
+
+    @dense_sparse
+    def test_nanmedian_more_nonzeros(self, array):
+        X = np.ones((10, 10))
+        X[:5, 0] = np.nan
+        X[:6, 1] = 0
+        X_sparse = array(X)
+        np.testing.assert_array_equal(
+            nanmedian(X_sparse),
+            np.nanmedian(X)
+        )
 
     def test_var(self):
         for data in self.data:
