@@ -86,7 +86,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
-        QDialog.__init__(self, windowTitle=self.captionTitle)
+        QDialog.__init__(self, master, windowTitle=self.captionTitle)
         WidgetMessagesMixin.__init__(self)
         self.setLayout(QVBoxLayout())
 
