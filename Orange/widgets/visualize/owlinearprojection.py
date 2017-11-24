@@ -3,7 +3,7 @@ Linear Projection widget
 ------------------------
 """
 
-from itertools import combinations, islice, permutations, chain
+from itertools import islice, permutations, chain
 from math import factorial
 from types import SimpleNamespace as namespace
 
@@ -59,6 +59,11 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
+        self.attr_color = master.graph.attr_color
+
+    def initialize(self):
+        super().initialize()
+        self.attr_color = self.master.graph.attr_color
 
     def before_running(self):
         """
@@ -75,11 +80,10 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         self.last_run_n_attrs = self.n_attrs
 
     def check_preconditions(self):
+        master = self.master
         if not super().check_preconditions():
             return False
-        elif not self.master.data:
-            return False
-        elif not self.master.data.domain.class_var:
+        elif not master.btn_vizrank.isEnabled():
             return False
         self.n_attrs_spin.setMaximum(self.master.n_cont_var)
         return True
@@ -91,23 +95,38 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def iterate_states(self, state):
         if state is None:  # on the first call, compute order
-            self.attrs = attrs = self._score_heuristic()
-        for c in combinations(attrs, self.n_attrs):
+            self.attrs = self._score_heuristic()
+            state = list(range(self.n_attrs))
+        else:
+            state = list(state)
+
+        def combinations(n, s):
+            while True:
+                yield s
+                for up, _ in enumerate(s):
+                    s[up] += 1
+                    if up + 1 == len(s) or s[up] < s[up + 1]:
+                        break
+                    s[up] = up
+                if s[-1] == n:
+                    break
+
+        for c in combinations(len(self.attrs), state):
             for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2):
                 yield (c[0], ) + p
 
     def compute_score(self, state):
         master = self.master
-        valid_mask, ec, _ = master.prepare_plot_data(state)
-        Y = master.data.Y[valid_mask]
+        _, ec, _ = master.prepare_plot_data([self.attrs[i] for i in state])
+        y = column_data(master.data, self.attr_color, dtype=float)
         if ec.shape[0] < self.minK:
             return
         n_neighbors = min(self.minK, len(ec) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
         ind = knn.kneighbors(return_distance=False)
-        if master.data.domain.has_discrete_class:
-            return -np.sum(Y[ind] == Y.reshape(-1, 1)) / n_neighbors / len(Y)
-        return -r2_score(Y, np.mean(Y[ind], axis=1)) * (len(Y) / len(master.data))
+        if self.attr_color.is_discrete:
+            return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
+        return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(master.data))
 
     def bar_length(self, score):
         return max(0, -score)
@@ -122,19 +141,22 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             span = col_max - col_min
             return (col - col_min) / (span or 1)
         domain = self.master.data.domain
+        attr_color = self.master.graph.attr_color
         domain = Domain(
-            attributes=[v for v in chain(domain.attributes, domain.metas) if v.is_continuous],
-            class_vars=domain.class_vars
+            attributes=[v for v in chain(domain.variables, domain.metas)
+                        if v.is_continuous and v is not attr_color],
+            class_vars=attr_color
         )
         data = self.master.data.transform(domain)
         for i, col in enumerate(data.X.T):
             data.X.T[i] = normalized(col)
-        relief = ReliefF if domain.class_var.is_discrete else RReliefF
+        relief = ReliefF if attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         results = sorted(zip(weights, domain.attributes), key=lambda x: (-x[0], x[1].name))
         return [attr for _, attr in results]
 
-    def row_for_state(self, score, attrs):
+    def row_for_state(self, score, state):
+        attrs = [self.attrs[i] for i in state]
         item = QStandardItem(", ".join(a.name for a in attrs))
         item.setData(attrs, self._AttrRole)
         return [item]
@@ -167,7 +189,7 @@ class OWLinProjGraph(OWScatterPlotGraph):
         axes = self.master.plotdata.axes
         axes_x, axes_y = axes[:, 0], axes[:, 1]
         x_data, y_data = self.get_xy_data_positions(attr_x, attr_y, self.valid_data)
-        f = lambda a, b : (min(np.nanmin(a), np.nanmin(b)), max(np.nanmax(a), np.nanmax(b)))
+        f = lambda a, b: (min(np.nanmin(a), np.nanmin(b)), max(np.nanmax(a), np.nanmax(b)))
         min_x, max_x = f(axes_x, x_data)
         min_y, max_y = f(axes_y, y_data)
         self.view_box.setRange(QRectF(min_x, min_y, max_x - min_x, max_y - min_y), padding=0.025)
@@ -224,7 +246,7 @@ class OWLinearProjection(widget.OWWidget):
     settingsHandler = settings.DomainContextHandler()
 
     variable_state = settings.ContextSetting({})
-    placement = settings.Setting(0)
+    placement = settings.Setting(Placement.Circular)
     radius = settings.Setting(0)
     auto_commit = settings.Setting(True)
 
@@ -352,13 +374,8 @@ class OWLinearProjection(widget.OWWidget):
         placement = self.placement
         p_Circular = self.Placement.Circular
         p_LDA = self.Placement.LDA
-        is_enabled = placement in [p_Circular, p_LDA]
-        self.variables_selection.set_enabled(is_enabled)
-        is_vizrank_enabled = is_enabled and self.data is not None and \
-                             self.data.domain.class_var is not None and \
-                             len(self.model_selected[:]) + len(self.model_other) > 2
-        self.vizrank.stop_and_reset(is_vizrank_enabled)
-        self.btn_vizrank.setEnabled(is_vizrank_enabled)
+        self.variables_selection.set_enabled(placement in [p_Circular, p_LDA])
+        self._vizrank_color_change()
         self.rslider.setEnabled(placement != p_Circular)
         self._setup_plot()
         self.commit()
@@ -415,7 +432,7 @@ class OWLinearProjection(widget.OWWidget):
         self.plotdata.hidecircle = hidecircle
 
     def update_colors(self):
-        pass
+        self._vizrank_color_change()
 
     def clear(self):
         # Clear/reset the widget state
@@ -450,6 +467,31 @@ class OWLinearProjection(widget.OWWidget):
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
+
+    def _vizrank_color_change(self):
+        is_enabled = False
+        if self.data is None:
+            self.btn_vizrank.setToolTip("There is no data.")
+            return
+        vars = [v for v in chain(self.data.domain.variables, self.data.domain.metas) if
+                v.is_primitive and v is not self.graph.attr_color]
+        self.n_cont_var = len(vars)
+        if self.placement not in [self.Placement.Circular, self.Placement.LDA]:
+            msg = "Suggest Features works only for Circular and " \
+                  "Linear Discriminant Analysis Projection"
+        elif self.graph.attr_color is None:
+            msg = "Color variable has to be selected"
+        elif self.graph.attr_color.is_continuous and self.placement == self.Placement.LDA:
+            msg = "Suggest Features does not work for Linear Discriminant Analysis Projection " \
+                  "when continuous color variable is selected."
+        elif len(vars) < 3:
+            msg = "Not enough available continuous variables"
+        else:
+            is_enabled = True
+            msg = ""
+        self.btn_vizrank.setToolTip(msg)
+        self.btn_vizrank.setEnabled(is_enabled)
+        self.vizrank.stop_and_reset(is_enabled)
 
     @Inputs.projection
     def set_projection(self, projection):
@@ -494,7 +536,7 @@ class OWLinearProjection(widget.OWWidget):
                 pass
 
             if self.__pending_selection_restore is not None:
-                self.select_indices(self.__pending_selection_restore)
+                self._selection = np.array(self.__pending_selection_restore, dtype=int)
                 self.__pending_selection_restore = None
 
             # update the defaults state (the encoded state must contain
@@ -514,8 +556,7 @@ class OWLinearProjection(widget.OWWidget):
         if data is not None:
             domain = data.domain
             vars = [var for var in chain(domain.variables, domain.metas) if var.is_continuous]
-            self.n_cont_var = len(vars)
-            if not self.n_cont_var:
+            if not len(vars):
                 self.Warning.no_cont_features()
                 data = None
         self.data = data
@@ -525,7 +566,6 @@ class OWLinearProjection(widget.OWWidget):
             self.model_selected[:], self.model_other[:] = settings(data)
             self.vizrank.stop_and_reset()
             self.vizrank.attrs = self.data.domain.attributes if self.data is not None else []
-            self._selection = np.zeros(len(data), dtype=np.uint8)
 
     def _check_possible_opt(self):
         def set_enabled(is_enabled):
@@ -659,11 +699,13 @@ class OWLinearProjection(widget.OWWidget):
         if not variables:
             self.graph.new_data(None)
             return
+        if self.placement == self.Placement.PCA:
+            valid_mask, ec, axes = self._get_pca()
+            variables = self._pca.orig_domain.attributes
+        else:
+            valid_mask, ec, axes = self.prepare_plot_data(variables)
+
         self.plotdata.variables = variables
-
-        valid_mask, ec, axes = self._get_pca() if self.placement == self.Placement.PCA else \
-            self.prepare_plot_data(variables)
-
         self.plotdata.valid_mask = valid_mask
         self.plotdata.embedding_coords = ec
         self.plotdata.axes = axes
@@ -743,8 +785,11 @@ class OWLinearProjection(widget.OWWidget):
 
     def selection_changed(self):
         if self.graph.selection is not None:
+            self._selection = np.zeros(len(self.data), dtype=np.uint8)
             self._selection[self.plotdata.valid_mask] = self.graph.selection
-            self.selection_indices = np.flatnonzero(self._selection).tolist()
+            self.selection_indices = self._selection.tolist()
+        else:
+            self._selection = self.selection_indices = None
         self.commit()
 
     def prepare_data(self):
