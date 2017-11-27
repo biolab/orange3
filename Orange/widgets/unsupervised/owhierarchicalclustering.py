@@ -1319,16 +1319,16 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def _set_slider_value(self, value, span):
         with blocked(self.cut_line):
-            self.cut_line.setValue(value)
             self.cut_line.setRange(0, span)
+            self.cut_line.setValue(value)
 
         with blocked(self.top_axis.line):
-            self.top_axis.line.setValue(value)
             self.top_axis.line.setRange(0, span)
+            self.top_axis.line.setValue(value)
 
         with blocked(self.bottom_axis.line):
-            self.bottom_axis.line.setValue(value)
             self.bottom_axis.line.setRange(0, span)
+            self.bottom_axis.line.setValue(value)
 
     def set_cutoff_height(self, height):
         self.cutoff_height = height
