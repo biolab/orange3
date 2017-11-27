@@ -885,7 +885,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.zoom_slider = gui.hSlider(
             self.controlArea, self, "zoom_factor", box="Zoom",
             minValue=-6, maxValue=3, step=1, ticks=True, createLabel=False,
-            callback=self.__zoom_factor_changed)
+            callback=self.__update_font_scale)
 
         zoom_in = QAction(
             "Zoom in", self, shortcut=QKeySequence.ZoomIn,
@@ -1003,6 +1003,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
         self._set_cut_line_visible(self.selection_method == 1)
+        self.__update_font_scale()
 
     @Inputs.distances
     def set_distances(self, matrix):
@@ -1384,7 +1385,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.zoom_factor = clip(self.zoom_slider.minimum(),
                                 self.zoom_slider.maximum(),
                                 self.zoom_factor + 1)
-        self.__zoom_factor_changed()
+        self.__update_font_scale()
 
     def __zoom_out(self):
         def clip(minval, maxval, val):
@@ -1392,11 +1393,11 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.zoom_factor = clip(self.zoom_slider.minimum(),
                                 self.zoom_slider.maximum(),
                                 self.zoom_factor - 1)
-        self.__zoom_factor_changed()
+        self.__update_font_scale()
 
     def __zoom_reset(self):
         self.zoom_factor = 0
-        self.__zoom_factor_changed()
+        self.__update_font_scale()
 
     def __layout_main_graphics(self, width=-1):
         if width < 0:
@@ -1408,12 +1409,11 @@ class OWHierarchicalClustering(widget.OWWidget):
         mw = self._main_graphics.minimumWidth() + 4
         self.view.setMinimumWidth(mw + self.view.verticalScrollBar().width())
 
-    def __zoom_factor_changed(self):
+    def __update_font_scale(self):
         font = self.scene.font()
         factor = (1.25 ** self.zoom_factor)
         font = qfont_scaled(font, factor)
-        self.labels.setFont(font)
-        self.dendrogram.setFont(font)
+        self._main_graphics.setFont(font)
 
     def send_report(self):
         annot = self.label_cb.currentText()
