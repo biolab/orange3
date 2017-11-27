@@ -640,7 +640,6 @@ class Table(MutableSequence, Storage):
                     self._Y[row] = example._y
                 self.metas[row] = example._metas
                 return
-            c = self.domain.get_conversion(example.domain)
 
             self.X[row], self._Y[row], self.metas[row] = \
                 self.domain.convert(example)
@@ -934,7 +933,7 @@ class Table(MutableSequence, Storage):
         """Return concatenation of `tables` by `axis`."""
         if not tables:
             raise ValueError('need at least one table to concatenate')
-        if 1 == len(tables):
+        if len(tables) == 1:
             return tables[0].copy()
         CONCAT_ROWS, CONCAT_COLS = 0, 1
         if axis == CONCAT_ROWS:
@@ -1541,8 +1540,8 @@ class Table(MutableSequence, Storage):
         return contingencies, unknown_rows
 
     @classmethod
-    def transpose(cls, table, feature_names_column="",
-                  meta_attr_name="Feature name"):
+    def transpose(cls, table, feature_names_column="", meta_attr_name="Feature name",
+                  feature_name="Feature"):
         """
         Transpose the table.
 
@@ -1564,10 +1563,10 @@ class Table(MutableSequence, Storage):
         self.X = table.X.T
         attributes = [ContinuousVariable(str(row[feature_names_column]))
                       for row in table] if feature_names_column else \
-            [ContinuousVariable("Feature " + str(i + 1).zfill(
+            [ContinuousVariable(feature_name + " " + str(i + 1).zfill(
                 int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
         if old_domain and feature_names_column:
-            for i in range(len(attributes)):
+            for i, _ in enumerate(attributes):
                 if attributes[i].name in old_domain:
                     var = old_domain[attributes[i].name]
                     attr = ContinuousVariable(var.name) if var.is_continuous \
