@@ -453,6 +453,8 @@ class OWFreeViz(widget.OWWidget):
     def update_radius(self):
         # Update the anchor/axes visibility
         assert not self.plotdata is None
+        if self.plotdata.hidecircle is None:
+            return
 
         minradius = self.radius / 100 + 1e-5
         for anchor, item in zip(self.plotdata.anchors,
@@ -813,6 +815,8 @@ class OWFreeViz(widget.OWWidget):
         self.graph.update_data(self.variable_x, self.variable_y, reset_view)
 
     def update_density(self):
+        if self.graph.data is None:
+            return
         self._update_graph(reset_view=False)
 
     def selection_changed(self):
