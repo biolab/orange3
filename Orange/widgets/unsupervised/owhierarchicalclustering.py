@@ -10,7 +10,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
-    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox
+    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QMenu, QComboBox
 )
 from AnyQt.QtGui import (
     QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
@@ -936,19 +936,29 @@ class OWHierarchicalClustering(widget.OWWidget):
             callback=self.__update_font_scale)
 
         zoom_in = QAction(
-            "Zoom in", self, shortcut=QKeySequence.ZoomIn,
+            "Increase Font Size", self, shortcut=QKeySequence.ZoomIn,
             triggered=self.__zoom_in
         )
         zoom_out = QAction(
-            "Zoom out", self, shortcut=QKeySequence.ZoomOut,
+            "Decrease Front Size", self, shortcut=QKeySequence.ZoomOut,
             triggered=self.__zoom_out
         )
         zoom_reset = QAction(
-            "Reset zoom", self,
+            "Reset Font Size", self,
             shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
             triggered=self.__zoom_reset
         )
         self.addActions([zoom_in, zoom_out, zoom_reset])
+        mb = self.menuBar()
+        viewmenu = mb.findChild(QMenu, "menu-view")
+        if viewmenu is not None:
+            zoommenu = QMenu("Zoom", viewmenu)
+            zoommenu.addActions([zoom_in, zoom_out, zoom_reset])
+            zoommenu.insertSeparator(zoom_reset)
+            if viewmenu.actions():
+                viewmenu.insertMenu(viewmenu.actions()[0], zoommenu)
+            else:
+                viewmenu.addMenu(zoommenu)
 
         self.controlArea.layout().addStretch()
 
