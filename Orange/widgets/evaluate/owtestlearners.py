@@ -206,6 +206,7 @@ class OWTestLearners(OWWidget):
         class_inconsistent = Msg("Test and train data sets "
                                  "have different target variables.")
         memory_error = Msg("Not enough memory.")
+        no_class_values = Msg("Target variable has no values.")
         only_one_class_var_value = Msg("Target variable has only one value.")
 
     class Warning(OWWidget.Warning):
@@ -356,6 +357,7 @@ class OWTestLearners(OWWidget):
         self.Error.train_data_empty.clear()
         self.Error.class_required.clear()
         self.Error.too_many_classes.clear()
+        self.Error.no_class_values.clear()
         self.Error.only_one_class_var_value.clear()
         if data is not None and not len(data):
             self.Error.train_data_empty()
@@ -363,9 +365,11 @@ class OWTestLearners(OWWidget):
         if data:
             conds = [not data.domain.class_vars,
                      len(data.domain.class_vars) > 1,
+                     np.isnan(data.Y).all(),
                      data.domain.has_discrete_class and len(data.domain.class_var.values) == 1]
             errors = [self.Error.class_required,
                       self.Error.too_many_classes,
+                      self.Error.no_class_values,
                       self.Error.only_one_class_var_value]
             for cond, error in zip(conds, errors):
                 if cond:
