@@ -15,6 +15,7 @@ import pickle
 import shlex
 import shutil
 from unittest.mock import patch
+from urllib.request import urlopen, Request, getproxies
 
 import pkg_resources
 
@@ -84,6 +85,15 @@ def fix_win_pythonw_std_stream():
             sys.stderr = open(os.devnull, "w")
 
 
+def fix_set_proxy_env():
+    """
+    Set http_proxy/https_proxy environment variables (for requests, pip, ...)
+    from system settings on OS X and from registry on Windos. On unix, no-op.
+    """
+    for scheme, proxy in getproxies().items():
+        os.environ[scheme + '_proxy'] = proxy
+
+
 def make_sql_logger(level=logging.INFO):
     sql_log = logging.getLogger('sql_log')
     sql_log.setLevel(level)
@@ -129,7 +139,6 @@ def check_for_updates():
     if check_updates and time.time() - last_check_time > ONE_DAY:
         settings.setValue('startup/last-update-check-time', int(time.time()))
 
-        from urllib.request import urlopen, Request
         from Orange.version import version as current
 
         class GetLatestVersion(QThread):
@@ -237,6 +246,9 @@ def main(argv=None):
 
     # Try to fix fonts on OSX Mavericks
     fix_osx_10_9_private_font()
+
+    # Set http_proxy environment variable(s) for some clients
+    fix_set_proxy_env()
 
     # File handler should always be at least INFO level so we need
     # the application root level to be at least at INFO.
