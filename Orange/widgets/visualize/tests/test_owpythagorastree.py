@@ -134,7 +134,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         return (sq.tree_node for sq in self.get_squares())
 
     def test_tree_is_drawn(self):
-        self.send_signal('Tree', self.housing)
+        self.send_signal(self.widget.Inputs.tree, self.housing)
         self.assertTrue(len(self.get_squares()) > 0)
 
     def _check_all_same(self, items):
@@ -162,13 +162,14 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             self.assertTrue(any(x is False for x in squares_same),
                             'Colors did not change for %s data' % data_type)
 
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.titanic)
         _test('classification')
-        self.send_signal('Tree', self.housing)
+        self.send_signal(w.Inputs.tree, self.housing)
         _test('regression')
 
     def test_changing_size_adjustment_changes_sizes(self):
-        self.send_signal('Tree', self.titanic)
+        self.send_signal(self.widget.Inputs.tree, self.titanic)
         squares = []
 
         def _callback():
@@ -187,7 +188,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(self.widget.log_scale_box.isEnabled(),
                          'Should be disabled with no tree')
 
-        self.send_signal('Tree', self.titanic)
+        self.send_signal(self.widget.Inputs.tree, self.titanic)
         # No size adjustment
         simulate.combobox_activate_item(self.widget.size_calc_combo, 'Normal')
         self.assertFalse(self.widget.log_scale_box.isEnabled(),
@@ -216,95 +217,96 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def test_legend(self):
         """Test legend behaviour."""
-        self.widget.cb_show_legend.setChecked(True)
+        w = self.widget
+        w.cb_show_legend.setChecked(True)
 
-        self.send_signal('Tree', self.titanic)
+        self.send_signal(w.Inputs.tree, self.titanic)
         self.assertIsInstance(self.widget.legend, OWDiscreteLegend)
         self.assertTrue(self.widget.legend.isVisible())
 
         # The legend should be invisible when regression coloring is none
-        self.send_signal('Tree', self.housing)
-        self.assertIsInstance(self.widget.legend, OWContinuousLegend)
-        self.assertFalse(self.widget.legend.isVisible())
+        self.send_signal(w.Inputs.tree, self.housing)
+        self.assertIsInstance(w.legend, OWContinuousLegend)
+        self.assertFalse(w.legend.isVisible())
 
         # The legend should appear when there is a coloring (2 is mean coloring)
         index = 2
-        simulate.combobox_activate_index(self.widget.target_class_combo, index)
-        self.assertIsInstance(self.widget.legend, OWContinuousLegend)
-        self.assertTrue(self.widget.legend.isVisible())
+        simulate.combobox_activate_index(w.target_class_combo, index)
+        self.assertIsInstance(w.legend, OWContinuousLegend)
+        self.assertTrue(w.legend.isVisible())
 
         # Check that switching back to a discrete target class works
-        self.send_signal('Tree', self.titanic)
-        self.assertIsInstance(self.widget.legend, OWDiscreteLegend)
-        self.assertTrue(self.widget.legend.isVisible())
+        self.send_signal(w.Inputs.tree, self.titanic)
+        self.assertIsInstance(w.legend, OWDiscreteLegend)
+        self.assertTrue(w.legend.isVisible())
 
     def test_checking_legend_checkbox_shows_and_hides_legend(self):
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.titanic)
         # Hide the legend
-        self.widget.cb_show_legend.setChecked(False)
-        self.assertFalse(self.widget.legend.isVisible(), 'Hiding legend failed')
+        w.cb_show_legend.setChecked(False)
+        self.assertFalse(w.legend.isVisible(), 'Hiding legend failed')
         # Show the legend
-        self.widget.cb_show_legend.setChecked(True)
-        self.assertTrue(self.widget.legend.isVisible(), 'Showing legend failed')
+        w.cb_show_legend.setChecked(True)
+        self.assertTrue(w.legend.isVisible(), 'Showing legend failed')
 
     def test_tooltip_changes_for_classification_target_class(self):
         """Tooltips should change when a target class is specified with a
         discrete target class."""
-        self.widget.cb_show_tooltips.setChecked(True)
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        w.cb_show_tooltips.setChecked(True)
+        self.send_signal(w.Inputs.tree, self.titanic)
         tooltips = []
 
         def _callback():
             tooltips.append(self.get_visible_squares()[2].toolTip())
 
-        simulate.combobox_run_through_all(
-            self.widget.target_class_combo, callback=_callback)
+        simulate.combobox_run_through_all(w.target_class_combo, callback=_callback)
 
         self.assertFalse(self._check_all_same(tooltips))
 
     def test_checking_tooltip_shows_and_hides_tooltips(self):
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.titanic)
         square = self.get_squares()[0]
         # Hide tooltips
-        self.widget.cb_show_tooltips.setChecked(False)
+        w.cb_show_tooltips.setChecked(False)
         self.assertEqual(square.toolTip(), '', 'Hiding tooltips failed')
         # Show tooltips
-        self.widget.cb_show_tooltips.setChecked(True)
+        w.cb_show_tooltips.setChecked(True)
         self.assertNotEqual(square.toolTip(), '', 'Showing tooltips failed')
 
     def test_changing_max_depth_slider(self):
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.titanic)
 
-        max_depth = self.widget.tree_adapter.max_depth
+        max_depth = w.tree_adapter.max_depth
         num_squares_full = len(self.get_visible_squares())
-        self.assertEqual(self.widget.depth_limit, max_depth,
-                         'Full tree should be drawn initially')
+        self.assertEqual(w.depth_limit, max_depth, 'Full tree should be drawn initially')
 
         self.widget.depth_slider.setValue(max_depth - 1)
         num_squares_less = len(self.get_visible_squares())
         self.assertLess(num_squares_less, num_squares_full,
                         'Lowering tree depth limit did not hide squares')
 
-        self.widget.depth_slider.setValue(max_depth + 1)
+        w.depth_slider.setValue(max_depth + 1)
         self.assertGreater(len(self.get_visible_squares()), num_squares_less,
                            'Increasing tree depth limit did not show squares')
 
     def test_label_on_tree_connect_and_disconnect(self):
+        w = self.widget
         regex = r'Nodes:(.+)\s*Depth:(.+)'
         # Should contain no info by default
         self.assertNotRegex(
             self.widget.info.text(), regex,
             'Initial info should not contain node or depth info')
         # Test info label for tree
-        self.send_signal('Tree', self.titanic)
-        self.assertRegex(
-            self.widget.info.text(), regex,
-            'Valid tree does not update info')
+        self.send_signal(w.Inputs.tree, self.titanic)
+        self.assertRegex(w.info.text(), regex, 'Valid tree does not update info')
         # Remove tree from input
-        self.send_signal('Tree', None)
+        self.send_signal(w.Inputs.tree, None)
         self.assertNotRegex(
-            self.widget.info.text(), regex,
-            'Initial info should not contain node or depth info')
+            w.info.text(), regex, 'Initial info should not contain node or depth info')
 
     def test_tree_determinism(self):
         """Check that the tree is drawn identically upon receiving the same
@@ -313,7 +315,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # Make sure the tree are deterministic for iris
         scene_nodes = []
         for _ in range(n_tries):
-            self.send_signal(self.signal_name, self.signal_data)
+            self.send_signal(self.widget.Inputs.tree, self.signal_data)
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
@@ -330,7 +332,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         data_same_entropy = TreeLearner()(data_same_entropy)
         scene_nodes = []
         for _ in range(n_tries):
-            self.send_signal(self.signal_name, data_same_entropy)
+            self.send_signal(self.widget.Inputs.tree, data_same_entropy)
             scene_nodes.append([n.pos() for n in self.get_visible_squares()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
@@ -342,14 +344,14 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
 
     def test_keep_colors_on_sizing_change(self):
         """The color should be the same after a full recompute of the tree."""
-        self.send_signal('Tree', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.titanic)
         colors = []
 
         def _callback():
             colors.append([sq.brush().color() for sq in self.get_visible_squares()])
 
-        simulate.combobox_run_through_all(
-            self.widget.size_calc_combo, callback=_callback)
+        simulate.combobox_run_through_all(w.size_calc_combo, callback=_callback)
 
         # Check that individual squares all have the same color
         colors_same = [self._check_all_same(x) for x in zip(*colors)]

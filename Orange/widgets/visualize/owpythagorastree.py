@@ -8,11 +8,12 @@ from AnyQt.QtWidgets import QLabel, QSizePolicy
 
 from Orange.base import TreeModel, SklModel
 from Orange.data.table import Table
-from Orange.widgets import gui, settings, widget
+from Orange.widgets import gui, settings
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table,
     ANNOTATED_DATA_SIGNAL_NAME
 )
+from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     SquareGraphicsItem,
@@ -43,9 +44,12 @@ class OWPythagorasTree(OWWidget):
 
     priority = 1000
 
-    inputs = [('Tree', TreeModel, 'set_tree')]
-    outputs = [('Selected Data', Table, widget.Default),
-               (ANNOTATED_DATA_SIGNAL_NAME, Table)]
+    class Inputs:
+        tree = Input("Tree", TreeModel)
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -136,6 +140,7 @@ class OWPythagorasTree(OWWidget):
         # Clear the widget to correctly set the intial values
         self.clear()
 
+    @Inputs.tree
     def set_tree(self, model=None):
         """When a different tree is given."""
         self.clear()
@@ -185,8 +190,7 @@ class OWPythagorasTree(OWWidget):
             #     self.depth_limit = model.meta_depth_limit
             #     self.update_depth()
 
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.instances, None))
+        self.Outputs.annotated_data.send(create_annotated_table(self.instances, None))
 
     def clear(self):
         """Clear all relevant data from the widget."""
@@ -296,16 +300,15 @@ class OWPythagorasTree(OWWidget):
     def commit(self):
         """Commit the selected data to output."""
         if self.instances is None:
-            self.send('Selected Data', None)
-            self.send(ANNOTATED_DATA_SIGNAL_NAME, None)
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(None)
             return
         nodes = [i.tree_node.label for i in self.scene.selectedItems()
                  if isinstance(i, SquareGraphicsItem)]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
-        self.send('Selected Data', data)
+        self.Outputs.selected_data.send(data)
         selected_indices = self.tree_adapter.get_indices(nodes)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.instances, selected_indices))
+        self.Outputs.annotated_data.send(create_annotated_table(self.instances, selected_indices))
 
     def send_report(self):
         """Send report."""
