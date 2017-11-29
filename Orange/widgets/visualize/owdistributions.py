@@ -117,7 +117,9 @@ class OWDistributions(widget.OWWidget):
         self.contingencies = None
         varbox = gui.vBox(self.controlArea, "Variable")
 
-        self.varmodel = DomainModel(separators=False, valid_types=DomainModel.PRIMITIVE)
+        self.varmodel = DomainModel(
+            order=(DomainModel.ATTRIBUTES, DomainModel.CLASSES,
+                   DomainModel.METAS), valid_types=DomainModel.PRIMITIVE)
         self.groupvarmodel = DomainModel(placeholder="(None)", valid_types=DiscreteVariable)
 
         self.varview = QListView(
@@ -153,8 +155,7 @@ class OWDistributions(widget.OWWidget):
         self.groupvarview = gui.comboBox(
             box, self, "group_var",
             callback=self._on_groupvar_changed,
-            valueType=str, contentsLength=12,
-            sendSelectedValue=True, model=self.groupvarmodel)
+            contentsLength=12, model=self.groupvarmodel)
         box2 = gui.indentedBox(box, sep=4)
         self.cb_rel_freq = gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
@@ -231,13 +232,12 @@ class OWDistributions(widget.OWWidget):
             self.varmodel.set_domain(domain)
             self.groupvarview.clear()
             self.groupvarmodel.set_domain(domain)
-            if domain.has_discrete_class:
+            if self.varmodel:
+                self.var = self.varmodel[0]
+            if domain.class_var in self.groupvarmodel:
                 self.group_var = domain.class_var
             self.openContext(domain)
-            self.group_var = None if self.group_var not in self.groupvarmodel else self.group_var
-            self.var = self.var if self.var in self.varmodel else None
-            self.group_var = self.group_var if self.group_var in self.groupvarmodel else None
-            itemmodels.select_row(self.varview, self.var)
+            itemmodels.select_row(self.varview, self.varmodel.indexOf(self.var))
             self._setup()
 
     def clear(self):
@@ -559,8 +559,7 @@ class OWDistributions(widget.OWWidget):
         super().onDeleteWidget()
 
     def get_widget_name_extension(self):
-        if self.var is not None:
-            return self.var
+        return self.var
 
     def send_report(self):
         self.plotview.scene().setSceneRect(self.plotview.sceneRect())
