@@ -1,10 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import QRectF, Qt
+from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.widget import AttributeList
@@ -536,6 +537,61 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         w = self.widget
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.controls.attr_x, domain.metas[0].name)
+
+    def test_tooltip(self):
+        # The test tests presence of some data,
+        # but avoids checking the exact format
+        data = Table("heart_disease")
+        self.send_signal(self.widget.Inputs.data, data)
+        widget = self.widget
+        graph = widget.graph
+        scatterplot_item = graph.scatterplot_item
+
+        widget.controls.attr_x = data.domain["chest pain"]
+        widget.controls.attr_y = data.domain["cholesterol"]
+        all_points = scatterplot_item.points()
+
+        event = MagicMock()
+        with patch.object(scatterplot_item, "mapFromScene"), \
+                patch.object(QToolTip, "showText") as show_text:
+
+            # Single point hovered
+            with patch.object(scatterplot_item, "pointsAt",
+                              return_value=[all_points[42]]):
+                # Show just x and y attribute
+                graph.tooltip_shows_all = False
+                self.assertTrue(graph.help_event(event))
+                (_, text), _ = show_text.call_args
+                self.assertIn("age = {}".format(data[42, "age"]), text)
+                self.assertIn("gender = {}".format(data[42, "gender"]), text)
+                self.assertNotIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertNotIn("others", text)
+
+                # Show all attributes
+                graph.tooltip_shows_all = True
+                self.assertTrue(graph.help_event(event))
+                (_, text), _ = show_text.call_args
+                self.assertIn("age = {}".format(data[42, "age"]), text)
+                self.assertIn("gender = {}".format(data[42, "gender"]), text)
+                self.assertIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertIn("... and 4 others", text)
+
+            # Two points hovered
+            with patch.object(scatterplot_item, "pointsAt",
+                              return_value=[all_points[42], all_points[100]]):
+                self.assertTrue(graph.help_event(event))
+                (_, text), _ = show_text.call_args
+                self.assertIn("age = {}".format(data[42, "age"]), text)
+                self.assertIn("gender = {}".format(data[42, "gender"]), text)
+                self.assertIn("age = {}".format(data[100, "age"]), text)
+                self.assertIn("gender = {}".format(data[100, "gender"]), text)
+
+            # No points hovered
+            with patch.object(scatterplot_item, "pointsAt",
+                              return_value=[]):
+                show_text.reset_mock()
+                self.assertFalse(graph.help_event(event))
+                self.assertEqual(show_text.call_count, 0)
 
 
 if __name__ == "__main__":
