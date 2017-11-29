@@ -73,7 +73,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         self.component_y = 1
 
         box = gui.vBox(self.controlArea, "Variables")
-        self.model = DomainModel(valid_types=DiscreteVariable)
+        self.model = DomainModel(valid_types=DiscreteVariable, separators=False)
         self.varview = view = QListView(selectionMode=QListView.MultiSelection)
         view.setModel(self.model)
         view.selectionModel().selectionChanged.connect(self._var_changed)
@@ -330,14 +330,10 @@ def burt_table(data, variables):
     offsets = np.r_[0, np.cumsum(counts)]
 
     for i, var1 in enumerate(variables):
-        for j in range(i + 1):
-            var2 = variables[j]
-
+        for j, var2 in enumerate(variables[:i + 1]):
             cm = contingency.get_contingency(data, var2, var1)
-
             start1, end1 = offsets[i], offsets[i] + counts[i]
             start2, end2 = offsets[j], offsets[j] + counts[j]
-
             table[start1: end1, start2: end2] += cm
             if i != j:
                 table[start2: end2, start1: end1] += cm.T
