@@ -1168,36 +1168,47 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.scatterplot_item is None:
             return False
 
+        domain = self.data.domain
+        PARTS = (("Class", "Classes", 4, domain.class_vars),
+                 ("Meta", "Metas", 4, domain.metas),
+                 ("Feature", "Features", 10, domain.attributes))
+
+        def format_val(var, point_data, bold=False):
+            text = escape('{} = {}'.format(var.name, point_data[var]))
+            if bold:
+                text = "<b>{}</b>".format(text)
+            return text
+
+        def show_part(point_data, singular, plural, max_shown, vars):
+            cols = [format_val(var, point_data)
+                    for var in vars[:max_shown + 2]
+                    if vars == domain.class_vars
+                    or var not in (self.shown_x, self.shown_y)][:max_shown]
+            if not cols:
+                return ""
+            n_vars = len(vars)
+            if n_vars > max_shown:
+                cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+            return \
+                "<br/><b>{}</b>:<br/>".format(singular if n_vars < 2
+                                              else plural) \
+                + "<br/>".join(cols)
+
+        def point_data(p):
+            point_data = self.data[p.data()]
+            text = "<br/>".join(
+                format_val(var, point_data, bold=self.tooltip_shows_all)
+                for var in (self.shown_x, self.shown_y))
+            if self.tooltip_shows_all:
+                text += "<br/>" + \
+                        "".join(show_part(point_data, *columns)
+                                for columns in PARTS)
+            return text
+
         act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
         points = self.scatterplot_item.pointsAt(act_pos)
-        text = ""
         if len(points):
-            for i, p in enumerate(points):
-                index = p.data()
-                text += "Attributes:\n"
-                if self.tooltip_shows_all and \
-                        len(self.domain.attributes) < 30:
-                    text += "".join(
-                        '   {} = {}\n'.format(attr.name,
-                                              self.data[index][attr])
-                        for attr in self.domain.attributes)
-                else:
-                    text += '   {} = {}\n   {} = {}\n'.format(
-                        self.shown_x, self.data[index][self.shown_x],
-                        self.shown_y, self.data[index][self.shown_y])
-                    if self.tooltip_shows_all:
-                        text += "   ... and {} others\n\n".format(
-                            len(self.domain.attributes) - 2)
-                if self.domain.class_var:
-                    text += 'Class:\n   {} = {}\n'.format(
-                        self.domain.class_var.name,
-                        self.data[index][self.data.domain.class_var])
-                if i < len(points) - 1:
-                    text += '------------------\n'
-
-            text = ('<span style="white-space:pre">{}</span>'
-                    .format(escape(text)))
-
+            text = "<hr/>".join(point_data(point) for point in points)
             QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
             return True
         else:
