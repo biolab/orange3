@@ -19,7 +19,6 @@
 		<node id="15" name="Outliers" position="(672.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owoutliers.OWOutliers" title="Outliers" version="" />
 		<node id="16" name="Edit Domain" position="(822.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.oweditdomain.OWEditDomain" title="Edit Domain" version="" />
 		<node id="17" name="Python Script" position="(972.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owpythonscript.OWPythonScript" title="Python Script" version="" />
-		<node id="18" name="Image Viewer" position="(1122.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owimageviewer.OWImageViewer" title="Image Viewer" version="" />
 		<node id="19" name="Color" position="(1272.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcolor.OWColor" title="Color" version="" />
 		<node id="20" name="Continuize" position="(1422.0, 294.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcontinuize.OWContinuize" title="Continuize" version="" />
 		<node id="21" name="Create Class" position="(64.0, 418.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owcreateclass.OWCreateClass" title="Create Class" version="" />
@@ -159,7 +158,6 @@ CVgLAAAASGVsbG8gd29ybGRxClgGAAAAc2NyaXB0cQtYFQAAAHByaW50KCdIZWxsbyB3b3JsZCcp
 CnEMWAUAAABmbGFnc3ENSwBYCAAAAGZpbGVuYW1lcQ5OdWJhWAwAAABhdXRvX2V4ZWN1dGVxD4hY
 CwAAAF9fdmVyc2lvbl9fcRBLAXUu
 </properties>
-		<properties format="literal" node_id="18">{'savedWidgetGeometry': None, 'autoCommit': True, '__version__': 1, 'imageSize': 100, 'context_settings': []}</properties>
 		<properties format="literal" node_id="19">{'savedWidgetGeometry': None, 'auto_apply': True, 'color_settings': None, '__version__': 1, 'selected_schema_index': 0, 'context_settings': []}</properties>
 		<properties format="literal" node_id="20">{'autosend': True, 'continuous_treatment': 0, 'class_treatment': 0, 'multinomial_treatment': 0, 'transform_class': False, 'savedWidgetGeometry': None, 'zero_based': 1, '__version__': 1}</properties>
 		<properties format="literal" node_id="21">{'savedWidgetGeometry': None, '__version__': 1, 'context_settings': []}</properties>
