@@ -9,6 +9,7 @@ from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
 from Orange.base import TreeModel, SklModel
+from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -16,7 +17,7 @@ from Orange.data import Table
 
 from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -158,21 +159,15 @@ class OWTreeGraph(OWTreeViewer2D):
     name = "Tree Viewer"
     icon = "icons/TreeViewer.svg"
     priority = 35
-    inputs = [
-        widget.InputSignal(
-            "Tree", TreeModel, "ctree",
-            # Had different input names before merging from
-            # Classification/Regression tree variants
-            replaces=["Classification Tree", "Regression Tree"])
-    ]
-    outputs = [
-        widget.OutputSignal(
-            "Selected Data", Table, widget.Default, id="selected-data",
-        ),
-        widget.OutputSignal(
-            ANNOTATED_DATA_SIGNAL_NAME, Table, id="annotated-data")
-    ]
 
+    class Inputs:
+        # Had different input names before merging from
+        # Classification/Regression tree variants
+        tree = Input("Tree", TreeModel, replaces=["Classification Tree", "Regression Tree"])
+
+    class Outputs:
+        selected_data = Output("Selected Data", Table, default=True, id="selected-data")
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, id="annotated-data")
 
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
@@ -257,6 +252,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.set_node_info()
         self.scene.update()
 
+    @Inputs.tree
     def ctree(self, model=None):
         """Input signal handler"""
         self.clear_scene()
@@ -297,9 +293,8 @@ class OWTreeGraph(OWTreeViewer2D):
                 self.tree_adapter.num_nodes,
                 len(self.tree_adapter.leaves(self.tree_adapter.root))))
         self.setup_scene()
-        self.send("Selected Data", None)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME,
-                  create_annotated_table(self.dataset, []))
+        self.Outputs.selected_data.send(None)
+        self.Outputs.annotated_data.send(create_annotated_table(self.dataset, []))
 
     def walkcreate(self, node, parent=None):
         """Create a structure of tree nodes from the given model"""
@@ -324,10 +319,9 @@ class OWTreeGraph(OWTreeViewer2D):
         nodes = [item.node_inst for item in self.scene.selectedItems()
                  if isinstance(item, TreeNode)]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
-        self.send("Selected Data", data)
-        self.send(ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table(
-            self.dataset,
-            self.tree_adapter.get_indices(nodes)))
+        self.Outputs.selected_data.send(data)
+        self.Outputs.annotated_data.send(create_annotated_table(
+            self.dataset, self.tree_adapter.get_indices(nodes)))
 
     def send_report(self):
         if not self.model:

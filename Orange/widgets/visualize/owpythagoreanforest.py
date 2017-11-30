@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView, QLabel
 from Orange.base import RandomForestModel, TreeModel
 from Orange.data import Table
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
@@ -30,8 +31,11 @@ class OWPythagoreanForest(OWWidget):
 
     priority = 1001
 
-    inputs = [('Random forest', RandomForestModel, 'set_rf')]
-    outputs = [('Tree', TreeModel)]
+    class Inputs:
+        random_forest = Input("Random forest", RandomForestModel)
+
+    class Outputs:
+        tree = Output("Tree", TreeModel)
 
     # Enable the save as feature
     graph_name = 'scene'
@@ -110,6 +114,7 @@ class OWPythagoreanForest(OWWidget):
 
         self.clear()
 
+    @Inputs.random_forest
     def set_rf(self, model=None):
         """When a different forest is given."""
         self.clear()
@@ -273,7 +278,7 @@ class OWPythagoreanForest(OWWidget):
             return
 
         if not self.scene.selectedItems():
-            self.send('Tree', None)
+            self.Outputs.tree.send(None)
             # The selected tree index should only reset when model changes
             if self.model is None:
                 self.selected_tree_index = -1
@@ -287,7 +292,7 @@ class OWPythagoreanForest(OWWidget):
         tree.meta_size_calc_idx = self.size_calc_idx
         tree.meta_depth_limit = self.depth_limit
 
-        self.send('Tree', tree)
+        self.Outputs.tree.send(tree)
 
     def send_report(self):
         """Send report."""

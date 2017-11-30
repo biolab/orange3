@@ -38,16 +38,18 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
     def test_target_class_changed(self):
         """Check if node content has changed after selecting target class"""
-        self.send_signal(self.signal_name, self.signal_data)
-        nodes = self.widget.scene.nodes()
+        w = self.widget
+        self.send_signal(w.Inputs.tree, self.signal_data)
+        nodes = w.scene.nodes()
         text = nodes[0].toPlainText()
-        self.widget.color_combo.activated.emit(1)
-        self.widget.color_combo.setCurrentIndex(1)
+        w.color_combo.activated.emit(1)
+        w.color_combo.setCurrentIndex(1)
         self.assertNotEqual(nodes[0].toPlainText(), text)
 
     def test_tree_determinism(self):
         """Check that the tree is drawn identically upon receiving the same
         dataset with no parameter changes."""
+        w = self.widget
         n_tries = 10
 
         def _check_all_same(data):
@@ -62,8 +64,8 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         # Make sure the tree are deterministic for iris
         scene_nodes = []
         for _ in range(n_tries):
-            self.send_signal(self.signal_name, self.signal_data)
-            scene_nodes.append([n.pos() for n in self.widget.scene.nodes()])
+            self.send_signal(w.Inputs.tree, self.signal_data)
+            scene_nodes.append([n.pos() for n in w.scene.nodes()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
                 _check_all_same(node_row),
@@ -75,8 +77,8 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         # the same entropy
         scene_nodes = []
         for _ in range(n_tries):
-            self.send_signal(self.signal_name, self.data_same_entropy)
-            scene_nodes.append([n.pos() for n in self.widget.scene.nodes()])
+            self.send_signal(w.Inputs.tree, self.data_same_entropy)
+            scene_nodes.append([n.pos() for n in w.scene.nodes()])
         for node_row in zip(*scene_nodes):
             self.assertTrue(
                 _check_all_same(node_row),
