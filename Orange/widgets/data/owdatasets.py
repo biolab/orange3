@@ -34,14 +34,13 @@ from Orange.widgets.widget import Msg
 log = logging.getLogger(__name__)
 
 
-def ensure_local(index_url, domain, filename, local_cache_path,
+def ensure_local(index_url, file_path, local_cache_path,
                  force=False, progress_advance=None):
     localfiles = LocalFiles(local_cache_path,
                             serverfiles=ServerFiles(server=index_url))
     if force:
-        localfiles.download(domain, filename, callback=progress_advance)
-    return localfiles.localpath_download(
-        domain, filename, callback=progress_advance)
+        localfiles.download(*file_path, callback=progress_advance)
+    return localfiles.localpath_download(*file_path, callback=progress_advance)
 
 
 def format_info(n_all, n_cached):
@@ -228,7 +227,7 @@ class OWDataSets(widget.OWWidget):
                 self.Warning.only_local_datasets()
             res = {}
 
-        allinforemote = res  # type: Dict[Tuple[str, str], dict]
+        allinforemote = res  # type: Dict[Tuple[str, ...], dict]
         allkeys = set(allinfolocal)
         if allinforemote is not None:
             allkeys = allkeys | set(allinforemote)
@@ -249,6 +248,7 @@ class OWDataSets(widget.OWWidget):
             filename = file_path[-1]
 
             return namespace(
+                file_path=file_path,
                 prefix=prefix, filename=filename,
                 title=info.get("title", filename),
                 datetime=info.get("datetime", None),
@@ -322,7 +322,7 @@ class OWDataSets(widget.OWWidget):
         for i in range(model.rowCount()):
             item = model.item(i, 0)
             info = item.data(Qt.UserRole)
-            info.islocal = (info.prefix, info.filename) in localinfo
+            info.islocal = info.file_path in localinfo
             item.setData(" " if info.islocal else "", Qt.DisplayRole)
             allinfo.append(info)
 
@@ -405,7 +405,7 @@ class OWDataSets(widget.OWWidget):
                 self.setBlocking(True)
 
                 f = self._executor.submit(
-                    ensure_local, self.INDEX_URL, di.prefix, di.filename,
+                    ensure_local, self.INDEX_URL, di.file_path,
                     self.local_cache_path, force=di.outdated,
                     progress_advance=callback)
                 w = FutureWatcher(f, parent=self)
@@ -414,7 +414,7 @@ class OWDataSets(widget.OWWidget):
             else:
                 self.setStatusMessage("")
                 self.setBlocking(False)
-                self.commit_cached(di.prefix, di.filename)
+                self.commit_cached(di.file_path)
         else:
             self.Outputs.data.send(None)
 
@@ -448,8 +448,8 @@ class OWDataSets(widget.OWWidget):
             data = None
         self.Outputs.data.send(data)
 
-    def commit_cached(self, prefix, filename):
-        path = LocalFiles(self.local_cache_path).localpath(prefix, filename)
+    def commit_cached(self, file_path):
+        path = LocalFiles(self.local_cache_path).localpath(*file_path)
         self.Outputs.data.send(Orange.data.Table(path))
 
     @Slot()
@@ -473,12 +473,12 @@ class OWDataSets(widget.OWWidget):
         super().closeEvent(event)
 
     def list_remote(self):
-        # type: () -> Dict[Tuple[str, str], dict]
+        # type: () -> Dict[Tuple[str, ...], dict]
         client = ServerFiles(server=self.INDEX_URL)
         return client.allinfo()
 
     def list_local(self):
-        # type: () -> Dict[Tuple[str, str], dict]
+        # type: () -> Dict[Tuple[str, ...], dict]
         return LocalFiles(self.local_cache_path).allinfo()
 
 
