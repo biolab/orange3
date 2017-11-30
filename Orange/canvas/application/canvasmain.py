@@ -137,28 +137,9 @@ class DockWidget(QDockWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        settings_group = kwargs.get('objectName')
-        if settings_group:
-            settings = QSettings()
-            self.dockLocationChanged.connect(
-                lambda area: settings.setValue(settings_group + '/area', area))
-            self.visibilityChanged.connect(
-                lambda visible: settings.setValue(settings_group + '/is-visible', visible))
-            self.topLevelChanged.connect(
-                lambda floating: settings.setValue(settings_group + '/is-floating', floating))
-            self.setVisible(
-                settings.value(settings_group + '/is-visible', False, type=bool))
-            self.setFloating(
-                settings.value(settings_group + '/is-floating', False, type=bool))
-
-        def _close():
-            focused = QApplication.focusWidget()
-            if any(dock_widget is focused
-                   for dock_widget in self.findChildren(type(focused))):
-                self.close()
-
         for key in (QKeySequence.Close, QKeySequence.Cancel):
-            QShortcut(key, self, _close, _close)
+            QShortcut(key, self, self.close,
+                      context=Qt.WidgetWithChildrenShortcut)
 
 
 class CanvasMainWindow(QMainWindow):
@@ -170,10 +151,19 @@ class CanvasMainWindow(QMainWindow):
         self.__scheme_margins_enabled = True
         self.__document_title = "untitled"
         self.__first_show = True
-
+        self.__is_transient = True
         self.widget_registry = None
 
-        self.last_scheme_dir = user_documents_path()
+        # TODO: Help view and manager to separate singleton instance.
+        self.help = None
+        self.help_view = None
+        self.help_dock = None
+
+        # TODO: Log view to separate singleton instance.
+        self.log_dock = None
+
+        # TODO: Read/store in QSettings, record/sync as soon as added.
+        # TODO: sync between CanvasMainWindow instances?.
         try:
             self.recent_schemes = config.recent_schemes()
         except Exception:
@@ -240,6 +230,12 @@ class CanvasMainWindow(QMainWindow):
         dropfilter.urlDropped.connect(self.open_scheme_file)
         self.scheme_widget.setAcceptDrops(True)
         self.scheme_widget.installEventFilter(dropfilter)
+
+        def touch():
+            # Mark the window as non transient on any change
+            self.__is_transient = False
+            self.scheme_widget.modificationChanged.disconnect(touch)
+        self.scheme_widget.modificationChanged.connect(touch)
 
         # QMainWindow's Dock widget
         self.dock_widget = CollapsibleDockWidget(objectName="main-area-dock")
@@ -350,11 +346,12 @@ class CanvasMainWindow(QMainWindow):
         self.log_dock.setWidget(OutputView())
         self.addDockWidget(Qt.BottomDockWidgetArea, self.log_dock)
 
-        self.help_dock = DockWidget(self.tr("Help"), self,
-                                    objectName="help-dock",
-                                    allowedAreas=Qt.RightDockWidgetArea |
-                                                 Qt.BottomDockWidgetArea)
-        self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
+        self.help_dock = DockWidget(
+            self.tr("Help"), self, objectName="help-dock",
+            allowedAreas=Qt.RightDockWidgetArea |
+                         Qt.BottomDockWidgetArea,
+            visible=False
+        )
         if USE_WEB_ENGINE:
             self.help_view = QWebEngineView()
         else:
@@ -365,10 +362,9 @@ class CanvasMainWindow(QMainWindow):
                 os.path.join(config.cache_dir(), "help", "help-view-cache")
             )
             manager.setCache(cache)
+
         self.help_dock.setWidget(self.help_view)
-        self.addDockWidget(
-            QSettings().value('help-dock/area', Qt.RightDockWidgetArea, type=int),
-            self.help_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.help_dock)
 
         self.setMinimumSize(600, 500)
 
@@ -380,7 +376,7 @@ class CanvasMainWindow(QMainWindow):
             QAction(self.tr("New"), self,
                     objectName="action-new",
                     toolTip=self.tr("Open a new workflow."),
-                    triggered=self.new_scheme,
+                    triggered=self.new_workflow_window,
                     shortcut=QKeySequence.New,
                     icon=canvas_icons("New.svg")
                     )
@@ -400,6 +396,17 @@ class CanvasMainWindow(QMainWindow):
                     toolTip=self.tr("Open a new workflow and freeze signal "
                                     "propagation."),
                     triggered=self.open_and_freeze_scheme
+                    )
+        self.open_and_freeze_action.setShortcut(
+            QKeySequence(Qt.ControlModifier | Qt.AltModifier | Qt.Key_O)
+        )
+
+        self.close_window_action = \
+            QAction(self.tr("Close Window"), self,
+                    objectName="action-close-window",
+                    toolTip=self.tr("Close the window"),
+                    shortcut=QKeySequence.Close,
+                    triggered=self.close,
                     )
 
         self.open_report_action = \
@@ -428,7 +435,7 @@ class CanvasMainWindow(QMainWindow):
             QAction(self.tr("Quit"), self,
                     objectName="quit-action",
                     toolTip=self.tr("Quit Orange Canvas."),
-                    triggered=self.quit,
+                    triggered=QApplication.closeAllWindows,
                     menuRole=QAction.QuitRole,
                     shortcut=QKeySequence.Quit,
                     )
@@ -575,7 +582,7 @@ class CanvasMainWindow(QMainWindow):
                     objectName="signal-freeze-action",
                     checkable=True,
                     toolTip=self.tr("Freeze signal propagation."),
-                    triggered=self.set_signal_freeze,
+                    toggled=self.set_signal_freeze,
                     icon=canvas_icons("Pause.svg")
                     )
 
@@ -622,6 +629,7 @@ class CanvasMainWindow(QMainWindow):
         self.recent_menu = QMenu(self.tr("Open Recent"), file_menu)
         file_menu.addMenu(self.recent_menu)
         file_menu.addAction(self.open_report_action)
+        file_menu.addAction(self.close_window_action)
         file_menu.addSeparator()
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
@@ -738,15 +746,6 @@ class CanvasMainWindow(QMainWindow):
         )
         self.show_log_action.setChecked(
             settings.value("output-dock/is-visible", False, type=bool))
-
-        default_dir = user_documents_path()
-
-        self.last_scheme_dir = settings.value("last-scheme-dir", default_dir,
-                                              type=str)
-
-        if not os.path.exists(self.last_scheme_dir):
-            # if directory no longer exists reset the saved location.
-            self.last_scheme_dir = default_dir
 
         self.canvas_tool_dock.setQuickHelpVisible(
             settings.value("quick-help/visible", True, type=bool)
@@ -871,67 +870,104 @@ class CanvasMainWindow(QMainWindow):
     #################
     # Action handlers
     #################
-    def pre_close_save(self):
+    def is_transient(self):
         """
-        Ask whether to save the schema (if changed) and the report (if
-        not empty).
+        Is this window a transient window.
 
-        Returns: `False` if the user cancelled, `True` otherwise
+        I.e. a window that was created empty and does not contain any modified
+        contents. In particular it can be reused to load a workflow model
+        without any detrimental effects (like lost information).
         """
-        return (not self.current_document().isModifiedStrict() or
-                self.ask_save_changes() != QDialog.Rejected
-            ) and self.ask_clear_report() != QDialog.Rejected
+        return self.__is_transient
 
-    def new_scheme(self):
-        """New scheme. Return QDialog.Rejected if the user canceled
-        the operation and QDialog.Accepted otherwise.
+    # All instances created through the create_new_window below.
+    # They are removed on `destroyed`
+    _instances = []  # type: List[CanvasMainWindow]
 
+    def create_new_window(self):
+        # type: () -> CanvasMainWindow
         """
-        if not self.pre_close_save():
-            return QDialog.Rejected
+        Create a new top level CanvasMainWindow instance.
 
-        new_scheme = widgetsscheme.WidgetsScheme(parent=self)
+        The window is positioned slightly offset to the originating window
+        (`self`).
+
+        Note
+        ----
+        The window has `Qt.WA_DeleteOnClose` flag set. If this flag is unset
+        it is the callers responsibility to explicitly delete the widget (via
+        `deleteLater` or `sip.delete`).
+
+        Returns
+        -------
+        window: CanvasMainWindow
+        """
+        window = CanvasMainWindow()
+        window.setAttribute(Qt.WA_DeleteOnClose)
+        window.setGeometry(self.geometry().translated(20, 20))
+        window.setStyleSheet(self.styleSheet())
+        window.set_widget_registry(self.widget_registry)
+        window.restoreState(self.saveState(self.SETTINGS_VERSION),
+                            self.SETTINGS_VERSION)
+        window.set_tool_dock_expanded(self.dock_widget.expanded())
+        CanvasMainWindow._instances.append(window)
+        window.destroyed.connect(
+            lambda: CanvasMainWindow._instances.remove(window))
+        return window
+
+    def new_workflow_window(self):
+        # type: () -> None
+        """
+        Create and show a new CanvasMainWindow instance.
+        """
+        newwindow = self.create_new_window()
+        newwindow.raise_()
+        newwindow.show()
+        newwindow.activateWindow()
 
         settings = QSettings()
         show = settings.value("schemeinfo/show-at-new-scheme", True,
                               type=bool)
-
         if show:
-            status = self.show_scheme_properties_for(
-                new_scheme, self.tr("New Workflow")
-            )
+            newwindow.show_scheme_properties()
 
-            if status == QDialog.Rejected:
-                return QDialog.Rejected
+    def open_scheme_file(self, filename, **kwargs):
+        """
+        Open and load a scheme file.
+        """
+        if isinstance(filename, QUrl):
+            filename = filename.toLocalFile()
 
-        self.set_new_scheme(new_scheme)
+        if self.is_transient():
+            window = self
+        else:
+            window = self.create_new_window()
+            window.show()
+            window.raise_()
+            window.activateWindow()
 
-        return QDialog.Accepted
+        if kwargs.get("freeze", False):
+            window.freeze_action.setChecked(True)
+        window.load_scheme(filename)
 
     def open_scheme(self):
-        """Open a new scheme. Return QDialog.Rejected if the user canceled
-        the operation and QDialog.Accepted otherwise.
-
         """
-        if not self.pre_close_save():
-            return QDialog.Rejected
-
-        if self.last_scheme_dir is None:
-            # Get user 'Documents' folder
+        Open a user selected workflow in a new window.
+        """
+        settings = QSettings()
+        settings.beginGroup("mainwindow")
+        start_dir = settings.value("last-scheme-dir", "", type=str)
+        if not os.path.isdir(start_dir):
             start_dir = user_documents_path()
-        else:
-            start_dir = self.last_scheme_dir
 
-        # TODO: Use a dialog instance and use 'addSidebarUrls' to
-        # set one or more extra sidebar locations where Schemes are stored.
-        # Also use setHistory
         filename, _ = QFileDialog.getOpenFileName(
             self, self.tr("Open Orange Workflow File"),
             start_dir, self.tr("Orange Workflow (*.ows)"),
         )
 
         if filename:
-            self.load_scheme(filename)
+            settings.setValue("last-scheme-dir", os.path.dirname(filename))
+            self.open_scheme_file(filename)
             return QDialog.Accepted
         else:
             return QDialog.Rejected
@@ -943,43 +979,37 @@ class CanvasMainWindow(QMainWindow):
 
     def open_and_freeze_scheme(self):
         """
-        Open a new scheme and freeze signal propagation. Return
-        QDialog.Rejected if the user canceled the operation and
-        QDialog.Accepted otherwise.
-
+        Open a user selected workflow file in a new window and freeze
+        signal propagation.
         """
-        frozen = self.freeze_action.isChecked()
-        if not frozen:
-            self.freeze_action.trigger()
+        settings = QSettings()
+        settings.beginGroup("mainwindow")
+        start_dir = settings.value("last-scheme-dir", "", type=str)
+        if not os.path.isdir(start_dir):
+            start_dir = user_documents_path()
 
-        state = self.open_scheme()
-        if state == QDialog.Rejected:
-            # If the action was rejected restore the original frozen state
-            if not frozen:
-                self.freeze_action.trigger()
-        return state
+        dlg = QFileDialog(
+            self, windowTitle=self.tr("Open Orange Workflow File"),
+            acceptMode=QFileDialog.AcceptOpen,
+            fileMode=QFileDialog.ExistingFile,
+        )
+        dlg.setDirectory(start_dir)
+        dlg.setNameFilters(["Orange Workflow (*.ows)"])
 
-    def open_scheme_file(self, filename):
-        """
-        Open and load a scheme file.
-        """
-        if isinstance(filename, QUrl):
-            filename = filename.toLocalFile()
-        if not self.pre_close_save():
-            return QDialog.Rejected
-        self.load_scheme(filename)
-        return QDialog.Accepted
+        def record_last_dir():
+            path = dlg.directory().canonicalPath()
+            settings.setValue("last-scheme-dir", path)
+
+        dlg.accepted.connect(record_last_dir)
+        dlg.fileSelected.connect(partial(self.open_scheme_file, freeze=True))
+        dlg.show()
 
     def load_scheme(self, filename):
-        """Load a scheme from a file (`filename`) into the current
-        document updates the recent scheme list and the loaded scheme path
-        property.
-
         """
-        dirname = os.path.dirname(filename)
-
-        self.last_scheme_dir = dirname
-
+        Load a scheme from a file (`filename`) into the current
+        document, updates the recent scheme list and the loaded scheme path
+        property.
+        """
         new_scheme = self.new_scheme_from(filename)
         if new_scheme is not None:
             self.set_new_scheme(new_scheme)
@@ -1036,25 +1066,24 @@ class CanvasMainWindow(QMainWindow):
         return new_scheme
 
     def reload_last(self):
-        """Reload last opened scheme. Return QDialog.Rejected if the
+        """
+        Reload last opened scheme. Return QDialog.Rejected if the
         user canceled the operation and QDialog.Accepted otherwise.
 
         """
-        if not self.pre_close_save():
-            return QDialog.Rejected
         # TODO: Search for a temp backup scheme with per process
         # locking.
         if self.recent_schemes:
-            self.load_scheme(self.recent_schemes[0][1])
-
-        return QDialog.Accepted
+            recent = self.recent_schemes[0][1]
+            self.open_scheme_file(recent)
 
     def set_new_scheme(self, new_scheme):
         """
-        Set new_scheme as the current shown scheme. The old scheme
-        will be deleted.
+        Set new_scheme as the current shown scheme in this window.
 
+        The old scheme will be deleted.
         """
+        self.__is_transient = False
         scheme_doc = self.current_document()
         old_scheme = scheme_doc.scheme()
 
@@ -1070,36 +1099,6 @@ class CanvasMainWindow(QMainWindow):
 
         old_scheme.deleteLater()
 
-    def ask_clear_report(self):
-        """
-        Ask whether to keep, clear or save and clear the report.
-
-        Returns:
-            `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
-        """
-        from Orange.canvas.report.owreport import OWReport
-        report = OWReport.get_instance()
-        if report.is_empty():
-            return QDialog.Accepted
-
-        msgbox = QMessageBox(QMessageBox.Question,
-                             "Report", "Report window has unsaved changes.",
-                             parent=self,
-                             informativeText="Save the report?")
-        # Cancel must have AcceptRole, otherwise Os X reorders the buttons
-        save = msgbox.addButton("Save && Clear", QMessageBox.AcceptRole)
-        msgbox.addButton("Clear", QMessageBox.DestructiveRole)
-        keep = msgbox.addButton("Keep", QMessageBox.AcceptRole)
-        cancel = msgbox.addButton("Cancel", QMessageBox.RejectRole)
-        msgbox.exec()
-        button = msgbox.clickedButton()
-        if button is cancel or \
-                button is save and report.save_report() == QDialog.Rejected:
-            return QDialog.Rejected
-        if button is not keep:
-            report.clear()
-        return QDialog.Accepted
-
     def ask_save_report(self):
         """
         Ask whether to save the report or not.
@@ -1109,6 +1108,7 @@ class CanvasMainWindow(QMainWindow):
         """
         from Orange.canvas.report.owreport import OWReport
         report = OWReport.get_instance()
+        # TODO: report is per main window / workflow
         if not report.is_changed():
             return QDialog.Accepted
 
@@ -1219,15 +1219,15 @@ class CanvasMainWindow(QMainWindow):
         for illegal in r'<>:"\/|?*\0':
             title = title.replace(illegal, '_')
 
+        settings = QSettings()
+        settings.beginGroup("mainwindow")
         if document.path():
             start_dir = document.path()
         else:
-            if self.last_scheme_dir is not None:
-                start_dir = self.last_scheme_dir
-            else:
+            start_dir = settings.value("last-scheme-dir", "", type=str)
+            if not os.path.isdir(start_dir):
                 start_dir = user_documents_path()
-
-            start_dir = os.path.join(str(start_dir), title + ".ows")
+            start_dir = os.path.join(start_dir, title + ".ows")
 
         filename, _ = QFileDialog.getSaveFileName(
             self, self.tr("Save Orange Workflow File"),
@@ -1257,7 +1257,6 @@ class CanvasMainWindow(QMainWindow):
 
         """
         dirname, basename = os.path.split(filename)
-        self.last_scheme_dir = dirname
         title = scheme.title or "untitled"
 
         # First write the scheme to a buffer so we don't truncate an
@@ -1279,7 +1278,7 @@ class CanvasMainWindow(QMainWindow):
         try:
             with open(filename, "wb") as f:
                 f.write(buffer.getvalue())
-            scheme.set_runtime_env("basedir", os.path.dirname(filename))
+            scheme.set_runtime_env("basedir", os.path.dirname(dirname))
             return True
         except (IOError, OSError) as ex:
             log.error("%s saving '%s'", type(ex).__name__, filename,
@@ -1342,10 +1341,12 @@ class CanvasMainWindow(QMainWindow):
         url = QUrl(LINKS["youtube"])
         QDesktopServices.openUrl(url)
 
-    def recent_scheme(self, *args):
-        """Browse recent schemes. Return QDialog.Rejected if the user
-        canceled the operation and QDialog.Accepted otherwise.
+    def recent_scheme(self):
+        """
+        Browse recent schemes.
 
+        Return QDialog.Rejected if the user canceled the operation and
+        QDialog.Accepted otherwise.
         """
         items = [previewmodel.PreviewItem(name=title, path=path)
                  for title, path in self.recent_schemes]
@@ -1371,18 +1372,16 @@ class CanvasMainWindow(QMainWindow):
         model.deleteLater()
 
         if status == QDialog.Accepted:
-            if not self.pre_close_save():
-                return QDialog.Rejected
             selected = model.item(index)
-            self.load_scheme(str(selected.path()))
-
+            self.open_scheme_file(selected.path())
         return status
 
-    def tutorial_scheme(self, *args):
-        """Browse a collection of tutorial schemes. Returns QDialog.Rejected
-        if the user canceled the dialog else loads the selected scheme into
-        the canvas and returns QDialog.Accepted.
+    def tutorial_scheme(self):
+        """
+        Browse a collection of tutorial/example schemes.
 
+        Returns QDialog.Rejected if the user canceled the dialog else loads
+        the selected scheme into the canvas and returns QDialog.Accepted.
         """
         tutors = workflows.example_workflows()
         items = [previewmodel.PreviewItem(path=t.abspath()) for t in tutors]
@@ -1405,13 +1404,8 @@ class CanvasMainWindow(QMainWindow):
         dialog.deleteLater()
 
         if status == QDialog.Accepted:
-            if not self.pre_close_save():
-                return QDialog.Rejected
             selected = model.item(index)
-            new_scheme = self.new_scheme_from(str(selected.path()))
-            if new_scheme is not None:
-                self.set_new_scheme(new_scheme)
-
+            self.open_scheme_file(selected.path())
         return status
 
     def welcome_dialog(self):
@@ -1422,8 +1416,9 @@ class CanvasMainWindow(QMainWindow):
         dialog.setWindowTitle(self.tr("Welcome to Orange Data Mining"))
 
         def new_scheme():
-            if self.new_scheme() == QDialog.Accepted:
-                dialog.accept()
+            if not self.is_transient():
+                self.new_workflow_window()
+            dialog.accept()
 
         def open_scheme():
             if self.open_scheme() == QDialog.Accepted:
@@ -1508,24 +1503,21 @@ class CanvasMainWindow(QMainWindow):
         """
         settings = QSettings()
         value_key = "schemeinfo/show-at-new-scheme"
-
-        dialog = SchemeInfoDialog(self)
-
-        dialog.setWindowTitle(self.tr("Workflow Info"))
-        dialog.setFixedSize(725, 450)
-
-        dialog.setShowAtNewScheme(
-            settings.value(value_key, True, type=bool)
+        dialog = SchemeInfoDialog(
+            self, windowTitle=self.tr("Workflow Info"),
         )
+        dialog.setFixedSize(725, 450)
+        dialog.setShowAtNewScheme(settings.value(value_key, True, type=bool))
 
+        def onfinished():
+            settings.setValue(value_key, dialog.showAtNewScheme())
+        dialog.finished.connect(onfinished)
         return dialog
 
     def show_scheme_properties(self):
-        """Show current scheme properties.
         """
-        settings = QSettings()
-        value_key = "schemeinfo/show-at-new-scheme"
-
+        Show current scheme properties.
+        """
         current_doc = self.current_document()
         scheme = current_doc.scheme()
         dlg = self.scheme_properties_dialog()
@@ -1540,33 +1532,6 @@ class CanvasMainWindow(QMainWindow):
             current_doc.setTitle(editor.title())
             current_doc.setDescription(editor.description())
             stack.endMacro()
-
-            # Store the check state.
-            settings.setValue(value_key, dlg.showAtNewScheme())
-        return status
-
-    def show_scheme_properties_for(self, scheme, window_title=None):
-        """Show scheme properties for `scheme` with `window_title (if None
-        a default 'Scheme Info' title will be used.
-
-        """
-        settings = QSettings()
-        value_key = "schemeinfo/show-at-new-scheme"
-
-        dialog = self.scheme_properties_dialog()
-
-        if window_title is not None:
-            dialog.setWindowTitle(window_title)
-
-        dialog.setScheme(scheme)
-
-        status = dialog.exec_()
-        if status == QDialog.Accepted:
-            # Store the check state.
-            settings.setValue(value_key, dialog.showAtNewScheme())
-
-        dialog.deleteLater()
-
         return status
 
     def set_signal_freeze(self, freeze):
@@ -1581,18 +1546,6 @@ class CanvasMainWindow(QMainWindow):
         """Remove current scheme selection.
         """
         self.current_document().removeSelected()
-
-    def quit(self):
-        """Quit the application.
-        """
-        if QApplication.activePopupWidget():
-            # On OSX the actions in the global menu bar are triggered
-            # even if an popup widget is running it's own event loop
-            # (in exec_)
-            log.debug("Ignoring a quit shortcut during an active "
-                      "popup dialog.")
-        else:
-            self.close()
 
     def select_all(self):
         self.current_document().selectAll()
@@ -1618,6 +1571,7 @@ class CanvasMainWindow(QMainWindow):
         dlg.show()
         status = dlg.exec_()
         if status == 0:
+            # TODO: Notify all instances
             self.__update_from_settings()
 
     def open_addons(self):
@@ -1742,12 +1696,11 @@ class CanvasMainWindow(QMainWindow):
         config.save_recent_scheme_list([])
 
     def _on_recent_scheme_action(self, action):
-        """A recent scheme action was triggered by the user
         """
-        if not self.pre_close_save():
-            return QDialog.Rejected
+        A recent scheme action was triggered by the user
+        """
         filename = str(action.data())
-        self.load_scheme(filename)
+        self.open_scheme_file(filename)
 
     def _on_dock_location_changed(self, location):
         """Location of the dock_widget has changed, fix the margins
@@ -1775,7 +1728,8 @@ class CanvasMainWindow(QMainWindow):
         return None
 
     def closeEvent(self, event):
-        """Close the main window.
+        """
+        Close the main window.
         """
         document = self.current_document()
         if document.isModifiedStrict() and \
@@ -1806,7 +1760,6 @@ class CanvasMainWindow(QMainWindow):
         settings.setValue("scheme-margins-enabled",
                           self.scheme_margins_enabled)
 
-        settings.setValue("last-scheme-dir", self.last_scheme_dir)
         settings.setValue("widgettoolbox/state",
                           self.widgets_tool_box.saveState())
 
@@ -1814,27 +1767,35 @@ class CanvasMainWindow(QMainWindow):
                           self.canvas_tool_dock.quickHelpVisible())
 
         settings.endGroup()
+        self.help_dock.close()
+        self.log_dock.close()
+        super().closeEvent(event)
 
-        event.accept()
+    __did_restore = False
 
-        # Close any windows left.
-        application = QApplication.instance()
-        QTimer.singleShot(0, application.closeAllWindows)
+    def restoreState(self, state, version=0):
+        # type: (Union[QByteArray, bytes, bytearray], int) -> bool
+        restored = super().restoreState(state, version)
+        self.__did_restore = self.__did_restore or restored
+        return restored
 
     def showEvent(self, event):
         if self.__first_show:
             settings = QSettings()
             settings.beginGroup("mainwindow")
 
-            # Restore geometry and dock/toolbar state
-            state = settings.value("state", QByteArray(), type=QByteArray)
-            if state:
-                self.restoreState(state, version=self.SETTINGS_VERSION)
+            # Restore geometry if not already positioned
+            if not (self.testAttribute(Qt.WA_Moved) or
+                    self.testAttribute(Qt.WA_Resized)):
+                geom_data = settings.value("geometry", QByteArray(),
+                                           type=QByteArray)
+                if geom_data:
+                    self.restoreGeometry(geom_data)
 
-            geom_data = settings.value("geometry", QByteArray(),
-                                       type=QByteArray)
-            if geom_data:
-                self.restoreGeometry(geom_data)
+            state = settings.value("state", QByteArray(), type=QByteArray)
+            # Restore dock/toolbar state is not already done so
+            if state and not self.__did_restore:
+                self.restoreState(state, version=self.SETTINGS_VERSION)
 
             self.__first_show = False
 
