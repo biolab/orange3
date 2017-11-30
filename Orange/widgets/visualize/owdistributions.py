@@ -89,6 +89,7 @@ class OWDistributions(widget.OWWidget):
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Set the input data set")
 
+    settings_version = 2
     settingsHandler = settings.DomainContextHandler(
         match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)
     #: Selected variable index
@@ -579,6 +580,11 @@ class OWDistributions(widget.OWWidget):
                 text += "; probabilites for '{}={}'".format(
                     group_var, prob.currentText())
         self.report_caption(text)
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            pass  # cannot convert index to variable
 
 
 def dist_sum(dXW1, dXW2):

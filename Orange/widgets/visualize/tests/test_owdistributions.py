@@ -59,7 +59,7 @@ class TestOWDistributions(WidgetTest):
         widget.varview.selectionModel().select(
             widget.varview.model().index(4, 0))
         self.assertIsInstance(widget.var, DiscreteVariable)
-        self.assertEqual(widget.var.name, mdomain.attributes[2].name)
+        self.assertEqual(widget.var.name, mdomain.metas[0].name)
 
     def test_variable_group_combinations(self):
         """Check widget for all combinations of variable and group for dataset
