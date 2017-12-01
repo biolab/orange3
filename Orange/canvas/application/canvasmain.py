@@ -87,12 +87,6 @@ LINKS = \
      }
 
 
-def style_icons(widget, standard_pixmap):
-    """Return the Qt standard pixmap icon.
-    """
-    return QIcon(widget.style().standardPixmap(standard_pixmap))
-
-
 def canvas_icons(name):
     """Return the named canvas icon.
     """
@@ -1835,16 +1829,6 @@ class CanvasMainWindow(QMainWindow):
             else:
                 self.showMaximized()
 
-        def changeEvent(self, event):
-            if event.type() == QEvent.WindowStateChange:
-                # Can get 'Qt.WindowNoState' before the widget is fully
-                # initialized
-                if hasattr(self, "window_state"):
-                    # Enable/disable window menu based on minimized state
-                    self.window_menu.setEnabled(not self.isMinimized())
-
-            QMainWindow.changeEvent(self, event)
-
     def zoom_in(self):
         self.scheme_widget.view().change_zoom(1)
 
@@ -1860,11 +1844,6 @@ class CanvasMainWindow(QMainWindow):
         """
         hint = QMainWindow.sizeHint(self)
         return hint.expandedTo(QSize(1024, 720))
-
-    def tr(self, sourceText, disambiguation=None, n=-1):
-        """Translate the string.
-        """
-        return str(QMainWindow.tr(self, sourceText, disambiguation, n))
 
     def __update_from_settings(self):
         settings = QSettings()
