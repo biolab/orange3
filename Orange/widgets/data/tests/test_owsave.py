@@ -3,11 +3,19 @@
 from unittest.mock import patch
 
 from Orange.data import Table
-from Orange.data.io import TabReader, PickleReader
+from Orange.data.io import TabReader, PickleReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter, fix_extension, open_filename_dialog_save
 from Orange.widgets.data.owsave import OWSave
+
+
+class AddedFormat(FileFormat):
+    EXTENSIONS = ('.234',)
+    DESCRIPTION = "Test if a dialog format works after reading OWSave"
+
+    def write_file(self):
+        pass
 
 
 class TestOWSave(WidgetTest):
@@ -47,7 +55,21 @@ class TestOWSave(WidgetTest):
             with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", file_choice),\
                  patch("Orange.widgets.utils.filedialogs.fix_extension", fix):
                 saved_filename, format, filter = \
-                    open_filename_dialog_save(".", None, OWSave.writers)
+                    open_filename_dialog_save(".", None, OWSave.get_writers(False))
                 self.assertEqual(saved_filename, "o.tab")
                 self.assertEqual(format, TabReader)
                 self.assertEqual(filter, format_filter(TabReader))
+
+    def test_added_format(self):
+        """Test that a format added after widget initialization is recognized"""
+        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        called = False
+        with named_file("", suffix=".tab") as filename:
+            def test_format(sd, sf, ff, **kwargs):
+                nonlocal called
+                called = True
+                self.assertIn(AddedFormat, ff)
+                return filename, TabReader, ""
+            with patch("Orange.widgets.utils.filedialogs.open_filename_dialog", test_format):
+                self.widget.save_file_as()
+        self.assertTrue(called)
