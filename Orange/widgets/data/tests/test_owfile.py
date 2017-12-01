@@ -27,14 +27,6 @@ from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, Va
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
 
 
-class AddedFormat(FileFormat):
-    EXTENSIONS = ('.123',)
-    DESCRIPTION = "Test if a dialog format works after reading OWFile"
-
-    def read(self):
-        pass
-
-
 class FailedSheetsFormat(FileFormat):
     EXTENSIONS = ('.failed_sheet',)
     DESCRIPTION = "Make a sheet function that fails"
@@ -340,8 +332,16 @@ a
 
     def test_add_new_format(self):
         # test adding file formats after registering the widget
-        formats = dialog_formats()
-        self.assertTrue(".123" in formats)
+        called = False
+        with named_file("", suffix=".tab") as filename:
+            def test_format(sd, sf, ff, **kwargs):
+                nonlocal called
+                called = True
+                self.assertIn(FailedSheetsFormat, ff)
+                return filename, TabReader, ""
+            with patch("Orange.widgets.data.owfile.open_filename_dialog", test_format):
+                self.widget.browse_file()
+        self.assertTrue(called)
 
     def test_domain_editor_conversions(self):
         dat = """V0\tV1\tV2\tV3\tV4\tV5\tV6
