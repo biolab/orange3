@@ -25,15 +25,13 @@ from AnyQt.QtCore import (
 
 try:
     from AnyQt.QtWebEngineWidgets import QWebEngineView
-    USE_WEB_ENGINE = True
 except ImportError:
+    QWebEngineView = None
     try:
         from AnyQt.QtWebKitWidgets import QWebView
+        from AnyQt.QtNetwork import QNetworkDiskCache
     except ImportError:
         QWebView = None
-    from AnyQt.QtNetwork import QNetworkDiskCache
-    USE_WEB_ENGINE = False
-
 
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
@@ -352,9 +350,9 @@ class CanvasMainWindow(QMainWindow):
                          Qt.BottomDockWidgetArea,
             visible=False
         )
-        if USE_WEB_ENGINE:
+        if QWebEngineView is not None:
             self.help_view = QWebEngineView()
-        else:
+        elif QWebView is not None:
             self.help_view = QWebView()
             manager = self.help_view.page().networkAccessManager()
             cache = QNetworkDiskCache()
@@ -1808,7 +1806,7 @@ class CanvasMainWindow(QMainWindow):
         Show `url` in a help window.
         """
         log.info("Setting help to url: %r", url)
-        if self.open_in_external_browser:
+        if self.open_in_external_browser or self.help_view is None:
             url = QUrl(url)
             if not QDesktopServices.openUrl(url):
                 # Try fixing some common problems.
