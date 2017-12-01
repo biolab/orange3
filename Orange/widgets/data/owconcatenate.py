@@ -164,9 +164,13 @@ class OWConcatenate(widget.OWWidget):
 
         if tables and self.append_source_column:
             assert domain is not None
+            names = [getattr(t, 'name', '') for t in tables]
+            if len(names) != len(set(names)):
+                names = ['{} ({})'.format(name, i)
+                         for i, name in enumerate(names)]
             source_var = Orange.data.DiscreteVariable(
                 self.source_attr_name,
-                values=["{}".format(i) for i in range(len(tables))]
+                values=names
             )
             places = ["class_vars", "attributes", "metas"]
             domain = add_columns(
