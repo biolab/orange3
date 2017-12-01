@@ -18,8 +18,7 @@ def registry_cache_filename():
 
     """
     cache_dir = config.cache_dir()
-    default = os.path.join(cache_dir, "registry-cache.pck")
-    cache_filename = config.rc.get("registry.registry-cache", default)
+    cache_filename = os.path.join(cache_dir, "registry-cache.pck")
     dirname = os.path.dirname(cache_filename)
     if not os.path.exists(dirname):
         log.info("Creating directory %r", dirname)
