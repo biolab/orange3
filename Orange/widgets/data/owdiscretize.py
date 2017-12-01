@@ -257,7 +257,8 @@ class OWDiscretize(widget.OWWidget):
     def _initialize(self, data):
         # Initialize the default variable states for new data.
         self.class_var = data.domain.class_var
-        cvars = [var for var in data.domain if var.is_continuous]
+        cvars = [var for var in data.domain.variables
+                 if var.is_continuous]
         self.varmodel[:] = cvars
 
         class_var = data.domain.class_var

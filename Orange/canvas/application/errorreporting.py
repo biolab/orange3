@@ -1,5 +1,4 @@
 import os
-import pip
 import sys
 import time
 import logging
@@ -16,6 +15,8 @@ from urllib.parse import urljoin, urlencode
 from urllib.request import pathname2url, urlopen, build_opener
 from unittest.mock import patch
 
+import pkg_resources
+
 from AnyQt.QtCore import pyqtSlot, QSettings, Qt
 from AnyQt.QtGui import QDesktopServices, QFont
 from AnyQt.QtWidgets import (
@@ -24,18 +25,32 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QWidget
 )
 
+from Orange.util import try_
+
 try:
     from Orange.widgets.widget import OWWidget
     from Orange.version import full_version as VERSION_STR
 except ImportError:
     # OWWidget (etc.) is not available because this is not Orange
-    class OWWidget: pass
+    class OWWidget:
+        pass
     VERSION_STR = '???'
 
 
 REPORT_POST_URL = 'https://qa.orange.biolab.si/error_report/v1/'
 
 log = logging.getLogger()
+
+
+def get_installed_distributions():
+    for dist in pkg_resources.working_set:  # type: pkg_resources.Distribution
+        name = dist.project_name
+        try:
+            version = dist.version
+        except ValueError:
+            # PKG-INFO/METADATA is not available or parsable.
+            version = "Unknown"
+        yield "{name}=={version}".format(name=name, version=version)
 
 
 class ErrorReporting(QDialog):
@@ -62,8 +77,10 @@ class ErrorReporting(QDialog):
                               data.get(F.WIDGET_MODULE)),
                       filename=data.get(F.WIDGET_SCHEME)):
             self._cache.add(key)
-            try: os.remove(filename)
-            except Exception: pass
+            try:
+                os.remove(filename)
+            except Exception:
+                pass
 
         super().__init__(None, Qt.Window, modal=True,
                          sizeGripEnabled=True, windowIcon=icon,
@@ -122,7 +139,8 @@ class ErrorReporting(QDialog):
         buttons = QWidget(self)
         buttons_layout = QHBoxLayout(self)
         buttons.setLayout(buttons_layout)
-        buttons_layout.addWidget(QPushButton('Send Report (Thanks!)', default=True, clicked=self.accept))
+        buttons_layout.addWidget(
+            QPushButton('Send Report (Thanks!)', default=True, clicked=self.accept))
         buttons_layout.addWidget(QPushButton("Don't Send", default=False, clicked=self.reject))
         layout.addWidget(buttons)
 
@@ -177,7 +195,8 @@ class ErrorReporting(QDialog):
             err_module = '{}:{}'.format(
                 frame.tb_frame.f_globals.get('__name__', frame.tb_frame.f_code.co_filename),
                 frame.tb_lineno)
-            err_locals = pformat(OrderedDict(sorted(frame.tb_frame.f_locals.items())))
+            err_locals = OrderedDict(sorted(frame.tb_frame.f_locals.items()))
+            err_locals = try_(lambda: pformat(err_locals), try_(lambda: str(err_locals)))
 
         def _find_widget_frame(tb):
             while tb:
@@ -190,8 +209,7 @@ class ErrorReporting(QDialog):
             widget = frame.tb_frame.f_locals['self'].__class__
             widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
 
-        packages = ', '.join(sorted("%s==%s" % (i.project_name, i.version)
-                                    for i in pip.get_installed_distributions()))
+        packages = ', '.join(sorted(get_installed_distributions()))
 
         machine_id = QSettings().value('error-reporting/machine-id', '', type=str)
 

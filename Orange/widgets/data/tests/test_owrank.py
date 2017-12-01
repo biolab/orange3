@@ -325,3 +325,17 @@ class TestOWRank(WidgetTest):
         reduced_data = self.get_output(widget.Outputs.reduced_data)
         self.assertEqual(reduced_data.domain.attributes,
                          (self.iris.domain["petal length"], ))
+
+    def test_no_attributes(self):
+        """
+        Rank should not fail on data with no attributes.
+        GH-2745
+        """
+        data = Table("iris")[::30]
+        domain = Domain(attributes=[], class_vars=data.domain.class_vars)
+        new_data = data.transform(domain)
+        self.assertFalse(self.widget.Error.no_attributes.is_shown())
+        self.send_signal(self.widget.Inputs.data, new_data)
+        self.assertTrue(self.widget.Error.no_attributes.is_shown())
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertFalse(self.widget.Error.no_attributes.is_shown())

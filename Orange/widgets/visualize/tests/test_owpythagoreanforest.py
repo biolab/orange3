@@ -39,47 +39,48 @@ class TestOWPythagoreanForest(WidgetTest):
                 if isinstance(x, GridItem)]
 
     def test_sending_rf_draws_trees(self):
+        w = self.widget
         # No trees by default
         self.assertEqual(len(self.get_tree_widgets()), 0,
                          'No trees should be drawn when no forest on input')
 
         # Draw trees for classification rf
-        self.send_signal('Random forest', self.titanic)
+        self.send_signal(w.Inputs.random_forest, self.titanic)
         self.assertEqual(len(self.get_tree_widgets()), 3,
                          'Incorrect number of trees when forest on input')
 
         # Clear trees when None
-        self.send_signal('Random forest', None)
+        self.send_signal(w.Inputs.random_forest, None)
         self.assertEqual(len(self.get_tree_widgets()), 0,
                          'Trees are cleared when forest is disconnected')
 
         # Draw trees for regression rf
-        self.send_signal('Random forest', self.housing)
+        self.send_signal(w.Inputs.random_forest, self.housing)
         self.assertEqual(len(self.get_tree_widgets()), 3,
                          'Incorrect number of trees when forest on input')
 
     def test_info_label(self):
+        w = self.widget
         regex = r'Trees:(.+)'
         # If no forest on input, display a message saying that
-        self.assertNotRegex(self.widget.ui_info.text(), regex,
+        self.assertNotRegex(w.ui_info.text(), regex,
                             'Initial info should not contain info on trees')
 
-        self.send_signal('Random forest', self.titanic)
-        self.assertRegex(self.widget.ui_info.text(), regex,
-                         'Valid RF does not update info')
+        self.send_signal(w.Inputs.random_forest, self.titanic)
+        self.assertRegex(self.widget.ui_info.text(), regex, 'Valid RF does not update info')
 
-        self.send_signal('Random forest', None)
-        self.assertNotRegex(self.widget.ui_info.text(), regex,
-                            'Removing RF does not clear info box')
+        self.send_signal(w.Inputs.random_forest, None)
+        self.assertNotRegex(w.ui_info.text(), regex, 'Removing RF does not clear info box')
 
     def test_depth_slider(self):
-        self.send_signal('Random forest', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.random_forest, self.titanic)
 
         trees = self.get_tree_widgets()
         for tree in trees:
             tree.set_depth_limit = Mock()
 
-        self.widget.ui_depth_slider.setValue(0)
+        w.ui_depth_slider.setValue(0)
         for tree in trees:
             tree.set_depth_limit.assert_called_once_with(0)
 
@@ -106,14 +107,14 @@ class TestOWPythagoreanForest(WidgetTest):
 
     def test_changing_target_class_changes_coloring(self):
         """Changing the `Target class` combo box should update colors."""
+        w = self.widget
         def _test(data_type):
             colors, tree = [], self._pick_random_tree()
 
             def _callback():
                 colors.append([sq.brush().color() for sq in self._get_visible_squares(tree)])
 
-            simulate.combobox_run_through_all(
-                self.widget.ui_target_class_combo, callback=_callback)
+            simulate.combobox_run_through_all(w.ui_target_class_combo, callback=_callback)
 
             # Check that individual squares all have different colors
             squares_same = [self._check_all_same(x) for x in zip(*colors)]
@@ -121,24 +122,24 @@ class TestOWPythagoreanForest(WidgetTest):
             self.assertTrue(any(x is False for x in squares_same),
                             'Colors did not change for %s data' % data_type)
 
-        self.send_signal('Random forest', self.titanic)
+        self.send_signal(w.Inputs.random_forest, self.titanic)
         _test('classification')
-        self.send_signal('Random forest', self.housing)
+        self.send_signal(w.Inputs.random_forest, self.housing)
         _test('regression')
 
     def test_changing_size_adjustment_changes_sizes(self):
-        self.send_signal('Random forest', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.random_forest, self.titanic)
         squares = []
         # We have to get the same tree with an index on the grid items since
         # the tree objects are deleted and recreated with every invalidation
-        tree_index = self.widget.grid_items.index(random.choice(self.get_grid_items()))
+        tree_index = w.grid_items.index(random.choice(self.get_grid_items()))
 
         def _callback():
             squares.append([sq.rect() for sq in self._get_visible_squares(
                 self.get_tree_widgets()[tree_index])])
 
-        simulate.combobox_run_through_all(
-            self.widget.ui_size_calc_combo, callback=_callback)
+        simulate.combobox_run_through_all(w.ui_size_calc_combo, callback=_callback)
 
         # Check that individual squares are in different position
         squares_same = [self._check_all_same(x) for x in zip(*squares)]
@@ -146,9 +147,10 @@ class TestOWPythagoreanForest(WidgetTest):
         self.assertTrue(any(x is False for x in squares_same))
 
     def test_zoom(self):
-        self.send_signal('Random forest', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.random_forest, self.titanic)
 
-        grid_item, zoom = self.get_grid_items()[0], self.widget.zoom
+        grid_item, zoom = self.get_grid_items()[0], w.zoom
 
         def _destructure_rectf(r):
             return r.width(), r.height()
@@ -156,27 +158,27 @@ class TestOWPythagoreanForest(WidgetTest):
         iw, ih = _destructure_rectf(grid_item.boundingRect())
 
         # Increase the size of grid item
-        self.widget.ui_zoom_slider.setValue(zoom + 1)
+        w.ui_zoom_slider.setValue(zoom + 1)
         lw, lh = _destructure_rectf(grid_item.boundingRect())
         self.assertTrue(iw < lw and ih < lh)
 
         # Decrease the size of grid item
-        self.widget.ui_zoom_slider.setValue(zoom - 1)
+        w.ui_zoom_slider.setValue(zoom - 1)
         lw, lh = _destructure_rectf(grid_item.boundingRect())
         self.assertTrue(iw > lw and ih > lh)
 
     def test_keep_colors_on_sizing_change(self):
         """The color should be the same after a full recompute of the tree."""
-        self.send_signal('Random forest', self.titanic)
+        w = self.widget
+        self.send_signal(w.Inputs.random_forest, self.titanic)
         colors = []
-        tree_index = self.widget.grid_items.index(random.choice(self.get_grid_items()))
+        tree_index = w.grid_items.index(random.choice(self.get_grid_items()))
 
         def _callback():
             colors.append([sq.brush().color() for sq in self._get_visible_squares(
                 self.get_tree_widgets()[tree_index])])
 
-        simulate.combobox_run_through_all(
-            self.widget.ui_size_calc_combo, callback=_callback)
+        simulate.combobox_run_through_all(w.ui_size_calc_combo, callback=_callback)
 
         # Check that individual squares all have the same color
         colors_same = [self._check_all_same(x) for x in zip(*colors)]

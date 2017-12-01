@@ -1,9 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
+import warnings
 from time import time
 from numbers import Real
-from itertools import starmap
+from itertools import starmap, chain
 import unittest
 import pickle
 
@@ -11,11 +11,12 @@ import numpy as np
 from numpy.testing import assert_array_equal
 
 from Orange.data import (
-    ContinuousVariable, DiscreteVariable,  StringVariable, TimeVariable,
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
     Variable, Domain, Table, DomainConversion)
 from Orange.data.domain import filter_visible
 from Orange.preprocess import Continuize, Impute
 from Orange.tests.base import create_pickling_tests
+from Orange.util import OrangeDeprecationWarning
 
 
 def create_domain(*ss):
@@ -164,7 +165,8 @@ class TestDomainInit(unittest.TestCase):
                                             (0, 2, DiscreteVariable),
                                             (18, 23, ContinuousVariable)]:
             n_rows, n_cols, = aran_max - aran_min, 1
-            d = Domain.from_numpy(np.zeros((1, 1)), np.arange(aran_min, aran_max).reshape(n_rows, n_cols))
+            d = Domain.from_numpy(np.zeros((1, 1)),
+                                  np.arange(aran_min, aran_max).reshape(n_rows, n_cols))
             self.assertTrue(d.anonymous)
             self.assertIsInstance(d.class_var, vartype)
             if isinstance(vartype, DiscreteVariable):
@@ -266,14 +268,21 @@ class TestDomainInit(unittest.TestCase):
             [] in d
 
     def test_iter(self):
-        d = Domain((age, gender, income), metas=(ssn,))
-        self.assertEqual([var for var in d], [age, gender, income])
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("error")
 
-        d = Domain((age, ), metas=(ssn,))
-        self.assertEqual([var for var in d], [age])
+            d = Domain((age, gender, income), metas=(ssn,))
+            with self.assertRaises(OrangeDeprecationWarning):
+                list(d)
 
-        d = Domain((), metas=(ssn,))
-        self.assertEqual([var for var in d], [])
+            warnings.simplefilter("ignore")
+            self.assertEqual([var for var in d], [age, gender, income])
+
+            d = Domain((age, ), metas=(ssn,))
+            self.assertEqual([var for var in d], [age])
+
+            d = Domain((), metas=(ssn,))
+            self.assertEqual([var for var in d], [])
 
     def test_str(self):
         cases = (
@@ -394,14 +403,14 @@ class TestDomainInit(unittest.TestCase):
         assert_array_equal(y, np.array([0]))
         metas_exp = [gender.Unknown, education.Unknown, ssn.Unknown]
 
-        def eq(a, b):
+        def equal(a, b):
             if isinstance(a, Real) and isinstance(b, Real) and \
                     np.isnan(a) and np.isnan(b):
                 return True
             else:
                 return a == b
 
-        self.assertTrue(all(starmap(eq, zip(metas, metas_exp))))
+        self.assertTrue(all(starmap(equal, zip(metas, metas_exp))))
 
         x, y, metas = domain.convert([42, 13, "White", "M", "HS", "1234567"])
         assert_array_equal(x, np.array([42, 13]))
@@ -481,6 +490,54 @@ class TestDomainInit(unittest.TestCase):
             self.assertEqual(c1.metas, metas)
 
         self.assertLessEqual(time() - start, 1)
+
+    def test_copy(self):
+        age.number_of_decimals = 5
+        attributes = (age, gender, income)
+
+        domain = Domain(attributes, [race], [ssn])
+
+        new_domain = domain.copy()
+        new_domain[age].number_of_decimals = 10
+
+        self.assertEqual(domain[age].number_of_decimals, 5)
+        self.assertEqual(new_domain[age].number_of_decimals, 10)
+
+    def test_domain_conversion_sparsity(self):
+        destination = Domain(
+            attributes=[
+                ContinuousVariable(name='a'),
+                ContinuousVariable(name='b'),
+                ContinuousVariable(name='c'),
+            ],
+            class_vars=[DiscreteVariable('d', values=['e'])],
+            metas=[StringVariable('f')]
+        )
+
+        # all dense
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertFalse(conversion.sparse_X)
+        self.assertFalse(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
+
+        # set destination attributes as sparse
+        for a in destination.attributes:
+            a.sparse = True
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertTrue(conversion.sparse_X)
+        self.assertFalse(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
+
+        # set all destination variable as sparse
+        for a in chain(destination.variables, destination.metas):
+            a.sparse = True
+        source = Domain(attributes=[])
+        conversion = DomainConversion(source, destination)
+        self.assertTrue(conversion.sparse_X)
+        self.assertTrue(conversion.sparse_Y)
+        self.assertFalse(conversion.sparse_metas)
 
 
 class TestDomainFilter(unittest.TestCase):

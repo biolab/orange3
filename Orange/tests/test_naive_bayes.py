@@ -45,3 +45,9 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self.assertEqual(model.domain.attributes, ())
         self.assertEqual(model(t[0]), 1)
         self.assertTrue(all(model(t) == 1))
+
+    def test_allnan_cv(self):
+        # GH 2740
+        data = Table('voting')
+        results = CrossValidation(data, [self.learner])
+        self.assertFalse(any(results.failed))

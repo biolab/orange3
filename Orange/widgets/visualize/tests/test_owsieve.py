@@ -3,7 +3,6 @@
 from math import isnan
 from unittest.mock import patch
 import numpy as np
-import scipy.sparse as sp
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
 from AnyQt.QtGui import QMouseEvent
@@ -100,7 +99,7 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output("Data")
         self.assertFalse(output.is_sparse())
 
-        table.X = sp.csr_matrix(table.X)
+        table = table.to_sparse()
         self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(len(self.widget.discrete_data.domain), 2)
         output = self.get_output("Data")

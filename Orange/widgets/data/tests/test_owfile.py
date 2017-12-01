@@ -308,8 +308,7 @@ a
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
 
     def test_domain_edit_on_sparse_data(self):
-        iris = Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = Table("iris").to_sparse()
 
         f = tempfile.NamedTemporaryFile(suffix='.pickle', delete=False)
         pickle.dump(iris, f)
@@ -374,6 +373,20 @@ a
             self.assertAlmostEqual(float(data1[0][2].value), data2[0][1])
             # discrete round floats should stay the same after conversion to continuous
             self.assertAlmostEqual(float(data1[0][6].value), data2[0][5])
+
+    def test_domaineditor_continuous_to_string(self):
+        # GH 2744
+        dat = """V0\nc\n\n1.0\nnan\n3.0"""
+        with named_file(dat, suffix=".tab") as filename:
+            self.open_dataset(filename)
+
+            model = self.widget.domain_editor.model()
+            model.setData(model.createIndex(0, 1), "text", Qt.EditRole)
+            self.widget.apply_button.click()
+
+            data = self.get_output(self.widget.Outputs.data)
+            self.assertSequenceEqual(data.metas.ravel().tolist(), ['1', '', '3'])
+
 
     def test_url_no_scheme(self):
         mock_urlreader = Mock(side_effect=ValueError())

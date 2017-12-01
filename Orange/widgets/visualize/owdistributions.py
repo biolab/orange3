@@ -227,12 +227,12 @@ class OWDistributions(widget.OWWidget):
                 self.warning("Empty input data cannot be visualized")
                 return
             domain = self.data.domain
-            self.varmodel[:] = list(domain) + \
+            self.varmodel[:] = list(domain.variables) + \
                                [meta for meta in domain.metas
                                 if meta.is_continuous or meta.is_discrete]
             self.groupvarview.clear()
             self.groupvarmodel = \
-                ["(None)"] + [var for var in domain if var.is_discrete] + \
+                ["(None)"] + [var for var in domain.variables if var.is_discrete] + \
                 [meta for meta in domain.metas if meta.is_discrete]
             self.groupvarview.addItem("(None)")
             for var in self.groupvarmodel[1:]:

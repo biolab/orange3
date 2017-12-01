@@ -655,7 +655,8 @@ class OWMDS(OWWidget):
 
     def commit(self):
         if self.embedding is not None:
-            names = get_unique_names([v.name for v in self.data.domain], ["mds-x", "mds-y"])
+            names = get_unique_names([v.name for v in self.data.domain.variables],
+                                     ["mds-x", "mds-y"])
             output = embedding = Orange.data.Table.from_numpy(
                 Orange.data.Domain([ContinuousVariable(names[0]), ContinuousVariable(names[1])]),
                 self.embedding

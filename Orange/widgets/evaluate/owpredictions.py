@@ -499,7 +499,7 @@ class OWPredictions(OWWidget):
             newcolumns += [p.results[0].reshape((-1, 1)) for p in slots]
 
         if self.output_probabilities:
-            newmetas += [ContinuousVariable(name="%s(%s)" % (p.name, value))
+            newmetas += [ContinuousVariable(name="%s (%s)" % (p.name, value))
                          for p in slots for value in self.class_values]
             newcolumns += [p.results[1] for p in slots]
         return newmetas, newcolumns

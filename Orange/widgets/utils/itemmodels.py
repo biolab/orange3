@@ -118,7 +118,7 @@ class AbstractSortTableModel(QAbstractTableModel):
 
         Parameters
         ----------
-        rows : int or list of int or numpy.ndarray or Ellipsis
+        rows : int or list of int or numpy.ndarray of dtype=int or Ellipsis
             View (sorted) rows.
 
         Returns
@@ -127,7 +127,10 @@ class AbstractSortTableModel(QAbstractTableModel):
             Source rows matching input rows. If they are the same,
             simply input `rows` is returned.
         """
-        if self.__sortInd is not None:
+        # self.__sortInd[rows] fails if `rows` is an empty list or array
+        if self.__sortInd is not None \
+                and (isinstance(rows, (Integral, type(Ellipsis)))
+                     or len(rows)):
             new_rows = self.__sortInd[rows]
             if rows is Ellipsis:
                 new_rows.setflags(write=False)
@@ -139,7 +142,7 @@ class AbstractSortTableModel(QAbstractTableModel):
 
         Parameters
         ----------
-        rows : int or list of int or numpy.ndarray or Ellipsis
+        rows : int or list of int or numpy.ndarray of dtype=int or Ellipsis
             Source model rows.
 
         Returns
@@ -148,7 +151,10 @@ class AbstractSortTableModel(QAbstractTableModel):
             ModelIndex (sorted) rows matching input source rows.
             If they are the same, simply input `rows` is returned.
         """
-        if self.__sortIndInv is not None:
+        # self.__sortInd[rows] fails if `rows` is an empty list or array
+        if self.__sortIndInv is not None \
+                and (isinstance(rows, (Integral, type(Ellipsis)))
+                     or len(rows)):
             new_rows = self.__sortIndInv[rows]
             if rows is Ellipsis:
                 new_rows.setflags(write=False)
@@ -869,8 +875,25 @@ class DomainModel(VariableListModel):
                  ATTRIBUTES)
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
-    def __init__(self, order=SEPARATED, placeholder=None,
+    def __init__(self, order=SEPARATED, separators=True, placeholder=None,
                  valid_types=None, alphabetical=False, skip_hidden_vars=True, **kwargs):
+        """
+
+        Parameters
+        ----------
+        order: tuple or int
+            Order of attributes, metas, classes, separators and other options
+        separators: bool
+            If False, remove separators from `order`.
+        placeholder: str
+            The text that is shown when no variable is selected
+        valid_types: tuple
+            (Sub)types of `Variable` that are included in the model
+        alphabetical: bool
+            If true, variables are sorted alphabetically.
+        skip_hidden_vars: bool
+            If true, variables marked as "hidden" are skipped.
+        """
         super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
             order = (order,)
@@ -880,6 +903,8 @@ class DomainModel(VariableListModel):
             order = (None,) + \
                     (self.Separator, ) * (self.Separator in order) + \
                     order
+        if not separators:
+            order = [e for e in order if e is not self.Separator]
         self.order = order
         self.valid_types = valid_types
         self.alphabetical = alphabetical
@@ -1080,7 +1105,7 @@ class TableModel(AbstractSortTableModel):
             elif role == TableModel.ClassVar:
                 getter = operator.attrgetter("sparse_y")
             elif role == TableModel.Meta:
-                getter = operator.attrgetter("sparse_meta")
+                getter = operator.attrgetter("sparse_metas")
             return partial(formater, vars, getter)
 
         def make_basket(vars, density, role):

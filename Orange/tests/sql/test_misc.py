@@ -29,7 +29,7 @@ class MiscSqlTests(PostgresTest):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
         sepal_length = iris.domain["sepal length"]
         get_conditional_distribution(iris, [sepal_length])
-        get_conditional_distribution(iris, list(iris.domain))
+        get_conditional_distribution(iris, list(iris.domain.variables))
 
     @unittest.skipIf(no_widgets, "Cannot import widgets")
     def test_create_sql_contingency(self):

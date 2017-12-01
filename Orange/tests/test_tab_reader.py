@@ -36,7 +36,7 @@ class TestTabReader(unittest.TestCase):
         file = io.StringIO(simplefile)
         table = read_tab_file(file)
 
-        f1, f2, c1, c2 = table.domain
+        f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f1, DiscreteVariable)
         self.assertEqual(f1.name, "Feature 1")
         self.assertIsInstance(f2, DiscreteVariable)

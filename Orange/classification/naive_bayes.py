@@ -52,12 +52,15 @@ class NaiveBayesModel(Model):
         if len(data.domain.attributes) == 0:
             probs = np.tile(self.class_prob, (len(data), 1))
         else:
-            probs = np.exp(np.array([np.sum(attr_prob[:, int(attr_val)]
-                                            for attr_val, attr_prob
-                                            in zip(ins, self.log_cont_prob)
-                                            if not np.isnan(attr_val))
-                                     for ins in data]) + np.log(
-                self.class_prob))
+            isnan = np.isnan
+            probs = np.exp(
+                np.log(self.class_prob) +
+                np.array([np.zeros_like(self.class_prob)
+                          if isnan(ins.x).all() else
+                          np.sum(attr_prob[:, int(attr_val)]
+                                 for attr_val, attr_prob in zip(ins, self.log_cont_prob)
+                                 if not isnan(attr_val))
+                          for ins in data]))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs

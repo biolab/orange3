@@ -305,7 +305,7 @@ class OWKMeans(widget.OWWidget):
             return
 
         domain = self.data.domain
-        existing_vars = [var.name for var in chain(domain, domain.metas)]
+        existing_vars = [var.name for var in chain(domain.variables, domain.metas)]
         clust_var = DiscreteVariable(
             get_next_name(existing_vars, "Cluster"),
             values=["C%d" % (x + 1) for x in range(km.k)])

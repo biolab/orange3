@@ -640,8 +640,7 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(np.all(t.metas == copy.metas))
 
     def test_copy_sparse(self):
-        t = data.Table('iris')
-        t.X = sp.csr_matrix(t.X)
+        t = data.Table('iris').to_sparse()
         copy = t.copy()
 
         self.assertEqual((t.X != copy.X).nnz, 0)      # sparse matrices match by content
@@ -727,7 +726,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         dom = data.Domain(["petal length", "sepal length", "iris"],
                           source=d.domain)
-        d_ref = d[:10, dom]
+        d_ref = d[:10, dom.variables]
         self.assertEqual(d_ref.domain.class_var, d.domain.class_var)
         self.assertEqual(d_ref[0, "petal length"], d[0, "petal length"])
         self.assertEqual(d_ref[0, "sepal length"], d[0, "sepal length"])
@@ -1778,7 +1777,7 @@ class CreateTableWithDomainAndTable(TableTests):
                 new_table, self.table, rows=slice_)
 
     def test_can_use_attributes_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         order = [random.randrange(a) for _ in self.domain.attributes]
         new_attributes = [self.domain.attributes[i] for i in order]
         new_domain = self.create_domain(
@@ -1789,7 +1788,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
     def test_can_use_class_vars_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        a, c, _ = column_sizes(self.table)
         order = [random.randrange(a, a + c) for _ in self.domain.class_vars]
         new_classes = [self.domain.class_vars[i - a] for i in order]
         new_domain = self.create_domain(new_classes, new_classes, new_classes)
@@ -1799,7 +1798,7 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table, xcols=order, ycols=order, mcols=order)
 
     def test_can_use_metas_as_new_columns(self):
-        a, c, m = column_sizes(self.table)
+        _, _, m = column_sizes(self.table)
         order = [random.randrange(-m + 1, 0) for _ in self.domain.metas]
         new_metas = [self.domain.metas[::-1][i] for i in order]
         new_domain = self.create_domain(new_metas, new_metas, new_metas)
@@ -1845,12 +1844,11 @@ class CreateTableWithDomainAndTable(TableTests):
             new_table, self.table[:0], xcols=order, ycols=order, mcols=order)
 
     def test_from_table_sparse_move_some_to_empty_metas(self):
-        iris = data.Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = data.Table("iris").to_sparse()
         new_domain = data.domain.Domain(
             iris.domain.attributes[:2], iris.domain.class_vars,
             iris.domain.attributes[2:], source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_iris = iris.transform(new_domain)
 
         self.assertTrue(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
@@ -1858,37 +1856,35 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(new_iris.metas.shape, (len(iris), 2))
 
         # move back
-        back_iris = data.Table.from_table(iris.domain, new_iris)
+        back_iris = new_iris.transform(iris.domain)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
-        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertFalse(sp.issparse(back_iris.metas))
         self.assertEqual(back_iris.X.shape, iris.X.shape)
         self.assertEqual(back_iris.metas.shape, iris.metas.shape)
 
     def test_from_table_sparse_move_all_to_empty_metas(self):
-        iris = data.Table("iris")
-        iris.X = sp.csr_matrix(iris.X)
+        iris = data.Table("iris").to_sparse()
         new_domain = data.domain.Domain(
             [], iris.domain.class_vars, iris.domain.attributes,
             source=iris.domain)
-        new_iris = data.Table.from_table(new_domain, iris)
+        new_iris = iris.transform(new_domain)
 
-        self.assertTrue(sp.issparse(new_iris.X))
+        self.assertFalse(sp.issparse(new_iris.X))
         self.assertTrue(sp.issparse(new_iris.metas))
         self.assertEqual(new_iris.X.shape, (len(iris), 0))
         self.assertEqual(new_iris.metas.shape, (len(iris), 4))
 
         # move back
-        back_iris = data.Table.from_table(iris.domain, new_iris)
+        back_iris = new_iris.transform(iris.domain)
         self.assertEqual(back_iris.domain, iris.domain)
         self.assertTrue(sp.issparse(back_iris.X))
-        self.assertTrue(sp.issparse(back_iris.metas))
+        self.assertFalse(sp.issparse(back_iris.metas))
         self.assertEqual(back_iris.X.shape, iris.X.shape)
         self.assertEqual(back_iris.metas.shape, iris.metas.shape)
 
     def test_from_table_sparse_move_to_nonempty_metas(self):
-        brown = data.Table("brown-selected")
-        brown.X = sp.csr_matrix(brown.X)
+        brown = data.Table("brown-selected").to_sparse()
         n_attr = len(brown.domain.attributes)
         n_metas = len(brown.domain.metas)
         new_domain = data.domain.Domain(
@@ -2053,7 +2049,7 @@ class TableElementAssignmentTest(TableTests):
         self.assertAlmostEqual(self.table.X[0, 0], 42.)
 
     def test_can_assign_values_to_classes(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         self.table[0, a] = 42.
         self.assertAlmostEqual(self.table.Y[0], 42.)
 
@@ -2071,7 +2067,7 @@ class TableElementAssignmentTest(TableTests):
             self.table.metas[0], self.table.metas[1])
 
     def test_can_assign_lists(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         new_example = [float(i)
                        for i in range(len(self.attributes + self.class_vars))]
         self.table[0] = new_example
@@ -2081,7 +2077,7 @@ class TableElementAssignmentTest(TableTests):
             self.table.Y[0], np.array(new_example[a:]))
 
     def test_can_assign_np_array(self):
-        a, c, m = column_sizes(self.table)
+        a, _, _ = column_sizes(self.table)
         new_example = \
             np.array([float(i)
                       for i in range(len(self.attributes + self.class_vars))])
@@ -2203,7 +2199,7 @@ class InterfaceTest(unittest.TestCase):
     def test_clear(self):
         self.table.clear()
         self.assertEqual(len(self.table), 0)
-        for i in self.table:
+        for _ in self.table:
             self.fail("Table should not contain any rows.")
 
     def test_subclasses(self):
@@ -2704,6 +2700,81 @@ class TestTableTranspose(unittest.TestCase):
                          [(type(x), x.name, x.attributes)
                           for x in table2.domain.metas])
 
+
+class SparseCV:
+    def __call__(self, data):
+        return sp.csr_matrix((len(data), 1))
+
+
+class TestTableSparseDense(unittest.TestCase):
+    def setUp(self):
+        self.iris = Table('iris')
+
+    def test_sparse_dense_transformation(self):
+        iris = Table('iris')
+        iris_sparse = iris.to_sparse(sparse_attributes=True)
+        self.assertTrue(sp.issparse(iris_sparse.X))
+        self.assertFalse(sp.issparse(iris_sparse.Y))
+        self.assertFalse(sp.issparse(iris_sparse.metas))
+
+        iris_sparse = iris.to_sparse(sparse_attributes=True, sparse_class=True)
+        self.assertTrue(sp.issparse(iris_sparse.X))
+        self.assertTrue(sp.issparse(iris_sparse.Y))
+        self.assertFalse(sp.issparse(iris_sparse.metas))
+
+        dense_iris = iris_sparse.to_dense()
+        self.assertFalse(sp.issparse(dense_iris.X))
+        self.assertFalse(sp.issparse(dense_iris.Y))
+        self.assertFalse(sp.issparse(dense_iris.metas))
+
+    def test_from_table_add_one_sparse_column(self):
+        # add one sparse feature, should remain dense
+        domain = self.iris.domain.copy()
+        domain.attributes += (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertFalse(sp.issparse(d.X))
+
+    def test_from_table_add_lots_of_sparse_columns(self):
+        n_attrs = len(self.iris.domain.attributes)
+
+        # add 2*n_attrs+1 sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain.attributes += tuple(
+            ContinuousVariable('S' + str(i), compute_value=SparseCV(), sparse=True)
+            for i in range(2*n_attrs + 1)
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.X))
+
+    def test_from_table_replace_attrs_with_sparse(self):
+        # replace attrs with a sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain.attributes = (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.X))
+
+    def test_from_table_sparse_metas(self):
+        # replace metas with a sparse feature, should became sparse
+        domain = self.iris.domain.copy()
+        domain._metas = (
+            ContinuousVariable('S1', compute_value=SparseCV(), sparse=True),
+        )
+        d = self.iris.transform(domain)
+        self.assertTrue(sp.issparse(d.metas))
+
+    def test_from_table_sparse_metas_with_strings(self):
+        # replace metas with text and 100 sparse features, should be dense
+        domain = self.iris.domain.copy()
+        domain._metas = (StringVariable('text'),) + tuple(
+            ContinuousVariable('S' + str(i), compute_value=SparseCV(), sparse=True)
+            for i in range(100)
+        )
+        d = self.iris.transform(domain)
+        self.assertFalse(sp.issparse(d.metas))
 
 if __name__ == "__main__":
     unittest.main()

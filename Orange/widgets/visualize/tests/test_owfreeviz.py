@@ -106,3 +106,21 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
     def test_class_density(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
         self.widget.cb_class_density.click()
+
+    def test_set_radius_no_data(self):
+        """
+        Widget should not crash when there is no data and radius slider is moved.
+        GH-2780
+        """
+        w = self.widget
+        self.send_signal(w.Inputs.data, None)
+        w.rslider.setSliderPosition(3)
+
+    def test_update_graph_no_data(self):
+        """
+        Widget should not crash when there is no data and one wants to change class density etc.
+        GH-2780
+        """
+        w = self.widget
+        self.send_signal(w.Inputs.data, None)
+        w.cb_class_density.click()

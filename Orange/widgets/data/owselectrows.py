@@ -530,6 +530,11 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
 
+        if matching_output is not None and not len(matching_output):
+            matching_output = None
+        if non_matching_output is not None and not len(non_matching_output):
+            non_matching_output = None
+
         self.Outputs.matching_data.send(matching_output)
         self.Outputs.unmatched_data.send(non_matching_output)
 

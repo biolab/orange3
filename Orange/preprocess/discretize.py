@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.data import DiscreteVariable, Domain, Table
+from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import distribution, contingency
@@ -73,7 +73,8 @@ class Discretizer(Transformation):
             to_sql = SingleValueSql(values[0])
 
         dvar = DiscreteVariable(name=var.name, values=values,
-                                compute_value=cls(var, points))
+                                compute_value=cls(var, points),
+                                sparse=var.sparse)
         dvar.source_variable = var
         dvar.to_sql = to_sql
         return dvar

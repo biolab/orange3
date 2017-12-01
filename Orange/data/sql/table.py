@@ -355,9 +355,9 @@ class SqlTable(Table):
         if columns is not None:
             columns = [self.domain[col] for col in columns]
         else:
-            columns = list(self.domain)
+            columns = self.domain.variables
             if include_metas:
-                columns += list(self.domain.metas)
+                columns += self.domain.metas
         return self._get_stats(columns)
 
     def _get_stats(self, columns):
@@ -387,7 +387,7 @@ class SqlTable(Table):
         if columns is not None:
             columns = [self.domain[col] for col in columns]
         else:
-            columns = list(self.domain)
+            columns = self.domain.variables
         return self._get_distributions(columns)
 
     def _get_distributions(self, columns):

@@ -6,6 +6,38 @@ Change Log
 * ...
 
 
+[3.8.0] - 2017-12-01
+--------------------
+##### Enhancements
+* New signals: Trees, Forest ([#2801](../../pull/2801))
+* Scatter Plot: Improve tooltips ([#2703](../../pull/2703))
+* Allow custom (generic) names in Transpose Widget  ([#2737](../../pull/2737))
+* Scatter Plot VizRank: some fixes and regard to color ([#2787](../../pull/2787))
+* Improved Sparsity Handling ([#2341](../../pull/2341))
+* Error Reporting: send report even when recursion error is raised
+* test_owdatasets: Test files at different (dir tree) depths
+* [FIX] Rank: should not fail on data with no attributes
+* Domain: Add copy method ([#2734](../../pull/2734))
+* Domain Model: order without separators ([#2697](../../pull/2697))
+
+##### Bugfixes
+* Test & Learn: do not crash on a data with class only nans ([#2751](../../pull/2751))
+* FreeViz: 2 issues when no data ([#2780](../../pull/2780))
+* [ENH] Scatter Plot VizRank: some fixes and regard to color ([#2787](../../pull/2787))
+* Scatter Plot Graph: crash on metas column with all 0 values ([#2775](../../pull/2775))
+* Scatter Plot: subset data ([#2773](../../pull/2773))
+* Scatter Plot: VizRank disabled when no class vars ([#2757](../../pull/2757))
+* Error Reporting: send report even when recursion error is raised
+* Select Rows: None on output when no data ([#2726](../../pull/2726))
+* test_owdatasets: Test files at different (dir tree) depths
+* [FIX] Rank: should not fail on data with no attributes
+* Predictions: space added before bracket in meta name. ([#2742](../../pull/2742))
+* Fix AbstractSortTableModel.mapFromSourceRows for empty list or array ([#2730](../../pull/2730))
+* Correspondence Analysis: do not crash when no categorical ([#2723](../../pull/2723))
+* ScatterPlotGraph: fix zoom CTRL + and CTRL - ([#2716](../../pull/2716))
+* errorreporting: Remove use of pip internal api ([#2724](../../pull/2724))
+
+
 [3.7.1] - 2017-11-17
 --------------------
 ##### Enhancements
@@ -64,6 +96,7 @@ Change Log
 * Feature Constructor: Support additional functions () ([#2611](../../pull/2611))
 * Miniconda installer: Install conda executable ([#2616](../../pull/2616))
 * Datasets: New widget ([#2557](../../pull/2557))
+* Neural Network widget ([#2553](../../pull/2553))
 
 ##### Bugfixes
 * settings: Store settings version in the serialized defaults ([#2631](../../pull/2631))
@@ -689,7 +722,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.7.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.8.0...HEAD
+[3.8.0]: https://github.com/biolab/orange3/compare/3.7.1...3.8.0
 [3.7.1]: https://github.com/biolab/orange3/compare/3.7.0...3.7.1
 [3.7.0]: https://github.com/biolab/orange3/compare/3.6.0...3.7.0
 [3.6.0]: https://github.com/biolab/orange3/compare/3.5.0...3.6.0

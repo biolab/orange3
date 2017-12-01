@@ -277,7 +277,7 @@ class OWDistanceMatrix(widget.OWWidget):
             self.annotation_idx = 2
         elif isinstance(items, Table):
             annotations.extend(
-                itertools.chain(items.domain, items.domain.metas))
+                itertools.chain(items.domain.variables, items.domain.metas))
             if items.domain.class_var:
                 self.annotation_idx = 2 + len(items.domain.attributes)
         self.annot_combo.model()[:] = annotations

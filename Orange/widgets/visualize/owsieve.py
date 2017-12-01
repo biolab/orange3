@@ -205,11 +205,11 @@ class OWSieveDiagram(OWWidget):
         GH-2260
         """
         def discretizer(data):
-            if any(attr.is_continuous for attr in chain(data.domain, data.domain.metas)):
+            if any(attr.is_continuous for attr in chain(data.domain.variables, data.domain.metas)):
                 discretize = Discretize(
                     method=EqualFreq(n=4), remove_const=False,
                     discretize_classes=True, discretize_metas=True)
-                return discretize(data)
+                return discretize(data).to_dense()
             return data
 
         if not data.is_sparse() and not init:
@@ -219,7 +219,6 @@ class OWSieveDiagram(OWWidget):
                      self.attr_y}
             new_domain = data.domain.select_columns(attrs)
             data = Table.from_table(new_domain, data)
-            data.X = data.X.toarray()
         return discretizer(data)
 
     @Inputs.features
