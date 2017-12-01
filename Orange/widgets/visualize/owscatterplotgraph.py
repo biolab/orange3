@@ -777,11 +777,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def set_axis_title(self, axis, title):
         self.plot_widget.setLabel(axis=axis, text=title)
 
-    def get_size_index(self):
-        if self.attr_size is None:
-            return -1
-        return self.domain.index(self.attr_size)
-
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
         if self.attr_size is None:
