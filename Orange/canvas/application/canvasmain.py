@@ -66,7 +66,7 @@ from .settings import UserSettingsDialog
 from ..document.schemeedit import SchemeEditWidget
 
 from ..scheme import widgetsscheme
-from ..scheme.readwrite import scheme_load, sniff_version
+from ..scheme.readwrite import scheme_load
 
 from . import welcomedialog
 from ..preview import previewdialog, previewmodel
@@ -1149,42 +1149,6 @@ class CanvasMainWindow(QMainWindow):
         elif selected == QMessageBox.Cancel:
             return QDialog.Rejected
 
-    def check_can_save(self, document, path):
-        """
-        Check if saving the document to `path` would prevent it from
-        being read by the version 1.0 of scheme parser. Return ``True``
-        if the existing scheme is version 1.0 else show a message box and
-        return ``False``
-
-        .. note::
-            In case of an error (opening, parsing), this method will return
-            ``True``, so the
-
-        """
-        if path and os.path.exists(path):
-            try:
-                with open(path, "rb") as f:
-                    version = sniff_version(f)
-            except (IOError, OSError):
-                log.error("Error opening '%s'", path, exc_info=True)
-                # The client should fail attempting to write.
-                return True
-            except Exception:
-                log.error("Error sniffing workflow version in '%s'", path,
-                          exc_info=True)
-                # Malformed .ows file, ...
-                return True
-
-            if version == "1.0":
-                # TODO: Ask for overwrite confirmation instead
-                message_information(
-                    self.tr("Can not overwrite a version 1.0 ows file. "
-                            "Please save your work to a new file"),
-                    title="Info",
-                    parent=self)
-                return False
-        return True
-
     def save_scheme(self):
         """Save the current scheme. If the scheme does not have an associated
         path then prompt the user to select a scheme file. Return
@@ -1196,7 +1160,7 @@ class CanvasMainWindow(QMainWindow):
         curr_scheme = document.scheme()
         path = document.path()
 
-        if path and self.check_can_save(document, path):
+        if path:
             if self.save_scheme_to(curr_scheme, path):
                 document.setModified(False)
                 self.add_recent_scheme(curr_scheme.title, document.path())
@@ -1235,11 +1199,7 @@ class CanvasMainWindow(QMainWindow):
         )
 
         if filename:
-            if not self.check_can_save(document, filename):
-                return QDialog.Rejected
-
-            self.last_scheme_dir = os.path.dirname(filename)
-
+            settings.setValue("last-scheme-dir", os.path.dirname(filename))
             if self.save_scheme_to(curr_scheme, filename):
                 document.setPath(filename)
                 document.setModified(False)
