@@ -17,6 +17,7 @@ from os.path import dirname
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
+from Orange.util import OrangeDeprecationWarning
 from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
@@ -329,6 +330,10 @@ a
         self.widget.apply_button.click()
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(data)
+
+    def test_call_deprecated_dialog_formats(self):
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertIn("Tab", dialog_formats())
 
     def test_add_new_format(self):
         # test adding file formats after registering the widget

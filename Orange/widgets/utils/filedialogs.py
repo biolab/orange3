@@ -7,6 +7,7 @@ from AnyQt.QtWidgets import \
 
 from Orange.data.io import FileFormat
 from Orange.widgets.settings import Setting
+from Orange.util import deprecated
 
 
 def fix_extension(ext, format, suggested_ext, suggested_format):
@@ -41,6 +42,7 @@ def format_filter(writer):
     return '{} (*{})'.format(writer.DESCRIPTION, ' *'.join(writer.EXTENSIONS))
 
 
+@deprecated
 def dialog_formats():
     """
     Return readable file types for QFileDialogs.
