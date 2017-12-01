@@ -25,9 +25,9 @@ class OWSave(widget.OWWidget):
     last_filter = Setting("")
     auto_save = Setting(False)
 
-    writers = FileFormat.writers
-    sparse_writers = {ext: w for ext, w in FileFormat.writers.items()
-                      if getattr(w, 'SUPPORT_SPARSE_DATA', False)}
+    writers = [f for f in FileFormat.formats
+               if getattr(f, 'write_file', None) and getattr(f, "EXTENSIONS", None)]
+    sparse_writers = [f for f in writers if getattr(f, 'SUPPORT_SPARSE_DATA', False)]
 
     def __init__(self):
         super().__init__()
@@ -63,7 +63,7 @@ class OWSave(widget.OWWidget):
         file_name = self.filename or \
             os.path.join(self.last_dir or os.path.expanduser("~"),
                          getattr(self.data, 'name', ''))
-        filename, writer, filter = filedialogs.get_file_name(
+        filename, writer, filter = filedialogs.open_filename_dialog_save(
             file_name, self.last_filter,
             self.sparse_writers if self.data.is_sparse() else self.writers)
         if not filename:

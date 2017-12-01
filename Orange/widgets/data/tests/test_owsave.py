@@ -3,10 +3,10 @@
 from unittest.mock import patch
 
 from Orange.data import Table
-from Orange.data.io import TabReader, PickleReader, FileFormat
+from Orange.data.io import TabReader, PickleReader
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.filedialogs import format_filter, fix_extension, get_file_name
+from Orange.widgets.utils.filedialogs import format_filter, fix_extension, open_filename_dialog_save
 from Orange.widgets.data.owsave import OWSave
 
 
@@ -46,7 +46,8 @@ class TestOWSave(WidgetTest):
 
             with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", file_choice),\
                  patch("Orange.widgets.utils.filedialogs.fix_extension", fix):
-                saved_filename, format, filter = get_file_name(".", None, FileFormat.writers)
+                saved_filename, format, filter = \
+                    open_filename_dialog_save(".", None, OWSave.writers)
                 self.assertEqual(saved_filename, "o.tab")
                 self.assertEqual(format, TabReader)
                 self.assertEqual(filter, format_filter(TabReader))
