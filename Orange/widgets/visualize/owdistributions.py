@@ -5,6 +5,7 @@ Distributions
 A widget for plotting attribute distributions.
 
 """
+from itertools import chain
 from math import sqrt
 import sys
 import collections
@@ -89,7 +90,6 @@ class OWDistributions(widget.OWWidget):
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Set the input data set")
 
-    settings_version = 2
     settingsHandler = settings.DomainContextHandler(
         match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)
     #: Selected variable index
@@ -238,6 +238,8 @@ class OWDistributions(widget.OWWidget):
             if domain.class_var in self.groupvarmodel:
                 self.group_var = domain.class_var
             self.openContext(domain)
+            # See the comment in migrate_context
+            self.migrate_context(None, None, self=self, domain=domain)
             itemmodels.select_row(self.varview, self.varmodel.indexOf(self.var))
             self._setup()
 
@@ -582,9 +584,28 @@ class OWDistributions(widget.OWWidget):
         self.report_caption(text)
 
     @classmethod
-    def migrate_context(cls, context, version):
-        if version < 2:
-            pass  # cannot convert index to variable
+    def migrate_context(cls, context, version, *, self=None, domain=None):
+        """
+        Migrate old indices into combos (`variable_idx`, `groupvar_idx`) to
+        variables (`var`, `group_var`). This cannot be done through usual
+        migrations because it requires a domain. The code is still put into
+        this method just so that anybody looking for it will find it here.
+        The patch is called after `openContext`
+        """
+        if version is None or version < 2:
+            if domain is not None:  # Called after openContext, not migrations
+                settings.migrate_idx_to_variable(
+                    self, "variable_idx", "var", self.varmodel,
+                    (var for var in chain(domain.variables, domain.metas)
+                     if var.is_primitive()))
+                settings.migrate_idx_to_variable(
+                    self, "groupvar_idx", "group_var", self.groupvarmodel,
+                    (var
+                     for var in chain([None], domain.variables, domain.metas)
+                     if var is None or var.is_discrete))
+            else:
+                super().migrate_context(context, version)
+                # Further migrations go here, not above or outside!
 
 
 def dist_sum(dXW1, dXW2):

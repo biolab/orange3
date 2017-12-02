@@ -1226,3 +1226,28 @@ def migrate_str_to_variable(settings, names=None):
     else:
         for name in names:
             _fix(name)
+
+
+def migrate_idx_to_variable(widget, idx_name, var_name, model, options):
+    """
+    Replace an index with a variable, given a list of options that were
+    available in the control.
+
+    Options may be a generator; it will be expanded into a list only if the
+    migration is needed.
+
+    Args:
+        widget (Orange.widgets.widget.OWBaseWidget): widget being migrated
+        idx_name (str): the attribute with the index in the old settings
+        var_name (str): the new attribute with the variable
+        options (list or generator): options in the old widget
+    """
+    idx, value_type = widget.current_context.values.get(idx_name, (None, None))
+    if idx is None or value_type != -2 or not isinstance(idx, int):
+        return
+    options = list(options)
+    if idx < len(options):
+        var = options[idx]
+        if var in model:
+            setattr(widget, var_name, options[idx])
+    del widget.current_context.values[idx_name]
