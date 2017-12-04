@@ -1,17 +1,18 @@
 import os
 import logging
-from collections import OrderedDict
-
-import pkg_resources
-import pickle
-import textwrap
 import warnings
+import pickle
+from collections import OrderedDict
 from enum import IntEnum
 
-from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, pyqtSlot, QT_VERSION
+from typing import Optional  # pylint: disable=unused-import
+
+import pkg_resources
+
+from AnyQt.QtCore import Qt, QObject, pyqtSlot
 from AnyQt.QtGui import QIcon, QCursor, QStandardItemModel, QStandardItem
 from AnyQt.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QTableView, QHeaderView, QSizePolicy
+    QApplication, QDialog, QFileDialog, QTableView, QHeaderView
 )
 from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
 
@@ -297,12 +298,16 @@ class OWReport(OWWidget):
             if document.isModifiedStrict():
                 self.last_scheme = canvas.get_scheme_xml()
             canvas.load_scheme_xml(scheme)
+            scheme = canvas.current_document().scheme()
+            scheme.set_report_view(self)
 
     def _show_last_scheme(self):
         if self.last_scheme:
             canvas = self.get_canvas_instance()
             if canvas:
                 canvas.load_scheme_xml(self.last_scheme)
+                scheme = canvas.current_document().scheme()
+                scheme.set_report_view(self)
 
     def save_report(self):
         """Save report"""
@@ -367,35 +372,6 @@ class OWReport(OWWidget):
             return
         self._print_to_printer(printer)
 
-    def open_report(self):
-        filename, _ = QFileDialog.getOpenFileName(
-            self, "Open Report", self.open_dir, "Report (*.report)")
-        if not filename:
-            return
-
-        self.report_changed = False
-        self.open_dir = os.path.dirname(filename)
-        self.saveSettings()
-
-        try:
-            report = self.load(filename)
-        except (IOError, AttributeError, pickle.UnpicklingError) as e:
-            message_critical(
-                 self.tr("Could not load an Orange Report file"),
-                 title=self.tr("Error"),
-                 informative_text=self.tr("Error occurred "
-                                          "while loading '{}'.").format(filename),
-                 exc_info=True,
-                 parent=self)
-            log.error(str(e), exc_info=True)
-            return
-        self.set_instance(report)
-        self = report
-        self._build_html()
-        self.table.selectRow(0)
-        self.show()
-        self.raise_()
-
     def save(self, filename):
         attributes = {}
         for key in ('last_scheme', 'open_dir'):
@@ -447,22 +423,43 @@ class OWReport(OWWidget):
 
     @staticmethod
     def set_instance(report):
+        warnings.warn(
+            "OWReport.set_instance is deprecated",
+            DeprecationWarning, stacklevel=2
+        )
         app_inst = QApplication.instance()
         app_inst._report_window = report
 
     @staticmethod
     def get_instance():
+        warnings.warn(
+            "OWReport.get_instance is deprecated",
+            DeprecationWarning, stacklevel=2
+        )
         app_inst = QApplication.instance()
         if not hasattr(app_inst, "_report_window"):
             report = OWReport()
             app_inst._report_window = report
         return app_inst._report_window
 
-    @staticmethod
-    def get_canvas_instance():
-        for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, CanvasMainWindow):
-                return widget
+    def get_canvas_instance(self):
+        # type: () -> Optional[CanvasMainWindow]
+        """
+        Return a CanvasMainWindow instance to which this report is attached.
+
+        Return None if not associated with any window.
+
+        Returns
+        -------
+        window : Optional[CanvasMainWindow]
+        """
+        # Run up the parent/window chain
+        parent = self.parent()
+        if parent is not None:
+            window = parent.window()
+            if isinstance(window, CanvasMainWindow):
+                return window
+        return None
 
 
 if __name__ == "__main__":

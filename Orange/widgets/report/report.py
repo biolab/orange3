@@ -22,13 +22,18 @@ class Report:
     report_html = ""
     name = ""
 
+    def get_designated_report_view(self):
+        from Orange.widgets.report.owreport import OWReport
+        try:
+            return self.signalManager.parent().report_view()
+        except (AttributeError, TypeError):
+            return OWReport.get_instance()
+
     def show_report(self):
         """
         Raise the report window.
         """
-        from Orange.widgets.report.owreport import OWReport
-
-        report = OWReport.get_instance()
+        report = self.get_designated_report_view()
         self.create_report_html()
         report.make_report(self)
         report.show()

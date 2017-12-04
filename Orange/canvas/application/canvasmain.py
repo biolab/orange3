@@ -966,8 +966,40 @@ class CanvasMainWindow(QMainWindow):
 
     def open_report(self):
         from Orange.canvas.report.owreport import OWReport
-        rep = OWReport()
-        rep.open_report()
+        settings = QSettings()
+        start_dir = settings.value("report/file-dialog-dir", "", type=str)
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Open Report", start_dir, "Report (*.report)")
+
+        if not filename:
+            return
+        settings.setValue("report/file-dialog-dir",
+                          os.path.dirname(filename))
+
+        try:
+            report = OWReport.load(filename)
+        except IOError:
+            log.exception("Error while opening a report", exc_info=True)
+            return
+
+        # Create a new window for the report
+        if self.is_transient():
+            window = self
+        else:
+            window = self.create_new_window()
+        window.__is_transient = False
+
+        report.setParent(window, Qt.Window)
+        sc = window.current_document().scheme()
+        sc.set_report_view(report)
+        window.show()
+        window.raise_()
+        window.show_report_view()
+
+        report._build_html()
+        report.table.selectRow(0)
+        report.show()
+        report.raise_()
 
     def open_and_freeze_scheme(self):
         """
@@ -1098,9 +1130,7 @@ class CanvasMainWindow(QMainWindow):
         Returns:
             `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
         """
-        from Orange.canvas.report.owreport import OWReport
-        report = OWReport.get_instance()
-        # TODO: report is per main window / workflow
+        report = self.current_document().scheme().report_view()
         if not report.is_changed():
             return QDialog.Accepted
 

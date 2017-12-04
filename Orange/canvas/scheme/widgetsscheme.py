@@ -66,6 +66,7 @@ class WidgetsScheme(Scheme):
 
         self.signal_manager.stateChanged.connect(onchanged)
         self.widget_manager.set_scheme(self)
+        self.__report_view = None  # type: Optional[OWReport]
 
     def widget_for_node(self, node):
         """
@@ -96,10 +97,29 @@ class WidgetsScheme(Scheme):
         return changed
 
     def show_report_view(self):
-        from Orange.canvas.report.owreport import OWReport
-        inst = OWReport.get_instance()
+        inst = self.report_view()
         inst.show()
         inst.raise_()
+
+    def report_view(self):
+        from Orange.canvas.report.owreport import OWReport
+        if self.__report_view is None:
+            parent = self.parent()
+            if isinstance(parent, QWidget):
+                window = parent.window()  # type: QWidget
+                view = window.findChild(OWReport)
+                if view is not None:
+                    return view
+            else:
+                window = None
+
+            self.__report_view = OWReport()
+            if window is not None:
+                self.__report_view.setParent(window, Qt.Window)
+        return self.__report_view
+
+    def set_report_view(self, view):
+        self.__report_view = view
 
     def dump_settings(self, node: SchemeNode):
         from Orange.widgets.settings import SettingsPrinter
