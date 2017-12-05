@@ -3,7 +3,9 @@
 import traceback
 
 from AnyQt.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QSizePolicy
-from AnyQt.QtGui import QTextCursor, QTextCharFormat, QFont, QTextOption
+from AnyQt.QtGui import (
+    QTextCursor, QTextCharFormat, QFont, QTextOption, QFontDatabase
+)
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
 from AnyQt.QtCore import pyqtSignal as Signal
 
@@ -16,10 +18,16 @@ class TerminalView(QPlainTextEdit):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
-        font = self.font()
-        font.setStyleHint(QFont.Monospace)
-        font.setFamily("Monospace")
+        try:
+            # Since Qt 5.2
+            font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        except AttributeError:
+            font = self.font()
+            font.setStyleHint(QFont.Monospace)
+            font.setFamily("Monospace")
+
         self.setFont(font)
+        self.setAttribute(Qt.WA_SetFont, False)
 
     def sizeHint(self):
         metrics = self.fontMetrics()
