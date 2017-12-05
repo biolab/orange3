@@ -14,7 +14,7 @@ import pkg_resources
 from AnyQt.QtWidgets import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QToolBar, QToolButton,
-    QDockWidget, QApplication, QShortcut
+    QDockWidget, QApplication, QShortcut, QPlainTextEdit
 )
 from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
 
@@ -902,6 +902,13 @@ class CanvasMainWindow(QMainWindow):
         window.restoreState(self.saveState(self.SETTINGS_VERSION),
                             self.SETTINGS_VERSION)
         window.set_tool_dock_expanded(self.dock_widget.expanded())
+
+        logview = window.log_view()  # type: OutputView
+
+        te = logview.findChild(QPlainTextEdit)
+        te1 = self.log_view().findChild(QPlainTextEdit)
+        te.setDocument(te1.document())
+
         CanvasMainWindow._instances.append(window)
         window.destroyed.connect(
             lambda: CanvasMainWindow._instances.remove(window))

@@ -3,14 +3,14 @@
 import traceback
 
 from AnyQt.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QSizePolicy
-from AnyQt.QtGui import QTextCursor, QTextCharFormat, QFont
+from AnyQt.QtGui import QTextCursor, QTextCharFormat, QFont, QTextOption
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
 from AnyQt.QtCore import pyqtSignal as Signal
 
 
 class TerminalView(QPlainTextEdit):
     def __init__(self, *args, **kwargs):
-        QPlainTextEdit.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.setFrameStyle(QPlainTextEdit.NoFrame)
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -23,7 +23,7 @@ class TerminalView(QPlainTextEdit):
 
     def sizeHint(self):
         metrics = self.fontMetrics()
-        width = metrics.boundingRect("_" * 81).width()
+        width = metrics.boundingRect("X" * 81).width()
         height = metrics.lineSpacing()
         scroll_width = self.verticalScrollBar().width()
         size = QSize(width + scroll_width, height * 25)
@@ -32,7 +32,7 @@ class TerminalView(QPlainTextEdit):
 
 class OutputView(QWidget):
     def __init__(self, parent=None, **kwargs):
-        QWidget.__init__(self, parent, **kwargs)
+        super().__init__(parent, **kwargs)
 
         self.__lines = 5000
 
@@ -40,6 +40,7 @@ class OutputView(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.__text = TerminalView()
+        self.__text.setWordWrapMode(QTextOption.NoWrap)
 
         self.__currentCharFormat = self.__text.currentCharFormat()
 
@@ -63,11 +64,13 @@ class OutputView(QWidget):
         """
         Clear the displayed text.
         """
+        assert QThread.currentThread() is self.thread()
         self.__text.clear()
 
     def setCurrentCharFormat(self, charformat):
         """Set the QTextCharFormat to be used when writing.
         """
+        assert QThread.currentThread() is self.thread()
         if self.__currentCharFormat != charformat:
             self.__currentCharFormat = charformat
 
@@ -82,23 +85,28 @@ class OutputView(QWidget):
 
     # A file like interface.
     def write(self, string):
+        assert QThread.currentThread() is self.thread()
         self.__text.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
         self.__text.setCurrentCharFormat(self.__currentCharFormat)
 
         self.__text.insertPlainText(string)
 
     def writelines(self, lines):
+        assert QThread.currentThread() is self.thread()
         self.write("".join(lines))
 
     def flush(self):
+        assert QThread.currentThread() is self.thread()
         pass
 
     def writeWithFormat(self, string, charformat):
+        assert QThread.currentThread() is self.thread()
         self.__text.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
         self.__text.setCurrentCharFormat(charformat)
         self.__text.insertPlainText(string)
 
     def writelinesWithFormat(self, lines, charformat):
+        assert QThread.currentThread() is self.thread()
         self.writeWithFormat("".join(lines), charformat)
 
     def formated(self, color=None, background=None, weight=None,
@@ -194,8 +202,8 @@ class TextStream(QObject):
     stream = Signal(str)
     flushed = Signal()
 
-    def __init__(self, parent=None):
-        QObject.__init__(self, parent)
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
 
     def write(self, string):
         self.stream.emit(string)
