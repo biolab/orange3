@@ -15,13 +15,13 @@ import pkg_resources
 from AnyQt.QtWidgets import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QToolBar, QToolButton,
-    QDockWidget, QApplication, QShortcut, QPlainTextEdit
+    QDockWidget, QApplication, QShortcut, QPlainTextEdit, QFileIconProvider
 )
 from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
 
 from AnyQt.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION,
-    QObject
+    QObject, QFileInfo
 )
 
 try:
@@ -638,12 +638,16 @@ class CanvasMainWindow(QMainWindow):
         # schemes into the menu in `add_recent_scheme`.
         self.recent_menu_begin = self.recent_menu.addSeparator()
 
+        icons = QFileIconProvider()
         # Add recent items.
         for item in self.recent_schemes:
             text = os.path.basename(item.path)
             if item.title:
                 text = "{} ('{}')".format(text, item.title)
-            action = QAction(text, self, toolTip=item.path)
+            icon = icons.icon(QFileInfo(item.path))
+            action = QAction(
+                icon, text, self, toolTip=item.path, iconVisibleInMenu=True
+            )
             action.setData(item.path)
             self.recent_menu.addAction(action)
             self.recent_scheme_action_group.addAction(action)
@@ -1670,7 +1674,11 @@ class CanvasMainWindow(QMainWindow):
             self.recent_scheme_action_group.removeAction(action)
             action.setText(text)
         else:
-            action = QAction(text, self, toolTip=filename)
+            icons = QFileIconProvider()
+            icon = icons.icon(QFileInfo(filename))
+            action = QAction(
+                icon, text, self, toolTip=filename, iconVisibleInMenu=True
+            )
             action.setData(filename)
 
         # Find the separator action in the menu (after 'Browse Recent')
