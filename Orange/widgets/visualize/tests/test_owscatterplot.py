@@ -8,6 +8,7 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.widgets.visualize.owscatterplotgraph import MAX
 from Orange.widgets.widget import AttributeList
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
 from Orange.widgets.visualize.owscatterplot import \
@@ -592,6 +593,31 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
                 show_text.reset_mock()
                 self.assertFalse(graph.help_event(event))
                 self.assertEqual(show_text.call_count, 0)
+
+    def test_many_discrete_values(self):
+        """
+        Do not show all discrete values if there are too many.
+        Also test for values with a nan.
+        GH-2804
+        """
+        def prepare_data():
+            data = Table("iris")
+            values = list(range(15))
+            class_var = DiscreteVariable("iris5", values=[str(v) for v in values])
+            data = data.transform(Domain(attributes=data.domain.attributes, class_vars=[class_var]))
+            data.Y = np.array(values * 10, dtype=float)
+            return data
+
+        def assert_equal(data, max):
+            self.send_signal(self.widget.Inputs.data, data)
+            pen_data, brush_data = self.widget.graph.compute_colors()
+            self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
+
+        assert_equal(prepare_data(), MAX)
+        # data with nan value
+        data = prepare_data()
+        data.Y[42] = np.nan
+        assert_equal(data, MAX + 1)
 
 
 if __name__ == "__main__":
