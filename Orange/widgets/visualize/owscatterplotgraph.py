@@ -1060,10 +1060,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             palette = self.discrete_palette
             for i, value in enumerate(self.attr_color.values):
                 color = QColor(*palette.getRGB(i))
-                brush = color.lighter(self.DarkerValue)
+                pen = _make_pen(color.darker(self.DarkerValue), 1.5)
+                color.setAlpha(self.alpha_value if self.subset_indices is None else 255)
+                brush = QBrush(color)
                 self.legend.addItem(
                     ScatterPlotItem(
-                        pen=color, brush=brush, size=10,
+                        pen=pen, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     escape(value))
         else:
