@@ -168,7 +168,6 @@ class CanvasMainWindow(QMainWindow):
 
         self.num_recent_schemes = 15
 
-        self.open_in_external_browser = False
         self.help = HelpManager(self)
 
         self.setup_actions()
@@ -812,7 +811,12 @@ class CanvasMainWindow(QMainWindow):
         """The quick category menu action triggered.
         """
         category = action.text()
-        if self.use_popover:
+        settings = QSettings()
+        use_popover = settings.value(
+            "mainwindow/toolbox-dock-use-popover-menu",
+            defaultValue=True, type=bool)
+
+        if use_popover:
             # Show a popup menu with the widgets in the category
             popup = CategoryPopupMenu(self.quick_category)
             reg = self.widget_registry.model()
@@ -827,6 +831,7 @@ class CanvasMainWindow(QMainWindow):
                     self.on_tool_box_widget_activated(action)
 
         else:
+            # Expand the dock and open the category under the triggered button
             for i in range(self.widgets_tool_box.count()):
                 cat_act = self.widgets_tool_box.tabAction(i)
                 cat_act.setChecked(cat_act.text() == category)
@@ -1857,7 +1862,10 @@ class CanvasMainWindow(QMainWindow):
         Show `url` in a help window.
         """
         log.info("Setting help to url: %r", url)
-        if self.open_in_external_browser or self.help_view is None:
+        settings = QSettings()
+        use_external = settings.value(
+            "help/open-in-external-browser", defaultValue=False, type=bool)
+        if use_external or self.help_view is None:
             url = QUrl(url)
             if not QDesktopServices.openUrl(url):
                 # Try fixing some common problems.
@@ -1965,14 +1973,6 @@ class CanvasMainWindow(QMainWindow):
                                          type=bool)
         self.scheme_widget.setNodeAnimationEnabled(node_animations)
         settings.endGroup()
-
-        self.open_in_external_browser = \
-            settings.value("open-in-external-browser", defaultValue=False,
-                           type=bool)
-
-        self.use_popover = \
-            settings.value("toolbox-dock-use-popover-menu", defaultValue=True,
-                           type=bool)
 
 
 def updated_flags(flags, mask, state):
