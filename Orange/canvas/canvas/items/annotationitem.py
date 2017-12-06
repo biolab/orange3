@@ -11,7 +11,7 @@ from AnyQt.QtWidgets import (
     QGraphicsDropShadowEffect, QMenu, QAction, QActionGroup
 )
 from AnyQt.QtGui import (
-    QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen
+    QPainterPath, QPainterPathStroker, QPolygonF, QColor, QPen, QBrush
 )
 from AnyQt.QtCore import (
     Qt, QPointF, QSizeF, QRectF, QLineF, QEvent, QMetaObject, QT_VERSION
@@ -699,21 +699,31 @@ class ArrowAnnotation(Annotation):
         if line is None:
             line = QLineF(0, 0, 20, 0)
 
-        self.__line = line
+        self.__line = QLineF(line)
         self.__color = QColor(Qt.red)
-        self.__arrowItem = ArrowItem(self)
-        self.__arrowItem.setLine(line)
-        self.__arrowItem.setBrush(self.__color)
-        self.__arrowItem.setPen(QPen(Qt.NoPen))
-        self.__arrowItem.setArrowStyle(ArrowItem.Concave)
-        self.__arrowItem.setLineWidth(5)
+        # An item with the same shape as this arrow, stacked behind this
+        # item as a source for QGraphicsDropShadowEffect. Cannot attach
+        # the effect to this item directly as QGraphicsEffect makes the item
+        # non devicePixelRatio aware.
+        self.__arrowShadowBase = ArrowItem(self, line=line)
+        self.__arrowShadowBase.setPen(Qt.NoPen)  # no pen -> slightly thinner
+        self.__arrowShadowBase.setBrush(QBrush(self.__color))
+        self.__arrowShadowBase.setArrowStyle(ArrowItem.Concave)
+        self.__arrowShadowBase.setLineWidth(5)
 
         self.__shadow = QGraphicsDropShadowEffect(
             blurRadius=5, offset=QPointF(1.0, 2.0),
         )
 
-        self.__arrowItem.setGraphicsEffect(self.__shadow)
+        self.__arrowShadowBase.setGraphicsEffect(self.__shadow)
         self.__shadow.setEnabled(True)
+
+        # The 'real' shape item
+        self.__arrowItem = ArrowItem(self, line=line)
+        self.__arrowItem.setBrush(self.__color)
+        self.__arrowItem.setPen(QPen(self.__color))
+        self.__arrowItem.setArrowStyle(ArrowItem.Concave)
+        self.__arrowItem.setLineWidth(5)
 
         self.__autoAdjustGeometry = True
 
@@ -742,7 +752,7 @@ class ArrowAnnotation(Annotation):
         Set the arrow base line (a `QLineF` in object coordinates).
         """
         if self.__line != line:
-            self.__line = line
+            self.__line = QLineF(line)
 
             # local item coordinate system
             geom = self.geometry().translated(-self.pos())
@@ -764,6 +774,7 @@ class ArrowAnnotation(Annotation):
             diff = geom.topLeft()
             line = QLineF(line.p1() - diff, line.p2() - diff)
             self.__arrowItem.setLine(line)
+            self.__arrowShadowBase.setLine(line)
             self.__line = line
 
             # parent item coordinate system
@@ -795,6 +806,7 @@ class ArrowAnnotation(Annotation):
         Set the arrow line width.
         """
         self.__arrowItem.setLineWidth(lineWidth)
+        self.__arrowShadowBase.setLineWidth(lineWidth)
 
     def lineWidth(self):
         """
@@ -846,11 +858,14 @@ class ArrowAnnotation(Annotation):
             pen = QPen(QColor(96, 158, 215), Qt.DashDotLine)
             pen.setWidthF(1.25)
             pen.setCosmetic(True)
-            self.__shadow.setColor(pen.color().darker(150))
+            shadow = pen.color().darker(150)
         else:
             color = self.__color
-            pen = QPen(Qt.NoPen)
-            self.__shadow.setColor(QColor(63, 63, 63, 180))
+            pen = QPen(color)
+            shadow = QColor(63, 63, 63, 180)
+
+        self.__arrowShadowBase.setBrush(color)
+        self.__shadow.setColor(shadow)
 
         self.__arrowItem.setBrush(color)
         self.__arrowItem.setPen(pen)
