@@ -8,6 +8,7 @@ import logging
 import operator
 from functools import partial
 from io import BytesIO, StringIO
+from types import SimpleNamespace
 
 import pkg_resources
 
@@ -154,13 +155,16 @@ class CanvasMainWindow(QMainWindow):
         # TODO: Log view to separate singleton instance.
         self.log_dock = None
 
-        # TODO: Read/store in QSettings, record/sync as soon as added.
         # TODO: sync between CanvasMainWindow instances?.
-        try:
-            self.recent_schemes = config.recent_schemes()
-        except Exception:
-            log.error("Failed to load recent scheme list.", exc_info=True)
-            self.recent_schemes = []
+        settings = QSettings()
+        recent = QSettings_readArray(
+            settings, "mainwindow/recent-items",
+            {"title": str, "path": str}
+        )
+        recent = [RecentItem(**item) for item in recent]
+        recent = [item for item in recent if os.path.exists(item.path)]
+
+        self.recent_schemes = recent
 
         self.num_recent_schemes = 15
 
@@ -636,11 +640,12 @@ class CanvasMainWindow(QMainWindow):
         self.recent_menu_begin = self.recent_menu.addSeparator()
 
         # Add recent items.
-        for title, filename in self.recent_schemes:
-            action = QAction(title or self.tr("untitled"), self,
-                             toolTip=filename)
-
-            action.setData(filename)
+        for item in self.recent_schemes:
+            text = os.path.basename(item.path)
+            if item.title:
+                text = "{} ('{}')".format(text, item.title)
+            action = QAction(text, self, toolTip=item.path)
+            action.setData(item.path)
             self.recent_menu.addAction(action)
             self.recent_scheme_action_group.addAction(action)
 
@@ -1104,8 +1109,12 @@ class CanvasMainWindow(QMainWindow):
         """
         # TODO: Search for a temp backup scheme with per process
         # locking.
-        if self.recent_schemes:
-            recent = self.recent_schemes[0][1]
+        settings = QSettings()
+        recent = QSettings_readArray(
+            settings, "mainwindow/recent-items", {"path": str}
+        )
+        if recent:
+            recent = recent[0]["path"]
             self.open_scheme_file(recent)
 
     def set_new_scheme(self, new_scheme):
@@ -1337,8 +1346,14 @@ class CanvasMainWindow(QMainWindow):
         Return QDialog.Rejected if the user canceled the operation and
         QDialog.Accepted otherwise.
         """
-        items = [previewmodel.PreviewItem(name=title, path=path)
-                 for title, path in self.recent_schemes]
+        settings = QSettings()
+        recent = QSettings_readArray(
+            settings, "mainwindow/recent-items", {"title": str, "path": str}
+        )
+        recent = [RecentItem(**item) for item in recent]
+        recent = [item for item in recent if os.path.exists(item.path)]
+        items = [previewmodel.PreviewItem(name=item.title, path=item.path)
+                 for item in recent]
         model = previewmodel.PreviewModel(items=items)
 
         dialog = previewdialog.PreviewDialog(self)
@@ -1625,9 +1640,16 @@ class CanvasMainWindow(QMainWindow):
             # No associated persistent path so we can't do anything.
             return
 
-        if not title:
-            title = os.path.basename(path)
+        text = os.path.basename(path)
+        if title:
+            text = "{} ('{}')".format(text, title)
 
+        settings = QSettings()
+        settings.beginGroup("mainwindow")
+        recent = QSettings_readArray(
+            settings, "recent-items", {"title": str, "path": str}
+        )
+        recent = [RecentItem(**d) for d in recent]
         filename = os.path.abspath(os.path.realpath(path))
         filename = os.path.normpath(filename)
 
@@ -1637,18 +1659,13 @@ class CanvasMainWindow(QMainWindow):
             actions_by_filename[path] = action
 
         if filename in actions_by_filename:
-            # Remove the title/filename (so it can be reinserted)
-            recent_index = index(self.recent_schemes, filename,
-                                 key=operator.itemgetter(1))
-            self.recent_schemes.pop(recent_index)
-
+            # reuse/update the existing action
             action = actions_by_filename[filename]
             self.recent_menu.removeAction(action)
             self.recent_scheme_action_group.removeAction(action)
-            action.setText(title or self.tr("untitled"))
+            action.setText(text)
         else:
-            action = QAction(title or self.tr("untitled"), self,
-                             toolTip=filename)
+            action = QAction(text, self, toolTip=filename)
             action.setData(filename)
 
         # Find the separator action in the menu (after 'Browse Recent')
@@ -1658,31 +1675,34 @@ class CanvasMainWindow(QMainWindow):
 
         self.recent_menu.insertAction(action_before, action)
         self.recent_scheme_action_group.addAction(action)
-        self.recent_schemes.insert(0, (title, filename))
 
-        if len(self.recent_schemes) > max(self.num_recent_schemes, 1):
-            title, filename = self.recent_schemes.pop(-1)
-            action = actions_by_filename[filename]
-            self.recent_menu.removeAction(action)
-            self.recent_scheme_action_group.removeAction(action)
+        recent.insert(0, RecentItem(title=title, path=filename))
 
-        config.save_recent_scheme_list(self.recent_schemes)
+        for i in reversed(range(1, len(recent))):
+            try:
+                same = os.path.samefile(recent[i].path, filename)
+            except OSError:
+                same = False
+            if same:
+                del recent[i]
+
+        recent = recent[:self.num_recent_schemes]
+
+        QSettings_writeArray(
+            settings, "recent-items",
+            [{"title": item.title, "path": item.path} for item in recent]
+        )
 
     def clear_recent_schemes(self):
         """Clear list of recent schemes
         """
-        actions = list(self.recent_menu.actions())
-
-        # Exclude permanent actions (Browse Recent, separators, Clear List)
-        actions_to_remove = [action for action in actions \
-                             if str(action.data())]
-
-        for action in actions_to_remove:
+        actions = self.recent_scheme_action_group.actions()
+        for action in actions:
             self.recent_menu.removeAction(action)
             self.recent_scheme_action_group.removeAction(action)
 
-        self.recent_schemes = []
-        config.save_recent_scheme_list([])
+        settings = QSettings()
+        QSettings_writeArray(settings, "mainwindow/recent-items", [])
 
     def _on_recent_scheme_action(self, action):
         """
@@ -2008,3 +2028,73 @@ class UrlDropEventFilter(QObject):
                 return True
 
         return QObject.eventFilter(self, obj, event)
+
+
+class RecentItem(SimpleNamespace):
+    title = ""  # type: str
+    path = ""  # type: str
+
+
+def QSettings_readArray(settings, key, scheme):
+    """
+    Read the whole array from a QSettings instance
+
+    Parameters
+    ----------
+    settings : QSettings
+    key : str
+    scheme : Dict[str, type]
+
+    Example
+    -------
+    >>> s = QSettings("./login.ini")
+    >>> QSettings_readArray(s, "array", {"username": str, "password": str})
+    [{"username": "darkhelmet", "password": "1234"}}
+    """
+    from collections import Mapping
+    items = []
+    if not isinstance(scheme, Mapping):
+        scheme = {key: None for key in scheme}
+
+    count = settings.beginReadArray(key)
+    for i in range(count):
+        settings.setArrayIndex(i)
+        keys = settings.allKeys()
+        item = {}
+        for key in keys:
+            if key in scheme:
+                vtype = scheme.get(key, None)
+                if vtype is not None:
+                    value = settings.value(key, type=vtype)
+                else:
+                    value = settings.value(key)
+                item[key] = value
+        items.append(item)
+    settings.endArray()
+    return items
+
+
+def QSettings_writeArray(settings, key, values):
+    # type: (QSettings, str, List[Dict[str, Any]]) -> None
+    """
+    Write an array of values to a QSettings instance.
+
+    Parameters
+    ----------
+    settings : QSettings
+    key : str
+    values : List[Dict[str, Any]]
+
+    Examples
+    --------
+    >>> s = QSettings("./login.ini")
+    >>> QSettings_writeArray(
+    ...     s, "array", [{"username": "darkhelmet", "password": "1234"}]
+    ... )
+    """
+    settings.beginWriteArray(key, len(values))
+    for i in range(len(values)):
+        settings.setArrayIndex(i)
+        for key_, val in values[i].items():
+            settings.setValue(key_, val)
+    settings.endArray()
