@@ -297,17 +297,25 @@ class OWReport(OWWidget):
             document = canvas.current_document()
             if document.isModifiedStrict():
                 self.last_scheme = canvas.get_scheme_xml()
-            canvas.load_scheme_xml(scheme)
-            scheme = canvas.current_document().scheme()
-            scheme.set_report_view(self)
+            self._load_scheme(scheme)
 
     def _show_last_scheme(self):
         if self.last_scheme:
-            canvas = self.get_canvas_instance()
-            if canvas:
-                canvas.load_scheme_xml(self.last_scheme)
-                scheme = canvas.current_document().scheme()
-                scheme.set_report_view(self)
+            self._load_scheme(self.last_scheme)
+
+    def _load_scheme(self, contents):
+        # forcibly load the contents into the associated CanvasMainWindow
+        # instance if one exists. Preserve `self` as the designated report.
+        canvas = self.get_canvas_instance()
+        if canvas is not None:
+            document = canvas.current_document()
+            old = document.scheme()
+            if old.has_report() and old.report_view() is self:
+                # remove self so it is not closed
+                old.set_report_view(None)
+            canvas.load_scheme_xml(contents)
+            scheme = canvas.current_document().scheme()
+            scheme.set_report_view(self)
 
     def save_report(self):
         """Save report"""

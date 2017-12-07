@@ -51,6 +51,11 @@ class WidgetsScheme(Scheme):
     propagation to an instance of `WidgetsSignalManager`.
     """
 
+    #: Emitted when a report_view is requested for the first time, before a
+    #: default instance is created. Clients can connect to this signal to
+    #: set a report view (`set_report_view`) to use instead.
+    report_view_requested = Signal()
+
     def __init__(self, parent=None, title=None, description=None, env={}):
         Scheme.__init__(self, parent, title, description, env=env)
 
@@ -101,15 +106,37 @@ class WidgetsScheme(Scheme):
         inst.show()
         inst.raise_()
 
+    def has_report(self):
+        """
+        Does this workflow have an associated report
+
+        Returns
+        -------
+        has_report: bool
+        """
+        return self.__report_view is not None
+
     def report_view(self):
+        """
+        Return a OWReport instance used by the workflow.
+
+        If a report window has not been set then the `report_view_requested`
+        signal is emitted to allow the framework to setup the report window.
+        If the report window is still not set after the signal is emitted, a
+        new default OWReport instance is constructed and returned.
+
+        Returns
+        -------
+        report : OWReport
+        """
         from Orange.canvas.report.owreport import OWReport
+        if self.__report_view is None:
+            self.report_view_requested.emit()
+
         if self.__report_view is None:
             parent = self.parent()
             if isinstance(parent, QWidget):
                 window = parent.window()  # type: QWidget
-                view = window.findChild(OWReport)
-                if view is not None:
-                    return view
             else:
                 window = None
 
@@ -119,6 +146,13 @@ class WidgetsScheme(Scheme):
         return self.__report_view
 
     def set_report_view(self, view):
+        """
+        Set the designated OWReport view for this workflow.
+
+        Parameters
+        ----------
+        view : Optional[OWReport]
+        """
         self.__report_view = view
 
     def dump_settings(self, node: SchemeNode):
@@ -127,6 +161,15 @@ class WidgetsScheme(Scheme):
 
         pp = SettingsPrinter(indent=4)
         pp.pprint(widget.settingsHandler.pack_data(widget))
+
+    def event(self, event):
+        if event.type() == QEvent.Close and \
+                self.__report_view is not None:
+            self.__report_view.close()
+        return super().event(event)
+
+    def close(self):
+        QCoreApplication.sendEvent(self, QEvent(QEvent.Close))
 
 
 class WidgetManager(QObject):
@@ -386,7 +429,7 @@ class WidgetManager(QObject):
             del self.__node_for_widget[state.widget]
             node.title_changed.disconnect(state.widget.setCaption)
             state.widget.progressBarValueChanged.disconnect(node.set_progress)
-
+            del state.widget._Report__report_view
             self.widget_for_node_removed.emit(node, state.widget)
             self._delete_widget(state.widget)
         elif isinstance(state, WidgetManager.PartiallyInitialized):
@@ -552,7 +595,8 @@ class WidgetManager(QObject):
             icon_loader.from_description(desc).get(desc.icon)
         )
         widget.setCaption(node.title)
-
+        # befriend class Report
+        widget._Report__report_view = self.scheme().report_view
         # Schedule an update with the signal manager, due to the cleared
         # implicit Initializing flag
         self.signal_manager()._update()
@@ -604,9 +648,6 @@ class WidgetManager(QObject):
                 widget.saveSettings()
                 widget.onDeleteWidget()
                 widget.deleteLater()
-
-            event.accept()
-            return True
 
         return QObject.eventFilter(self, receiver, event)
 

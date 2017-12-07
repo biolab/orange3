@@ -205,7 +205,10 @@ class CanvasMainWindow(QMainWindow):
         w.layout().setContentsMargins(20, 0, 10, 0)
 
         self.scheme_widget = SchemeEditWidget()
-        self.scheme_widget.setScheme(widgetsscheme.WidgetsScheme(parent=self))
+        workflow = widgetsscheme.WidgetsScheme(parent=self)
+        workflow.report_view_requested.connect(
+            self.show_report_view, Qt.UniqueConnection)
+        self.scheme_widget.setScheme(workflow)
 
         w.layout().addWidget(self.scheme_widget)
 
@@ -1137,8 +1140,11 @@ class CanvasMainWindow(QMainWindow):
         """
         self.__is_transient = False
         scheme_doc = self.current_document()
-        old_scheme = scheme_doc.scheme()
-
+        old_scheme = scheme_doc.scheme()  # type: widgetsscheme.WidgetsScheme
+        old_scheme.report_view_requested.disconnect(self.show_report_view)
+        new_scheme.report_view_requested.connect(
+            self.show_report_view, Qt.UniqueConnection
+        )
         manager = new_scheme.signal_manager
         if self.freeze_action.isChecked():
             manager.pause()
@@ -1158,7 +1164,11 @@ class CanvasMainWindow(QMainWindow):
         Returns:
             `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
         """
-        report = self.current_document().scheme().report_view()
+        workflow = self.current_document().scheme()
+        if not workflow.has_report():
+            return QDialog.Accepted
+
+        report = workflow.report_view()
         if not report.is_changed():
             return QDialog.Accepted
 
@@ -1629,8 +1639,14 @@ class CanvasMainWindow(QMainWindow):
                     parent=self)
 
     def show_report_view(self):
+        from Orange.canvas.report.owreport import OWReport
         doc = self.current_document()
-        scheme = doc.scheme()
+        scheme = doc.scheme()  # type: widgetsscheme.WidgetsScheme
+        if not scheme.has_report():
+            report = OWReport()
+            report.setParent(self, Qt.Window)
+            report.get_canvas_instance = lambda: self
+            scheme.set_report_view(report)
         scheme.show_report_view()
 
     def log_view(self):
@@ -1764,7 +1780,6 @@ class CanvasMainWindow(QMainWindow):
             return
 
         old_scheme = document.scheme()
-
         # Set an empty scheme to clear the document
         document.setScheme(widgetsscheme.WidgetsScheme())
 
