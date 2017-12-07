@@ -15,9 +15,12 @@ import pkg_resources
 from AnyQt.QtWidgets import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QToolBar, QToolButton,
-    QDockWidget, QApplication, QShortcut, QPlainTextEdit, QFileIconProvider
+    QDockWidget, QApplication, QShortcut, QPlainTextEdit,
+    QPlainTextDocumentLayout, QFileIconProvider,
 )
-from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
+from AnyQt.QtGui import (
+    QColor, QIcon, QDesktopServices, QKeySequence, QTextDocument
+)
 
 from AnyQt.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION,
@@ -59,7 +62,7 @@ from .canvastooldock import CanvasToolDock, QuickCategoryToolbar, \
                             CategoryPopupMenu, popup_position_from_source
 from .aboutdialog import AboutDialog
 from .schemeinfo import SchemeInfoDialog
-from .outputview import OutputView
+from .outputview import OutputView, TextStream
 from .settings import UserSettingsDialog
 
 from ..document.schemeedit import SchemeEditWidget
@@ -924,10 +927,22 @@ class CanvasMainWindow(QMainWindow):
         window.set_tool_dock_expanded(self.dock_widget.expanded())
 
         logview = window.log_view()  # type: OutputView
-
         te = logview.findChild(QPlainTextEdit)
-        te1 = self.log_view().findChild(QPlainTextEdit)
-        te.setDocument(te1.document())
+
+        doc = self.log_view().findChild(QPlainTextEdit).document()
+        # first clone the existing document and set it on the new instance
+        doc = doc.clone(parent=te)  # type: QTextDocument
+        doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
+        te.setDocument(doc)
+
+        # route the stdout/err if possible
+        stdout, stderr = sys.stdout, sys.stderr
+        if isinstance(stdout, TextStream):
+            stdout.stream.connect(logview.write)
+
+        if isinstance(stderr, TextStream):
+            logview._err_formater = logview.formated(color=Qt.red)
+            stderr.stream.connect(logview._err_formater.write)
 
         CanvasMainWindow._instances.append(window)
         window.destroyed.connect(
