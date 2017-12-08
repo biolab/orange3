@@ -810,7 +810,10 @@ class CSVReader(FileFormat):
                            encoding=encoding, errors=errors) as file:
                 # Sniff the CSV dialect (delimiter, quotes, ...)
                 try:
-                    dialect = csv.Sniffer().sniff(file.read(1024), self.DELIMITERS)
+                    dialect = csv.Sniffer().sniff(
+                        # Take first couple of *complete* lines as sample
+                        ''.join(file.readline() for _ in range(5)),
+                        self.DELIMITERS)
                 except UnicodeDecodeError as e:
                     error = e
                     continue
