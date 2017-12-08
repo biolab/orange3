@@ -276,6 +276,7 @@ class OWDataSets(widget.OWWidget):
             item1 = QStandardItem()
             item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
             item1.setData(datainfo, Qt.UserRole)
+            item1.setData(QSize(26, 26), Qt.SizeHintRole)
             item2 = QStandardItem(datainfo.title)
             item3 = QStandardItem()
             item3.setData(datainfo.size, Qt.DisplayRole)
@@ -300,6 +301,7 @@ class OWDataSets(widget.OWWidget):
         model_ = self.view.model().sourceModel()
         self.view.model().setSourceModel(model)
         self.view.header().restoreState(hs)
+        self.view.resizeColumnToContents(1)
         model_.deleteLater()
         model_.setParent(None)
         self.view.selectionModel().selectionChanged.connect(
