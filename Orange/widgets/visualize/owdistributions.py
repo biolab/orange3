@@ -238,8 +238,7 @@ class OWDistributions(widget.OWWidget):
             if domain.class_var in self.groupvarmodel:
                 self.group_var = domain.class_var
             self.openContext(domain)
-            # See the comment in migrate_context
-            self.migrate_context(None, None, self=self, domain=domain)
+            self.migrate_var_idx()  # Migrate obsolete settings with var indices
             itemmodels.select_row(self.varview, self.varmodel.indexOf(self.var))
             self._setup()
 
@@ -583,29 +582,34 @@ class OWDistributions(widget.OWWidget):
                     group_var, prob.currentText())
         self.report_caption(text)
 
-    @classmethod
-    def migrate_context(cls, context, version, *, self=None, domain=None):
+    def migrate_var_idx(self):
         """
         Migrate old indices into combos (`variable_idx`, `groupvar_idx`) to
         variables (`var`, `group_var`). This cannot be done through usual
-        migrations because it requires a domain. The code is still put into
-        this method just so that anybody looking for it will find it here.
-        The patch is called after `openContext`
+        migrations because it requires a domain.
         """
-        if version is None or version < 2:
-            if domain is not None:  # Called after openContext, not migrations
-                settings.migrate_idx_to_variable(
-                    self, "variable_idx", "var", self.varmodel,
-                    (var for var in chain(domain.variables, domain.metas)
-                     if var.is_primitive()))
-                settings.migrate_idx_to_variable(
-                    self, "groupvar_idx", "group_var", self.groupvarmodel,
-                    (var
-                     for var in chain([None], domain.variables, domain.metas)
-                     if var is None or var.is_discrete))
-            else:
-                super().migrate_context(context, version)
-                # Further migrations go here, not above or outside!
+        domain = self.data.domain
+        context_values = self.current_context.values
+
+        var_idx, _ = context_values.pop("variable_idx", (None, None))
+        if isinstance(var_idx, int):
+            options = [
+                var for var in chain(domain.variables, domain.metas)
+                if var.is_primitive()]
+            if var_idx < len(options):
+                var = options[var_idx]
+                if var in self.varmodel:
+                    self.var = options[var_idx]
+
+        groupvar_idx, _ = context_values.pop("groupvar_idx", (None, None))
+        if isinstance(groupvar_idx, int):
+            options = [None] + [
+                var for var in chain(domain.variables, domain.metas)
+                if var.is_discrete]
+            if groupvar_idx < len(options):
+                var = options[groupvar_idx]
+                if var in self.groupvarmodel:
+                    self.group_var = options[groupvar_idx]
 
 
 def dist_sum(dXW1, dXW2):
