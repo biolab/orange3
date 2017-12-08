@@ -665,8 +665,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.jittered_data is None or not len(self.jittered_data):
             self.valid_data = None
         else:
-            index_x = self.domain.index(attr_x)
-            index_y = self.domain.index(attr_y)
             self.valid_data = self.get_valid_list([attr_x, attr_y])
             if not np.any(self.valid_data):
                 self.valid_data = None
@@ -691,10 +689,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.view_box.tag_history()
         [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
 
-        for axis, name, index in (("bottom", attr_x, index_x),
-                                  ("left", attr_y, index_y)):
-            self.set_axis_title(axis, name)
-            var = self.domain[index]
+        for axis, var in (("bottom", attr_x), ("left", attr_y)):
+            self.set_axis_title(axis, var)
             if var.is_discrete:
                 self.set_labels(axis, get_variable_values_sorted(var))
             else:
@@ -780,11 +776,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def set_axis_title(self, axis, title):
         self.plot_widget.setLabel(axis=axis, text=title)
-
-    def get_size_index(self):
-        if self.attr_size is None:
-            return -1
-        return self.domain.index(self.attr_size)
 
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
