@@ -492,7 +492,7 @@ class Table(MutableSequence, Storage):
 
         if Y is None:
             if sp.issparse(X):
-                Y = np.empty((X.shape[0], 0), object)
+                Y = np.empty((X.shape[0], 0), dtype=np.float64)
             else:
                 Y = X[:, len(domain.attributes):]
                 X = X[:, :len(domain.attributes)]
