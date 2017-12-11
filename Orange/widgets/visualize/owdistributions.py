@@ -23,9 +23,9 @@ from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.widget import Input
-from Orange.widgets.visualize.owlinearprojection import LegendItem, ScatterPlotItem
 
-from Orange.widgets.visualize.owscatterplotgraph import HelpEventDelegate
+from Orange.widgets.visualize.owscatterplotgraph import LegendItem as SPGLegendItem,\
+    HelpEventDelegate
 
 
 def selected_index(view):
@@ -41,6 +41,62 @@ def selected_index(view):
         return indices[0].row()
     else:
         return -1
+
+
+class ScatterPlotItem(pg.ScatterPlotItem):
+    Symbols = pg.graphicsItems.ScatterPlotItem.Symbols
+
+    def paint(self, painter, option, widget=None):
+        if self.opts["pxMode"]:
+            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+        if self.opts["antialias"]:
+            painter.setRenderHint(QPainter.Antialiasing, True)
+
+        super().paint(painter, option, widget)
+
+
+class LegendItem(SPGLegendItem):
+    def __init__(self):
+        super().__init__()
+        self.items = []
+
+    def clear(self):
+        """
+        Clear all legend items.
+        """
+        items = list(self.items)
+        self.items = []
+        for sample, label in items:
+            # yes, the LegendItem shadows QGraphicsWidget.layout() with
+            # an instance attribute.
+            self.layout.removeItem(sample)
+            self.layout.removeItem(label)
+            sample.hide()
+            label.hide()
+
+        self.updateSize()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton:
+            event.accept()
+            if self.parentItem() is not None:
+                self.autoAnchor(
+                    self.pos() + (event.pos() - event.lastPos()) / 2)
+        else:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            event.ignore()
 
 
 class DistributionBarItem(pg.GraphicsObject):
