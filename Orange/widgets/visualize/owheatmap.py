@@ -1129,7 +1129,15 @@ class OWHeatMap(widget.OWWidget):
         if self.heatmap_scene.widget is not None:
             mode = Qt.KeepAspectRatio if self.keep_aspect \
                    else Qt.IgnoreAspectRatio
-            size = QSizeF(self.sceneView.viewport().size())
+            # get the preferred size from the view (view size - space for
+            # scrollbars)
+            view = self.sceneView
+            size = view.size()
+            fw = view.frameWidth()
+            vsb_extent = view.verticalScrollBar().sizeHint().width()
+            hsb_extent = view.horizontalScrollBar().sizeHint().height()
+            size = QSizeF(max(size.width() - 2 * fw - vsb_extent, 0),
+                          max(size.height() - 2 * fw - hsb_extent, 0))
             widget = self.heatmap_scene.widget
             layout = widget.layout()
             if mode == Qt.IgnoreAspectRatio:
