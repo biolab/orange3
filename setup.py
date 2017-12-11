@@ -193,8 +193,7 @@ PACKAGE_DATA = {
                                   "origin2/*.tab"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
     "Orange.widgets.model": ["icons/*.svg"],
-    "Orange.widgets.visualize": ["icons/*.svg",
-                                 "_owmap/*"],
+    "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
     "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
