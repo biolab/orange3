@@ -984,9 +984,14 @@ class CanvasMainWindow(QMainWindow):
             window.freeze_action.setChecked(True)
         window.load_scheme(filename)
 
-    def open_scheme(self):
+    def _open_workflow_dialog(self):
+        # type: () -> QFileDialog
         """
-        Open a user selected workflow in a new window.
+        Create and return an initialized QFileDialog for opening a workflow
+        file.
+
+        The dialog is a child of this window and has the `Qt.WA_DeleteOnClose`
+        flag set.
         """
         settings = QSettings()
         settings.beginGroup("mainwindow")
@@ -994,17 +999,38 @@ class CanvasMainWindow(QMainWindow):
         if not os.path.isdir(start_dir):
             start_dir = user_documents_path()
 
-        filename, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Open Orange Workflow File"),
-            start_dir, self.tr("Orange Workflow (*.ows)"),
+        dlg = QFileDialog(
+            self, windowTitle=self.tr("Open Orange Workflow File"),
+            acceptMode=QFileDialog.AcceptOpen,
+            fileMode=QFileDialog.ExistingFile,
         )
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.setDirectory(start_dir)
+        dlg.setNameFilters(["Orange Workflow (*.ows)"])
 
-        if filename:
-            settings.setValue("last-scheme-dir", os.path.dirname(filename))
-            self.open_scheme_file(filename)
-            return QDialog.Accepted
-        else:
-            return QDialog.Rejected
+        def record_last_dir():
+            path = dlg.directory().canonicalPath()
+            settings.setValue("last-scheme-dir", path)
+
+        dlg.accepted.connect(record_last_dir)
+        return dlg
+
+    def open_scheme(self):
+        """
+        Open a user selected workflow in a new window.
+        """
+        dlg = self._open_workflow_dialog()
+        dlg.fileSelected.connect(self.open_scheme_file)
+        dlg.exec()
+
+    def open_and_freeze_scheme(self):
+        """
+        Open a user selected workflow file in a new window and freeze
+        signal propagation.
+        """
+        dlg = self._open_workflow_dialog()
+        dlg.fileSelected.connect(partial(self.open_scheme_file, freeze=True))
+        dlg.exec()
 
     def open_report(self):
         from Orange.canvas.report.owreport import OWReport
@@ -1042,33 +1068,6 @@ class CanvasMainWindow(QMainWindow):
         report.table.selectRow(0)
         report.show()
         report.raise_()
-
-    def open_and_freeze_scheme(self):
-        """
-        Open a user selected workflow file in a new window and freeze
-        signal propagation.
-        """
-        settings = QSettings()
-        settings.beginGroup("mainwindow")
-        start_dir = settings.value("last-scheme-dir", "", type=str)
-        if not os.path.isdir(start_dir):
-            start_dir = user_documents_path()
-
-        dlg = QFileDialog(
-            self, windowTitle=self.tr("Open Orange Workflow File"),
-            acceptMode=QFileDialog.AcceptOpen,
-            fileMode=QFileDialog.ExistingFile,
-        )
-        dlg.setDirectory(start_dir)
-        dlg.setNameFilters(["Orange Workflow (*.ows)"])
-
-        def record_last_dir():
-            path = dlg.directory().canonicalPath()
-            settings.setValue("last-scheme-dir", path)
-
-        dlg.accepted.connect(record_last_dir)
-        dlg.fileSelected.connect(partial(self.open_scheme_file, freeze=True))
-        dlg.show()
 
     def load_scheme(self, filename):
         """
@@ -1462,8 +1461,11 @@ class CanvasMainWindow(QMainWindow):
             dialog.accept()
 
         def open_scheme():
-            if self.open_scheme() == QDialog.Accepted:
-                dialog.accept()
+            dlg = self._open_workflow_dialog()
+            dlg.setParent(dialog, Qt.Dialog)
+            dlg.fileSelected.connect(self.open_scheme_file)
+            dlg.accepted.connect(dialog.accept)
+            dlg.exec()
 
         def open_recent():
             if self.recent_scheme() == QDialog.Accepted:
