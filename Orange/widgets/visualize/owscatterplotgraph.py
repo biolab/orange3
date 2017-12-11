@@ -469,6 +469,12 @@ def _define_symbols():
 _define_symbols()
 
 
+def _make_pen(color, width):
+    p = QPen(color, width)
+    p.setCosmetic(True)
+    return p
+
+
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     attr_color = ContextSetting(None, required=ContextSetting.OPTIONAL)
     attr_label = ContextSetting(None, required=ContextSetting.OPTIONAL)
@@ -818,25 +824,20 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not keep_colors:
             self.pen_colors_sel = self.brush_colors_sel = None
 
-        def make_pen(color, width):
-            p = QPen(color, width)
-            p.setCosmetic(True)
-            return p
-
         nopen = QPen(Qt.NoPen)
         if self.selection is not None:
             sels = np.max(self.selection)
             if sels == 1:
                 pens = [nopen,
-                        make_pen(QColor(255, 190, 0, 255),
-                                 SELECTION_WIDTH + 1.)]
+                        _make_pen(QColor(255, 190, 0, 255),
+                                  SELECTION_WIDTH + 1.)]
             else:
                 # Start with the first color so that the colors of the
                 # additional attribute in annotation (which start with 0,
                 # unselected) will match these colors
                 palette = ColorPaletteGenerator(number_of_colors=sels + 1)
                 pens = [nopen] + \
-                       [make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                       [_make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
                         for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:
@@ -849,11 +850,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.pen_colors = self.brush_colors = None
         self.get_color()
 
-        def make_pen(color, width):
-            p = QPen(color, width)
-            p.setCosmetic(True)
-            return p
-
         subset = None
         if self.subset_indices:
             subset = np.array([ex.id in self.subset_indices
@@ -861,7 +857,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         if self.attr_color is None:  # same color
             color = self.plot_widget.palette().color(OWPalette.Data)
-            pen = [make_pen(color, 1.5)] * self.n_points
+            pen = [_make_pen(color, 1.5)] * self.n_points
             if subset is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 0)),
                           QBrush(QColor(128, 128, 128, 255)))[s]
@@ -887,7 +883,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                      np.full((self.n_points, 1), self.alpha_value, dtype=int)])
                 self.pen_colors *= 100
                 self.pen_colors //= self.DarkerValue
-                self.pen_colors = [make_pen(QColor(*col), 1.5)
+                self.pen_colors = [_make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
             if subset is not None:
                 self.brush_colors[:, 3] = 0
@@ -907,7 +903,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 colors = np.r_[palette.getRGB(np.arange(n_colors)),
                                [[128, 128, 128]]]
                 pens = np.array(
-                    [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
+                    [_make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
                 self.pen_colors = pens[c_data]
                 alpha = self.alpha_value if subset is None else 255
@@ -1055,10 +1051,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             palette = self.discrete_palette
             for i, value in enumerate(self.attr_color.values):
                 color = QColor(*palette.getRGB(i))
-                brush = color.lighter(self.DarkerValue)
+                pen = _make_pen(color.darker(self.DarkerValue), 1.5)
+                color.setAlpha(self.alpha_value if self.subset_indices is None else 255)
+                brush = QBrush(color)
                 self.legend.addItem(
                     ScatterPlotItem(
-                        pen=color, brush=brush, size=10,
+                        pen=pen, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     escape(value))
         else:
