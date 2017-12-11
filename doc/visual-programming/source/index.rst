@@ -41,7 +41,6 @@ Data
    widgets/data/pythonscript
    widgets/data/featureconstructor
    widgets/data/editdomain
-   widgets/data/imageviewer
    widgets/data/impute
    widgets/data/mergedata
    widgets/data/outliers
