@@ -83,3 +83,51 @@ Example
 
 
 .. autoclass:: Orange.projection.freeviz.FreeViz
+
+
+
+
+LDA
+---
+
+Linear discriminant analysis is another way of finding a linear transformation of
+data that reduces the number of dimensions required to represent it. It is often
+used for dimensionality reduction prior to classification, but can also be used as a
+classification technique itself ([1]_).
+
+
+Example
+=======
+
+    >>> from Orange.projection import LDA
+    >>> from Orange.data import Table
+    >>> iris = Table('iris')
+    >>> lda = LDA()
+    >>> model = LDA(iris)
+    >>> model.components_    # LDA components
+    array([[ 0.20490976,  0.38714331, -0.54648218, -0.71378517],
+       [ 0.00898234,  0.58899857, -0.25428655,  0.76703217],
+       [-0.71507172,  0.43568045,  0.45568731, -0.30200008],
+       [ 0.06449913, -0.35780501, -0.42514529,  0.828895  ]])
+    >>> transformed_data = model(iris)    # transformed data
+    >>> transformed_data
+    [[1.492, 1.905 | Iris-setosa],
+    [1.258, 1.608 | Iris-setosa],
+    [1.349, 1.750 | Iris-setosa],
+    [1.180, 1.639 | Iris-setosa],
+    [1.510, 1.963 | Iris-setosa],
+    ...
+    ]
+
+
+
+.. autoclass:: Orange.projection.lda.LDA
+
+
+
+References
+----------
+
+.. [1] Witten, I.H., Frank, E., Hall, M.A. and Pal, C.J., 2016.
+   Data Mining: Practical machine learning tools and techniques. Morgan Kaufmann.
+

@@ -3,7 +3,7 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import Orange.data
 from Orange.classification.logistic_regression import _FeatureScorerMixin
 from Orange.data.util import SharedComputeValue
-from Orange.projection import SklProjector, Projection, LinearCombinationSql
+from Orange.projection import SklProjector, Projection
 
 __all__ = ["LDA"]
 
