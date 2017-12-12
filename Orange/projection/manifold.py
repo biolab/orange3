@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from scipy.sparse.linalg import eigsh as arpack_eigh
@@ -68,6 +70,20 @@ def torgerson(distances, n_components=2, eigen_solver="auto"):
         U, L = v[:, ::-1], w[::-1]
     else:
         raise ValueError(eigen_solver)
+
+    assert L.shape == (min(n_components, N),)
+    assert U.shape == (N, min(n_components, N))
+
+    # Warn for (sufficiently) negative eig values ...
+    neg = L < -5 * np.finfo(L.dtype).eps
+    if np.any(neg):
+        warnings.warn(
+            ("{} of the {} eigenvalues were negative."
+             .format(np.sum(neg), L.size)),
+            UserWarning, stacklevel=2,
+        )
+    # ... and clamp them all to 0
+    L[L < 0] = 0
 
     if n_components > N:
         U = np.hstack((U, np.zeros((N, n_components - N))))
