@@ -363,7 +363,7 @@ class TreeNavigator(QGraphicsView):
 
 class OWTreeViewer2D(OWWidget):
     zoom = Setting(5)
-    line_width_method = Setting(2)
+    line_width_method = Setting(1)
     max_tree_depth = Setting(0)
     max_node_width = Setting(150)
 
