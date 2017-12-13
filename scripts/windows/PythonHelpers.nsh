@@ -119,6 +119,8 @@
             ReadRegStr $2 ${ROOT_KEY} \
                        "${__CONDA_REG_PREFIX}\$1\InstallPath" ""
             ${If} $2 != ""
+            ${AndIf} ${FileExists} "$2\python.exe"
+            ${AndIf} ${FileExists} "$2\Scripts\conda.exe"
                 ${LogWrite} "${ROOT_KEY} ${__CONDA_REG_PREFIX}\$1\InstallPath: $2"
                 Exch $2  # <stack> $0, $1, $2, "prefix"
             ${EndIf}
