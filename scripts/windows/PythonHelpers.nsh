@@ -80,7 +80,7 @@
 #
 # Retrive the registered install prefix for Python
 # - input: VERSIONTAG is a MajorMinor version number (no dots)
-# - input: BITS 34 or 64 (constant!)
+# - input: BITS 34 or 64 (constant)
 # - output: INSTALL_PREFIX installation path (e.g C:\Python35)
 # - output: INSTALL_MODE
 #           1 if Python was installed for all users or 0 if
@@ -88,41 +88,12 @@
 #
 # Example
 # -------
-# ${GetAnacondaInstall} 3.5 64 $PythonDir $InstallMode
+# ${GetAnacondaInstall} 35 64 $PythonDir $InstallMode
 
 !macro __GET_CONDA_INSTALL VERSION_TAG BITS INSTALL_PREFIX INSTALL_MODE
-    !define __CONDA_REG_PREFIX \
-        Software\Python\ContinuumAnalytics\Anaconda${VERSION_TAG}-${BITS}
-
-    !if "${BITS}" != 32
-    !if "${BITS}" != 64
-        !error "BITS must be a 32 or 64 constant"
-    !endif
-    !endif
-    ReadRegStr ${INSTALL_PREFIX} HKCU ${__CONDA_REG_PREFIX}\InstallPath ""
-    ${If} ${INSTALL_PREFIX} != ""
-        StrCpy ${INSTALL_MODE} 0
-    ${Else}
-        ReadRegStr ${INSTALL_PREFIX} HKLM ${__CONDA_REG_PREFIX}\InstallPath ""
-        ${If} ${INSTALL_PREFIX} != ""
-            StrCpy ${INSTALL_MODE} 1
-        ${Else}
-            StrCpy ${INSTALL_MODE} 0
-        ${EndIf}
-    ${EndIf}
-
-    ${If} ${INSTALL_PREFIX} != ""
-        # Strip (single) trailing '\' if present
-        Push $0
-        StrCpy $0 ${INSTALL_PREFIX} "" -1
-        ${If} $0 == "\"
-            StrLen $0 ${INSTALL_PREFIX}
-            IntOp $0 $0 - 1
-            StrCpy ${INSTALL_PREFIX} ${INSTALL_PREFIX} $0 0
-        ${EndIf}
-        Pop $0
-     ${EndIf}
-    !undef __CONDA_REG_PREFIX
+    !define __TAG Anaconda${VERSION_TAG}-${BITS}
+    ${GetPythonInstallPEP514} ContinuumAnalytics ${__TAG} ${INSTALL_PREFIX} ${INSTALL_MODE}
+    !undef __TAG
 !macroend
 !define GetAnacondaInstall "!insertmacro __GET_CONDA_INSTALL"
 
