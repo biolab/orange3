@@ -446,7 +446,7 @@ Section "Python ${PYTHON_VERSION} (${BITS} bit)" SectionPython
         Abort "Python installation failed (error value: $0)"
     ${EndIf}
     ${GetPythonInstall} \
-        "${PYMAJOR}.${PYMINOR}" $BasePythonPrefix $PythonInstallMode
+        "${PYMAJOR}.${PYMINOR}" ${BITS} $BasePythonPrefix $PythonInstallMode
     ${If} $BasePythonPrefix == ""
         Abort "Python installation failed (cannot determine Python \
                installation prefix)."
@@ -811,7 +811,8 @@ Function .onInit
     !insertmacro MULTIUSER_INIT
 
 !if ${PYINSTALL_TYPE} == Normal
-    ${GetPythonInstall} ${PYMAJOR}.${PYMINOR} $BasePythonPrefix $PythonInstallMode
+    ${GetPythonInstall} ${PYMAJOR}.${PYMINOR} ${BITS} \
+        $BasePythonPrefix $PythonInstallMode
     ${LogWrite} "Python Prefix: $BasePythonPrefix"
     ${LogWrite} "Python Install Type: $PythonInstallMode"
     ${If} $BasePythonPrefix != ""
