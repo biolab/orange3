@@ -28,10 +28,14 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
 
+DisplayMethodRole = Qt.UserRole
+StateRole = DisplayMethodRole + 0xf4
+
+
 class DisplayFormatDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         super().initStyleOption(option, index)
-        method = index.data(Qt.UserRole)
+        method = index.data(DisplayMethodRole)
         var = index.model()[index.row()]
         if method:
             option.text = method.format_variable(var)
@@ -140,7 +144,8 @@ class OWImpute(OWWidget):
     settingsHandler = settings.DomainContextHandler()
 
     _default_method_index = settings.Setting(int(Method.Leave))  # type: int
-    variable_state = settings.ContextSetting({})  # type: VariableState
+    # Per-variable imputation state (synced in storeSpecificSettings)
+    _variable_imputation_state = settings.ContextSetting({})  # type: VariableState
 
     autocommit = settings.Setting(True)
 
@@ -281,13 +286,15 @@ class OWImpute(OWWidget):
     def set_data(self, data):
         self.closeContext()
         self.varmodel[:] = []
-        self.variable_state = {}  # type: VariableState
+        self._variable_imputation_state = {}  # type: VariableState
         self.modified = False
         self.data = data
 
         if data is not None:
             self.varmodel[:] = data.domain.variables
             self.openContext(data.domain)
+            # restore per variable imputation state
+            self._restore_state(self._variable_imputation_state)
 
         self.update_varview()
         self.unconditional_commit()
@@ -314,10 +321,9 @@ class OWImpute(OWWidget):
         Return the imputation method for column by its index.
         """
         assert 0 <= column_index < len(self.varmodel)
-        var = self.varmodel[column_index]  # type: Orange.data.Variable
-        try:
-            state = self.variable_state[var_key(var)]
-        except KeyError:
+        idx = self.varmodel.index(column_index, 0)
+        state = idx.data(StateRole)
+        if state is None:
             state = (Method.AsAboveSoBelow, ())
         return self.create_imputer(state[0], *state[1])
 
@@ -478,8 +484,8 @@ class OWImpute(OWWidget):
     def _on_var_selection_changed(self):
         indexes = self.selection.selectedIndexes()
         defmethod = (Method.AsAboveSoBelow, ())
-        methods = [self.variable_state.get(var_key(var), defmethod)
-                   for var in variables]
+        methods = [index.data(StateRole) for index in indexes]
+        methods = [m if m is not None else defmethod for m in methods]
         methods = set(methods)
         selected_vars = [self.varmodel[index.row()] for index in indexes]
         has_discrete = any(var.is_discrete for var in selected_vars)
@@ -494,7 +500,7 @@ class OWImpute(OWWidget):
                     self.variable_button_group.button(m).setChecked(True)
 
             if method_type == Method.Default:
-                (fixed_value, ) = parameters
+                (fixed_value,) = parameters
 
         elif self.variable_button_group.checkedButton() is not None:
             # Uncheck the current button
@@ -550,9 +556,7 @@ class OWImpute(OWWidget):
         # type: (List[QModelIndex], Method) -> None
         if method_index == Method.AsAboveSoBelow:
             for index in indexes:
-                var = self.varmodel[index.row()]
-                assert isinstance(var, Orange.data.Variable)
-                self.variable_state.pop(var_key(var), None)
+                self.varmodel.setData(index, None, StateRole)
         elif method_index == Method.Default:
             current = self.value_stack.currentWidget()
             if current is self.value_combo:
@@ -561,15 +565,11 @@ class OWImpute(OWWidget):
                 value = self.value_double.value()
             for index in indexes:
                 state = (int(Method.Default), (value,))
-                var = self.varmodel[index.row()]
-                assert isinstance(var, Orange.data.Variable)
-                self.variable_state[var_key(var)] = state
+                self.varmodel.setData(index, state, StateRole)
         else:
             state = (int(method_index), ())
             for index in indexes:
-                var = self.varmodel[index.row()]
-                assert isinstance(var, Orange.data.Variable)
-                self.variable_state[var_key(var)] = state
+                self.varmodel.setData(index, state, StateRole)
 
         self.update_varview(indexes)
         self._invalidate()
@@ -581,7 +581,7 @@ class OWImpute(OWWidget):
         for index in indexes:
             self.varmodel.setData(
                 index, self.get_method_for_column(index.row()),
-                Qt.UserRole)
+                DisplayMethodRole)
 
     def _on_value_selected(self):
         # The fixed 'Value' in the widget has been changed by the user.
@@ -592,6 +592,42 @@ class OWImpute(OWWidget):
         indexes = list(map(self.varmodel.index, range(len(self.varmodel))))
         self.set_method_for_indexes(indexes, Method.AsAboveSoBelow)
         self.variable_button_group.button(Method.AsAboveSoBelow).setChecked(True)
+
+    def _store_state(self):
+        # type: () -> VariableState
+        """
+        Save the current variable imputation state
+        """
+        state = {}  # type: VariableState
+        for i, var in enumerate(self.varmodel):
+            index = self.varmodel.index(i)
+            m = index.data(StateRole)
+            if m is not None:
+                state[var_key(var)] = m
+        return state
+
+    def _restore_state(self, state):
+        # type: (VariableState) -> None
+        """
+        Restore the variable imputation state from the saved state
+        """
+        def check(state):
+            # check if state is a proper State
+            if isinstance(state, tuple) and len(state) == 2:
+                m, p = state
+                if isinstance(m, int) and isinstance(p, tuple) and \
+                        0 <= m < len(Method):
+                    return True
+            return False
+
+        for i, var in enumerate(self.varmodel):
+            m = state.get(var_key(var), None)
+            if check(m):
+                self.varmodel.setData(self.varmodel.index(i), m, StateRole)
+
+    def storeSpecificSettings(self):
+        self._variable_imputation_state = self._store_state()
+        super().storeSpecificSettings()
 
 
 def main(argv=None):
