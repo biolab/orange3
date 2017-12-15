@@ -10,7 +10,8 @@ from scipy.spatial import distance
 from AnyQt.QtGui import QStandardItem, QColor, QFontMetrics, QCursor
 from AnyQt.QtCore import Qt, QEvent, QSize, QRectF, QPoint
 from AnyQt.QtCore import pyqtSignal as Signal
-from AnyQt.QtWidgets import qApp, QSizePolicy, QApplication, QToolTip, QGraphicsSceneMouseEvent
+from AnyQt.QtWidgets import qApp, QSizePolicy, QApplication, QToolTip, QGraphicsSceneMouseEvent, \
+    QGraphicsEllipseItem
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
@@ -39,7 +40,7 @@ from Orange.canvas import report
 
 class RadvizVizRank(VizRankDialog, OWComponent):
     captionTitle = "Score Plots"
-    n_attrs = settings.Setting(6)
+    n_attrs = settings.Setting(3)
     minK = 10
 
     attrsSelected = Signal([])
@@ -58,15 +59,12 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
         box = gui.hBox(self)
         self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 4, max_n_attrs, label="Number of variables: ",
+            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
         self.attr_color = master.graph.attr_color
-
         self.attr_ordering = None
-        self.last_run_n_attrs = None
-        self.attr_color = master.graph.attr_color
         self.data = None
         self.valid_data = None
 
@@ -146,7 +144,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
     def iterate_states(self, state):
         if state is None:  # on the first call, compute order
             self.attrs = self._compute_attr_order()
-            state = list(range(self.n_attrs))
+            state = list(range(3))
         else:
             state = list(state)
 
@@ -159,7 +157,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
                         break
                     s[up] = up
                 if s[-1] == n:
-                    break
+                    if len(s) < self.n_attrs:
+                        s = list(range(len(s) + 1))
+                    else:
+                        break
 
         for c in combinations(len(self.attrs), state):
             for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2):
@@ -283,11 +284,11 @@ class OWRadvizGraph(OWScatterPlotGraph):
             self.plot_widget.hideAxis(axis)
 
     def update_data(self, attr_x, attr_y, reset_view=True):
-        super().update_data(attr_x, attr_y, reset_view)
-        self.hide_axes()
         if reset_view:
             self.view_box.setRange(RANGE, padding=0.025)
             self.view_box.setAspectLocked(True, 1)
+        super().update_data(attr_x, attr_y, reset_view=False)
+        self.hide_axes()
 
     def show_arc_arrow(self, x=None, y=None, point_i=None):
         def remove_arc_arrows():
@@ -366,7 +367,6 @@ class OWRadvizGraph(OWScatterPlotGraph):
 
 
 RANGE = QRectF(-1.2, -1.05, 2.4, 2.1)
-MAX_ANCHORS = 16
 MAX_POINTS = 100
 
 class OWRadviz(widget.OWWidget):
@@ -404,7 +404,7 @@ class OWRadviz(widget.OWWidget):
         sql_sampled_data = widget.Msg("Data has been sampled")
 
     class Warning(widget.OWWidget.Warning):
-        no_features = widget.Msg("At least 2 features has to be chosen")
+        no_features = widget.Msg("At least 2 features have to be chosen")
 
     class Error(widget.OWWidget.Error):
         sparse_data = widget.Msg("Sparse data is not supported")
@@ -470,12 +470,9 @@ class OWRadviz(widget.OWWidget):
 
         self.graph.zoom_actions(self)
 
-        self._circle = pg.PlotCurveItem(
-            x=np.fromfunction(lambda i: np.cos(2. * np.pi * i / 120.), (121,), dtype=int),
-            y=np.fromfunction(lambda i: np.sin(2. * np.pi * i / 120.), (121,), dtype=int),
-            pen=pg.mkPen(QColor(0, 0, 0), width=2),
-            antialias=False
-        )
+        self._circle = QGraphicsEllipseItem()
+        self._circle.setRect(QRectF(-1., -1., 2., 2.))
+        self._circle.setPen(pg.mkPen(QColor(0, 0, 0), width=2))
 
     def resizeEvent(self, event):
         self._update_points_labels()
@@ -500,7 +497,6 @@ class OWRadviz(widget.OWWidget):
             valid_mask=None,
             embedding_coords=None,
             points=None,
-            circle=None,
             arcarrows=[],
             point_labels=[],
             rand=None,
@@ -553,7 +549,7 @@ class OWRadviz(widget.OWWidget):
             and not np.isnan(self.data.get_column_view(attr_color)[0].astype(float)).all())
         if is_enabled and (attr_color is None or
                            (attr_color is not None and not attr_color.is_discrete)):
-            self.btn_vizrank.setToolTip("Discrete color variable has to be selected.")
+            self.btn_vizrank.setToolTip("Categorical color variable has to be selected.")
         else:
             self.btn_vizrank.setToolTip("")
         self.vizrank.initialize()
@@ -638,10 +634,10 @@ class OWRadviz(widget.OWWidget):
             self.data = data
             self.init_attr_values()
             domain = data.domain
-            vars = [v for v in chain(domain.class_vars, domain.metas, domain.attributes)
-                    if v.is_primitive]
-            self.model_selected[:] = vars[:6]
-            self.model_other[:] = vars[6:]
+            vars = [v for v in chain(domain.metas, domain.attributes)
+                    if v.is_primitive()]
+            self.model_selected[:] = vars[:5]
+            self.model_other[:] = vars[5:] + list(domain.class_vars)
             self.model_selected[:], self.model_other[:] = settings(data)
             self._selection = np.zeros(len(data), dtype=np.uint8)
             self.invalidate_plot()
@@ -696,7 +692,7 @@ class OWRadviz(widget.OWWidget):
         self.plotdata.points = points
         self.plotdata.valid_mask = valid_mask
 
-    def setup_plot(self, reset_view=False):
+    def setup_plot(self, reset_view=True):
         if self.data is None:
             return
         self.graph.jitter_continuous = True
@@ -714,10 +710,6 @@ class OWRadviz(widget.OWWidget):
         if self.plotdata.embedding_coords is None:
             return
 
-        self.plotdata.circle = self._circle
-        if reset_view:
-            self.viewbox.setRange(RANGE)
-            self.viewbox.setAspectLocked(True, 1)
         domain = self.data.domain
         new_metas = domain.metas + (self.variable_x, self.variable_y)
         domain = Domain(attributes=domain.attributes,
@@ -735,7 +727,7 @@ class OWRadviz(widget.OWWidget):
         if self._selection is not None:
             self.graph.selection = self._selection[self.plotdata.valid_mask]
         self.graph.update_data(self.variable_x, self.variable_y, reset_view=reset_view)
-        self.graph.plot_widget.addItem(self.plotdata.circle)
+        self.graph.plot_widget.addItem(self._circle)
         self.graph.scatterplot_points = ScatterPlotItem(
             x=self.plotdata.points[:, 0],
             y=self.plotdata.points[:, 1]
@@ -780,8 +772,8 @@ class OWRadviz(widget.OWWidget):
         data = Table.from_numpy(domain, X=np.hstack((ec, data_x)), Y=data_y, metas=data_metas)
         self.graph.new_data(data, None)
         self.graph.selection = selection
-        self.graph.update_data(self.variable_x, self.variable_y, reset_view=False)
-        self.graph.plot_widget.addItem(self.plotdata.circle)
+        self.graph.update_data(self.variable_x, self.variable_y, reset_view=True)
+        self.graph.plot_widget.addItem(self._circle)
         self.graph.scatterplot_points = ScatterPlotItem(
             x=self.plotdata.points[:, 0], y=self.plotdata.points[:, 1])
         self._update_points_labels()
@@ -823,10 +815,10 @@ class OWRadviz(widget.OWWidget):
         self.graph.zoomStack = []
         if self.graph.data is None:
             return
-        self.graph.update_data(self.variable_x, self.variable_y, reset_view)
+        self.graph.update_data(self.variable_x, self.variable_y, reset_view=reset_view)
 
     def update_density(self):
-        self._update_graph(reset_view=False)
+        self._update_graph(reset_view=True)
 
     def selection_changed(self):
         if self.graph.selection is not None:
