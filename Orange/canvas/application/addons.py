@@ -476,22 +476,34 @@ class AddonManagerDialog(QDialog):
             method_queued(self._set_packages, (object,))
         )
 
-        self.__progress = QProgressDialog(
-            self, Qt.Sheet,
-            minimum=0, maximum=0,
-            labelText=self.tr("Retrieving package list"),
-            sizeGripEnabled=False,
-            windowTitle="Progress"
-        )
-
-        self.__progress.rejected.connect(self.reject)
+        self.__progress = None  # type: Optional[QProgressDialog]
         self.__thread = None
         self.__installer = None
 
+        if not self._f_pypi_addons.done():
+            self.__progressDialog()
+
+    def __progressDialog(self):
+        if self.__progress is None:
+            self.__progress = QProgressDialog(
+                self,
+                minimum=0, maximum=0,
+                labelText=self.tr("Retrieving package list"),
+                sizeGripEnabled=False,
+                windowTitle="Progress",
+            )
+            self.__progress.setWindowModality(Qt.WindowModal)
+            self.__progress.canceled.connect(self.reject)
+            self.__progress.hide()
+
+        return self.__progress
+
     @Slot(object)
     def _set_packages(self, f):
-        if self.__progress.isVisible():
-            self.__progress.close()
+        if self.__progress is not None:
+            self.__progress.hide()
+            self.__progress.deleteLater()
+            self.__progress = None
 
         try:
             packages = f.result()
@@ -550,7 +562,7 @@ class AddonManagerDialog(QDialog):
     def showEvent(self, event):
         super().showEvent(event)
 
-        if not self._f_pypi_addons.done():
+        if not self._f_pypi_addons.done() and self.__progress is not None:
             QTimer.singleShot(0, self.__progress.show)
 
     def done(self, retcode):
@@ -563,6 +575,8 @@ class AddonManagerDialog(QDialog):
 
     def closeEvent(self, event):
         super().closeEvent(event)
+        if self.__progress is not None:
+            self.__progress.hide()
         self._f_pypi_addons.cancel()
         self._executor.shutdown(wait=False)
 
@@ -613,11 +627,11 @@ class AddonManagerDialog(QDialog):
             self.__installer.moveToThread(self.__thread)
             self.__installer.finished.connect(self.__on_installer_finished)
             self.__installer.error.connect(self.__on_installer_error)
-            self.__installer.installStatusChanged.connect(
-                self.__progress.setLabelText)
 
-            self.__progress.show()
-            self.__progress.setLabelText("Installing")
+            progress = self.__progressDialog()
+            self.__installer.installStatusChanged.connect(progress.setLabelText)
+            progress.show()
+            progress.setLabelText("Installing")
 
             self.__installer.start()
 
