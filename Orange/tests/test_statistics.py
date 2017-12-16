@@ -408,6 +408,13 @@ class TestBincount(unittest.TestCase):
         expected = [3, 0, 2, 1]
         np.testing.assert_equal(bincount(x, w)[0], expected)
 
+    @dense_sparse
+    def test_all_nans(self, array):
+        x = array([np.nan] * 5)
+        expected = []
+
+        np.testing.assert_equal(bincount(x)[0], expected)
+
 
 class TestUnique(unittest.TestCase):
     @dense_sparse
