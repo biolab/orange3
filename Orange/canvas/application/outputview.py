@@ -1,5 +1,6 @@
 """
 """
+import warnings
 import traceback
 
 from AnyQt.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QSizePolicy
@@ -128,7 +129,7 @@ class OutputView(QWidget):
             self.currentCharFormat(), color, background, weight,
             italic, underline, font
         )
-        return formater(self, charformat)
+        return Formatter(self, charformat)
 
 
 def update_char_format(baseformat, color=None, background=None, weight=None,
@@ -180,7 +181,7 @@ def update_font(basefont, weight=None, italic=None, underline=None,
     return font
 
 
-class formater(QObject):
+class Formatter(QObject):
     def __init__(self, outputview, charformat):
         # type: (OutputView, QTextCharFormat) -> None
         # Parent to the output view. Ensure the formatter does not outlive it.
@@ -204,7 +205,7 @@ class formater(QObject):
                  italic=None, underline=None, font=None):
         charformat = update_char_format(self.charformat, color, background,
                                         weight, italic, underline, font)
-        return formater(self.outputview, charformat)
+        return Formatter(self.outputview, charformat)
 
     def __enter__(self):
         return self
@@ -213,6 +214,15 @@ class formater(QObject):
         self.outputview = None
         self.charformat = None
         self.setParent(None)
+
+
+class formater(Formatter):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "Deprecated: Renamed to Formatter.",
+            DeprecationWarning, stacklevel=2
+        )
+        super().__init__(*args, **kwargs)
 
 
 class TextStream(QObject):
