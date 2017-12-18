@@ -7,7 +7,7 @@ from AnyQt.QtGui import (
     QTextCursor, QTextCharFormat, QFont, QTextOption, QFontDatabase
 )
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 class TerminalView(QPlainTextEdit):
@@ -92,6 +92,7 @@ class OutputView(QWidget):
         return self.__text.toPlainText()
 
     # A file like interface.
+    @Slot(str)
     def write(self, string):
         assert QThread.currentThread() is self.thread()
         self.__text.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
@@ -99,13 +100,14 @@ class OutputView(QWidget):
 
         self.__text.insertPlainText(string)
 
+    @Slot(object)
     def writelines(self, lines):
         assert QThread.currentThread() is self.thread()
         self.write("".join(lines))
 
+    @Slot()
     def flush(self):
         assert QThread.currentThread() is self.thread()
-        pass
 
     def writeWithFormat(self, string, charformat):
         assert QThread.currentThread() is self.thread()
@@ -120,7 +122,7 @@ class OutputView(QWidget):
     def formated(self, color=None, background=None, weight=None,
                  italic=None, underline=None, font=None):
         """
-        Return a formated file like object proxy.
+        Return a formatted file like object proxy.
         """
         charformat = update_char_format(
             self.currentCharFormat(), color, background, weight,
@@ -178,17 +180,23 @@ def update_font(basefont, weight=None, italic=None, underline=None,
     return font
 
 
-class formater(object):
+class formater(QObject):
     def __init__(self, outputview, charformat):
+        # type: (OutputView, QTextCharFormat) -> None
+        # Parent to the output view. Ensure the formatter does not outlive it.
+        super().__init__(outputview)
         self.outputview = outputview
         self.charformat = charformat
 
+    @Slot(str)
     def write(self, string):
         self.outputview.writeWithFormat(string, self.charformat)
 
+    @Slot(object)
     def writelines(self, lines):
-        self.outputview.writelines(lines, self.charformat)
+        self.outputview.writelinesWithFormat(lines, self.charformat)
 
+    @Slot()
     def flush(self):
         self.outputview.flush()
 
@@ -204,6 +212,7 @@ class formater(object):
     def __exit__(self, *args):
         self.outputview = None
         self.charformat = None
+        self.setParent(None)
 
 
 class TextStream(QObject):

@@ -941,8 +941,8 @@ class CanvasMainWindow(QMainWindow):
             stdout.stream.connect(logview.write)
 
         if isinstance(stderr, TextStream):
-            logview._err_formater = logview.formated(color=Qt.red)
-            stderr.stream.connect(logview._err_formater.write)
+            err_formater = logview.formated(color=Qt.red)
+            stderr.stream.connect(err_formater.write)
 
         CanvasMainWindow._instances.append(window)
         window.destroyed.connect(
