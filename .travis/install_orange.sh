@@ -7,6 +7,7 @@ foldable pip install -U setuptools pip codecov
 cat requirements-core.txt \
     requirements-gui.txt \
     requirements-dev.txt \
+    requirements-opt.txt \
     requirements-doc.txt |
     while read dep; do
         dep="${dep%%#*}"  # Strip the comment
