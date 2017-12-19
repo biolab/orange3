@@ -639,6 +639,9 @@ Function un.Shortcuts
         ${LogWrite} "Removing Start Menu Shortcuts (from $SMPROGRAMS\$0)"
         DetailPrint "Removing Start Menu shortcuts"
         Delete "$SMPROGRAMS\$0\${LAUNCHER_SHORTCUT_NAME}.lnk"
+!if ${PYINSTALL_TYPE} == Normal
+        Delete "$SMPROGRAMS\$0\${APPNAME} Command Prompt.lnk"
+!endif
         RMDir "$SMPROGRAMS\$0"
     ${EndIf}
     ${LogWrite} "Removing Desktop shortcurt"
