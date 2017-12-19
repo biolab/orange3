@@ -574,6 +574,11 @@ Section "Start Menu Shortcuts" SectionStartMenu
             "$SMPROGRAMS\$StartMenuFolder\${LAUNCHER_SHORTCUT_NAME}.lnk" \
             "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas" \
             "$PythonPrefix\share\orange3\icons\orange.ico" 0
+
+        # A utility shortcut for activating the environment
+        CreateShortCut \
+            "$SMPROGRAMS\$StartMenuFolder\${APPNAME} Command Prompt.lnk" \
+            "%COMSPEC%" '/S /K ""$PythonScriptsPrefix\activate.bat" "$InstDir""'
     ${EndIf}
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
@@ -604,6 +609,7 @@ Function un.Shortcuts
         ${LogWrite} "Removing Start Menu Shortcuts (from $SMPROGRAMS\$0)"
         DetailPrint "Removing Start Menu shortcuts"
         Delete "$SMPROGRAMS\$0\${LAUNCHER_SHORTCUT_NAME}.lnk"
+        Delete "$SMPROGRAMS\$0\${APPNAME} Command Prompt.lnk"
         RMDir "$SMPROGRAMS\$0"
     ${EndIf}
     ${LogWrite} "Removing Desktop shortcurt"
