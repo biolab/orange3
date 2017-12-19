@@ -171,6 +171,10 @@ Var StartMenuFolder
 # - no check box to enable/disable start menu creation
 #   (is controled by the Components Page)
 !define MUI_STARTMENUPAGE_NODISABLE
+# Registry key path where the selected start folder name is stored
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT SHELL_CONTEXT
+!define MUI_STARTMENUPAGE_REGISTRY_KEY ${INSTALL_SETTINGS_KEY}
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME StartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU StartMenuPageID $StartMenuFolder
 
 # Install Files page:
@@ -749,8 +753,8 @@ Section Uninstall
     ${LogWrite} "    PythonPrefix: $PythonPrefix"
     ${LogWrite} "    BasePythonPrefix: $BasePythonPrefix"
 
-    Call un.Register
     Call un.Shortcuts
+    Call un.Register
     Call un.Launchers
     Call un.InstallPackages
     Call un.Environment
