@@ -10,6 +10,7 @@ import Orange
 from Orange.data import StringVariable, ContinuousVariable
 from Orange.data.util import hstack
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.settings import DomainContextHandler, ContextHandler
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
@@ -20,6 +21,31 @@ class MergeType(IntEnum):
 
 INSTANCEID = "Source position (index)"
 INDEX = "Position (index)"
+
+
+class MultiDomainContextHandler(DomainContextHandler):
+    def open_context(self, widget, **datasets):
+        """Merge domains to be compatible with DomainContextHandler"""
+        attrs, metas, domains = {}, {}, {}
+
+        for name, dataset in datasets.items():
+            if dataset is None:
+                return None, False
+
+            attrs[name], metas[name] = self.encode_domain(dataset.domain)
+            domains[name] = dataset.domain
+
+        return ContextHandler.open_context(self, widget, domains, attrs, metas)
+
+    def _var_exists(self, setting, value, attributes, metas):
+        dataset = setting.dataset
+        return super()._var_exists(
+            setting, value, attributes[dataset], metas[dataset])
+
+    def decode_setting(self, setting, value, domain):
+        dataset = setting.dataset
+        return super().decode_setting(
+            setting, value, domain[dataset])
 
 
 class OWMergeData(widget.OWWidget):
@@ -37,12 +63,14 @@ class OWMergeData(widget.OWWidget):
                       Orange.data.Table,
                       replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])
 
-    attr_augment_data = settings.Setting('', schema_only=True)
-    attr_augment_extra = settings.Setting('', schema_only=True)
-    attr_merge_data = settings.Setting('', schema_only=True)
-    attr_merge_extra = settings.Setting('', schema_only=True)
-    attr_combine_data = settings.Setting('', schema_only=True)
-    attr_combine_extra = settings.Setting('', schema_only=True)
+    settingsHandler = MultiDomainContextHandler()
+    settings_version = 2
+    attr_augment_data = settings.ContextSetting('', dataset="data")
+    attr_augment_extra = settings.ContextSetting('', dataset="extra")
+    attr_merge_data = settings.ContextSetting('', dataset="data")
+    attr_merge_extra = settings.ContextSetting('', dataset="extra")
+    attr_combine_data = settings.ContextSetting('', dataset="data")
+    attr_combine_extra = settings.ContextSetting('', dataset="extra")
     merging = settings.Setting(0)
 
     want_main_area = False
@@ -194,6 +222,7 @@ class OWMergeData(widget.OWWidget):
     @Inputs.data
     @check_sql_input
     def setData(self, data):
+        self.closeContext()
         self.data = data
         self._set_model(data, self.model)
         self._set_unique_model(data, self.model_unique_with_id)
@@ -207,6 +236,7 @@ class OWMergeData(widget.OWWidget):
     @Inputs.extra_data
     @check_sql_input
     def setExtraData(self, data):
+        self.closeContext()
         self.extra_data = data
         self._set_unique_model(data, self.extra_model_unique)
         self._set_unique_model(data, self.extra_model_unique_with_id)
@@ -219,6 +249,7 @@ class OWMergeData(widget.OWWidget):
         self._find_best_match()
 
     def handleNewSignals(self):
+        self.openContext(data=self.data, extra=self.extra_data)
         self._invalidate()
 
     def dataInfoText(self, data):
