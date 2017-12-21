@@ -1,4 +1,5 @@
 import unittest
+import unittest.mock
 import threading
 import random
 
@@ -225,6 +226,18 @@ class TestFutureSetWatcher(CoreAppTestCase):
         watcher.setFutures([])
         spy = spies(watcher)
         self.assertTrue(spy.doneAll.wait())
+
+        watcher = FutureSetWatcher()
+        watcher.setFutures([])
+        watcher.wait()
+
+        watcher = FutureSetWatcher()
+        with self.assertRaises(RuntimeError):
+            watcher.wait()
+
+        with unittest.mock.patch.object(watcher, "thread", lambda: 42), \
+                self.assertRaises(RuntimeError):
+            watcher.flush()
 
 
 class TestTask(CoreAppTestCase):
