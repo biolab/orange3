@@ -24,6 +24,9 @@ class PymssqlBackend(Backend):
             self.connection = pymssql.connect(login_timeout=5, **connection_params)
         except pymssql.Error as ex:
             raise BackendError(str(ex)) from ex
+        except ValueError:
+            # ValueError is raised when 'server' contains "\\"
+            raise BackendError("Incorrect format of connection details")
 
     def list_tables_query(self, schema=None):
         return """
