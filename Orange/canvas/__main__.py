@@ -503,7 +503,7 @@ def main(argv=None):
     log.info("Entering main event loop.")
     try:
         with patch('sys.excepthook',
-                   ExceptHook(stream=stderr, canvas=canvas_window,
+                   ExceptHook(stream=stderr,
                               handledException=handle_exception)),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):

@@ -245,10 +245,9 @@ class TextStream(QObject):
 class ExceptHook(QObject):
     handledException = Signal(object)
 
-    def __init__(self, parent=None, stream=None, canvas=None, **kwargs):
+    def __init__(self, parent=None, stream=None, **kwargs):
         QObject.__init__(self, parent, **kwargs)
         self._stream = stream
-        self._canvas = canvas
 
     def __call__(self, exc_type, exc_value, tb):
         if self._stream:
@@ -260,4 +259,4 @@ class ExceptHook(QObject):
             text.append('-' * 79 + '\n')
             self._stream.writelines(text)
 
-        self.handledException.emit(((exc_type, exc_value, tb), self._canvas))
+        self.handledException.emit((exc_type, exc_value, tb))

@@ -26,7 +26,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.util import try_
-
+from Orange.canvas.scheme import Scheme
 try:
     from Orange.widgets.widget import OWWidget
     from Orange.version import full_version as VERSION_STR
@@ -179,7 +179,7 @@ class ErrorReporting(QDialog):
     @patch('sys.excepthook', sys.__excepthook__)  # Prevent recursion
     @pyqtSlot(object)
     def handle_exception(cls, exc):
-        (etype, evalue, tb), canvas = exc
+        etype, evalue, tb = exc
         exception = traceback.format_exception_only(etype, evalue)[-1].strip()
         stacktrace = ''.join(traceback.format_exception(etype, evalue, tb))
 
@@ -204,10 +204,19 @@ class ErrorReporting(QDialog):
                     return tb
                 tb = tb.tb_next
 
-        widget_module, widget, frame = None, None, _find_widget_frame(tb)
-        if frame:
-            widget = frame.tb_frame.f_locals['self'].__class__
-            widget_module = '{}:{}'.format(widget.__module__, frame.tb_lineno)
+        widget_module = widget_class = widget = workflow = None
+        frame = _find_widget_frame(tb)
+        if frame is not None:
+            widget = frame.tb_frame.f_locals['self']  # type: OWWidget
+            widget_class = widget.__class__
+            widget_module = '{}:{}'.format(widget_class.__module__, frame.tb_lineno)
+        if widget is not None:
+            try:
+                workflow = widget.signalManager.parent()
+                if not isinstance(workflow, Scheme):
+                    raise TypeError
+            except Exception:
+                workflow = None
 
         packages = ', '.join(sorted(get_installed_distributions()))
 
@@ -218,7 +227,8 @@ class ErrorReporting(QDialog):
         if (err_module, widget_module) in cls._cache:
             QMessageBox(QMessageBox.Warning, 'Error Encountered',
                         'Error encountered{}:<br><br><tt>{}</tt>'.format(
-                            ' in widget <b>{}</b>'.format(widget.name) if widget else '',
+                            (' in widget <b>{}</b>'.format(widget_class.name)
+                             if widget_class else ''),
                             stacktrace.replace('\n', '<br>').replace(' ', '&nbsp;')),
                         QMessageBox.Ignore).exec()
             return
@@ -227,19 +237,15 @@ class ErrorReporting(QDialog):
         data = OrderedDict()
         data[F.EXCEPTION] = exception
         data[F.MODULE] = err_module
-        if widget:
-            data[F.WIDGET_NAME] = widget.name
+        if widget_class is not None:
+            data[F.WIDGET_NAME] = widget_class.name
             data[F.WIDGET_MODULE] = widget_module
-        if canvas:
+        if workflow is not None:
             fd, filename = mkstemp(prefix='ows-', suffix='.ows.xml')
             os.close(fd)
-            # Prevent excepthook printing the same exception when
-            # canvas tries to instantiate the broken widget again
-            with patch('sys.excepthook', lambda *_: None), \
-                    open(filename, "wb") as f:
-                scheme = canvas.current_document().scheme()
+            with open(filename, "wb") as f:
                 try:
-                    scheme.save_to(f, pretty=True, pickle_fallback=True)
+                    workflow.save_to(f, pretty=True, pickle_fallback=True)
                 except Exception:
                     pass
             data[F.WIDGET_SCHEME] = filename
