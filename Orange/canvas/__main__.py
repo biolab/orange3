@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pkg_resources
 
-from AnyQt.QtGui import QFont, QColor, QDesktopServices
+from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices
 from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
@@ -218,7 +218,7 @@ def main(argv=None):
                       type="str", default=None)
     parser.add_option("--stylesheet",
                       help="Application level CSS style sheet to use",
-                      type="str", default="orange.qss")
+                      type="str", default=None)
     parser.add_option("--qt",
                       help="Additional arguments for QApplication",
                       type="str", default=None)
@@ -257,8 +257,16 @@ def main(argv=None):
 
     qt_argv = argv[:1]
 
-    if options.style is not None:
-        qt_argv += ["-style", options.style]
+    style = options.style
+    defaultstylesheet = "orange.qss"
+    fusiontheme = None
+
+    if style is not None:
+        if style.startswith("fusion:"):
+            qt_argv += ["-style", "fusion"]
+            _, _, fusiontheme = style.partition(":")
+        else:
+            qt_argv += ["-style", style]
 
     if options.qt is not None:
         qt_argv += shlex.split(options.qt)
@@ -270,6 +278,15 @@ def main(argv=None):
 
     log.debug("Starting CanvasApplicaiton with argv = %r.", qt_argv)
     app = CanvasApplication(qt_argv)
+    if app.style().metaObject().className() == "QFusionStyle":
+        if fusiontheme == "breeze-dark":
+            app.setPalette(breeze_dark())
+            defaultstylesheet = "darkorange.qss"
+
+    palette = app.palette()
+    if style is None and palette.color(QPalette.Window).value() < 127:
+        log.info("Switching default stylesheet to darkorange")
+        defaultstylesheet = "darkorange.qss"
 
     # NOTE: config.init() must be called after the QApplication constructor
     config.init()
@@ -309,7 +326,7 @@ def main(argv=None):
 
     settings = QSettings()
 
-    stylesheet = options.stylesheet
+    stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
 
     if stylesheet != "none":
@@ -473,6 +490,44 @@ def main(argv=None):
 
     del app
     return status
+
+
+def breeze_dark():
+    # 'Breeze Dark' color scheme from KDE.
+    text = QColor(239, 240, 241)
+    textdisabled = QColor(98, 108, 118)
+    window = QColor(49, 54, 59)
+    base = QColor(35, 38, 41)
+    highlight = QColor(61, 174, 233)
+    link = QColor(41, 128, 185)
+
+    light = QColor(69, 76, 84)
+    mid = QColor(43, 47, 52)
+    dark = QColor(28, 31, 34)
+    shadow = QColor(20, 23, 25)
+
+    palette = QPalette()
+    palette.setColor(QPalette.Window, window)
+    palette.setColor(QPalette.WindowText, text)
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, textdisabled)
+    palette.setColor(QPalette.Base, base)
+    palette.setColor(QPalette.AlternateBase, window)
+    palette.setColor(QPalette.ToolTipBase, window)
+    palette.setColor(QPalette.ToolTipText, text)
+    palette.setColor(QPalette.Text, text)
+    palette.setColor(QPalette.Disabled, QPalette.Text, textdisabled)
+    palette.setColor(QPalette.Button, window)
+    palette.setColor(QPalette.ButtonText, text)
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, textdisabled)
+    palette.setColor(QPalette.BrightText, Qt.white)
+    palette.setColor(QPalette.Highlight, highlight)
+    palette.setColor(QPalette.HighlightedText, text)
+    palette.setColor(QPalette.Light, light)
+    palette.setColor(QPalette.Mid, mid)
+    palette.setColor(QPalette.Dark, dark)
+    palette.setColor(QPalette.Shadow, shadow)
+    palette.setColor(QPalette.Link, link)
+    return palette
 
 
 if __name__ == "__main__":

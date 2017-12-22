@@ -9,7 +9,7 @@ import string
 from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
-    QGraphicsItem, QGraphicsObject, QGraphicsTextItem,
+    QGraphicsItem, QGraphicsObject, QGraphicsTextItem, QGraphicsWidget,
     QGraphicsDropShadowEffect, QStyle, QApplication
 )
 from AnyQt.QtGui import (
@@ -17,7 +17,7 @@ from AnyQt.QtGui import (
     QPainterPathStroker
 )
 from AnyQt.QtCore import (
-    Qt, QPointF, QRectF, QRect, QSize, QTimer, QPropertyAnimation
+    Qt, QEvent, QPointF, QRectF, QRect, QSize, QTimer, QPropertyAnimation
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
@@ -721,9 +721,9 @@ class NameTextItem(QGraphicsTextItem):
             self.__updateDefaultTextColor()
             self.update()
 
-    def setPalatte(self, palette):
+    def setPalette(self, palette):
         if self.__palette != palette:
-            self.__palette = palette
+            self.__palette = QPalette(palette)
             self.__updateDefaultTextColor()
             self.update()
 
@@ -735,7 +735,7 @@ class NameTextItem(QGraphicsTextItem):
             else:
                 return QPalette()
         else:
-            return self.__palette
+            return QPalette(self.__palette)
 
     def __updateDefaultTextColor(self):
         if self.__selected:
@@ -750,7 +750,7 @@ class NameTextItem(QGraphicsTextItem):
             super().setHtml(contents)
 
 
-class NodeItem(QGraphicsObject):
+class NodeItem(QGraphicsWidget):
     """
     An widget node item in the canvas.
     """
@@ -776,7 +776,8 @@ class NodeItem(QGraphicsObject):
 
     def __init__(self, widget_description=None, parent=None, **kwargs):
         self.__boundingRect = None
-        QGraphicsObject.__init__(self, parent, **kwargs)
+        super().__init__(parent, **kwargs)
+        self.setFocusPolicy(Qt.ClickFocus)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemHasNoContents, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
@@ -939,10 +940,6 @@ class NodeItem(QGraphicsObject):
             selectedColor = saturated(color, 150)
         palette = create_palette(color, selectedColor)
         self.shapeItem.setPalette(palette)
-
-    def setPalette(self, palette):
-        # TODO: The palette should override the `setColor`
-        raise NotImplementedError
 
     def setTitle(self, title):
         """
@@ -1245,30 +1242,37 @@ class NodeItem(QGraphicsObject):
 
     def mousePressEvent(self, event):
         if self.shapeItem.path().contains(event.pos()):
-            return QGraphicsObject.mousePressEvent(self, event)
+            return super().mousePressEvent(event)
         else:
             event.ignore()
 
     def mouseDoubleClickEvent(self, event):
         if self.shapeItem.path().contains(event.pos()):
-            QGraphicsObject.mouseDoubleClickEvent(self, event)
+            super().mouseDoubleClickEvent(event)
             QTimer.singleShot(0, self.activated.emit)
         else:
             event.ignore()
 
     def contextMenuEvent(self, event):
         if self.shapeItem.path().contains(event.pos()):
-            return QGraphicsObject.contextMenuEvent(self, event)
+            return super().contextMenuEvent(event)
         else:
             event.ignore()
 
     def focusInEvent(self, event):
         self.shapeItem.setHasFocus(True)
-        return QGraphicsObject.focusInEvent(self, event)
+        return super().focusInEvent(event)
 
     def focusOutEvent(self, event):
         self.shapeItem.setHasFocus(False)
-        return QGraphicsObject.focusOutEvent(self, event)
+        return super().focusOutEvent(event)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updatePalette()
+        elif event.type() == QEvent.FontChange:
+            self.__updateFont()
+        super().changeEvent(event)
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedChange:
@@ -1277,7 +1281,15 @@ class NodeItem(QGraphicsObject):
         elif change == QGraphicsItem.ItemPositionHasChanged:
             self.positionChanged.emit()
 
-        return QGraphicsObject.itemChange(self, change, value)
+        return super().itemChange(change, value)
+
+    def __updatePalette(self):
+        self.captionTextItem.setPalette(self.palette())
+
+    def __updateFont(self):
+        self.prepareGeometryChange()
+        self.captionTextItem.setFont(self.font())
+        self.__updateTitleText()
 
 
 TOOLTIP_TEMPLATE = """\

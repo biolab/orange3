@@ -21,8 +21,8 @@ from AnyQt.QtWidgets import (
     QGraphicsTextItem
 )
 from AnyQt.QtGui import (
-    QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QBrush, QIcon,
-    QWhatsThisClickedEvent
+    QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QIcon,
+    QWhatsThisClickedEvent, QPalette
 )
 
 from AnyQt.QtCore import (
@@ -395,7 +395,7 @@ class SchemeEditWidget(QWidget):
         )
 
         scene.setFont(self.font())
-
+        scene.setPalette(self.palette())
         scene.installEventFilter(self)
 
         scene.set_registry(self.__registry)
@@ -973,6 +973,9 @@ class SchemeEditWidget(QWidget):
     def changeEvent(self, event):
         if event.type() == QEvent.FontChange:
             self.__updateFont()
+        elif event.type() == QEvent.PaletteChange:
+            if self.__scene is not None:
+                self.__scene.setPalette(self.palette())
 
         QWidget.changeEvent(self, event)
 
@@ -1650,11 +1653,10 @@ class SchemeEditWidget(QWidget):
 
     def __signalManagerStateChanged(self, state):
         if state == signalmanager.SignalManager.Running:
-            self.__view.setBackgroundBrush(QBrush(Qt.NoBrush))
-#            self.__view.setBackgroundIcon(QIcon())
-        elif state == signalmanager.SignalManager.Paused:
-            self.__view.setBackgroundBrush(QBrush(QColor(235, 235, 235)))
-#            self.__view.setBackgroundIcon(QIcon("canvas_icons:Pause.svg"))
+            role = QPalette.Base
+        else:
+            role = QPalette.Window
+        self.__view.viewport().setBackgroundRole(role)
 
 
 def geometry_from_annotation_item(item):

@@ -14,7 +14,7 @@ from operator import eq, attrgetter
 from AnyQt.QtWidgets import (
     QWidget, QFrame, QSizePolicy, QStyle, QStyleOptionToolButton,
     QStyleOptionToolBox, QScrollArea, QVBoxLayout, QToolButton,
-    QAction, QActionGroup
+    QAction, QActionGroup, QApplication
 )
 from AnyQt.QtGui import (
     QIcon, QFontMetrics, QPainter, QPalette, QBrush, QPen, QColor,
@@ -68,8 +68,29 @@ class ToolBoxTabButton(QToolButton):
         self.__nativeStyling = False
         self.position = QStyleOptionToolBox.OnlyOneTab
         self.selected = QStyleOptionToolBox.NotAdjacent
+        font = kwargs.pop("font", None)
+        palette = kwargs.pop("palette", None)
 
         QToolButton.__init__(self, *args, **kwargs)
+
+        if font is None:
+            self.setFont(QApplication.font("QAbstractButton"))
+            self.setAttribute(Qt.WA_SetFont, False)
+        else:
+            self.setFont(font)
+        if palette is None:
+            self.setPalette(QApplication.palette("QAbstractButton"))
+            self.setAttribute(Qt.WA_SetPalette, False)
+        else:
+            self.setPalette(palette)
+
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self.update()
+
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self.update()
 
     def paintEvent(self, event):
         if self.__nativeStyling:
@@ -88,13 +109,17 @@ class ToolBoxTabButton(QToolButton):
         # highlight brush is used as the background for the icon and background
         # when the tab is expanded and as mouse hover color (lighter).
         brush_highlight = palette.highlight()
+        foregroundrole = QPalette.ButtonText
         if opt.state & QStyle.State_Sunken:
             # State 'down' pressed during a mouse press (slightly darker).
             background_brush = brush_darker(brush_highlight, 110)
+            foregroundrole = QPalette.HighlightedText
         elif opt.state & QStyle.State_MouseOver:
             background_brush = brush_darker(brush_highlight, 95)
+            foregroundrole = QPalette.HighlightedText
         elif opt.state & QStyle.State_On:
             background_brush = brush_highlight
+            foregroundrole = QPalette.HighlightedText
         else:
             # The default button brush.
             background_brush = palette.button()
@@ -154,7 +179,7 @@ class ToolBoxTabButton(QToolButton):
 
         p.save()
         text = fm.elidedText(opt.text, Qt.ElideRight, text_rect.width())
-        p.setPen(QPen(palette.color(QPalette.ButtonText)))
+        p.setPen(QPen(palette.color(foregroundrole)))
         p.setFont(opt.font)
 
         p.drawText(text_rect,

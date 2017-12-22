@@ -250,8 +250,8 @@ class CanvasMainWindow(QMainWindow):
 
         # Bottom tool bar
         self.canvas_toolbar = canvas_tool_dock.toolbar
-        self.canvas_toolbar.setIconSize(QSize(25, 25))
-        self.canvas_toolbar.setFixedHeight(28)
+        self.canvas_toolbar.setIconSize(QSize(24, 24))
+        self.canvas_toolbar.setMinimumHeight(28)
         self.canvas_toolbar.layout().setSpacing(1)
 
         # Widgets tool box

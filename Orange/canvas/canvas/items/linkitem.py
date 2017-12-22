@@ -8,10 +8,12 @@ import math
 from xml.sax.saxutils import escape
 
 from AnyQt.QtWidgets import (
-    QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsObject,
+    QGraphicsItem, QGraphicsEllipseItem, QGraphicsPathItem, QGraphicsWidget,
     QGraphicsTextItem, QGraphicsDropShadowEffect
 )
-from AnyQt.QtGui import QPen, QBrush, QColor, QPainterPath, QTransform
+from AnyQt.QtGui import (
+    QPen, QBrush, QColor, QPainterPath, QTransform, QPalette
+)
 from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF, QEvent
 
 from .nodeitem import SHADOW_COLOR
@@ -269,7 +271,7 @@ class LinkAnchorIndicator(QGraphicsEllipseItem):
         painter.drawEllipse(self.rect())
 
 
-class LinkItem(QGraphicsObject):
+class LinkItem(QGraphicsWidget):
     """
     A Link item in the canvas that connects two :class:`.NodeItem`\s in the
     canvas.
@@ -301,7 +303,7 @@ class LinkItem(QGraphicsObject):
 
     def __init__(self, *args):
         self.__boundingRect = None
-        QGraphicsObject.__init__(self, *args)
+        super().__init__(*args)
         self.setFlag(QGraphicsItem.ItemHasNoContents, True)
         self.setAcceptedMouseButtons(Qt.RightButton | Qt.LeftButton)
         self.setAcceptHoverEvents(True)
@@ -334,6 +336,8 @@ class LinkItem(QGraphicsObject):
         self.prepareGeometryChange()
         self.__updatePen()
         self.__boundingRect = None
+        self.__updatePalette()
+        self.__updateFont()
 
     def setSourceItem(self, item, anchor=None):
         """
@@ -434,20 +438,6 @@ class LinkItem(QGraphicsObject):
                 )
 
         self.__updateCurve()
-
-    def setFont(self, font):
-        """
-        Set the font for the channel names text item.
-        """
-        if font != self.font():
-            self.linkTextItem.setFont(font)
-            self.__updateText()
-
-    def font(self):
-        """
-        Return the font for the channel names text.
-        """
-        return self.linkTextItem.font()
 
     def setChannelNamesVisible(self, visible):
         """
@@ -599,13 +589,20 @@ class LinkItem(QGraphicsObject):
         # is over the 'curveItem', so we install self as an event filter
         # on the LinkCurveItem and listen to its hover events.
         self.curveItem.installSceneEventFilter(self)
-        return QGraphicsObject.hoverEnterEvent(self, event)
+        return super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
         # Remove the event filter to prevent unnecessary work in
         # scene event filter when not needed
         self.curveItem.removeSceneEventFilter(self)
-        return QGraphicsObject.hoverLeaveEvent(self, event)
+        return super().hoverLeaveEvent(event)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.__updatePalette()
+        elif event.type() == QEvent.FontChange:
+            self.__updateFont()
+        super().changeEvent(event)
 
     def sceneEventFilter(self, obj, event):
         if obj is self.curveItem:
@@ -614,7 +611,7 @@ class LinkItem(QGraphicsObject):
             elif event.type() == QEvent.GraphicsSceneHoverLeave:
                 self.setHoverState(False)
 
-        return QGraphicsObject.sceneEventFilter(self, obj, event)
+        return super().sceneEventFilter(obj, event)
 
     def boundingRect(self):
         if self.__boundingRect is None:
@@ -626,7 +623,7 @@ class LinkItem(QGraphicsObject):
 
     def setEnabled(self, enabled):
         """
-        Reimplemented from :class:`QGraphicsObject`
+        Reimplemented from :class:`QGraphicWidget`
 
         Set link enabled state. When disabled the link is rendered with a
         dashed line.
@@ -723,3 +720,10 @@ class LinkItem(QGraphicsObject):
             pen = normal
 
         self.curveItem.setPen(pen)
+
+    def __updatePalette(self):
+        self.linkTextItem.setDefaultTextColor(
+            self.palette().color(QPalette.Text))
+
+    def __updateFont(self):
+        self.linkTextItem.setFont(self.font())
