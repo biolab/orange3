@@ -295,13 +295,9 @@ class SchemeEditWidget(QWidget):
                     triggered=self.showSettings,
                     enabled=False)
 
-        shortcuts = [Qt.Key_Delete,
+        shortcuts = [Qt.Key_Backspace,
+                     Qt.Key_Delete,
                      Qt.ControlModifier + Qt.Key_Backspace]
-
-        if sys.platform == "darwin":
-            # Command Backspace should be the first
-            # (visible shortcut in the menu)
-            shortcuts.reverse()
 
         self.__removeSelectedAction.setShortcuts(shortcuts)
 
