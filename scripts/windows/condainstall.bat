@@ -30,6 +30,13 @@ rem # with a local package, we need to create it manually.
 echo @echo off           > "%PREFIX%\Scripts\conda.bat"
 echo call "%CONDA%" %%* >> "%PREFIX%\Scripts\conda.bat"
 
+rem # same for activate.bat
+rem #
+for %%f in ( "%CONDA%" ) do ( set "CONDA_DIR=%%~dpf" )
+echo @echo off                           > "%PREFIX%\Scripts\activate.bat"
+echo call "%CONDA_DIR%\activate.bat" %%* >> "%PREFIX%\Scripts\activate.bat"
+set CONDA_DIR=
+
 rem # Create .condarc file that includes conda-forge channel
 rem # We need it so add-ons can be installed from conda-forge
 echo Appending conda-forge channel

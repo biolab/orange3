@@ -189,6 +189,10 @@ Var StartMenuFolder
 # - no check box to enable/disable start menu creation
 #   (is controled by the Components Page)
 !define MUI_STARTMENUPAGE_NODISABLE
+# Registry key path where the selected start folder name is stored
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT SHELL_CONTEXT
+!define MUI_STARTMENUPAGE_REGISTRY_KEY ${INSTALL_SETTINGS_KEY}
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME StartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU StartMenuPageID $StartMenuFolder
 
 # Install Files page:
@@ -446,7 +450,7 @@ Section "Python ${PYTHON_VERSION} (${BITS} bit)" SectionPython
         Abort "Python installation failed (error value: $0)"
     ${EndIf}
     ${GetPythonInstall} \
-        "${PYMAJOR}.${PYMINOR}" $BasePythonPrefix $PythonInstallMode
+        "${PYMAJOR}.${PYMINOR}" ${BITS} $BasePythonPrefix $PythonInstallMode
     ${If} $BasePythonPrefix == ""
         Abort "Python installation failed (cannot determine Python \
                installation prefix)."
@@ -639,6 +643,9 @@ Function un.Shortcuts
         ${LogWrite} "Removing Start Menu Shortcuts (from $SMPROGRAMS\$0)"
         DetailPrint "Removing Start Menu shortcuts"
         Delete "$SMPROGRAMS\$0\${LAUNCHER_SHORTCUT_NAME}.lnk"
+!if ${PYINSTALL_TYPE} == Normal
+        Delete "$SMPROGRAMS\$0\${APPNAME} Command Prompt.lnk"
+!endif
         RMDir "$SMPROGRAMS\$0"
     ${EndIf}
     ${LogWrite} "Removing Desktop shortcurt"
@@ -780,8 +787,8 @@ Section Uninstall
     ${LogWrite} "    PythonPrefix: $PythonPrefix"
     ${LogWrite} "    BasePythonPrefix: $BasePythonPrefix"
 
-    Call un.Register
     Call un.Shortcuts
+    Call un.Register
     Call un.Launchers
     Call un.InstallPackages
     Call un.Environment
@@ -811,7 +818,8 @@ Function .onInit
     !insertmacro MULTIUSER_INIT
 
 !if ${PYINSTALL_TYPE} == Normal
-    ${GetPythonInstall} ${PYMAJOR}.${PYMINOR} $BasePythonPrefix $PythonInstallMode
+    ${GetPythonInstall} ${PYMAJOR}.${PYMINOR} ${BITS} \
+        $BasePythonPrefix $PythonInstallMode
     ${LogWrite} "Python Prefix: $BasePythonPrefix"
     ${LogWrite} "Python Install Type: $PythonInstallMode"
     ${If} $BasePythonPrefix != ""
