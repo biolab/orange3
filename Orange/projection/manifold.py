@@ -61,12 +61,12 @@ def torgerson(distances, n_components=2, eigen_solver="auto"):
     if eigen_solver == "arpack":
         v0 = np.random.RandomState(0xD06).uniform(-1, 1, B.shape[0])
         w, v = arpack_eigh(B, k=n_components, v0=v0)
-        assert np.all(np.diff(w) > 0)
+        assert np.all(np.diff(w) >= 0), "w was not in ascending order"
         U, L = v[:, ::-1], w[::-1]
     elif eigen_solver == "lapack":  # lapack (d|s)syevr
         w, v = lapack_eigh(B, overwrite_a=True,
                            eigvals=(max(N - n_components, 0), N - 1))
-        assert np.all(np.diff(w) > 0)
+        assert np.all(np.diff(w) >= 0), "w was not in ascending order"
         U, L = v[:, ::-1], w[::-1]
     else:
         raise ValueError(eigen_solver)
