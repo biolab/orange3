@@ -417,6 +417,15 @@ class TestBincount(unittest.TestCase):
 
         np.testing.assert_equal(bincount(x)[0], expected)
 
+    @dense_sparse
+    def test_all_zeros_or_nans(self, array):
+        """Sparse arrays with only nans with no explicit zeros will have no non
+        zero indices. Check that this counts the zeros properly."""
+        x = array([np.nan] * 5 + [0] * 5)
+        expected = [5]
+
+        np.testing.assert_equal(bincount(x)[0], expected)
+
 
 class TestUnique(unittest.TestCase):
     @dense_sparse
