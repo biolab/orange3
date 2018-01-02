@@ -26,7 +26,9 @@ def dense_sparse(test_case):
 
             return sp_array
 
-        test_case(self, lambda x: np.array(x))
+        test_case(self, np.array)
+        test_case(self, csr_matrix)
+        test_case(self, csc_matrix)
         test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
         test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
 
