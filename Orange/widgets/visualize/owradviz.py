@@ -199,6 +199,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             self.scores = []
             self.rank_model.clear()
         self.last_run_n_attrs = self.n_attrs
+        self.n_attrs_spin.setDisabled(True)
+
+    def stopped(self):
+        self.n_attrs_spin.setDisabled(False)
 
 
 class RadvizInteractiveViewBox(InteractiveViewBox):
