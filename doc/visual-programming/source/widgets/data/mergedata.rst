@@ -83,14 +83,3 @@ The third type of merging is shown in the next workflow. The output consist of
 both inputs, with unknown values assigned where no match was found.
 
 .. figure:: images/MergeData-Example3.png
-
-Hint
-----
-
-If the two data sets consist of equally-named attributes (other than
-the ones used to perform the merging), Orange will check by default for
-consistency of the values of these attributes and report an error in
-case of non-matching values. In order to avoid the consistency checking,
-make sure that new attributes are created for each data set: you may use the
-'*Columns with the same name in different files represent different
-variables*' option in the :doc:`File <../data/file>` widget for loading the data.
