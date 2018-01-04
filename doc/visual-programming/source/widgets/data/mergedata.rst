@@ -48,8 +48,7 @@ Data was to be found, the attribute is removed from available merging attributes
    **Append columns from Extra Data** outputs all instances from
    Data appended by matching instances from Extra Data. When no match is found,
    unknown values are appended.
-   **Find matching rows** outputs similar as above,
-   except hen no match is found, instances are excluded.
+   **Find matching rows** outputs only matching instances.
    **Concatenate tables, merge rows** outputs all instances from both inputs,
    even though the match may not be found. In that case unknown values are
    assigned.
