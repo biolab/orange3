@@ -418,8 +418,6 @@ class CorrelationDistanceModel(DistanceModel):
         self.absolute = absolute
 
     def compute_distances(self, x1, x2):
-        if x2 is None:
-            x2 = x1
         rho = self.compute_correlation(x1, x2)
         if self.absolute:
             return (1. - np.abs(rho)) / 2.
@@ -432,11 +430,29 @@ class CorrelationDistanceModel(DistanceModel):
 
 class SpearmanModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
-        rho = stats.spearmanr(x1, x2, axis=self.axis)[0]
-        if isinstance(rho, np.float):
-            return np.array([[rho]])
-        slc = x1.shape[1 - self.axis]
-        return rho[:slc, slc:]
+        n1 = x1.shape[1 - self.axis]
+        n2 = x2.shape[1 - self.axis] if x2 is not None else 0
+        if x2 is None:
+            if n1 == 2:
+                # Special case to properly fill degenerate self correlations
+                # (nan, inf on the diagonals)
+                rho = stats.spearmanr(x1, x1, axis=self.axis)[0]
+                assert rho.shape == (4, 4)
+                rho = rho[:2, :2].copy()
+            else:
+                # scalar if n1 == 1
+                rho = stats.spearmanr(x1, axis=self.axis)[0]
+            return np.atleast_2d(rho)
+        else:
+            # this computes too much (most of it is thrown away)
+            rho = stats.spearmanr(x1, x2, axis=self.axis)[0]
+            if np.isscalar(rho):
+                # scalar if n1 + n2 <= 2
+                assert n1 + n2 <= 2
+                return np.atleast_2d(rho)
+            else:
+                assert rho.shape == (n1 + n2, n1 + n2)
+                return rho[:n1, n1:].copy()
 
 
 class CorrelationDistance(Distance):
@@ -455,10 +471,18 @@ class SpearmanRAbsolute(CorrelationDistance):
 
 class PearsonModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
-        if self.axis == 0:
-            x1 = x1.T
-            x2 = x2.T
-        return np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
+        if x2 is None:
+            c = np.corrcoef(x1, rowvar=self.axis == 1)
+            return np.atleast_2d(c)
+        else:
+            # this computes too much (most of it is thrown away)`
+            c = np.corrcoef(x1, x2, rowvar=self.axis == 1)
+            if np.isscalar(c):
+                return np.atleast_2d(c)
+            n1 = x1.shape[1 - self.axis]
+            n2 = x2.shape[1 - self.axis]
+            assert c.shape[0] == c.shape[1] == n1 + n2
+            return c[:n1, n1:].copy()
 
 
 class PearsonR(CorrelationDistance):
