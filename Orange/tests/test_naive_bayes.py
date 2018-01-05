@@ -37,7 +37,9 @@ class TestNaiveBayesLearner(unittest.TestCase):
         vals, probs = self.model(X, self.model.ValueProbs)
 
     def test_degenerate(self):
-        d = Domain((ContinuousVariable(name="A"), ContinuousVariable(name="B"), ContinuousVariable(name="C")),
+        d = Domain((ContinuousVariable(name="A"),
+                    ContinuousVariable(name="B"),
+                    ContinuousVariable(name="C")),
                     DiscreteVariable(name="CLASS", values=["M", "F"]))
         t = Table(d, [[0,1,0,0], [0,1,0,1], [0,1,0,1]])
         nb = NaiveBayesLearner()

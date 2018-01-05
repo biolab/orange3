@@ -256,7 +256,9 @@ class TestDomainInit(unittest.TestCase):
 
     def test_contains(self):
         d = Domain((age, gender, income), metas=(ssn,))
-        for var in ["AGE", age, 0, np.int_(0), "income", income, 2, np.int_(2), "SSN", ssn, -1, np.int_(-1)]:
+        for var in ["AGE", age, 0, np.int_(0),
+                    "income", income, 2, np.int_(2),
+                    "SSN", ssn, -1, np.int_(-1)]:
             self.assertIn(var, d)
 
         for var in ["no_such_thing", race, 3, np.int_(3), -2, np.int_(-2)]:
@@ -384,10 +386,11 @@ class TestDomainInit(unittest.TestCase):
         g = Domain((), metas=(age, gender, ssn))
         h = Domain((gender,), (race, new_income), metas=(age, new_income, ssn))
 
-        for conver, domain, attr, class_vars, metas in ((d, e, [1, -2], [], [0, 1, -1]),
-                                                        (d, f, [1], [-2, 2], [0, 2, -1]),
-                                                        (f, g, [], [], [-1, 0, -3]),
-                                                        (g, h, [-2], [None, compute_value], [-1, compute_value, -3])):
+        for conver, domain, attr, class_vars, metas in (
+                (d, e, [1, -2], [], [0, 1, -1]),
+                (d, f, [1], [-2, 2], [0, 2, -1]),
+                (f, g, [], [], [-1, 0, -3]),
+                (g, h, [-2], [None, compute_value], [-1, compute_value, -3])):
             to_domain = domain.get_conversion(conver)
             self.assertIs(to_domain.source, conver)
             self.assertEqual(to_domain.attributes, attr)

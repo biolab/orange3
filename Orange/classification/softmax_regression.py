@@ -28,8 +28,10 @@ class SoftmaxRegressionLearner(Learner):
         data and keeping parameters small. Higher values of lambda\_ force
         parameters to be smaller.
 
-    preprocessors : list, optional (default=[RemoveNaNClasses(), RemoveNaNColumns(), Impute(), Continuize(), Normalize()])
+    preprocessors : list, optional
         Preprocessors are applied to data before training or testing. Default preprocessors:
+        Defaults to
+        `[RemoveNaNClasses(), RemoveNaNColumns(), Impute(), Continuize(), Normalize()]`
 
         - remove columns with all values as NaN
         - replace NaN values with suitable values
