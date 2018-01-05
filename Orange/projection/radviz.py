@@ -2,6 +2,8 @@ import numpy as np
 
 from Orange.data import Domain
 
+__all__ = ["radviz"]
+
 
 def radviz(data, attrs, points=None):
     x = data.transform(domain=Domain(attrs)).X
