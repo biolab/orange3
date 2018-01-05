@@ -44,6 +44,7 @@ log = logging.getLogger(__name__)
 
 # The modules below are imported on the fly (and used just there) for clarity
 # pylint: disable=wrong-import-order
+# pylint: disable=wrong-import-position
 
 # Allow termination with CTRL + C
 import signal

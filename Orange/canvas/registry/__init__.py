@@ -15,6 +15,16 @@ The :class:`WidgetDiscovery` can be used to populate the registry.
 
 import logging
 
+from .description import (
+    WidgetDescription, CategoryDescription,
+    InputSignal, OutputSignal
+)
+
+from .base import WidgetRegistry, VERSION_HEX
+from . import discovery
+from .discovery import WidgetDiscovery
+
+
 # Color names that can be used in widget/category descriptions
 # as background color.
 NAMED_COLORS = \
@@ -42,15 +52,6 @@ NAMED_COLORS = \
 # default color when the category does not provide it
 DEFAULT_COLOR = "light-yellow"
 
-
-from .description import (
-    WidgetDescription, CategoryDescription,
-    InputSignal, OutputSignal
-)
-
-from .base import WidgetRegistry, VERSION_HEX
-from . import discovery
-from .discovery import WidgetDiscovery
 
 log = logging.getLogger(__name__)
 

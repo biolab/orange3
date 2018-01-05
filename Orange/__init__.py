@@ -1,3 +1,6 @@
+# This module is a mixture of imports and code, so we allow import anywhere
+# pylint: disable=wrong-import-position
+
 import pickle
 from unittest.mock import patch
 # Needed because the pure-Python Unpickler that dill uses can also fail

@@ -32,6 +32,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
 from Orange.widgets.widget import Msg, Input, Output
+from Orange.widgets.visualize.owheatmap import scaled
 
 
 ROW_NAMES_WIDTH = 200
@@ -1070,9 +1071,6 @@ class BarPlotItem(QGraphicsWidget):
         for i, (v, item) in enumerate(zip(datascaled, self.__items)):
             item.setRect(QRectF(base, rect.top() + i * (h + spacing),
                                 v - base, h).normalized())
-
-
-from Orange.widgets.visualize.owheatmap import scaled
 
 
 class TextListWidget(QGraphicsWidget):

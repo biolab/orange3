@@ -2,6 +2,10 @@
 Orange Canvas Main Window
 
 """
+
+# The import section is mixed with conditions and exception handlers, hence:
+# pylint: disable=wrong-import-position
+
 import os
 import sys
 import logging
