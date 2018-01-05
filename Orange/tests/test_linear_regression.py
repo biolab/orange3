@@ -2,7 +2,10 @@
 # pylint: disable=missing-docstring
 
 import unittest
+
 import numpy as np
+from sklearn import linear_model
+
 from Orange.data import Table
 from Orange.regression import (LinearRegressionLearner,
                                RidgeRegressionLearner,
@@ -11,7 +14,6 @@ from Orange.regression import (LinearRegressionLearner,
                                ElasticNetCVLearner,
                                MeanLearner)
 from Orange.evaluation import CrossValidation, RMSE
-from sklearn import linear_model
 
 
 class TestLinearRegressionLearner(unittest.TestCase):

@@ -11,10 +11,7 @@ import itertools
 
 import pkg_resources
 
-from AnyQt.QtGui import (
-    QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
-)
-
+from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QCoreApplication, QPoint, QRect, QSettings
 
 from .utils.settings import Settings, config_slot

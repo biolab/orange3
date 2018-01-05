@@ -3,12 +3,12 @@ Unittests for PrewiewBrowser widget.
 
 """
 
-from ...gui import test
+import pkg_resources
 
+from ...gui import test
 from ..previewbrowser import PreviewBrowser
 from ..previewmodel import PreviewItem, PreviewModel
 
-import pkg_resources
 
 svg1 = pkg_resources.resource_string("Orange.canvas",
                                      "icons/default-category.svg")

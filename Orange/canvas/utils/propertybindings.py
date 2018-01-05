@@ -7,14 +7,12 @@ Qt Property Bindings (`propertybindings`)
 
 import sys
 import ast
-
 from collections import defaultdict
 from operator import add
+from functools import reduce
 
 from AnyQt.QtCore import QObject, QEvent, QT_VERSION
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
-from functools import reduce
 
 
 def find_meta_property(obj, name):
