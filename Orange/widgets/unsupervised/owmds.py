@@ -216,6 +216,8 @@ class OWMDS(OWWidget):
         g = self.graph.gui
         box = g.point_properties_box(self.controlArea)
         self.models = g.points_models
+        self.models[2].order = \
+            self.models[2].order[:1] + ("Stress", ) + self.models[2].order[1:]
 
         gui.hSlider(box, self, "connected_pairs", label="Show similar pairs:", minValue=0,
                     maxValue=20, createLabel=False, callback=self._on_connected_changed)
@@ -270,7 +272,6 @@ class OWMDS(OWWidget):
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
-        self.models[2][:] = self.models[2][0:1] + ["Stress"] + self.models[2][1:]
 
     def prepare_data(self):
         pass

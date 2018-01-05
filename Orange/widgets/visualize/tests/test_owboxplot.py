@@ -33,11 +33,16 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.widget.group_vars), 2)
         self.assertFalse(self.widget.display_box.isHidden())
         self.assertTrue(self.widget.stretching_box.isHidden())
+
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(len(self.widget.attrs), 0)
-        self.assertEqual(len(self.widget.group_vars), 0)
+        self.assertEqual(len(self.widget.group_vars), 1)
+        self.assertFalse(self.widget.group_view.isEnabled())
         self.assertTrue(self.widget.display_box.isHidden())
         self.assertFalse(self.widget.stretching_box.isHidden())
+
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.group_view.isEnabled())
 
     def test_input_data_missings_cont_group_var(self):
         """Check widget with continuous data with missing values and group variable"""
