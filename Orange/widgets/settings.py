@@ -1227,3 +1227,10 @@ def migrate_str_to_variable(settings, names=None):
     else:
         for name in names:
             _fix(name)
+
+def migrate_var_idx(context_values, old_name, options, new_name, model):
+    var_idx, *_ = context_values.pop(old_name, (None,))
+    if isinstance(var_idx, int) and var_idx < len(options):
+        var = options[var_idx]
+        if var in model:
+            context_values[new_name] = (var, vartype(var))

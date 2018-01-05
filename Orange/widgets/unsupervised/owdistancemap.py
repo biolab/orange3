@@ -3,11 +3,10 @@ import itertools
 from functools import reduce
 from operator import iadd
 
-import numpy
+import numpy as np
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QGraphicsWidget,
-    QApplication
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
@@ -28,7 +27,8 @@ from Orange.widgets.utils import itemmodels, colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.widget import Input, Output
-from .owhierarchicalclustering import DendrogramWidget, GraphicsSimpleTextList
+from Orange.widgets.unsupervised.owhierarchicalclustering import DendrogramWidget,\
+    GraphicsSimpleTextList
 
 def _remove_item(item):
     item.setParentItem(None)
@@ -181,7 +181,7 @@ class DistanceMapItem(pg.ImageItem):
             return -1, -1
         else:
             h, w = self.image.shape
-            i, j = numpy.floor([pos.y(), pos.x()])
+            i, j = np.floor([pos.y(), pos.x()])
             if 0 <= i < h and 0 <= j < w:
                 return int(i), int(j)
             else:
@@ -193,9 +193,9 @@ class DistanceMapItem(pg.ImageItem):
             return -1, -1
         else:
             h, w = self.image.shape
-            i, j = numpy.floor([pos.y(), pos.x()])
-            i = numpy.clip(i, 0, h - 1)
-            j = numpy.clip(j, 0, w - 1)
+            i, j = np.floor([pos.y(), pos.x()])
+            i = np.clip(i, 0, h - 1)
+            j = np.clip(j, 0, w - 1)
             return int(i), int(j)
 
     def __clearSelections(self):
@@ -552,10 +552,10 @@ class OWDistanceMap(widget.OWWidget):
                 tree = self._ordered_cluster_tree()
 
             leaves = hierarchical.leaves(tree)
-            indices = numpy.array([leaf.value.index for leaf in leaves])
+            indices = np.array([leaf.value.index for leaf in leaves])
             X = self.matrix
-            self._sorted_matrix = X[indices[:, numpy.newaxis],
-                                    indices[numpy.newaxis, :]]
+            self._sorted_matrix = X[indices[:, np.newaxis],
+                                    indices[np.newaxis, :]]
             self._sort_indices = indices
 
     def _invalidate_annotations(self):
@@ -568,8 +568,8 @@ class OWDistanceMap(widget.OWWidget):
         elif self.annotation_idx == 1:  # Enumeration
             labels = [str(i + 1) for i in range(self.matrix.shape[0])]
         elif self.annot_combo.model()[self.annotation_idx] == "Attribute names":
-                attr = self.matrix.row_items.domain.attributes
-                labels = [str(attr[i]) for i in range(self.matrix.shape[0])]
+            attr = self.matrix.row_items.domain.attributes
+            labels = [str(attr[i]) for i in range(self.matrix.shape[0])]
         elif self.annotation_idx == 2 and \
                 isinstance(self.items, widget.AttributeList):
             labels = [v.name for v in self.items]
@@ -597,17 +597,17 @@ class OWDistanceMap(widget.OWWidget):
 
     def _update_color(self):
         if self.matrix_item:
-            name, colors = self.palettes[self.colormap]
+            _, colors = self.palettes[self.colormap]
             n, colors = max(colors.items())
-            colors = numpy.array(colors, dtype=numpy.ubyte)
+            colors = np.array(colors, dtype=np.ubyte)
             low, high = self.color_low * 255, self.color_high * 255
-            points = numpy.linspace(low, high, n)
-            space = numpy.linspace(0, 255, 255)
+            points = np.linspace(low, high, n)
+            space = np.linspace(0, 255, 255)
 
-            r = numpy.interp(space, points, colors[:, 0], left=255, right=0)
-            g = numpy.interp(space, points, colors[:, 1], left=255, right=0)
-            b = numpy.interp(space, points, colors[:, 2], left=255, right=0)
-            colortable = numpy.c_[r, g, b]
+            r = np.interp(space, points, colors[:, 0], left=255, right=0)
+            g = np.interp(space, points, colors[:, 1], left=255, right=0)
+            b = np.interp(space, points, colors[:, 2], left=255, right=0)
+            colortable = np.c_[r, g, b]
             self.matrix_item.setLookupTable(colortable)
 
     def _invalidate_selection(self):
@@ -707,7 +707,7 @@ class TextList(GraphicsSimpleTextList):
 
 def palette_gradient(colors, discrete=False):
     n = len(colors)
-    stops = numpy.linspace(0.0, 1.0, n, endpoint=True)
+    stops = np.linspace(0.0, 1.0, n, endpoint=True)
     gradstops = [(float(stop), color) for stop, color in zip(stops, colors)]
     grad = QLinearGradient(QPointF(0, 0), QPointF(1, 0))
     grad.setStops(gradstops)
@@ -733,7 +733,7 @@ def init_color_combo(cb, palettes, iconsize):
     iconsize = cb.iconSize()
 
     for name, palette in palettes:
-        n, colors = max(palette.items())
+        _, colors = max(palette.items())
         colors = [QColor(*c) for c in colors]
         cb.addItem(QIcon(palette_pixmap(colors, iconsize)), name,
                    palette)
