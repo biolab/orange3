@@ -43,6 +43,10 @@ from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
 from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
     SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
 
+__all__ = ["AddVariablesDialog", "VariablesSelection",
+           "OrientedWidget", "OWToolbar", "StateButtonContainer",
+           "OWAction", "OWButton", "OWPlotGUI"]
+
 
 SIZE_POLICY_ADAPTING = (QSizePolicy.Expanding, QSizePolicy.Ignored)
 SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)

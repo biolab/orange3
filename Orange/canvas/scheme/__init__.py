@@ -21,4 +21,6 @@ from .annotations import (
     BaseSchemeAnnotation, SchemeArrowAnnotation, SchemeTextAnnotation
 )
 
+# the module contains only exceptions classes; all need to be exposed
+# pylint: disable=wildcard-import
 from .errors import *

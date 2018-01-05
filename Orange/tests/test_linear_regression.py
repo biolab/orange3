@@ -4,7 +4,6 @@
 import unittest
 import numpy as np
 from Orange.data import Table
-from Orange.preprocess import *
 from Orange.regression import (LinearRegressionLearner,
                                RidgeRegressionLearner,
                                LassoRegressionLearner,
