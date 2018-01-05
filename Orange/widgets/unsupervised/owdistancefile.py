@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
 from AnyQt.QtCore import QTimer
