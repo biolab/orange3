@@ -30,7 +30,7 @@ from Orange.data import Domain, Table, DiscreteVariable, StringVariable, \
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
-from Orange.clustering import hierarchical
+from Orange.clustering import hierarchical, kmeans
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -110,8 +110,6 @@ def barycenter(a, axis=0):
         weights[:, mask] = 1
 
     return np.average(X, weights=weights, axis=axis)
-
-from Orange.clustering import kmeans
 
 
 def kmeans_compress(X, k=50):

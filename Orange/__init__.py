@@ -1,3 +1,6 @@
+# This module is a mixture of imports and code, so we allow import anywhere
+# pylint: disable=wrong-import-position
+
 from Orange import data
 
 from .misc.lazy_module import _LazyModule
