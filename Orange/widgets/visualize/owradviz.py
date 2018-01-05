@@ -17,11 +17,11 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 
 from sklearn.model_selection import cross_val_score
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.data.sql.table import SqlTable
-from Orange.preprocess.score import ReliefF
+from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import radviz
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.gui import OWComponent
@@ -82,7 +82,8 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         data = self.master.data.transform(Domain(attributes=attrs, class_vars=self.attr_color))
         self.data = data
         self.valid_data = np.hstack((~np.isnan(data.X), ~np.isnan(data.Y.reshape(len(data.Y), 1))))
-        weights = ReliefF(n_iterations=100, k_nearest=self.minK)(data)
+        relief = ReliefF if self.attr_color.is_discrete else RReliefF
+        weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         attrs = sorted(zip(weights, attrs), key=lambda x: (-x[0], x[1].name))
         self.attr_ordering = attr_ordering = [a for _, a in attrs]
         return attr_ordering
@@ -104,7 +105,8 @@ class RadvizVizRank(VizRankDialog, OWComponent):
                                     replace=False)
             x = x[rand]
             y = y[rand]
-        neigh = KNeighborsClassifier(n_neighbors=3)
+        neigh = KNeighborsClassifier(n_neighbors=3) if self.attr_color.is_discrete else \
+            KNeighborsRegressor(n_neighbors=3)
         assert ~(np.isnan(x).any(axis=None) | np.isnan(x).any(axis=None))
         neigh.fit(x, y)
         with warnings.catch_warnings():
@@ -549,13 +551,8 @@ class OWRadviz(widget.OWWidget):
         is_enabled = self.data is not None and not self.data.is_sparse() and \
                      (len(self.model_other) + len(self.model_selected)) > 3 and len(self.data) > 1
         self.btn_vizrank.setEnabled(
-            is_enabled and attr_color is not None and attr_color.is_discrete
+            is_enabled and attr_color is not None
             and not np.isnan(self.data.get_column_view(attr_color)[0].astype(float)).all())
-        if is_enabled and (attr_color is None or
-                           (attr_color is not None and not attr_color.is_discrete)):
-            self.btn_vizrank.setToolTip("Categorical color variable has to be selected.")
-        else:
-            self.btn_vizrank.setToolTip("")
         self.vizrank.initialize()
 
     @Inputs.data
