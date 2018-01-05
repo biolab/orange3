@@ -213,7 +213,8 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.display_box = gui.vBox(
             self.controlArea, "Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
+            addSpace=False)
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.display_changed)
@@ -225,13 +226,15 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.stretching_box = box = gui.vBox(
             self.controlArea, box="Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.stretching_box.sizeHint = self.display_box.sizeHint
         gui.checkBox(
             box, self, 'stretched', "Stretch bars",
             callback=self.display_changed)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
             callback=self.display_changed)
+        gui.rubber(box)
 
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
