@@ -6,10 +6,9 @@ import unittest
 import unittest.mock
 
 import numpy as np
-from Orange.data.sql.backend.base import BackendError
-
 from numpy.testing import assert_almost_equal
 
+from Orange.data.sql.backend.base import BackendError
 from Orange.data import filter, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Table, Domain
 from Orange.data.sql.table import SqlTable

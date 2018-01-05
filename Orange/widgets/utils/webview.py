@@ -19,8 +19,6 @@ from urllib.request import pathname2url
 import numpy as np
 import sip
 
-from Orange.util import inherit_docstrings, OrangeDeprecationWarning
-
 from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, QSize, QEventLoop, \
     pyqtProperty, pyqtSlot, pyqtSignal
 from AnyQt.QtGui import QColor
@@ -39,6 +37,7 @@ try:
 except ImportError:
     HAVE_WEBENGINE = False
 
+from Orange.util import inherit_docstrings, OrangeDeprecationWarning
 
 _WEBVIEW_HELPERS = join(dirname(__file__), '_webview', 'helpers.js')
 _WEBENGINE_INIT_WEBCHANNEL = join(dirname(__file__), '_webview', 'init-webengine-webchannel.js')

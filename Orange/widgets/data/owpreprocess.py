@@ -21,7 +21,6 @@ from AnyQt.QtCore import (
 
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \

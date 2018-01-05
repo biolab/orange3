@@ -25,7 +25,6 @@ from .description import (
 
 from . import VERSION_HEX
 from . import cache, WidgetRegistry
-import collections
 
 log = logging.getLogger(__name__)
 

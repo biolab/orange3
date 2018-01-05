@@ -4,12 +4,10 @@
 import os
 import tempfile
 import unittest
-import Orange.data._io as _io
 
 import numpy as np
-import scipy.sparse as sp
 
-from Orange.data import ContinuousVariable, DiscreteVariable
+import Orange.data._io as _io
 
 
 simple_file = """\

@@ -1,8 +1,8 @@
 from collections import Iterable
 from numbers import Real
+import zlib
 
 import numpy as np
-import zlib
 
 from Orange import data
 
