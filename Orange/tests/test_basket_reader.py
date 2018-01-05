@@ -3,7 +3,8 @@
 
 import io
 import functools
-import os, tempfile
+import os
+import tempfile
 import unittest
 
 import numpy as np
