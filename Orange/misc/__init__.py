@@ -9,5 +9,6 @@ def import_late_warning(name):
     except ImportError:
         class Warn:
             def __getattr__(self, val):
-                raise ImportError("Please install package '" + name + "' to use this functionality.")
+                raise ImportError("Install package '" + name
+                                  + "' to use this functionality.")
         return Warn()

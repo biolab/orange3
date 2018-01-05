@@ -52,17 +52,26 @@ ScoreMeta = namedtuple("score_meta", ["name", "shortname", "scorer", 'problem_ty
 
 # Default scores.
 CLS_SCORES = [
-    ScoreMeta("Information Gain", "Info. gain", score.InfoGain, ProblemType.CLASSIFICATION, False),
-    ScoreMeta("Information Gain Ratio", "Gain ratio", score.GainRatio, ProblemType.CLASSIFICATION, True),
-    ScoreMeta("Gini Decrease", "Gini", score.Gini, ProblemType.CLASSIFICATION, True),
-    ScoreMeta("ANOVA", "ANOVA", score.ANOVA, ProblemType.CLASSIFICATION, False),
-    ScoreMeta("χ²", "χ²", score.Chi2, ProblemType.CLASSIFICATION, False),
-    ScoreMeta("ReliefF", "ReliefF", score.ReliefF, ProblemType.CLASSIFICATION, False),
-    ScoreMeta("FCBF", "FCBF", score.FCBF, ProblemType.CLASSIFICATION, False)
+    ScoreMeta("Information Gain", "Info. gain",
+              score.InfoGain, ProblemType.CLASSIFICATION, False),
+    ScoreMeta("Information Gain Ratio", "Gain ratio",
+              score.GainRatio, ProblemType.CLASSIFICATION, True),
+    ScoreMeta("Gini Decrease", "Gini",
+              score.Gini, ProblemType.CLASSIFICATION, True),
+    ScoreMeta("ANOVA", "ANOVA",
+              score.ANOVA, ProblemType.CLASSIFICATION, False),
+    ScoreMeta("χ²", "χ²",
+              score.Chi2, ProblemType.CLASSIFICATION, False),
+    ScoreMeta("ReliefF", "ReliefF",
+              score.ReliefF, ProblemType.CLASSIFICATION, False),
+    ScoreMeta("FCBF", "FCBF",
+              score.FCBF, ProblemType.CLASSIFICATION, False)
 ]
 REG_SCORES = [
-    ScoreMeta("Univariate Regression", "Univar. reg.", score.UnivariateLinearRegression, ProblemType.REGRESSION, True),
-    ScoreMeta("RReliefF", "RReliefF", score.RReliefF, ProblemType.REGRESSION, True)
+    ScoreMeta("Univariate Regression", "Univar. reg.",
+              score.UnivariateLinearRegression, ProblemType.REGRESSION, True),
+    ScoreMeta("RReliefF", "RReliefF",
+              score.RReliefF, ProblemType.REGRESSION, True)
 ]
 SCORES = CLS_SCORES + REG_SCORES
 
@@ -434,7 +443,8 @@ class OWRank(OWWidget):
         try:
             sort_column, sort_order = self.sorting
             if sort_column < len(labels):
-                self.ranksModel.sort(sort_column + 1, sort_order)  # +1 for '#' (discrete count) column
+                # adds 1 for '#' (discrete count) column
+                self.ranksModel.sort(sort_column + 1, sort_order)
                 self.ranksView.horizontalHeader().setSortIndicator(sort_column + 1, sort_order)
         except ValueError:
             pass

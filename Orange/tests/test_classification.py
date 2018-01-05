@@ -304,10 +304,12 @@ class LearnerAccessibility(unittest.TestCase):
                 s = pickle.dumps(model, 0)
                 model2 = pickle.loads(s)
 
-                np.testing.assert_almost_equal(Table(model.domain, ds).X, Table(model2.domain, ds).X)
-                np.testing.assert_almost_equal(model(ds), model2(ds),
-                                               err_msg='%s does not return same values when unpickled %s' % (learner.__class__.__name__, ds.name))
-                #print('%s on %s works' % (learner, ds.name))
+                np.testing.assert_almost_equal(
+                    Table(model.domain, ds).X, Table(model2.domain, ds).X)
+                np.testing.assert_almost_equal(
+                    model(ds), model2(ds),
+                    err_msg='%s does not return same values when unpickled %s'
+                            % (learner.__class__.__name__, ds.name))
 
     def test_adequacy_all_learners(self):
         for learner in self.all_learners():

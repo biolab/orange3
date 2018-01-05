@@ -125,50 +125,48 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
         buttBox = gui.vBox(self.mainArea, boxCaption)
         box = gui.hBox(buttBox)
 
-        self.__dict__["cont" + paletteName + "Left"] = ColorButton(self, box, color=QColor(initialColor1))
-        self.__dict__["cont" + paletteName + "View"] = PaletteView(box)
-        self.__dict__["cont" + paletteName + "Right"] = ColorButton(self, box, color=QColor(initialColor2))
+        def _set(keypart, val):
+            self.__dict__["cont{}{}".format(paletteName, keypart)] = val
 
-        self.__dict__["cont" + paletteName + "passThroughBlack"] = passThroughBlack
-        self.__dict__["cont" + paletteName + "passThroughBlackCheckbox"] = gui.checkBox(buttBox, self,
-                                                                                        "cont" + paletteName + "passThroughBlack",
-                                                                                        "Pass through black",
-                                                                                        callback=self.colorSchemaChange)
+        _set("Left", ColorButton(self, box, color=QColor(initialColor1)))
+        _set("View", PaletteView(box))
+        _set("Right", ColorButton(self, box, color=QColor(initialColor2)))
+        _set("passThroughBlack", passThroughBlack)
+        _set("passThroughBlackCheckbox", gui.checkBox(
+            buttBox, self, "cont" + paletteName + "passThroughBlack",
+            "Pass through black", callback=self.colorSchemaChange))
         self.contPaletteNames.append(paletteName)
 
-    def createExtendedContinuousPalette(self, paletteName, boxCaption,
-                                        passThroughColors=0, initialColor1=Qt.white,
-                                        initialColor2=Qt.black,
-                                        extendedPassThroughColors=((Qt.red, 1),
-                                                                   (Qt.black, 1),
-                                                                   (Qt.green, 1))):
+    def createExtendedContinuousPalette(
+            self, paletteName, boxCaption,
+            passThroughColors=0, initialColor1=Qt.white, initialColor2=Qt.black,
+            extendedPassThroughColors=((Qt.red, 1), (Qt.black, 1), (Qt.green, 1))):
         buttBox = gui.vBox(self.mainArea, boxCaption)
         box = gui.hBox(buttBox)
 
-        self.__dict__["exCont" + paletteName + "Left"] = ColorButton(self, box, color=QColor(initialColor1))
-        self.__dict__["exCont" + paletteName + "View"] = PaletteView(box)
-        self.__dict__["exCont" + paletteName + "Right"] = ColorButton(self, box, color=QColor(initialColor2))
+        def _set(keypart, val):
+            self.__dict__["exCont{}{}".format(paletteName, keypart)] = val
 
-        self.__dict__["exCont" + paletteName + "passThroughColors"] = passThroughColors
-        self.__dict__["exCont" + paletteName + "passThroughColorsCheckbox"] = gui.checkBox(buttBox, self,
-                                                                                           "exCont" + paletteName + "passThroughColors",
-                                                                                           "Use pass-through colors",
-                                                                                           callback=self.colorSchemaChange)
+        _set("Left", ColorButton(self, box, color=QColor(initialColor1)))
+        _set("View", PaletteView(box))
+        _set("Right", ColorButton(self, box, color=QColor(initialColor2)))
+        _set("passThroughColors", passThroughColors)
+        _set("passThroughColorsCheckbox", gui.checkBox(buttBox, self,
+             "exCont" + paletteName + "passThroughColors",
+             "Use pass-through colors",
+             callback=self.colorSchemaChange))
 
         box = gui.hBox(buttBox, "Pass-through colors")
         for i, (color, check) in enumerate(extendedPassThroughColors):
-            self.__dict__["exCont" + paletteName + "passThroughColor" + str(i)] = check
-            self.__dict__["exCont" + paletteName + "passThroughColor" + str(i) + "Checkbox"] = cb = gui.checkBox(box,
-                                                                                                                 self,
-                                                                                                                 "exCont" + paletteName + "passThroughColor" + str(
-                                                                                                                     i),
-                                                                                                                 "",
-                                                                                                                 tooltip="Use color",
-                                                                                                                 callback=self.colorSchemaChange)
-            self.__dict__["exCont" + paletteName + "color" + str(i)] = ColorButton(self, box, color=QColor(color))
+            _set("passThroughColor" + str(i), check)
+            _set("passThroughColor" + str(i) + "Checkbox", gui.checkBox(
+                box, self,
+                "exCont" + paletteName + "passThroughColor" + str(i),
+                "", tooltip="Use color", callback=self.colorSchemaChange))
+            _set("color" + str(i), ColorButton(self, box, color=QColor(color)))
             if i < len(extendedPassThroughColors) - 1:
                 gui.rubber(box)
-        self.__dict__["exCont" + paletteName + "colorCount"] = len(extendedPassThroughColors)
+        _set("colorCount", len(extendedPassThroughColors))
         self.exContPaletteNames.append(paletteName)
 
 
@@ -176,21 +174,28 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
     # DISCRETE COLOR PALETTE
     # #####################################################
     def createDiscretePalette(self, paletteName, boxCaption, rgbColors=DefaultRGBColors):
+        def _set(keypart, val):
+            self.__dict__["disc{}{}".format(paletteName, keypart)] = val
+
         vbox = gui.vBox(self.mainArea, boxCaption)
-        self.__dict__["disc" + paletteName + "View"] = PaletteView(vbox)
-        self.__dict__["disc" + paletteName + "View"].rgbColors = rgbColors
+        paletteView = PaletteView(vbox)
+        paletteView.rgbColors = rgbColors
+        _set("View", paletteView)
 
         hbox = gui.hBox(vbox)
-        self.__dict__["disc" + paletteName + "EditButt"] = gui.button(hbox, self, "Edit palette", self.editPalette,
-                                                                      tooltip="Edit the order and colors of the palette",
-                                                                      toggleButton=1)
-        self.__dict__["disc" + paletteName + "LoadButt"] = gui.button(hbox, self, "Load palette", self.loadPalette,
-                                                                      tooltip="Load a predefined color palette",
-                                                                      toggleButton=1)
+        _set("EditButt", gui.button(
+            hbox, self, "Edit palette", self.editPalette,
+            tooltip="Edit the order and colors of the palette", toggleButton=1))
+        _set("LoadButt", gui.button(
+            hbox, self, "Load palette", self.loadPalette,
+            tooltip="Load a predefined color palette", toggleButton=1))
         self.discPaletteNames.append(paletteName)
 
 
     def editPalette(self):
+        def _set(keypart, val):
+            self.__dict__["disc{}{}".format(paletteName, keypart)] = val
+
         for paletteName in self.discPaletteNames:
             if self.__dict__["disc" + paletteName + "EditButt"].isChecked():
                 colors = self.__dict__["disc" + paletteName + "View"].rgbColors
@@ -244,15 +249,19 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
         return self.colorSchemas
 
     def getCurrentState(self):
-        l1 = [(name, self.qRgbFromQColor(self.__dict__["butt" + name].getColor())) for name in self.colorButtonNames]
+        l1 = [(name, self.qRgbFromQColor(self.__dict__["butt" + name].getColor()))
+              for name in self.colorButtonNames]
         l2 = [(name, (self.qRgbFromQColor(self.__dict__["cont" + name + "Left"].getColor()),
                       self.qRgbFromQColor(self.__dict__["cont" + name + "Right"].getColor()),
-                      self.__dict__["cont" + name + "passThroughBlack"])) for name in self.contPaletteNames]
-        l3 = [(name, self.__dict__["disc" + name + "View"].rgbColors) for name in self.discPaletteNames]
+                      self.__dict__["cont" + name + "passThroughBlack"]))
+              for name in self.contPaletteNames]
+        l3 = [(name, self.__dict__["disc" + name + "View"].rgbColors)
+              for name in self.discPaletteNames]
         l4 = [(name, (self.qRgbFromQColor(self.__dict__["exCont" + name + "Left"].getColor()),
                       self.qRgbFromQColor(self.__dict__["exCont" + name + "Right"].getColor()),
                       self.__dict__["exCont" + name + "passThroughColors"],
-                      [(self.qRgbFromQColor(self.__dict__["exCont" + name + "color" + str(i)].getColor()),
+                      [(self.qRgbFromQColor(
+                          self.__dict__["exCont" + name + "color" + str(i)].getColor()),
                         self.__dict__["exCont" + name + "passThroughColor" + str(i)])
                        for i in range(self.__dict__["exCont" + name + "colorCount"])]))
               for name in self.exContPaletteNames]
@@ -285,7 +294,8 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
             self.__dict__["cont" + name + "Right"].setColor(rgbToQColor(r))
             self.__dict__["cont" + name + "passThroughBlack"] = chk
             self.__dict__["cont" + name + "passThroughBlackCheckbox"].setChecked(chk)
-            self.__dict__["cont" + name + "View"].setContPalette(rgbToQColor(l), rgbToQColor(r), chk)
+            self.__dict__["cont" + name + "View"]\
+                .setContPalette(rgbToQColor(l), rgbToQColor(r), chk)
 
         for (name, rgbColors) in discPalettes:
             self.__dict__["disc" + name + "View"].setDiscPalette(rgbColors)
@@ -300,14 +310,15 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
             colorsList = []
             for i, (color, check) in enumerate(colors):
                 self.__dict__["exCont" + name + "passThroughColor" + str(i)] = check
-                self.__dict__["exCont" + name + "passThroughColor" + str(i) + "Checkbox"].setChecked(check)
+                self.__dict__["exCont" + name + "passThroughColor" + str(i) + "Checkbox"]\
+                    .setChecked(check)
                 self.__dict__["exCont" + name + "color" + str(i)].setColor(rgbToQColor(color))
                 if check and chk:
                     colorsList.append(rgbToQColor(color))
-            self.__dict__["exCont" + name + "colorCount"] = self.__dict__.get("exCont" + name + "colorCount",
-                                                                              len(colors))
-            self.__dict__["exCont" + name + "View"].setExContPalette(rgbToQColor(l), rgbToQColor(r),
-                                                                     colorsList)
+            self.__dict__["exCont" + name + "colorCount"] = \
+                self.__dict__.get("exCont" + name + "colorCount",  len(colors))
+            self.__dict__["exCont" + name + "View"].setExContPalette(
+                rgbToQColor(l), rgbToQColor(r), colorsList)
 
     def paletteSelected(self):
         if not self.schemaCombo.count():
@@ -316,16 +327,19 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
 
         # if we selected "Save current palette as..." option then add another option to the list
         if self.selectedSchemaIndex == self.schemaCombo.count() - 1:
-            message = "Please enter a name for the current color settings.\nPressing 'Cancel' will cancel your changes and close the dialog."
+            message = "Name the current color settings.\n" \
+                      "Pressing 'Cancel' will cancel your changes and close the dialog."
             ok = 0
             while not ok:
                 text, ok = QInputDialog.getText(self, "Name Your Color Settings", message)
                 if (ok):
                     newName = str(text)
-                    oldNames = [str(self.schemaCombo.itemText(i)).lower() for i in range(self.schemaCombo.count() - 1)]
+                    oldNames = [str(self.schemaCombo.itemText(i)).lower()
+                                for i in range(self.schemaCombo.count() - 1)]
                     if newName.lower() == "default":
                         ok = False
-                        message = "The 'Default' settings cannot be changed. Please enter a different name:"
+                        message = "The 'Default' settings cannot be changed." \
+                                  "Enter a different name:"
                     elif newName.lower() in oldNames:
                         index = oldNames.index(newName.lower())
                         self.colorSchemas.pop(index)
@@ -337,7 +351,9 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
                         self.selectedSchemaIndex = 0
                 else:
                     ok = 1
-                    state = self.getCurrentState()  # if we pressed cancel we have to select a different item than the "Save current palette as..."
+                    # if we pressed cancel we have to select a different item
+                    # then the "Save current palette as..."
+                    state = self.getCurrentState()
                     self.selectedSchemaIndex = 0
                     self.schemaCombo.setCurrentIndex(0)
                     self.setCurrentState(state)
@@ -352,17 +368,21 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
         if passThroughBlack:
             palette = [qRgb(color1.red() - color1.red() * i * 2. / colorNumber,
                             color1.green() - color1.green() * i * 2. / colorNumber,
-                            color1.blue() - color1.blue() * i * 2. / colorNumber) for i in range(colorNumber / 2)]
-            palette += [qRgb(color2.red() * i * 2. / colorNumber, color2.green() * i * 2. / colorNumber,
-                             color2.blue() * i * 2. / colorNumber) for i in range(colorNumber - (colorNumber / 2))]
+                            color1.blue() - color1.blue() * i * 2. / colorNumber)
+                       for i in range(colorNumber / 2)]
+            palette += [qRgb(color2.red() * i * 2. / colorNumber,
+                             color2.green() * i * 2. / colorNumber,
+                             color2.blue() * i * 2. / colorNumber)
+                        for i in range(colorNumber - (colorNumber / 2))]
         else:
             palette = [qRgb(color1.red() + (color2.red() - color1.red()) * i / colorNumber,
                             color1.green() + (color2.green() - color1.green()) * i / colorNumber,
-                            color1.blue() + (color2.blue() - color1.blue()) * i / colorNumber) for i in
-                       range(colorNumber)]
+                            color1.blue() + (color2.blue() - color1.blue()) * i / colorNumber)
+                       for i in range(colorNumber)]
         return palette
 
-    # this function is called if one of the color buttons was pressed or there was any other change of the color palette
+    # this function is called if one of the color buttons was pressed or
+    # there was any other change of the color palette
     def colorSchemaChange(self):
         self.setCurrentState(self.getCurrentState())
         self.shemaChanged.emit()
@@ -474,8 +494,10 @@ class PaletteEditor(QDialog):
         self.discListbox = gui.listBox(hbox, self, enableDragDrop=1)
 
         vbox = gui.vBox(hbox)
-        buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP, tooltip="Move selected colors up")
-        buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN, tooltip="Move selected colors down")
+        buttonUPAttr = gui.button(vbox, self, "", callback=self.moveAttrUP,
+                                  tooltip="Move selected colors up")
+        buttonDOWNAttr = gui.button(vbox, self, "", callback=self.moveAttrDOWN,
+                                    tooltip="Move selected colors down")
         buttonUPAttr.setIcon(QIcon(gui.resource_filename("icons/Dlg_up3.png")))
         buttonUPAttr.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding))
         buttonUPAttr.setMaximumWidth(30)
@@ -514,8 +536,8 @@ class PaletteEditor(QDialog):
         iconII = self.discListbox.item(ind).icon()
         self.discListbox.item(ind - 1).setIcon(iconII)
         self.discListbox.item(ind).setIcon(iconI)
-        self.discListbox.item(ind - 1).rgbColor, self.discListbox.item(ind).rgbColor = self.discListbox.item(
-            ind).rgbColor, self.discListbox.item(ind - 1).rgbColor
+        self.discListbox.item(ind - 1).rgbColor, self.discListbox.item(ind).rgbColor = \
+            self.discListbox.item(ind).rgbColor, self.discListbox.item(ind - 1).rgbColor
         self.discListbox.setCurrentRow(ind - 1)
 
 
@@ -528,8 +550,8 @@ class PaletteEditor(QDialog):
         iconII = self.discListbox.item(ind).icon()
         self.discListbox.item(ind + 1).setIcon(iconII)
         self.discListbox.item(ind).setIcon(iconI)
-        self.discListbox.item(ind).rgbColor, self.discListbox.item(ind + 1).rgbColor = self.discListbox.item(
-            ind + 1).rgbColor, self.discListbox.item(ind).rgbColor
+        self.discListbox.item(ind).rgbColor, self.discListbox.item(ind + 1).rgbColor = \
+            self.discListbox.item(ind + 1).rgbColor, self.discListbox.item(ind).rgbColor
         self.discListbox.setCurrentRow(ind + 1)
 
     def getRgbColors(self):
@@ -558,7 +580,8 @@ class GradientPaletteGenerator:
         Return RGB tuple that matches `value`, which is assumed
         to lay within [0, 1].
         """
-        values, single = (np.array([values]), True) if isinstance(values, Number) else (values, False)
+        values, single = (np.array([values]), True) \
+            if isinstance(values, Number) else (values, False)
         values = np.clip(values, 0, 1 - EPS)
         bin = np.digitize(values, self.bins)
         nans = bin >= len(self.bins)
@@ -583,28 +606,41 @@ class ContinuousPaletteGenerator(GradientPaletteGenerator):
 class ExtendedContinuousPaletteGenerator:
     def __init__(self, color1, color2, passThroughColors):
         self.colors = [color1] + passThroughColors + [color2]
-        self.gammaFunc = lambda x, gamma: ((math.exp(gamma * math.log(2 * x - 1)) if x > 0.5 else -math.exp(
-            gamma * math.log(-2 * x + 1)) if x != 0.5 else 0.0) + 1) / 2.0
+        self.gammaFunc = lambda x, gamma: \
+            ((math.exp(gamma * math.log(2 * x - 1))
+              if x > 0.5 else
+              -math.exp(gamma * math.log(-2 * x + 1))
+              if x != 0.5 else 0.0) + 1) / 2.0
 
     def getRGB(self, val, gamma=1.0):
         index = int(val * (len(self.colors) - 1))
         if index == len(self.colors) - 1:
             return (self.colors[-1].red(), self.colors[-1].green(), self.colors[-1].blue())
         else:
-            red1, green1, blue1 = self.colors[index].red(), self.colors[index].green(), self.colors[index].blue()
-            red2, green2, blue2 = self.colors[index + 1].red(), self.colors[index + 1].green(), self.colors[
-                index + 1].blue()
+            red1, green1, blue1 = self.colors[index].red(), \
+                                  self.colors[index].green(), \
+                                  self.colors[index].blue()
+            red2, green2, blue2 = self.colors[index + 1].red(), \
+                                  self.colors[index + 1].green(), \
+                                  self.colors[index + 1].blue()
             x = val * (len(self.colors) - 1) - index
             if gamma != 1.0:
                 x = self.gammaFunc(x, gamma)
-            return [(c2 - c1) * x + c1 for c1, c2 in [(red1, red2), (green1, green2), (blue1, blue2)]]
+            return [(c2 - c1) * x + c1
+                    for c1, c2 in [(red1, red2), (green1, green2), (blue1, blue2)]]
         ##        if self.passThroughBlack:
         ##            if val < 0.5:
-        ##                return (self.c1Red - self.c1Red*val*2, self.c1Green - self.c1Green*val*2, self.c1Blue - self.c1Blue*val*2)
+        ##                return (self.c1Red - self.c1Red*val*2,
+        ##                        self.c1Green - self.c1Green*val*2,
+        ##                        self.c1Blue - self.c1Blue*val*2)
         ##            else:
-        ##                return (self.c2Red*(val-0.5)*2., self.c2Green*(val-0.5)*2., self.c2Blue*(val-0.5)*2.)
+        ##                return (self.c2Red*(val-0.5)*2.,
+        ##                        self.c2Green*(val-0.5)*2.,
+        ##                        self.c2Blue*(val-0.5)*2.)
         ##        else:
-        ##            return (self.c1Red + (self.c2Red-self.c1Red)*val, self.c1Green + (self.c2Green-self.c1Green)*val, self.c1Blue + (self.c2Blue-self.c1Blue)*val)
+        ##            return (self.c1Red + (self.c2Red-self.c1Red)*val,
+        ##                    self.c1Green + (self.c2Green-self.c1Green)*val,
+        ##                    self.c1Blue + (self.c2Blue-self.c1Blue)*val)
 
     # val must be between 0 and 1
     def __getitem__(self, val):
@@ -703,17 +739,16 @@ class ColorPaletteBW:
         if numberOfColors == -1:
             return # used for coloring continuous variables
         else:
-            self.values = [int(brightest + (darkest - brightest) * x / float(numberOfColors - 1)) for x in
-                           range(numberOfColors)]
+            self.values = [int(brightest + (darkest - brightest) * x / float(numberOfColors - 1))
+                           for x in range(numberOfColors)]
 
     def __getitem__(self, index):
-        if self.numberOfColors == -1:                # is this color for continuous attribute?
+        if self.numberOfColors == -1:  # is this color for continuous attribute?
             val = int(self.brightest + (self.darkest - self.brightest) * index)
             return QColor(val, val, val)
         else:
-            index = int(index)                       # get color for discrete attribute
-            return QColor(self.values[index], self.values[index],
-                          self.values[index])   # index must be between 0 and self.numberofColors
+            index = int(index)  # get color for discrete attribute
+            return QColor(self.values[index], self.values[index], self.values[index])
 
     # get QColor instance for given index
     def getColor(self, index):
@@ -786,10 +821,13 @@ class PaletteView(QGraphicsView):
         if self.color1 is None:
             img = createDiscPalettePixmap(self.width(), self.height(), self.rgbColors)
         elif self.passThroughColors is None:
-            img = createContPalettePixmap(self.width(), self.height(), self.color1, self.color2, self.passThroughBlack)
+            img = createContPalettePixmap(
+                self.width(), self.height(), self.color1, self.color2,
+                self.passThroughBlack)
         else:
-            img = createExContPalettePixmap(self.width(), self.height(), self.color1, self.color2,
-                                            self.passThroughColors)
+            img = createExContPalettePixmap(
+                self.width(), self.height(), self.color1, self.color2,
+                self.passThroughColors)
         self.scene().addPixmap(img)
         self.scene().update()
 
@@ -826,7 +864,8 @@ def createDiscPalettePixmap(width, height, palette):
         p.drawRect(QRectF(i * rectWidth, 0, (i + 1) * rectWidth, height))
     return img
 
-# create a pixmap withcolor going from color1 to color2 passing through all intermidiate colors in passThroughColors
+# create a pixmap withcolor going from color1 to color2 passing through all
+# intermediate colors in passThroughColors
 def createExContPalettePixmap(width, height, color1, color2, passThroughColors):
     p = QPainter()
     img = QPixmap(width, height)
@@ -928,7 +967,8 @@ class PaletteSelectorComboBox(QComboBox):
                 butt, disc, cont, exCont = state
                 name, (c1, c2, chk, colors) = exCont[paletteIndex]
                 palettes.append((schemaName, (
-                (rgbToQColor(c1), rgbToQColor(c2), [rgbToQColor(color) for color, check in colors if check and chk]))))
+                (rgbToQColor(c1), rgbToQColor(c2),
+                 [rgbToQColor(color)for color, check in colors if check and chk]))))
             self.setContinuousPalettes(palettes)
 
     def setDiscretePalettes(self, palettes):
@@ -945,7 +985,10 @@ class PaletteSelectorComboBox(QComboBox):
         paletteImg = []
         self.cachedPalettes = []
         for name, (c1, c2, colors) in palettes:
-            icon = QIcon(createExContPalettePixmap(self.iconSize().width(), self.iconSize().height(), c1, c2, colors))
+            icon = QIcon(
+                createExContPalettePixmap(
+                    self.iconSize().width(), self.iconSize().height(),
+                    c1, c2, colors))
             self.addItem(icon, name)
 
 

@@ -33,7 +33,9 @@ def create_discrete(cls, *args):
 
 
 class Discrete(np.ndarray):
-    def __new__(cls, dat=None, col_variable=None, row_variable=None, unknowns=None, unknown_rows=None):
+    def __new__(cls, dat=None,
+                col_variable=None, row_variable=None,
+                unknowns=None, unknown_rows=None):
         if isinstance(dat, data.Storage):
             if unknowns is not None:
                 raise TypeError(
@@ -157,7 +159,9 @@ class Discrete(np.ndarray):
                 self.unknowns /= t
 
     def __reduce__(self):
-        return create_discrete, (Discrete, np.copy(self), self.col_variable, self.row_variable, self.unknowns)
+        return create_discrete, (Discrete, np.copy(self),
+                                 self.col_variable, self.row_variable,
+                                 self.unknowns)
 
 
 class Continuous:

@@ -220,8 +220,10 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
         self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
         # +1 for class, +n_classes for probabilities, +1 for fold
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + n_classes + 1)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+        self.assertEqual(
+            len(table.domain.metas), len(data.domain.metas) + 1 + n_classes + 1)
+        self.assertEqual(
+            table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
 
         res = CrossValidation(data, [NaiveBayesLearner(), MajorityLearner()], store_data=True)
         table = res.get_augmented_data(['Naive Bayes', 'Majority'])
@@ -229,9 +231,12 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(len(table), len(data))
         self.assertEqual(len(table.domain.attributes), len(data.domain.attributes))
         self.assertEqual(len(table.domain.class_vars), len(data.domain.class_vars))
-        self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 2*(n_classes+1) + 1)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
-        self.assertEqual(table.domain.metas[len(data.domain.metas)+1].values, data.domain.class_var.values)
+        self.assertEqual(
+            len(table.domain.metas), len(data.domain.metas) + 2*(n_classes+1) + 1)
+        self.assertEqual(
+            table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
+        self.assertEqual(
+            table.domain.metas[len(data.domain.metas)+1].values, data.domain.class_var.values)
 
     def test_augmented_data_regression(self):
         data = Table("housing")

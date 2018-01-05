@@ -111,7 +111,10 @@ def lac(conts, k, nsteps=30, window_size=1):
                     inv_covars = 1. / covars[j, dims]
                     xn = x - means[j, dims]
                     factor = (2.0 * np.pi) ** (x.shape[1]/ 2.0) * det ** 0.5
-                    w[l][j] = priors[j] * np.exp(np.sum(xn * inv_covars * xn, axis=1) * -.5) / factor
+                    w[l][j] = \
+                        priors[j] \
+                        * np.exp(np.sum(xn * inv_covars * xn, axis=1) * -.5) \
+                        / factor
                 else:
                     w[l][j] = 0
             w[l][active] /= w[l][active].sum(axis=0)

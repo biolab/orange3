@@ -26,8 +26,9 @@ class LinearRegressionLearner(Learner):
         data and keeping parameters small. Higher values of lambda\_ force
         parameters to be smaller.
 
-    preprocessors : list, optional (default="[Normalize(), Continuize(), Impute(), RemoveNaNColumns()])
+    preprocessors : list, optional
         Preprocessors are applied to data before training or testing. Default preprocessors
+        `[Normalize(), Continuize(), Impute(), RemoveNaNColumns()]`:
         - transform the dataset so that the columns are on a similar scale,
         - continuize all discrete attributes,
         - remove columns with all values as NaN

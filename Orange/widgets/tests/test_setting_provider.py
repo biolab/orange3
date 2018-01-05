@@ -80,11 +80,15 @@ class SettingProviderTestCase(unittest.TestCase):
 
     def test_get_provider(self):
         self.assertEqual(default_provider.get_provider(BaseWidget), None)
-        self.assertEqual(default_provider.get_provider(Widget), default_provider)
+        self.assertEqual(default_provider.get_provider(Widget),
+                         default_provider)
         self.assertEqual(default_provider.get_provider(BaseGraph), None)
-        self.assertEqual(default_provider.get_provider(Graph), default_provider.providers[GRAPH])
-        self.assertEqual(default_provider.get_provider(ExtendedGraph), default_provider.providers[GRAPH])
-        self.assertEqual(default_provider.get_provider(ZoomToolbar), default_provider.providers[ZOOM_TOOLBAR])
+        self.assertEqual(default_provider.get_provider(Graph),
+                         default_provider.providers[GRAPH])
+        self.assertEqual(default_provider.get_provider(ExtendedGraph),
+                         default_provider.providers[GRAPH])
+        self.assertEqual(default_provider.get_provider(ZoomToolbar),
+                         default_provider.providers[ZOOM_TOOLBAR])
 
     def test_pack_settings(self):
         widget = Widget()

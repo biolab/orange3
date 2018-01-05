@@ -326,8 +326,9 @@ class OWPredictions(OWWidget):
                     # if values were added to class_var between building the
                     # model and predicting, add zeros for new class values,
                     # which are always at the end
-                    prob = numpy.c_[prob,
-                                    numpy.zeros((prob.shape[0], len(class_var.values) - prob.shape[1]))]
+                    prob = numpy.c_[
+                        prob,
+                        numpy.zeros((prob.shape[0], len(class_var.values) - prob.shape[1]))]
                     values = [Value(class_var, v) for v in values]
                 results.append((values, prob))
             results = list(zip(*(zip(*res) for res in results)))

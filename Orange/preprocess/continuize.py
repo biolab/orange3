@@ -24,20 +24,22 @@ class DomainContinuizer(_RefuseDataInConstructor, Reprable):
                     len(var.values) > 2):
                 return []
             if treat == Continuize.AsOrdinal:
-                new_var = ContinuousVariable(var.name,
-                                             compute_value=Identity(var),
-                                             sparse=var.sparse)
+                new_var = ContinuousVariable(
+                    var.name, compute_value=Identity(var), sparse=var.sparse)
                 return [new_var]
             if treat == Continuize.AsNormalizedOrdinal:
                 n_values = max(1, len(var.values))
                 if self.zero_based:
-                    return [ContinuousVariable(var.name,
-                                               compute_value=Normalizer(var, 0, 1 / (n_values - 1)),
-                                               sparse=var.sparse)]
+                    return [ContinuousVariable(
+                        var.name,
+                        compute_value=Normalizer(var, 0, 1 / (n_values - 1)),
+                        sparse=var.sparse)]
                 else:
-                    return [ContinuousVariable(var.name,
-                                               compute_value=Normalizer(var, (n_values - 1) / 2, 2 / (n_values - 1)),
-                                               sparse=var.sparse)]
+                    return [ContinuousVariable(
+                        var.name,
+                        compute_value=Normalizer(var, (n_values - 1) / 2,
+                                                 2 / (n_values - 1)),
+                        sparse=var.sparse)]
 
             new_vars = []
             if treat == Continuize.Indicators:

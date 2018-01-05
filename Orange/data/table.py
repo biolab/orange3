@@ -17,7 +17,8 @@ from Orange.data import (
     Domain, Variable, Storage, StringVariable, Unknown, Value, Instance,
     ContinuousVariable, DiscreteVariable, MISSING_VALUES
 )
-from Orange.data.util import SharedComputeValue, vstack, hstack, assure_array_dense, assure_array_sparse, \
+from Orange.data.util import SharedComputeValue, vstack, hstack, \
+    assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
@@ -361,7 +362,8 @@ class Table(MutableSequence, Storage):
                     table = cls.from_table_rows(source, row_indices)
                     # assure resulting domain is the instance passed on input
                     table.domain = domain
-                    # since sparse flags are not considered when checking for domain equality, fix manually.
+                    # since sparse flags are not considered when checking for
+                    # domain equality, fix manually.
                     table = assure_domain_conversion_sparsity(table, source)
                     return table
 

@@ -83,7 +83,8 @@ BASE_LINK = "http://orange.biolab.si/"
 LINKS = \
     {"get-started": BASE_LINK + "start-using/",
      "examples": BASE_LINK + "tutorial/",
-     "youtube": "https://www.youtube.com/watch?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1"
+     "youtube": "https://www.youtube.com/watch"
+                "?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1"
      }
 
 
