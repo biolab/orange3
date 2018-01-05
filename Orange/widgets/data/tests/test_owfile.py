@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from os import path, remove
+from os.path import dirname
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
@@ -12,7 +13,6 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
-from os.path import dirname
 
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \

@@ -6,13 +6,6 @@ User settings/preference dialog
 import sys
 import logging
 
-from .. import config
-from ..utils.settings import SettingChangedEvent
-
-from ..utils.propertybindings import (
-    AbstractBoundProperty, PropertyBinding, BindingManager
-)
-
 from AnyQt.QtWidgets import (
     QWidget, QMainWindow, QComboBox, QCheckBox, QListView, QTabWidget,
     QToolBar, QAction, QStackedWidget, QVBoxLayout, QHBoxLayout,
@@ -22,6 +15,13 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtCore import (
     Qt, QEventLoop, QAbstractItemModel, QModelIndex
 )
+
+from .. import config
+from ..utils.settings import SettingChangedEvent
+from ..utils.propertybindings import (
+    AbstractBoundProperty, PropertyBinding, BindingManager
+)
+
 
 log = logging.getLogger(__name__)
 

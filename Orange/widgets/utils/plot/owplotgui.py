@@ -31,16 +31,16 @@ import unicodedata
 from functools import reduce
 from operator import itemgetter
 
+from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout,\
+    QMenu, QAction,QDialog, QSizePolicy, QPushButton, QListView
+from AnyQt.QtGui import QIcon, QKeySequence
+from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
+
 from Orange.data import ContinuousVariable, DiscreteVariable, Variable
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.listfilter import variables_filter
 from Orange.widgets.utils.itemmodels import DomainModel
-
-from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QMenu, QAction,\
-    QDialog, QSizePolicy, QPushButton, QListView
-from AnyQt.QtGui import QIcon, QKeySequence
-from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
 
 from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
     SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE

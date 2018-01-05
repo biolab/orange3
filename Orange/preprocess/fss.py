@@ -1,12 +1,12 @@
 import random
-import Orange
-import numpy as np
-from Orange.util import Reprable
-from scipy.sparse import issparse
-
 from itertools import takewhile
 from operator import itemgetter
 
+import numpy as np
+from scipy.sparse import issparse
+
+import Orange
+from Orange.util import Reprable
 from Orange.preprocess.preprocess import Preprocess
 from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
 

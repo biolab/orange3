@@ -10,17 +10,14 @@ widgets in a scheme.
 
 import logging
 import warnings
-
 from collections import namedtuple, defaultdict, deque
 from operator import attrgetter
-from functools import partial
+from functools import partial, reduce
 
 from AnyQt.QtCore import QObject, QCoreApplication, QEvent, QTimer
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-
 from .scheme import SchemeNode, SchemeLink
-from functools import reduce
 
 log = logging.getLogger(__name__)
 
