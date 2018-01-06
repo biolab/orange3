@@ -1,11 +1,10 @@
 """Various small utilities that might be useful everywhere"""
 import os
 import inspect
-import itertools
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
-from itertools import chain, count
+from itertools import chain, count, repeat
 
 from collections import OrderedDict
 import warnings
@@ -189,7 +188,7 @@ def interleave(seq1, seq2):
     -------
     >>> list(interleave([1, 3, 5], [2, 4]))
     [1, 2, 3, 4, 5]
-    >>> list(interleave([1, 2, 3, 4], itertools.repeat("<")))
+    >>> list(interleave([1, 2, 3, 4], repeat("<")))
     [1, '<', 2, '<', 3, '<', 4]
     """
     iterator1, iterator2 = iter(seq1), iter(seq2)
@@ -222,7 +221,7 @@ def Reprable_repr_pretty(name, itemsiter, printer, cycle):
             printer.breakable()
 
         itemsiter = (partial(printitem, *item) for item in itemsiter)
-        sepiter = itertools.repeat(printsep)
+        sepiter = repeat(printsep)
 
         with printer.group(len(name) + 1, "{0}(".format(name), ")"):
             for part in interleave(itemsiter, sepiter):

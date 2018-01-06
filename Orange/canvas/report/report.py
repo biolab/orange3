@@ -1,7 +1,6 @@
 import itertools
 import time
 from collections import OrderedDict, Iterable
-from itertools import chain
 
 from AnyQt.QtCore import (
     Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
