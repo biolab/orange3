@@ -82,14 +82,11 @@ class OWSaveDistances(widget.OWWidget):
             else:
                 self.warning()
 
+    def test_run_signals(self):
+        from Orange.data import Table
+        from Orange.distance import Euclidean
+        self.set_distances(Euclidean(Table("iris")))
+
 
 if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    table = Table("iris")
-    ow = OWSaveDistances()
-    ow.show()
-    ow.set_distances(table)
-    a.exec()
-    ow.saveSettings()
+    OWSaveDistances.test_run()

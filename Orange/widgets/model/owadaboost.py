@@ -109,14 +109,5 @@ class OWAdaBoost(OWBaseLearner):
                     self.loss_index].capitalize()))
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWAdaBoost()
-    ow.resetSettings()
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWAdaBoost.test_run(Table("iris"))

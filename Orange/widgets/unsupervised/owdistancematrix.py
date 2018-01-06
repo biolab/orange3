@@ -374,3 +374,10 @@ class OWDistanceMatrix(widget.OWWidget):
                             for j in range(dim)) +
                     "</tr>")
             self.report_raw("</table>")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import Orange.distance
+    data = Orange.data.Table("iris")
+    dist = Orange.distance.Euclidean(data[:50])
+    OWDistanceMatrix.test_run(dist)

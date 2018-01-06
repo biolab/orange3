@@ -17,7 +17,8 @@ import pyqtgraph as pg
 
 import Orange
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.evaluate.utils import check_results_adequacy
+from Orange.widgets.evaluate.utils import \
+    check_results_adequacy, results_for_test_run
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.io import FileFormat
 from Orange.widgets.widget import Input
@@ -873,42 +874,5 @@ def roc_iso_performance_slope(fp_cost, fn_cost, p):
         return (fp_cost * (1. - p)) / (fn_cost * p)
 
 
-def main():
-    import gc
-    import sip
-    from AnyQt.QtWidgets import QApplication
-    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
-                                       NuSVMLearner)
-
-    app = QApplication([])
-    w = OWROCAnalysis()
-    w.show()
-    w.raise_()
-
-#     data = Orange.data.Table("iris")
-    data = Orange.data.Table("ionosphere")
-    results = Orange.evaluation.CrossValidation(
-        data,
-        [LogisticRegressionLearner(),
-         LogisticRegressionLearner(penalty="l1"),
-         SVMLearner(probability=True),
-         NuSVMLearner(probability=True)],
-        k=5,
-        store_data=True,
-    )
-    results.learner_names = ["Logistic", "Logistic (L1 reg.)", "SVM", "NuSVM"]
-    w.set_results(results)
-
-    rval = app.exec_()
-    w.deleteLater()
-    sip.delete(w)
-    del w
-    app.processEvents()
-    sip.delete(app)
-    del app
-    gc.collect()
-    return rval
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWROCAnalysis.test_run(results_for_test_run())

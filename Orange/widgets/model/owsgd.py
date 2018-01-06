@@ -307,16 +307,5 @@ class OWSGD(OWBaseLearner):
         self.Outputs.coefficients.send(coeffs)
 
 
-if __name__ == '__main__':
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    from Orange.data import Table
-
-    a = QApplication(sys.argv)
-    ow = OWSGD()
-    ow.resetSettings()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWSGD.test_run(Table("iris"))

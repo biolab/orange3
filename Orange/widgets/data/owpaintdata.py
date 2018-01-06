@@ -1291,23 +1291,6 @@ class OWPaintData(OWWidget):
         self.report_items("Painted data", settings)
         self.report_plot()
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    import gc
-    import sip
-    app = QApplication([])
-    ow = OWPaintData()
-    ow.show()
-    ow.raise_()
-    rval = app.exec_()
-    ow.saveSettings()
-    ow.onDeleteWidget()
-    sip.delete(ow)
-    del ow
-    gc.collect()
-    app.processEvents()
-    return rval
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWPaintData.test_run()

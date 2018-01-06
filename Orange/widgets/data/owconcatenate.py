@@ -10,7 +10,7 @@ from collections import OrderedDict
 from functools import reduce
 
 import numpy as np
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 import Orange.data
@@ -209,6 +209,10 @@ class OWConcatenate(widget.OWWidget):
                 self.id_roles[self.source_column_role].lower())
         self.report_items(items)
 
+    def test_run_signals(self):
+        self.set_more_data(Orange.data.Table("iris"), 0)
+        self.set_more_data(Orange.data.Table("zoo"), 1)
+
 
 def unique(seq):
     seen_set = set()
@@ -241,18 +245,5 @@ def domain_intersection(A, B):
     return intersection
 
 
-def main():
-    app = QApplication([])
-    w = OWConcatenate()
-    data_a = Orange.data.Table("iris")
-    data_b = Orange.data.Table("zoo")
-    w.set_more_data(data_a, 0)
-    w.set_more_data(data_b, 1)
-    w.handleNewSignals()
-    w.show()
-
-    app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWConcatenate.test_run()

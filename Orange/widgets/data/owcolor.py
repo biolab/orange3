@@ -5,9 +5,7 @@ Widget for assigning colors to variables
 import numpy as np
 from AnyQt.QtCore import Qt, QSize, QAbstractTableModel
 from AnyQt.QtGui import QColor, QFont, QImage, QBrush, qRgb
-from AnyQt.QtWidgets import (
-    QHeaderView, QColorDialog, QTableView, QApplication
-)
+from AnyQt.QtWidgets import QHeaderView, QColorDialog, QTableView
 
 import Orange
 from Orange.widgets import widget, settings, gui
@@ -454,10 +452,5 @@ class OWColor(widget.OWWidget):
             self.report_raw("<table>{}</table>".format(table))
 
 
-if __name__ == "__main__":
-    a = QApplication([])
-    WIDGET = OWColor()
-    WIDGET.set_data(Orange.data.Table("heart_disease.tab"))
-    WIDGET.show()
-    a.exec_()
-    WIDGET.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWColor.test_run(Orange.data.Table("heart_disease.tab"))

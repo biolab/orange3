@@ -1,5 +1,3 @@
-import sys
-
 from collections import namedtuple, OrderedDict
 
 import numpy as np
@@ -401,27 +399,5 @@ class CA(CA):
         return np.sum(self.row_inertia(), axis=0)
 
 
-def main(argv=None):
-    import sip
-    if argv is None:
-        argv = sys.argv[1:]
-
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "smokers_ct"
-
-    data = Orange.data.Table(filename)
-    app = QApplication([argv])
-    w = OWCorrespondenceAnalysis()
-    w.set_data(data)
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.onDeleteWidget()
-    sip.delete(w)
-    del w
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWCorrespondenceAnalysis.test_run(Orange.data.Table("smokers_ct"))

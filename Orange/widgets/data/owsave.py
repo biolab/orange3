@@ -89,13 +89,5 @@ class OWSave(widget.OWWidget):
                 self.error()
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    table = Table("iris")
-    ow = OWSave()
-    ow.show()
-    ow.dataset(table)
-    a.exec()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWSave.test_run(Table("iris"))

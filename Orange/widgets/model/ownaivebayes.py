@@ -19,14 +19,5 @@ class OWNaiveBayes(OWBaseLearner):
     LEARNER = NaiveBayesLearner
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWNaiveBayes()
-    d = Table('iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWNaiveBayes.test_run(Table("iris"))

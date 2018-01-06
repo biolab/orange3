@@ -518,16 +518,6 @@ class OWConfusionMatrix(widget.OWWidget):
                 settings["selected_learner"] = [settings["selected_learner"]]
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-
-    APP = QApplication([])
-    w = OWConfusionMatrix()
-    w.show()
-    IRIS = Orange.data.Table("iris")
-    RES_CV = Orange.evaluation.CrossValidation(
-        IRIS, [Orange.classification.TreeLearner(),
-               Orange.classification.MajorityLearner()],
-        store_data=True)
-    w.set_results(RES_CV)
-    APP.exec_()
+if __name__ == "__main__":  # pragma: no cover
+    from Orange.widgets.evaluate.utils import results_for_test_run
+    OWConfusionMatrix.test_run(results_for_test_run("iris"))

@@ -350,19 +350,9 @@ class SklRandomForestAdapter:
         return self._domain
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     from Orange.modelling import RandomForestLearner
-    from AnyQt.QtWidgets import QApplication
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWPythagoreanForest()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
+    data = Table('iris')
     rf = RandomForestLearner(n_estimators=10)(data)
     rf.instances = data
-    ow.set_rf(rf)
-
-    ow.show()
-    ow.raise_()
-    ow.handleNewSignals()
-    app.exec_()
+    OWPythagoreanForest.test_run(rf)

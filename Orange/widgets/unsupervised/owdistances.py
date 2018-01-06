@@ -133,3 +133,7 @@ class OWDistances(OWWidget):
             ("Distances Between", ["Rows", "Columns"][self.axis]),
             ("Metric", METRICS[self.metric_idx][0])
         ))
+
+
+if __name__ == "__main__":  # pragma: no cover
+    OWDistances.test_run(Orange.data.Table("iris"))

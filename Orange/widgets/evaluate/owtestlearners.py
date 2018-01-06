@@ -1,7 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
 
-import sys
 from itertools import chain
 import abc
 import enum
@@ -949,6 +948,25 @@ class OWTestLearners(OWWidget):
         self.cancel()
         super().onDeleteWidget()
 
+    def test_run_signals(self):
+        filename = "iris"
+        data = Table(filename)
+        class_var = data.domain.class_var
+        if class_var.is_discrete:
+            learners = [lambda data: 1 / 0,
+                        Orange.classification.LogisticRegressionLearner(),
+                        Orange.classification.MajorityLearner(),
+                        Orange.classification.NaiveBayesLearner()]
+        else:
+            learners = [lambda data: 1 / 0,
+                        Orange.regression.MeanLearner(),
+                        Orange.regression.KNNRegressionLearner(),
+                        Orange.regression.RidgeRegressionLearner()]
+        self.set_train_data(data)
+        self.set_test_data(data)
+        for i, learner in enumerate(learners):
+            self.set_learner(learner, i)
+
 
 def scorer_caller(scorer, ovr_results):
     if scorer.is_binary:
@@ -1068,51 +1086,5 @@ class Task:
         concurrent.futures.wait([self.future])
 
 
-def main(argv=None):
-    """Show and test the widget"""
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig(level=logging.DEBUG)
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-    class_var = data.domain.class_var
-
-    if class_var is None:
-        return 1
-    elif class_var.is_discrete:
-        learners = [lambda data: 1 / 0,
-                    Orange.classification.LogisticRegressionLearner(),
-                    Orange.classification.MajorityLearner(),
-                    Orange.classification.NaiveBayesLearner()]
-    else:
-        learners = [lambda data: 1 / 0,
-                    Orange.regression.MeanLearner(),
-                    Orange.regression.KNNRegressionLearner(),
-                    Orange.regression.RidgeRegressionLearner()]
-
-    w = OWTestLearners()
-    w.show()
-    w.set_train_data(data)
-    w.set_test_data(data)
-
-    for i, learner in enumerate(learners):
-        w.set_learner(learner, i)
-
-    w.handleNewSignals()
-    rval = app.exec_()
-
-    for i in range(len(learners)):
-        w.set_learner(None, i)
-    w.handleNewSignals()
-    w.saveSettings()
-    return rval
-
 if __name__ == "__main__":
-    sys.exit(main())
+    OWTestLearners.test_run()

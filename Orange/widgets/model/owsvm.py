@@ -237,15 +237,6 @@ class OWSVM(OWBaseLearner):
                 g=gamma, c=self.coef0)
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
+    OWSVM.test_run(Table("iris"))
 
-    a = QApplication(sys.argv)
-    ow = OWSVM()
-    ow.resetSettings()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()

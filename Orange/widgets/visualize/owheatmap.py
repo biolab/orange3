@@ -1,4 +1,3 @@
-import sys
 import math
 import itertools
 
@@ -2382,24 +2381,5 @@ def join_ellided(sep, maxlen, values, ellidetemplate="..."):
         return best
 
 
-def test_main(argv=sys.argv):
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    app = QApplication(argv)
-    ow = OWHeatMap()
-
-    ow.set_dataset(Table(filename))
-    ow.handleNewSignals()
-    ow.show()
-    ow.raise_()
-    app.exec_()
-    ow.set_dataset(None)
-    ow.handleNewSignals()
-    ow.saveSettings()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWHeatMap.test_run(Table("brown-selected.tab"))

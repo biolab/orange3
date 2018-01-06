@@ -1,4 +1,3 @@
-import sys
 from collections import OrderedDict
 from functools import reduce
 
@@ -242,6 +241,30 @@ class OWLearningCurveB(OWWidget):
     def updateCurvePoints(self):
         self.curvePoints = [(x + 1.)/self.steps for x in range(self.steps)]
 
+# [start-snippet-3]
+    def test_run_signals(self):
+        data = Orange.data.Table("iris")
+        indices = numpy.random.permutation(len(data))
+
+        traindata = data[indices[:-20]]
+        testdata = data[indices[-20:]]
+
+        self.set_dataset(traindata)
+        self.set_testdataset(testdata)
+
+        l1 = Orange.classification.NaiveBayesLearner()
+        l1.name = 'Naive Bayes'
+        self.set_learner(l1, 1)
+
+        l2 = Orange.classification.LogisticRegressionLearner()
+        l2.name = 'Logistic Regression'
+        self.set_learner(l2, 2)
+
+        l4 = Orange.classification.SklTreeLearner()
+        l4.name = "Decision Tree"
+        self.set_learner(l4, 3)
+# [end-snippet-3]
+
 
 def learning_curve(learners, data, folds=10, proportions=None,
                    random_state=None, callback=None):
@@ -363,52 +386,5 @@ def results_add(x, y):
     return res
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Orange.data.Table(filename)
-    indices = numpy.random.permutation(len(data))
-
-    traindata = data[indices[:-20]]
-    testdata = data[indices[-20:]]
-
-    ow = OWLearningCurveB()
-    ow.show()
-    ow.raise_()
-
-    ow.set_dataset(traindata)
-    ow.set_testdataset(testdata)
-
-    l1 = Orange.classification.NaiveBayesLearner()
-    l1.name = 'Naive Bayes'
-    ow.set_learner(l1, 1)
-
-    l2 = Orange.classification.LogisticRegressionLearner()
-    l2.name = 'Logistic Regression'
-    ow.set_learner(l2, 2)
-
-    l4 = Orange.classification.SklTreeLearner()
-    l4.name = "Decision Tree"
-    ow.set_learner(l4, 3)
-
-    ow.handleNewSignals()
-
-    app.exec_()
-
-    ow.set_dataset(None)
-    ow.set_testdataset(None)
-    ow.set_learner(None, 1)
-    ow.set_learner(None, 2)
-    ow.set_learner(None, 3)
-    ow.handleNewSignals()
-    ow.onDeleteWidget()
-    return 0
-
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    OWLearningCurveB.test_run()

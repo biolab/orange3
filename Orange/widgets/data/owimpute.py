@@ -1,4 +1,3 @@
-import sys
 import copy
 import logging
 import concurrent.futures
@@ -543,29 +542,5 @@ class OWImpute(OWWidget):
         self.variable_button_group.button(self.DEFAULT).setChecked(True)
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig()
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWImpute()
-    w.show()
-    w.raise_()
-
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.handleNewSignals()
-    app.exec_()
-    w.set_data(None)
-    w.set_learner(None)
-    w.handleNewSignals()
-    w.onDeleteWidget()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+if __name__ == "__main__":  # pragma: no cover
+    OWImpute.test_run(Orange.data.Table("brown-selected"))

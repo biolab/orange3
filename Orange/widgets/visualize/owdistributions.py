@@ -6,7 +6,6 @@ A widget for plotting attribute distributions.
 
 """
 from math import sqrt
-import sys
 import collections
 from xml.sax.saxutils import escape
 
@@ -808,31 +807,5 @@ def shape_reduce_keep_dims(shape, axis):
     return tuple(shape)
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    import gc
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    w = OWDistributions()
-    w.show()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "heart_disease"
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.handleNewSignals()
-    rval = app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.deleteLater()
-    del w
-    app.processEvents()
-    gc.collect()
-    return rval
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDistributions.test_run(Orange.data.Table("heart_disease.tab"))

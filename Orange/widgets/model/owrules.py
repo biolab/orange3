@@ -360,14 +360,7 @@ class OWRuleLearner(OWBaseLearner):
                               else self.parent_alpha))
         ])
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
 
-    a = QApplication(sys.argv)
-    ow = OWRuleLearner()
-    d = Table('iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWRuleLearner.test_run(Table("iris"))
+

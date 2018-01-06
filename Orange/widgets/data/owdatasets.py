@@ -2,7 +2,6 @@ import enum
 import logging
 import numbers
 import os
-import sys
 import traceback
 
 from xml.sax.saxutils import escape
@@ -13,7 +12,7 @@ from typing import Optional, Dict, Tuple
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate, QApplication
+    QStyleOptionViewItem, QStyledItemDelegate
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
@@ -547,18 +546,5 @@ def description_html(datainfo):
     return "\n".join(html)
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-
-    app = QApplication(list(args))
-    w = OWDataSets()
-    w.show()
-    w.raise_()
-    rv = app.exec_()
-    w.saveSettings()
-    w.onDeleteWidget()
-    return rv
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDataSets.test_run()

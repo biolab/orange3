@@ -472,34 +472,6 @@ class OWScatterPlot(OWWidget):
             settings["selection_group"] = [(a, 1) for a in settings["selection"]]
 
 
-def main(argv=None):
-    import sys
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    a = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "heart_disease"
-
-    ow = OWScatterPlot()
-    ow.show()
-    ow.raise_()
-    data = Orange.data.Table(filename)
-    ow.set_data(data)
-    ow.set_subset_data(data[:30])
-    ow.handleNewSignals()
-
-    rval = a.exec()
-
-    ow.set_data(None)
-    ow.set_subset_data(None)
-    ow.handleNewSignals()
-    ow.saveSettings()
-    ow.onDeleteWidget()
-
-    return rval
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    data = Orange.data.Table("iris")
+    OWScatterPlot.test_run(set_data=data, set_subset_data=data[:30])
