@@ -1,9 +1,8 @@
 
 import os
-import sys
 import unicodedata
 import itertools
-from functools import partial
+from functools import partial, singledispatch
 from collections import namedtuple
 
 import numpy as np
@@ -71,13 +70,6 @@ def stack_on_condition(a, b, condition):
 # ###########################
 # Data manipulation operators
 # ###########################
-
-if sys.version_info < (3, 4):
-    # use singledispatch backports from pypi
-    from singledispatch import singledispatch
-else:
-    from functools import singledispatch
-
 
 # Base commands
 Append = namedtuple("Append", ["points"])

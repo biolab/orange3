@@ -316,7 +316,7 @@ class OWSql(OWWidget):
             what = self.sql = self.sqltext.toPlainText()
             self.table = "Custom SQL"
             if self.materialize:
-                import psycopg2
+                import psycopg2  # pylint: disable=import-error
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
