@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse.linalg as sla
 
 import Orange.data
+import Orange.projection
 from Orange.projection import Projector, Projection
 
 __all__ = ["CUR"]
@@ -173,12 +174,6 @@ class Projector:
 
 
 if __name__ == '__main__':
-    import numpy as np
-    import scipy.sparse.linalg as sla
-
-    import Orange.data
-    import Orange.projection
-
     np.random.seed(42)
     X = np.random.rand(60, 100)
     rank = 5

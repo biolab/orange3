@@ -5,13 +5,13 @@ around either WebEngineView (extends QWebEngineView) or WebKitView
 (extends QWebView), as available.
 """
 import os
+from os.path import abspath, dirname, join
 import time
 import threading
 import warnings
 from collections.abc import Iterable, Mapping, Set, Sequence
 from itertools import count
 from numbers import Integral, Real
-from os.path import abspath, dirname, join
 from random import random
 from urllib.parse import urljoin
 from urllib.request import pathname2url
