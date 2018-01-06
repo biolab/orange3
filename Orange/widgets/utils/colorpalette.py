@@ -992,7 +992,7 @@ class PaletteSelectorComboBox(QComboBox):
             self.addItem(icon, name)
 
 
-if __name__ == "__main__":
+def main():  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
 
@@ -1005,3 +1005,7 @@ if __name__ == "__main__":
     c.setColorSchemas()
     c.show()
     a.exec()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

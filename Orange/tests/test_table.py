@@ -5,9 +5,9 @@ import copy
 import os
 import random
 import unittest
+from unittest.mock import Mock, MagicMock, patch
 from itertools import chain
 from math import isnan
-from unittest.mock import Mock, MagicMock, patch
 
 import numpy as np
 import scipy.sparse as sp
@@ -817,8 +817,6 @@ class TableTestCase(unittest.TestCase):
             os.remove("iris.pickle")
 
     def test_from_numpy(self):
-        import random
-
         a = np.arange(20, dtype="d").reshape((4, 5))
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
