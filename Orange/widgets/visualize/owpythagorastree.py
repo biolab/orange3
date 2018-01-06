@@ -410,25 +410,9 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     pass
 
 
-def main():
+if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling import TreeLearner
-    from AnyQt.QtWidgets import QApplication
-    import sys
-
-    app = QApplication(sys.argv)
-
-    ow = OWPythagorasTree()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-
+    data = Table('iris')
     model = TreeLearner(max_depth=1000)(data)
     model.instances = data
-    ow.set_tree(model)
-
-    ow.show()
-    ow.raise_()
-    ow.handleNewSignals()
-    app.exec_()
-
-
-if __name__ == '__main__':
-    main()
+    OWPythagorasTree.test_run(model)

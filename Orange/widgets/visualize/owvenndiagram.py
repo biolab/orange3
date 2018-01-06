@@ -638,6 +638,26 @@ class OWVennDiagram(widget.OWWidget):
     def send_report(self):
         self.report_plot()
 
+    def test_run_signals(self):
+        from Orange.evaluation import ShuffleSplit
+
+        data = Orange.data.Table("brown-selected")
+        # data1 = Orange.data.Table("brown-selected")
+        # self.setData(data, 1)
+        # self.setData(data1, 2)
+        # return
+
+        data = append_column(data, "M", Orange.data.StringVariable("Test"),
+                             numpy.arange(len(data)).reshape(-1, 1) % 30)
+        res = ShuffleSplit(data, [None], n_resamples=5,
+                           test_size=0.7, stratified=False)
+        indices = iter(res.indices)
+        for i in range(1, 6):
+            sample, _ = next(indices)
+            data1 = data[sample]
+            data1.name = chr(ord("A") + i)
+            self.setData(data1, key=i)
+
 
 def pairwise(iterable):
     """
@@ -1668,57 +1688,5 @@ def group_table_indices(table, key_var):
     return groups
 
 
-def test():
-    from Orange.evaluation import ShuffleSplit
-
-    app = QApplication([])
-    w = OWVennDiagram()
-    data = Orange.data.Table("brown-selected")
-    data = append_column(data, "M", Orange.data.StringVariable("Test"),
-                         numpy.arange(len(data)).reshape(-1, 1) % 30)
-
-    res = ShuffleSplit(data, [None], n_resamples=5,
-                       test_size=0.7, stratified=False)
-    indices = iter(res.indices)
-
-    def select(data):
-        sample, _ = next(indices)
-        return data[sample]
-
-    d1 = select(data)
-    d2 = select(data)
-    d3 = select(data)
-    d4 = select(data)
-    d5 = select(data)
-
-    for i, data in enumerate([d1, d2, d3, d4, d5]):
-        data.name = chr(ord("A") + i)
-        w.setData(data, key=i)
-
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-    del w
-    app.processEvents()
-    return app
-
-
-def test1():
-    app = QApplication([])
-    w = OWVennDiagram()
-    data1 = Orange.data.Table("brown-selected")
-    data2 = Orange.data.Table("brown-selected")
-    w.setData(data1, 1)
-    w.setData(data2, 2)
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    app.exec_()
-
-    del w
-    return app
-
-if __name__ == "__main__":
-    test()
+if __name__ == "__main__":  # pragma: no cover
+    OWVennDiagram.test_run()

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
 from collections import OrderedDict
 
 from AnyQt.QtWidgets import (
@@ -441,9 +439,5 @@ class OWSql(OWWidget):
             cm.password = settings["password"]
 
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWSql()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWSql.test_run()

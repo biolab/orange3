@@ -305,39 +305,8 @@ class OWtSNE(OWDataProjectionWidget):
             values["attr_label"] = values["graph"]["attr_label"]
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    import gc
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-    w = OWtSNE()
-    w.set_data(data)
-    w.set_subset_data(data[np.random.choice(len(data), 10)])
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-
-    w.set_subset_data(None)
-    w.set_data(None)
-    w.handleNewSignals()
-
-    w.saveSettings()
-    w.onDeleteWidget()
-    w.deleteLater()
-    del w
-    gc.collect()
-    app.processEvents()
-    return rval
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    data = Table("iris")
+    OWtSNE.test_run(
+        set_data=data,
+        set_subset_data=data[np.random.choice(len(data), 10)])

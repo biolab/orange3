@@ -390,12 +390,5 @@ class DomainContinuizer(Reprable):
         return newdomain
 
 
-if __name__ == "__main__":
-    import sys
-    a = QtWidgets.QApplication(sys.argv)
-    ow = OWContinuize()
-    data = Table("lenses")
-    ow.setData(data)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWContinuize.test_run(Table("lenses"))

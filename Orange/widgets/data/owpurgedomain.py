@@ -168,16 +168,9 @@ class OWPurgeDomain(widget.OWWidget):
             ))
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    appl = QApplication([])
-    ow = OWPurgeDomain()
+if __name__ == "__main__":  # pragma: no cover
     data = Table("car.tab")
-    subset = [inst for inst in data
-              if inst["buying"] == "v-high"]
+    subset = [inst for inst in data if inst["buying"] == "v-high"]
     subset = Table(data.domain, subset)
     # The "buying" should be removed and the class "y" reduced
-    ow.setData(subset)
-    ow.show()
-    appl.exec_()
-    ow.saveSettings()
+    OWPurgeDomain.test_run(subset)

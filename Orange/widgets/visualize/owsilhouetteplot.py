@@ -1,4 +1,3 @@
-import sys
 import itertools
 import enum
 
@@ -1196,26 +1195,5 @@ class TextListWidget(QGraphicsWidget):
         self.__textitems = []
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-    w = OWSilhouettePlot()
-    w.show()
-    w.raise_()
-    w.set_data(Orange.data.Table(filename))
-    w.handleNewSignals()
-    app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.onDeleteWidget()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+if __name__ == "__main__":  # pragma: no cover
+    OWSilhouettePlot.test_run(Orange.data.Table("iris"))

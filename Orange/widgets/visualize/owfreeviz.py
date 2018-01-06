@@ -8,7 +8,6 @@ from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtSlot as Slot
 )
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 
@@ -415,29 +414,6 @@ class MoveIndicator(pg.GraphicsObject):
         return QRectF()
 
 
-def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "zoo"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWFreeViz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-
-    del w
-    return r
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("zoo")
+    OWFreeViz.test_run(set_data=data, set_subset_data=data[::10])

@@ -700,20 +700,5 @@ class DropDownToolButton(QToolButton):
         self.set_text()
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(argv or [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "zoo"
-
-    w = OWSelectRows()
-    w.set_data(Table(filename))
-    w.show()
-    app.exec_()
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main(sys.argv))
+    OWSelectRows.test_run(Table("zoo"))

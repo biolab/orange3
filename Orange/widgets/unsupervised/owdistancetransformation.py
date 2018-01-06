@@ -90,3 +90,10 @@ class OWDistanceTransformation(widget.OWWidget):
 
     def _invalidate(self):
         self.commit()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import Orange.distance
+    data = Orange.data.Table("iris")
+    dist = Orange.distance.Euclidean(data)
+    OWDistanceTransformation.test_run(dist)

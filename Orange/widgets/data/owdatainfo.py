@@ -201,11 +201,5 @@ class OWDataInfo(widget.OWWidget):
             self.report_items(self.data_desc)
 
 
-if __name__ == "__main__":
-    a = QtWidgets.QApplication([])
-    ow = OWDataInfo()
-    ow.show()
-    ow.data(Table("iris"))
-    ow.raise_()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWDataInfo.test_run(Table("iris"))

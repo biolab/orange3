@@ -13,7 +13,8 @@ import pyqtgraph as pg
 
 import Orange
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.evaluate.utils import check_results_adequacy
+from Orange.widgets.evaluate.utils import \
+    check_results_adequacy, results_for_test_run
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.widget import Input
 from Orange.widgets import report
@@ -231,37 +232,5 @@ def gaussian_smoother(x, y, sigma=1.0):
     return np.vectorize(smoother, otypes=[np.float])
 
 
-def main():
-    import sip
-    from AnyQt.QtWidgets import QApplication
-    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
-                                       NuSVMLearner)
-
-    app = QApplication([])
-    w = OWCalibrationPlot()
-    w.show()
-    w.raise_()
-
-    data = Orange.data.Table("ionosphere")
-    results = Orange.evaluation.CrossValidation(
-        data,
-        [LogisticRegressionLearner(penalty="l2"),
-         LogisticRegressionLearner(penalty="l1"),
-         SVMLearner(probability=True),
-         NuSVMLearner(probability=True)
-        ],
-        store_data=True
-    )
-    results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
-    w.set_results(results)
-    rval = app.exec_()
-
-    sip.delete(w)
-    del w
-    app.processEvents()
-    del app
-    return rval
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWCalibrationPlot.test_run(results_for_test_run())

@@ -1,4 +1,3 @@
-import sys
 import numpy
 
 import Orange.data
@@ -83,28 +82,5 @@ class OWDataSamplerB(OWWidget):
 # [end-snippet-4]
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    # PyQt changes argv list in-place
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    ow = OWDataSamplerB()
-    ow.show()
-    ow.raise_()
-
-    dataset = Orange.data.Table(filename)
-    ow.set_data(dataset)
-    ow.handleNewSignals()
-    app.exec_()
-    ow.set_data(None)
-    ow.handleNewSignals()
-    ow.onDeleteWidget()
-    return 0
-
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    OWDataSamplerB.test_run(Orange.data.Table("iris"))

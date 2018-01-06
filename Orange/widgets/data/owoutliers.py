@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 from AnyQt.QtWidgets import QLayout
 
@@ -227,16 +225,6 @@ class OWOutliers(widget.OWWidget):
                  ("Contamination", self.cont),
                  ("Support fraction", self.support_fraction)))
 
-def test_main():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    data = Table("iris")
-    w = OWOutliers()
-    w.set_data(data)
-    w.commit()
-    w.show()
-    return app.exec_()
 
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWOutliers.test_run(Table("iris"))

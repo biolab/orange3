@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
-
 from collections import namedtuple, OrderedDict
 from itertools import chain
 from contextlib import contextmanager
@@ -1880,39 +1877,8 @@ def clusters_at_height(root, height):
     return cluster_list
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    import sip
-    import Orange.distance as distance
-
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris.tab"
-
-    w = OWHierarchicalClustering()
-
-    data = Orange.data.Table(filename)
-    matrix = distance.Euclidean(distance._preprocess(data))
-
-    w.set_distances(matrix)
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.set_distances(None)
-    w.handleNewSignals()
-    w.saveSettings()
-    w.onDeleteWidget()
-    sip.delete(w)
-    del w
-    app.processEvents()
-    return rval
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+    from Orange import distance
+    data = Orange.data.Table("iris")
+    matrix = distance.Euclidean(distance._preprocess(data))
+    OWHierarchicalClustering.test_run(matrix)

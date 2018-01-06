@@ -372,19 +372,11 @@ class DistributionItemDelegate(QItemDelegate):
 
         painter.restore()
 
-if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
 
+if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import CN2Learner
-
     data = Table("iris")
     learner = CN2Learner()
     model = learner(data)
     model.instances = data
-
-    a = QApplication([])
-    ow = OWRuleViewer()
-    ow.set_classifier(model)
-
-    ow.show()
-    a.exec()
+    OWRuleViewer.test_run(model)

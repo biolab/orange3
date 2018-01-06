@@ -131,13 +131,5 @@ class OWLoadModel(widget.OWWidget):
         self.load(self.history[self.selectedIndex])
 
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    w = OWLoadModel()
-    w.show()
-    return app.exec_()
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWLoadModel.test_run()

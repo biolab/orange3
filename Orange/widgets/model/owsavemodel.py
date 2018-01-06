@@ -2,9 +2,7 @@ import os
 
 import pickle
 
-from AnyQt.QtWidgets import (
-    QComboBox, QStyle, QSizePolicy, QFileDialog, QApplication
-)
+from AnyQt.QtWidgets import QComboBox, QStyle, QSizePolicy, QFileDialog
 
 from Orange.base import Model
 from Orange.widgets import widget, gui
@@ -143,13 +141,5 @@ class OWSaveModel(widget.OWWidget):
             not (self.model is None or self.filename is None))
 
 
-def main():
-    app = QApplication([])
-    w = OWSaveModel()
-    w.show()
-    return app.exec_()
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
-
+if __name__ == "__main__":  # pragma: no cover
+    OWSaveModel.test_run()

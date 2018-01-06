@@ -167,3 +167,7 @@ class OWDistances(OWWidget):
             # normalize_dist is set to False when restoring settings from
             # an older version to preserve old semantics.
             settings["normalized_dist"] = False
+
+
+if __name__ == "__main__":  # pragma: no cover
+    OWDistances.test_run(Orange.data.Table("iris"))

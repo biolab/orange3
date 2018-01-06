@@ -1014,29 +1014,5 @@ def unique(seq):
     return unique_el
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    w = OWFeatureConstructor()
-    w.show()
-    w.raise_()
-    data = Orange.data.Table(filename)
-    w.setData(data)
-    w.handleNewSignals()
-    app.exec_()
-    w.setData(None)
-    w.handleNewSignals()
-    w.saveSettings()
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWFeatureConstructor.test_run(Orange.data.Table("iris"))

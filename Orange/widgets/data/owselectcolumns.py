@@ -1,4 +1,3 @@
-import sys
 from functools import partial
 from typing import Optional  # pylint: disable=unused-import
 
@@ -548,30 +547,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(list(argv))
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWSelectAttributes()
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.set_features(AttributeList(data.domain.attributes[:2]))
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    return rval
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+    data = Orange.data.Table("brown-selected")
+    features = AttributeList(data.domain.attributes[:2])
+    OWSelectAttributes.test_run(set_data=data, set_features=features)

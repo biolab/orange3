@@ -612,14 +612,5 @@ def run_on_graph(graph, resolution, state):
     return res
 
 
-if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWLouvainClustering()
-    ow.resetSettings()
-
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    app.exec_()
+if __name__ == '__main__':  # pragma: no cover
+    OWLouvainClustering.test_run(Table("iris"))

@@ -1,7 +1,6 @@
 import logging
 import numbers
 import os
-import sys
 import traceback
 
 from xml.sax.saxutils import escape
@@ -610,19 +609,5 @@ def description_html(datainfo):
     return "\n".join(html)
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-
-    app = QApplication(list(args))
-    w = OWDataSets()
-    w.show()
-    w.raise_()
-    rv = app.exec_()
-    w.saveSettings()
-    w.onDeleteWidget()
-    return rv
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDataSets.test_run()

@@ -115,13 +115,5 @@ class OWRandomize(OWWidget):
              ("Replicable", ["no", "yes"][self.random_seed])])
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-
-    app = QApplication([])
-    ow = OWRandomize()
-    d = Table("iris")
-    ow.set_data(d)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWRandomize.test_run(Table("iris"))

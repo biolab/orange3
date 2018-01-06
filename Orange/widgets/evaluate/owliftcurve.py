@@ -257,37 +257,6 @@ def lift_curve(ytrue, ypred, target=1):
     return rpp, tpr, thresholds
 
 
-def main():
-    import sip
-    from AnyQt.QtWidgets import QApplication
-    from Orange.classification import (LogisticRegressionLearner, SVMLearner,
-                                       NuSVMLearner)
-
-    app = QApplication([])
-    w = OWLiftCurve()
-    w.show()
-    w.raise_()
-
-    data = Orange.data.Table("ionosphere")
-    results = Orange.evaluation.CrossValidation(
-        data,
-        [LogisticRegressionLearner(penalty="l2"),
-         LogisticRegressionLearner(penalty="l1"),
-         SVMLearner(probability=True),
-         NuSVMLearner(probability=True)
-        ],
-        store_data=True
-    )
-    results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
-    w.set_results(results)
-    rval = app.exec_()
-
-    sip.delete(w)
-    del w
-    app.processEvents()
-    del app
-    return rval
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    from Orange.widgets.evaluate.utils import results_for_test_run
+    OWLiftCurve.test_run(results_for_test_run())

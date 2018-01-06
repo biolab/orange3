@@ -518,14 +518,5 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.update_file_list(key, value, oldvalue)
 
 
-def main():
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWFile()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWFile.test_run()

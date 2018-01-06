@@ -909,13 +909,5 @@ class OWFeatureStatistics(widget.OWWidget):
         pass
 
 
-if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWFeatureStatistics()
-
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    app.exec_()
+if __name__ == '__main__':  # pragma: no cover
+    OWFeatureStatistics.test_run(Table("iris"))

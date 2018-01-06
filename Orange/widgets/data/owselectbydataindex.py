@@ -1,7 +1,5 @@
 import numpy as np
 
-from AnyQt.QtWidgets import QApplication
-
 from Orange.data import Table
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
@@ -101,17 +99,6 @@ class OWSelectByDataIndex(widget.OWWidget):
         self.report_items("", [("Data", d_text), ("Data Subset", ds_text)])
 
 
-def main():
-    app = QApplication([])
-    w = OWSelectByDataIndex()
+if __name__ == "__main__":  # pragma: no cover
     data = Table("iris.tab")
-    data_subset = data[:20]
-    w.set_data(data)
-    w.set_data_subset(data_subset)
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+    OWSelectByDataIndex.test_run(set_data=data, set_data_subset=data[:20])

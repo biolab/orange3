@@ -11,7 +11,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtWidgets import QApplication, QSizePolicy
+from AnyQt.QtWidgets import QSizePolicy
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
@@ -547,30 +547,6 @@ class CircularPlacement(LinearProjector):
         return np.vstack((np.cos(axes_angle), np.sin(axes_angle)))
 
 
-def main(argv=None):
-    import sys
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWLinearProjection()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    del w
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("iris")
+    OWLinearProjection.test_run(set_data=data, set_subset_data=data[::10])

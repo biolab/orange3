@@ -521,18 +521,5 @@ class OWKMeans(widget.OWWidget):
         super().onDeleteWidget()
 
 
-def main():  # pragma: no cover
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWKMeans()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else "iris.tab")
-    ow.set_data(d)
-    ow.show()
-    a.exec()
-    ow.saveSettings()
-
-
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    OWKMeans.test_run(Table("iris.tab"))

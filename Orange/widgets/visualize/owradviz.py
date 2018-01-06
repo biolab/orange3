@@ -9,7 +9,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
-from AnyQt.QtWidgets import qApp, QApplication
+from AnyQt.QtWidgets import qApp
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
@@ -456,27 +456,6 @@ class MoveIndicator(pg.GraphicsObject):
         return QRectF()
 
 
-def main(argv=None):
-    import sys
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "heart_disease"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWRadviz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    app.exec()
-    w.saveSettings()
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("heart_disease")
+    OWRadviz.test_run(set_data=data, set_subset_data=data[::10])

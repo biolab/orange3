@@ -110,9 +110,5 @@ def create_coef_table(classifier):
     return coef_table
 
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    w = OWLogisticRegression()
-    w.set_data(Table("zoo"))
-    w.show()
-    app.exec_()
+if __name__ == "__main__":  # pragma: no cover
+    OWLogisticRegression.test_run(Table("zoo"))

@@ -11,7 +11,6 @@ from sklearn.cluster import KMeans
 
 from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, QSize
 from AnyQt.QtGui import QStandardItem, QColor
-from AnyQt.QtWidgets import QApplication
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.preprocess import SklImpute, Normalize
@@ -285,11 +284,5 @@ class OWCorrelations(OWWidget):
                           self.vizrank.rank_table)
 
 
-if __name__ == "__main__":
-    app = QApplication([])
-    ow = OWCorrelations()
-    iris = Table("iris")
-    ow.set_data(iris)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWCorrelations.test_run(Table("iris"))

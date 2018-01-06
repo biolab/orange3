@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
 import math
 from itertools import chain
 import numpy as np
@@ -1112,28 +1110,5 @@ class OWBoxPlot(widget.OWWidget):
                 text)
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "heart_disease"
-
-    data = Orange.data.Table(filename)
-    w = OWBoxPlot()
-    w.show()
-    w.raise_()
-    w.set_data(data)
-    w.handleNewSignals()
-    rval = app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.saveSettings()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWBoxPlot.test_run(Orange.data.Table("heart_disease.tab"))

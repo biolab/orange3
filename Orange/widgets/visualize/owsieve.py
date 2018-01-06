@@ -506,17 +506,5 @@ class OWSieveDiagram(OWWidget):
         self.report_plot()
 
 
-def main():
-    # pylint: disable=missing-docstring
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWSieveDiagram()
-    ow.show()
-    data = Table(r"zoo.tab")
-    ow.set_data(data)
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWSieveDiagram.test_run(Table("zoo"))
