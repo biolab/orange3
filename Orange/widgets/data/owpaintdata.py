@@ -72,6 +72,8 @@ def stack_on_condition(a, b, condition):
 # Data manipulation operators
 # ###########################
 
+# pylint: disable=ungrouped-imports
+# pylint: disable=import-error
 if sys.version_info < (3, 4):
     # use singledispatch backports from pypi
     from singledispatch import singledispatch

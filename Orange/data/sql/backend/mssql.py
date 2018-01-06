@@ -2,7 +2,7 @@ import re
 import warnings
 from contextlib import contextmanager
 
-import pymssql
+import pymssql  # pylint: disable=import-error
 
 from Orange.data import StringVariable, TimeVariable, ContinuousVariable, DiscreteVariable
 from Orange.data.sql.backend import Backend
@@ -96,6 +96,7 @@ class PymssqlBackend(Backend):
         return var
 
     def _guess_variable(self, field_name, field_metadata, inspect_table):
+        # pylint: disable=import-error
         from pymssql import STRING, NUMBER, DATETIME, DECIMAL
 
         type_code, *_ = field_metadata

@@ -596,6 +596,8 @@ class SqlTable(Table):
                             no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
+        # the module is optional, but this function is not called if it's not installed
+        # pylint: disable=import-error
         import psycopg2
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
