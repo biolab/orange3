@@ -1,7 +1,5 @@
 import re
-import sys
 
-from AnyQt.QtWidgets import QApplication
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table
@@ -82,11 +80,5 @@ class OWNNLearner(OWBaseLearner):
         return layers
 
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWNNLearner()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWNNLearner.test_run(Table("iris"))

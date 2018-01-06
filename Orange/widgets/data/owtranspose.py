@@ -122,14 +122,4 @@ class OWTranspose(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-
-    app = QApplication([])
-    ow = OWTranspose()
-    d = Table("iris")
-    ow.set_data(d)
-    d = Table("zoo")
-    ow.set_data(d)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+    OWTranspose.test_run(Table("zoo"))

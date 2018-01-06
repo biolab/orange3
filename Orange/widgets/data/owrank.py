@@ -585,13 +585,8 @@ class OWRank(OWWidget):
             context.values['selected_rows'] = []
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import RandomForestLearner
-    a = QApplication([])
-    ow = OWRank()
-    ow.set_learner(RandomForestLearner(), (3, 'Learner', None))
-    ow.setData(Table("heart_disease.tab"))
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+    OWRank.test_run(
+        set_learner=(RandomForestLearner(), (3, 'Learner', None)),
+        set_data=Table("heart_disease.tab"))

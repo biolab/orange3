@@ -1029,17 +1029,5 @@ def get_conditional_distribution(data, attrs):
     return cond_dist, dist
 
 
-def main():
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWMosaicDisplay()
-    ow.show()
-    data = Table("zoo.tab")
-    ow.set_data(data)
-    ow.set_subset_data(data[::10])
-    ow.handleNewSignals()
-    a.exec_()
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWMosaicDisplay.test_run(Table("zoo"))

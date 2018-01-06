@@ -1,4 +1,3 @@
-import sys
 from functools import partial
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
@@ -418,27 +417,5 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def test_main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(list(argv))
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWSelectAttributes()
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWSelectAttributes.test_run(Orange.data.Table("brown-selected"))

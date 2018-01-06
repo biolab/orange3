@@ -358,17 +358,5 @@ class OWKMeans(widget.OWWidget):
                     self.table_view)
 
 
-def main():  # pragma: no cover
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWKMeans()
-    d = Table("iris.tab")
-    ow.set_data(d)
-    ow.show()
-    a.exec()
-    ow.saveSettings()
-
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    OWKMeans.test_run(Table("iris.tab"))

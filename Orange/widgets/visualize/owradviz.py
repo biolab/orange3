@@ -905,33 +905,5 @@ def add_arc(angle, col, dangle=5):
     return [arc, arrow1, arrow2]
 
 
-def main(argv=None):
-    import sys
-    import sip
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "heart_disease"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWRadviz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    sip.delete(w)
-    del w
-    return r
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWRadviz.test_run(Table("heart_disease"))

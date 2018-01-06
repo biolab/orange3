@@ -32,6 +32,7 @@ from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg, MessagesWidget
 from Orange.widgets.utils.signals import \
     WidgetSignalsMixin, Input, Output, AttributeList
+from Orange.widgets.utils.test_run import WidgetTestRunMixin
 from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 from Orange.widgets.utils.buttons import SimpleButton
 
@@ -69,7 +70,7 @@ class WidgetMetaClass(type(QDialog)):
 
 # pylint: disable=too-many-instance-attributes
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
-               WidgetMessagesMixin, WidgetSignalsMixin,
+               WidgetMessagesMixin, WidgetSignalsMixin, WidgetTestRunMixin,
                metaclass=WidgetMetaClass):
     """Base widget class"""
 
