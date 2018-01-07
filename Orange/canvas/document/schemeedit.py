@@ -6,7 +6,6 @@ Scheme Editor Widget
 
 """
 
-import sys
 import logging
 import itertools
 import unicodedata
@@ -35,9 +34,7 @@ from ..registry.qt import whats_this_helper
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
 from ..scheme import (
-    scheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation
-)
-from ..scheme import widgetsscheme
+    widgetsscheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation)
 from ..canvas.scene import CanvasScene
 from ..canvas.view import CanvasView
 from ..canvas import items
@@ -80,7 +77,7 @@ class GraphicsSceneFocusEventListener(QGraphicsObject):
 
 class SchemeEditWidget(QWidget):
     """
-    A widget for editing a :class:`~.scheme.Scheme` instance.
+    A widget for editing a :class:`~Orange.canvas.scheme.Scheme` instance.
 
     """
     #: Undo command has become available/unavailable.

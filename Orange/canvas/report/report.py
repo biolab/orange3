@@ -2,9 +2,7 @@ import itertools
 import time
 from collections import OrderedDict, Iterable
 
-from AnyQt.QtCore import (
-    Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
-)
+from AnyQt.QtCore import Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
 from AnyQt.QtGui import QColor, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QTableView
 

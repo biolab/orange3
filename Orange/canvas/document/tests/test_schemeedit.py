@@ -3,8 +3,7 @@ Tests for scheme document.
 """
 
 from ..schemeedit import SchemeEditWidget
-from ...scheme import Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation, \
-                      SchemeArrowAnnotation
+from ...scheme import Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation
 
 from ...registry.tests import small_testing_registry
 

@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QSizePolicy, QLabel
 )
 from AnyQt.QtGui import QFont, QIcon, QPixmap, QPainter, QColor, QBrush
-from AnyQt.QtCore import Qt, QRect, QSize, QPoint, QT_VERSION
+from AnyQt.QtCore import Qt, QRect, QSize, QPoint
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..canvas.items.utils import radial_gradient
