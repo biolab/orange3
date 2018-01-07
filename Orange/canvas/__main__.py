@@ -29,8 +29,7 @@ from Orange import canvas
 from Orange.canvas.application.application import CanvasApplication
 from Orange.canvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.application.outputview import TextStream, ExceptHook
-from Orange.canvas.application.errorreporting import ErrorReporting, \
-    handle_exception
+from Orange.canvas.application.errorreporting import handle_exception
 
 from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir

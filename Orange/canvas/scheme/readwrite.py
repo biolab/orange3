@@ -25,6 +25,8 @@ from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
 from .errors import IncompatibleChannelTypeError
 
 from ..registry import global_registry
+# pylint ignores uses in type annotations
+# pylint: disable=unused-import
 from ..registry import WidgetDescription, InputSignal, OutputSignal
 
 log = logging.getLogger(__name__)
