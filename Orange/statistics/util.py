@@ -144,7 +144,11 @@ def bincount(x, weights=None, max_val=None, minlength=None):
         # zeros, we must count implicit zeros separately and add them to the
         # explicit ones found before
         if sp.issparse(x_original):
-            bc[0] += zero_weights
+            # If x contains only NaNs, then bc will be an empty array
+            if zero_weights and bc.size == 0:
+                bc = [zero_weights]
+            elif zero_weights:
+                bc[0] += zero_weights
 
     return bc, nans
 
