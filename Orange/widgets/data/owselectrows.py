@@ -1,4 +1,3 @@
-import sys
 import enum
 from collections import OrderedDict
 from itertools import chain

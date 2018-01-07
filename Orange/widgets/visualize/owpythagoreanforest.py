@@ -1,9 +1,7 @@
 """Pythagorean forest widget for visualizing random forests."""
 from math import log, sqrt
-# pylint: disable=unused-import
 from typing import Any, Callable, Optional
 
-# pylint: disable=unused-import
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
     QItemSelection, QT_VERSION
 from AnyQt.QtGui import QPainter, QPen, QColor, QBrush, QMouseEvent

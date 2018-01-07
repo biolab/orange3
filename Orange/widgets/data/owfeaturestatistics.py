@@ -8,7 +8,7 @@ TODO:
 import datetime
 import locale
 from enum import IntEnum
-from typing import Any, Optional, Tuple, List  # pylint: disable=unused-import
+from typing import Any, Optional, Tuple, List
 
 import numpy as np
 import scipy.stats as ss
@@ -16,11 +16,11 @@ from AnyQt.QtCore import Qt, QSize, QRectF, QVariant, QModelIndex, pyqtSlot, \
     QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
-    QHeaderView, QStyle, QStyleOptionViewItem  # pylint: disable=unused-import
+    QHeaderView, QStyle, QStyleOptionViewItem
 
 import Orange.statistics.util as ut
 from Orange.data import Table, StringVariable, DiscreteVariable, \
-    ContinuousVariable, TimeVariable, Domain, Variable  # pylint: disable=unused-import
+    ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
 from Orange.widgets.report import plural

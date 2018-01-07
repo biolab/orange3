@@ -4,10 +4,10 @@ import os
 import traceback
 
 from xml.sax.saxutils import escape
-from concurrent.futures import ThreadPoolExecutor, Future  # pylint: disable=unused-import
+from concurrent.futures import ThreadPoolExecutor, Future
 
 from types import SimpleNamespace
-from typing import Optional, Dict, Tuple, List  # pylint: disable=unused-import
+from typing import Optional, Dict, Tuple, List
 from collections import namedtuple
 
 from AnyQt.QtWidgets import (

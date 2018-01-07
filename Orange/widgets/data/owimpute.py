@@ -2,9 +2,9 @@ import copy
 import logging
 import enum
 import concurrent.futures
-from concurrent.futures import Future  # pylint: disable=unused-import
+from concurrent.futures import Future
 from collections import namedtuple, OrderedDict
-from typing import List, Any, Dict, Tuple, Type, Optional # pylint: disable=unused-import
+from typing import List, Any, Dict, Tuple, Type, Optional
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
-from AnyQt.QtCore import Qt, QThread, QModelIndex  # pylint: disable=unused-import
+from AnyQt.QtCore import Qt, QThread, QModelIndex
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data

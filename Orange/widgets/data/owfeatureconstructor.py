@@ -19,7 +19,7 @@ import types
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
-from typing import List, Dict, Any  # pylint: disable=unused-import
+from typing import List, Dict, Any
 
 import numpy as np
 

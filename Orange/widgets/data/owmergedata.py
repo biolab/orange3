@@ -4,7 +4,6 @@ from itertools import chain, product, tee
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
 import numpy as np
-import scipy.sparse as sp
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable

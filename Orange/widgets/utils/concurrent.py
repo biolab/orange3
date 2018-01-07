@@ -12,14 +12,9 @@ import weakref
 from functools import partial
 import concurrent.futures
 
-from concurrent.futures import Future, CancelledError, TimeoutError
+from concurrent.futures import Future, TimeoutError
 from contextlib import contextmanager
-
-try:
-    # pylint: disable=unused-import
-    from typing import Callable, Optional, Any, List
-except ImportError:
-    pass
+from typing import Callable, Optional, Any, List
 
 from AnyQt.QtCore import (
     Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable, QSemaphore,

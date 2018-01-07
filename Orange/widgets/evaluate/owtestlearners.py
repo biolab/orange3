@@ -12,13 +12,7 @@ from functools import partial, reduce
 import concurrent.futures
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
-
-try:
-    # only used in type hinting
-    # pylint: disable=unused-import
-    from typing import Any, Optional, List, Tuple, Dict, Callable
-except ImportError:
-    pass
+from typing import Any, Optional, List, Dict, Callable
 
 import numpy as np
 

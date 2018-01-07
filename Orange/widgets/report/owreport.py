@@ -5,7 +5,7 @@ import pickle
 from collections import OrderedDict
 from enum import IntEnum
 
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
 import pkg_resources
 

@@ -2,7 +2,7 @@
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
+    QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
     QLabel, QComboBox
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics

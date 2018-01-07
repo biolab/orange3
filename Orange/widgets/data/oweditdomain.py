@@ -5,7 +5,6 @@ Edit Domain
 A widget for manual editing of a domain's attributes.
 
 """
-import sys
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest

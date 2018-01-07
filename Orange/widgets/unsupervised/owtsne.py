@@ -1,9 +1,7 @@
-import sys
-
 import numpy as np
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain

@@ -1,6 +1,3 @@
-# Module imports Input, Output and AttributeList to be used in widgets
-# pylint: disable=unused-import
-
 import sys
 import os
 import types
@@ -19,10 +16,11 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
+from Orange.canvas.registry import description as widget_description
 # OutputSignal and InputSignal are imported for compatibility, but shouldn't
 # be used; use Input and Output instead
-from Orange.canvas.registry import description as widget_description, \
-    WidgetDescription, OutputSignal, InputSignal
+# pylint: disable=unused-import
+from Orange.canvas.registry import WidgetDescription, OutputSignal, InputSignal
 from Orange.widgets.report import Report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.io import ClipboardFormat
@@ -31,8 +29,10 @@ from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.utils.messages import \
     WidgetMessagesMixin, UnboundMsg, MessagesWidget
-from Orange.widgets.utils.signals import \
-    WidgetSignalsMixin, Input, Output, AttributeList
+from Orange.widgets.utils.signals import WidgetSignalsMixin
+# Module exposes Input, Output and AttributeList to be used in widgets
+# pylint: disable=unused-import
+from Orange.widgets.utils.signals import Input, Output, AttributeList
 from Orange.widgets.utils.test_run import WidgetTestRunMixin
 from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 from Orange.widgets.utils.buttons import SimpleButton

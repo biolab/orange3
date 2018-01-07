@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
 from AnyQt.QtWidgets import QListView, QHBoxLayout, QStyledItemDelegate
 from AnyQt.QtCore import Qt

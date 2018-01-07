@@ -5,8 +5,7 @@ from operator import iadd
 import numpy
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QGraphicsWidget,
-    QApplication
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,

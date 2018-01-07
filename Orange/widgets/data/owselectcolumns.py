@@ -1,8 +1,8 @@
 from functools import partial
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
+from AnyQt.QtWidgets import QListView
 from AnyQt.QtCore import (
     Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
     QMimeData

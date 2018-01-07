@@ -6,7 +6,7 @@ import itertools
 import concurrent.futures
 
 from collections import OrderedDict, namedtuple
-from typing import List, Tuple, Iterable  # pylint: disable=unused-import
+from typing import List, Tuple, Iterable
 
 from math import isnan
 

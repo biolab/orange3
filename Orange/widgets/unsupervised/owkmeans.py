@@ -1,5 +1,5 @@
-from concurrent.futures import Future  # pylint: disable=unused-import
-from typing import Optional, List, Dict  # pylint: disable=unused-import
+from concurrent.futures import Future
+from typing import Optional, List, Dict
 
 import numpy as np
 from AnyQt.QtCore import Qt, QTimer, QAbstractTableModel, QModelIndex, QThread, \
@@ -8,7 +8,7 @@ from AnyQt.QtGui import QIntValidator
 from AnyQt.QtWidgets import QGridLayout, QTableView
 
 from Orange.clustering import KMeans
-from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES  # pylint: disable=unused-import
+from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting

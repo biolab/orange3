@@ -12,7 +12,7 @@ import sklearn.metrics
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
-    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX
+    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX,
 )
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
