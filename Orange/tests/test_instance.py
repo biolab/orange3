@@ -2,7 +2,6 @@
 # pylint: disable=missing-docstring
 
 from math import isnan
-import warnings
 import unittest
 from unittest.mock import MagicMock
 

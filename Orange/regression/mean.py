@@ -1,7 +1,6 @@
 import numpy
 
 from Orange.regression import Learner, Model
-from Orange.data import ContinuousVariable
 from Orange.statistics import distribution
 
 __all__ = ["MeanLearner"]

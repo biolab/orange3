@@ -5,7 +5,7 @@ from collections import OrderedDict
 import numpy as np
 import scipy.sparse as sp
 
-from Orange.base import Model, TreeModel as TreeModelInterface
+from Orange.base import TreeModel as TreeModelInterface
 
 
 class Node:

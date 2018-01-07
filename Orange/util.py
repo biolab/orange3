@@ -4,7 +4,8 @@ import inspect
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
-from itertools import chain, count, repeat
+# pylint complains that count is unused
+from itertools import chain, count, repeat  # pylint: disable=unused-import
 
 from collections import OrderedDict
 import warnings
@@ -114,11 +115,11 @@ class Registry(type):
         return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
 
 
-def namegen(prefix='_', *args, count=count, **kwargs):
+def namegen(prefix='_', *args, spec_count=count, **kwargs):
     """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
-    count = iter(count(*args, **kwargs))
+    spec_count = iter(spec_count(*args, **kwargs))
     while True:
-        yield prefix + str(next(count))
+        yield prefix + str(next(spec_count))
 
 
 def export_globals(globals, module_name):
