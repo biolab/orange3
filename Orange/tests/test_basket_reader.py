@@ -1,7 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import io
 import functools
 import os
 import tempfile
