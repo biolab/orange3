@@ -6,7 +6,7 @@ from AnyQt.QtCore import Qt
 import numpy as np
 import sklearn.model_selection as skl
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable

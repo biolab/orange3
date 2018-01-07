@@ -18,8 +18,7 @@ from AnyQt.QtCore import Qt, QSize, QItemSelection, pyqtSignal as Signal
 from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
-    QComboBox, QLineEdit, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
+    QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
     QTableView, QHeaderView, QListView
 )
 
@@ -1595,12 +1594,12 @@ def comboBox(widget, master, value, box=None, label=None, labelWidth=None,
         fixed size hint. When not None, equivalent to::
 
             combo.setSizeAdjustPolicy(
-                QComboBox.AdjustToMinimumContentsLengthWithIcon)
+                QtWidgets.QComboBox.AdjustToMinimumContentsLengthWithIcon)
             combo.setMinimumContentsLength(contentsLength)
     :param int maximumContentsLength: Specifies the upper bound on the
         `sizeHint` and `minimumSizeHint` width specified in character
         length (default: 25, use 0 to disable)
-    :rtype: QComboBox
+    :rtype: QtWidgets.QComboBox
     """
 
     # Local import to avoid circular imports

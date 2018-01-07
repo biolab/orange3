@@ -1,8 +1,5 @@
 from functools import reduce
 
-import numpy as np
-
-from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
 import Orange.data

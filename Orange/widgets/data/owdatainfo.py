@@ -2,7 +2,6 @@ from collections import OrderedDict
 import threading
 
 from AnyQt import QtWidgets
-from AnyQt import QtCore
 
 from Orange.widgets import widget, gui
 from Orange.widgets.widget import Input

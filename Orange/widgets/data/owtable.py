@@ -12,10 +12,10 @@ import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QAction, QApplication,
+    QTableView, QHeaderView, QAbstractButton, QApplication,
     QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QKeySequence, QClipboard
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,

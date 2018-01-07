@@ -6,7 +6,7 @@ from AnyQt.QtWidgets import (
     QGraphicsTextItem, QGraphicsLinearLayout, QGraphicsView, QApplication
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QLinearGradient, QFont
-from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF, QPoint, QSize, QRect
+from AnyQt.QtCore import Qt, QPointF, QSizeF, QPoint, QSize, QRect
 
 
 class Anchorable(QGraphicsWidget):

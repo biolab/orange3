@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Table
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets

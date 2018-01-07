@@ -29,7 +29,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
 

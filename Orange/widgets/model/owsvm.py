@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QLabel, QGridLayout
 
 from Orange.data import Table
 from Orange.modelling import SVMLearner, NuSVMLearner
-from Orange.widgets import gui, widget
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
