@@ -7,8 +7,7 @@ import itertools
 
 import numpy as np
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable, \
-    StringVariable
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.data.filter import \
     FilterContinuous, FilterDiscrete, FilterString, Values, HasClass, \
     IsDefined, SameValue, Random, ValueFilter, FilterStringList, FilterRegex

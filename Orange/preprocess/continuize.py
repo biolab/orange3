@@ -1,4 +1,4 @@
-from Orange.data import ContinuousVariable, Domain, Table
+from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from Orange.util import Reprable
 from Orange.preprocess.transformation import \

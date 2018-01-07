@@ -15,7 +15,6 @@ from Orange.data import (
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import TableDesc, BackendError
-from Orange.misc import import_late_warning
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000

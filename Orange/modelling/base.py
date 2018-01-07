@@ -1,5 +1,6 @@
 import numpy as np
 
+# pylint: disable=unused-import
 from Orange.base import Learner, Model, SklLearner
 from Orange.data import Table, Domain
 
