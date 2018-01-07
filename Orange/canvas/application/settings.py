@@ -7,7 +7,7 @@ import sys
 import logging
 
 from AnyQt.QtWidgets import (
-    QWidget, QMainWindow, QComboBox, QCheckBox, QListView, QTabWidget,
+    QWidget, QMainWindow, QComboBox, QCheckBox, QTabWidget,
     QToolBar, QAction, QStackedWidget, QVBoxLayout, QHBoxLayout,
     QFormLayout, QSizePolicy, QLineEdit, QLabel
 )

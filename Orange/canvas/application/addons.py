@@ -14,7 +14,7 @@ import concurrent.futures
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
-from typing import Optional, List, Union, Tuple  # pylint: disable=unused-import
+from typing import Optional, List, Union, Tuple
 
 import pkg_resources
 import requests

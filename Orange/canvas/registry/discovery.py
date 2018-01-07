@@ -9,9 +9,7 @@ This module implements a discovery process
 """
 
 import os
-import sys
 import stat
-import glob
 import logging
 import types
 import pkgutil

@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import (
     QPen, QBrush, QColor, QPainterPath, QTransform, QPalette
 )
-from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF, QEvent
+from AnyQt.QtCore import Qt, QPointF, QLineF, QEvent
 
 from .nodeitem import SHADOW_COLOR
 from .utils import stroke_path

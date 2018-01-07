@@ -699,4 +699,5 @@ class Scheme(QObject):
         self.setProperty("_presets", groups)
 
 
-from . import readwrite
+# import here to prevent cyclic imports
+from . import readwrite  # pylint: disable=wrong-import-position
