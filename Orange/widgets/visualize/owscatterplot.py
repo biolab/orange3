@@ -4,7 +4,6 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtGui import QPen, QPalette
-from AnyQt.QtWidgets import QApplication
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score

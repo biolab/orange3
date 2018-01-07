@@ -1,6 +1,5 @@
 from itertools import chain
 import numpy as np
-from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable

@@ -20,7 +20,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_test_run
 from Orange.widgets.utils import colorpalette, colorbrewer
-from Orange.widgets.io import FileFormat
 from Orange.widgets.widget import Input
 from Orange.canvas import report
 

@@ -4,7 +4,8 @@ import enum
 from xml.sax.saxutils import escape
 from types import SimpleNamespace as namespace
 
-from typing import Optional
+# pylint ignores uses in type annotation
+from typing import Optional  # pylint: disable=unused-import
 
 import numpy as np
 import sklearn.metrics
@@ -12,8 +13,9 @@ import sklearn.metrics
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
-    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX
+    QSizePolicy, QWIDGETSIZE_MAX,
 )
+from AnyQt.QtWidgets import QWidget, QStyleOptionGraphicsItem  # pylint: disable=unused-import
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal

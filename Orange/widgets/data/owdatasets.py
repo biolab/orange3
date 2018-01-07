@@ -5,15 +5,18 @@ import os
 import traceback
 
 from xml.sax.saxutils import escape
-from concurrent.futures import ThreadPoolExecutor, Future
-
-from types import SimpleNamespace as namespace
-from typing import Optional, Dict, Tuple
+from concurrent.futures import ThreadPoolExecutor
+# pylint ignores uses in type annotation
+from concurrent.futures import Future  # pylint: disable=unused-import
+from types import SimpleNamespace as namespace  # pylint: disable=unused-import
+from typing import Optional, Dict, Tuple  # pylint: disable=unused-import
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate
+
 )
+# pylint: disable=unused-import
+from AnyQt.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
     Qt, QSize, QObject, QThread, QModelIndex, QSortFilterProxyModel,

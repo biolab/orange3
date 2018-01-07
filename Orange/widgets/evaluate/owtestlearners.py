@@ -10,11 +10,12 @@ import copy
 from functools import partial, reduce
 
 import concurrent.futures
-from concurrent.futures import Future
+# pylint issues false positive here
+from concurrent.futures import Future  # pylint: disable=unused-import
 from collections import OrderedDict, namedtuple
 
 try:
-    # only used in type hinting
+    # pylint ignores uses in type annotation
     # pylint: disable=unused-import
     from typing import Any, Optional, List, Tuple, Dict, Callable
 except ImportError:

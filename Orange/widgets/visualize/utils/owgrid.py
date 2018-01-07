@@ -8,9 +8,10 @@ from itertools import zip_longest
 
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 from AnyQt.QtGui import QColor, QPen, QBrush
-from AnyQt.QtWidgets import (
-    QSizePolicy, QGraphicsWidget, QGraphicsGridLayout, QGraphicsRectItem
-)
+from AnyQt.QtWidgets import QSizePolicy, QGraphicsWidget, QGraphicsGridLayout
+
+# used in docstring
+from AnyQt.QtWidgets import QGraphicsRectItem  # pylint: disable=unused-import
 
 class GridItem(QGraphicsWidget):
     """The base class for grid items, takes care of positioning in grid.
