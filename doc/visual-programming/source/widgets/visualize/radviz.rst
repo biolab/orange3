@@ -67,9 +67,7 @@ Just like all point-based visualizations, this widget includes tools for
 intelligent data visualization (VizRank, see [3]_) and an interface for explorative
 data analysis - selection of data points in visualization. Just like the
 :ref:`Scatter Plot` widget, it can be used to find a set
-of variables that would result in an interesting visualization. For now, this
-works only with a class-labeled data set, where interesting visualizations are
-those that well separate data instances of different classes. The Radviz graph above
+of variables that would result in an interesting visualization. The Radviz graph above
 is according to this definition an example of a very good visualization,
 while the one below is not - where we show an VizRank's interface (:obj:`Suggest features` button)
 with a list of 3-attribute visualizations and their scores - is not.
