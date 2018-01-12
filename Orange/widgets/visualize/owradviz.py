@@ -533,10 +533,13 @@ class OWRadviz(widget.OWWidget):
             QApplication.postEvent(self, QEvent(self.ReplotRequest), Qt.LowEventPriority - 10)
 
     def init_attr_values(self):
-        domain = self.data and len(self.data) and self.data.domain or None
+        domain = self.data.domain if self.data and len(self.data) else None
         for model in self.models:
             model.set_domain(domain)
-        self.graph.attr_color = self.data.domain.class_var if domain else None
+        if domain is not None:
+            self.graph.attr_color = self.data.domain.class_var
+        else:
+            self.graph.attr_color = None
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None

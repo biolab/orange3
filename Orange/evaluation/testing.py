@@ -166,9 +166,9 @@ class Results:
                     probabilities is not None and probabilities.shape[1]],
             "mismatching number of rows")
         nclasses = set_or_raise(
-            nclasses, [domain and (len(domain.class_var.values)
-                                   if domain.has_discrete_class
-                                   else None),
+            nclasses, [len(domain.class_var.values)
+                       if domain is not None and domain.has_discrete_class
+                       else None,
                        probabilities is not None and probabilities.shape[2]],
             "mismatching number of class values")
         if nclasses is not None and probabilities is not None:

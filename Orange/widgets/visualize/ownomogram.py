@@ -735,7 +735,7 @@ class OWNomogram(OWWidget):
         self.class_combo.clear()
         self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
-        if self.domain:
+        if self.domain is not None:
             self.class_combo.addItems(self.domain.class_vars[0].values)
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
@@ -775,7 +775,8 @@ class OWNomogram(OWWidget):
         self.calculate_log_reg_coefficients()
         self.update_controls()
         self.target_class_index = 0
-        self.openContext(self.domain and self.domain.class_var)
+        self.openContext(self.domain.class_var if self.domain is not None
+                         else None)
         self.points = self.log_odds_ratios or self.log_reg_coeffs
         self.feature_marker_values = []
         self.old_target_class_index = self.target_class_index
@@ -954,7 +955,7 @@ class OWNomogram(OWWidget):
 
     def get_ordered_attributes(self):
         """Return (in_domain_index, attr) pairs, ordered by method in SortBy combo"""
-        if not self.domain or not self.domain.attributes:
+        if self.domain is None or not self.domain.attributes:
             return []
 
         attrs = self.domain.attributes
