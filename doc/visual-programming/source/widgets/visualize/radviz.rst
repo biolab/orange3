@@ -1,44 +1,23 @@
 Radviz
 ======
 
-.. image:: icons/radviz.png
-
 Radviz vizualization with explorative data analysis and intelligent data
 visualization enhancements.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Data Subset
+        subset of instances
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+      data with an additional column showing whether a point is selected
+    Components
+      Radviz vectors
 
--  **Data**
-
-   An input dataset.
-
--  **Data Subset**
-
-   A subset of instances from the input dataset.
-
-**Outputs**:
-
--  **Selected Data**
-
-   A subset of instances that the user manually selected from the
-   Radviz plot
-
--  **Annotated Data**
-
-   Data with an additional column showing whether a point is selected. If more
-   than one group is selected then also the group name is written instead.
-
--  **Components**
-
-   Radviz vectors
-
-
-
-Description
------------
 
 Radviz ([1]_) is a non-linear multi-dimensional visualization
 technique that can display data defined by three or more variables in a 2-dimensional
@@ -61,18 +40,18 @@ probability. Notice that the particular visualization very nicely separates
 data instances of different class, making the visualization interesting
 and potentially informative.
 
-.. image:: images/Radviz-Brown.png
+.. figure:: images/Radviz-Brown.png
 
 Just like all point-based visualizations, this widget includes tools for
 intelligent data visualization (VizRank, see [3]_) and an interface for explorative
 data analysis - selection of data points in visualization. Just like the
-:ref:`Scatter Plot` widget, it can be used to find a set
+:doc:`Scatter Plot <../visualize/scatterplot>` widget, it can be used to find a set
 of variables that would result in an interesting visualization. The Radviz graph above
 is according to this definition an example of a very good visualization,
 while the one below is not - where we show an VizRank's interface (:obj:`Suggest features` button)
 with a list of 3-attribute visualizations and their scores - is not.
 
-.. image:: images/Radviz-Brown-2.png
+.. figure:: images/Radviz-Brown-2.png
 
 References
 ----------

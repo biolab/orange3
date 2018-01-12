@@ -1,27 +1,16 @@
 Feature Constructor
 ===================
 
-.. figure:: icons/feature-constructor.png
-
 Add new features to your dataset.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with additional features
 
--  **Data**
-
-A dataset
-
-**Outputs**:
-
--  **Data**
-
-A modified dataset
-
-Description
------------
 
 The **Feature Constructor** allows you to manually add features (columns)
 into your dataset. The new feature can be a computation of an existing

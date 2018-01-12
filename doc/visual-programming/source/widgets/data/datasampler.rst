@@ -1,32 +1,18 @@
 Data Sampler
 ============
 
-.. figure:: icons/data-sampler.png
-
 Selects a subset of data instances from an input dataset.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data Sample
+        sampled data instances
+    Remaining Data
+        out-of-sample data
 
--  **Data**
-
-   Input dataset to be sampled.
-
-**Outputs**:
-
--  **Data Sample**
-
-   A set of sampled data instances.
-
--  **Remaining Data**
-
-   All other data instances from the input dataset, which are not included in
-   the sample.
-
-Description
------------
 
 The **Data Sampler** widget implements several means of sampling data from
 an input channel. It outputs a sampled and a complementary

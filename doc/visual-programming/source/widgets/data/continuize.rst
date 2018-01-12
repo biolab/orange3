@@ -1,27 +1,16 @@
 Continuize
 ==========
 
-.. figure:: icons/continuize.png
-
 Turns discrete attributes into continuous dummy variables.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with continuized instances
 
--  **Data**
-
-   Input dataset
-
-**Outputs**:
-
--  **Data**
-
-   Output dataset
-
-Description
------------
 
 The **Continuize** widget receives a dataset in the input and outputs the
 same dataset in which the discrete attributes (including binary attributes)

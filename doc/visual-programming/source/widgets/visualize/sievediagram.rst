@@ -1,25 +1,12 @@
 Sieve Diagram
 =============
 
-.. figure:: icons/sieve-diagram.png
-
 Plots a sieve diagram for a pair of attributes.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Data**
-
-   An input dataset
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 A **Sieve diagram** is a graphical method for visualizing frequencies in a two-way contingency table and comparing them to `expected frequencies <http://cnx.org/contents/d396c4ad-2fd7-47cd-be84-152b44880feb@2/What-is-an-expected-frequency>`_ under assumption of independence. It was proposed by
 Riedwyl and Schüpbach in a technical report in 1983 and later called a

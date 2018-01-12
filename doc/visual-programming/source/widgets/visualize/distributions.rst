@@ -1,25 +1,12 @@
 Distributions
 =============
 
-.. figure:: icons/distributions.png
-
 Displays value distributions for a single attribute.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Data**
-
-   An input dataset.
-
-**Outputs**:
-
--  (None)
-
-Description
------------
 
 The **Distributions** widget displays the `value distribution <https://en.wikipedia.org/wiki/Frequency_distribution>`_
 of discrete or continuous attributes. If the data contains a class

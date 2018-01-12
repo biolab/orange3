@@ -1,25 +1,12 @@
 Save Data
 =========
 
-.. figure:: icons/save.png
-
 Saves data to a file.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  (None)
-
-Description
------------
 
 The **Save Data** widget considers a dataset provided in the input channel
 and saves it to a data file with a specified name. It can save the

@@ -1,31 +1,18 @@
 Distance Matrix
 ===============
 
-.. figure:: icons/distance-matrix.png
-
 Visualizes distance measures in a distance matrix. 
 
-Signals
--------
+Inputs
+    Distances
+        distance matrix
 
-**Inputs**:
+Outputs
+    Distances
+        distance matrix
+    Table
+        distance measures in a distance matrix
 
--  **Distances**
-
-   A distance matrix.
-
-**Outputs**:
-
--  **Distances**
-
-   A distance matrix.
-
--  **Table**
-
-   Distance measures in a distance matrix.
-
-Description
------------
 
 The **Distance Matrix** widget creates a distance matrix, which is a two-dimensional array containing the distances, taken pairwise, between the elements of a set. The number of elements in the dataset defines the size of the matrix. Data matrices are essential for hierarchical clustering and they are extremely useful in bioinformatics as well, where they are used to represent protein structures in a coordinate-independent manner. 
 

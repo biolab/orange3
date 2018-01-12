@@ -1,38 +1,20 @@
-.. _model.rf:
-
 Random Forest
 =============
 
-.. figure:: icons/random-forest.png
-
 Predict using an ensemble of decision trees.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        random forest learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A random forest learning algorithm with settings as specified in the
-   dialog.
-
--  **Model**
-
-   A trained model. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 `Random forest <https://en.wikipedia.org/wiki/Random_forest>`_ is an ensemble learning method used for classification, regression and other tasks. It was first proposed by Tin Kam Ho and further developed by Leo Breiman (Breiman, 2001) and Adele Cutler.
 

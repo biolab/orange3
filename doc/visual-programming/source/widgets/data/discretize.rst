@@ -1,27 +1,16 @@
 Discretize
 ==========
 
-.. figure:: icons/discretize.png
+Discretizes continuous attributes from an input dataset.
 
-Discretizes continuous attributes from an input dataset. 
+Inputs
+    Data
+        input dataset
 
-Signals
--------
+Outputs
+    Data
+        dataset with discretized values
 
-**Inputs**:
-
--  **Data**
-
-   Attribute-valued dataset.
-
-**Outputs**:
-
--  **Data**
-
-   A dataset with discretized values.
-
-Description
------------
 
 The **Discretize** widget
 `discretizes <https://en.wikipedia.org/wiki/Discretization>`_

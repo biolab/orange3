@@ -1,27 +1,16 @@
 Distance Transformation
 =======================
 
-.. figure:: icons/distance-transformation.png
+Transforms distances in a dataset.
 
-Transforms distances in a dataset. 
+Inputs
+    Distances
+        distance matrix
 
-Signals
--------
+Outputs
+    Distances
+        transformed distance matrix
 
-**Inputs**:
-
--  **Distances**
-
-   A distance matrix
-
-**Outputs**:
-
--  **Distances**
-
-   A distance matrix
-
-Description
------------
 
 The **Distances Transformation** widget is used for the normalization and inversion of distance matrices. The normalization of data is necessary to bring all the variables into proportion with one another. 
 

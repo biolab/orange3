@@ -1,26 +1,13 @@
 Paint Data
 ==========
 
-.. figure:: icons/paint-data.png
-
 Paints data on a 2D plane. You can place individual data points or
 use a brush to paint larger datasets.
 
-Signals
--------
+Outputs
+    Data
+        dataset as painted in the plot
 
-**Inputs**
-
--  (None)
-
-**Outputs**
-
--  **Data**
-
-   Attribute-valued dataset created in the widget
-
-Description
------------
 
 The widget supports the creation of a new dataset by visually placing
 data points on a two-dimension plane. Data points can be placed on the

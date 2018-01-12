@@ -1,41 +1,23 @@
 Scatter Plot
 ============
 
-.. figure:: icons/scatter-plot.png
-
 Scatterplot visualization with explorative analysis and intelligent data
 visualization enhancements.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Data Subset
+        subset of instances
+    Features
+        list of attributes
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        data with an additional column showing whether a point is selected
 
--  **Data**
-
-   An input dataset.
-
--  **Data Subset**
-
-   A subset of instances from the input dataset.
-
--  **Features**
-
-   A list of attributes.
-
-**Outputs**:
-
--  **Selected Data**
-
-   A subset of instances that the user manually selected from the
-   scatterplot.
-
--  **Data**
-
-   Data with an additional column showing whether a point is selected.
-
-Description
------------
 
 The **Scatterplot** widget provides a 2-dimensional scatterplot
 visualization for both continuous and discrete-valued attributes. The

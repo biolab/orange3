@@ -1,27 +1,16 @@
 Pythagorean Forest
 ==================
 
-.. figure:: icons/pythagorean-forest.png
-
 Pythagorean forest for visualising random forests.
 
-Signals
--------
+Inputs
+    Random Forest
+        tree models from random forest
 
-**Inputs**:
+Outputs
+    Tree
+        selected tree model
 
--  **Random Forest**
-
-   Classification / regression tree models as random forest.
-
-**Outputs**:
-
--  **Tree**
-
-   A selected classification / regression tree model.
-
-Description
------------
 
 **Pythagorean Forest** shows all learned decision tree models from :doc:`Random Forest <../model/randomforest>` widget. It displays then as Pythagorean trees, each visualization pertaining to one randomly constructed tree. In the visualization, you can select a tree and display it in :doc:`Pythagorean Tree <../visualize/pythagoreantree>` wigdet. The best tree is the one with the shortest and most strongly colored branches. This means few attributes split the branches well.
 

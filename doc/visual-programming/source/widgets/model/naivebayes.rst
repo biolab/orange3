@@ -1,35 +1,20 @@
 Naive Bayes
 ===========
 
-.. figure:: icons/naive-bayes.png
-
 A fast and simple probabilistic classifier based on Bayes' theorem with the assumption of feature independence.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        naive bayes learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A naive bayes learning algorithm with settings as specified in the dialog.
-
--  **Model**
-
-   A trained classifier. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 **Naive Bayes** learns a `Naive Bayesian <https://en.wikipedia.org/wiki/Naive_Bayes_classifier>`_ model from the data.
 

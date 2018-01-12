@@ -1,27 +1,16 @@
 Heat Map
 ========
 
-.. figure:: icons/heat-map.png
-
 Plots a heat map for a pair of attributes.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
 
--  **Data**
-
-   An input dataset.
-
-**Outputs**:
-
--  **Selected Data**
-
-   A subset of instances that the user has manually selected from the map.
-
-Description
------------
 
 `Heat map <https://en.wikipedia.org/wiki/Heat_map>`_ is a graphical
 method for visualizing attribute values by class in a two-way matrix.

@@ -2,25 +2,12 @@
 Datasets
 ========
 
-.. figure:: icons/datasets.png
-
 Load a dataset from an online repository.
 
-Signals
--------
+Outputs
+    Data
+        output dataset
 
-**Inputs**:
-
--  (None)
-
-**Outputs**:
-
--  **Data**
-
-   Attribute-valued dataset.
-
-Description
------------
 
 **Datasets** widget retrives selected dataset from the server and sends it to the output. File is downloaded to the local memory and thus instantly available even without the internet connection. Each dataset is provided with a description and information on the data size, number of instances, number of variables, target and tags.
 

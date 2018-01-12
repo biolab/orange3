@@ -1,69 +1,28 @@
 Python Script
 =============
 
-.. figure:: icons/python-script.png
-
 Extends functionalities through Python scripting.
 
-Signals
--------
+Inputs
+    Data (Orange.data.Table)
+        input dataset bound to ``in_data`` variable
+    Learner (Orange.classification.Learner)
+        input learner bound to ``in_learner`` variable
+    Classifier (Orange.classification.Learner)
+        input classifier bound to ``in_classifier`` variable
+    Object
+        input python object bound to ``in_object`` variable
 
-**Inputs**:
+Outputs
+    Data (Orange.data.Table)
+        dataset retrieved from ``out_data`` variable
+    Learner (Orange.classification.Learner)
+        learner retrieved from ``out_learner`` variable
+    Classifier (Orange.classification.Learner)
+        classifier retrieved from ``out_classifier`` variable
+    Object
+        python object retrieved from ``out_object`` variable
 
--  **in\_data (Orange.data.Table)**
-
-   Input dataset bound to ``in_data`` variable in the script’s local
-   namespace.
-
--  **in\_distance (Orange.core.SymMatrix)**
-
-   Input symmetric matrix bound to ``in_distance`` variable in the script’s
-   local namespace.
-
--  **in\_learner (Orange.classification.Learner)**
-
-   Input learner bound to ``in_learner`` variable in the script’s local
-   namespace.
-
--  **in\_classifier (Orange.classification.Learner)**
-
-   Input classifier bound to ``in_classifier`` variable in the script’s
-   local namespace.
-
--  **in\_object (object)**
-
-   Input python object bound to ``in_object`` variable in the script’s
-   local namespace.
-
-**Outputs**:
-
--  **out\_data (Orange.data.Table)**
-
-   Dataset retrieved from ``out_data`` variable in the script’s local
-   namespace after execution.
-
--  **out\_distance (Orange.core.SymMatrix)**
-
-   Symmetric matrix retrieved from ``out_distance`` variable in the
-   script’s local namespace after execution.
-
--  **out\_learner (Orange.classification.Learner)**
-
-   Learner retrieved from ``out_learner`` variable in the script’s local
-   namespace.
-
--  **out\_classifier (Orange.classification.Learner)**
-
-   Classifier retrieved from ``out_classifier`` variable in the script’s
-   local namespace after execution.
-
--  **out\_object (object)**
-
-   Python object retrieved from ``out_object`` variable in the script’s
-   local namespace after execution.
-
-Description
------------
 
 **Python Script** widget can be used to run a python script in the
 input, when a suitable functionality is not implemented in an existing

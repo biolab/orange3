@@ -1,31 +1,18 @@
 Distance Map
 ============
 
-.. figure:: icons/distance-map.png
-
 Visualizes distances between items.
 
-Signals
--------
+Inputs
+    Distances
+        distance matrix
 
-**Inputs**:
+Outputs
+    Data
+        instances selected from the matrix
+    Features
+        attributes selected from the matrix
 
--  **Distances**
-
-   A distance matrix.
-
-**Outputs**:
-
--  **Data**
-
-   Instances corresponding to the selected elements of the matrix.
-
--  **Features**
-
-   Attributes corresponding to the selected elements of the matrix.
-
-Description
------------
 
 The **Distance Map** visualizes distances between objects. The visualization
 is the same as if we printed out a table of numbers, except that the

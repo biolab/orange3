@@ -1,35 +1,20 @@
 Constant
 ========
 
-.. figure:: icons/constant.png
-
 Predict the most frequent class or mean value from the training set.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        majority/mean learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A majority/mean learning algorithm
-
--  **Model**
-
-   A trained model. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 This learner produces a model that always predicts the
 `majority <https://en.wikipedia.org/wiki/Predictive_modelling#Majority_classifier>`_ for classification tasks and `mean value <https://en.wikipedia.org/wiki/Mean>`_ for regression tasks. 

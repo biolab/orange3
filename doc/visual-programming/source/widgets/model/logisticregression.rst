@@ -1,38 +1,22 @@
-.. _model.logit:
-
 Logistic Regression
 ===================
 
-.. figure:: icons/logistic-regression.png
-
 The logistic regression classification algorithm with LASSO (L1) or ridge (L2) regularization.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        logistic regression learning algorithm
+    Model
+        trained model
+    Coefficients
+        logistic regression coefficients
 
--  **Data**
-
-   A dataset
-
-- **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A logistic regression learning algorithm with settings as specified in
-   the dialog.
-
--  **Logistic Regression Classifier**
-
-   A trained classifier. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 **Logistic Regression** learns a `Logistic Regression <https://en.wikipedia.org/wiki/Logistic_regression>`_ model from the data.
 

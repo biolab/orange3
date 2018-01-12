@@ -1,27 +1,16 @@
 Color
 =====
 
-.. figure:: icons/color.png
-
 Set color legend for variables. 
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with a new color legend
 
--  **Data**
-
-   An input dataset. 
-
-**Outputs**:
-
-- **Data**
-
-   A dataset with a new color legend. 
-
-Description
------------
 
 The **Color** widget enables you to set the color legend in your visualizations 
 according to your own preferences. This option provides you with the tools for 

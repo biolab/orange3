@@ -1,26 +1,13 @@
 Calibration Plot
 ================
 
-.. figure:: icons/calibration-plot.png
-
 Shows the match between classifiers’ probability predictions and actual
 class probabilities.
 
-Signals
--------
+Inputs
+    Evaluation Results
+        results of testing classification algorithms
 
-**Inputs**:
-
--  **Evaluation Results**
-
-   Results of testing classification algorithms.
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 The `Calibration Plot <https://en.wikipedia.org/wiki/Calibration_curve>`_ plots class
 probabilities against those predicted by the classifier(s).

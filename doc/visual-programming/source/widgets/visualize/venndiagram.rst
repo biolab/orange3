@@ -1,29 +1,17 @@
 Venn Diagram
 ============
 
-.. figure:: icons/venn-diagram.png
-
 Plots a `Venn diagram <http://en.wikipedia.org/wiki/Venn_diagram>`_ for
 two or more data subsets.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
 
--  **Data**
-
-   An input dataset
-
-**Outputs**:
-
--  **Selected Data**
-
-   A subset of instances that the user has manually selected from the
-   diagram.
-
-Description
------------
 
 The **Venn Diagram** widget displays logical relations between datasets. This
 projection shows two or more datasets represented by circles of

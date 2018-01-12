@@ -2,25 +2,12 @@
 SQL Table
 =========
 
-.. figure:: icons/sql-table.png
-
 Reads data from an SQL database.
 
-Signals
--------
+Outputs
+    Data
+        dataset from the database
 
-**Inputs**:
-
--  (None)
-
-**Outputs**:
-
--  **Data**
-
-   Attribute-valued data from the database
-
-Description
------------
 
 The **SQL** widget accesses data stored in an SQL database. It can
 connect to PostgreSQL (requires `psycopg2 <http://initd.org/psycopg/>`_ module) 

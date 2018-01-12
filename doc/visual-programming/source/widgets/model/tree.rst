@@ -1,35 +1,20 @@
 Tree
 ====
 
-.. figure:: icons/tree.png
-
 A tree algorithm with forward pruning.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        decision tree learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A decision tree learning algorithm with settings as specified in the dialog.
-
--  **Model**
-
-   A subset of data instances from the training set that were used as support vectors in the trained model.
-
-Description
------------
 
 **Tree** is a simple algorithm that splits the data into nodes by class purity. It is a precursor to :doc:`Random Forest <randomforest>`. Tree in Orange is designed in-house and can handle both discrete and continuous datasets.
 

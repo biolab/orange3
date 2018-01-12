@@ -1,36 +1,23 @@
 MDS
 ===
 
-.. figure:: icons/mds.png
-
 Multidimensional scaling (MDS) projects items onto a plane fitted to
 given distances between points.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Distances
+        distance matrix
+    Data Subset
+        subset of instances
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        dataset with MDS coordinates
 
--  **Distances**
-
-   A distance matrix
-
--  **Data**
-
-   A dataset
-
-**Outputs**:
-
--  **Data**
-
-   A dataset with MDS coordinates.
-
--  **Data subset**
-
-   Selected data
-
-Description
------------
 
 `Multidimensional scaling <https://en.wikipedia.org/wiki/Multidimensional_scaling>`_ is a
 technique which finds a low-dimensional (in our case a two-dimensional)
