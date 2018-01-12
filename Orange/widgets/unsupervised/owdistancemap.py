@@ -566,8 +566,8 @@ class OWDistanceMap(widget.OWWidget):
         elif self.annotation_idx == 1:  # Enumeration
             labels = [str(i + 1) for i in range(self.matrix.shape[0])]
         elif self.annot_combo.model()[self.annotation_idx] == "Attribute names":
-                attr = self.matrix.row_items.domain.attributes
-                labels = [str(attr[i]) for i in range(self.matrix.shape[0])]
+            attr = self.matrix.row_items.domain.attributes
+            labels = [str(attr[i]) for i in range(self.matrix.shape[0])]
         elif self.annotation_idx == 2 and \
                 isinstance(self.items, widget.AttributeList):
             labels = [v.name for v in self.items]
