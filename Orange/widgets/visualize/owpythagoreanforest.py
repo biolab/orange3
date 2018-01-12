@@ -1,33 +1,162 @@
 """Pythagorean forest widget for visualizing random forests."""
-from contextlib import contextmanager
 from math import log, sqrt
+from typing import Any, Callable, Optional
 
-from AnyQt.QtCore import Qt
-from AnyQt.QtGui import QPainter
-from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QGraphicsView, QLabel
+from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
+    QItemSelection
+from AnyQt.QtGui import QPainter, QPen, QColor, QBrush
+from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QLabel, QSlider, \
+    QListView, QStyledItemDelegate, QStyleOptionViewItem, QStyle
+from AnyQt.QtGui import QMouseEvent
 
 from Orange.base import RandomForestModel, TreeModel
 from Orange.data import Table
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
-)
-from Orange.widgets.visualize.utils.owgrid import (
-    OWGrid,
-    SelectableGridItem,
-    ZoomableGridItem
 )
 from Orange.widgets.visualize.utils.tree.skltreeadapter import \
     SklTreeAdapter
 from Orange.widgets.widget import OWWidget
 
 
+class PythagoreanForestModel(PyListModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.depth_limit = -1
+        self.target_class_idx = None
+        self.size_calc_idx = 0
+        self.size_adjustment = None
+        self.item_scale = 2
+
+    def data(self, index, role=Qt.DisplayRole):
+        # type: (QModelIndex, Qt.QDisplayRole) -> Any
+        if not index.isValid():
+            return
+
+        idx = index.row()
+
+        if role == Qt.SizeHintRole:
+            return self.item_scale * QSize(100, 100)
+
+        if role == Qt.DisplayRole:
+            if 'tree' not in self._other_data[idx]:
+                scene = QGraphicsScene(parent=self)
+                tree = PythagorasTreeViewer(
+                    adapter=self._list[idx],
+                    weight_adjustment=OWPythagoreanForest.SIZE_CALCULATION[
+                        self.size_calc_idx][1],
+                    interactive=False,
+                    padding=100,
+                    depth_limit=self.depth_limit,
+                    target_class_index=self.target_class_idx,
+                )
+                scene.addItem(tree)
+                self._other_data[idx]['scene'] = scene
+                self._other_data[idx]['tree'] = tree
+
+            return self._other_data[idx]['scene']
+
+        return super().data(index, role)
+
+    @property
+    def trees(self):
+        """Get the tree adapters."""
+        return self._list
+
+    def update_tree_views(self, func):
+        # type: (Callable[[PythagorasTreeViewer], None]) -> None
+        """Apply `func` to every rendered tree viewer instance."""
+        for idx, tree_data in enumerate(self._other_data):
+            if 'tree' in tree_data:
+                func(tree_data['tree'])
+                index = self.index(idx)
+                self.dataChanged.emit(index, index, [Qt.DisplayRole])
+
+    def update_depth(self, depth):
+        self.depth_limit = depth
+        self.update_tree_views(lambda tree: tree.set_depth_limit(depth))
+
+    def update_target_class(self, idx):
+        self.target_class_idx = idx
+        self.update_tree_views(lambda tree: tree.target_class_changed(idx))
+
+    def update_item_size(self, scale):
+        self.item_scale = scale / 100
+        indices = [idx for idx, _ in enumerate(self._other_data)]
+        self.emitDataChanged(indices)
+
+    def update_size_calc(self, idx):
+        self.size_calc_idx = idx
+        _, size_calc = OWPythagoreanForest.SIZE_CALCULATION[idx]
+        self.update_tree_views(lambda tree: tree.set_size_calc(size_calc))
+
+
+class PythagorasTreeDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        # type: (QPainter, QStyleOptionViewItem, QModelIndex) -> None
+        scene = index.data(Qt.DisplayRole)  # type: Optional[QGraphicsScene]
+        if scene is None:
+            return super().paint(painter, option, index)
+
+        painter.save()
+        rect = QRectF(QPointF(option.rect.topLeft()), QSizeF(option.rect.size()))
+        if option.state & QStyle.State_Selected:
+            painter.setPen(QPen(QColor(125, 162, 206, 192)))
+            painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
+            painter.drawRoundedRect(rect, 3, 3)
+        else:
+            painter.setPen(QPen(QColor('#ebebeb')))
+            painter.drawRoundedRect(rect, 3, 3)
+        painter.restore()
+
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # The sceneRect doesn't automatically shrink to fit contents, so when
+        # drawing smaller tree, remove any excess space aroung the tree
+        scene.setSceneRect(scene.itemsBoundingRect())
+
+        # Make sure the tree is centered in the item cell
+        # First, figure out how much we get the bounding rect to the size of
+        # the available painting rect
+        scene_rect = scene.itemsBoundingRect()
+        w_scale = option.rect.width() / scene_rect.width()
+        h_scale = option.rect.height() / scene_rect.height()
+        # In order to keep the aspect ratio, we use the same scale
+        scale = min(w_scale, h_scale)
+        # Figure out the rescaled scene width/height
+        scene_w = scale * scene_rect.width()
+        scene_h = scale * scene_rect.height()
+        # Figure out how much we have to offset the rect so that the scene will
+        # be painted in the centre of the rect
+        offset_w = (option.rect.width() - scene_w) / 2
+        offset_h = (option.rect.height() - scene_h) / 2
+        offset = option.rect.topLeft() + QPointF(offset_w, offset_h)
+        # Finally, we have all the data for the new rect in which to render
+        target_rect = QRectF(offset, QSizeF(scene_w, scene_h))
+
+        scene.render(painter, target=target_rect, mode=Qt.KeepAspectRatio)
+
+
+class ClickToClearSelectionListView(QListView):
+    """Clicking outside any item clears the current selection."""
+    def mousePressEvent(self, event):
+        # type: (QMouseEvent) -> None
+        super().mousePressEvent(event)
+
+        index = self.indexAt(event.pos())
+        if index.row() == -1:
+            self.clearSelection()
+
+
 class OWPythagoreanForest(OWWidget):
     name = 'Pythagorean Forest'
     description = 'Pythagorean forest for visualising random forests.'
     icon = 'icons/PythagoreanForest.svg'
+    settings_version = 2
 
     priority = 1001
 
@@ -44,31 +173,31 @@ class OWPythagoreanForest(OWWidget):
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
-    zoom = settings.Setting(50)
-    selected_tree_index = settings.ContextSetting(-1)
+    zoom = settings.Setting(200)
+
+    SIZE_CALCULATION = [
+        ('Normal', lambda x: x),
+        ('Square root', lambda x: sqrt(x)),
+        ('Logarithmic', lambda x: log(x + 1)),
+    ]
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            del settings['selected_tree_index']
+            v1_min, v1_max = 20, 150
+            v2_min, v2_max = 100, 400
+            ratio = (v2_max - v2_min) / (v1_max - v1_min)
+            settings['zoom'] = int(settings['zoom'] * ratio + v2_min)
 
     def __init__(self):
         super().__init__()
-        self.model = None
-        self.forest_adapter = None
+        self.rf_model = None
+        self.forest = None
         self.instances = None
         self.clf_dataset = None
-        # We need to store refernces to the trees and grid items
-        self.grid_items, self.ptrees = [], []
-        # In some rare cases, we need to prevent commiting, the only one
-        # that this currently helps is that when changing the size calculation
-        # the trees are all recomputed, but we don't want to output a new tree
-        # to keep things consistent with other ui controls.
-        self.__prevent_commit = False
 
         self.color_palette = None
-
-        # Different methods to calculate the size of squares
-        self.SIZE_CALCULATION = [
-            ('Normal', lambda x: x),
-            ('Square root', lambda x: sqrt(x)),
-            ('Logarithmic', lambda x: log(x + 1)),
-        ]
 
         # CONTROL AREA
         # Tree info area
@@ -79,19 +208,20 @@ class OWPythagoreanForest(OWWidget):
         box_display = gui.widgetBox(self.controlArea, 'Display')
         self.ui_depth_slider = gui.hSlider(
             box_display, self, 'depth_limit', label='Depth', ticks=False,
-            callback=self.update_depth)
+        )  # type: QSlider
         self.ui_target_class_combo = gui.comboBox(
             box_display, self, 'target_class_index', label='Target class',
             orientation=Qt.Horizontal, items=[], contentsLength=8,
-            callback=self.update_colors)
+        )  # type: gui.OrangeComboBox
         self.ui_size_calc_combo = gui.comboBox(
             box_display, self, 'size_calc_idx', label='Size',
             orientation=Qt.Horizontal,
             items=list(zip(*self.SIZE_CALCULATION))[0], contentsLength=8,
-            callback=self.update_size_calc)
+        )  # type: gui.OrangeComboBox
         self.ui_zoom_slider = gui.hSlider(
-            box_display, self, 'zoom', label='Zoom', ticks=False, minValue=20,
-            maxValue=150, callback=self.zoom_changed, createLabel=False)
+            box_display, self, 'zoom', label='Zoom', ticks=False, minValue=100,
+            maxValue=400, createLabel=False, intOnly=False,
+        )  # type: QSlider
 
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
@@ -99,36 +229,49 @@ class OWPythagoreanForest(OWWidget):
         self.controlArea.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
         # MAIN AREA
-        self.scene = QGraphicsScene(self)
-        self.scene.selectionChanged.connect(self.commit)
-        self.grid = OWGrid()
-        self.grid.geometryChanged.connect(self._update_scene_rect)
-        self.scene.addItem(self.grid)
+        self.forest_model = PythagoreanForestModel(parent=self)
+        self.forest_model.update_item_size(self.zoom)
+        self.ui_depth_slider.valueChanged.connect(
+            self.forest_model.update_depth)
+        self.ui_target_class_combo.currentIndexChanged.connect(
+            self.forest_model.update_target_class)
+        self.ui_zoom_slider.valueChanged.connect(
+            self.forest_model.update_item_size)
+        self.ui_size_calc_combo.currentIndexChanged.connect(
+            self.forest_model.update_size_calc)
 
-        self.view = QGraphicsView(self.scene)
-        self.view.setRenderHint(QPainter.Antialiasing, True)
-        self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.mainArea.layout().addWidget(self.view)
+        self.list_delegate = PythagorasTreeDelegate(parent=self)
+        self.list_view = ClickToClearSelectionListView(parent=self)
+        self.list_view.setWrapping(True)
+        self.list_view.setFlow(QListView.LeftToRight)
+        self.list_view.setResizeMode(QListView.Adjust)
+        self.list_view.setModel(self.forest_model)
+        self.list_view.setItemDelegate(self.list_delegate)
+        self.list_view.setSpacing(2)
+        self.list_view.setSelectionMode(QListView.SingleSelection)
+        self.list_view.selectionModel().selectionChanged.connect(self.commit)
+        self.list_view.setUniformItemSizes(True)
+        self.mainArea.layout().addWidget(self.list_view)
 
         self.resize(800, 500)
 
+        # Clear to set sensible default values
         self.clear()
 
     @Inputs.random_forest
     def set_rf(self, model=None):
         """When a different forest is given."""
         self.clear()
-        self.model = model
+        self.rf_model = model
 
         if model is not None:
-            self.forest_adapter = self._get_forest_adapter(self.model)
-            self._draw_trees()
-            self.color_palette = self.forest_adapter.get_trees()[0]
+            self.forest = self._get_forest_adapter(self.rf_model)
+            self.forest_model[:] = self.forest.trees
 
             self.instances = model.instances
-            # this bit is important for the regression classifier
+            # This bit is important for the regression classifier
             if self.instances is not None and self.instances.domain != model.domain:
-                self.clf_dataset = self.instances.transform(self.model.domain)
+                self.clf_dataset = self.instances.transform(self.rf_model.domain)
             else:
                 self.clf_dataset = self.instances
 
@@ -136,60 +279,18 @@ class OWPythagoreanForest(OWWidget):
             self._update_target_class_combo()
             self._update_depth_slider()
 
-            self.selected_tree_index = -1
-
     def clear(self):
         """Clear all relevant data from the widget."""
-        self.model = None
-        self.forest_adapter = None
-        self.ptrees = []
-        self.grid_items = []
-        self.grid.clear()
+        self.rf_model = None
+        self.forest = None
+        self.forest_model.clear()
 
         self._clear_info_box()
         self._clear_target_class_combo()
         self._clear_depth_slider()
 
-    def update_depth(self):
-        """When the max depth slider is changed."""
-        for tree in self.ptrees:
-            tree.set_depth_limit(self.depth_limit)
-
-    def update_colors(self):
-        """When the target class or coloring method is changed."""
-        for tree in self.ptrees:
-            tree.target_class_changed(self.target_class_index)
-
-    def update_size_calc(self):
-        """When the size calculation of the trees is changed."""
-        if self.model is not None:
-            with self._prevent_commit():
-                self.grid.clear()
-                self._draw_trees()
-                # Keep the selected item
-                if self.selected_tree_index != -1:
-                    self.grid_items[self.selected_tree_index].setSelected(True)
-                self.update_depth()
-
-    def zoom_changed(self):
-        """When we update the "Zoom" slider."""
-        for item in self.grid_items:
-            item.set_max_size(self._calculate_zoom(self.zoom))
-
-        width = (self.view.width() - self.view.verticalScrollBar().width())
-        self.grid.reflow(width)
-        self.grid.setPreferredWidth(width)
-
-    @contextmanager
-    def _prevent_commit(self):
-        try:
-            self.__prevent_commit = True
-            yield
-        finally:
-            self.__prevent_commit = False
-
     def _update_info_box(self):
-        self.ui_info.setText('Trees: {}'.format(len(self.forest_adapter.get_trees())))
+        self.ui_info.setText('Trees: {}'.format(len(self.forest.trees)))
 
     def _update_depth_slider(self):
         self.depth_limit = self._get_max_depth()
@@ -197,109 +298,6 @@ class OWPythagoreanForest(OWWidget):
         self.ui_depth_slider.parent().setEnabled(True)
         self.ui_depth_slider.setMaximum(self.depth_limit)
         self.ui_depth_slider.setValue(self.depth_limit)
-
-    def _clear_info_box(self):
-        self.ui_info.setText('No forest on input.')
-
-    def _clear_target_class_combo(self):
-        self.ui_target_class_combo.clear()
-        self.target_class_index = 0
-        self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
-
-    def _clear_depth_slider(self):
-        self.ui_depth_slider.parent().setEnabled(False)
-        self.ui_depth_slider.setMaximum(0)
-
-    def _get_max_depth(self):
-        return max(tree.tree_adapter.max_depth for tree in self.ptrees)
-
-    def _get_forest_adapter(self, model):
-        return SklRandomForestAdapter(model)
-
-    @contextmanager
-    def disable_ui(self):
-        """Temporarly disable the UI while trees may be redrawn."""
-        try:
-            self.ui_size_calc_combo.setEnabled(False)
-            self.ui_depth_slider.setEnabled(False)
-            self.ui_target_class_combo.setEnabled(False)
-            self.ui_zoom_slider.setEnabled(False)
-            yield
-        finally:
-            self.ui_size_calc_combo.setEnabled(True)
-            self.ui_depth_slider.setEnabled(True)
-            self.ui_target_class_combo.setEnabled(True)
-            self.ui_zoom_slider.setEnabled(True)
-
-    def _draw_trees(self):
-        self.grid_items, self.ptrees = [], []
-
-        num_trees = len(self.forest_adapter.get_trees())
-        with self.progressBar(num_trees) as prg, self.disable_ui():
-            for tree in self.forest_adapter.get_trees():
-                ptree = PythagorasTreeViewer(
-                    None, tree, interactive=False, padding=100,
-                    target_class_index=self.target_class_index,
-                    weight_adjustment=self.SIZE_CALCULATION[self.size_calc_idx][1]
-                )
-                grid_item = GridItem(
-                    ptree, self.grid, max_size=self._calculate_zoom(self.zoom)
-                )
-                # We don't want to show flickering while the trees are being
-                grid_item.setVisible(False)
-
-                self.grid_items.append(grid_item)
-                self.ptrees.append(ptree)
-                prg.advance()
-
-            self.grid.set_items(self.grid_items)
-            # This is necessary when adding items for the first time
-            if self.grid:
-                width = (self.view.width() - self.view.verticalScrollBar().width())
-                self.grid.reflow(width)
-                self.grid.setPreferredWidth(width)
-                # After drawing is complete, we show the trees
-                for grid_item in self.grid_items:
-                    grid_item.setVisible(True)
-
-    @staticmethod
-    def _calculate_zoom(zoom_level):
-        """Calculate the max size for grid items from zoom level setting."""
-        return zoom_level * 5
-
-    def onDeleteWidget(self):
-        """When deleting the widget."""
-        super().onDeleteWidget()
-        self.clear()
-
-    def commit(self):
-        """Commit the selected tree to output."""
-        if self.__prevent_commit:
-            return
-
-        if not self.scene.selectedItems():
-            self.Outputs.tree.send(None)
-            # The selected tree index should only reset when model changes
-            if self.model is None:
-                self.selected_tree_index = -1
-            return
-
-        selected_item = self.scene.selectedItems()[0]
-        self.selected_tree_index = self.grid_items.index(selected_item)
-        tree = self.model.trees[self.selected_tree_index]
-        tree.instances = self.instances
-        tree.meta_target_class_index = self.target_class_index
-        tree.meta_size_calc_idx = self.size_calc_idx
-        tree.meta_depth_limit = self.depth_limit
-
-        self.Outputs.tree.send(tree)
-
-    def send_report(self):
-        """Send report."""
-        self.report_plot()
-
-    def _update_scene_rect(self):
-        self.scene.setSceneRect(self.scene.itemsBoundingRect())
 
     def _update_target_class_combo(self):
         self._clear_target_class_combo()
@@ -317,17 +315,52 @@ class OWPythagoreanForest(OWWidget):
         self.ui_target_class_combo.addItems(values)
         self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
 
-    def resizeEvent(self, ev):
-        width = (self.view.width() - self.view.verticalScrollBar().width())
-        self.grid.reflow(width)
-        self.grid.setPreferredWidth(width)
+    def _clear_info_box(self):
+        self.ui_info.setText('No forest on input.')
 
-        super().resizeEvent(ev)
+    def _clear_target_class_combo(self):
+        self.ui_target_class_combo.clear()
+        self.target_class_index = 0
+        self.ui_target_class_combo.setCurrentIndex(self.target_class_index)
 
+    def _clear_depth_slider(self):
+        self.ui_depth_slider.parent().setEnabled(False)
+        self.ui_depth_slider.setMaximum(0)
 
-class GridItem(SelectableGridItem, ZoomableGridItem):
-    """The grid item we will use in our grid."""
-    pass
+    def _get_max_depth(self):
+        return max(tree.max_depth for tree in self.forest.trees)
+
+    def _get_forest_adapter(self, model):
+        return SklRandomForestAdapter(model)
+
+    def onDeleteWidget(self):
+        """When deleting the widget."""
+        super().onDeleteWidget()
+        self.clear()
+
+    def commit(self, selection):
+        # type: (QItemSelection) -> None
+        """Commit the selected tree to output."""
+        selected_indices = selection.indexes()
+
+        if not len(selected_indices):
+            self.Outputs.tree.send(None)
+            return
+
+        selected_index, = selection.indexes()
+
+        idx = selected_index.row()
+        tree = self.rf_model.trees[idx]
+        tree.instances = self.instances
+        tree.meta_target_class_index = self.target_class_index
+        tree.meta_size_calc_idx = self.size_calc_idx
+        tree.meta_depth_limit = self.depth_limit
+
+        self.Outputs.tree.send(tree)
+
+    def send_report(self):
+        """Send report."""
+        self.report_plot()
 
 
 class SklRandomForestAdapter:
@@ -338,7 +371,8 @@ class SklRandomForestAdapter:
         self._domain = model.domain
         self._trees = model.trees
 
-    def get_trees(self):
+    @property
+    def trees(self):
         """Get the tree adapters in the random forest."""
         if not self._adapters:
             self._adapters = list(map(SklTreeAdapter, self._trees))
@@ -357,8 +391,9 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     ow = OWPythagoreanForest()
+    ow.resetSettings()
     data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    rf = RandomForestLearner(n_estimators=10)(data)
+    rf = RandomForestLearner(n_estimators=100)(data)
     rf.instances = data
     ow.set_rf(rf)
 

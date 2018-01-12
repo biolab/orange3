@@ -6,9 +6,10 @@ from Orange.data import Table
 from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest, \
-    GridItem
+from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
+
+from AnyQt.QtCore import Qt
 
 
 class TestOWPythagoreanForest(WidgetTest):
@@ -29,14 +30,15 @@ class TestOWPythagoreanForest(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPythagoreanForest)  # type: OWPythagoreanForest
 
-
     def get_tree_widgets(self):
-        return [x for x in self.widget.scene.items()
-                if isinstance(x, PythagorasTreeViewer)]
-
-    def get_grid_items(self):
-        return [x for x in self.widget.scene.items()
-                if isinstance(x, GridItem)]
+        model = self.widget.forest_model
+        trees = []
+        for idx in range(len(model)):
+            scene = model.data(model.index(idx), Qt.DisplayRole)
+            tree, = [item for item in scene.items()
+                     if isinstance(item, PythagorasTreeViewer)]
+            trees.append(tree)
+        return trees
 
     def test_sending_rf_draws_trees(self):
         w = self.widget
@@ -108,6 +110,7 @@ class TestOWPythagoreanForest(WidgetTest):
     def test_changing_target_class_changes_coloring(self):
         """Changing the `Target class` combo box should update colors."""
         w = self.widget
+
         def _test(data_type):
             colors, tree = [], self._pick_random_tree()
 
@@ -131,13 +134,10 @@ class TestOWPythagoreanForest(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.random_forest, self.titanic)
         squares = []
-        # We have to get the same tree with an index on the grid items since
-        # the tree objects are deleted and recreated with every invalidation
-        tree_index = w.grid_items.index(random.choice(self.get_grid_items()))
+        tree = self._pick_random_tree()
 
         def _callback():
-            squares.append([sq.rect() for sq in self._get_visible_squares(
-                self.get_tree_widgets()[tree_index])])
+            squares.append([sq.rect() for sq in self._get_visible_squares(tree)])
 
         simulate.combobox_run_through_all(w.ui_size_calc_combo, callback=_callback)
 
@@ -150,33 +150,30 @@ class TestOWPythagoreanForest(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.random_forest, self.titanic)
 
-        grid_item, zoom = self.get_grid_items()[0], w.zoom
-
-        def _destructure_rectf(r):
-            return r.width(), r.height()
-
-        iw, ih = _destructure_rectf(grid_item.boundingRect())
+        min_zoom = w.ui_zoom_slider.minimum()
+        max_zoom = w.ui_zoom_slider.maximum()
 
         # Increase the size of grid item
-        w.ui_zoom_slider.setValue(zoom + 1)
-        lw, lh = _destructure_rectf(grid_item.boundingRect())
-        self.assertTrue(iw < lw and ih < lh)
+        w.ui_zoom_slider.setValue(max_zoom)
+        item_size = w.forest_model.data(w.forest_model.index(0), Qt.SizeHintRole)
+        max_w, max_h = item_size.width(), item_size.height()
 
         # Decrease the size of grid item
-        w.ui_zoom_slider.setValue(zoom - 1)
-        lw, lh = _destructure_rectf(grid_item.boundingRect())
-        self.assertTrue(iw > lw and ih > lh)
+        w.ui_zoom_slider.setValue(min_zoom)
+        item_size = w.forest_model.data(w.forest_model.index(0), Qt.SizeHintRole)
+        min_w, min_h = item_size.width(), item_size.height()
+
+        self.assertTrue(min_w < max_w and min_h < max_h)
 
     def test_keep_colors_on_sizing_change(self):
         """The color should be the same after a full recompute of the tree."""
         w = self.widget
         self.send_signal(w.Inputs.random_forest, self.titanic)
         colors = []
-        tree_index = w.grid_items.index(random.choice(self.get_grid_items()))
+        tree = self._pick_random_tree()
 
         def _callback():
-            colors.append([sq.brush().color() for sq in self._get_visible_squares(
-                self.get_tree_widgets()[tree_index])])
+            colors.append([sq.brush().color() for sq in self._get_visible_squares(tree)])
 
         simulate.combobox_run_through_all(w.ui_size_calc_combo, callback=_callback)
 

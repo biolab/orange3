@@ -114,6 +114,10 @@ class PythagorasTreeViewer(QGraphicsWidget):
                 target_class_index=kwargs.get('target_class_index'),
                 weight_adjustment=kwargs.get('weight_adjustment'),
             )
+            # Since `set_tree` needs to draw the entire tree to be visualized
+            # properly, it overrides the `depth_limit` to max. If we specified
+            # the depth limit, however, apply that afterwards-
+            self.set_depth_limit(depth_limit)
 
     def set_tree(self, tree_adapter, weight_adjustment=lambda x: x,
                  target_class_index=0):
@@ -139,6 +143,12 @@ class PythagorasTreeViewer(QGraphicsWidget):
             self.set_depth_limit(tree_adapter.max_depth)
             self.target_class_changed(target_class_index)
             self._draw_tree(self.root)
+
+    def set_size_calc(self, weight_adjustment):
+        """Set the weight adjustment on the tree. Redraws the whole tree."""
+        # Since we have to redraw the whole tree anyways, just call `set_tree`
+        self.set_tree(self.tree_adapter, weight_adjustment,
+                      self._target_class_index)
 
     def set_depth_limit(self, depth):
         """Update the drawing depth limit.
