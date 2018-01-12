@@ -24,7 +24,8 @@ class TestUtil(unittest.TestCase):
 
     def test_deprecated(self):
         @deprecated
-        def identity(x): return x
+        def identity(x):
+            return x
 
         with self.assertWarns(DeprecationWarning) as cm:
             x = identity(10)

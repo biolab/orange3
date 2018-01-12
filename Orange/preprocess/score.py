@@ -259,12 +259,16 @@ class FCBF(ClassificationScorer):
 
         p = 1
         while True:
-            try: SUpc, Fp = S[-p]
-            except IndexError: break
+            try:
+                SUpc, Fp = S[-p]
+            except IndexError:
+                break
             q = p + 1
             while True:
-                try: SUqc, Fq = S[-q]
-                except IndexError: break
+                try:
+                    SUqc, Fq = S[-q]
+                except IndexError:
+                    break
                 if _symmetrical_uncertainty(data, attributes[Fp], attributes[Fq]) >= SUqc:
                     del S[-q]
                     worst.append((1e-4*SUqc, Fq))

@@ -1384,11 +1384,14 @@ class CreateTableWithUrl(TableTests):
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
                                           'filename*=UTF-8''Something%20%28Responses%29.tsv'}
-        def __enter__(self): return self
+        def __enter__(self):
+            return self
 
-        def __exit__(self, *args, **kwargs): pass
+        def __exit__(self, *args, **kwargs):
+            pass
 
-        def read(self): return b'''\
+        def read(self):
+            return b'''\
 a\tb\tc
 1\t2\t3
 2\t3\t4'''

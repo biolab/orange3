@@ -28,7 +28,8 @@ class DummyPlus(SharedComputeValue):
         return data.X[:, 0] + shared_data
 
 
-class DummyTable(Orange.data.Table): pass
+class DummyTable(Orange.data.Table):
+    pass
 
 
 class TestSharedComputeValue(unittest.TestCase):
