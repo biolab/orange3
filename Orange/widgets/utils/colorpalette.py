@@ -316,7 +316,7 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
                 if check and chk:
                     colorsList.append(rgbToQColor(color))
             self.__dict__["exCont" + name + "colorCount"] = \
-                self.__dict__.get("exCont" + name + "colorCount",  len(colors))
+                self.__dict__.get("exCont" + name + "colorCount", len(colors))
             self.__dict__["exCont" + name + "View"].setExContPalette(
                 rgbToQColor(l), rgbToQColor(r), colorsList)
 

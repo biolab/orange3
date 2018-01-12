@@ -3,7 +3,7 @@ A splash screen widget with support for positioning of the message text.
 
 """
 
-from AnyQt.QtWidgets import QSplashScreen,  QWidget, QApplication
+from AnyQt.QtWidgets import QSplashScreen, QWidget, QApplication
 from AnyQt.QtGui import (
     QPixmap, QPainter, QTextDocument, QTextBlockFormat, QTextCursor
 )

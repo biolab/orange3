@@ -161,7 +161,7 @@ class WidgetTest(GuiTest):
             # Reset context settings
             settings_handler.global_contexts = []
 
-    def process_events(self, until: callable=None, timeout=DEFAULT_TIMEOUT):
+    def process_events(self, until: callable = None, timeout=DEFAULT_TIMEOUT):
         """Process Qt events, optionally until `until` returns
         something True-ish.
 

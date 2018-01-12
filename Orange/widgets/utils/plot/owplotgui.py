@@ -32,7 +32,7 @@ from functools import reduce
 from operator import itemgetter
 
 from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout,\
-    QMenu, QAction,QDialog, QSizePolicy, QPushButton, QListView
+    QMenu, QAction, QDialog, QSizePolicy, QPushButton, QListView
 from AnyQt.QtGui import QIcon, QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
 

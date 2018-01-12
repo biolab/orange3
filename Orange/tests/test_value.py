@@ -36,8 +36,8 @@ class TestValue(unittest.TestCase):
         self.assertFalse(acc1 != acc1)
 
     def test_compare_discrete(self):
-        data = Table(Domain([DiscreteVariable(name="G",values=["M", "F"])]),
-                     np.array([[0],[1]]))
+        data = Table(Domain([DiscreteVariable(name="G", values=["M", "F"])]),
+                     np.array([[0], [1]]))
         self.assertTrue(data[0]['G'] < data[1]['G'])
         self.assertTrue(data[0]['G'] >= data[0]['G'])
         self.assertTrue(data[0]['G'] < 1)

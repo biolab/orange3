@@ -41,7 +41,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
                     ContinuousVariable(name="B"),
                     ContinuousVariable(name="C")),
                    DiscreteVariable(name="CLASS", values=["M", "F"]))
-        t = Table(d, [[0,1,0,0], [0,1,0,1], [0,1,0,1]])
+        t = Table(d, [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 1]])
         nb = NaiveBayesLearner()
         model = nb(t)
         self.assertEqual(model.domain.attributes, ())

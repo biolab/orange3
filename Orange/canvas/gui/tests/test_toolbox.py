@@ -32,7 +32,7 @@ class TestToolBox(test.QAppTestCase):
             self.assertIs(item, w.widget(i))
             b = w.tabButton(i)
             a = w.tabAction(i)
-            self.assertIsInstance(b,  QAbstractButton)
+            self.assertIsInstance(b, QAbstractButton)
             self.assertIs(b.defaultAction(), a)
 
         w.show()

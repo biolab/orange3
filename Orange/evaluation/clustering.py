@@ -135,7 +135,7 @@ def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):
 
     # Detect number of clusters and set colors
     N = len(set(y))
-    if isinstance(colors, type(None)) :
+    if isinstance(colors, type(None)):
         colors = ["g" if i % 2 else "b" for i in range(N)]
     elif len(colors) != N:
         import sys

@@ -56,6 +56,7 @@ class TestTabReader(unittest.TestCase):
             os.remove(f.name)
 
 
+    # for readability, pylint: disable=bad-whitespace
     def test_read_complex(self):
         f = tempfile.NamedTemporaryFile(delete=False)
         f.write(complex_file.encode("ascii"))
