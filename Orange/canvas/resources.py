@@ -44,7 +44,7 @@ def package(qualified_name):
         return module.__package__
     else:
         # 'qualified_name' is itself the package
-        assert(module.__name__ == qualified_name)
+        assert module.__name__ == qualified_name
         return qualified_name
 
 dirname = os.path.abspath(os.path.dirname(__file__))

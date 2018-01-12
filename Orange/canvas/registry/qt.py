@@ -182,7 +182,7 @@ class QtWidgetRegistry(QObject, WidgetRegistry):
         """
         Override to update the item model and emit the signals.
         """
-        assert(isinstance(category, CategoryDescription))
+        assert isinstance(category, CategoryDescription)
         categories = self.categories()
         cat_i = categories.index(category)
         _, widgets = self._categories_dict[category.name]

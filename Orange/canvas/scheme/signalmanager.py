@@ -68,7 +68,7 @@ class SignalManager(QObject):
     """Emitted when `SignalManager`'s runtime state changes."""
 
     def __init__(self, scheme):
-        assert(scheme)
+        assert scheme
         QObject.__init__(self, scheme)
         self._input_queue = []
 

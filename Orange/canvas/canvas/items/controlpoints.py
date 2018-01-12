@@ -142,7 +142,7 @@ class ControlPointRect(QGraphicsObject):
              ControlPoint(self, ControlPoint.Bottom),
              ControlPoint(self, ControlPoint.BottomLeft),
              ControlPoint(self, ControlPoint.BottomRight)]
-        assert(points == sorted(points, key=lambda p: p.anchor()))
+        assert points == sorted(points, key=lambda p: p.anchor())
 
         self.__points = dict((p.anchor(), p) for p in points)
 

@@ -332,7 +332,7 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
             ok = 0
             while not ok:
                 text, ok = QInputDialog.getText(self, "Name Your Color Settings", message)
-                if (ok):
+                if ok:
                     newName = str(text)
                     oldNames = [str(self.schemaCombo.itemText(i)).lower()
                                 for i in range(self.schemaCombo.count() - 1)]

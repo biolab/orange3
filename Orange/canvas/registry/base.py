@@ -209,7 +209,7 @@ class WidgetRegistry(object):
         """
         Insert widget description `desc` into `category`.
         """
-        assert(isinstance(category, description.CategoryDescription))
+        assert isinstance(category, description.CategoryDescription)
         _, widgets = self._categories_dict[category.name]
 
         priority = desc.priority

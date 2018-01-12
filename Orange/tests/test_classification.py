@@ -218,8 +218,9 @@ class ClassfierListInputTest(unittest.TestCase):
         strlist = [["crew", "adult", "male"],
                    ["crew", "adult", None]]
         for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+            assert all(tree(se) == tree(Orange.data.Table(table.domain, [se])))
+        assert all(
+            tree(strlist) == tree(Orange.data.Table(table.domain, strlist)))
 
     def test_continuous(self):
         table = Table("iris")
@@ -227,8 +228,9 @@ class ClassfierListInputTest(unittest.TestCase):
         strlist = [[2, 3, 4, 5],
                    [1, 2, 3, 5]]
         for se in strlist: #individual examples
-            assert(all(tree(se) == tree(Orange.data.Table(table.domain, [se]))))
-        assert(all(tree(strlist) == tree(Orange.data.Table(table.domain, strlist))))
+            assert all(tree(se) == tree(Orange.data.Table(table.domain, [se])))
+        assert all(
+            tree(strlist) == tree(Orange.data.Table(table.domain, strlist)))
 
 
 class UnknownValuesInPrediction(unittest.TestCase):

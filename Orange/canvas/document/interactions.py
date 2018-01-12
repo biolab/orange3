@@ -258,7 +258,7 @@ class NewLinkAction(UserInteraction):
         """
         Create a new tmp anchor at the `item` (:class:`NodeItem`).
         """
-        assert(self.tmp_anchor_point is None)
+        assert self.tmp_anchor_point is None
         if self.direction == self.FROM_SOURCE:
             self.tmp_anchor_point = item.newInputAnchor()
         else:

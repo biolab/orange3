@@ -603,7 +603,7 @@ class Scheme(QObject):
         for annotation in self.annotations:
             self.remove_annotation(annotation)
 
-        assert(not (self.nodes or self.links or self.annotations))
+        assert not (self.nodes or self.links or self.annotations)
 
     def sync_node_properties(self):
         """

@@ -771,7 +771,7 @@ class ArrowAnnotation(Annotation):
             arrow_shape = arrow_path_concave(line, self.lineWidth())
             arrow_rect = arrow_shape.boundingRect()
 
-            if not (geom.contains(arrow_rect)):
+            if not geom.contains(arrow_rect):
                 geom = geom.united(arrow_rect)
 
             if self.__autoAdjustGeometry:
@@ -837,7 +837,7 @@ class ArrowAnnotation(Annotation):
         if geom.isNull() and not line.isNull():
             geom = QRectF(0, 0, 1, 1)
 
-        if not (geom.contains(arrow_rect)):
+        if not geom.contains(arrow_rect):
             geom = geom.united(arrow_rect)
 
         geom = geom.intersected(arrow_rect)

@@ -136,7 +136,7 @@ class Lookup(Transformation):
         :param lookup_table: transformations for each value of `self.variable`
         :type lookup_table: np.array or list or tuple
         :param unknown: The value to be used as unknown value.
-        :type unknown: float or int 
+        :type unknown: float or int
         """
         super().__init__(variable)
         self.lookup_table = lookup_table

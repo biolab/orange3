@@ -148,7 +148,7 @@ class SchemeLink(QObject):
         """
         return self.source_channel.dynamic and \
             issubclass(self.sink_type(), self.source_type()) and \
-            not (self.sink_type() is self.source_type())
+            self.sink_type() is not self.source_type()
 
     def set_enabled(self, enabled):
         """

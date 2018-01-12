@@ -77,7 +77,7 @@ class NodeBodyItem(GraphicsPathObject):
     """
     def __init__(self, parent=None):
         GraphicsPathObject.__init__(self, parent)
-        assert(isinstance(parent, NodeItem))
+        assert isinstance(parent, NodeItem)
 
         self.__processingState = 0
         self.__progress = -1
@@ -1332,13 +1332,13 @@ def NodeItem_toolTipHelper(node, links_in=[], links_out=[]):
         inputs = [channel_fmt.format(inp.name) for inp in desc.inputs]
         inputs = inputs_list_fmt.format(inputs="".join(inputs))
     else:
-        inputs = "No inputs<hr/>" 
+        inputs = "No inputs<hr/>"
 
     if desc.outputs:
         outputs = [channel_fmt.format(out.name) for out in desc.outputs]
         outputs = outputs_list_fmt.format(outputs="".join(outputs))
     else:
-        outputs = "No outputs" 
+        outputs = "No outputs"
 
     tooltip = title + inputs + outputs
     style = "ul { margin-top: 1px; margin-bottom: 1px; }"

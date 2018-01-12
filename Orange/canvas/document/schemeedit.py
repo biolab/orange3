@@ -1165,8 +1165,8 @@ class SchemeEditWidget(QWidget):
 
         handler = None
         searchText = ""
-        if (event.key() == Qt.Key_Space and \
-                self.__quickMenuTriggers & SchemeEditWidget.SpaceKey):
+        if event.key() == Qt.Key_Space and \
+                self.__quickMenuTriggers & SchemeEditWidget.SpaceKey:
             handler = interactions.NewNodeAction(self)
 
         elif len(event.text()) and \

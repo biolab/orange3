@@ -403,7 +403,7 @@ class ToolGrid(QFrame):
         return QFrame.eventFilter(self, obj, event)
 
     def __focusMove(self, focus, key):
-        assert(focus is self.focusWidget())
+        assert focus is self.focusWidget()
         try:
             index = self.__indexOf(focus)
         except IndexError:
