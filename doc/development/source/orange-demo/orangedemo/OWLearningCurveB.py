@@ -83,8 +83,7 @@ class OWLearningCurveB(OWWidget):
         gui.spin(box, self, 'folds', 2, 100, step=1,
                  label='Cross validation folds:  ', keyboardTracking=False,
                  callback=lambda:
-                    self._invalidate_results() if self.commitOnChange else None
-        )
+                 self._invalidate_results() if self.commitOnChange else None)
         gui.spin(box, self, 'steps', 2, 100, step=1,
                  label='Learning curve points:  ', keyboardTracking=False,
                  callback=[self.updateCurvePoints,
@@ -290,10 +289,8 @@ def learning_curve(learners, data, folds=10, proportions=None,
     results = [
         Orange.evaluation.CrossValidation(
             data, learners, k=folds,
-            preprocessor=lambda data, p=p:
-                select_proportion_preproc(data, p),
-            callback=callback_wrapped(i)
-        )
+            preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
+            callback=callback_wrapped(i))
         for i, p in enumerate(proportions)
     ]
     return results
@@ -321,13 +318,11 @@ def learning_curve_with_test_data(learners, traindata, testdata, times=10,
 
     results = [
         [Orange.evaluation.TestOnTestData(
-             traindata, testdata, learners,
-             preprocessor=lambda data, p=p:
-                 select_proportion_preproc(data, p),
-             callback=callback_wrapped(i * times + t))
+            traindata, testdata, learners,
+            preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
+            callback=callback_wrapped(i * times + t))
          for t in range(times)]
-        for i, p in enumerate(proportions)
-    ]
+        for i, p in enumerate(proportions)]
     results = [reduce(results_add, res, Orange.evaluation.Results())
                for res in results]
     return results
