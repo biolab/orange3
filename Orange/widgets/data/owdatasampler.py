@@ -348,7 +348,7 @@ class SampleFoldIndices(Reprable):
 
 class SampleRandomN(Reprable):
     def __init__(self, n=0, stratified=False, replace=False,
-                    random_state=None):
+                 random_state=None):
         self.n = n
         self.stratified = stratified
         self.replace = replace

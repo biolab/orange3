@@ -20,8 +20,7 @@ _ToolGridSlot = namedtuple(
     ["button",
      "action",
      "row",
-     "column"
-     ]
+     "column"]
     )
 
 

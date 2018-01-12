@@ -94,7 +94,7 @@ class TestHasClassFilter(unittest.TestCase):
     def test_has_class_multiclass(self):
         domain = Domain([DiscreteVariable("x", values="01")],
                         [DiscreteVariable("y1", values="01"),
-                        DiscreteVariable("y2", values="01")])
+                         DiscreteVariable("y2", values="01")])
         table = Table(domain, [[0, 1, np.nan],
                                [1, np.nan, 0],
                                [1, 0, 1],

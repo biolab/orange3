@@ -14,8 +14,7 @@ def configuration(parent_package='', top_path=None):
                          sources=['_grid_density.cpp'],
                          include_dirs=[],
                          libraries=libraries,
-                         export_symbols=["compute_density"]
-                         )
+                         export_symbols=["compute_density"])
     return config
 
 

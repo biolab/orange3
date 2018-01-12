@@ -175,23 +175,20 @@ class SchemeEditWidget(QWidget):
                     checkable=True,
                     shortcut=QKeySequence.ZoomIn,
                     toolTip=self.tr("Zoom in the workflow."),
-                    toggled=self.toggleZoom,
-                    )
+                    toggled=self.toggleZoom)
 
         self.__cleanUpAction = \
             QAction(self.tr("Clean Up"), self,
                     objectName="cleanup-action",
                     toolTip=self.tr("Align widgets to a grid."),
-                    triggered=self.alignToGrid,
-                    )
+                    triggered=self.alignToGrid)
 
         self.__newTextAnnotationAction = \
             QAction(self.tr("Text"), self,
                     objectName="new-text-action",
                     toolTip=self.tr("Add a text annotation to the workflow."),
                     checkable=True,
-                    toggled=self.__toggleNewTextAnnotation,
-                    )
+                    toggled=self.__toggleNewTextAnnotation)
 
         # Create a font size menu for the new annotation action.
         self.__fontMenu = QMenu("Font Size", self)
@@ -220,8 +217,7 @@ class SchemeEditWidget(QWidget):
                     objectName="new-arrow-action",
                     toolTip=self.tr("Add an arrow annotation to the workflow."),
                     checkable=True,
-                    toggled=self.__toggleNewArrowAnnotation,
-                    )
+                    toggled=self.__toggleNewArrowAnnotation)
 
         # Create a color menu for the arrow annotation action
         self.__arrowColorMenu = QMenu("Arrow Color",)
@@ -267,8 +263,7 @@ class SchemeEditWidget(QWidget):
                     objectName="select-all-action",
                     toolTip=self.tr("Select all items."),
                     triggered=self.selectAll,
-                    shortcut=QKeySequence.SelectAll
-                    )
+                    shortcut=QKeySequence.SelectAll)
 
         self.__openSelectedAction = \
             QAction(self.tr("Open"), self,
@@ -282,8 +277,7 @@ class SchemeEditWidget(QWidget):
                     objectName="remove-selected",
                     toolTip=self.tr("Remove selected items"),
                     triggered=self.removeSelected,
-                    enabled=False
-                    )
+                    enabled=False)
 
         self.__showSettingsAction = \
             QAction(self.tr("Show settings"), self,
@@ -312,36 +306,31 @@ class SchemeEditWidget(QWidget):
                     toolTip=self.tr("Show widget help"),
                     triggered=self.__onHelpAction,
                     shortcut=QKeySequence("F1"),
-                    enabled=False,
-                    )
+                    enabled=False)
 
         self.__linkEnableAction = \
             QAction(self.tr("Enabled"), self,
                     objectName="link-enable-action",
                     triggered=self.__toggleLinkEnabled,
-                    checkable=True,
-                    )
+                    checkable=True)
 
         self.__linkRemoveAction = \
             QAction(self.tr("Remove"), self,
                     objectName="link-remove-action",
                     triggered=self.__linkRemove,
-                    toolTip=self.tr("Remove link."),
-                    )
+                    toolTip=self.tr("Remove link."))
 
         self.__linkResetAction = \
             QAction(self.tr("Reset Signals"), self,
                     objectName="link-reset-action",
-                    triggered=self.__linkReset,
-                    )
+                    triggered=self.__linkReset)
 
         self.__duplicateSelectedAction = \
             QAction(self.tr("Duplicate Selected"), self,
                     objectName="duplicate-action",
                     enabled=False,
                     shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_D),
-                    triggered=self.__duplicateSelected,
-                    )
+                    triggered=self.__duplicateSelected)
 
         self.addActions([self.__newTextAnnotationAction,
                          self.__newArrowAnnotationAction,
@@ -950,12 +939,10 @@ class SchemeEditWidget(QWidget):
         Edit (rename) the `node`'s title. Opens an input dialog.
         """
         name, ok = QInputDialog.getText(
-                    self, self.tr("Rename"),
-                    str(self.tr("Enter a new name for the '%s' widget")) \
-                    % node.title,
-                    text=node.title
-                    )
-
+            self, self.tr("Rename"),
+            str(self.tr("Enter a new name for the '%s' widget")) % node.title,
+            text=node.title
+            )
         if ok:
             self.__undoStack.push(
                 commands.RenameNodeCommand(self.__scheme, node, node.title,
@@ -980,21 +967,18 @@ class SchemeEditWidget(QWidget):
         # Filter the scene's drag/drop events.
         if obj is self.scene():
             etype = event.type()
+            mime_name = "application/vnv.orange-canvas.registry.qualified-name"
             if etype == QEvent.GraphicsSceneDragEnter or \
                     etype == QEvent.GraphicsSceneDragMove:
                 mime_data = event.mimeData()
-                if mime_data.hasFormat(
-                        "application/vnv.orange-canvas.registry.qualified-name"
-                        ):
+                if mime_data.hasFormat(mime_name):
                     event.acceptProposedAction()
                 else:
                     event.ignore()
                 return True
             elif etype == QEvent.GraphicsSceneDrop:
                 data = event.mimeData()
-                qname = data.data(
-                    "application/vnv.orange-canvas.registry.qualified-name"
-                )
+                qname = data.data(mime_name)
                 try:
                     desc = self.__registry.widget(bytes(qname).decode())
                 except KeyError:
@@ -1566,9 +1550,9 @@ class SchemeEditWidget(QWidget):
 
         selection = self.selectedNodes()
 
-        links = [link for link in scheme.links
-                 if link.source_node in selection and
-                    link.sink_node in selection]
+        links = [
+            link for link in scheme.links
+            if link.source_node in selection and link.sink_node in selection]
         nodedups = [copy_node(node) for node in selection]
         allnames = {node.title for node in scheme.nodes + nodedups}
         for nodedup in nodedups:

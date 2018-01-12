@@ -45,8 +45,7 @@ NAMED_COLORS = \
      "light-grass": "#DFECB0",
      "grass": "#C0D962",
      "light-yellow": "#F7F5A7",
-     "yellow": "#F0EC4F",
-     }
+     "yellow": "#F0EC4F"}
 
 
 # default color when the category does not provide it

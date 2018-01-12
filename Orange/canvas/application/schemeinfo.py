@@ -123,16 +123,15 @@ class SchemeInfoDialog(QDialog):
             QCheckBox(self.tr("Show when I make a New Workflow."),
                       self,
                       objectName="auto-show-check",
-                      checked=False,
-                      )
+                      checked=False)
 
         check_layout.addWidget(self.__showAtNewSchemeCheck)
         check_layout.addWidget(
-               QLabel(self.tr("You can also edit Workflow Info later "
-                              "(File -> Workflow Info)."),
-                      self,
-                      objectName="auto-show-info"),
-               alignment=Qt.AlignRight)
+            QLabel(self.tr("You can also edit Workflow Info later "
+                           "(File -> Workflow Info)."),
+                   self,
+                   objectName="auto-show-info"),
+            alignment=Qt.AlignRight)
         widget.setLayout(check_layout)
         widget.setSizePolicy(QSizePolicy.MinimumExpanding,
                              QSizePolicy.Fixed)

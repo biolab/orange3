@@ -629,16 +629,16 @@ class SqlTable(Table):
             create = True
 
         if create:
-            with self.backend.execute_sql_query(" ".join([
-                    "CREATE TABLE", sample_table_q, "AS",
-                    "SELECT * FROM", self.table_name,
-                    "TABLESAMPLE", method, "(", parameter, ")"])):
+            with self.backend.execute_sql_query(
+                " ".join(["CREATE TABLE", sample_table_q, "AS",
+                          "SELECT * FROM", self.table_name,
+                          "TABLESAMPLE", method, "(", parameter, ")"])):
                 pass
 
         sampled_table = self.copy()
         sampled_table.table_name = sample_table_q
-        with sampled_table.backend.execute_sql_query(
-                'ANALYZE' + sample_table_q):
+        with sampled_table.backend.execute_sql_query('ANALYZE'
+                                                     + sample_table_q):
             pass
         return sampled_table
 

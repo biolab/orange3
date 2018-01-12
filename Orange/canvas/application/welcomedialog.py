@@ -164,8 +164,7 @@ class WelcomeDialog(QDialog):
         for i, action in enumerate(actions):
             self.insertAction(index, i, action, background)
 
-    def insertAction(self, row, index, action,
-                      background="light-orange"):
+    def insertAction(self, row, index, action, background="light-orange"):
         """Insert `action` in `row` in position `index`.
         """
         button = self.createButton(action, background)

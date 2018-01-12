@@ -117,11 +117,10 @@ spec = \
       "Open help in an external browser"),
 
      ("error-reporting/machine-id", str, '',
-     "Report custom name instead of machine ID"),
+      "Report custom name instead of machine ID"),
 
      ("add-ons/allow-conda-experimental", bool, False,
-      "Install add-ons with conda"),
-     ]
+      "Install add-ons with conda")]
 
 spec = [config_slot(*t) for t in spec]
 
@@ -252,8 +251,7 @@ def widgets_entry_points():
     """
     ep_iter = pkg_resources.iter_entry_points(WIDGETS_ENTRY)
     chain = [[default_entry_point()],
-             ep_iter
-             ]
+             ep_iter]
     return itertools.chain(*chain)
 
 #: Parameters for searching add-on packages in PyPi using xmlrpc api.

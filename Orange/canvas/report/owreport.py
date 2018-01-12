@@ -379,12 +379,12 @@ class OWReport(OWWidget):
             report = self.load(filename)
         except (IOError, AttributeError, pickle.UnpicklingError) as e:
             message_critical(
-                 self.tr("Could not load an Orange Report file"),
-                 title=self.tr("Error"),
-                 informative_text=self.tr("Error occurred "
-                                          "while loading '{}'.").format(filename),
-                 exc_info=True,
-                 parent=self)
+                self.tr("Could not load an Orange Report file"),
+                title=self.tr("Error"),
+                informative_text=self.tr(
+                    "Error occurred while loading '{}'.").format(filename),
+                exc_info=True,
+                parent=self)
             log.error(str(e), exc_info=True)
             return
         self.set_instance(report)

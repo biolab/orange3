@@ -62,8 +62,8 @@ class TestSimpleTreeLearner(unittest.TestCase):
     def test_SimpleTree_classification_tree(self):
         lrn = SimpleTreeCls(min_instances=6, max_majority=0.7)
         clf = lrn(self.data_cls)
-        self.assertEqual(clf.dumps_tree(
-            clf.node),
+        self.assertEqual(
+            clf.dumps_tree(clf.node),
             '{ 1 4 -1.17364 { 1 5 0.37564 { 2 0.00 0.00 0.56 } '
             '{ 2 0.00 3.00 1.14 } } { 1 4 -0.41863 { 1 5 0.14592 '
             '{ 2 3.54 0.54 0.70 } { 2 2.46 0.46 2.47 } } { 1 4 0.24404 '
@@ -83,8 +83,8 @@ class TestSimpleTreeLearner(unittest.TestCase):
     def test_SimpleTree_regression_tree(self):
         lrn = SimpleTreeReg(min_instances=5)
         clf = lrn(self.data_reg)
-        self.assertEqual(clf.dumps_tree(
-            clf.node),
+        self.assertEqual(
+            clf.dumps_tree(clf.node),
             '{ 0 2 { 1 4 0.13895 { 1 4 -0.32607 { 2 4.60993 1.71141 } '
             '{ 2 4.96454 3.56122 } } { 2 7.09220 -4.32343 } } { 1 4 -0.35941 '
             '{ 0 0 { 1 5 -0.20027 { 2 3.54255 0.95095 } { 2 5.50000 -5.56049 } '

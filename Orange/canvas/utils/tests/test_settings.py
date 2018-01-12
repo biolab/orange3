@@ -18,8 +18,7 @@ class TestUserSettings(test.QAppTestCase):
 
     def test_settings(self):
         spec = [config_slot("foo", bool, True, "foo doc"),
-                config_slot("bar", int, 0, "bar doc"),
-                ]
+                config_slot("bar", int, 0, "bar doc")]
 
         store = QSettings(QSettings.IniFormat, QSettings.UserScope,
                           "biolab.si", "Orange Canvas Unit Tests")

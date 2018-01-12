@@ -778,8 +778,8 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
                  "qualified_name": desc.qualified_name,
                  "project_name": desc.project_name or "",
                  "version": desc.version or "",
-                 "title": node.title,
-                 }
+                 "title": node.title}
+
         if node.position is not None:
             attrs["position"] = str(node.position)
 
@@ -804,8 +804,7 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
                  "sink_node_id": str(sink_id),
                  "source_channel": link.source_channel.name,
                  "sink_channel": link.sink_channel.name,
-                 "enabled": "true" if link.enabled else "false",
-                 }
+                 "enabled": "true" if link.enabled else "false"}
         builder.start("link", attrs)
         builder.end("link")
 
@@ -1012,7 +1011,7 @@ def literal_dumps(obj, prettyprint=False, indent=4):
             return all(map(check, chain(iter(obj.keys()), iter(obj.values()))))
         else:
             raise TypeError("{0} can not be serialized as a python "
-                             "literal".format(type(obj)))
+                            "literal".format(type(obj)))
 
     check(obj)
 

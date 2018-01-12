@@ -514,8 +514,7 @@ class TestSqlTable(PostgresTest):
         table = np.array(['bcd4d9c0-361e-bad4-7ceb-0d171cdec981',
                           '544b7ddc-d861-0201-81c8-9f7ad0bbf531',
                           'b35a10f7-7901-f313-ec16-5ad9778040a6',
-                          'b267c4be-4a26-60b5-e664-737a90a40e93']
-                         ).reshape(-1, 1)
+                          'b267c4be-4a26-60b5-e664-737a90a40e93']).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['uuid'])
 
         sql_table = SqlTable(conn, table_name, inspect_values=False)

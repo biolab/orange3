@@ -11,11 +11,12 @@ import numpy as np
 from Orange.base import SklLearner
 
 import Orange.classification
-from Orange.classification import (Learner, Model, NaiveBayesLearner,
-    LogisticRegressionLearner, NuSVMLearner, MajorityLearner, RandomForestLearner,
-    SimpleTreeLearner, SoftmaxRegressionLearner, SVMLearner, LinearSVMLearner,
-    OneClassSVMLearner, TreeLearner, KNNLearner, SimpleRandomForestLearner,
-    EllipticEnvelopeLearner)
+from Orange.classification import (
+    Learner, Model,
+    NaiveBayesLearner, LogisticRegressionLearner, NuSVMLearner, MajorityLearner,
+    RandomForestLearner, SimpleTreeLearner, SoftmaxRegressionLearner,
+    SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
+    SimpleRandomForestLearner, EllipticEnvelopeLearner)
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
@@ -151,11 +152,10 @@ class ExpandProbabilitiesTest(unittest.TestCase):
         attributes = ["Feature %i" % i for i in range(attr)]
         classes = ["Class %i" % i for i in range(vars)]
         attr_vars = [DiscreteVariable(name=a, values="01") for a in attributes]
-        class_vars = [DiscreteVariable(name=c,
-                                       values=[str(v)
-                                               for v in range(class_var_domain)]
-                                       )
-                      for c in classes]
+        class_vars = [
+            DiscreteVariable(name=c,
+                             values=[str(v) for v in range(class_var_domain)])
+            for c in classes]
         meta_vars = []
         self.domain = Domain(attr_vars, class_vars, meta_vars)
         self.x = np.random.randint(0, 2, (rows, attr))
@@ -309,7 +309,7 @@ class LearnerAccessibility(unittest.TestCase):
                 np.testing.assert_almost_equal(
                     model(ds), model2(ds),
                     err_msg='%s does not return same values when unpickled %s'
-                            % (learner.__class__.__name__, ds.name))
+                    % (learner.__class__.__name__, ds.name))
 
     def test_adequacy_all_learners(self):
         for learner in self.all_learners():

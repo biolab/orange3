@@ -268,7 +268,7 @@ class SimpleWidget:
     with_metas = ContextSetting([], required=ContextSetting.OPTIONAL)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
     if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
-        selected='selected')
+                                 selected='selected')
     selected = ""
 
     def retrieveSpecificSettings(self):

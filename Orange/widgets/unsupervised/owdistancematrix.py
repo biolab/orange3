@@ -345,8 +345,8 @@ class OWDistanceMatrix(widget.OWWidget):
             self.report_raw('<table style="border-collapse:collapse">')
             self.report_raw("<tr><td></td>")
             self.report_raw("".join(
-                    '<td style="background-color: {}">{}</td>'.format(*cv)
-                    for cv in zip(label_colors, model.labels)))
+                '<td style="background-color: {}">{}</td>'.format(*cv)
+                for cv in zip(label_colors, model.labels)))
             self.report_raw("</tr>")
             for i in range(dim):
                 self.report_raw("<tr>")

@@ -38,8 +38,7 @@ _CacheEntry = \
          "exc_type",         # exception type when last trying to import
          "exc_val",          # exception value (str of value)
          "description"       # WidgetDescription instance
-         ]
-    )
+        ])
 
 
 def default_category_for_module(module):
@@ -175,10 +174,9 @@ class WidgetDiscovery(object):
         self.handle_category(cat_desc)
 
         desc_iter = self.iter_widget_descriptions(
-                        category,
-                        category_name=cat_desc.name,
-                        distribution=distribution
-                        )
+            category,
+            category_name=cat_desc.name,
+            distribution=distribution)
 
         for desc in desc_iter:
             self.handle_widget(desc)
@@ -266,16 +264,13 @@ class WidgetDiscovery(object):
 
                     try:
                         desc = self.widget_description(
-                                 module,
-                                 category_name=category_name,
-                                 distribution=distribution
-                                 )
+                            module,
+                            category_name=category_name,
+                            distribution=distribution)
                     except WidgetSpecificationError:
                         self.cache_log_error(
-                                 source_path, WidgetSpecificationError,
-                                 distribution
-                                 )
-
+                            source_path, WidgetSpecificationError,
+                            distribution)
                         continue
                     except Exception:
                         log.warning("Problem parsing %r", name, exc_info=True)

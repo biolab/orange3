@@ -162,21 +162,21 @@ class SameValue(Filter):
             if self.negate:
                 retain = np.fromiter(
                     (inst[column] != value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
             else:
                 retain = np.fromiter(
                     (inst[column] == value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
         else:
             column = -1 - column
             if self.negate:
                 retain = np.fromiter(
                     (inst._metas[column] != value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
             else:
                 retain = np.fromiter(
                     (inst._metas[column] == value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
         return data[retain]
 
 

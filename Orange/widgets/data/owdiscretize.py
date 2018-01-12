@@ -39,7 +39,8 @@ _dispatch = {
     EqualFreq: lambda m, data, var: disc.EqualFreq(m.k)(data, var),
     EqualWidth: lambda m, data, var: disc.EqualWidth(m.k)(data, var),
     Remove: lambda m, data, var: None,
-    Custom: lambda m, data, var:
+    Custom:
+        lambda m, data, var:
         disc.Discretizer.create_discretized_var(var, m.points)
 }
 

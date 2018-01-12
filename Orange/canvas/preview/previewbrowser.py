@@ -220,8 +220,7 @@ class PreviewBrowser(QWidget):
 
         self.__selectAction = \
             QAction(self.tr("Select"), self,
-                    objectName="select-action",
-                    )
+                    objectName="select-action")
 
         top_layout.addWidget(self.__label, 1,
                              alignment=Qt.AlignTop | Qt.AlignLeft)

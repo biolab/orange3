@@ -141,8 +141,7 @@ class ControlPointRect(QGraphicsObject):
              ControlPoint(self, ControlPoint.TopRight),
              ControlPoint(self, ControlPoint.Bottom),
              ControlPoint(self, ControlPoint.BottomLeft),
-             ControlPoint(self, ControlPoint.BottomRight)
-             ]
+             ControlPoint(self, ControlPoint.BottomRight)]
         assert(points == sorted(points, key=lambda p: p.anchor()))
 
         self.__points = dict((p.anchor(), p) for p in points)
@@ -340,8 +339,7 @@ class ControlPointLine(QGraphicsObject):
         self.__line = QLineF()
         self.__points = \
             [ControlPoint(self, ControlPoint.TopLeft),  # TopLeft is line start
-             ControlPoint(self, ControlPoint.BottomRight)  # line end
-             ]
+             ControlPoint(self, ControlPoint.BottomRight)]  # line end
 
         self.__activeControl = None
 

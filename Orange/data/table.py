@@ -297,7 +297,7 @@ class Table(MutableSequence, Storage):
                 return match_density(_subarray(source.X, row_indices, src_cols))
             if all(isinstance(x, Integral) and x < 0 for x in src_cols):
                 arr = match_density(_subarray(source.metas, row_indices,
-                                            [-1 - x for x in src_cols]))
+                                              [-1 - x for x in src_cols]))
                 if arr.dtype != dtype:
                     return arr.astype(dtype)
                 return arr

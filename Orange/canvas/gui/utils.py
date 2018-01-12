@@ -192,8 +192,7 @@ def create_gradient(base_color, stop=QPointF(0, 0),
     grad.setStops([(0.0, base_color),
                    (0.5, base_color),
                    (0.8, base_color.darker(105)),
-                   (1.0, base_color.darker(110)),
-                   ])
+                   (1.0, base_color.darker(110))])
     grad.setCoordinateMode(QLinearGradient.ObjectBoundingMode)
     return grad
 
@@ -246,8 +245,7 @@ def message_warning(text, title=None, informative_text=None, details=None,
     if not text:
         import random
         text_candidates = ["Death could come at any moment.",
-                           "Murphy lurks about. Remember to save frequently."
-                           ]
+                           "Murphy lurks about. Remember to save frequently."]
         text = random.choice(text_candidates)
 
     if title is not None:

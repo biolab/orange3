@@ -191,9 +191,9 @@ class OWImpute(OWWidget):
         method_layout.addStretch(2)
 
         reset_button = QPushButton(
-                "Restore All to Default", checked=False, checkable=False,
-                clicked=self.reset_variable_methods, default=False,
-                autoDefault=False)
+            "Restore All to Default", checked=False, checkable=False,
+            clicked=self.reset_variable_methods, default=False,
+            autoDefault=False)
         method_layout.addWidget(reset_button)
 
         self.variable_button_group = button_group

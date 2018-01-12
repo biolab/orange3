@@ -30,7 +30,7 @@ ROCPoints = namedtuple(
     ["fpr",        # (N,) array of false positive rate coordinates (ascending)
      "tpr",        # (N,) array of true positive rate coordinates
      "thresholds"  # (N,) array of thresholds (in descending order)
-     ]
+    ]
 )
 ROCPoints.is_valid = property(lambda self: self.fpr.size > 0)
 
@@ -49,7 +49,7 @@ ROCAveragedVert = namedtuple(
     ["points",   # ROCPoints sampled by fpr
      "hull",     # ROCPoints of the convex hull
      "tpr_std",  # array standard deviation of tpr at each fpr point
-     ]
+    ]
 )
 ROCAveragedVert.is_valid = property(lambda self: self.points.is_valid)
 
@@ -60,7 +60,7 @@ ROCAveragedThresh = namedtuple(
      "hull",     # ROCPoints of the convex hull
      "tpr_std",  # array standard deviations of tpr at each threshold
      "fpr_std"   # array standard deviations of fpr at each threshold
-     ]
+    ]
 )
 ROCAveragedThresh.is_valid = property(lambda self: self.points.is_valid)
 
@@ -71,7 +71,7 @@ ROCData = namedtuple(
      "folds",   # ROCCurve list, one for each fold
      "avg_vertical",   # ROCAveragedVert
      "avg_threshold",  # ROCAveragedThresh
-     ]
+    ]
 )
 
 
@@ -156,7 +156,7 @@ PlotCurve = namedtuple(
     ["curve",        # ROCCurve source curve
      "curve_item",   # pg.PlotDataItem main curve
      "hull_item"     # pg.PlotDataItem curve's convex hull
-     ]
+    ]
 )
 
 
@@ -209,7 +209,7 @@ PlotAvgCurve = namedtuple(
      "curve_item",    # pg.PlotDataItem
      "hull_item",     # pg.PlotDataItem
      "confint_item",  # pg.ErrorBarItem
-     ]
+    ]
 )
 
 
@@ -273,7 +273,7 @@ plot_curves = namedtuple(
      "folds",   # :: () -> [PlotCurve]
      "avg_vertical",   # :: () -> PlotAvgCurve
      "avg_threshold",  # :: () -> PlotAvgCurve
-     ]
+    ]
 )
 
 

@@ -726,7 +726,7 @@ class ColoredListModel(itemmodels.PyListModel):
 
 
 def _icon(name, icon_path="icons/paintdata",
-        widg_path=os.path.dirname(os.path.abspath(__file__))):
+          widg_path=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(widg_path, icon_path, name)
 
 

@@ -98,7 +98,8 @@ class Test(test.QAppTestCase):
         textw.setProperty("spin_", 0)
         textw.setProperty("line_", "")
 
-        textexpr = PropertyBindingExpr(r"""
+        textexpr = PropertyBindingExpr(
+            r"""
 ("Check box is {0}\n"
  "Spin has value {1}\n"
  "Line contains {2}").format(
@@ -108,8 +109,7 @@ class Test(test.QAppTestCase):
 """,
             dict(checked=binding_for(cb, "checked"),
                  spin=binding_for(sp, "value"),
-                 line=binding_for(le, "text")),
-        )
+                 line=binding_for(le, "text")))
 
         layout.addWidget(cb)
         layout.addWidget(sp)
@@ -142,9 +142,8 @@ class Test(test.QAppTestCase):
             )
 
         expr = PropertyBindingExpr(
-           "True if value < 3 else False",
-           dict(value=DynamicPropertyBinding(obj1, "result"))
-        )
+            "True if value < 3 else False",
+            dict(value=DynamicPropertyBinding(obj1, "result")))
 
         result_values = []
         result.changed[object].connect(result_values.append)
