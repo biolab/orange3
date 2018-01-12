@@ -1,3 +1,4 @@
+import warnings
 import weakref
 
 from math import log
@@ -10,7 +11,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
-from Orange.util import deprecated
+from Orange.util import deprecated, OrangeDeprecationWarning
 
 __all__ = ["DomainConversion", "Domain"]
 
@@ -242,6 +243,16 @@ class Domain:
     def __len__(self):
         """The number of variables (features and class attributes)."""
         return len(self._variables)
+
+    def __bool__(self):
+        warnings.warn(
+            "Domain.__bool__ is ambiguous; use 'is None' or 'empty' instead",
+            OrangeDeprecationWarning, stacklevel=2)
+        return len(self) > 0  # Keep the obsolete behaviour
+
+    def empty(self):
+        """True if the domain has no variables of any kind"""
+        return not self.variables and not self.metas
 
     def __getitem__(self, idx):
         """
