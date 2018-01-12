@@ -359,19 +359,13 @@ class OWScatterPlot(OWWidget):
             self.attribute_selection_list = None
 
     def init_attr_values(self):
-        domain = self.data.domain if self.data else None
-        for model in self.models:
-            model.set_domain(domain)
+        data = self.data
+        domain = data.domain if data and len(data) else None
+        self.xy_model.set_domain(domain)
         self.attr_x = self.xy_model[0] if self.xy_model else None
         self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
             else self.attr_x
-        if domain is not None:
-            self.graph.attr_color = self.data.domain.class_var
-        else:
-            self.graph.attr_color = None
-        self.graph.attr_shape = None
-        self.graph.attr_size = None
-        self.graph.attr_label = None
+        self.graph.set_domain(data)
 
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y

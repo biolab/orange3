@@ -618,16 +618,7 @@ class OWFreeViz(widget.OWWidget):
         self._new_plotdata()
 
     def init_attr_values(self):
-        domain = self.data.domain if self.data and len(self.data) else None
-        for model in self.models:
-            model.set_domain(domain)
-        self.graph.attr_label = None
-        self.graph.attr_size = None
-        self.graph.attr_shape = None
-        if domain is not None:
-            self.graph.attr_color = self.data.domain.class_var
-        else:
-            self.graph.attr_color = None
+        self.graph.set_domain(self.data)
 
     @Inputs.data
     def set_data(self, data):

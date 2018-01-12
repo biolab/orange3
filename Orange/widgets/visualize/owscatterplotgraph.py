@@ -616,6 +616,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         data = self.sparse_to_dense()
         self.set_data(data, **args)
 
+    def set_domain(self, data):
+        domain = data.domain if data and len(data) else None
+        for attr in ("attr_color", "attr_shape", "attr_size", "attr_label"):
+            getattr(self.controls, attr).model().set_domain(domain)
+            setattr(self, attr, None)
+        if domain is not None:
+            self.attr_color = domain.class_var
+
     def sparse_to_dense(self):
         data = self._data
         if data is None or not data.is_sparse():
