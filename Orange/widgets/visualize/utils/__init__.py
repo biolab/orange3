@@ -633,5 +633,3 @@ class ViewWithPress(QGraphicsView):
         super().mousePressEvent(event)
         if not event.isAccepted():
             self.handler()
-
-

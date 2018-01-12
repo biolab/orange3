@@ -43,4 +43,3 @@ def results_for_test_run(data_name=""):
     )
     results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
     return results
-

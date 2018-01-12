@@ -75,4 +75,3 @@ class TestTreeAdapter(unittest.TestCase):
         self.assertEqual(adapt.num_nodes, 7)
         self.assertIs(adapt.root, self.root)
         self.assertIs(adapt.domain, self.domain)
-

@@ -252,4 +252,3 @@ class TestDiscrete(unittest.TestCase):
         cont, _ = d._compute_contingency([var1], var2)[0][0]
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
                                               [0, 0, 2], [0, 1, 0]])
-

@@ -363,4 +363,3 @@ class OWRuleLearner(OWBaseLearner):
 
 if __name__ == "__main__":  # pragma: no cover
     OWRuleLearner.test_run(Table("iris"))
-

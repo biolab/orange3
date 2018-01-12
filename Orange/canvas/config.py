@@ -298,4 +298,3 @@ def application_icon():
         __name__, "icons/orange-canvas.svg"
     )
     return QIcon(path)
-

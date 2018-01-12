@@ -239,4 +239,3 @@ class OWSVM(OWBaseLearner):
 
 if __name__ == "__main__":  # pragma: no cover
     OWSVM.test_run(Table("iris"))
-

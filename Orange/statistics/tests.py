@@ -32,4 +32,3 @@ def wilcoxon_rank_sum(d1, d2):
     z = abs(U - m) / math.sqrt(var)
     p = 2 * (1 - scipy.special.ndtr(z))
     return z, p
-

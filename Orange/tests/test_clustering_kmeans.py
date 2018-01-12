@@ -46,4 +46,3 @@ class TestKMeans(unittest.TestCase):
         c = kmeans(self.iris)
         X = self.iris.X[::20]
         p = c(X)
-
