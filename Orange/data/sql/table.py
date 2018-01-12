@@ -618,11 +618,13 @@ class SqlTable(Table):
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
-            with self.backend.execute_sql_query(query): pass
+            with self.backend.execute_sql_query(query):
+                pass
 
             if no_cache:
                 query = "DROP TABLE " + sample_table_q
-                with self.backend.execute_sql_query(query): pass
+                with self.backend.execute_sql_query(query):
+                    pass
                 create = True
 
         except BackendError:
