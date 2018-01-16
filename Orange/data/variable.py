@@ -238,6 +238,28 @@ class VariableMeta(Registry):
         return obj
 
 
+class _predicatedescriptor(property):
+    """
+    A property that behaves as a class method if accessed via a class
+    >>> class A:
+    ...     foo = False
+    ...     @_predicatedescriptor
+    ...     def is_foo(self):
+    ...         return self.foo
+    ...
+    >>> a = A()
+    >>> a.is_foo
+    False
+    >>> A.is_foo(a)
+    False
+    """
+    def __get__(self, instance, objtype=None):
+        if instance is None:
+            return self.fget
+        else:
+            return super().__get__(instance, objtype)
+
+
 class Variable(Reprable, metaclass=VariableMeta):
     """
     The base class for variable descriptors contains the variable's
@@ -357,6 +379,22 @@ class Variable(Reprable, metaclass=VariableMeta):
         to_check = cls if var is None else type(var)
         return issubclass(to_check, (DiscreteVariable, ContinuousVariable))
 
+    @_predicatedescriptor
+    def is_discrete(self):
+        return isinstance(self, DiscreteVariable)
+
+    @_predicatedescriptor
+    def is_continuous(self):
+        return isinstance(self, ContinuousVariable)
+
+    @_predicatedescriptor
+    def is_string(self):
+        return isinstance(self, StringVariable)
+
+    @_predicatedescriptor
+    def is_time(self):
+        return isinstance(self, TimeVariable)
+
     def repr_val(self, val):
         """
         Return a textual representation of variable's value `val`. Argument
@@ -428,6 +466,9 @@ class Variable(Reprable, metaclass=VariableMeta):
         var = type(self)(self.name, compute_value=compute_value, sparse=self.sparse)
         var.attributes = dict(self.attributes)
         return var
+
+
+del _predicatedescriptor
 
 
 class ContinuousVariable(Variable):
@@ -1011,34 +1052,3 @@ class TimeVariable(ContinuousVariable):
             return self.parse(s)
         else:
             return super().to_val(s)
-
-
-class _TypeIndicatorDescriptor:
-    """
-    Descriptor that can be used on classes and on instances.
-
-    On an instance, the descriptor is used as a property of a variable,
-    e.g. `var.is_discrete`.
-
-    As a class attribute, the descriptor returns a predicate that can
-    be called as `Variable.is_discrete(var)` or, for a more common use,
-    `filter(Variable.is_discrete, domain)`.
-    """
-    def __init__(self, atype):
-        def __check_type(instance):
-            return isinstance(instance, atype)
-
-        self.check_type = __check_type
-
-    def __get__(self, instance, owner):
-        if instance is not None:
-            return self.check_type(instance)
-        else:
-            return self.check_type
-
-# These properties of Variable require its subclasses, hence they have to
-# inserted into the class later.
-Variable.is_discrete = _TypeIndicatorDescriptor(DiscreteVariable)
-Variable.is_continuous = _TypeIndicatorDescriptor(ContinuousVariable)
-Variable.is_string = _TypeIndicatorDescriptor(StringVariable)
-Variable.is_time = _TypeIndicatorDescriptor(TimeVariable)
