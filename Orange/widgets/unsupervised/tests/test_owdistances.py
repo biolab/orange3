@@ -27,8 +27,13 @@ class TestOWDistances(WidgetTest):
             self.widget.metrics_combo.activated.emit(i)
             self.widget.metrics_combo.setCurrentIndex(i)
             self.send_signal(self.widget.Inputs.data, self.iris)
+            if metric.supports_normalization:
+                expected = metric(self.iris, normalize=self.widget.normalized_dist)
+            else:
+                expected = metric(self.iris)
+
             np.testing.assert_array_equal(
-                metric(self.iris), self.get_output(self.widget.Outputs.distances))
+                expected, self.get_output(self.widget.Outputs.distances))
 
     def test_error_message(self):
         """Check if error message appears and then disappears when
@@ -58,3 +63,7 @@ class TestOWDistances(WidgetTest):
         self.widget.compute_distances(mock, self.iris)
         self.assertEqual(len(self.widget.Error.active), 1)
         self.assertTrue(self.widget.Error.distances_memory_error.is_shown())
+
+    def test_migrates_normalized_dist(self):
+        w = self.create_widget(OWDistances, stored_settings={"metric_idx": 0})
+        self.assertFalse(w.normalized_dist)
