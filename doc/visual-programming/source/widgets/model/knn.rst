@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A data set
+   A dataset
 
 -  **Preprocessor**
 
@@ -61,10 +61,10 @@ The **kNN** widget uses the `kNN algorithm <https://en.wikipedia.org/wiki/K-near
 Examples
 --------
 
-The first example is a classification task on *iris* data set. We compare the results of `k-Nearest neighbors <https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm>`_ with the default model :doc:`Constant <../model/constant>`, which always predicts the majority class.
+The first example is a classification task on *iris* dataset. We compare the results of `k-Nearest neighbors <https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm>`_ with the default model :doc:`Constant <../model/constant>`, which always predicts the majority class.
 
 .. figure:: images/Constant-classification.png
 
-The second example is a regression task. This workflow shows how to use the *Learner* output. For the purpose of this example, we used the *housing* data set. We input the **kNN** prediction model into :doc:`Predictions <../evaluation/predictions>` and observe the predicted values.
+The second example is a regression task. This workflow shows how to use the *Learner* output. For the purpose of this example, we used the *housing* dataset. We input the **kNN** prediction model into :doc:`Predictions <../evaluation/predictions>` and observe the predicted values.
 
 .. figure:: images/kNN-regression.png

@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   Data set.
+   Dataset.
 
 -  **Preprocessor**
 
@@ -97,7 +97,7 @@ then predict *class*", even in domains where noise may be present.
 Examples
 --------
 
-For the example below, we have used *zoo* data set and passed it to **CN2 Rule Induction**. We can review and interpret the built model with :doc:`CN2 Rule Viewer <../visualize/cn2ruleviewer>` widget.
+For the example below, we have used *zoo* dataset and passed it to **CN2 Rule Induction**. We can review and interpret the built model with :doc:`CN2 Rule Viewer <../visualize/cn2ruleviewer>` widget.
 
 .. figure:: images/CN2-visualize.png
 
