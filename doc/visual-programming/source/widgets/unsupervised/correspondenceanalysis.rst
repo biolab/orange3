@@ -10,7 +10,7 @@ Signals
 
 -  **Data**
 
-   A data set.
+   A dataset.
 
 **Outputs**:
 
@@ -37,7 +37,7 @@ Example
 -------
 
 Below, is a simple comparison between the **Correspondence Analysis** and
-:doc:`Scatter plot <../visualize/scatterplot>` widgets on the *Titanic* data set. While the :doc:`Scatter plot <../visualize/scatterplot>` shows
+:doc:`Scatter plot <../visualize/scatterplot>` widgets on the *Titanic* dataset. While the :doc:`Scatter plot <../visualize/scatterplot>` shows
 fairly well which class and sex had a good survival rate and which one
 didn't, **Correspondence Analysis** can plot several variables in a 2-D
 graph, thus making it easy to see the relations between variable values.
