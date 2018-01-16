@@ -15,7 +15,7 @@ from Orange.evaluation.testing import Results
 
 class OWLearningCurveA(OWWidget):
     name = "Learning Curve (A)"
-    description = ("Takes a data set and a set of learners and shows a "
+    description = ("Takes a dataset and a set of learners and shows a "
                    "learning curve in a table")
     icon = "icons/LearningCurve.svg"
     priority = 1000
@@ -112,7 +112,7 @@ class OWLearningCurveA(OWWidget):
         self.data = data
 
         if data is not None:
-            self.infoa.setText('%d instances in input data set' % len(data))
+            self.infoa.setText('%d instances in input dataset' % len(data))
         else:
             self.infoa.setText('No data on input.')
 

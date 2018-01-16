@@ -6,8 +6,8 @@ After learning what an Orange Widget is and how to define them on
 a toy example, we will build an semi-useful widgets that can
 work together with the existing Orange Widgets.
 
-We will start with a very simple one, that will receive a data set
-on the input and will output a data set with 10% of the data instances.
+We will start with a very simple one, that will receive a dataset
+on the input and will output a dataset with 10% of the data instances.
 We will call this widget `OWDataSamplerA` (OW for Orange Widget,
 DataSampler since this is what widget will be doing, and A since we
 prototype a number of this widgets in our tutorial).
@@ -112,7 +112,7 @@ info was processed correctly:
 .. image:: images/samplewidgetontoolbox.png
 
 Now for the real test. We put the File widget on the schema (from
-Data pane) and load the iris.tab data set. We also put our Data
+Data pane) and load the iris.tab dataset. We also put our Data
 Sampler widget on the scheme and open it (double click on the icon,
 or right-click and choose Open):
 
