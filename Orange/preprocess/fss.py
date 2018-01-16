@@ -15,7 +15,7 @@ __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
 class SelectBestFeatures(Reprable):
     """
-    A feature selector that builds a new data set consisting of either the top
+    A feature selector that builds a new dataset consisting of either the top
     `k` features or all those that exceed a given `threshold`. Features are
     scored using the provided feature scoring `method`. By default it is
     assumed that feature importance diminishes with decreasing scores.
@@ -24,7 +24,7 @@ class SelectBestFeatures(Reprable):
     conditions will be selected.
 
     If `method` is not set, it is automatically selected when presented with
-    the data set. Data sets with both continuous and discrete features are
+    the dataset. Datasets with both continuous and discrete features are
     scored using a method suitable for the majority of features.
 
     Parameters
@@ -98,7 +98,7 @@ class SelectBestFeatures(Reprable):
 class SelectRandomFeatures(Reprable):
     """
     A feature selector that selects random `k` features from an input
-    data set and returns a data set with selected features. Parameter
+    dataset and returns a dataset with selected features. Parameter
     `k` is either an integer (number of feature) or float (from 0.0 to
     1.0, proportion of retained features).
 
