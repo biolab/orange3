@@ -6,6 +6,8 @@ import pickle
 
 import numpy as np
 import scipy
+import scipy.spatial
+import scipy.stats
 from scipy.sparse import csr_matrix
 
 from Orange.data import (Table, Domain, ContinuousVariable,
@@ -13,6 +15,7 @@ from Orange.data import (Table, Domain, ContinuousVariable,
 from Orange.distance import (Euclidean, SpearmanR, SpearmanRAbsolute,
                              PearsonR, PearsonRAbsolute, Manhattan, Cosine,
                              Jaccard, _preprocess, MahalanobisDistance)
+from Orange.distance.distance import _spearmanr2, _corrcoef2
 from Orange.misc import DistMatrix
 from Orange.tests import named_file, test_filename
 from Orange.util import OrangeDeprecationWarning
@@ -598,6 +601,30 @@ class TestSpearmanR(TestCase):
                       [0.3833333],
                       [0.]]))
 
+    def test_spearmanr2(self):
+        # Test that _spearnmanr2 returns the same result that stats.spearmanr
+        # would
+        n, m = tuple(np.random.randint(2, 5, size=2))
+        mean = np.random.uniform(-1, 1, size=m)
+        cov = np.random.uniform(0, 1./m, size=(m, m))
+        cov = (cov + cov.T) / 2
+        cov.flat[::m + 1] = 1.0
+        X1 = np.random.multivariate_normal(mean, cov, size=n)
+        X2 = np.random.multivariate_normal(mean, cov, size=n)
+        expected = scipy.stats.spearmanr(X1, X2, axis=1)[0][:n, n:]
+        np.testing.assert_almost_equal(
+            _spearmanr2(X1, X2, axis=1),
+            expected,
+            decimal=9
+        )
+
+        expected = scipy.stats.spearmanr(X1, X2, axis=0)[0][:m, m:]
+        np.testing.assert_almost_equal(
+            _spearmanr2(X1, X2, axis=0),
+            expected,
+            decimal=9,
+        )
+
 
 # noinspection PyTypeChecker
 class TestSpearmanRAbsolute(TestCase):
@@ -751,6 +778,32 @@ class TestPearsonR(TestCase):
             np.array([[0.10133593],
                       [0.32783865],
                       [0.]]))
+
+    def test_corrcoef2(self):
+        # Test that _corrcoef2 returns the same result that np.corrcoef would
+        n, m = tuple(np.random.randint(2, 5, size=2))
+        mean = np.random.uniform(-1, 1, size=m)
+        cov = np.random.uniform(0, 1./m, size=(m, m))
+        cov = (cov + cov.T) / 2
+        cov.flat[::m + 1] = 1.0
+        X1 = np.random.multivariate_normal(mean, cov, size=n)
+        X2 = np.random.multivariate_normal(mean, cov, size=n)
+        expected = np.corrcoef(X1, X2, rowvar=True)[:n, n:]
+        np.testing.assert_almost_equal(
+            _corrcoef2(X1, X2, axis=1),
+            expected,
+            decimal=9
+        )
+
+        expected = np.corrcoef(X1, X2, rowvar=False)[:m, m:]
+        np.testing.assert_almost_equal(
+            _corrcoef2(X1, X2, axis=0),
+            expected,
+            decimal=9,
+        )
+
+        with self.assertRaises(ValueError):
+            _corrcoef2(X1, X2, axis=10)
 
 
 # noinspection PyTypeChecker

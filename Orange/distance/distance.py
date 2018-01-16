@@ -507,6 +507,9 @@ def _corrcoef2(a, b, axis=0):
     numpy.corrcoef
     """
     a, b = np.atleast_2d(a, b)
+    if not (axis == 0 or axis == 1):
+        raise ValueError("Invalid axis {} (only 0 or 1 accepted)".format(axis))
+
     mean_a = np.mean(a, axis=axis, keepdims=True)
     mean_b = np.mean(b, axis=axis, keepdims=True)
     assert a.shape[axis] == b.shape[axis]
@@ -523,8 +526,6 @@ def _corrcoef2(a, b, axis=0):
     elif axis == 1:
         C = a.dot(b.T)
         assert C.shape == (n, m)
-    else:
-        raise ValueError()
 
     ss_a = np.sum(a ** 2, axis=axis, keepdims=True)
     ss_b = np.sum(b ** 2, axis=axis, keepdims=True)
