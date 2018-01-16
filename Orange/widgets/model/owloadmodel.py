@@ -1,6 +1,6 @@
 import os
+import pickle
 
-import dill as pickle
 from AnyQt.QtCore import QTimer
 from AnyQt.QtWidgets import (
     QSizePolicy, QHBoxLayout, QComboBox, QStyle, QFileDialog

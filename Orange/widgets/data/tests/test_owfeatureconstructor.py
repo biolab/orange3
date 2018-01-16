@@ -20,8 +20,6 @@ from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
 )
 
-import dill  # Import dill after Orange because patched
-
 
 class FeatureConstructorTest(unittest.TestCase):
     def test_construct_variables_discrete(self):
@@ -91,27 +89,6 @@ class FeatureConstructorTest(unittest.TestCase):
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
         ContinuousVariable._clear_all_caches()
-
-
-GLOBAL_CONST = 2
-
-
-class PicklingTest(unittest.TestCase):
-    CLASS_CONST = 3
-
-    def test_lambdas_pickle(self):
-        NONLOCAL_CONST = 5
-
-        lambda_func = lambda x, local_const=7: \
-            x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
-
-        def nested_func(x, local_const=7):
-            return x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
-
-        self.assertEqual(lambda_func(11),
-                         dill.loads(dill.dumps(lambda_func))(11))
-        self.assertEqual(nested_func(11),
-                         dill.loads(dill.dumps(nested_func))(11))
 
 
 class TestTools(unittest.TestCase):

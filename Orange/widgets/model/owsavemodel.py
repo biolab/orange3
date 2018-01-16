@@ -1,6 +1,7 @@
 import os
 
-import dill as pickle
+import pickle
+
 from AnyQt.QtWidgets import (
     QComboBox, QStyle, QSizePolicy, QFileDialog, QApplication
 )
