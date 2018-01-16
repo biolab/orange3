@@ -27,7 +27,7 @@ In a Nutshell
 Example: Data from Excel
 ------------------------
 
-Here is an example data set (download it from :download:`sample.xlsx <sample.xlsx>`) as entered in Excel:
+Here is an example dataset (download it from :download:`sample.xlsx <sample.xlsx>`) as entered in Excel:
 
 .. image:: spreadsheet1.png
     :width: 600 px
@@ -96,10 +96,10 @@ by clicking the **Apply** button. The data from this widget is fed into
     :width: 548 px
     :align: center
 
-We could also define the domain for this data set in a different way.
-Say, we could make the data set ready for regression, and use `heat 0`
+We could also define the domain for this dataset in a different way.
+Say, we could make the dataset ready for regression, and use `heat 0`
 as a continuous class variable, keep gene function and name as meta
-variables, and remove `heat 10` and `heat 20` from the data set:
+variables, and remove `heat 10` and `heat 20` from the dataset:
 
 .. image:: select-columns-regression.png
     :width: 413 px
@@ -115,7 +115,7 @@ Data Table widget gives the following output:
 Header with Attribute Type Information
 --------------------------------------
 
-Consider again the :download:`sample.xlsx <sample.xlsx>` data set. This time 
+Consider again the :download:`sample.xlsx <sample.xlsx>` dataset. This time 
 we will augment the names of the attributes with prefixes
 that define attribute type (continuous, discrete, time, string) and role (class or meta attribute)
 Prefixes are separated from the attribute name with a hash sign ("\#"). Prefixes for attribute roles are:
@@ -139,14 +139,14 @@ Excel (:download:`sample-head.xlsx <sample-head.xlsx>`):
     :width: 414 px
     :align: center
 
-We can again use a **File** widget to load this data set and then render it in the **Data Table**:
+We can again use a **File** widget to load this dataset and then render it in the **Data Table**:
 
 .. image:: select-cols-simplified-header.png
     :width: 509 px
     :align: center
 
 Notice that the attributes we have ignored (label "i" in the
-attribute name) are not present in the data set.
+attribute name) are not present in the dataset.
 
 Three-Row Header Format
 -----------------------

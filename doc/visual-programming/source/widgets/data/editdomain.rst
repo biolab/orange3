@@ -10,22 +10,22 @@ Signals
 
 -  **Data**
 
-   An input data set
+   An input dataset
 
 **Outputs**:
 
 -  **Data**
 
-   An edited output data set
+   An edited output dataset
 
 Description
 -----------
 
-This widget can be used to edit/change a data set's domain. 
+This widget can be used to edit/change a dataset's domain. 
 
 .. figure:: images/EditDomain-stamped.png
 
-1. All features (including meta attributes) from the input data set are
+1. All features (including meta attributes) from the input dataset are
    listed in the *Domain Features* list in the box on the left.
    Selecting one feature displays an editor on the right.
 2. The name of the feature can be changed in the *Name* line edit. For
@@ -38,14 +38,14 @@ This widget can be used to edit/change a data set's domain.
    button in the *Reset* box while the feature is selected in the
    *Domain Features* list. Pressing *Reset All* will reset all features
    in the domain at the same time.
-4. Pressing the *Apply* button will send the changed domain data set to the
+4. Pressing the *Apply* button will send the changed domain dataset to the
    output channel.
 
 Example
 -------
 
 Below, we demonstrate how to simply edit an existing domain. We selected the
-*lenses.tab* data set and edited the *perscription* attribute. Where in
+*lenses.tab* dataset and edited the *perscription* attribute. Where in
 the original we had the values *myope* and *hypermetrope*, we changed it
 into *nearsightedness* and *farsightedness* instead. For an easier
 comparison, we fed both the original and edited data into the :doc:`Data

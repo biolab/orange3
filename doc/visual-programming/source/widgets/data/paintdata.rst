@@ -4,7 +4,7 @@ Paint Data
 .. figure:: icons/paint-data.png
 
 Paints data on a 2D plane. You can place individual data points or
-use a brush to paint larger data sets.
+use a brush to paint larger datasets.
 
 Signals
 -------
@@ -17,12 +17,12 @@ Signals
 
 -  **Data**
 
-   Attribute-valued data set created in the widget
+   Attribute-valued dataset created in the widget
 
 Description
 -----------
 
-The widget supports the creation of a new data set by visually placing
+The widget supports the creation of a new dataset by visually placing
 data points on a two-dimension plane. Data points can be placed on the
 plane individually (*Put*) or in a larger number by brushing (*Brush*).
 Data points can belong to classes if the data is intended to be used in
@@ -32,7 +32,7 @@ supervised learning.
 
 1. Name the axes and select a class to paint data instances. You can
    add or remove classes. Use only one class to create classless,
-   unsupervised data sets.
+   unsupervised datasets.
 2. Drawing tools. Paint data points with *Brush* (multiple data
    instances) or *Put* (individual data instance). Select data points
    with *Select* and remove them with the Delete/Backspace key. Reposition
@@ -50,7 +50,7 @@ supervised learning.
 Example
 -------
 
-In the example below, we have painted a data set with 4 classes. Such data set
+In the example below, we have painted a dataset with 4 classes. Such dataset
 is great for demonstrating k-means and hierarchical clustering methods.
 In the screenshot, we see that :doc:`k-means <../unsupervised/kmeansclustering>`, overall, recognizes 
 clusters better than :doc:`hierarchical clustering <../unsupervised/hierarchicalclustering>`. 
