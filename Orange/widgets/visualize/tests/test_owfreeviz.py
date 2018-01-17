@@ -27,11 +27,11 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
 
     def test_points_combo_boxes(self):
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        graph = self.widget.controls.graph
-        self.assertEqual(len(graph.attr_color.model()), 17)
-        self.assertEqual(len(graph.attr_shape.model()), 11)
-        self.assertEqual(len(graph.attr_size.model()), 8)
-        self.assertEqual(len(graph.attr_label.model()), 17)
+        controls = self.widget.graph.controls
+        self.assertEqual(len(controls.attr_color.model()), 17)
+        self.assertEqual(len(controls.attr_shape.model()), 11)
+        self.assertEqual(len(controls.attr_size.model()), 8)
+        self.assertEqual(len(controls.attr_label.model()), 17)
 
     def test_ugly_datasets(self):
         self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
