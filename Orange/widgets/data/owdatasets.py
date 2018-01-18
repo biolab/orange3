@@ -90,7 +90,7 @@ class NumericalDelegate(QStyledItemDelegate):
 
 
 class OWDataSets(widget.OWWidget):
-    name = "Data Sets"
+    name = "Datasets"
     description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20

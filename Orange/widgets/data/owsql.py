@@ -47,7 +47,7 @@ class OWSql(OWWidget):
     keywords = ["data", "file", "load", "read", "SQL"]
 
     class Outputs:
-        data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
+        data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")
 
     settings_version = 2
 
