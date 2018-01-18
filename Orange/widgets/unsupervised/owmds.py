@@ -274,11 +274,6 @@ class OWMDS(OWWidget):
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
-        if domain is not None:
-            for var in domain.metas:
-                if var.is_string:
-                    self.graph.attr_label = var
-                    break
 
     def prepare_data(self):
         pass

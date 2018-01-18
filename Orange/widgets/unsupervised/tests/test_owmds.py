@@ -196,26 +196,26 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
         # Distance matrix with labels
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIs(w.graph.attr_label, row_items.domain["label"])
+        self.assertIn(row_items.domain["label"], w.label_model)
 
         # Distances matrix without labels
         self.towns.row_items = None
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIsNone(w.graph.attr_label)
+        self.assertEqual(list(w.label_model), [None])
 
         # No data
         self.send_signal(w.Inputs.distances, None)
-        self.assertIsNone(w.graph.attr_label)
+        self.assertEqual(list(w.label_model), [None])
 
         # Distances matrix with labels again
         self.towns.row_items = row_items
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIs(w.graph.attr_label, row_items.domain["label"])
+        self.assertIn(row_items.domain["label"], w.label_model)
 
         # Followed by no data
         self.towns.row_items = None
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIsNone(w.graph.attr_label)
+        self.assertEqual(list(w.label_model), [None])
 
     def test_attr_label_from_dist_matrix_from_data(self):
         w = self.widget
@@ -229,7 +229,6 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.label_model))
-        self.assertIs(w.graph.attr_label, data.domain.metas[0])
 
     def test_attr_label_from_data(self):
         w = self.widget
@@ -237,21 +236,11 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         # widget be in a blocking state when trying to send the next signal
         w.start = Mock()
 
-        # Data with string attribute: all attributes present, string selected
         data = Table("zoo")
         dist = Euclidean(data)
         self.send_signal(w.Inputs.distances, dist)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.label_model))
-        self.assertIs(w.graph.attr_label, data.domain.metas[0])
-
-        # Data without string attribute: all attributes present, none selected
-        data = Table("iris")
-        dist = Euclidean(data)
-        self.send_signal(w.Inputs.distances, dist)
-        self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
-        self.assertIsNone(w.graph.attr_label)
 
     def test_attr_label_matrix_and_data(self):
         w = self.widget
@@ -266,25 +255,21 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.label_model))
-        self.assertIs(w.graph.attr_label, data.domain.metas[0])
 
         # Has data, but receives a signal without data: has to keep the label
         dist.row_items = None
         self.send_signal(w.Inputs.distances, dist)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.label_model))
-        self.assertIs(w.graph.attr_label, data.domain.metas[0])
 
         # Has matrix without data, and loses the data: remove the label
         self.send_signal(w.Inputs.data, None)
-        self.assertEqual(len(w.label_model), 1)  # just None
-        self.assertIsNone(w.graph.attr_label)
+        self.assertEqual(list(w.label_model), [None])
 
         # Has matrix without data, receives data: add attrs to combo, select
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.label_model))
-        self.assertIs(w.graph.attr_label, data.domain.metas[0])
 
 
 if __name__ == "__main__":
