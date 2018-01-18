@@ -733,20 +733,6 @@ def unique(iterable):
     return (el for el in iterable if not observed(el))
 
 
-def _env_with_proxies():
-    """
-    Return system environment with proxies obtained from urllib so that
-    they can be used with pip.
-    """
-    proxies = urllib.request.getproxies()
-    env = dict(os.environ)
-    if "http" in proxies:
-        env["HTTP_PROXY"] = proxies["http"]
-    if "https" in proxies:
-        env["HTTPS_PROXY"] = proxies["https"]
-    return env
-
-
 Install, Upgrade, Uninstall = 1, 2, 3
 
 
@@ -1002,7 +988,6 @@ def create_process(cmd, executable=None, **kwargs):
         cmd,
         executable=executable,
         cwd=None,
-        env=_env_with_proxies(),
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
         bufsize=-1,
