@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 from scipy.spatial import distance
 
-from AnyQt.QtGui import QStandardItem, QColor, QFontMetrics, QCursor
+from AnyQt.QtGui import QStandardItem, QColor, QFontMetrics
 from AnyQt.QtCore import Qt, QEvent, QSize, QRectF, QPoint
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtWidgets import qApp, QSizePolicy, QApplication, QToolTip, QGraphicsSceneMouseEvent, \
@@ -211,7 +211,6 @@ class RadvizInteractiveViewBox(InteractiveViewBox):
     def __init__(self, graph, enable_menu=False):
         self.mouse_state = 0
         self.point_i = None
-        self.cursor = QCursor()
         super().__init__(graph, enable_menu)
 
     def _dragtip_pos(self):
@@ -239,15 +238,13 @@ class RadvizInteractiveViewBox(InteractiveViewBox):
 
         ev.accept()
         if ev.start:
-            self.cursor.setShape(Qt.ClosedHandCursor)
-            self.setCursor(self.cursor)
+            self.setCursor(Qt.ClosedHandCursor)
             self.mouse_state = 1
             self.point_i = np.argmin(distances)
             master.randomize_indices()
         if self.mouse_state == 1:
             if ev.finish:
-                self.cursor.setShape(Qt.ArrowCursor)
-                self.setCursor(self.cursor)
+                self.setCursor(Qt.ArrowCursor)
                 self.mouse_state = 0
             angle = np.arctan2(pos.y(), pos.x())
             QToolTip.showText(
@@ -335,12 +332,10 @@ class OWRadvizGraph(OWScatterPlotGraph):
         np_pos = np.array([[x, y]])
         distances = distance.cdist(np_pos, points[:, :2])[0]
         if len(distances) and np.min(distances) < 0.08:
-            self.view_box.cursor.setShape(Qt.OpenHandCursor)
-            self.view_box.setCursor(self.view_box.cursor)
+            self.view_box.setCursor(Qt.OpenHandCursor)
             self.show_arc_arrow(point_i=np.argmin(distances))
         else:
-            self.view_box.cursor.setShape(Qt.ArrowCursor)
-            self.view_box.setCursor(self.view_box.cursor)
+            self.view_box.setCursor(Qt.ArrowCursor)
         return True
 
     def help_event(self, event):
