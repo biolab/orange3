@@ -112,7 +112,7 @@ class OWDataSets(widget.OWWidget):
     class Outputs:
         data = Output("Data", Orange.data.Table)
 
-    #: Selected data set id
+    #: Selected dataset id
     selected_id = settings.Setting(None)   # type: Optional[str]
 
     auto_commit = settings.Setting(False)  # type: bool
@@ -354,7 +354,7 @@ class OWDataSets(widget.OWWidget):
             proxyModel.setFilterFixedString(filter_string)
 
     def __on_selection(self):
-        # Main data sets view selection has changed
+        # Main datasets view selection has changed
         rows = self.view.selectionModel().selectedRows(0)
         assert 0 <= len(rows) <= 1
         current = rows[0] if rows else None  # type: Optional[QModelIndex]
