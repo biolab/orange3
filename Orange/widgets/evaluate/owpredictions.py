@@ -58,7 +58,7 @@ class OWPredictions(OWWidget):
                                     dynamic=False)
 
     class Warning(OWWidget.Warning):
-        empty_data = Msg("Empty data set")
+        empty_data = Msg("Empty dataset")
 
     class Error(OWWidget.Error):
         predictor_failed = \

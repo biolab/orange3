@@ -103,11 +103,11 @@ class OWDataSets(widget.OWWidget):
     DATASET_DIR = "datasets"
 
     class Error(widget.OWWidget.Error):
-        no_remote_datasets = Msg("Could not fetch data set list")
+        no_remote_datasets = Msg("Could not fetch dataset list")
 
     class Warning(widget.OWWidget.Warning):
-        only_local_datasets = Msg("Could not fetch data sets list, only local "
-                                  "cached data sets are shown")
+        only_local_datasets = Msg("Could not fetch datasets list, only local "
+                                  "cached datasets are shown")
 
     class Outputs:
         data = Output("Data", Orange.data.Table)

@@ -181,7 +181,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
             if not self.learner.check_learner_adequacy(self.data.domain):
                 self.Error.data_error(self.learner.learner_adequacy_err_msg)
             elif not len(self.data):
-                self.Error.data_error("Data set is empty.")
+                self.Error.data_error("Dataset is empty.")
             elif len(np.unique(self.data.Y)) < 2:
                 self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:

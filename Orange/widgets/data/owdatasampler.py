@@ -57,7 +57,7 @@ class OWDataSampler(OWWidget):
         too_many_folds = Msg("Number of folds exceeds data size")
         sample_larger_than_data = Msg("Sample must be smaller than data")
         not_enough_to_stratify = Msg("Data is too small to stratify")
-        no_data = Msg("Data set is empty")
+        no_data = Msg("Dataset is empty")
 
     def __init__(self):
         super().__init__()
