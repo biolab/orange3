@@ -184,7 +184,7 @@ class OWPredictions(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        """Set the input data set"""
+        """Set the input dataset"""
         if data is not None and not len(data):
             data = None
             self.Warning.empty_data()

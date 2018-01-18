@@ -2,7 +2,7 @@
 Concatenate
 ===========
 
-Concatenate (append) two or more data sets.
+Concatenate (append) two or more datasets.
 
 """
 

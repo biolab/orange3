@@ -331,7 +331,7 @@ class OWDataSets(widget.OWWidget):
 
     def selected_dataset(self):
         """
-        Return the current selected data set info or None if not selected
+        Return the current selected dataset info or None if not selected
 
         Returns
         -------

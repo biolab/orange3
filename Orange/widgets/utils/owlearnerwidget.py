@@ -131,7 +131,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        """Set the input train data set."""
+        """Set the input train dataset."""
         self.Error.data_error.clear()
         self.data = data
         if data is not None and data.domain.class_var is None:
