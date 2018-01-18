@@ -123,7 +123,7 @@ class OWPredictions(OWWidget):
                      callback=self._update_prediction_delegate)
 
         box = gui.vBox(self.controlArea, "Data View")
-        gui.checkBox(box, self, "show_attrs", "Show full data set",
+        gui.checkBox(box, self, "show_attrs", "Show full dataset",
                      callback=self._update_column_visibility)
 
         box = gui.vBox(self.controlArea, "Output", spacing=-1)

@@ -45,7 +45,7 @@ def ensure_local(index_url, file_path, local_cache_path,
 
 def format_info(n_all, n_cached):
     plural = lambda x: '' if x == 1 else 's'
-    return "{} data set{}\n{} data set{} cached".format(
+    return "{} dataset{}\n{} dataset{} cached".format(
         n_all, plural(n_all), n_cached if n_cached else 'No', plural(n_cached))
 
 

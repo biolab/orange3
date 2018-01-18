@@ -201,7 +201,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         box = gui.hBox(self.controlArea)
         gui.button(
-            box, self, "Browse documentation data sets",
+            box, self, "Browse documentation datasets",
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
 
@@ -261,7 +261,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if not os.path.exists(start_file):
                 QMessageBox.information(
                     None, "File",
-                    "Cannot find the directory with documentation data sets")
+                    "Cannot find the directory with documentation datasets")
                 return
         else:
             start_file = self.last_path() or os.path.expanduser("~/")

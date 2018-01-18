@@ -102,7 +102,7 @@ class OWVennDiagram(widget.OWWidget):
         self.inputsBox.setEnabled(bool(self.useidentifiers))
 
         for i in range(5):
-            box = gui.vBox(self.inputsBox, "Data set #%i" % (i + 1),
+            box = gui.vBox(self.inputsBox, "Dataset #%i" % (i + 1),
                            addSpace=False)
             box.setFlat(True)
             model = itemmodels.VariableListModel(parent=self)
@@ -264,7 +264,7 @@ class OWVennDiagram(widget.OWWidget):
 
         item = self.inputsBox.layout().itemAt(index)
         box = item.widget()
-        box.setTitle("Data set: {}".format(name))
+        box.setTitle("Dataset: {}".format(name))
 
     def _remove(self, key):
         index = list(self.data.keys()).index(key)
@@ -284,9 +284,9 @@ class OWVennDiagram(widget.OWWidget):
         for i in range(5):
             box, _ = self._controlAtIndex(i)
             if i < len(inputs):
-                title = "Data set: {}".format(inputs[i].name)
+                title = "Dataset: {}".format(inputs[i].name)
             else:
-                title = "Data set #{}".format(i + 1)
+                title = "Dataset #{}".format(i + 1)
             box.setTitle(title)
 
         self._invalidate([key], incremental=False)
@@ -303,7 +303,7 @@ class OWVennDiagram(widget.OWWidget):
 
         item = self.inputsBox.layout().itemAt(index)
         box = item.widget()
-        box.setTitle("Data set: {}".format(name))
+        box.setTitle("Dataset: {}".format(name))
 
     def _itemsForInput(self, key):
         useidentifiers = self.useidentifiers or not self.samedomain

@@ -175,7 +175,7 @@ class OWDataSampler(OWWidget):
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
             self.dataInfoLabel.setText(
-                '{}{} instances in input data set.'.format(*(
+                '{}{} instances in input dataset.'.format(*(
                     ('~', dataset.approx_len()) if sql else
                     ('', len(dataset)))))
             if not sql:
