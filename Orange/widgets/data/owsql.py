@@ -40,7 +40,7 @@ class BackendModel(PyListModel):
 class OWSql(OWWidget):
     name = "SQL Table"
     id = "orange.widgets.data.sql"
-    description = "Load data set from SQL."
+    description = "Load dataset from SQL."
     icon = "icons/SQLTable.svg"
     priority = 30
     category = "Data"

@@ -91,7 +91,7 @@ class NumericalDelegate(QStyledItemDelegate):
 
 class OWDataSets(widget.OWWidget):
     name = "Data Sets"
-    description = "Load a data set from an online repository"
+    description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
