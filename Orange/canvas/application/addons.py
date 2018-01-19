@@ -869,8 +869,8 @@ class PipInstaller:
 
 class CondaInstaller:
     def __init__(self):
-        enabled = QSettings().value('add-ons/allow-conda-experimental',
-                                    False, type=bool)
+        enabled = QSettings().value('add-ons/allow-conda',
+                                    True, type=bool)
         if enabled:
             self.conda = self._find_conda()
         else:

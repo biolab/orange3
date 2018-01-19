@@ -122,7 +122,7 @@ spec = \
      ("error-reporting/machine-id", str, '',
      "Report custom name instead of machine ID"),
 
-     ("add-ons/allow-conda-experimental", bool, False,
+     ("add-ons/allow-conda", bool, True,
       "Install add-ons with conda"),
      ]
 
