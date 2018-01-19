@@ -784,9 +784,9 @@ class OWFreeViz(widget.OWWidget):
         mask = self.plotdata.validmask
         array = np.zeros((len(self.data), 2), dtype=np.float)
         array[mask] = self.plotdata.embedding_coords
-        data = Table.from_numpy(domain, X=np.hstack((self.data.X, array)),
-                                Y=self.data.Y,
-                                metas=self.data.metas)
+        data = self.data.transform(domain)
+        data[:, self.variable_x] = array[:, 0].reshape(-1, 1)
+        data[:, self.variable_y] = array[:, 1].reshape(-1, 1)
         subset_data = data[self._subset_mask & mask]\
             if self._subset_mask is not None and len(self._subset_mask) else None
         self.plotdata.data = data
