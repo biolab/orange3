@@ -476,22 +476,34 @@ class AddonManagerDialog(QDialog):
             method_queued(self._set_packages, (object,))
         )
 
-        self.__progress = QProgressDialog(
-            self, Qt.Sheet,
-            minimum=0, maximum=0,
-            labelText=self.tr("Retrieving package list"),
-            sizeGripEnabled=False,
-            windowTitle="Progress"
-        )
-
-        self.__progress.rejected.connect(self.reject)
+        self.__progress = None  # type: Optional[QProgressDialog]
         self.__thread = None
         self.__installer = None
 
+        if not self._f_pypi_addons.done():
+            self.__progressDialog()
+
+    def __progressDialog(self):
+        if self.__progress is None:
+            self.__progress = QProgressDialog(
+                self,
+                minimum=0, maximum=0,
+                labelText=self.tr("Retrieving package list"),
+                sizeGripEnabled=False,
+                windowTitle="Progress",
+            )
+            self.__progress.setWindowModality(Qt.WindowModal)
+            self.__progress.canceled.connect(self.reject)
+            self.__progress.hide()
+
+        return self.__progress
+
     @Slot(object)
     def _set_packages(self, f):
-        if self.__progress.isVisible():
-            self.__progress.close()
+        if self.__progress is not None:
+            self.__progress.hide()
+            self.__progress.deleteLater()
+            self.__progress = None
 
         try:
             packages = f.result()
@@ -550,7 +562,7 @@ class AddonManagerDialog(QDialog):
     def showEvent(self, event):
         super().showEvent(event)
 
-        if not self._f_pypi_addons.done():
+        if not self._f_pypi_addons.done() and self.__progress is not None:
             QTimer.singleShot(0, self.__progress.show)
 
     def done(self, retcode):
@@ -563,6 +575,8 @@ class AddonManagerDialog(QDialog):
 
     def closeEvent(self, event):
         super().closeEvent(event)
+        if self.__progress is not None:
+            self.__progress.hide()
         self._f_pypi_addons.cancel()
         self._executor.shutdown(wait=False)
 
@@ -613,11 +627,11 @@ class AddonManagerDialog(QDialog):
             self.__installer.moveToThread(self.__thread)
             self.__installer.finished.connect(self.__on_installer_finished)
             self.__installer.error.connect(self.__on_installer_error)
-            self.__installer.installStatusChanged.connect(
-                self.__progress.setLabelText)
 
-            self.__progress.show()
-            self.__progress.setLabelText("Installing")
+            progress = self.__progressDialog()
+            self.__installer.installStatusChanged.connect(progress.setLabelText)
+            progress.show()
+            progress.setLabelText("Installing")
 
             self.__installer.start()
 
@@ -719,20 +733,6 @@ def unique(iterable):
     return (el for el in iterable if not observed(el))
 
 
-def _env_with_proxies():
-    """
-    Return system environment with proxies obtained from urllib so that
-    they can be used with pip.
-    """
-    proxies = urllib.request.getproxies()
-    env = dict(os.environ)
-    if "http" in proxies:
-        env["HTTP_PROXY"] = proxies["http"]
-    if "https" in proxies:
-        env["HTTPS_PROXY"] = proxies["https"]
-    return env
-
-
 Install, Upgrade, Uninstall = 1, 2, 3
 
 
@@ -774,19 +774,19 @@ class Installer(QObject):
         try:
             if command == Install:
                 self.setStatusMessage(
-                    "Installing {}".format(pkg.installable.name))
+                    "Installing {}".format(cleanup(pkg.installable.name)))
                 if self.conda:
                     self.conda.install(pkg.installable, raise_on_fail=False)
                 self.pip.install(pkg.installable)
             elif command == Upgrade:
                 self.setStatusMessage(
-                    "Upgrading {}".format(pkg.installable.name))
+                    "Upgrading {}".format(cleanup(pkg.installable.name)))
                 if self.conda:
                     self.conda.upgrade(pkg.installable, raise_on_fail=False)
                 self.pip.upgrade(pkg.installable)
             elif command == Uninstall:
                 self.setStatusMessage(
-                    "Uninstalling {}".format(pkg.local.project_name))
+                    "Uninstalling {}".format(cleanup(pkg.local.project_name)))
                 if self.conda:
                     try:
                         self.conda.uninstall(pkg.local, raise_on_fail=True)
@@ -988,7 +988,6 @@ def create_process(cmd, executable=None, **kwargs):
         cmd,
         executable=executable,
         cwd=None,
-        env=_env_with_proxies(),
         stderr=subprocess.STDOUT,
         stdout=subprocess.PIPE,
         bufsize=-1,

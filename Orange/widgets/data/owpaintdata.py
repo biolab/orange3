@@ -716,7 +716,7 @@ class ColoredListModel(itemmodels.PyListModel):
             len(colorpalette.DefaultRGBColors))
 
     def data(self, index, role=Qt.DisplayRole):
-        if self._is_index_valid_for(index, self) and \
+        if self._is_index_valid(index) and \
                 role == Qt.DecorationRole and \
                 0 <= index.row() < self.colors.number_of_colors:
             return gui.createAttributePixmap("", self.colors[index.row()])
@@ -759,6 +759,8 @@ class OWPaintData(OWWidget):
 
     brushRadius = Setting(75)
     density = Setting(7)
+    symbol_size = Setting(10)
+
     #: current data array (shape=(N, 3)) as presented on the output
     data = Setting(None, schema_only=True)
     labels = Setting(["C1", "C2"], schema_only=True)
@@ -922,6 +924,14 @@ class OWPaintData(OWWidget):
         )
 
         form.addRow("Intensity:", slider)
+
+        slider = gui.hSlider(
+            indBox, self, "symbol_size", None, minValue=1, maxValue=100,
+            createLabel=False, callback=self.set_symbol_size
+        )
+
+        form.addRow("Symbol:", slider)
+
         self.btResetToInput = gui.button(
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
@@ -963,6 +973,10 @@ class OWPaintData(OWWidget):
         self.set_current_tool(self.TOOLS[0][2])
 
         self.set_dimensions()
+
+    def set_symbol_size(self):
+        if self._scatter_item:
+            self._scatter_item.setSize(self.symbol_size)
 
     def set_dimensions(self):
         if self.hasAttr2:
@@ -1235,10 +1249,13 @@ class OWPaintData(OWWidget):
 
         colors = self.colors[self.__buffer[:, 2]]
         pens = [pen(c) for c in colors]
+        brushes = [QBrush(c) for c in colors]
+
         self._scatter_item = pg.ScatterPlotItem(
-            x, y, symbol="+", pen=pens
+            x, y, symbol="+", brush=brushes, pen=pens
         )
         self.plot.addItem(self._scatter_item)
+        self.set_symbol_size()
 
     def _attr_name_changed(self):
         self.plot.getAxis("bottom").setLabel(self.attr1)

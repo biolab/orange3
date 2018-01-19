@@ -238,6 +238,28 @@ class VariableMeta(Registry):
         return obj
 
 
+class _predicatedescriptor(property):
+    """
+    A property that behaves as a class method if accessed via a class
+    >>> class A:
+    ...     foo = False
+    ...     @_predicatedescriptor
+    ...     def is_foo(self):
+    ...         return self.foo
+    ...
+    >>> a = A()
+    >>> a.is_foo
+    False
+    >>> A.is_foo(a)
+    False
+    """
+    def __get__(self, instance, objtype=None):
+        if instance is None:
+            return self.fget
+        else:
+            return super().__get__(instance, objtype)
+
+
 class Variable(Reprable, metaclass=VariableMeta):
     """
     The base class for variable descriptors contains the variable's
@@ -349,26 +371,27 @@ class Variable(Reprable, metaclass=VariableMeta):
             cls._clear_cache()
 
     @classmethod
-    def is_primitive(cls):
+    def is_primitive(cls, var=None):
         """
         `True` if the variable's values are stored as floats.
         Non-primitive variables can appear in the data only as meta attributes.
         """
-        return issubclass(cls, (DiscreteVariable, ContinuousVariable))
+        to_check = cls if var is None else type(var)
+        return issubclass(to_check, (DiscreteVariable, ContinuousVariable))
 
-    @property
+    @_predicatedescriptor
     def is_discrete(self):
         return isinstance(self, DiscreteVariable)
 
-    @property
+    @_predicatedescriptor
     def is_continuous(self):
         return isinstance(self, ContinuousVariable)
 
-    @property
+    @_predicatedescriptor
     def is_string(self):
         return isinstance(self, StringVariable)
 
-    @property
+    @_predicatedescriptor
     def is_time(self):
         return isinstance(self, TimeVariable)
 
@@ -443,6 +466,9 @@ class Variable(Reprable, metaclass=VariableMeta):
         var = type(self)(self.name, compute_value=compute_value, sparse=self.sparse)
         var.attributes = dict(self.attributes)
         return var
+
+
+del _predicatedescriptor
 
 
 class ContinuousVariable(Variable):

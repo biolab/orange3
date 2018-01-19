@@ -27,16 +27,208 @@ This module contains functions and classes for creating GUI elements commonly us
 
 import os
 
-from Orange.data import ContinuousVariable, DiscreteVariable
+import unicodedata
+from functools import reduce
+from operator import itemgetter
+
+from Orange.data import ContinuousVariable, DiscreteVariable, Variable
 from Orange.widgets import gui
+from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.listfilter import variables_filter
 from Orange.widgets.utils.itemmodels import DomainModel
 
-from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QMenu, QAction
-from AnyQt.QtGui import QIcon
-from AnyQt.QtCore import Qt, pyqtSignal
+from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QMenu, QAction,\
+    QDialog, QSizePolicy, QPushButton, QListView
+from AnyQt.QtGui import QIcon, QKeySequence
+from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
 
 from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
     SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
+
+
+SIZE_POLICY_ADAPTING = (QSizePolicy.Expanding, QSizePolicy.Ignored)
+SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)
+
+
+class AddVariablesDialog(QDialog):
+    def __init__(self, master, model):
+        QDialog.__init__(self)
+
+        self.master = master
+
+        self.setWindowFlags(Qt.Tool)
+        self.setLayout(QVBoxLayout())
+        self.setWindowTitle("Hidden Axes")
+
+        btns_area = gui.widgetBox(
+            self, addSpace=0, spacing=9, orientation=Qt.Horizontal,
+            sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
+        )
+        self.btn_add = QPushButton(
+            "Add", autoDefault=False, sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
+        )
+        self.btn_add.clicked.connect(self._add)
+        self.btn_cancel = QPushButton(
+            "Cancel", autoDefault=False, sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
+        )
+        self.btn_cancel.clicked.connect(self._cancel)
+
+        btns_area.layout().addWidget(self.btn_add)
+        btns_area.layout().addWidget(self.btn_cancel)
+
+        filter_edit, view = variables_filter(model=model)
+        self.view_other = view
+        view.setMinimumSize(QSize(30, 60))
+        view.setSizePolicy(*SIZE_POLICY_ADAPTING)
+        view.viewport().setAcceptDrops(True)
+
+        self.layout().addWidget(filter_edit)
+        self.layout().addWidget(view)
+        self.layout().addWidget(btns_area)
+
+        master = self.master
+        box = master.box
+        master.master.setEnabled(False)
+        self.move(box.mapToGlobal(QPoint(0, box.pos().y() + box.height())))
+        self.setFixedWidth(master.master.controlArea.width())
+        self.setMinimumHeight(300)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _cancel(self):
+        self.closeEvent(None)
+
+    def _add(self):
+        self.add_variables()
+        self.closeEvent(None)
+
+    def closeEvent(self, QCloseEvent):
+        self.master.master.setEnabled(True)
+        super().closeEvent(QCloseEvent)
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.closeEvent(None)
+        elif e.key() in [Qt.Key_Return, Qt.Key_Enter]:
+            self._add()
+        else:
+            super().keyPressEvent(e)
+
+    def selected_rows(self, view):
+        """ Return the selected rows in the view.
+        """
+        rows = view.selectionModel().selectedRows()
+        model = view.model()
+        return [model.mapToSource(r) for r in rows]
+
+    def add_variables(self):
+        view = self.view_other
+        model = self.master.model_other
+
+        indices = self.selected_rows(view)
+        variables = [model.data(ind, Qt.EditRole) for ind in indices]
+
+        for i in sorted((ind.row() for ind in indices), reverse=True):
+            del model[i]
+
+        self.master.model_selected.extend(variables)
+
+
+class VariablesSelection:
+    def __call__(self, master, model_selected, model_other):
+        self.master = master
+
+        params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
+                       "selectionMode": QListView.ExtendedSelection,
+                       "dragEnabled": True,
+                       "defaultDropAction": Qt.MoveAction,
+                       "dragDropOverwriteMode": False,
+                       "dragDropMode": QListView.DragDrop}
+
+        self.view_selected = view = gui.listView(widget=master.controlArea, master=master,
+                                                 box="Displayed Axes", **params_view)
+        view.box.setMinimumHeight(120)
+        view.viewport().setAcceptDrops(True)
+
+        delete = QAction(
+            "Delete", view,
+            shortcut=QKeySequence(Qt.Key_Delete),
+            triggered=self.__deactivate_selection
+        )
+        view.addAction(delete)
+
+        self.model_selected = model = model_selected
+
+        model.rowsInserted.connect(master.invalidate_plot)
+        model.rowsRemoved.connect(master.invalidate_plot)
+        model.rowsMoved.connect(master.invalidate_plot)
+
+        view.setModel(model)
+
+        addClassLabel = QAction("+", master,
+                                toolTip="Add new class label",
+                                triggered=self._action_add)
+        removeClassLabel = QAction(unicodedata.lookup("MINUS SIGN"), master,
+                                   toolTip="Remove selected class label",
+                                   triggered=self.__deactivate_selection)
+
+        add_remove = itemmodels.ModelActionsWidget([addClassLabel, removeClassLabel], master)
+        add_remove.layout().addStretch(10)
+        add_remove.layout().setSpacing(1)
+        add_remove.setSizePolicy(*SIZE_POLICY_FIXED)
+        view.box.layout().addWidget(add_remove)
+
+        self.add_remove = add_remove
+        self.box = add_remove.buttons[1]
+
+        self.model_other = model_other
+
+    def set_enabled(self, is_enabled):
+        self.view_selected.setEnabled(is_enabled)
+        for btn in self.add_remove.buttons:
+            btn.setEnabled(is_enabled)
+
+    def display_all(self):
+        self.model_selected[:] += self.model_other[:]
+        self.model_other[:] = []
+
+    def display_none(self):
+        self.model_other[:] += self.model_selected[:]
+        self.model_selected[:] = []
+
+    def __deactivate_selection(self):
+        view = self.view_selected
+        model = self.model_selected
+        indices = view.selectionModel().selectedRows()
+
+        variables = [model.data(ind, Qt.EditRole) for ind in indices]
+
+        for i in sorted((ind.row() for ind in indices), reverse=True):
+            del model[i]
+
+        self.model_other.extend(variables)
+
+    def _action_add(self):
+        self.add_variables_dialog = AddVariablesDialog(self, self.model_other)
+
+    @staticmethod
+    def encode_var_state(lists):
+        return {(type(var), var.name): (source_ind, pos)
+                for source_ind, var_list in enumerate(lists)
+                for pos, var in enumerate(var_list)
+                if isinstance(var, Variable)}
+
+    @staticmethod
+    def decode_var_state(state, lists):
+        all_vars = reduce(list.__iadd__, lists, [])
+
+        newlists = [[] for _ in lists]
+        for var in all_vars:
+            source, pos = state[(type(var), var.name)]
+            newlists[source].append((pos, var))
+        return [[var for _, var in sorted(newlist, key=itemgetter(0))]
+                for newlist in newlists]
 
 
 class OrientedWidget(QWidget):

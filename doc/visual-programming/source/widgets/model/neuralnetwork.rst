@@ -1,7 +1,7 @@
 Neural Network
 ==============
 
-.. figure:: icons/nn.png
+.. figure:: icons/neural-network.png
 
 A multi-layer perceptron (MLP) algorithm with backpropagation.
 
@@ -38,13 +38,16 @@ The **Neural Network** widget uses sklearn's `Multi\-layer Perceptron algorithm 
 1. A name under which it will appear in other widgets. The default name is
    "Neural Network".
 2. Set model parameters:
+
    -  Neurons per hidden layer: defined as the ith element represents the number of neurons in the ith hidden layer. E.g. a neural network with 3 layers can be defined as 2, 3, 2.
    -  Activation function for the hidden layer:
+
       -  Identity: no-op activation, useful to implement linear bottleneck
       -  Logistic: the logistic sigmoid function
       -  tanh: the hyperbolic tan function
       -  ReLu: the rectified linear unit function
    -  Solver for weight optimization:
+
       -  L-BFGS-B: an optimizer in the family of quasi-Newton methods
       -  SGD: stochastic gradient descent
       -  Adam: stochastic gradient-based optimizer

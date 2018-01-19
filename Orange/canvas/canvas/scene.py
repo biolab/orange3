@@ -12,10 +12,12 @@ from operator import attrgetter
 
 from xml.sax.saxutils import escape
 
-from AnyQt.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsObject
-from AnyQt.QtGui import QPainter, QBrush, QColor, QFont
-from AnyQt.QtCore import Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, \
-                         QEvent, QObject, QSignalMapper, QT_VERSION
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsItem
+from AnyQt.QtGui import QPainter, QColor, QFont
+from AnyQt.QtCore import (
+    Qt, QPointF, QRectF, QSizeF, QLineF, QBuffer, QObject, QSignalMapper,
+    QT_VERSION
+)
 from AnyQt.QtSvg import QSvgGenerator
 from AnyQt.QtCore import pyqtSignal as Signal
 try:
@@ -869,19 +871,6 @@ class CanvasScene(QGraphicsScene):
         if handler:
             handler.start()
 
-    def event(self, event):
-        # TODO: change the base class of Node/LinkItem to QGraphicsWidget.
-        # It already handles font changes.
-        if event.type() == QEvent.FontChange:
-            self.__update_font()
-
-        return QGraphicsScene.event(self, event)
-
-    def __update_font(self):
-        font = self.font()
-        for item in self.__node_items + self.__link_items:
-            item.setFont(font)
-
     def __str__(self):
         return "%s(objectName=%r, ...)" % \
                 (type(self).__name__, str(self.objectName()))
@@ -951,7 +940,7 @@ def grab_svg(scene):
     painter = QPainter(gen)
 
     # Draw background.
-    painter.setBrush(QBrush(Qt.white))
+    painter.setBrush(scene.palette().base())
     painter.drawRect(target_rect)
 
     # Render the scene

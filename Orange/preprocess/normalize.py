@@ -49,6 +49,12 @@ class Normalizer(Reprable):
         if diff < 1e-15:
             diff = 1
         if self.zero_based:
-            return ContinuousVariable(var.name, compute_value=Norm(var, dmi, 1 / diff), sparse=var.sparse)
+            return ContinuousVariable(
+                var.name,
+                compute_value=Norm(var, dmi, 1 / diff),
+                sparse=var.sparse)
         else:
-            return ContinuousVariable(var.name, compute_value=Norm(var, (dma + dmi) / 2, 2 / diff), sparse=var.sparse)
+            return ContinuousVariable(
+                var.name,
+                compute_value=Norm(var, (dma + dmi) / 2, 2 / diff),
+                sparse=var.sparse)

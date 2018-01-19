@@ -101,3 +101,10 @@ time
             CSVReader(filename).read()
         finally:
             os.remove(filename)
+
+    def test_csv_sniffer(self):
+        # GH-2785
+        reader = CSVReader(test_filename('test_asn_data_working.csv'))
+        data = reader.read()
+        self.assertEqual(len(data), 8)
+        self.assertEqual(len(data.domain.variables) + len(data.domain.metas), 15)

@@ -6,6 +6,7 @@ import numpy as np
 
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
+from Orange.projection.manifold import torgerson
 from Orange.distance import Euclidean
 from Orange.data import Table
 
@@ -67,7 +68,7 @@ class TestManifold(unittest.TestCase):
             n_init=1)
         X = projector(self.iris[:5]).embedding_
         result = np.array([-0.31871, -0.064644, 0.015653, -1.5e-08, -4.3e-11, 0])
-        np.testing.assert_array_almost_equal(X[0], result)
+        np.testing.assert_array_almost_equal(np.abs(X[0]), np.abs(result))
 
     def test_isomap(self):
         for i in range(1, 4):
@@ -134,3 +135,17 @@ class TestManifold(unittest.TestCase):
         self.assertEqual((data.X.shape[0], n_com), tsne_def.embedding_.shape)
         self.assertEqual((data.X.shape[0], n_com), tsne_euc.embedding_.shape)
         self.assertEqual((data.X.shape[0], n_com), tsne_pre.embedding_.shape)
+
+    def test_torgerson(self):
+        data = self.ionosphere[::5]
+        dis = Euclidean(data)
+
+        e1 = torgerson(dis, eigen_solver="auto")
+        e2 = torgerson(dis, eigen_solver="lapack")
+        e3 = torgerson(dis, eigen_solver="arpack")
+
+        np.testing.assert_almost_equal(np.abs(e1), np.abs(e2))
+        np.testing.assert_almost_equal(np.abs(e2), np.abs(e3))
+
+        with self.assertRaises(ValueError):
+            torgerson(dis, eigen_solver="madness")

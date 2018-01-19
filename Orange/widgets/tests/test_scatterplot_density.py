@@ -21,7 +21,8 @@ class TestScatterplotDensity(TestCase):
         x_grid = sorted(uniform(mx, Mx, n_grid))
         y_grid = sorted(uniform(my, My, n_grid))
 
-        colors = [QColor(randint(256), randint(256), randint(256), randint(256)) for i in range(n_colors)]
+        colors = [QColor(randint(256), randint(256), randint(256), randint(256))
+                  for i in range(n_colors)]
         cx = uniform(mx, Mx, n_colors)
         cy = uniform(my, My, n_colors)
         cr = uniform(mr, Mr, n_colors)
@@ -38,13 +39,15 @@ class TestScatterplotDensity(TestCase):
         return x_grid, y_grid, x_data, y_data, rgb_data
 
     def test_random(self):
-        x_grid, y_grid, x_data, y_data, rgb_data = self.random_data(n_grid=50, n_colors=5, n_data=121)
+        x_grid, y_grid, x_data, y_data, rgb_data = \
+            self.random_data(n_grid=50, n_colors=5, n_data=121)
         img = compute_density(x_grid, y_grid, x_data, y_data, rgb_data)
         self.assertTrue(img.shape == (50, 50, 4))
         self.assertTrue(np.all(0 <= img) and np.all(img < 256))
 
     def test_single_class(self):
-        x_grid, y_grid, x_data, y_data, rgb_data = self.random_data(n_grid=50, n_colors=1, n_data=100)
+        x_grid, y_grid, x_data, y_data, rgb_data = \
+            self.random_data(n_grid=50, n_colors=1, n_data=100)
         img = compute_density(x_grid, y_grid, x_data, y_data, rgb_data)
         self.assertTrue(np.all(img[:, :, 3] == 128))
 

@@ -1,10 +1,10 @@
+from collections import Counter
 import sys
 import itertools
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
-import scipy.sparse as sp
 from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
@@ -25,7 +25,7 @@ from pyqtgraph.Point import Point
 from Orange.widgets import gui
 from Orange.widgets.utils import classdensity, get_variable_values_sorted
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
-                                               ContinuousPaletteGenerator)
+                                               ContinuousPaletteGenerator, DefaultRGBColors)
 from Orange.widgets.utils.plot import \
     OWPalette, OWPlotGUI, SELECT, PANNING, ZOOMING
 from Orange.widgets.utils.scaling import ScaleScatterPlotData
@@ -35,6 +35,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 # TODO Move utility classes to another module, so they can be used elsewhere
 
 SELECTION_WIDTH = 5
+MAX = 11  # maximum number of colors or shapes (including Other)
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -469,6 +470,12 @@ def _define_symbols():
 _define_symbols()
 
 
+def _make_pen(color, width):
+    p = QPen(color, width)
+    p.setCosmetic(True)
+    return p
+
+
 class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     attr_color = ContextSetting(None, required=ContextSetting.OPTIONAL)
     attr_label = ContextSetting(None, required=ContextSetting.OPTIONAL)
@@ -485,7 +492,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     show_reg_line = Setting(False)
     resolution = 256
 
-    CurveSymbols = np.array("o x t + d s ?".split())
+    CurveSymbols = np.array("o x t + d s t2 t3 p h star ?".split())
     MinShapeSize = 6
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
@@ -665,8 +672,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if self.jittered_data is None or not len(self.jittered_data):
             self.valid_data = None
         else:
-            index_x = self.domain.index(attr_x)
-            index_y = self.domain.index(attr_y)
             self.valid_data = self.get_valid_list([attr_x, attr_y])
             if not np.any(self.valid_data):
                 self.valid_data = None
@@ -691,10 +696,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.view_box.tag_history()
         [min_x, max_x], [min_y, max_y] = self.view_box.viewRange()
 
-        for axis, name, index in (("bottom", attr_x, index_x),
-                                  ("left", attr_y, index_y)):
-            self.set_axis_title(axis, name)
-            var = self.domain[index]
+        for axis, var in (("bottom", attr_x), ("left", attr_y)):
+            self.set_axis_title(axis, var)
             if var.is_discrete:
                 self.set_labels(axis, get_variable_values_sorted(var))
             else:
@@ -781,11 +784,6 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def set_axis_title(self, axis, title):
         self.plot_widget.setLabel(axis=axis, text=title)
 
-    def get_size_index(self):
-        if self.attr_size is None:
-            return -1
-        return self.domain.index(self.attr_size)
-
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
         if self.attr_size is None:
@@ -818,7 +816,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         colors = self.attr_color.colors
         if self.attr_color.is_discrete:
             self.discrete_palette = ColorPaletteGenerator(
-                number_of_colors=len(colors), rgb_colors=colors)
+                number_of_colors=min(len(colors), MAX), rgb_colors=colors if len(colors) <= MAX
+                else DefaultRGBColors)
         else:
             self.continuous_palette = ContinuousPaletteGenerator(*colors)
         return self.attr_color
@@ -827,25 +826,20 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if not keep_colors:
             self.pen_colors_sel = self.brush_colors_sel = None
 
-        def make_pen(color, width):
-            p = QPen(color, width)
-            p.setCosmetic(True)
-            return p
-
         nopen = QPen(Qt.NoPen)
         if self.selection is not None:
             sels = np.max(self.selection)
             if sels == 1:
                 pens = [nopen,
-                        make_pen(QColor(255, 190, 0, 255),
-                                 SELECTION_WIDTH + 1.)]
+                        _make_pen(QColor(255, 190, 0, 255),
+                                  SELECTION_WIDTH + 1.)]
             else:
                 # Start with the first color so that the colors of the
                 # additional attribute in annotation (which start with 0,
                 # unselected) will match these colors
                 palette = ColorPaletteGenerator(number_of_colors=sels + 1)
                 pens = [nopen] + \
-                       [make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                       [_make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
                         for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:
@@ -853,15 +847,39 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         brush = [QBrush(QColor(255, 255, 255, 0))] * self.n_points
         return pen, brush
 
+    def _reduce_values(self, attr):
+        """
+        If discrete variable has more than maximium allowed values,
+        less used values are joined as "Other"
+        """
+        c_data = self.data.get_column_view(attr)[0][self.valid_data]
+        if attr.is_continuous or len(attr.values) <= MAX:
+            return None, c_data
+        values_to_replace = Counter(c_data)
+        values_to_replace = sorted(
+            values_to_replace, key=values_to_replace.get, reverse=True
+        )
+        return values_to_replace, c_data
+
+    def _get_values(self, attr):
+        if len(attr.values) <= MAX:
+            return attr.values
+        values_to_replace, _ = self._reduce_values(attr)
+        return [attr.values[int(i)] for i in values_to_replace
+                if not np.isnan(i)][:MAX - 1] + ["Other"]
+
+    def _get_data(self, attr):
+        values_to_replace, c_data = self._reduce_values(attr)
+        if values_to_replace is not None:
+            c_data_2 = c_data.copy()
+            for i, v in enumerate(values_to_replace):
+                c_data[c_data_2 == v] = i if i < MAX - 1 else MAX - 1
+        return c_data
+
     def compute_colors(self, keep_colors=False):
         if not keep_colors:
             self.pen_colors = self.brush_colors = None
         self.get_color()
-
-        def make_pen(color, width):
-            p = QPen(color, width)
-            p.setCosmetic(True)
-            return p
 
         subset = None
         if self.subset_indices:
@@ -870,7 +888,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         if self.attr_color is None:  # same color
             color = self.plot_widget.palette().color(OWPalette.Data)
-            pen = [make_pen(color, 1.5)] * self.n_points
+            pen = [_make_pen(color, 1.5)] * self.n_points
             if subset is not None:
                 brush = [(QBrush(QColor(128, 128, 128, 0)),
                           QBrush(QColor(128, 128, 128, 255)))[s]
@@ -880,7 +898,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         * self.n_points
             return pen, brush
 
-        c_data = self.data.get_column_view(self.attr_color)[0][self.valid_data]
+        c_data = self._get_data(self.attr_color)
         if self.attr_color.is_continuous:
             if self.pen_colors is None:
                 self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
@@ -896,7 +914,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                      np.full((self.n_points, 1), self.alpha_value, dtype=int)])
                 self.pen_colors *= 100
                 self.pen_colors //= self.DarkerValue
-                self.pen_colors = [make_pen(QColor(*col), 1.5)
+                self.pen_colors = [_make_pen(QColor(*col), 1.5)
                                    for col in self.pen_colors.tolist()]
             if subset is not None:
                 self.brush_colors[:, 3] = 0
@@ -916,7 +934,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 colors = np.r_[palette.getRGB(np.arange(n_colors)),
                                [[128, 128, 128]]]
                 pens = np.array(
-                    [make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
+                    [_make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
                 self.pen_colors = pens[c_data]
                 alpha = self.alpha_value if subset is None else 255
@@ -992,18 +1010,12 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             for label, text in zip(self.labels, label_data):
                 label.setText(text, black)
 
-    def get_shape(self):
-        if self.attr_shape is None or \
-                len(self.attr_shape.values) > len(self.CurveSymbols):
-            return None
-        return self.attr_shape
-
     def compute_symbols(self):
         self.master.Information.missing_shape.clear()
-        if self.get_shape() is None:
+        if self.attr_shape is None:
             shape_data = self.CurveSymbols[np.zeros(self.n_points, dtype=int)]
         else:
-            shape_data = self.data.get_column_view(self.attr_shape)[0][self.valid_data]
+            shape_data = self._get_data(self.attr_shape)
             nans = np.isnan(shape_data)
             if np.any(nans):
                 shape_data[nans] = len(self.CurveSymbols) - 1
@@ -1057,17 +1069,19 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
     def make_color_legend(self):
         if self.attr_color is None:
             return
-        use_shape = self.get_shape() == self.get_color()
+        use_shape = self.attr_shape == self.get_color()
         if self.attr_color.is_discrete:
             if not self.legend:
                 self.create_legend()
             palette = self.discrete_palette
-            for i, value in enumerate(self.attr_color.values):
+            for i, value in enumerate(self._get_values(self.attr_color)):
                 color = QColor(*palette.getRGB(i))
-                brush = color.lighter(self.DarkerValue)
+                pen = _make_pen(color.darker(self.DarkerValue), 1.5)
+                color.setAlpha(self.alpha_value if self.subset_indices is None else 255)
+                brush = QBrush(color)
                 self.legend.addItem(
                     ScatterPlotItem(
-                        pen=color, brush=brush, size=10,
+                        pen=pen, brush=brush, size=10,
                         symbol=self.CurveSymbols[i] if use_shape else "o"),
                     escape(value))
         else:
@@ -1080,14 +1094,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             legend.setGeometry(label.boundingRect())
 
     def make_shape_legend(self):
-        shape = self.get_shape()
-        if shape is None or shape == self.get_color():
+        if self.attr_shape is None or self.attr_shape == self.get_color():
             return
         if not self.legend:
             self.create_legend()
         color = QColor(0, 0, 0)
         color.setAlpha(self.alpha_value)
-        for i, value in enumerate(self.attr_shape.values):
+        for i, value in enumerate(self._get_values(self.attr_shape)):
             self.legend.addItem(
                 ScatterPlotItem(pen=color, brush=color, size=10,
                                 symbol=self.CurveSymbols[i]), escape(value))

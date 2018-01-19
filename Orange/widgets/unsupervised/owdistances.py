@@ -34,9 +34,16 @@ class OWDistances(OWWidget):
     class Outputs:
         distances = Output("Distances", Orange.misc.DistMatrix, dynamic=False)
 
-    axis = settings.Setting(0)
-    metric_idx = settings.Setting(0)
-    autocommit = settings.Setting(True)
+    settings_version = 2
+
+    axis = settings.Setting(0)        # type: int
+    metric_idx = settings.Setting(0)  # type: int
+
+    #: Use normalized distances if the metric supports it.
+    #: The default is `True`, expect when restoring from old pre v2 settings
+    #: (see `migrate_settings`).
+    normalized_dist = settings.Setting(True)  # type: bool
+    autocommit = settings.Setting(True)       # type: bool
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
@@ -59,11 +66,21 @@ class OWDistances(OWWidget):
         gui.radioButtons(self.controlArea, self, "axis", ["Rows", "Columns"],
                          box="Distances between", callback=self._invalidate
                         )
-        self.metrics_combo = gui.comboBox(self.controlArea, self, "metric_idx",
-                                          box="Distance Metric",
-                                          items=[m[0] for m in METRICS],
-                                          callback=self._invalidate
-                                         )
+        box = gui.widgetBox(self.controlArea, "Distance Metric")
+        self.metrics_combo = gui.comboBox(
+            box, self, "metric_idx",
+            items=[m[0] for m in METRICS],
+            callback=self._metric_changed
+        )
+        self.normalization_check = gui.checkBox(
+            box, self, "normalized_dist", "Normalized",
+            callback=self._invalidate,
+            tooltip=("All dimensions are (implicitly) scaled to a common"
+                     "scale to normalize the influence across the domain.")
+        )
+        _, metric = METRICS[self.metric_idx]
+        self.normalization_check.setEnabled(metric.supports_normalization)
+
         gui.auto_commit(self.controlArea, self, "autocommit", "Apply")
         self.layout().setSizeConstraint(self.layout().SetFixedSize)
 
@@ -118,7 +135,11 @@ class OWDistances(OWWidget):
             if check() is False:
                 return
         try:
-            return metric(data, axis=1 - self.axis, impute=True)
+            if metric.supports_normalization and self.normalized_dist:
+                return metric(data, axis=1 - self.axis, impute=True,
+                              normalize=True)
+            else:
+                return metric(data, axis=1 - self.axis, impute=True)
         except ValueError as e:
             self.Error.distances_value_error(e)
         except MemoryError:
@@ -127,9 +148,21 @@ class OWDistances(OWWidget):
     def _invalidate(self):
         self.commit()
 
+    def _metric_changed(self):
+        metric = METRICS[self.metric_idx][1]
+        self.normalization_check.setEnabled(metric.supports_normalization)
+        self._invalidate()
+
     def send_report(self):
         # pylint: disable=invalid-sequence-index
         self.report_items((
             ("Distances Between", ["Rows", "Columns"][self.axis]),
             ("Metric", METRICS[self.metric_idx][0])
         ))
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version is None or version < 2 and "normalized_dist" not in settings:
+            # normalize_dist is set to False when restoring settings from
+            # an older version to preserve old semantics.
+            settings["normalized_dist"] = False

@@ -135,7 +135,8 @@ class OWPurgeDomain(widget.OWWidget):
                           Remove.RemoveUnusedValues * self.removeMetaAttributeValues])
         remover = Remove(attr_flags, class_flags, meta_flags)
         data = remover(self.data)
-        attr_res, class_res, meta_res = remover.attr_results, remover.class_results, remover.meta_results
+        attr_res, class_res, meta_res = \
+            remover.attr_results, remover.class_results, remover.meta_results
 
         self.removedAttrs = attr_res['removed']
         self.reducedAttrs = attr_res['reduced']

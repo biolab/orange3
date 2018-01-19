@@ -1,4 +1,5 @@
 import unittest
+import unittest.mock
 import threading
 import random
 
@@ -200,6 +201,43 @@ class TestFutureSetWatcher(CoreAppTestCase):
         self.assertSetEqual(as_set(spy.cancelledAt), {(1, f2)})
         self.assertSetEqual(as_set(spy.resultAt), {(0, True)})
         self.assertSetEqual(as_set(spy.exceptionAt), set())
+
+        # doneAll must always be emitted after the doneAt signals.
+        executor = ThreadPoolExecutor(max_workers=2)
+        futures = [executor.submit(pow, 1000, 1000) for _ in range(100)]
+        watcher = FutureSetWatcher(futures)
+        emithistory = []
+        watcher.doneAt.connect(lambda i, f: emithistory.append(("doneAt", i, f)))
+        watcher.doneAll.connect(lambda: emithistory.append(("doneAll", )))
+
+        spy = spies(watcher)
+        watcher.wait()
+        self.assertEqual(len(spy.doneAll), 0)
+        self.assertEqual(len(spy.doneAt), 0)
+        watcher.flush()
+        self.assertEqual(len(spy.doneAt), 100)
+        self.assertEqual(list(spy.doneAll), [[]])
+        self.assertSetEqual(set(emithistory[:-1]),
+                            {("doneAt", i, f) for i, f in enumerate(futures)})
+        self.assertEqual(emithistory[-1], ("doneAll",))
+
+        # doneAll must be emitted even when on an empty futures list
+        watcher = FutureSetWatcher()
+        watcher.setFutures([])
+        spy = spies(watcher)
+        self.assertTrue(spy.doneAll.wait())
+
+        watcher = FutureSetWatcher()
+        watcher.setFutures([])
+        watcher.wait()
+
+        watcher = FutureSetWatcher()
+        with self.assertRaises(RuntimeError):
+            watcher.wait()
+
+        with unittest.mock.patch.object(watcher, "thread", lambda: 42), \
+                self.assertRaises(RuntimeError):
+            watcher.flush()
 
 
 class TestTask(CoreAppTestCase):

@@ -1,29 +1,31 @@
 
 !include TextFunc.nsh
 
-# ${GetPythonInstall} VERSION $(user_var: INSTALL_PREFIX) $(user_var: INSTALL_MODE)
+# ${GetPythonInstallPEP514} COMPANY TAG $(user_var: INSTALL_PREFIX) $(user_var: INSTALL_MODE)
 #
-# Retrive the registered install prefix for Python
-# - input: VERSION is a Major.Minor version number
+# Retrive the registered install prefix for Python (as documented by PEP 514)
+# - input: COMPANY distibutor (use PythonCore for default pyhton.org
+#          distributed python)
+# - input: TAG environemnt tag (e.g 3.6 or 3.6-32; sys.winver for PythonCore)
 # - output: INSTALL_PREFIX installation path (e.g C:\Python35) or empty if
 #           not found
 # - output: INSTALL_MODE
-#           1 if Python was installed for all users or 0 if
-#           current user only (-1 when not installed).
+#           1 if Python was installed for all users, 0 if
+#           current user only or -1 when not found.
 #
 # Example
 # -------
-# ${GetPythonInstall} 3.5 $PythonDir $InstallMode
+# ${GetPythonInstallPEP14} PythonCore 3.5 $PythonDir $InstallMode
+# ${GetPythonInstallPEP14} ContinuumAnalytics Anaconda36-64 $1 $2
 
-
-!macro __GET_PYTHON_INSTALL VERSION INSTALL_PREFIX INSTALL_MODE
+!macro __GET_PYTHON_INSTALL_PEP514 COMPANY TAG INSTALL_PREFIX INSTALL_MODE
     ReadRegStr ${INSTALL_PREFIX} \
-        HKCU Software\Python\PythonCore\${VERSION}\InstallPath ""
+        HKCU Software\Python\${COMPANY}\${TAG}\InstallPath ""
     ${If} ${INSTALL_PREFIX} != ""
         StrCpy ${INSTALL_MODE} 0
     ${Else}
         ReadRegStr ${INSTALL_PREFIX} \
-            HKLM Software\Python\PythonCore\${VERSION}\InstallPath ""
+            HKLM Software\Python\${COMPANY}\${TAG}\InstallPath ""
         ${If} ${INSTALL_PREFIX} != ""
             StrCpy ${INSTALL_MODE} 1
         ${Else}
@@ -43,14 +45,42 @@
         Pop $0
      ${EndIf}
 !macroend
-!define GetPythonInstall "!insertmacro __GET_PYTHON_INSTALL"
+!define GetPythonInstallPEP514 "!insertmacro __GET_PYTHON_INSTALL_PEP514"
 
+
+# ${GetPythonInstall} VERSION BITS $(user_var: INSTALL_PREFIX) $(user_var: INSTALL_MODE)
+#
+# Retrive the registered install prefix for Python
+# - input: VERSION is a Major.Minor version number
+# - input: BITS is 32 or 64 constant speciying which python arch to lookup
+# - output: INSTALL_PREFIX installation path (e.g C:\Python35) or empty if
+#           not found
+# - output: INSTALL_MODE
+#           1 if Python was installed for all users, 0 if
+#           current user only or -1 when not found.
+#
+# Example
+# -------
+# ${GetPythonInstall} 3.5 64 $PythonDir $InstallMode
+
+!macro __GET_PYTHON_INSTALL VERSION BITS INSTALL_PREFIX INSTALL_MODE
+    !if ${VERSION} < 3.5
+        !define __TAG ${VERSION}
+    !else if ${BITS} == 64
+        !define __TAG ${VERSION}
+    !else
+        !define __TAG ${VERSION}-${BITS}
+    !endif
+    ${GetPythonInstallPEP514} PythonCore ${__TAG} ${INSTALL_PREFIX} ${INSTALL_MODE}
+    !undef __TAG
+!macroend
+!define GetPythonInstall "!insertmacro __GET_PYTHON_INSTALL"
 
 # ${GetAnacondaInstall} VERSIONTAG BITS $(user_var: INSTALL_PREFIX) $(user_var: INSTALL_MODE)
 #
 # Retrive the registered install prefix for Python
 # - input: VERSIONTAG is a MajorMinor version number (no dots)
-# - input: BITS 34 or 64 (constant!)
+# - input: BITS 34 or 64 (constant)
 # - output: INSTALL_PREFIX installation path (e.g C:\Python35)
 # - output: INSTALL_MODE
 #           1 if Python was installed for all users or 0 if
@@ -58,41 +88,12 @@
 #
 # Example
 # -------
-# ${GetPythonInstall} 3.5 $PythonDir $InstallMode
+# ${GetAnacondaInstall} 35 64 $PythonDir $InstallMode
 
 !macro __GET_CONDA_INSTALL VERSION_TAG BITS INSTALL_PREFIX INSTALL_MODE
-    !define __CONDA_REG_PREFIX \
-        Software\Python\ContinuumAnalytics\Anaconda${VERSION_TAG}-${BITS}
-
-    !if "${BITS}" != 32
-    !if "${BITS}" != 64
-        !error "BITS must be a 32 or 64 constant"
-    !endif
-    !endif
-    ReadRegStr ${INSTALL_PREFIX} HKCU ${__CONDA_REG_PREFIX}\InstallPath ""
-    ${If} ${INSTALL_PREFIX} != ""
-        StrCpy ${INSTALL_MODE} 0
-    ${Else}
-        ReadRegStr ${INSTALL_PREFIX} HKLM ${__CONDA_REG_PREFIX}\InstallPath ""
-        ${If} ${INSTALL_PREFIX} != ""
-            StrCpy ${INSTALL_MODE} 1
-        ${Else}
-            StrCpy ${INSTALL_MODE} 0
-        ${EndIf}
-    ${EndIf}
-
-    ${If} ${INSTALL_PREFIX} != ""
-        # Strip (single) trailing '\' if present
-        Push $0
-        StrCpy $0 ${INSTALL_PREFIX} "" -1
-        ${If} $0 == "\"
-            StrLen $0 ${INSTALL_PREFIX}
-            IntOp $0 $0 - 1
-            StrCpy ${INSTALL_PREFIX} ${INSTALL_PREFIX} $0 0
-        ${EndIf}
-        Pop $0
-     ${EndIf}
-    !undef __CONDA_REG_PREFIX
+    !define __TAG Anaconda${VERSION_TAG}-${BITS}
+    ${GetPythonInstallPEP514} ContinuumAnalytics ${__TAG} ${INSTALL_PREFIX} ${INSTALL_MODE}
+    !undef __TAG
 !macroend
 !define GetAnacondaInstall "!insertmacro __GET_CONDA_INSTALL"
 
@@ -118,6 +119,8 @@
             ReadRegStr $2 ${ROOT_KEY} \
                        "${__CONDA_REG_PREFIX}\$1\InstallPath" ""
             ${If} $2 != ""
+            ${AndIf} ${FileExists} "$2\python.exe"
+            ${AndIf} ${FileExists} "$2\Scripts\conda.exe"
                 ${LogWrite} "${ROOT_KEY} ${__CONDA_REG_PREFIX}\$1\InstallPath: $2"
                 Exch $2  # <stack> $0, $1, $2, "prefix"
             ${EndIf}

@@ -72,7 +72,9 @@ def deprecated(obj):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            name = '{}.{}'.format(func.__self__.__class__, func.__name__) if hasattr(func, '__self__') else func
+            name = '{}.{}'.format(
+                func.__self__.__class__,
+                func.__name__) if hasattr(func, '__self__') else func
             warnings.warn('Call to deprecated {}{}'.format(name, alternative),
                           OrangeDeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)

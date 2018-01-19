@@ -22,7 +22,7 @@ from Orange.statistics import contingency, distribution
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import (Setting, DomainContextHandler,
                                      ContextSetting)
-from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.widget import Input, Output
@@ -183,10 +183,7 @@ class OWBoxPlot(widget.OWWidget):
         self.scale_x = self.scene_min_x = self.scene_width = 0
         self.label_width = 0
 
-        order = (DomainModel.CLASSES, DomainModel.METAS, DomainModel.ATTRIBUTES)
-        self.attrs = DomainModel(
-            order=order,
-            valid_types=DomainModel.PRIMITIVE)
+        self.attrs = VariableListModel()
         view = gui.listView(
             self.controlArea, self, "attribute", box="Variable",
             model=self.attrs, callback=self.attr_changed)
@@ -202,13 +199,12 @@ class OWBoxPlot(widget.OWWidget):
             tooltip="Order by 𝜒² or ANOVA over the subgroups",
             callback=self.apply_sorting)
         self.group_vars = DomainModel(
-            order=order,
-            placeholder="None",
+            placeholder="None", separators=False,
             valid_types=Orange.data.DiscreteVariable)
-        self.group_vars.clear()  # Remove 'None' from the list view
-        view = gui.listView(
+        self.group_view = view = gui.listView(
             self.controlArea, self, "group_var", box="Subgroups",
             model=self.group_vars, callback=self.grouping_changed)
+        view.setEnabled(False)
         view.setMinimumSize(QSize(30, 30))
         # See the comment above
         view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -217,7 +213,8 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.display_box = gui.vBox(
             self.controlArea, "Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum),
+            addSpace=False)
 
         gui.checkBox(self.display_box, self, "show_annotations", "Annotate",
                      callback=self.display_changed)
@@ -229,13 +226,15 @@ class OWBoxPlot(widget.OWWidget):
         # The vertical size policy is needed to let only the list views expand
         self.stretching_box = box = gui.vBox(
             self.controlArea, box="Display",
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.stretching_box.sizeHint = self.display_box.sizeHint
         gui.checkBox(
             box, self, 'stretched', "Stretch bars",
             callback=self.display_changed)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
             callback=self.display_changed)
+        gui.rubber(box)
 
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
@@ -270,6 +269,12 @@ class OWBoxPlot(widget.OWWidget):
 
         return super().eventFilter(obj, event)
 
+    def reset_attrs(self, domain):
+        self.attrs[:] = [
+            var for var in chain(
+                domain.class_vars, domain.metas, domain.attributes)
+            if var.is_primitive()]
+
     # noinspection PyTypeChecker
     @Inputs.data
     def set_data(self, dataset):
@@ -284,7 +289,8 @@ class OWBoxPlot(widget.OWWidget):
         if dataset:
             domain = dataset.domain
             self.group_vars.set_domain(domain)
-            self.attrs.set_domain(domain)
+            self.group_view.setEnabled(len(self.group_vars) > 1)
+            self.reset_attrs(domain)
             self.select_default_variables(domain)
             self.openContext(self.dataset)
             self.grouping_changed()
@@ -348,15 +354,15 @@ class OWBoxPlot(widget.OWWidget):
                     include_class=True, include_metas=True) else None
             self.attrs.sort(key=compute_score)
         else:
-            self.attrs.set_domain(domain)
+            self.reset_attrs(domain)
         self.attribute = attribute
 
     def reset_all_data(self):
         self.clear_scene()
         self.infot1.setText("")
-        self.attrs.set_domain(None)
+        self.attrs.clear()
         self.group_vars.set_domain(None)
-        self.group_vars.clear()  # Remove 'None' from the list view
+        self.group_view.setEnabled(False)
         self.is_continuous = False
         self.update_display_box()
 

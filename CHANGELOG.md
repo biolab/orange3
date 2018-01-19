@@ -6,6 +6,38 @@ Change Log
 * ...
 
 
+[3.9.0] - 2018-01-19
+--------------------
+##### Enhancements
+* Linear Discriminant Analysis: scripting part ([#2823](../../pull/2823))
+* owdistances: Add 'Normalize' check box ([#2851](../../pull/2851))
+* Variable: Simplify the is_{discrete,continuous,...} implementation ([#2874](../../pull/2874))
+* manifold: Use arpack for decomposition in `torgerson` ([#2825](../../pull/2825))
+* Radviz: new widget ([#2480](../../pull/2480))
+* Canvas: Improve preview rendering ([#2784](../../pull/2784))
+* Linear Projection (LDA, PCA) ([#2445](../../pull/2445))
+* Scatter Plot Graph: max discrete values colors and shape ([#2804](../../pull/2804))
+* Scatter Plot Graph: legend opacity ([#2819](../../pull/2819))
+
+##### Bugfixes
+* Add labels to combo when data comes from distance matrix ([#2866](../../pull/2866))
+* utils/concurrent: Handle an empty futures list ([#2834](../../pull/2834))
+* OWWidget: Move 'splitter' to private members ([#2847](../../pull/2847))
+* Radviz: enable VizRank numeric color (class) ([#2853](../../pull/2853))
+* Bincount: Fix crash on array with all nans ([#2831](../../pull/2831))
+* mds: Fix incorrect assert ([#2844](../../pull/2844))
+* VizRank (Linear Projection, Radviz): spin disabled/enabled ([#2846](../../pull/2846))
+* Windows installers: Python lookup ([#2827](../../pull/2827))
+* Canvas: Palette propagation ([#2760](../../pull/2760))
+* mssql: Catch errors due to incorrect connection params ([#2838](../../pull/2838))
+* canvas/addons: Fix progress dialog showing up when not necessary ([#2833](../../pull/2833))
+* ContextHandler: Merge local context into globals before serialization ([#2837](../../pull/2837))
+* Hierarchical Clustering: Fix size constraints ([#2796](../../pull/2796))
+* canvas/annotationitem: Use separate item for shadow base ([#2821](../../pull/2821))
+* Scatter Plot Graph: vars instead of indices & remove dead code ([#2815](../../pull/2815))
+* Table: classes (Y) must be float ([#2822](../../pull/2822))
+
+
 [3.8.0] - 2017-12-01
 --------------------
 ##### Enhancements
@@ -722,7 +754,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.8.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.9.0...HEAD
+[3.9.0]: https://github.com/biolab/orange3/compare/3.8.0...3.9.0
 [3.8.0]: https://github.com/biolab/orange3/compare/3.7.1...3.8.0
 [3.7.1]: https://github.com/biolab/orange3/compare/3.7.0...3.7.1
 [3.7.0]: https://github.com/biolab/orange3/compare/3.6.0...3.7.0

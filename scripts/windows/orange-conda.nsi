@@ -171,6 +171,10 @@ Var StartMenuFolder
 # - no check box to enable/disable start menu creation
 #   (is controled by the Components Page)
 !define MUI_STARTMENUPAGE_NODISABLE
+# Registry key path where the selected start folder name is stored
+!define MUI_STARTMENUPAGE_REGISTRY_ROOT SHELL_CONTEXT
+!define MUI_STARTMENUPAGE_REGISTRY_KEY ${INSTALL_SETTINGS_KEY}
+!define MUI_STARTMENUPAGE_REGISTRY_VALUENAME StartMenuFolder
 !insertmacro MUI_PAGE_STARTMENU StartMenuPageID $StartMenuFolder
 
 # Install Files page:
@@ -574,6 +578,11 @@ Section "Start Menu Shortcuts" SectionStartMenu
             "$SMPROGRAMS\$StartMenuFolder\${LAUNCHER_SHORTCUT_NAME}.lnk" \
             "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas" \
             "$PythonPrefix\share\orange3\icons\orange.ico" 0
+
+        # A utility shortcut for activating the environment
+        CreateShortCut \
+            "$SMPROGRAMS\$StartMenuFolder\${APPNAME} Command Prompt.lnk" \
+            "%COMSPEC%" '/S /K ""$PythonScriptsPrefix\activate.bat" "$InstDir""'
     ${EndIf}
     !insertmacro MUI_STARTMENU_WRITE_END
 SectionEnd
@@ -604,6 +613,7 @@ Function un.Shortcuts
         ${LogWrite} "Removing Start Menu Shortcuts (from $SMPROGRAMS\$0)"
         DetailPrint "Removing Start Menu shortcuts"
         Delete "$SMPROGRAMS\$0\${LAUNCHER_SHORTCUT_NAME}.lnk"
+        Delete "$SMPROGRAMS\$0\${APPNAME} Command Prompt.lnk"
         RMDir "$SMPROGRAMS\$0"
     ${EndIf}
     ${LogWrite} "Removing Desktop shortcurt"
@@ -743,8 +753,8 @@ Section Uninstall
     ${LogWrite} "    PythonPrefix: $PythonPrefix"
     ${LogWrite} "    BasePythonPrefix: $BasePythonPrefix"
 
-    Call un.Register
     Call un.Shortcuts
+    Call un.Register
     Call un.Launchers
     Call un.InstallPackages
     Call un.Environment

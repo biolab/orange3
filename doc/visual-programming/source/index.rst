@@ -41,7 +41,6 @@ Data
    widgets/data/pythonscript
    widgets/data/featureconstructor
    widgets/data/editdomain
-   widgets/data/imageviewer
    widgets/data/impute
    widgets/data/mergedata
    widgets/data/outliers
@@ -71,9 +70,9 @@ Visualize
    widgets/visualize/mosaicdisplay
    widgets/visualize/silhouetteplot
    widgets/visualize/treeviewer
-   widgets/visualize/geomap
    widgets/visualize/nomogram
    widgets/visualize/freeviz
+   widgets/visualize/radviz
 
 
 Model

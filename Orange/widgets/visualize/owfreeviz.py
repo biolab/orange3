@@ -9,7 +9,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QFormLayout, QApplication, QGraphicsEllipseItem, QGraphicsSceneMouseEvent, QToolTip
 )
-from AnyQt.QtGui import QPen, QCursor
+from AnyQt.QtGui import QPen
 from AnyQt.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QTimer, QPoint
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -150,7 +150,6 @@ class FreeVizInteractiveViewBox(InteractiveViewBox):
     def __init__(self, graph, enable_menu=False):
         self.mousestate = 0
         self.point_i = None
-        self.cursor = QCursor()
         super().__init__(graph, enable_menu)
 
     def _dragtip_pos(self):
@@ -181,14 +180,14 @@ class FreeVizInteractiveViewBox(InteractiveViewBox):
             return
         ev.accept()
         if ev.start:
-            self.cursor.setShape(Qt.ClosedHandCursor)
+            self.setCursor(Qt.ClosedHandCursor)
             self.mousestate = 1  # working
             self.point_i = np.flatnonzero(mask)[np.argmin(distances[mask])]
             master.randomize_indices()
         is_moving = True
         if self.mousestate == 1:
             if ev.finish:
-                self.cursor.setShape(Qt.OpenHandCursor)
+                self.setCursor(Qt.OpenHandCursor)
                 self.mousestate = 0
                 is_moving = False
             points[self.point_i][0] = pos.x()
@@ -198,7 +197,6 @@ class FreeVizInteractiveViewBox(InteractiveViewBox):
             else:
                 master.setup_plot(reset_view=False)
             self.graph.show_indicator(point_i=self.point_i)
-        self.setCursor(self.cursor)
 
 
 class EventDelegate(HelpEventDelegate):
@@ -261,11 +259,10 @@ class OWFreeVizGraph(OWScatterPlotGraph):
         distances = distance.cdist(np_pos, points[:, :2])[0]
         if len(distances[mask]) and np.min(distances[mask]) < 0.08:
             if self.view_box.mousestate == 0:
-                self.view_box.cursor.setShape(Qt.OpenHandCursor)
+                self.view_box.setCursor(Qt.OpenHandCursor)
             self.show_indicator(point_i=np.flatnonzero(mask)[np.argmin(distances[mask])])
         else:
-            self.view_box.cursor.setShape(Qt.ArrowCursor)
-        self.view_box.setCursor(self.view_box.cursor)
+            self.view_box.setCursor(Qt.ArrowCursor)
         return True
 
     def show_indicator(self, point_i):

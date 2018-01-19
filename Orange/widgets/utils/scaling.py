@@ -5,7 +5,6 @@ import numpy as np
 from Orange.data import Domain
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import checksum
 from Orange.widgets.utils.datacaching import getCached, setCached
 
 
@@ -88,9 +87,7 @@ class ScaleData:
             col[above_1] = 2 - col[above_1]
 
     # noinspection PyAttributeOutsideInit
-    def set_data(self, data, skip_if_same=False, no_data=False):
-        if skip_if_same and checksum(data) == checksum(self.data):
-            return
+    def set_data(self, data, *, no_data=False):
         self._reset_data()
         if data is None:
             return

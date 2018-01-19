@@ -26,7 +26,9 @@ def dense_sparse(test_case):
 
             return sp_array
 
-        test_case(self, lambda x: np.array(x))
+        test_case(self, np.array)
+        test_case(self, csr_matrix)
+        test_case(self, csc_matrix)
         test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
         test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
 
@@ -407,6 +409,22 @@ class TestBincount(unittest.TestCase):
 
         expected = [3, 0, 2, 1]
         np.testing.assert_equal(bincount(x, w)[0], expected)
+
+    @dense_sparse
+    def test_all_nans(self, array):
+        x = array([np.nan] * 5)
+        expected = []
+
+        np.testing.assert_equal(bincount(x)[0], expected)
+
+    @dense_sparse
+    def test_all_zeros_or_nans(self, array):
+        """Sparse arrays with only nans with no explicit zeros will have no non
+        zero indices. Check that this counts the zeros properly."""
+        x = array([np.nan] * 5 + [0] * 5)
+        expected = [5]
+
+        np.testing.assert_equal(bincount(x)[0], expected)
 
 
 class TestUnique(unittest.TestCase):

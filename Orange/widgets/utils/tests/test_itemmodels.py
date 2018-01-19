@@ -1,18 +1,24 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-from unittest import TestCase
+import unittest
+from unittest.mock import patch
 
 import numpy as np
 
 from AnyQt.QtCore import Qt
 
-from Orange.data import Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import \
+    Domain, \
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
 from Orange.widgets.utils.itemmodels import \
-    AbstractSortTableModel, PyTableModel, PyListModel, DomainModel, _argsort
+    AbstractSortTableModel, PyTableModel,\
+    PyListModel, VariableListModel, DomainModel,\
+    _argsort, _as_contiguous_range
+from Orange.widgets.gui import TableVariable
 
 
-class TestArgsort(TestCase):
+class TestArgsort(unittest.TestCase):
     def test_argsort(self):
         self.assertEqual(_argsort("dacb"), [1, 3, 2, 0])
         self.assertEqual(_argsort("dacb", reverse=True), [0, 2, 3, 1])
@@ -29,8 +35,18 @@ class TestArgsort(TestCase):
                      reverse=True),
             [0, 3, 1, 2])
 
+class TestUtils(unittest.TestCase):
+    def test_as_contiguous_range(self):
+        self.assertEqual(_as_contiguous_range(slice(1, 8), 20), (1, 8, 1))
+        self.assertEqual(_as_contiguous_range(slice(1, 8), 6), (1, 6, 1))
+        self.assertEqual(_as_contiguous_range(slice(8, 1, -1), 6), (2, 6, 1))
+        self.assertEqual(_as_contiguous_range(slice(8), 6), (0, 6, 1))
+        self.assertEqual(_as_contiguous_range(slice(8, None, -1), 6), (0, 6, 1))
+        self.assertEqual(_as_contiguous_range(slice(7, None, -1), 9), (0, 8, 1))
+        self.assertEqual(_as_contiguous_range(slice(None, None, -1), 9),
+                         (0, 9, 1))
 
-class TestPyTableModel(TestCase):
+class TestPyTableModel(unittest.TestCase):
     def setUp(self):
         self.model = PyTableModel([[1, 4],
                                    [2, 3]])
@@ -122,7 +138,7 @@ class TestPyTableModel(TestCase):
                                         Qt.TextAlignmentRole))
 
 
-class TestAbstractSortTableModel(TestCase):
+class TestAbstractSortTableModel(unittest.TestCase):
     def test_sorting(self):
         assert issubclass(PyTableModel, AbstractSortTableModel)
         model = PyTableModel([[1, 4],
@@ -150,10 +166,55 @@ class TestAbstractSortTableModel(TestCase):
         self.assertSequenceEqual(model.mapFromSourceRows(...).tolist(), [0, 2, 1])
 
 
-class TestPyListModel(TestCase):
+# Tests test _is_index_valid and access model._other_data. The latter tests
+# implementation, but it would be cumbersome and less readable to test function
+# pylint: disable=protected-access
+class TestPyListModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.model = PyListModel([1, 2, 3, 4])
+
+    def test_wrap(self):
+        model = PyListModel()
+        s = [1, 2]
+        model.wrap(s)
+        self.assertSequenceEqual(model, [1, 2])
+        model.append(3)
+        self.assertEqual(s, [1, 2, 3])
+        self.assertEqual(len(model._other_data), 3)
+
+        s.append(5)
+        self.assertRaises(RuntimeError, model._is_index_valid, 0)
+
+    def test_is_index_valid(self):
+        self.assertTrue(self.model._is_index_valid(0))
+        self.assertTrue(self.model._is_index_valid(2))
+        self.assertTrue(self.model._is_index_valid(-1))
+        self.assertTrue(self.model._is_index_valid(-4))
+
+        self.assertFalse(self.model._is_index_valid(-5))
+        self.assertFalse(self.model._is_index_valid(5))
+
+    def test_index(self):
+        index = self.model.index(2, 0)
+        self.assertTrue(index.isValid())
+        self.assertEqual(index.row(), 2)
+        self.assertEqual(index.column(), 0)
+
+        self.assertFalse(self.model.index(5, 0).isValid())
+        self.assertFalse(self.model.index(-5, 0).isValid())
+        self.assertFalse(self.model.index(0, 1).isValid())
+
+    def test_headerData(self):
+        self.assertEqual(self.model.headerData(3, Qt.Vertical), "3")
+
+    def test_rowCount(self):
+        self.assertEqual(self.model.rowCount(), len(self.model))
+        self.assertEqual(self.model.rowCount(self.model.index(2, 0)), 0)
+
+    def test_columnCount(self):
+        self.assertEqual(self.model.columnCount(), 1)
+        self.assertEqual(self.model.columnCount(self.model.index(2, 0)), 0)
 
     def test_indexOf(self):
         self.assertEqual(self.model.indexOf(3), 2)
@@ -162,6 +223,19 @@ class TestPyListModel(TestCase):
         mi = self.model.index(2)
         self.assertEqual(self.model.data(mi), 3)
         self.assertEqual(self.model.data(mi, Qt.EditRole), 3)
+
+        self.assertIsNone(self.model.data(self.model.index(5)))
+
+    def test_itemData(self):
+        model = PyListModel([1, 2, 3, 4])
+        mi = model.index(2)
+        model.setItemData(mi, {Qt.ToolTipRole: "foo"})
+        self.assertEqual(model.itemData(mi)[Qt.ToolTipRole], "foo")
+
+        self.assertEqual(model.itemData(model.index(5)), {})
+
+    def test_parent(self):
+        self.assertFalse(self.model.parent(self.model.index(2)).isValid())
 
     def test_set_data(self):
         model = PyListModel([1, 2, 3, 4])
@@ -172,6 +246,8 @@ class TestPyListModel(TestCase):
         self.assertEqual(model.data(model.index(1), Qt.ToolTipRole),
                          "This is two",)
 
+        self.assertFalse(model.setData(model.index(5), "foo"))
+
     def test_setitem(self):
         model = PyListModel([1, 2, 3, 4])
         model[1] = 42
@@ -180,10 +256,10 @@ class TestPyListModel(TestCase):
         self.assertSequenceEqual(model, [1, 42, 3, 42])
 
         with self.assertRaises(IndexError):
-            model[4]
+            model[4]  # pylint: disable=pointless-statement
 
         with self.assertRaises(IndexError):
-            model[-5]
+            model[-5]  # pylint: disable=pointless-statement
 
         model = PyListModel([1, 2, 3, 4])
         model[0:0] = [-1, 0]
@@ -194,7 +270,7 @@ class TestPyListModel(TestCase):
         self.assertSequenceEqual(model, [1, 2, 3, 4, 5, 6])
 
         model = PyListModel([1, 2, 3, 4])
-        model[0:2] = [-1, -2]
+        model[0:2] = (-1, -2)
         self.assertSequenceEqual(model, [-1, -2, 3, 4])
 
         model = PyListModel([1, 2, 3, 4])
@@ -206,23 +282,70 @@ class TestPyListModel(TestCase):
             # non unit strides currently not supported
             model[0:-1:2] = [3, 3]
 
+    def test_getitem(self):
+        self.assertEqual(self.model[0], 1)
+        self.assertEqual(self.model[2], 3)
+        self.assertEqual(self.model[-1], 4)
+        self.assertEqual(self.model[-4], 1)
+
+        with self.assertRaises(IndexError):
+            self.model[4]    # pylint: disable=pointless-statement
+
+        with self.assertRaises(IndexError):
+            self.model[-5]  # pylint: disable=pointless-statement
+
     def test_delitem(self):
         model = PyListModel([1, 2, 3, 4])
+        model._other_data = list("abcd")
         del model[1]
         self.assertSequenceEqual(model, [1, 3, 4])
+        self.assertSequenceEqual(model._other_data, "acd")
 
         model = PyListModel([1, 2, 3, 4])
+        model._other_data = list("abcd")
         del model[1:3]
 
         self.assertSequenceEqual(model, [1, 4])
+        self.assertSequenceEqual(model._other_data, "ad")
+
         model = PyListModel([1, 2, 3, 4])
+        model._other_data = list("abcd")
         del model[:]
         self.assertSequenceEqual(model, [])
+        self.assertEqual(len(model._other_data), 0)
 
         model = PyListModel([1, 2, 3, 4])
         with self.assertRaises(IndexError):
             # non unit strides currently not supported
             del model[0:-1:2]
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_add(self):
+        model2 = self.model + [5, 6]
+        self.assertSequenceEqual(model2, [1, 2, 3, 4, 5, 6])
+        self.assertEqual(len(model2), len(model2._other_data))
+
+    def test_iadd(self):
+        model = PyListModel([1, 2, 3, 4])
+        model += [5, 6]
+        self.assertSequenceEqual(model, [1, 2, 3, 4, 5, 6])
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_list_specials(self):
+        # Essentially tested in other tests, but let's do it explicitly, too
+        # __len__
+        self.assertEqual(len(self.model), 4)
+
+        # __contains__
+        self.assertTrue(2 in self.model)
+        self.assertFalse(5 in self.model)
+
+        # __iter__
+        self.assertSequenceEqual(self.model, [1, 2, 3, 4])
+
+        # __bool__
+        self.assertTrue(bool(self.model))
+        self.assertFalse(bool(PyListModel()))
 
     def test_insert_delete_rows(self):
         model = PyListModel([1, 2, 3, 4])
@@ -235,8 +358,184 @@ class TestPyListModel(TestCase):
         self.assertIs(success, True)
         self.assertSequenceEqual(model, [None, None, None])
 
+        self.assertFalse(model.insertRows(0, 1, model.index(0)))
+        self.assertFalse(model.removeRows(0, 1, model.index(0)))
 
-class TestDomainModel(TestCase):
+    def test_extend(self):
+        model = PyListModel([])
+        model.extend([1, 2, 3, 4])
+        self.assertSequenceEqual(model, [1, 2, 3, 4])
+
+        model.extend([5, 6])
+        self.assertSequenceEqual(model, [1, 2, 3, 4, 5, 6])
+
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_append(self):
+        model = PyListModel([])
+        model.append(1)
+        self.assertSequenceEqual(model, [1])
+
+        model.append(2)
+        self.assertSequenceEqual(model, [1, 2])
+
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_insert(self):
+        model = PyListModel()
+        model.insert(0, 1)
+        self.assertSequenceEqual(model, [1])
+        self.assertEqual(len(model._other_data), 1)
+        model._other_data = ["a"]
+
+        model.insert(0, 2)
+        self.assertSequenceEqual(model, [2, 1])
+        self.assertEqual(model._other_data[1], "a")
+        self.assertNotEqual(model._other_data[0], "a")
+        model._other_data[0] = "b"
+
+        model.insert(1, 3)
+        self.assertSequenceEqual(model, [2, 3, 1])
+        self.assertEqual(model._other_data[0], "b")
+        self.assertEqual(model._other_data[2], "a")
+        self.assertNotEqual(model._other_data[1], "b")
+        self.assertNotEqual(model._other_data[1], "a")
+        model._other_data[1] = "c"
+
+        model.insert(3, 4)
+        self.assertSequenceEqual(model, [2, 3, 1, 4])
+        self.assertSequenceEqual(model._other_data[:3], ["b", "c", "a"])
+        model._other_data[3] = "d"
+
+        model.insert(-1, 5)
+        self.assertSequenceEqual(model, [2, 3, 1, 5, 4])
+        self.assertSequenceEqual(model._other_data[:3], ["b", "c", "a"])
+        self.assertEqual(model._other_data[4], "d")
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_remove(self):
+        model = PyListModel([1, 2, 3, 2, 4])
+        model._other_data = list("abcde")
+        model.remove(2)
+        self.assertSequenceEqual(model, [1, 3, 2, 4])
+        self.assertSequenceEqual(model._other_data, "acde")
+
+    def test_pop(self):
+        model = PyListModel([1, 2, 3, 2, 4])
+        model._other_data = list("abcde")
+        model.pop(1)
+        self.assertSequenceEqual(model, [1, 3, 2, 4])
+        self.assertSequenceEqual(model._other_data, "acde")
+
+    def test_clear(self):
+        model = PyListModel([1, 2, 3, 2, 4])
+        model.clear()
+        self.assertSequenceEqual(model, [])
+        self.assertEqual(len(model), len(model._other_data))
+
+        model.clear()
+        self.assertSequenceEqual(model, [])
+        self.assertEqual(len(model), len(model._other_data))
+
+    def test_reverse(self):
+        model = PyListModel([1, 2, 3, 4])
+        model._other_data = list("abcd")
+        model.reverse()
+        self.assertSequenceEqual(model, [4, 3, 2, 1])
+        self.assertSequenceEqual(model._other_data, "dcba")
+
+    def test_sort(self):
+        model = PyListModel([3, 1, 4, 2])
+        model._other_data = list("abcd")
+        model.sort()
+        self.assertSequenceEqual(model, [1, 2, 3, 4])
+        self.assertSequenceEqual(model._other_data, "bdac")
+
+
+class TestVariableListModel(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.disc = DiscreteVariable("gender", values=("M", "F"))
+        cls.cont = ContinuousVariable("age")
+        cls.string = StringVariable("name")
+        cls.time = TimeVariable("birth")
+        cls.model = VariableListModel([
+            cls.cont, None, "Foo", cls.disc, cls.string, cls.time])
+
+    def test_placeholder(self):
+        model = self.model
+        self.assertEqual(model.data(model.index(1)), "None")
+        model.placeholder = "Bar"
+        self.assertEqual(model.data(model.index(1)), "Bar")
+        model.placeholder = "None"
+
+    def test_displayrole(self):
+        data, index = self.model.data, self.model.index
+        self.assertEqual(data(index(0)), "age")
+        self.assertEqual(data(index(1)), "None")
+        self.assertEqual(data(index(2)), "Foo")
+        self.assertEqual(data(index(3)), "gender")
+        self.assertEqual(data(index(4)), "name")
+        self.assertEqual(data(index(5)), "birth")
+
+    def test_tooltip(self):
+        def get_tooltip(i):
+            return self.model.data(self.model.index(i), Qt.ToolTipRole)
+
+        text = get_tooltip(0)
+        self.assertIn("age", text)
+        self.assertIn("Numeric", text)
+
+        self.assertIsNone(get_tooltip(1))
+        self.assertIsNone(get_tooltip(2))
+
+        text = get_tooltip(3)
+        self.assertIn("gender", text)
+        self.assertIn("M", text)
+        self.assertIn("F", text)
+        self.assertIn("2", text)
+        self.assertIn("Categorical", text)
+
+        text = get_tooltip(4)
+        self.assertIn("name", text)
+        self.assertIn("Text", text)
+
+        text = get_tooltip(5)
+        self.assertIn("birth", text)
+        self.assertIn("Time", text)
+
+        self.cont.attributes = {"foo": "bar"}
+        text = get_tooltip(0)
+        self.assertIn("foo", text)
+        self.assertIn("bar", text)
+
+    @unittest.skip
+    def test_decoration(self):
+        decorations = [self.model.data(self.model.index(i), Qt.DecorationRole)
+                       for i in range(self.model.rowCount())]
+        self.assertIs(decorations[1], decorations[2])
+        del decorations[2]
+        for i, dec1 in enumerate(decorations):
+            for dec2 in decoreations[i]:
+                self.assertIsNot(dec1, dec2)
+
+    def test_table_variable(self):
+        self.assertEqual(
+            [self.model.data(self.model.index(i), TableVariable)
+             for i in range(self.model.rowCount())],
+            [self.cont, None, None, self.disc, self.string, self.time])
+
+    def test_other_roles(self):
+        with patch.object(PyListModel, "data") as data:
+            index = self.model.index(0)
+            _ = self.model.data(index, Qt.BackgroundRole)
+            print(data.call_args[1:])
+            self.assertEqual(data.call_args[0][1:], (index, Qt.BackgroundRole))
+
+    def test_invalid_index(self):
+        self.assertIsNone(self.model.data(self.model.index(0).parent()))
+
+class TestDomainModel(unittest.TestCase):
     def test_init_with_single_section(self):
         model = DomainModel(order=DomainModel.CLASSES)
         self.assertEqual(model.order, (DomainModel.CLASSES, ))
@@ -344,3 +643,35 @@ class TestDomainModel(TestCase):
         self.assertEqual(
             list(model),
             classes + [PyListModel.Separator] + metas + [PyListModel.Separator] + attrs)
+
+    def test_read_only(self):
+        model = DomainModel()
+        domain = Domain([ContinuousVariable(x) for x in "abc"])
+        model.set_domain(domain)
+        index = model.index(0, 0)
+
+        self.assertRaises(TypeError, model.append, 42)
+        self.assertRaises(TypeError, model.extend, [42])
+        self.assertRaises(TypeError, model.insert, 0, 42)
+        self.assertRaises(TypeError, model.remove, 0)
+        self.assertRaises(TypeError, model.pop)
+        self.assertRaises(TypeError, model.clear)
+        self.assertRaises(TypeError, model.reverse)
+        self.assertRaises(TypeError, model.sort)
+        with self.assertRaises(TypeError):
+            model[0] = 1
+        with self.assertRaises(TypeError):
+            del model[0]
+
+        self.assertRaises(TypeError, model.setData, index, domain[0])
+        self.assertTrue(model.setData(index, "foo", Qt.ToolTipRole))
+
+        self.assertRaises(TypeError, model.setItemData, index,
+                          {Qt.EditRole: domain[0], Qt.ToolTipRole: "foo"})
+        self.assertTrue(model.setItemData(index, {Qt.ToolTipRole: "foo"}))
+
+        self.assertRaises(TypeError, model.insertRows, 0, 0)
+        self.assertRaises(TypeError, model.removeRows, 0, 0)
+
+if __name__ == "__main__":
+    unittest.main()

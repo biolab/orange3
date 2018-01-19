@@ -8,11 +8,12 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table
-from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, SelectRandomFeatures, EqualFreq, \
-    RemoveNaNColumns, DropInstances
+from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
+    SelectRandomFeatures, EqualFreq, RemoveNaNColumns, DropInstances
 from Orange.preprocess import EqualWidth, SelectBestFeatures
-from Orange.preprocess.preprocess import Preprocess, Scale, Randomize, Continuize, Discretize, Impute, SklImpute, \
-    Normalize, ProjectCUR, ProjectPCA, RemoveConstant
+from Orange.preprocess.preprocess import Preprocess, Scale, Randomize, \
+    Continuize, Discretize, Impute, SklImpute, Normalize, ProjectCUR, \
+    ProjectPCA, RemoveConstant
 from Orange.util import OrangeDeprecationWarning
 
 

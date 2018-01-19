@@ -17,6 +17,7 @@ from os.path import dirname
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable
+from Orange.util import OrangeDeprecationWarning
 from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
@@ -25,14 +26,6 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
-
-
-class AddedFormat(FileFormat):
-    EXTENSIONS = ('.123',)
-    DESCRIPTION = "Test if a dialog format works after reading OWFile"
-
-    def read(self):
-        pass
 
 
 class FailedSheetsFormat(FileFormat):
@@ -338,10 +331,22 @@ a
         data = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(data)
 
+    def test_call_deprecated_dialog_formats(self):
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertIn("Tab", dialog_formats())
+
     def test_add_new_format(self):
         # test adding file formats after registering the widget
-        formats = dialog_formats()
-        self.assertTrue(".123" in formats)
+        called = False
+        with named_file("", suffix=".tab") as filename:
+            def test_format(sd, sf, ff, **kwargs):
+                nonlocal called
+                called = True
+                self.assertIn(FailedSheetsFormat, ff)
+                return filename, TabReader, ""
+            with patch("Orange.widgets.data.owfile.open_filename_dialog", test_format):
+                self.widget.browse_file()
+        self.assertTrue(called)
 
     def test_domain_editor_conversions(self):
         dat = """V0\tV1\tV2\tV3\tV4\tV5\tV6

@@ -216,6 +216,10 @@ class OWMDS(OWWidget):
         g = self.graph.gui
         box = g.point_properties_box(self.controlArea)
         self.models = g.points_models
+        self.size_model = self.models[2]
+        self.label_model = self.models[3]
+        self.size_model.order = \
+            self.size_model.order[:1] + ("Stress", ) + self.models[2].order[1:]
 
         gui.hSlider(box, self, "connected_pairs", label="Show similar pairs:", minValue=0,
                     maxValue=20, createLabel=False, callback=self._on_connected_changed)
@@ -263,14 +267,13 @@ class OWMDS(OWWidget):
         self.update_graph(reset_view=False)
 
     def init_attr_values(self):
-        domain = self.data and len(self.data) and self.data.domain or None
+        domain = self.data.domain if self.data and len(self.data) else None
         for model in self.models:
             model.set_domain(domain)
         self.graph.attr_color = self.data.domain.class_var if domain else None
         self.graph.attr_shape = None
         self.graph.attr_size = None
         self.graph.attr_label = None
-        self.models[2][:] = self.models[2][0:1] + ["Stress"] + self.models[2][1:]
 
     def prepare_data(self):
         pass
@@ -325,10 +328,7 @@ class OWMDS(OWWidget):
             self.Error.matrix_too_small.clear()
 
         self.matrix = matrix
-        if matrix is not None and matrix.row_items:
-            self.matrix_data = matrix.row_items
-        if matrix is None:
-            self.matrix_data = None
+        self.matrix_data = matrix.row_items if matrix is not None else None
         self._invalidated = True
 
     @Inputs.data_subset
