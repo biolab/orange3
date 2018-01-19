@@ -254,7 +254,7 @@ class TestDomainContextHandler(TestCase):
                           [x.category for x in w])
 
     def create_context(self, domain, values):
-        if not domain:
+        if domain is None:
             domain = Domain([])
 
         context = self.handler.new_context(domain,

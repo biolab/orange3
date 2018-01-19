@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
+
 import numpy as np
 
 from AnyQt.QtCore import QPoint
@@ -209,3 +211,6 @@ class TestOWNomogram(WidgetTest):
         # had problems on PyQt4
         m = MovableToolTip()
         m.show(QPoint(0, 0), "Some text.")
+
+if __name__ == "__main__":
+    unittest.main()
