@@ -2,7 +2,7 @@
 Concatenate
 ===========
 
-Concatenate (append) two or more datasets.
+Concatenate (append) two or more data sets.
 
 """
 
@@ -24,7 +24,7 @@ from Orange.widgets.widget import Input, Output
 
 class OWConcatenate(widget.OWWidget):
     name = "Concatenate"
-    description = "Concatenate (append) two or more datasets."
+    description = "Concatenate (append) two or more data sets."
     priority = 1111
     icon = "icons/Concatenate.svg"
 

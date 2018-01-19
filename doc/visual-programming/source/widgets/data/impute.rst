@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 -  **Learner for Imputation**
 
@@ -24,7 +24,7 @@ Signals
 
 -  **Data**
 
-   The same dataset as in the input, but with the missing values imputed.
+   The same data set as in the input, but with the missing values imputed.
 
 Description
 -----------
@@ -83,7 +83,7 @@ set by the user.
 Example
 -------
 
-To demonstrate how the **Impute** widget works, we played around with the *Iris* dataset
+To demonstrate how the **Impute** widget works, we played around with the *Iris* data set
 and deleted some of the data. We used the **Impute** widget and selected the 
 *Model-based imputer* to impute the missing values. In another :doc:`Data Table <../data/datatable>`, 
 we see how the question marks turned into distinct values ("Iris-setosa, "Iris-versicolor"). 

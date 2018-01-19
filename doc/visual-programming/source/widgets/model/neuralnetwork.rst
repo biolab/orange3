@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 -  **Preprocessor**
 
@@ -63,7 +63,7 @@ The **Neural Network** widget uses sklearn's `Multi\-layer Perceptron algorithm 
 Examples
 --------
 
-The first example is a classification task on *iris* dataset. We compare the results of **Neural Network** with the :doc:`Logistic Regression <../model/logisticregression>`.
+The first example is a classification task on *iris* data set. We compare the results of **Neural Network** with the :doc:`Logistic Regression <../model/logisticregression>`.
 
 .. figure:: images/NN-Example-Test.png
 

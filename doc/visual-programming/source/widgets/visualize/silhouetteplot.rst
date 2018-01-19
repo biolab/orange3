@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 **Outputs**
 
@@ -54,7 +54,7 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 Example
 -------
 
-In the snapshot below, we have decided to use the **Silhoutte Plot** on the *iris* dataset. We selected data intances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot <../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
+In the snapshot below, we have decided to use the **Silhoutte Plot** on the *iris* data set. We selected data intances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot <../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
 
 .. figure:: images/SilhouettePlot-Example.png
 

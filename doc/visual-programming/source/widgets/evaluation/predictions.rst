@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 -  **Predictors**
 
@@ -27,7 +27,7 @@ Signals
 Description
 -----------
 
-The widget receives a dataset and one or more predictors (classifiers,
+The widget receives a data set and one or more predictors (classifiers,
 not learning algorithms - see the example below). It outputs the data
 and the predictions.
 
@@ -35,7 +35,7 @@ and the predictions.
 
 1. Information on the input
 2. The user can select the options for classification. If *Show predicted class* is ticked, the appended data table provides information on predicted class. If *Show predicted probabilities* is ticked, the appended data table provides information on probabilities predicted by the classifiers. The user can also select the predicted class he or she wants displayed in the appended data table. The option *Draw distribution bars* provides a nice visualization of the predictions. 
-3. By ticking the *Show full dataset*, the user can append the entire data table to the *Predictions* widget. 
+3. By ticking the *Show full data set*, the user can append the entire data table to the *Predictions* widget. 
 4. Select the desired output.
 5. The appended data table
 6. Produce a report.
@@ -46,9 +46,9 @@ a simple demonstration at the bottom of the page. :doc:`Confusion Matrix <../eva
 is a related widget and although many things can be done with any of
 them, there are tasks for which one of them might be much more
 convenient than the other.
-The output of the widget is another dataset, where predictions are
+The output of the widget is another data set, where predictions are
 appended as new meta attributes. You can select which features you wish
-to output (original data, predictions, probabilities). The resulting dataset can be appended to the widget, but you can still choose to display it in a separate data table. 
+to output (original data, predictions, probabilities). The resulting data set can be appended to the widget, but you can still choose to display it in a separate data table. 
 
 Example
 -------

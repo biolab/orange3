@@ -50,7 +50,7 @@ while the diagonal may also be non-zero.
 
 1. *Element sorting* arranges elements in the map by
 
-   -  None (lists instances as found in the dataset)
+   -  None (lists instances as found in the data set)
    -  **Clustering** (clusters data by similarity)
    -  **Clustering with ordered leaves** (maximizes the sum of
       similarities of adjacent elements)
@@ -75,7 +75,7 @@ distances outside this interval and visualize the interesting part of
 the distribution.
 
 Below, we visualized the most correlated attributes (distances by
-columns) in the *heart disease* dataset by setting the color threshold
+columns) in the *heart disease* data set by setting the color threshold
 for high distances to the minimum. We get a predominantly black square,
 where attributes with the lowest distance scores are represented by
 a lighter shade of the selected color schema (in our case: orange). Beside the diagonal line, we see that in our example *ST by

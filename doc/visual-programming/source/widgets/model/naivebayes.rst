@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 -  **Preprocessor**
 

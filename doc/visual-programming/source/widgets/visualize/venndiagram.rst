@@ -13,7 +13,7 @@ Signals
 
 -  **Data**
 
-   An input dataset
+   An input data set
 
 **Outputs**:
 
@@ -25,10 +25,10 @@ Signals
 Description
 -----------
 
-The **Venn Diagram** widget displays logical relations between datasets. This
-projection shows two or more datasets represented by circles of
+The **Venn Diagram** widget displays logical relations between data sets. This
+projection shows two or more data sets represented by circles of
 different colors. The intersections are subsets that belong to more than one
-dataset. To further analyze or visualize the subset, click on the
+data set. To further analyze or visualize the subset, click on the
 intersection.
 
 .. figure:: images/venn-workflow.png
@@ -49,7 +49,7 @@ Examples
 
 The easiest way to use the **Venn Diagram** is to select data subsets and
 find matching instances in the visualization. We use the *breast-cancer*
-dataset to select two subsets with :doc:`Select Rows <../data/selectrows>` widget - the first
+data set to select two subsets with :doc:`Select Rows <../data/selectrows>` widget - the first
 subset is that of breast cancer patients aged between 40 and 49 and the
 second is that of patients with a tumor size between 20 and 29. The **Venn
 Diagram** helps us find instances that correspond to both criteria,

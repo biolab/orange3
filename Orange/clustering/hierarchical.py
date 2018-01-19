@@ -69,9 +69,9 @@ def squareform(X, mode="upper"):
 def data_clustering(data, distance=Euclidean,
                     linkage=AVERAGE):
     """
-    Return the hierarchical clustering of the dataset's rows.
+    Return the hierarchical clustering of the data set's rows.
 
-    :param Orange.data.Table data: Dataset to cluster.
+    :param Orange.data.Table data: Data set to cluster.
     :param Orange.distance.Distance distance: A distance measure.
     :param str linkage:
     """
@@ -82,9 +82,9 @@ def data_clustering(data, distance=Euclidean,
 def feature_clustering(data, distance=PearsonR,
                        linkage=AVERAGE):
     """
-    Return the hierarchical clustering of the dataset's columns.
+    Return the hierarchical clustering of the data set's columns.
 
-    :param Orange.data.Table data: Dataset to cluster.
+    :param Orange.data.Table data: Data set to cluster.
     :param Orange.distance.Distance distance: A distance measure.
     :param str linkage:
     """

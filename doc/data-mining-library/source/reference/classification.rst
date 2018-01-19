@@ -62,8 +62,8 @@ Naive Bayes
 .. autoclass:: NaiveBayesLearner
    :members:
 
-The following code loads lenses dataset (four discrete attributes and discrete
-class), constructs naive Bayesian learner, uses it on the entire dataset
+The following code loads lenses data set (four discrete attributes and discrete
+class), constructs naive Bayesian learner, uses it on the entire data set
 to construct a classifier, and then applies classifier to the first three
 data instances:
 
@@ -76,7 +76,7 @@ data instances:
            [ 0.17428279,  0.20342097,  0.62229625],
            [ 0.18633359,  0.79518516,  0.01848125]])
 
-For datasets that include continuous attributes,
+For data sets that include continuous attributes,
 
 .. _`Naive Bayes`: http://en.wikipedia.org/wiki/Naive_Bayes_classifier
 .. _`scikit-learn`: http://scikit-learn.org

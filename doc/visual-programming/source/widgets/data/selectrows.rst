@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   Dataset.
+   Data set.
 
 **Outputs**:
 
@@ -27,7 +27,7 @@ Signals
 Description
 -----------
 
-This widget selects a subset from an input dataset, based on user-defined
+This widget selects a subset from an input data set, based on user-defined
 conditions. Instances that match the selection rule are placed in the
 output *Matching Data* channel.
 
@@ -45,7 +45,7 @@ discrete, continuous and string attributes.
 2. Add a new condition to the list of conditions.
 3. Add all the possible variables at once.
 4. Remove all the listed variables at once.
-5. Information on the input dataset and information on instances that match the condition(s)
+5. Information on the input data set and information on instances that match the condition(s)
 6. Purge the output data.
 7. When the *Send automatically* box is ticked, all changes will be
    automatically communicated to other widgets.
@@ -63,14 +63,14 @@ Example
 In the workflow below, we used the *Zoo* data from the :doc:`File <../data/file>` widget and
 fed it into the **Select Rows** widget. In the widget, we chose to output only
 two animal types, namely fish and reptiles. We can inspect both the
-original dataset and the dataset with selected rows in the :doc:`Data
+original data set and the data set with selected rows in the :doc:`Data
 Table <../data/datatable>` widget.
 
 .. figure:: images/SelectRows-Example.png 
 
-In the next example, we used the data from the *Titanic* dataset and
+In the next example, we used the data from the *Titanic* data set and
 similarly fed it into the :doc:`Box Plot <../visualize/boxplot>` widget. We first observed the
-entire dataset based on survival. Then we selected only first class passengers in the **Select Rows** widget and fed it again into the :doc:`Box Plot <../visualize/boxplot>`.
+entire data set based on survival. Then we selected only first class passengers in the **Select Rows** widget and fed it again into the :doc:`Box Plot <../visualize/boxplot>`.
 There we could see all the first class passengers listed by their survival rate and grouped by gender. 
 
 .. figure:: images/SelectRows-Workflow.png

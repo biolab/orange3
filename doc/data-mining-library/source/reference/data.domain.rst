@@ -85,7 +85,7 @@ wrapping the numpy arrays into Orange's :obj:`~Orange.data.Table`. ::
             >>> domain
             [gender, age | salary]
 
-        This constructs a new domain with some features from the Iris dataset
+        This constructs a new domain with some features from the Iris data set
         and a new feature *color*. ::
 
             >>> new_domain = Domain(["sepal length",

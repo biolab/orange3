@@ -13,13 +13,13 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 **Outputs**:
 
 -  **Data**
 
-   A filtered dataset
+   A filtered data set
 
 Description
 -----------
@@ -78,7 +78,7 @@ Example
 The **Purge Domain** widget would typically appear after data filtering, for
 instance when selecting a subset of visualized examples.
 
-In the above schema, we play with the *adult.tab* dataset: we visualize
+In the above schema, we play with the *adult.tab* data set: we visualize
 it and select a portion of the data, which contains only four out of the
 five original classes. To get rid of the empty class, we put the data
 through **Purge Domain** before going on to the :doc:`Box Plot <../visualize/boxplot>` widget. The

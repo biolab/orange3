@@ -53,7 +53,7 @@ Pythagorean Tree can visualize both classification and regression trees. Below i
 Example
 -------
 
-The workflow from the screenshot below demonstrates the difference between :doc:`Tree Viewer <../visualize/treeviewer>` and Pythagorean Tree. They can both visualize :doc:`Tree <../model/tree>`, but Pythagorean visualization takes less space and is more compact, even for a small `Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_ dataset. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
+The workflow from the screenshot below demonstrates the difference between :doc:`Tree Viewer <../visualize/treeviewer>` and Pythagorean Tree. They can both visualize :doc:`Tree <../model/tree>`, but Pythagorean visualization takes less space and is more compact, even for a small `Iris flower <https://en.wikipedia.org/wiki/Iris_flower_data_set>`_ data set. For both visualization widgets, we have hidden the control area on the left by clicking on the splitter between control and visualization area.
 
 .. figure:: images/Pythagorean-Tree-comparison.png
 
@@ -63,7 +63,7 @@ Pythagorean Tree is interactive: click on any of the nodes (squares) to select t
     :scale: 80
     :align: center 
 
-The selected data instances are shown as a subset in the :doc:`Scatter Plot <../visualize/scatterplot>`, sent to the :doc:`Data Table <../data/datatable>` and examined in the :doc:`Box Plot <../visualize/boxplot>`. We have used brown-selected dataset in this example. The tree and scatter plot are shown below; the selected node in the tree has a black outline.
+The selected data instances are shown as a subset in the :doc:`Scatter Plot <../visualize/scatterplot>`, sent to the :doc:`Data Table <../data/datatable>` and examined in the :doc:`Box Plot <../visualize/boxplot>`. We have used brown-selected data set in this example. The tree and scatter plot are shown below; the selected node in the tree has a black outline.
 
 .. figure:: images/Pythagorean-Tree-scatterplot.png
 

@@ -284,7 +284,7 @@ class OWMDS(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        """Set the input dataset.
+        """Set the input data set.
 
         Parameters
         ----------

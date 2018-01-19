@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 **Outputs**:
 
 -  **Transformed Data**
 
-   A dataset with new, reduced coordinates.
+   A data set with new, reduced coordinates.
 
 Description
 -----------
@@ -80,6 +80,6 @@ From left to right, top to bottom: t-SNE, MDS, Isomap, Locally Linear Embedding 
 Example
 -------
 
-*Manifold Learning* widget transforms high-dimensional data into a lower dimensional approximation. This makes it great for visualizing datasets with many features. We used *voting.tab* to map 16-dimensional data onto a 2D graph. Then we used :doc:`Scatter Plot <../visualize/scatterplot>` to plot the embeddings.
+*Manifold Learning* widget transforms high-dimensional data into a lower dimensional approximation. This makes it great for visualizing data sets with many features. We used *voting.tab* to map 16-dimensional data onto a 2D graph. Then we used :doc:`Scatter Plot <../visualize/scatterplot>` to plot the embeddings.
 
 .. figure:: images/manifold-learning-example.png

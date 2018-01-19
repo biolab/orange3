@@ -429,7 +429,7 @@ class FittedDistance(Distance):
 
         Args:
             column (np.ndarray): column data
-            n_bins (int): maximal number of bins in the dataset
+            n_bins (int): maximal number of bins in the data set
 
         Returns:
             dist_missing_disc (np.ndarray): `dist_missing_disc[value]` is

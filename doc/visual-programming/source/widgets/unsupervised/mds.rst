@@ -17,13 +17,13 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 **Outputs**:
 
 -  **Data**
 
-   A dataset with MDS coordinates.
+   A data set with MDS coordinates.
 
 -  **Data subset**
 
@@ -39,7 +39,7 @@ well as possible. The perfect fit is typically impossible to obtain
 since the data is high-dimensional or the distances are not
 `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_.
 
-In the input, the widget needs either a dataset or a matrix of
+In the input, the widget needs either a data set or a matrix of
 distances. When visualizing distances between rows, you can also adjust
 the color of the points, change their shape, mark them, and output them
 upon selection.
@@ -83,11 +83,11 @@ corresponds to the sum of forces acting on it.
 3. Adjust the graph with *Zoom/Select*. The arrow enables you to select data instances. The magnifying glass enables zooming, which can be also done by scrolling in and out. The hand allows you to move the graph around. The rectangle readjusts the graph proportionally.
 4. Select the desired output:
 
-   -  **Original features only** (input dataset)
+   -  **Original features only** (input data set)
    -  **Coordinates only** (MDS coordinates)
-   -  **Coordinates as features** (input dataset + MDS coordinates as
+   -  **Coordinates as features** (input data set + MDS coordinates as
       regular attributes)
-   -  **Coordinates as meta attributes** (input dataset + MDS
+   -  **Coordinates as meta attributes** (input data set + MDS
       coordinates as meta attributes) 
 
 5. Sending the instances can be automatic if *Send selected automatically* is ticked. Alternatively, click *Send selected*.
@@ -102,7 +102,7 @@ recommend reading that widget's description as well.
 Example
 -------
 
-The above graphs were drawn using the following simple schema. We used the *iris.tab* dataset. Using the
+The above graphs were drawn using the following simple schema. We used the *iris.tab* data set. Using the
 :doc:`Distances <../unsupervised/distances>` widget we input the distance matrix into the **MDS**
 widget, where we see the *Iris* data displayed in a 2-dimensional plane.
 We can see the appended coordinates in the :doc:`Data Table <../data/datatable>` widget.

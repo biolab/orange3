@@ -322,7 +322,7 @@ def compute_CD(avranks, n, alpha="0.05", test="nemenyi"):
     """
     Returns critical difference for Nemenyi or Bonferroni-Dunn test
     according to given alpha (either alpha="0.05" or alpha="0.1") for average
-    ranks and number of tested datasets N. Test can be either "nemenyi" for
+    ranks and number of tested data sets N. Test can be either "nemenyi" for
     for Nemenyi two tailed test or "bonferroni-dunn" for Bonferroni-Dunn test.
     """
     k = len(avranks)

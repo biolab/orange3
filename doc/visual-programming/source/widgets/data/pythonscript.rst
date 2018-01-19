@@ -12,7 +12,7 @@ Signals
 
 -  **in\_data (Orange.data.Table)**
 
-   Input dataset bound to ``in_data`` variable in the script’s local
+   Input data set bound to ``in_data`` variable in the script’s local
    namespace.
 
 -  **in\_distance (Orange.core.SymMatrix)**
@@ -39,7 +39,7 @@ Signals
 
 -  **out\_data (Orange.data.Table)**
 
-   Dataset retrieved from ``out_data`` variable in the script’s local
+   Data set retrieved from ``out_data`` variable in the script’s local
    namespace after execution.
 
 -  **out\_distance (Orange.core.SymMatrix)**

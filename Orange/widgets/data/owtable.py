@@ -362,7 +362,7 @@ TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 class OWDataTable(widget.OWWidget):
     name = "Data Table"
-    description = "View the dataset in a spreadsheet."
+    description = "View the data set in a spreadsheet."
     icon = "icons/Table.svg"
     priority = 50
 

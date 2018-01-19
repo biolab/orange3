@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 **Outputs**:
 
 -  **Data**
 
-   Transposed dataset
+   Transposed data set
 
 Description
 -----------

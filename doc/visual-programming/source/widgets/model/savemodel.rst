@@ -36,6 +36,6 @@ Description
 Example
 -------
 
-When you want to save a custom-set model, feed the data to the model (e.g. :doc:`Logistic Regression <../model/logisticregression>`) and connect it to **Save Model**. Name the model; load it later into workflows with :doc:`Load Model <../model/loadmodel>`. Datasets used with **Load Model** have to contain compatible attributes.
+When you want to save a custom-set model, feed the data to the model (e.g. :doc:`Logistic Regression <../model/logisticregression>`) and connect it to **Save Model**. Name the model; load it later into workflows with :doc:`Load Model <../model/loadmodel>`. Data sets used with **Load Model** have to contain compatible attributes.
 
 .. figure:: images/SaveModel-example.png

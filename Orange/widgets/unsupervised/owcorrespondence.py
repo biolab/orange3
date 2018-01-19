@@ -60,7 +60,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     graph_name = "plot.plotItem"
 
     class Error(widget.OWWidget.Error):
-        empty_data = widget.Msg("Empty dataset")
+        empty_data = widget.Msg("Empty data set")
         no_disc_vars = widget.Msg("No categorical data")
 
     def __init__(self):

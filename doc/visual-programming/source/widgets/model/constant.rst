@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 -  **Preprocessor**
 
@@ -53,10 +53,10 @@ If you change the widget's name, you need to click *Apply*. Alternatively, tick 
 Examples
 --------
 
-In a typical classification example, we would use this widget to compare the scores of other learning algorithms (such as kNN) with the default scores. Use *iris* dataset and connect it to :doc:`Test & Score <../evaluation/testandscore>`. Then connect **Constant** and :doc:`kNN <../model/knn>` to :doc:`Test & Score <../evaluation/testandscore>` and observe how well :doc:`kNN <../model/knn>` performs against a constant baseline.
+In a typical classification example, we would use this widget to compare the scores of other learning algorithms (such as kNN) with the default scores. Use *iris* data set and connect it to :doc:`Test & Score <../evaluation/testandscore>`. Then connect **Constant** and :doc:`kNN <../model/knn>` to :doc:`Test & Score <../evaluation/testandscore>` and observe how well :doc:`kNN <../model/knn>` performs against a constant baseline.
 
 .. figure:: images/Constant-classification.png
 
-For regression, we use **Constant** to construct a predictor in :doc:`Predictions <../evaluation/predictions>`. We used the *housing* dataset. In **Predictions**, you can see that *Mean Learner* returns one (mean) value for all instances.
+For regression, we use **Constant** to construct a predictor in :doc:`Predictions <../evaluation/predictions>`. We used the *housing* data set. In **Predictions**, you can see that *Mean Learner* returns one (mean) value for all instances.
 
 .. figure:: images/Constant-regression.png

@@ -1302,7 +1302,7 @@ class CN2UnorderedLearner(_RuleLearner):
     by the relative frequency of the class corrected by the Laplace correction.
     After adding a rule, only the covered examples of that class are removed.
 
-    The code below loads the *iris* dataset (four continuous attributes
+    The code below loads the *iris* data set (four continuous attributes
     and a discrete class) and fits the learner.
 
     .. literalinclude:: code/classification-cn2ruleinduction1.py

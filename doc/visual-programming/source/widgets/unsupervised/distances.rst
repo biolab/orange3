@@ -3,7 +3,7 @@ Distances
 
 .. figure:: icons/distances.png
 
-Computes distances between rows/columns in a dataset.
+Computes distances between rows/columns in a data set.
 
 Signals
 -------
@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 **Outputs**:
 
@@ -24,7 +24,7 @@ Description
 -----------
 
 The **Distances** widget computes distances between rows or
-columns in a dataset.
+columns in a data set.
 
 .. figure:: images/Distances-stamped.png
 

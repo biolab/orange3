@@ -45,7 +45,7 @@ class OWPredictions(OWWidget):
     name = "Predictions"
     icon = "icons/Predictions.svg"
     priority = 200
-    description = "Display the predictions of models for an input dataset."
+    description = "Display the predictions of models for an input data set."
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -58,7 +58,7 @@ class OWPredictions(OWWidget):
                                     dynamic=False)
 
     class Warning(OWWidget.Warning):
-        empty_data = Msg("Empty dataset")
+        empty_data = Msg("Empty data set")
 
     class Error(OWWidget.Error):
         predictor_failed = \
@@ -123,7 +123,7 @@ class OWPredictions(OWWidget):
                      callback=self._update_prediction_delegate)
 
         box = gui.vBox(self.controlArea, "Data View")
-        gui.checkBox(box, self, "show_attrs", "Show full dataset",
+        gui.checkBox(box, self, "show_attrs", "Show full data set",
                      callback=self._update_column_visibility)
 
         box = gui.vBox(self.controlArea, "Output", spacing=-1)
@@ -184,7 +184,7 @@ class OWPredictions(OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        """Set the input dataset"""
+        """Set the input data set"""
         if data is not None and not len(data):
             data = None
             self.Warning.empty_data()

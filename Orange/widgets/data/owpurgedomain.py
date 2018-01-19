@@ -9,7 +9,7 @@ from Orange.widgets.widget import Input, Output
 
 class OWPurgeDomain(widget.OWWidget):
     name = "Purge Domain"
-    description = "Remove redundant values and features from the dataset. " \
+    description = "Remove redundant values and features from the data set. " \
                   "Sort values."
     icon = "icons/PurgeDomain.svg"
     category = "Data"
