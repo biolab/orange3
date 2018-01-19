@@ -41,7 +41,7 @@ _ItemSet = namedtuple("_ItemSet", ["key", "name", "title", "items"])
 class OWVennDiagram(widget.OWWidget):
     name = "Venn Diagram"
     description = "A graphical visualization of the overlap of data instances " \
-                  "from a collection of input data sets."
+                  "from a collection of input datasets."
     icon = "icons/VennDiagram.svg"
     priority = 280
 
@@ -102,7 +102,7 @@ class OWVennDiagram(widget.OWWidget):
         self.inputsBox.setEnabled(bool(self.useidentifiers))
 
         for i in range(5):
-            box = gui.vBox(self.inputsBox, "Data set #%i" % (i + 1),
+            box = gui.vBox(self.inputsBox, "Dataset #%i" % (i + 1),
                            addSpace=False)
             box.setFlat(True)
             model = itemmodels.VariableListModel(parent=self)
@@ -163,7 +163,7 @@ class OWVennDiagram(widget.OWWidget):
             # TODO: Allow setting more them 5 inputs and let the user
             # select the 5 to display.
             if len(self.data) == 5:
-                self.error("Venn diagram accepts at most five data sets.")
+                self.error("Venn diagram accepts at most five datasets.")
                 return
             # Add a new input
             self._add(key, data)
@@ -207,7 +207,7 @@ class OWVennDiagram(widget.OWWidget):
         self._createDiagram()
         if self.data:
             self.info.setText(
-                "{} data sets on input.\n".format(len(self.data)))
+                "{} datasets on input.\n".format(len(self.data)))
         else:
             self.info.setText("No data on input\n")
 
@@ -264,7 +264,7 @@ class OWVennDiagram(widget.OWWidget):
 
         item = self.inputsBox.layout().itemAt(index)
         box = item.widget()
-        box.setTitle("Data set: {}".format(name))
+        box.setTitle("Dataset: {}".format(name))
 
     def _remove(self, key):
         index = list(self.data.keys()).index(key)
@@ -284,9 +284,9 @@ class OWVennDiagram(widget.OWWidget):
         for i in range(5):
             box, _ = self._controlAtIndex(i)
             if i < len(inputs):
-                title = "Data set: {}".format(inputs[i].name)
+                title = "Dataset: {}".format(inputs[i].name)
             else:
-                title = "Data set #{}".format(i + 1)
+                title = "Dataset #{}".format(i + 1)
             box.setTitle(title)
 
         self._invalidate([key], incremental=False)
@@ -303,7 +303,7 @@ class OWVennDiagram(widget.OWWidget):
 
         item = self.inputsBox.layout().itemAt(index)
         box = item.widget()
-        box.setTitle("Data set: {}".format(name))
+        box.setTitle("Dataset: {}".format(name))
 
     def _itemsForInput(self, key):
         useidentifiers = self.useidentifiers or not self.samedomain
@@ -454,17 +454,17 @@ class OWVennDiagram(widget.OWWidget):
             self.info.setText("No data on input\n")
         else:
             self.info.setText(
-                "{0} data sets on input\n".format(len(self.data)))
+                "{0} datasets on input\n".format(len(self.data)))
 
         if self.useidentifiers:
             no_idx = ["#{}".format(i + 1)
                       for i, key in enumerate(self.data)
                       if not source_attributes(self.data[key].table.domain)]
             if len(no_idx) == 1:
-                self.warning("Data set {} has no suitable identifiers."
+                self.warning("Dataset {} has no suitable identifiers."
                              .format(no_idx[0]))
             elif len(no_idx) > 1:
-                self.warning("Data sets {} and {} have no suitable identifiers."
+                self.warning("Datasets {} and {} have no suitable identifiers."
                              .format(", ".join(no_idx[:-1]), no_idx[-1]))
 
     def _on_selectionChanged(self):

@@ -14,7 +14,7 @@ data storages, therefore changing them actually changes the data.
 Like data tables, every data instance is associated with a domain and its
 data is split into attributes, classes, meta attributes and the weight. Its
 constructor thus requires a domain and, optionally, data. For the following
-example, we borrow the domain from the Iris data set. ::
+example, we borrow the domain from the Iris dataset. ::
 
     >>> from Orange.data import Table, Instance
     >>> iris = Table("iris")

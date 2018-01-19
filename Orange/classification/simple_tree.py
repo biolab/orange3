@@ -70,7 +70,7 @@ class SimpleTreeLearner(Learner):
         - if "log2", then `skip_prob = 1 - log2(n_features) / n_features`
 
     bootstrap : data table, optional (default = False)
-        A bootstrap data set.
+        A bootstrap dataset.
 
     seed : int, optional (default = 42)
         Random seed.

@@ -23,7 +23,7 @@ be used to connect them with several output channels. That is, if a
 widget supports such a channel, several widgets can feed their input
 to that widget simultaneously.
 
-Say we want to build a widget that takes a data set and test
+Say we want to build a widget that takes a dataset and test
 various predictive modeling techniques on it. A widget has to have an
 input data channel, and this we know how to deal with from our
 :doc:`previous <tutorial-settings>` lesson. But, somehow differently, we
@@ -39,7 +39,7 @@ just in brief: learning curve is something that you can use to test
 some machine learning algorithm in trying to see how its performance
 depends on the size of the training set size. For this, one can draw a
 smaller subset of data, learn the classifier, and test it on remaining
-data set. To do this in a just way (by Salzberg, 1997), we perform
+dataset. To do this in a just way (by Salzberg, 1997), we perform
 k-fold cross validation but use only a proportion of the data for
 training. The output widget should then look something like:
 
@@ -86,7 +86,7 @@ and curve point for that channel id, marking for update in
 when we receive a learner for a new channel id.
 
 Note that in this widget the evaluation (k-fold cross
-validation) is carried out just once given the learner, data set and
+validation) is carried out just once given the learner, dataset and
 evaluation parameters, and scores are then derived from class
 probability estimates as obtained from the evaluation procedure. Which
 essentially means that switching from one to another scoring function
@@ -144,13 +144,13 @@ Default Channels (When Using Input Channels of the Same Type)
 
 Now, let's say we want to extend our learning curve widget such
 that it does the learning the same way as it used to, but can -
-provided that such data set is defined - test the
-learners (always) on the same, external data set. That is, besides the
-training data set, we need another channel of the same type but used
-for training data set. Notice, however, that most often we will only
-provide the training data set, so we would not like to be bothered (in
+provided that such dataset is defined - test the
+learners (always) on the same, external dataset. That is, besides the
+training dataset, we need another channel of the same type but used
+for training dataset. Notice, however, that most often we will only
+provide the training dataset, so we would not like to be bothered (in
 Orange Canvas) with the dialog which channel to connect to, as the
-training data set channel will be the default one.
+training dataset channel will be the default one.
 
 When enlisting the input channel of the same type, the default
 channels have a special flag in the channel specification list. So for

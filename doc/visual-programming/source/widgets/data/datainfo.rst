@@ -3,7 +3,7 @@ Data Info
 
 .. figure:: icons/data-info.png
 
-Displays information on a selected data set.
+Displays information on a selected dataset.
 
 Signals
 -------
@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A data set.
+   A dataset.
 
 -  **Selected Data**
 
@@ -25,12 +25,12 @@ Signals
 Description
 -----------
 
-A simple widget that presents information on data set size, features,
+A simple widget that presents information on dataset size, features,
 targets, meta attributes, and location. 
 
 .. figure:: images/data-info-stamped.png
 
-1. Information on data set size
+1. Information on dataset size
 2. Information on discrete and continuous features
 3. Information on targets
 4. Information on meta attributes
@@ -41,8 +41,8 @@ Example
 -------
 
 Below, we compare the basic statistics of two **Data Info** widgets - one
-with information on the entire data set and the other with
+with information on the entire dataset and the other with
 information on the (manually) selected subset from the :doc:`Scatterplot <../visualize/scatterplot>`
-widget. We used the *Iris* data set. 
+widget. We used the *Iris* dataset. 
 
 .. figure:: images/DataInfo-Example.png

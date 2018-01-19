@@ -17,7 +17,7 @@ class MajorityLearner(Learner):
 
     In the special case of uniform class distribution within the training data,
     class value is selected randomly. In order to produce consistent results on
-    the same data set, this value is selected based on hash of the class vector.
+    the same dataset, this value is selected based on hash of the class vector.
     """
     def fit_storage(self, dat):
         if not dat.domain.has_discrete_class:

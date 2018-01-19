@@ -3,7 +3,7 @@ Feature Constructor
 
 .. figure:: icons/feature-constructor.png
 
-Add new features to your data set.
+Add new features to your dataset.
 
 Signals
 -------
@@ -12,19 +12,19 @@ Signals
 
 -  **Data**
 
-A data set
+A dataset
 
 **Outputs**:
 
 -  **Data**
 
-A modified data set
+A modified dataset
 
 Description
 -----------
 
 The **Feature Constructor** allows you to manually add features (columns)
-into your data set. The new feature can be a computation of an existing
+into your dataset. The new feature can be a computation of an existing
 one or a combination of several (addition, subtraction, etc.). You can
 choose what type of feature it will be (discrete, continuous or string)
 and what its parameters are (name, value, expression). For continuous
@@ -71,10 +71,10 @@ Example
 
 With the **Feature Constructor** you can easily adjust or combine existing
 features into new ones. Below, we added one new discrete feature to the
-*Titanic* data set. We created a new attribute called *Financial status*
+*Titanic* dataset. We created a new attribute called *Financial status*
 and set the values to be *rich* if the person belongs to the first class
 (status = first) and *not rich* for everybody else. We can see the new
-data set with :doc:`Data Table<../data/datatable>` widget.
+dataset with :doc:`Data Table<../data/datatable>` widget.
 
 .. figure:: images/FeatureConstructor-Example.png
 

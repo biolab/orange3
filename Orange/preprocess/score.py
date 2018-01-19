@@ -181,14 +181,14 @@ class LearnerScorer(Scorer):
 
 class ClassificationScorer(Scorer):
     """
-    Base class for feature scores in a class-labeled data set.
+    Base class for feature scores in a class-labeled dataset.
 
     Parameters
     ----------
     feature : int, string, Orange.data.Variable
         Feature id
     data : Orange.data.Table
-        Data set
+        Dataset
 
     Attributes
     ----------

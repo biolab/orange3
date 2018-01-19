@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   Data for training and, if there is no separate test data set, also
+   Data for training and, if there is no separate test dataset, also
    testing.
 
 -  **Test Data**
@@ -59,10 +59,10 @@ than one widget to test multiple learners with the same procedures.
    -  **Random sampling** randomly splits the data into the training and
       testing set in the given proportion (e.g. 70:30); the whole procedure
       is repeated for a specified number of times.
-   -  **Test on train data** uses the whole data set for training and then
+   -  **Test on train data** uses the whole dataset for training and then
       for testing. This method practically always gives wrong results.
    -  **Test on test data**: the above methods use the data from *Data*
-      signal only. To input another data set with testing examples (for
+      signal only. To input another dataset with testing examples (for
       instance from another file or some data selected in another widget),
       we select *Separate Test Data* signal in the communication channel
       and select Test on test data.
@@ -101,11 +101,11 @@ Regression
 Example
 -------
 
-In a typical use of the widget, we give it a data set and a few learning
+In a typical use of the widget, we give it a dataset and a few learning
 algorithms and we observe their performance in the table inside the
 **Test & Score** widget and in the :doc:`ROC <../evaluation/rocanalysis>`. The data is often
 preprocessed before testing; in this case we did some manual feature
-selection (:doc:`Select Columns <../data/selectcolumns>` widget) on *Titanic* data set, where we
+selection (:doc:`Select Columns <../data/selectcolumns>` widget) on *Titanic* dataset, where we
 want to know only the sex and status of the survived and omit the age.
 
 .. figure:: images/TestLearners-example-classification.png

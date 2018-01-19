@@ -12,11 +12,11 @@ Signals
 
 -  **Primary Data**
 
-   A data set that defines the attribute set.
+   A dataset that defines the attribute set.
 
 -  **Additional Data**
 
-   An additional data set.
+   An additional dataset.
 
 **Outputs**:
 
@@ -25,14 +25,14 @@ Signals
 Description
 -----------
 
-The widget concatenates multiple sets of instances (data sets). The
+The widget concatenates multiple sets of instances (datasets). The
 merge is “vertical”, in a sense that two sets of 10 and 5 instances
 yield a new set of 15 instances.
 
 .. figure:: images/Concatenate-stamped.png
 
 1. Set the attribute merging method.
-2. Add the identification of source data sets to the output data set.
+2. Add the identification of source datasets to the output dataset.
 3. Produce a report. 
 4. If *Apply automatically* is ticked, changes are communicated automatically. Otherwise, click *Apply*. 
 
@@ -46,13 +46,13 @@ tables.
 Example
 -------
 
-As shown below, the widget can be used for merging data from two separate files. Let's say we have two data sets with the
+As shown below, the widget can be used for merging data from two separate files. Let's say we have two datasets with the
 same attributes, one containing instances from the first experiment and the other
 instances from the second experiment and we wish to join the two data
-tables together. We use the **Concatenate** widget to merge the data sets by
+tables together. We use the **Concatenate** widget to merge the datasets by
 attributes (appending new rows under existing attributes).
 
-Below, we used a modified *Zoo* data set. In the
+Below, we used a modified *Zoo* dataset. In the
 :download:`first <../data/zoo-first.tab>` :doc:`File<../data/file>` widget, we loaded only the animals
 beginning with the letters A and B and in the :download:`second <../data/zoo-second.tab>` 
 one only the animals beginning with the letter C. Upon concatenation, we

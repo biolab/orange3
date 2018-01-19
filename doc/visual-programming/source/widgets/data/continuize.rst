@@ -12,19 +12,19 @@ Signals
 
 -  **Data**
 
-   Input data set
+   Input dataset
 
 **Outputs**:
 
 -  **Data**
 
-   Output data set
+   Output dataset
 
 Description
 -----------
 
-The **Continuize** widget receives a data set in the input and outputs the
-same data set in which the discrete attributes (including binary attributes)
+The **Continuize** widget receives a dataset in the input and outputs the
+same dataset in which the discrete attributes (including binary attributes)
 are replaced with continuous ones.
 
 .. figure:: images/Continuize-stamped.png
@@ -60,7 +60,7 @@ Examples
 --------
 
 First, let's see what is the output of the **Continuize** widget. We feed the
-original data (the *Heart disease* data set) into the :doc:`Data Table <../data/datatable>` and see how they look like. Then
+original data (the *Heart disease* dataset) into the :doc:`Data Table <../data/datatable>` and see how they look like. Then
 we continuize the discrete values and observe them in another :doc:`Data
 Table <../data/datatable>`.
 

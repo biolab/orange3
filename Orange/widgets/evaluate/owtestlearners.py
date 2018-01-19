@@ -197,13 +197,13 @@ class OWTestLearners(OWWidget):
         settings.Setting(set(chain(*BUILTIN_ORDER.values())))
 
     class Error(OWWidget.Error):
-        train_data_empty = Msg("Train data set is empty.")
-        test_data_empty = Msg("Test data set is empty.")
+        train_data_empty = Msg("Train dataset is empty.")
+        test_data_empty = Msg("Test dataset is empty.")
         class_required = Msg("Train data input requires a target variable.")
         too_many_classes = Msg("Too many target variables.")
         class_required_test = Msg("Test data input requires a target variable.")
         too_many_folds = Msg("Number of folds exceeds the data size")
-        class_inconsistent = Msg("Test and train data sets "
+        class_inconsistent = Msg("Test and train datasets "
                                  "have different target variables.")
         memory_error = Msg("Not enough memory.")
         no_class_values = Msg("Target variable has no values.")

@@ -3,7 +3,7 @@ Merge Data
 
 .. figure:: icons/merge-data.png
 
-Merges two data sets, based on values of selected attributes.
+Merges two datasets, based on values of selected attributes.
 
 Signals
 -------
@@ -12,11 +12,11 @@ Signals
 
 -  **Data**
 
-   Attribute-valued data set.
+   Attribute-valued dataset.
 
 -  **Extra Data**
 
-   Attribute-valued data set.
+   Attribute-valued dataset.
 
 **Outputs**:
 
@@ -28,8 +28,8 @@ Signals
 Description
 -----------
 
-The **Merge Data** widget is used to horizontally merge two data sets, based
-on values of selected attributes. In the input, two data sets are
+The **Merge Data** widget is used to horizontally merge two datasets, based
+on values of selected attributes. In the input, two datasets are
 required, data and extra data. The widget allows selection of an attribute from each
 domain, which will be used to perform the merging. The widget produces
 one output. It corresponds to instances from the input data
@@ -59,7 +59,7 @@ Data was to be found, the attribute is removed from available merging attributes
 Example
 -------
 
-Merging two data sets results in appending new attributes to the
+Merging two datasets results in appending new attributes to the
 original file, based on a selected common attribute. In the example
 below, we wanted to merge the **zoo.tab** file containing only factual
 data with :download:`zoo-with-images.tab <../data/zoo-with-images.tab>`

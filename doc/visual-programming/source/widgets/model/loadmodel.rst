@@ -31,6 +31,6 @@ Description
 Example
 -------
 
-When you want to use a custom-set model that you've saved before, open the **Load Model** widget and select the desired file with the *Browse* icon. This widget loads the exisiting model into :doc:`Predictions <../evaluation/predictions>` widget. Data sets used with **Load Model** have to contain compatible attributes!
+When you want to use a custom-set model that you've saved before, open the **Load Model** widget and select the desired file with the *Browse* icon. This widget loads the exisiting model into :doc:`Predictions <../evaluation/predictions>` widget. Datasets used with **Load Model** have to contain compatible attributes!
 
 .. figure:: images/LoadModel-example.png

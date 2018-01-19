@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-   An input data set. 
+   An input dataset. 
 
 **Outputs**:
 
 - **Data**
 
-   A data set with a new color legend. 
+   A dataset with a new color legend. 
 
 Description
 -----------
@@ -65,7 +65,7 @@ Numeric variables
 Example
 -------
 
-We chose to work with the *Iris* data set. We opened the color palette and selected three new colors for the three types of Irises. Then we opened the :doc:`Scatter Plot<../visualize/scatterplot>` widget and viewed the changes made to the scatter plot. 
+We chose to work with the *Iris* dataset. We opened the color palette and selected three new colors for the three types of Irises. Then we opened the :doc:`Scatter Plot<../visualize/scatterplot>` widget and viewed the changes made to the scatter plot. 
 
 .. figure:: images/Color-Example-1.png
 

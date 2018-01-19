@@ -78,14 +78,14 @@ corresponding `dendrogram <https://en.wikipedia.org/wiki/Dendrogram>`_.
 Examples
 --------
 
-The workflow below shows the output of **Hierarchical Clustering** for the *Iris* data set in :doc:`Data Table <../data/datatable>` widget. We see that if we choose
+The workflow below shows the output of **Hierarchical Clustering** for the *Iris* dataset in :doc:`Data Table <../data/datatable>` widget. We see that if we choose
 *Append cluster IDs* in hierarchical clustering, we can see an
 additional column in the :doc:`Data Table <../data/datatable>` named *Cluster*. This is a way
 to check how hierarchical clustering clustered individual instances.
 
 .. figure:: images/HierarchicalClustering-Example.png
 
-In the second example, we loaded the *Iris* data set again, but this time
+In the second example, we loaded the *Iris* dataset again, but this time
 we added the :doc:`Scatter Plot <../visualize/scatterplot>`, showing all the instances from the
 :doc:`File<../data/file>` widget, while at the same time receiving the selected instances
 signal from **Hierarchical Clustering**. This way we can observe the

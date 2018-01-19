@@ -45,7 +45,7 @@ def ensure_local(index_url, file_path, local_cache_path,
 
 def format_info(n_all, n_cached):
     plural = lambda x: '' if x == 1 else 's'
-    return "{} data set{}\n{} data set{} cached".format(
+    return "{} dataset{}\n{} dataset{} cached".format(
         n_all, plural(n_all), n_cached if n_cached else 'No', plural(n_cached))
 
 
@@ -90,8 +90,8 @@ class NumericalDelegate(QStyledItemDelegate):
 
 
 class OWDataSets(widget.OWWidget):
-    name = "Data Sets"
-    description = "Load a data set from an online repository"
+    name = "Datasets"
+    description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
@@ -103,16 +103,16 @@ class OWDataSets(widget.OWWidget):
     DATASET_DIR = "datasets"
 
     class Error(widget.OWWidget.Error):
-        no_remote_datasets = Msg("Could not fetch data set list")
+        no_remote_datasets = Msg("Could not fetch dataset list")
 
     class Warning(widget.OWWidget.Warning):
-        only_local_datasets = Msg("Could not fetch data sets list, only local "
-                                  "cached data sets are shown")
+        only_local_datasets = Msg("Could not fetch datasets list, only local "
+                                  "cached datasets are shown")
 
     class Outputs:
         data = Output("Data", Orange.data.Table)
 
-    #: Selected data set id
+    #: Selected dataset id
     selected_id = settings.Setting(None)   # type: Optional[str]
 
     auto_commit = settings.Setting(False)  # type: bool
@@ -331,7 +331,7 @@ class OWDataSets(widget.OWWidget):
 
     def selected_dataset(self):
         """
-        Return the current selected data set info or None if not selected
+        Return the current selected dataset info or None if not selected
 
         Returns
         -------
@@ -354,7 +354,7 @@ class OWDataSets(widget.OWWidget):
             proxyModel.setFilterFixedString(filter_string)
 
     def __on_selection(self):
-        # Main data sets view selection has changed
+        # Main datasets view selection has changed
         rows = self.view.selectionModel().selectedRows(0)
         assert 0 <= len(rows) <= 1
         current = rows[0] if rows else None  # type: Optional[QModelIndex]

@@ -13,11 +13,11 @@ Signals
 
 -  **Data**
 
-   An input data set.
+   An input dataset.
 
 -  **Data Subset**
 
-   A subset of instances from the input data set.
+   A subset of instances from the input dataset.
 
 **Outputs**:
 
