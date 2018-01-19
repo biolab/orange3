@@ -386,8 +386,8 @@ class UserSettingsDialog(QMainWindow):
         conda.layout().setContentsMargins(0, 0, 0, 0)
 
         cb_conda_install = QCheckBox(self.tr("Install add-ons with conda"), self,
-                                     objectName="allow-conda-experimental")
-        self.bind(cb_conda_install, "checked", "add-ons/allow-conda-experimental")
+                                     objectName="allow-conda")
+        self.bind(cb_conda_install, "checked", "add-ons/allow-conda")
         conda.layout().addWidget(cb_conda_install)
 
         form.addRow(self.tr("Conda"), conda)
