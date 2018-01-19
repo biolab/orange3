@@ -1595,7 +1595,13 @@ class CanvasMainWindow(QMainWindow):
             self.__update_from_settings()
 
     def open_addons(self):
-        from .addons import AddonManagerDialog
+        from .addons import AddonManagerDialog, have_install_permissions
+        if not have_install_permissions():
+            QMessageBox(QMessageBox.Warning,
+                        "Add-ons: insufficient permissions",
+                        "Insufficient permissions to install add-ons. Try starting Orange "
+                        "as a system administrator or install Orange in user folders.",
+                        parent=self).exec_()
         dlg = AddonManagerDialog(self, windowTitle=self.tr("Add-ons"))
         dlg.setAttribute(Qt.WA_DeleteOnClose)
         return dlg.exec_()
