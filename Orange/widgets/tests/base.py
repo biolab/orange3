@@ -394,7 +394,7 @@ class ParameterMapping(BaseParameterMapping):
 
     @staticmethod
     def get_gui_element(widget, attribute):
-        return widget.controlled_attributes[attribute][0].control
+        return getattr(widget.controls, attribute)
 
     @classmethod
     def from_attribute(cls, widget, attribute, parameter=None):
