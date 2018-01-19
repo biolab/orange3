@@ -14,7 +14,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 -  **Preprocessor**
 
@@ -52,7 +52,7 @@ Description
 Examples
 --------
 
-For classification tasks, we use *iris* dataset. Connect it to :doc:`Predictions <../evaluation/predictions>`. Then, connect :doc:`File <../data/file>` to **Random Forest** and :doc:`Tree <../model/tree>` and connect them further to :doc:`Predictions <../evaluation/predictions>`. Finally, observe the predictions for the two models.
+For classification tasks, we use *iris* data set. Connect it to :doc:`Predictions <../evaluation/predictions>`. Then, connect :doc:`File <../data/file>` to **Random Forest** and :doc:`Tree <../model/tree>` and connect them further to :doc:`Predictions <../evaluation/predictions>`. Finally, observe the predictions for the two models.
 
 .. figure:: images/RandomForest-classification.png
 

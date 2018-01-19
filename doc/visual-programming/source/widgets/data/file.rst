@@ -24,9 +24,9 @@ Description
 
 The **File** widget :doc:`reads the input data
 file <../../loading-your-data/index>` (data table
-with data instances) and sends the dataset to its output channel.
+with data instances) and sends the data set to its output channel.
 The history of most recently opened files is maintained in the widget.
-The widget also includes a directory with sample datasets that come
+The widget also includes a directory with sample data sets that come
 pre-installed with Orange.
 
 The widget reads data from Excel (**.xlsx**), simple tab-delimited
@@ -38,9 +38,9 @@ The widget reads data from Excel (**.xlsx**), simple tab-delimited
 2. Browse for a data file.
 3. Reloads currently selected data file.
 4. Insert data from URL adresses, including data from Google Sheets. 
-5. Information on the loaded dataset: dataset size, number and types of data features.
-6. Additional information on the features in the dataset. Features can be edited by double-clicking on them. The user can change the attribute names, select the type of variable per each attribute (*Continuous*, *Nominal*, *String*, *Datetime*), and choose how to further define the attributes (as *Features*, *Targets* or *Meta*). The user can also decide to ignore an attribute. 
-7. Browse documentation datasets.
+5. Information on the loaded data set: data set size, number and types of data features.
+6. Additional information on the features in the data set. Features can be edited by double-clicking on them. The user can change the attribute names, select the type of variable per each attribute (*Continuous*, *Nominal*, *String*, *Datetime*), and choose how to further define the attributes (as *Features*, *Targets* or *Meta*). The user can also decide to ignore an attribute. 
+7. Browse documentation data sets.
 8. Produce a report. 
 
 Example

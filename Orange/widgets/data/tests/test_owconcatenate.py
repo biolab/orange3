@@ -50,7 +50,7 @@ class TestOWConcatenate(WidgetTest):
         outvars = output.domain.variables
         self.assertLess(set(self.iris.domain.variables), set(outvars))
         self.assertLess(set(self.titanic.domain.variables), set(outvars))
-        # the first part of the dataset is iris, the second part is titanic
+        # the first part of the data set is iris, the second part is titanic
         np.testing.assert_equal(self.iris.X, output.X[:len(self.iris), :-3])
         self.assertTrue(np.isnan(output.X[:len(self.iris), -3:]).all())
         np.testing.assert_equal(self.titanic.X, output.X[len(self.iris):, -3:])

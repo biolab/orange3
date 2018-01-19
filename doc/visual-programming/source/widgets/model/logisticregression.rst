@@ -14,7 +14,7 @@ Signals
 
 -  **Data**
 
-   A dataset
+   A data set
 
 - **Preprocessor**
 
@@ -53,8 +53,8 @@ It only works for classification tasks.
 Example
 -------
 
-The widget is used just as any other widget for inducing a classifier. This is an example demonstrating prediction results with logistic regression on the *hayes-roth* dataset. We first load *hayes-roth_learn* in the :doc:`File <../data/file>` widget and pass the data to **Logistic Regression**. Then we pass the trained model to :doc:`Predictions <../evaluation/predictions>`.
+The widget is used just as any other widget for inducing a classifier. This is an example demonstrating prediction results with logistic regression on the *hayes-roth* data set. We first load *hayes-roth_learn* in the :doc:`File <../data/file>` widget and pass the data to **Logistic Regression**. Then we pass the trained model to :doc:`Predictions <../evaluation/predictions>`.
 
-Now we want to predict class value on a new dataset. We load *hayes-roth_test* in the second **File** widget and connect it to **Predictions**. We can now observe class values predicted with **Logistic Regression** directly in **Predictions**.
+Now we want to predict class value on a new data set. We load *hayes-roth_test* in the second **File** widget and connect it to **Predictions**. We can now observe class values predicted with **Logistic Regression** directly in **Predictions**.
 
 .. figure:: images/LogisticRegression-classification.png

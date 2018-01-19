@@ -165,7 +165,7 @@ class OWSilhouettePlot(widget.OWWidget):
     @check_sql_input
     def set_data(self, data):
         """
-        Set the input dataset.
+        Set the input data set.
         """
         self.closeContext()
         self.clear()

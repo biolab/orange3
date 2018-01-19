@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input dataset
+   An input data set
 
 **Outputs**:
 
@@ -52,7 +52,7 @@ Example
 Below, you can see an example workflow for the **Scatter Map** widget. Notice
 that the widget only works with continuous data, so you need to first
 continuize the data attributes you want to visualize. The Scatter map below
-displays two attributes from the *Iris* dataset, namely the petal width
+displays two attributes from the *Iris* data set, namely the petal width
 and petal length. Here, we can see the distribution of width and length
 values per Iris type. You can see that the variety *Iris setosa* is
 distinctly separated from the other two varieties by petal width and

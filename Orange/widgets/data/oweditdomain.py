@@ -423,7 +423,7 @@ class OWEditDomain(widget.OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        """Set input dataset."""
+        """Set input data set."""
         self.closeContext()
         self.clear()
         self.data = data

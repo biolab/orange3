@@ -22,7 +22,7 @@ Signals
 
 -  **Data**
 
-   Dataset with an additional attribute for selection labels.
+   Data set with an additional attribute for selection labels.
 
 Description
 -----------
@@ -68,7 +68,7 @@ Clicking on any node will output the related data instances. This is explored in
 
 .. figure:: images/TreeViewer-selection.png
 
-Finally, **Tree Viewer** can be used also for visualizing regression trees. Connect :doc:`Random Forest <../model/randomforest>` to :doc:`File <../data/file>` widget using *housing.tab* dataset. Then connect :doc:`Pythagorean Forest <../visualize/pythagoreanforest>` to **Random Forest**. In **Pythagorean Forest** select a regression tree you wish to further analyze and pass it to the **Tree Viewer**. The widget will display the constructed tree. For visualizing larger trees, especially for regression, :doc:`Pythagorean Tree <../visualize/pythagoreantree>` could be a better option.
+Finally, **Tree Viewer** can be used also for visualizing regression trees. Connect :doc:`Random Forest <../model/randomforest>` to :doc:`File <../data/file>` widget using *housing.tab* data set. Then connect :doc:`Pythagorean Forest <../visualize/pythagoreanforest>` to **Random Forest**. In **Pythagorean Forest** select a regression tree you wish to further analyze and pass it to the **Tree Viewer**. The widget will display the constructed tree. For visualizing larger trees, especially for regression, :doc:`Pythagorean Tree <../visualize/pythagoreantree>` could be a better option.
 
 .. figure:: images/TreeViewer-regression.png
 

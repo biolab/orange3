@@ -13,11 +13,11 @@ Signals
 
 -  **Data**
 
-   An input dataset.
+   An input data set.
 
 -  **Data Subset**
 
-   A subset of instances from the input dataset.
+   A subset of instances from the input data set.
 
 -  **Features**
 
@@ -45,7 +45,7 @@ value of the y-axis attribute determining the position on the vertical axis.
 Various properties of the graph, like color, size and shape of the
 points, axis titles, maximum point size and jittering can be adjusted on
 the left side of the widget. A snapshot below shows the scatterplot of the
-*Iris* dataset with the coloring matching of the class attribute.
+*Iris* data set with the coloring matching of the class attribute.
 
 .. figure:: images/Scatterplot-Iris-stamped.png
 
@@ -82,7 +82,7 @@ the left side of the widget. A snapshot below shows the scatterplot of the
 For discrete attributes, jittering circumvents the overlap of points
 which have the same value for both axes, and therefore the density of
 points in the region corresponds better to the data. As an example, the
-scatterplot for the Titanic dataset, reporting on the gender of the
+scatterplot for the Titanic data set, reporting on the gender of the
 passengers and the traveling class is shown below; without jittering,
 the scatterplot would display only eight distinct points.
 
@@ -96,7 +96,7 @@ density* and *Show regression line* boxes are ticked.
 Intelligent Data Visualization
 ------------------------------
 
-If a dataset has many attributes, it is impossible to manually scan
+If a data set has many attributes, it is impossible to manually scan
 through all the pairs to find interesting or useful scatterplots. Orange
 implements intelligent data visualization with the **Find Informative Projections**
 option in the widget. The goal of optimization is to find scatterplot
@@ -108,7 +108,7 @@ list of attribute pairs by average classification accuracy score.
 
 Below, there is an example demonstrating the utility of ranking. The
 first scatterplot projection was set as the default sepal width to sepal
-length plot (we used the Iris dataset for simplicity). Upon running *Find Informative Projections* optimization, the scatterplot converted to a much better
+length plot (we used the Iris data set for simplicity). Upon running *Find Informative Projections* optimization, the scatterplot converted to a much better
 projection of petal width to petal length plot.
 
 .. figure:: images/ScatterPlotExample-Ranking.png

@@ -11,10 +11,10 @@ and other properties. Descriptors serve three main purposes:
   the internal representation and back (e.g. when writing files or printing
   out);
 
-- identification of variables: two variables from different datasets are
+- identification of variables: two variables from different data sets are
   considered to be the same if they have the same descriptor;
 
-- conversion of values between domains or datasets, for instance from
+- conversion of values between domains or data sets, for instance from
   continuous to discrete data, using a pre-computed transformation.
 
 Descriptors are most often constructed when loading the data from files. ::
@@ -50,9 +50,9 @@ Constructors
 ------------
 
 Orange maintains lists of existing descriptors for variables. This facilitates
-the reuse of descriptors: if two datasets refer to the same variables, they
+the reuse of descriptors: if two data sets refer to the same variables, they
 should be assigned the same descriptors so that, for instance, a model
-trained on one dataset can make predictions for the other.
+trained on one data set can make predictions for the other.
 
 Variable descriptors are seldom constructed in user scripts. When needed,
 this can be done by calling the constructor directly or by calling the class

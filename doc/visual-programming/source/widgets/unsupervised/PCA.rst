@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 **Outputs**:
 
@@ -29,7 +29,7 @@ Description
 
 `Principal Component Analysis <https://en.wikipedia.org/wiki/Principal_component_analysis>`_
 (PCA) computes the PCA linear transformation of the input data. It
-outputs either a transformed dataset with weights of individual
+outputs either a transformed data set with weights of individual
 instances or weights of principal components.
 
 .. figure:: images/PCA-stamped.png
@@ -53,9 +53,9 @@ line in the graph.
 Examples
 --------
 
-**PCA** can be used to simplify visualizations of large datasets. Below,
-we used the *Iris* dataset to show how we can improve the visualization of
-the dataset with PCA. The transformed data in the :doc:`Scatter Plot <../visualize/scatterplot>` show a
+**PCA** can be used to simplify visualizations of large data sets. Below,
+we used the *Iris* data set to show how we can improve the visualization of
+the data set with PCA. The transformed data in the :doc:`Scatter Plot <../visualize/scatterplot>` show a
 much clearer distinction between classes than the default settings.
 
 .. figure:: images/PCAExample.png

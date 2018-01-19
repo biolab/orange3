@@ -52,7 +52,7 @@ class TestOWDataSets(WidgetTest):
            Mock(return_value="iris.tab"))
     def test_download_iris(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
-        # select the only dataset
+        # select the only data set
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
         w.unconditional_commit()

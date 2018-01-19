@@ -3,7 +3,7 @@ Rank
 
 .. figure:: icons/rank.png
 
-Ranking of attributes in classification or regression datasets.
+Ranking of attributes in classification or regression data sets.
 
 Signals
 -------
@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input dataset.
+   An input data set.
 
 - **Scorer**  (multiple)
 
@@ -23,12 +23,12 @@ Signals
 
 -  **Reduced Data**
 
-   A dataset whith selected attributes.
+   A data set whith selected attributes.
 
 Description
 -----------
 
-The **Rank** widget considers class-labeled datasets (classification or
+The **Rank** widget considers class-labeled data sets (classification or
 regression) and scores the attributes according to their correlation
 with the class.
 
@@ -67,7 +67,7 @@ informative ones:
 
 .. figure:: images/Rank-Select-Schema.png
 
-Notice how the widget outputs a dataset that includes only the
+Notice how the widget outputs a data set that includes only the
 best-scored attributes:
 
 .. figure:: images/Rank-Select-Widgets.png
@@ -79,12 +79,12 @@ What follows is a bit more complicated example. In the workflow below, we
 first split the data into a training set and a test set. In the upper branch, the
 training data passes through the **Rank** widget to select the most
 informative attributes, while in the lower branch there is no feature
-selection. Both feature selected and original datasets are passed to
+selection. Both feature selected and original data sets are passed to
 their own :doc:`Test & Score <../evaluation/testandscore>` widgets, which develop a *Naive Bayes*
 classifier and score it on a test set.
 
 .. figure:: images/Rank-and-Test.png
 
-For datasets with many features, a naive Bayesian classifier feature
+For data sets with many features, a naive Bayesian classifier feature
 selection, as shown above, would often yield a better predictive
 accuracy.

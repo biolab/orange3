@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A dataset. 
+   A data set. 
 
 -  **Preprocessor**
 
@@ -60,10 +60,10 @@ The `AdaBoost <https://en.wikipedia.org/wiki/AdaBoost>`_ (short for "Adaptive bo
 Examples
 --------
 
-For classification, we loaded the *iris* dataset. We used *AdaBoost*, :doc:`Tree <../model/tree>` and :doc:`Logistic Regression <../model/logisticregression>` and evaluated the models' performance in :doc:`Test & Score <../evaluation/testandscore>`.
+For classification, we loaded the *iris* data set. We used *AdaBoost*, :doc:`Tree <../model/tree>` and :doc:`Logistic Regression <../model/logisticregression>` and evaluated the models' performance in :doc:`Test & Score <../evaluation/testandscore>`.
 
 .. figure:: images/AdaBoost-classification.png
 
-For regression, we loaded the *housing* dataset, sent the data instances to two different models (**AdaBoost** and :doc:`Tree <../model/tree>`) and output them to the :doc:`Predictions <../evaluation/predictions>` widget. 
+For regression, we loaded the *housing* data set, sent the data instances to two different models (**AdaBoost** and :doc:`Tree <../model/tree>`) and output them to the :doc:`Predictions <../evaluation/predictions>` widget. 
 
 .. figure:: images/AdaBoost-regression.png

@@ -130,7 +130,7 @@ class Impute(Preprocess):
 
     def __call__(self, data):
         """
-        Apply an imputation method to the given dataset. Returns a new
+        Apply an imputation method to the given data set. Returns a new
         data table with missing values replaced by their imputations.
 
         Parameters
@@ -177,17 +177,17 @@ class SklImpute(Preprocess):
 class RemoveConstant(Preprocess):
     """
     Construct a preprocessor that removes features with constant values
-    from the dataset.
+    from the data set.
     """
 
     def __call__(self, data):
         """
-        Remove columns with constant values from the dataset and return
+        Remove columns with constant values from the data set and return
         the resulting data table.
 
         Parameters
         ----------
-        data : an input dataset
+        data : an input data set
         """
 
         oks = bn.nanmin(data.X, axis=0) != \
@@ -202,21 +202,21 @@ class RemoveConstant(Preprocess):
 class RemoveNaNClasses(Preprocess):
     """
     Construct preprocessor that removes examples with missing class
-    from the dataset.
+    from the data set.
     """
 
     def __call__(self, data):
         """
-        Remove rows that contain NaN in any class variable from the dataset
+        Remove rows that contain NaN in any class variable from the data set
         and return the resulting data table.
 
         Parameters
         ----------
-        data : an input dataset
+        data : an input data set
 
         Returns
         -------
-        data : dataset without rows with missing classes
+        data : data set without rows with missing classes
         """
         return HasClass()(data)
 
@@ -286,7 +286,7 @@ class Normalize(Preprocess):
 
         if all(a.attributes.get('skip-normalization', False)
                for a in data.domain.attributes if a.is_continuous):
-            # Skip normalization for datasets where all features are marked as already normalized.
+            # Skip normalization for data sets where all features are marked as already normalized.
             # Required for SVMs (with normalizer as their default preprocessor) on sparse data to
             # retain sparse structure. Normalizing sparse data would otherwise result in a dense
             # matrix, which requires too much memory. For example, this is used for Bag of Words
@@ -490,7 +490,7 @@ class Scale(Preprocess):
 
 class PreprocessorList(Preprocess):
     """
-    Store a list of preprocessors and on call apply them to the dataset.
+    Store a list of preprocessors and on call apply them to the data set.
 
     Parameters
     ----------
@@ -503,7 +503,7 @@ class PreprocessorList(Preprocess):
 
     def __call__(self, data):
         """
-        Applies a list of preprocessors to the dataset.
+        Applies a list of preprocessors to the data set.
 
         Parameters
         ----------

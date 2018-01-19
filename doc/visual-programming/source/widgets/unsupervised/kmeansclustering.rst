@@ -12,19 +12,19 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 **Outputs**:
 
 -  **Data**
 
-   A dataset with cluster index as a class attribute.
+   A data set with cluster index as a class attribute.
 
 Description
 -----------
 
 The widget applies the `k-Means clustering <https://en.wikipedia.org/wiki/K-means_clustering>`_
-algorithm to the data and outputs a new dataset in which the cluster
+algorithm to the data and outputs a new data set in which the cluster
 index is used as a class attribute. The original class attribute, if it
 exists, is moved to meta attributes. Scores of clustering results for
 various k are also shown in the widget.
@@ -59,7 +59,7 @@ various k are also shown in the widget.
    **Re-runs** (how many times the algorithm is run) and **maximal
    iterations** (the maximum number of iteration within each algorithm
    run) can be set manually.
-3. The widget outputs a new dataset with appended cluster information.
+3. The widget outputs a new data set with appended cluster information.
    Select how to append cluster information (as class, feature or meta
    attribute) and name the column.
 4. If *Apply Automatically* is ticked, the widget will commit changes
@@ -74,7 +74,7 @@ We are going to explore the widget with the following schema.
 
 .. figure:: images/K-MeansClustering-Schema.png
 
-First, we load the *Iris* dataset, divide it into three clusters and
+First, we load the *Iris* data set, divide it into three clusters and
 show it in the :doc:`Data Table <../data/datatable>`, where we can observe which instance went into
 which cluster. The interesting parts are the :doc:`Scatter Plot <../visualize/scatterplot>` and
 :doc:`Select Rows <../data/selectrows>`.

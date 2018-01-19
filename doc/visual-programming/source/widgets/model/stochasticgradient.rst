@@ -14,7 +14,7 @@ Signals
 
 -  **Data**
 
-   A dataset.
+   A data set.
 
 -  **Preprocessor**
 
@@ -33,7 +33,7 @@ Signals
 Description
 -----------
 
-The **Stochastic Gradient Descent** widget uses `stochastic gradient descent <https://en.wikipedia.org/wiki/Stochastic_gradient_descent>`_ that minimizes a chosen loss function with a linear function. The algorithm approximates a true gradient by considering one sample at a time, and simultaneously updates the model based on the gradient of the loss function. For regression, it returns predictors as minimizers of the sum, i.e. M-estimators, and is especially useful for large-scale and sparse datasets.
+The **Stochastic Gradient Descent** widget uses `stochastic gradient descent <https://en.wikipedia.org/wiki/Stochastic_gradient_descent>`_ that minimizes a chosen loss function with a linear function. The algorithm approximates a true gradient by considering one sample at a time, and simultaneously updates the model based on the gradient of the loss function. For regression, it returns predictors as minimizers of the sum, i.e. M-estimators, and is especially useful for large-scale and sparse data sets.
 
 .. figure:: images/StochasticGradientDescent-stamped.png
    :scale: 50 %
@@ -96,10 +96,10 @@ The **Stochastic Gradient Descent** widget uses `stochastic gradient descent <ht
 Examples
 --------
 
-For the classification task, we will use *iris* dataset and test two models on it. We connected :doc:`Stochastic Gradient Descent <../model/stochasticgradient>` and :doc:`Tree <../model/tree>` to :doc:`Test & Score <../evaluation/testandscore>`. We also connected :doc:`File <../data/file>` to **Test & Score** and observed model performance in the widget.
+For the classification task, we will use *iris* data set and test two models on it. We connected :doc:`Stochastic Gradient Descent <../model/stochasticgradient>` and :doc:`Tree <../model/tree>` to :doc:`Test & Score <../evaluation/testandscore>`. We also connected :doc:`File <../data/file>` to **Test & Score** and observed model performance in the widget.
 
 .. figure:: images/StochasticGradientDescent-classification.png
 
-For the regression task, we will compare three different models to see which predict what kind of results. For the purpose of this example, the *housing* dataset is used. We connect the :doc:`File <../data/file>` widget to **Stochastic Gradient Descent**, :doc:`Linear Regression <../model/linearregression>` and :doc:`kNN <../model/knn>` widget and all four to the :doc:`Predictions <../evaluation/predictions>` widget.
+For the regression task, we will compare three different models to see which predict what kind of results. For the purpose of this example, the *housing* data set is used. We connect the :doc:`File <../data/file>` widget to **Stochastic Gradient Descent**, :doc:`Linear Regression <../model/linearregression>` and :doc:`kNN <../model/knn>` widget and all four to the :doc:`Predictions <../evaluation/predictions>` widget.
 
 .. figure:: images/StochasticGradientDescent-regression.png

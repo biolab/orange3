@@ -10,7 +10,7 @@
 		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Selected Data" source_node_id="1" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="12" id="0" rect="(26.0, 7.0, 150.0, 112.59375)">This File widget is set to read the Iris dataset. Double click on the icon to change the input data file and observe how this workflow works for some other datasets such as housing or auto-mpg.</text>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(26.0, 7.0, 150.0, 112.59375)">This File widget is set to read the Iris data set. Double click on the icon to change the input data file and observe how this workflow works for some other data sets such as housing or auto-mpg.</text>
 		<text font-family="Helvetica" font-size="12" id="1" rect="(224.0, 24.0, 150.0, 83.0)">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
 		<text font-family="Helvetica" font-size="12" id="2" rect="(412.0, 55.0, 150.0, 48.0)">Data Table widget shows the data subset selected in the Scatter Plot.</text>
 		<arrow end="(99.00000000000003, 175.0)" fill="#C1272D" id="3" start="(98.00000000000003, 118.0)" />

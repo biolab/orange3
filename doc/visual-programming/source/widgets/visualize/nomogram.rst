@@ -26,7 +26,7 @@ and Logistic Regression classifier) visual representation. It offers an insight
 into the structure of the training data and effects of the attributes on the
 class probabilities. Besides visualization of the classifier, the widget offers
 interactive support to prediction of class probabilities.
-A snapshot below shows the nomogram of the Titanic dataset, that models the
+A snapshot below shows the nomogram of the Titanic data set, that models the
 probability for a passenger not to survive the disaster of the Titanic.
 
 .. figure:: images/Nomogram-NaiveBayes.png
@@ -38,13 +38,13 @@ probability for a passenger not to survive the disaster of the Titanic.
    re-scaling the log odds so that the maximal absolute log odds ratio in the
    nomogram represents 100 points.
 
-3. When there are to many attributes in the plotted dataset, you can choose to
+3. When there are to many attributes in the plotted data set, you can choose to
    display only best ranked ones. It is possible to choose from 'No sorting',
    'Name', 'Absolute importance', 'Positive influence' and 'Negative influence'
    for Naive Bayes representation and from 'No sorting', 'Name' and
    'Absolute importance' for Logistic Regression representation.
 
-To represent nomogram for Logistic Regressing classifier Iris dataset is used:
+To represent nomogram for Logistic Regressing classifier Iris data set is used:
 
 .. figure:: images/Nomogram-LogisticRegression.png
 
@@ -67,7 +67,7 @@ instance using any widget that enables selection
 
 .. figure:: images/Nomogram-Example.png
 
-Referring to the Titanic dataset once again, 1490 (68%) of passengers on Titanic,
+Referring to the Titanic data set once again, 1490 (68%) of passengers on Titanic,
 of 2201 in total, died. To make a prediction, the contribution of each attribute
 is measured as a point score and the individual point scores are summed to determine
 the probability. When the value of the attribute is unknown, its contribution is

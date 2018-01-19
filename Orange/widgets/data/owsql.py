@@ -40,14 +40,14 @@ class BackendModel(PyListModel):
 class OWSql(OWWidget):
     name = "SQL Table"
     id = "orange.widgets.data.sql"
-    description = "Load dataset from SQL."
+    description = "Load data set from SQL."
     icon = "icons/SQLTable.svg"
     priority = 30
     category = "Data"
     keywords = ["data", "file", "load", "read", "SQL"]
 
     class Outputs:
-        data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")
+        data = Output("Data", Table, doc="Attribute-valued data set read from the input file.")
 
     settings_version = 2
 

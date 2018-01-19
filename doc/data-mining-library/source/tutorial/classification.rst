@@ -5,7 +5,7 @@ Classification
 .. index::
    single: data mining; supervised
 
-Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on the data with class-labeled instances, like that of senate voting. Here is a code that loads this dataset, displays the first data instance and shows its predicted class (``republican``)::
+Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on the data with class-labeled instances, like that of senate voting. Here is a code that loads this data set, displays the first data instance and shows its predicted class (``republican``)::
 
    >>> import Orange
    >>> data = Orange.data.Table("voting")
@@ -42,7 +42,7 @@ Classification uses two types of objects: learners and classifiers. Learners con
     >>> classifier(data[:3])
     array([ 0.,  0.,  1.])
 
-Above, we read the data, constructed a logistic regression learner, gave it the dataset to construct a classifier, and used it to predict the class of the first three data instances. We also use these concepts in the following code that predicts the classes of the selected three instances in the dataset:
+Above, we read the data, constructed a logistic regression learner, gave it the data set to construct a classifier, and used it to predict the class of the first three data instances. We also use these concepts in the following code that predicts the classes of the selected three instances in the data set:
 
 ..  literalinclude:: code/classification-classifier1.py
     :lines: 4-
@@ -53,7 +53,7 @@ The script outputs::
     republican, originally democrat
     republican, originally republican
 
-Logistic regression has made a mistake in the second case, but otherwise predicted correctly. No wonder, since this was also the data it trained from. The following code counts the number of such mistakes in the entire dataset:
+Logistic regression has made a mistake in the second case, but otherwise predicted correctly. No wonder, since this was also the data it trained from. The following code counts the number of such mistakes in the entire data set:
 
 ..  literalinclude:: code/classification-accuracy-train.py
     :lines: 4-
@@ -78,7 +78,7 @@ Cross-Validation
 
 .. index:: cross-validation
 
-Validating the accuracy of classifiers on the training data, as we did above, serves demonstration purposes only. Any performance measure that assess accuracy should be estimated on the independent test set. Such is also a procedure called `cross-validation <http://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_, which averages the evaluation scores across several runs, each time considering a different training and test subsets as sampled from the original dataset:
+Validating the accuracy of classifiers on the training data, as we did above, serves demonstration purposes only. Any performance measure that assess accuracy should be estimated on the independent test set. Such is also a procedure called `cross-validation <http://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_, which averages the evaluation scores across several runs, each time considering a different training and test subsets as sampled from the original data set:
 
 .. literalinclude:: code/classification-cv.py
    :lines: 3-
@@ -107,7 +107,7 @@ Orange includes a variety of classification algorithms, most of them wrapped fro
 - classification trees (``Orange.classification.tree.SklTreeLearner``)
 - radnom forest (``Orange.classification.RandomForestLearner``)
 
-Some of these are included in the code that estimates the probability of a target class on a testing data. This time, training and test datasets are disjoint:
+Some of these are included in the code that estimates the probability of a target class on a testing data. This time, training and test data sets are disjoint:
 
 .. index::
    single: classification; logistic regression
@@ -128,7 +128,7 @@ For these five data items, there are no major differences between predictions of
     republican      0.991 1.000 0.979
     republican      0.991 0.667 0.963
 
-The following code cross-validates these learners on the titanic dataset.
+The following code cross-validates these learners on the titanic data set.
 
 .. literalinclude:: code/classification-cv2.py
 
