@@ -94,12 +94,12 @@ class TSNEParametersEditor(ManifoldParametersEditor):
     metric_values = [("l2", "Euclidean")] + metric_values
 
     perplexity = Setting(30)
-    early_exaggeration = Setting(4)
-    learning_rate = Setting(1000)
+    early_exaggeration = Setting(12)
+    learning_rate = Setting(200)
     n_iter = Setting(1000)
 
     init_index = Setting(0)
-    init_values = [("random", "Random"), ("pca", "PCA")]
+    init_values = [("pca", "PCA"), ("random", "Random")]
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -107,13 +107,13 @@ class TSNEParametersEditor(ManifoldParametersEditor):
         self.metric_combo = self._create_combo_parameter(
             "metric", "Metric:")
         self.perplexity_spin = self._create_spin_parameter(
-            "perplexity", 0, 1000, "Perplexity:")
+            "perplexity", 1, 100, "Perplexity:")
         self.early_exaggeration_spin = self._create_spin_parameter(
-            "early_exaggeration", 1, 1000, "Early exaggeration:")
+            "early_exaggeration", 1, 100, "Early exaggeration:")
         self.lr_spin = self._create_spin_parameter(
             "learning_rate", 1, 1000, "Learning rate:")
         self.n_iter_spin = self._create_spin_parameter(
-            "n_iter", 0, 1e5, "Max iterations:")
+            "n_iter", 250, 1e5, "Max iterations:")
         self.init_radio = self._create_radio_parameter(
             "init", "Initialization:")
 
