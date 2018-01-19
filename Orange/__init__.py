@@ -1,3 +1,6 @@
+# This module is a mixture of imports and code, so we allow import anywhere
+# pylint: disable=wrong-import-position
+
 import pickle
 from unittest.mock import patch
 # Needed because the pure-Python Unpickler that dill uses can also fail
@@ -8,14 +11,14 @@ dill.settings['protocol'] = pickle.HIGHEST_PROTOCOL
 dill.settings['recurse'] = True
 dill.settings['byref'] = True
 
+from Orange import data
+
 from .misc.lazy_module import _LazyModule
 from .misc.datasets import _DatasetInfo
 from .version import \
     short_version as __version__, git_revision as __git_version__
 
 ADDONS_ENTRY_POINT = 'orange.addons'
-
-from Orange import data
 
 for mod_name in ['classification', 'clustering', 'distance', 'ensembles',
                  'evaluation', 'misc', 'modelling', 'preprocess', 'projection',

@@ -9,9 +9,7 @@ This module implements a discovery process
 """
 
 import os
-import sys
 import stat
-import glob
 import logging
 import types
 import pkgutil
@@ -25,7 +23,6 @@ from .description import (
 
 from . import VERSION_HEX
 from . import cache, WidgetRegistry
-import collections
 
 log = logging.getLogger(__name__)
 

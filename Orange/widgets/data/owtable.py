@@ -12,10 +12,10 @@ import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QAction, QApplication,
+    QTableView, QHeaderView, QAbstractButton, QApplication,
     QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QKeySequence, QClipboard
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
@@ -878,6 +878,15 @@ class OWDataTable(widget.OWWidget):
         self.report_data_brief(model.source)
         self.report_table(view)
 
+    def test_run_signals(self):
+        iris = Table("iris")
+        brown = Table("brown-selected")
+        housing = Table("housing")
+        self.set_dataset(iris, iris.name)
+        self.set_dataset(brown, brown.name)
+        self.set_dataset(housing, housing.name)
+
+
 # Table Summary
 
 # Basic statistics for X/Y/metas arrays
@@ -1018,25 +1027,6 @@ def is_sortable(table):
         return False
 
 
-def test_main():
-    a = QApplication(sys.argv)
-    ow = OWDataTable()
-
-    iris = Table("iris")
-    brown = Table("brown-selected")
-    housing = Table("housing")
-    ow.show()
-    ow.raise_()
-
-    ow.set_dataset(iris, iris.name)
-    ow.set_dataset(brown, brown.name)
-    ow.set_dataset(housing, housing.name)
-
-    rval = a.exec()
-#     ow.saveSettings()
-    return rval
-
-
 def test_model():
     app = QApplication([])
     view = QTableView(
@@ -1051,5 +1041,6 @@ def test_model():
     view.raise_()
     return app.exec()
 
-if __name__ == "__main__":
-    sys.exit(test_main())
+
+if __name__ == "__main__":  # pragma: no cover
+    OWDataTable.test_run()

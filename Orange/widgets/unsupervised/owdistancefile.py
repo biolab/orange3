@@ -1,4 +1,4 @@
-import os, sys
+import os
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
 from AnyQt.QtCore import QTimer
@@ -142,10 +142,6 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             self.report_items([("File name", self.loaded_file)])
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWDistanceFile()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+
+if __name__ == "__main__":  # pragma: no cover
+    OWDistanceFile.test_run()

@@ -1,6 +1,5 @@
 from itertools import chain
 import numpy as np
-from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -109,9 +108,5 @@ def create_coef_table(classifier):
     return coef_table
 
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    w = OWLogisticRegression()
-    w.set_data(Table("zoo"))
-    w.show()
-    app.exec_()
+if __name__ == "__main__":  # pragma: no cover
+    OWLogisticRegression.test_run(Table("zoo"))

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
 from collections import OrderedDict
 
 from AnyQt.QtWidgets import (
@@ -300,7 +298,7 @@ class OWSql(OWWidget):
             what = self.sql = self.sqltext.toPlainText()
             self.table = "Custom SQL"
             if self.materialize:
-                import psycopg2
+                import psycopg2  # pylint: disable=import-error
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
@@ -403,9 +401,5 @@ class OWSql(OWWidget):
             cm.password = settings["password"]
 
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWSql()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWSql.test_run()

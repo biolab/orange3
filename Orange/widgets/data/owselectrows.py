@@ -685,13 +685,5 @@ class DropDownToolButton(QToolButton):
         self.set_text()
 
 
-def test():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    w = OWSelectRows()
-    w.set_data(Table("zoo"))
-    w.show()
-    app.exec_()
-
-if __name__ == "__main__":
-    test()
+if __name__ == "__main__":  # pragma: no cover
+    OWSelectRows.test_run(Table("zoo"))

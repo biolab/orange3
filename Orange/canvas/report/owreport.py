@@ -1,17 +1,15 @@
 import os
 import logging
 from collections import OrderedDict
-
-import pkg_resources
 import pickle
-import textwrap
-import warnings
 from enum import IntEnum
 
-from AnyQt.QtCore import Qt, QObject, QFile, QTimer, QUrl, pyqtSlot, QT_VERSION
+import pkg_resources
+
+from AnyQt.QtCore import Qt, QObject, pyqtSlot
 from AnyQt.QtGui import QIcon, QCursor, QStandardItemModel, QStandardItem
 from AnyQt.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QTableView, QHeaderView, QSizePolicy
+    QApplication, QDialog, QFileDialog, QTableView, QHeaderView
 )
 from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
 

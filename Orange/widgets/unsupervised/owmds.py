@@ -1,9 +1,7 @@
-import sys
-
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtGui import QPainter
 from AnyQt.QtCore import Qt, QTimer
 
@@ -734,38 +732,5 @@ class OWMDS(OWWidget):
             context.values["graph"] = context_values_graph
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    import gc
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Orange.data.Table(filename)
-    w = OWMDS()
-    w.set_data(data)
-    w.set_subset_data(data[np.random.choice(len(data), 10)])
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-
-    w.set_subset_data(None)
-    w.set_data(None)
-    w.handleNewSignals()
-
-    w.saveSettings()
-    w.onDeleteWidget()
-    w.deleteLater()
-    del w
-    gc.collect()
-    app.processEvents()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWMDS.test_run(Orange.data.Table("iris"))

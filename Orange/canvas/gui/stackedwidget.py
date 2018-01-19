@@ -11,7 +11,7 @@ transitions between widgets.
 import logging
 
 from AnyQt.QtWidgets import QWidget, QFrame, QStackedLayout, QSizePolicy
-from AnyQt.QtGui import QPixmap, QPainter
+from AnyQt.QtGui import QPainter
 from AnyQt.QtCore import Qt, QPoint, QRect, QSize, QPropertyAnimation
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 

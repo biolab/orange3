@@ -656,17 +656,5 @@ class EditDomainReport:
                                          .format(name, old_labels[name], new_labels[name]))
 
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    w = OWEditDomain()
-    data = Orange.data.Table("iris")
-    w.set_data(data)
-    w.show()
-    w.raise_()
-
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWEditDomain.test_run(Orange.data.Table("iris"))

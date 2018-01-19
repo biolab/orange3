@@ -313,13 +313,5 @@ class OWManifoldLearning(OWWidget):
             self.report_data("Data", self.data)
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication([])
-    ow = OWManifoldLearning()
-    d = Table("ionosphere")
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWManifoldLearning.test_run(Table("ionosphere"))

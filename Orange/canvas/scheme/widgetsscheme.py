@@ -32,7 +32,7 @@ from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
-from .scheme import Scheme, SchemeNode, SchemeLink
+from .scheme import Scheme, SchemeNode
 from .node import UserMessage
 from ..utils import name_lookup
 from ..resources import icon_loader

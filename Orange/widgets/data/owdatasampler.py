@@ -1,13 +1,12 @@
-import sys
 import math
 
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 import numpy as np
 import sklearn.model_selection as skl
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
@@ -413,14 +412,5 @@ class SampleBootstrap(Reprable):
         return remaining, sample
 
 
-def test_main():
-    app = QApplication([])
-    data = Table("iris")
-    w = OWDataSampler()
-    w.set_data(data)
-    w.show()
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDataSampler.test_run(Table("iris"))

@@ -7,7 +7,7 @@ from scipy.spatial import distance
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QApplication, QGraphicsEllipseItem, QGraphicsSceneMouseEvent, QToolTip
+    QFormLayout, QGraphicsEllipseItem, QGraphicsSceneMouseEvent, QToolTip
 )
 from AnyQt.QtGui import QPen
 from AnyQt.QtCore import Qt, QObject, QEvent, QSize, QRectF, QLineF, QTimer, QPoint
@@ -898,31 +898,5 @@ class MoveIndicator(pg.GraphicsObject):
         return QRectF()
 
 
-def main(argv=None):
-    import sip
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "zoo"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWFreeViz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    sip.delete(w)
-    del w
-    return r
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWFreeViz.test_run(Table("zoo"))

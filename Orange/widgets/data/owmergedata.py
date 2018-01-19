@@ -4,7 +4,6 @@ from itertools import chain, product, tee
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
 import numpy as np
-import scipy.sparse as sp
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable
@@ -390,17 +389,7 @@ class OWMergeData(widget.OWWidget):
         return res
 
 
-def main():
-    app = QApplication([])
-    w = OWMergeData()
-    data = Orange.data.Table("tests/data-gender-region")
-    extra_data = Orange.data.Table("tests/data-regions")
-    w.setData(data)
-    w.setExtraData(extra_data)
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    OWMergeData.test_run(
+        setData=Orange.data.Table("tests/data-gender-region"),
+        setExtraData=Orange.data.Table("tests/data-regions"))

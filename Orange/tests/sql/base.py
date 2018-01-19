@@ -11,7 +11,7 @@ from Orange.data.sql.table import SqlTable
 
 def sql_test(f):
     try:
-        import psycopg2
+        import psycopg2  # pylint: disable=import-error
         return unittest.skipIf(not sql_version, "Database is not running.")(f)
     except:
         return unittest.skip("Psycopg2 is required for sql tests.")(f)
@@ -55,7 +55,7 @@ def parse_uri(uri):
 
 
 try:
-    import psycopg2
+    import psycopg2  # pylint: disable=import-error
     with psycopg2.connect(**connection_params()) as conn:
         sql_version = conn.server_version
 except:
@@ -148,7 +148,7 @@ class TestParseUri(unittest.TestCase):
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from psycopg2.pool import ThreadedConnectionPool
+        from psycopg2.pool import ThreadedConnectionPool  # pylint: disable=import-error
         from Orange.data.sql.backend.postgres import Psycopg2Backend
 
         Psycopg2Backend.connection_pool = \

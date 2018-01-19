@@ -2,7 +2,7 @@
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
+    QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
     QLabel, QComboBox
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
@@ -435,22 +435,9 @@ class OWTreeGraph(OWTreeViewer2D):
         return TreeAdapter(model)
 
 
-def main():
-    """Standalone test"""
-    import sys
-    from AnyQt.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling.tree import TreeLearner
-    a = QApplication(sys.argv)
-    ow = OWTreeGraph()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else "titanic")
+    data = Table("titanic")
     clf = TreeLearner()(data)
     clf.instances = data
-
-    ow.ctree(clf)
-    ow.show()
-    ow.raise_()
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+    OWTreeGraph.test_run(clf)

@@ -1,4 +1,3 @@
-import sys
 from collections import OrderedDict
 import pkg_resources
 
@@ -20,7 +19,6 @@ from AnyQt.QtCore import (
 )
 
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-
 
 import Orange.data
 from Orange import preprocess
@@ -1245,24 +1243,5 @@ class OWPreprocess(widget.OWWidget):
             self.report_items("Settings", pp)
 
 
-def test_main(argv=sys.argv):
-    argv = list(argv)
-    app = QApplication(argv)
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWPreprocess()
-    w.set_data(Orange.data.Table(filename))
-    w.show()
-    w.raise_()
-    r = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    w.onDeleteWidget()
-    return r
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWPreprocess.test_run(Orange.data.Table("brown-selected"))

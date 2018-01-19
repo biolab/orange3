@@ -72,6 +72,8 @@ def stack_on_condition(a, b, condition):
 # Data manipulation operators
 # ###########################
 
+# pylint: disable=ungrouped-imports
+# pylint: disable=import-error
 if sys.version_info < (3, 4):
     # use singledispatch backports from pypi
     from singledispatch import singledispatch
@@ -1308,23 +1310,6 @@ class OWPaintData(OWWidget):
         self.report_items("Painted data", settings)
         self.report_plot()
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    import gc
-    import sip
-    app = QApplication([])
-    ow = OWPaintData()
-    ow.show()
-    ow.raise_()
-    rval = app.exec_()
-    ow.saveSettings()
-    ow.onDeleteWidget()
-    sip.delete(ow)
-    del ow
-    gc.collect()
-    app.processEvents()
-    return rval
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWPaintData.test_run()

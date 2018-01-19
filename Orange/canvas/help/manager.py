@@ -16,9 +16,10 @@ from sysconfig import get_path
 
 import pkg_resources
 
+from AnyQt.QtCore import QObject, QUrl, QDir, QT_VERSION
+
 from . import provider
 
-from AnyQt.QtCore import QObject, QUrl, QDir, QT_VERSION
 
 log = logging.getLogger(__name__)
 

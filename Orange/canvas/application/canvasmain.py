@@ -2,6 +2,10 @@
 Orange Canvas Main Window
 
 """
+
+# The import section is mixed with conditions and exception handlers, hence:
+# pylint: disable=wrong-import-position
+
 import os
 import sys
 import logging
@@ -17,7 +21,6 @@ from AnyQt.QtWidgets import (
     QDockWidget, QApplication, QShortcut
 )
 from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
-
 from AnyQt.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION
 )

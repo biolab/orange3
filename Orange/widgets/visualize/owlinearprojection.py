@@ -949,33 +949,5 @@ def normalized(a):
     return (a - mean) / (span or 1)
 
 
-def main(argv=None):
-    import sys
-    import sip
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWLinearProjection()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    sip.delete(w)
-    del w
-    return r
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWLinearProjection.test_run(Table("iris"))

@@ -1,4 +1,3 @@
-import time
 from os.path import dirname
 
 from AnyQt.QtCore import Qt, QObject, pyqtSlot

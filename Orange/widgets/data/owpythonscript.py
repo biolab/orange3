@@ -698,10 +698,5 @@ class OWPythonScript(widget.OWWidget):
             getattr(self.Outputs, signal).send(out_var)
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    ow = OWPythonScript()
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    OWPythonScript.test_run()

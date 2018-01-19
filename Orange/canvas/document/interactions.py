@@ -14,6 +14,7 @@ All interactions are subclasses of :class:`UserInteraction`.
 """
 
 import logging
+from functools import reduce
 
 from AnyQt.QtWidgets import QApplication, QGraphicsRectItem, QUndoCommand
 from AnyQt.QtGui import QPen, QBrush, QColor, QFontMetrics
@@ -30,7 +31,6 @@ from ..canvas.items import controlpoints
 from ..gui.quickhelp import QuickHelpTipEvent
 from . import commands
 from .editlinksdialog import EditLinksDialog
-from functools import reduce
 
 log = logging.getLogger(__name__)
 

@@ -16,7 +16,9 @@ from Orange.widgets.data.owfeatureconstructor import (
 
 from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
 
-import dill as pickle  # Import dill after Orange because patched
+# Import dill after Orange because patched
+# pylint: disable=wrong-import-order
+import dill as pickle
 
 
 class FeatureConstructorTest(unittest.TestCase):

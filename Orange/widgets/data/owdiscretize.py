@@ -1,8 +1,6 @@
 from collections import namedtuple
 
-from AnyQt.QtWidgets import (
-    QListView, QHBoxLayout, QStyledItemDelegate, QApplication
-)
+from AnyQt.QtWidgets import QListView, QHBoxLayout, QStyledItemDelegate
 from AnyQt.QtCore import Qt
 
 import Orange.data
@@ -491,17 +489,5 @@ class OWDiscretize(widget.OWWidget):
                 for i, var in enumerate(self.varmodel)])
 
 
-def main():
-    app = QApplication([])
-    w = OWDiscretize()
-    data = Orange.data.Table("brown-selected")
-    w.set_data(data)
-    w.set_data(None)
-    w.set_data(data)
-    w.show()
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDiscretize.test_run(Orange.data.Table("brown-selected"))

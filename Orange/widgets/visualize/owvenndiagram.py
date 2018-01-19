@@ -29,7 +29,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
 
@@ -1666,7 +1665,7 @@ def group_table_indices(table, key_var):
     return groups
 
 
-def test():
+def test():  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
 
     app = QApplication([])
@@ -1702,7 +1701,7 @@ def test():
     return app
 
 
-def test1():
+def test1():  # pragma: no cover
     app = QApplication([])
     w = OWVennDiagram()
     data1 = Orange.data.Table("brown-selected")
@@ -1718,5 +1717,6 @@ def test1():
     del w
     return app
 
-if __name__ == "__main__":
+
+if __name__ == "__main__":  # pragma: no cover
     test()

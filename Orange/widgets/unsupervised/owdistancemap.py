@@ -1,4 +1,3 @@
-import sys
 import itertools
 from functools import reduce
 from operator import iadd
@@ -6,8 +5,7 @@ from operator import iadd
 import numpy
 
 from AnyQt.QtWidgets import (
-    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QGraphicsWidget,
-    QApplication
+    QFormLayout, QGraphicsRectItem, QGraphicsGridLayout, QApplication
 )
 from AnyQt.QtGui import (
     QFontMetrics, QPen, QIcon, QPixmap, QLinearGradient, QPainter, QColor,
@@ -739,33 +737,9 @@ def init_color_combo(cb, palettes, iconsize):
                    palette)
 
 
-def test(argv=sys.argv):
-    app = QApplication(list(argv))
-    argv = app.arguments()
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    import sip
+# run widget with `python -m Orange.widgets.unsupervised.owdistancemap`
+if __name__ == "__main__":  # pragma: no cover
     import Orange.distance
-
-    w = OWDistanceMap()
-    w.show()
-    w.raise_()
-    data = Orange.data.Table(filename)
+    data = Orange.data.Table("iris")
     dist = Orange.distance.Euclidean(data)
-    w.set_distances(dist)
-    w.handleNewSignals()
-    rval = app.exec_()
-    w.set_distances(None)
-    w.saveSettings()
-    w.onDeleteWidget()
-    sip.delete(w)
-    del w
-    return rval
-
-# run widget by python -m Orange.widgets.unsupervised.owdistancemap
-if __name__ == "__main__":
-    sys.exit(test())
+    OWDistanceMap.test_run(dist)

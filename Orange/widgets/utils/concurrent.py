@@ -11,6 +11,7 @@ import weakref
 from functools import partial
 import concurrent.futures
 
+# pylint: disable=unused-import
 from concurrent.futures import Future, CancelledError, TimeoutError
 from contextlib import contextmanager
 

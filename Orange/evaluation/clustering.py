@@ -123,6 +123,8 @@ def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):
     :param xlim tuple (float, float):
             Limit x-axis values.
     """
+    # If the module is not there, let the user install it
+    # pylint: disable=import-error
     import matplotlib.pyplot as plt
 
     if isinstance(X, Table):

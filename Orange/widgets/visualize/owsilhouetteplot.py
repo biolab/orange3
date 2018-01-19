@@ -1,11 +1,11 @@
-import sys
 import itertools
 import enum
 
 from xml.sax.saxutils import escape
 from types import SimpleNamespace as namespace
 
-from typing import Optional
+# pylint ignores uses in type annotation
+from typing import Optional  # pylint: disable=unused-import
 
 import numpy as np
 import sklearn.metrics
@@ -13,8 +13,9 @@ import sklearn.metrics
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
-    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX
+    QSizePolicy, QWIDGETSIZE_MAX,
 )
+from AnyQt.QtWidgets import QWidget, QStyleOptionGraphicsItem  # pylint: disable=unused-import
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
 from AnyQt.QtCore import pyqtSignal as Signal
@@ -32,6 +33,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
 from Orange.widgets.widget import Msg, Input, Output
+from Orange.widgets.visualize.owheatmap import scaled
 
 
 ROW_NAMES_WIDTH = 200
@@ -1072,9 +1074,6 @@ class BarPlotItem(QGraphicsWidget):
                                 v - base, h).normalized())
 
 
-from Orange.widgets.visualize.owheatmap import scaled
-
-
 class TextListWidget(QGraphicsWidget):
     def __init__(self, parent=None, items=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -1181,26 +1180,5 @@ class TextListWidget(QGraphicsWidget):
         self.__textitems = []
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-    w = OWSilhouettePlot()
-    w.show()
-    w.raise_()
-    w.set_data(Orange.data.Table(filename))
-    w.handleNewSignals()
-    app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.onDeleteWidget()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+if __name__ == "__main__":  # pragma: no cover
+    OWSilhouettePlot.test_run(Orange.data.Table("iris"))

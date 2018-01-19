@@ -483,11 +483,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.source = self.LOCAL_FILE
             self.load_data()
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWFile()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+
+if __name__ == "__main__":  # pragma: no cover
+    OWFile.test_run()

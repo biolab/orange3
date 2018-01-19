@@ -2,19 +2,21 @@ import enum
 import logging
 import numbers
 import os
-import sys
 import traceback
 
 from xml.sax.saxutils import escape
-from concurrent.futures import ThreadPoolExecutor, Future
-
-from types import SimpleNamespace as namespace
-from typing import Optional, Dict, Tuple
+from concurrent.futures import ThreadPoolExecutor
+# pylint ignores uses in type annotation
+from concurrent.futures import Future  # pylint: disable=unused-import
+from types import SimpleNamespace as namespace  # pylint: disable=unused-import
+from typing import Optional, Dict, Tuple  # pylint: disable=unused-import
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate, QApplication
+
 )
+# pylint: disable=unused-import
+from AnyQt.QtWidgets import QStyleOptionViewItem, QStyledItemDelegate
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
     Qt, QSize, QObject, QThread, QModelIndex, QSortFilterProxyModel,
@@ -547,18 +549,5 @@ def description_html(datainfo):
     return "\n".join(html)
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-
-    app = QApplication(list(args))
-    w = OWDataSets()
-    w.show()
-    w.raise_()
-    rv = app.exec_()
-    w.saveSettings()
-    w.onDeleteWidget()
-    return rv
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    OWDataSets.test_run()

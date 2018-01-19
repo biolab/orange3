@@ -1,4 +1,3 @@
-import sys
 import math
 import itertools
 
@@ -29,7 +28,7 @@ from Orange.data import Domain, Table, DiscreteVariable, StringVariable
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
-from Orange.clustering import hierarchical
+from Orange.clustering import hierarchical, kmeans
 from Orange.widgets.utils import colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -109,8 +108,6 @@ def barycenter(a, axis=0):
         weights[:, mask] = 1
 
     return np.average(X, weights=weights, axis=axis)
-
-from Orange.clustering import kmeans
 
 
 def kmeans_compress(X, k=50):
@@ -2384,24 +2381,5 @@ def join_ellided(sep, maxlen, values, ellidetemplate="..."):
         return best
 
 
-def test_main(argv=sys.argv):
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    app = QApplication(argv)
-    ow = OWHeatMap()
-
-    ow.set_dataset(Table(filename))
-    ow.handleNewSignals()
-    ow.show()
-    ow.raise_()
-    app.exec_()
-    ow.set_dataset(None)
-    ow.handleNewSignals()
-    ow.saveSettings()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    OWHeatMap.test_run(Table("brown-selected.tab"))

@@ -1,11 +1,10 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import unittest
 from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
 
-from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+from Orange.tests.sql.base import PostgresTest, sql_test
 
 
 @sql_test
