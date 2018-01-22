@@ -3,7 +3,7 @@ from math import log, sqrt
 from typing import Any, Callable, Optional
 
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
-    QItemSelection
+    QItemSelection, QT_VERSION
 from AnyQt.QtGui import QPainter, QPen, QColor, QBrush
 from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QLabel, QSlider, \
     QListView, QStyledItemDelegate, QStyleOptionViewItem, QStyle
@@ -74,7 +74,10 @@ class PythagoreanForestModel(PyListModel):
             if 'tree' in tree_data:
                 func(tree_data['tree'])
                 index = self.index(idx)
-                self.dataChanged.emit(index, index, [Qt.DisplayRole])
+                if QT_VERSION < 0x50000:
+                    self.dataChanged.emit(index, index)
+                else:
+                    self.dataChanged.emit(index, index, [Qt.DisplayRole])
 
     def update_depth(self, depth):
         self.depth_limit = depth
