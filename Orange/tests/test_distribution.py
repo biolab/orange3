@@ -150,13 +150,13 @@ class Distribution_DiscreteTestCase(unittest.TestCase):
     def test_normalize(self):
         d = data.Table("zoo")
         disc = distribution.Discrete(d, "type")
-        disc.normalize()
+        disc = disc.normalize()
         self.assertEqual(disc, self.rfreqs)
-        disc.normalize()
+        disc = disc.normalize()
         self.assertEqual(disc, self.rfreqs)
 
         disc1 = distribution.Discrete(None, d.domain.class_var)
-        disc1.normalize()
+        disc1 = disc1.normalize()
         v = len(d.domain.class_var.values)
         np.testing.assert_almost_equal(disc1, [1/v]*v)
 
@@ -256,12 +256,12 @@ class Distribution_ContinuousTestCase(unittest.TestCase):
         disc = distribution.Continuous(d, "petal length")
 
         np.testing.assert_almost_equal(disc, self.freqs)
-        disc.normalize()
+        disc = disc.normalize()
         self.freqs[1, :] /= 150
         np.testing.assert_almost_equal(disc, self.freqs)
 
         disc1 = distribution.Continuous(10, petal_length)
-        disc1.normalize()
+        disc1 = disc1.normalize()
         f = np.zeros((2, 10))
         f[1, :] = 0.1
         np.testing.assert_almost_equal(disc1, f)

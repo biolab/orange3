@@ -163,12 +163,12 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         if state is None:  # on the first call, compute order
             if self._compute_class_dists():
                 self.marginal = get_distribution(data, data.domain.class_var)
-                self.marginal.normalize()
+                self.marginal = self.marginal.normalize()
                 state = [0]
             else:
                 self.marginal = get_distributions(data)
-                for dist in self.marginal:
-                    dist.normalize()
+                for idx, dist in enumerate(self.marginal):
+                    self.marginal[idx] = dist.normalize()
                 state = [0, 1]
         n_attrs = len(data.domain.attributes)
         while True:
