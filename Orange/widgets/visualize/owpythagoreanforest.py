@@ -1,13 +1,14 @@
 """Pythagorean forest widget for visualizing random forests."""
 from math import log, sqrt
+# pylint: disable=unused-import
 from typing import Any, Callable, Optional
 
+# pylint: disable=unused-import
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
     QItemSelection, QT_VERSION
-from AnyQt.QtGui import QPainter, QPen, QColor, QBrush
+from AnyQt.QtGui import QPainter, QPen, QColor, QBrush, QMouseEvent
 from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QLabel, QSlider, \
     QListView, QStyledItemDelegate, QStyleOptionViewItem, QStyle
-from AnyQt.QtGui import QMouseEvent
 
 from Orange.base import RandomForestModel, TreeModel
 from Orange.data import Table
@@ -110,10 +111,9 @@ class PythagorasTreeDelegate(QStyledItemDelegate):
         if option.state & QStyle.State_Selected:
             painter.setPen(QPen(QColor(125, 162, 206, 192)))
             painter.setBrush(QBrush(QColor(217, 232, 252, 192)))
-            painter.drawRoundedRect(rect, 3, 3)
         else:
             painter.setPen(QPen(QColor('#ebebeb')))
-            painter.drawRoundedRect(rect, 3, 3)
+        painter.drawRoundedRect(rect, 3, 3)
         painter.restore()
 
         painter.setRenderHint(QPainter.Antialiasing)

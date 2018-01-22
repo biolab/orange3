@@ -1,5 +1,6 @@
-import random
 from unittest.mock import Mock
+
+from AnyQt.QtCore import Qt
 
 from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
@@ -8,8 +9,6 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
 from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
-
-from AnyQt.QtCore import Qt
 
 
 class TestOWPythagoreanForest(WidgetTest):
@@ -86,7 +85,7 @@ class TestOWPythagoreanForest(WidgetTest):
         for tree in trees:
             tree.set_depth_limit.assert_called_once_with(0)
 
-    def _pick_random_tree(self):
+    def _get_first_tree(self):
         """Pick a random tree from all the trees on the grid.
 
         Returns
@@ -94,7 +93,9 @@ class TestOWPythagoreanForest(WidgetTest):
         PythagorasTreeViewer
 
         """
-        return random.choice(self.get_tree_widgets())
+        widgets = self.get_tree_widgets()
+        assert len(widgets), 'Empty list of tree widgets'
+        return widgets[0]
 
     def _get_visible_squares(self, tree):
         return [x for _, x in tree._square_objects.items() if x.isVisible()]
@@ -112,7 +113,7 @@ class TestOWPythagoreanForest(WidgetTest):
         w = self.widget
 
         def _test(data_type):
-            colors, tree = [], self._pick_random_tree()
+            colors, tree = [], self._get_first_tree()
 
             def _callback():
                 colors.append([sq.brush().color() for sq in self._get_visible_squares(tree)])
@@ -134,7 +135,7 @@ class TestOWPythagoreanForest(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.random_forest, self.titanic)
         squares = []
-        tree = self._pick_random_tree()
+        tree = self._get_first_tree()
 
         def _callback():
             squares.append([sq.rect() for sq in self._get_visible_squares(tree)])
@@ -170,7 +171,7 @@ class TestOWPythagoreanForest(WidgetTest):
         w = self.widget
         self.send_signal(w.Inputs.random_forest, self.titanic)
         colors = []
-        tree = self._pick_random_tree()
+        tree = self._get_first_tree()
 
         def _callback():
             colors.append([sq.brush().color() for sq in self._get_visible_squares(tree)])
