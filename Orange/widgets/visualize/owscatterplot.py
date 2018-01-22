@@ -217,8 +217,15 @@ class OWScatterPlot(OWWidget):
         super().keyReleaseEvent(event)
         self.graph.update_tooltip(event.modifiers())
 
-    def reset_graph_data(self, *_):
+    def jitter_continuous_click(self):
         if self.data is not None:
+            self.graph.rescale_data()
+            self.update_graph()
+
+    def reset_graph_data(self, *_):
+        if self.data is not None and \
+                (self.graph.jitter_continuous or
+                 self.attr_x.is_discrete or self.attr_y.is_discrete):
             self.graph.rescale_data()
             self.update_graph()
 

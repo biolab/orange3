@@ -595,9 +595,12 @@ class OWPlotGUI:
             labelFormat=lambda x: "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
 
     def jitter_numeric_check_box(self, widget):
+        master = self._plot.master
         gui.checkBox(
             widget=gui.indentedBox(widget=widget), master=self._plot, value="jitter_continuous",
-            label="Jitter numeric values", callback=self._plot.master.reset_graph_data)
+            label="Jitter numeric values",
+            callback=master.jitter_continuous_click
+            if hasattr(master, 'jitter_continuous_click') else master.reset_graph_data)
 
     def show_legend_check_box(self, widget):
         '''
