@@ -345,9 +345,7 @@ class Scheme(QObject):
         """
         check_type(link, SchemeLink)
 
-        if not (link.source_node.allows_cycle() or link.sink_node.allows_cycle()):
-            if self.creates_cycle(link):
-                raise SchemeCycleError("Cannot create cycles in the scheme")
+        self.check_cycles_will_be_valid(link)
 
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
@@ -375,6 +373,193 @@ class Scheme(QObject):
                         "%r is already connected." % link.sink_channel.name
                     )
 
+    def check_cycles_will_be_valid(self, link):
+        """
+        check that if we add the given link in the scheme then the construction
+        will still be valid.
+        Otherwise will raise an error
+
+        Parameters
+        ----------
+        link : :class:`.SchemeLink` the link we intend to add
+        """
+        def _check_cycles_overlap(cycle1, cycle2):
+            """Check if two cycle are overlaping. Meaning they have at least
+            one common node"""
+            for node in cycle1:
+                if node in cycle2:
+                    raise SchemeCycleError("Cannot create complex cycles in "
+                                           "the scheme")
+
+        def is_cycle_hascycle_control(cycle):
+            for node in cycle:
+                if node.description.allows_cycle is True:
+                    return True
+            return False
+
+        cycles = self.extrapolate_cycles(link)
+        for ic in range(0, len(cycles)):
+            for jc in range(ic+1, len(cycles)):
+                _check_cycles_overlap(list(cycles)[ic], list(cycles)[jc])
+
+        for cycle in cycles:
+            if not is_cycle_hascycle_control(cycle):
+                raise SchemeCycleError("Found at least one cycle without cycle"
+                                       "controller")
+
+    def extrapolate_cycles(self, link):
+        """
+        return the list of cycle in the current graph if adding the given link.
+        Cycle detection is quiet raw:
+           * we remove all nodes not part of a cycle
+           * then we deduce all existing cycles making sure of their uniqueness
+
+        Parameters
+        ----------
+        link : :class:`.SchemeLink` the link we would like to add
+        """
+        def remove_nodes_with_no_successor(nodes):
+            """
+            Remove final nodes from nodes
+
+            Parameters
+            ----------
+            nodes : dict with :class:`SchemeNode` as keys and sink nodes as
+                    values
+            """
+            def get_nodes_without_successor():
+                res = []
+                for node in nodes:
+                    if len(nodes[node]) is 0:
+                        res.append(node)
+                return res
+
+            for node in get_nodes_without_successor():
+                del nodes[node]
+
+        def clean_nodes_without_successor(nodes):
+            """
+            Remove final nodes from outputs (sink nodes)
+
+            Parameters
+            ----------
+            nodes : dict with :class:`SchemeNode` as keys and sink nodes as
+                    values
+            """
+            for node in nodes:
+                for isuccessor, successor in enumerate(nodes[node]):
+                    if successor not in list(nodes.keys()):
+                        del nodes[node][isuccessor]
+
+        def clean_dead_end(nodes):
+            """
+            Remove all nodes which can't be part of a cycle using basic graph
+            theory
+
+            Parameters
+            ----------
+            nodes : dict with :class:`SchemeNode` as keys and sink nodes as
+                    values
+            """
+            def has_to_be_clean():
+                for node in nodes:
+                    if len(nodes[node]) is 0:
+                        return True
+                    for successor in nodes[node]:
+                        if successor not in list(nodes.keys()):
+                            return True
+                return False
+
+            while has_to_be_clean() is True:
+                # circuit can pass by a final node (node without output)
+                remove_nodes_with_no_successor(nodes)
+                # circuit do not pass by node only having final node as output
+                clean_nodes_without_successor(nodes)
+
+        def deduce_circuits(node, newlink):
+            """
+            Return all circuit including the node and taking into account
+            the newlink
+            """
+            def get_circuits(starting_node, ending_node, current_circuit,
+                             circuits):
+                outputs_link = self.output_links(starting_node)
+                if starting_node is newlink.source_node:
+                    outputs_link.append(newlink)
+                if len(outputs_link) is 0:
+                    # if dead end no this path is not a circuits
+                    return
+
+                for link in outputs_link:
+                    c_currentCircuit = current_circuit.copy()
+                    c_currentCircuit.add(starting_node)
+                    if link.sink_node is ending_node:
+                        circuits.append(c_currentCircuit)
+                        continue
+                    elif link.sink_node in c_currentCircuit:
+                        # if is in a different cycle
+                        continue
+                    else:
+                        get_circuits(starting_node=link.sink_node,
+                                     ending_node=ending_node,
+                                     current_circuit=c_currentCircuit,
+                                     circuits=circuits)
+
+            circuits = []
+            current_circuit = set()
+            current_circuit.add(node)
+            get_circuits(starting_node=node,
+                         ending_node=node,
+                         current_circuit=current_circuit,
+                         circuits=circuits)
+
+            res = []
+            for circuit in circuits:
+                if circuit not in res:
+                    res.append(circuit)
+            return res
+
+        check_type(link, SchemeLink)
+        source_node, sink_node = link.source_node, link.sink_node
+        nodes = self.create_nodes_dict(source_node)
+        if link.source_node not in nodes:
+            nodes[link.source_node] = []
+        nodes[link.source_node].append(link.sink_node)
+        clean_dead_end(nodes)
+        all_circuits = []
+        for node in nodes:
+            for circuit in deduce_circuits(node, link):
+                if circuit not in all_circuits:
+                    all_circuits.append(circuit)
+        return list(all_circuits)
+
+    def create_nodes_dict(self, start_node):
+        """
+        Create a dictionary to represent the status of the scheme from
+        `start_node`.
+
+        Keys are the nodes and values are the list of the node outputs
+        (sink nodes)
+
+        Parameters
+        ----------
+        start_node : :class:`.SchemeNode`
+        """
+        visited = set()
+        ndict = dict()
+        queue = deque([start_node])
+        while queue:
+            node = queue.popleft()
+            snodes = [link.source_node for link in self.input_links(node)]
+
+            for source_node in snodes:
+                if source_node not in visited:
+                    queue.append(source_node)
+
+            visited.add(node)
+            ndict[node] = [link.sink_node for link in self.output_links(node)]
+        return ndict
+
     def creates_cycle(self, link):
         """
         Return `True` if `link` would introduce a cycle in the scheme.
@@ -386,8 +571,6 @@ class Scheme(QObject):
         """
         check_type(link, SchemeLink)
         source_node, sink_node = link.source_node, link.sink_node
-        if source_node.allows_cycle() or sink_node.allows_cycle():
-            return False
         upstream = self.upstream_nodes(source_node)
         upstream.add(source_node)
         return sink_node in upstream
