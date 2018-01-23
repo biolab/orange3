@@ -9,10 +9,11 @@ widgets in a scheme.
 """
 
 import logging
+import itertools
 import warnings
 
 from collections import namedtuple, defaultdict, deque
-from operator import attrgetter
+from operator import attrgetter, add
 from functools import partial
 
 from AnyQt.QtCore import QObject, QCoreApplication, QEvent, QTimer
@@ -433,6 +434,18 @@ class SignalManager(QObject):
         """
         scheme = self.scheme()
 
+        def expand(node):
+            return [link.sink_node for
+                link in scheme.find_links(source_node=node) if
+                link.enabled]
+
+        components = strongly_connected_components(scheme.nodes, expand)
+        node_scc = {node: scc for scc in components for node in scc}
+
+        def isincycle(node):
+            return len(node_scc[node]) > 1
+
+        # a list of all nodes currently active/executing a task.
         blocking_nodes = set(self.blocking_nodes())
 
         dependents = partial(dependent_nodes, scheme)
@@ -441,10 +454,18 @@ class SignalManager(QObject):
                                map(dependents, blocking_nodes),
                                set(blocking_nodes))
 
-        pending = self.pending_nodes()
-        pending_downstream = reduce(set.union,
-                                    map(dependents, pending),
-                                    set())
+        pending = set(self.pending_nodes())
+
+        pending_downstream = set()
+        for n in pending:
+            depend = set(dependents(n))
+            if isincycle(n):
+                # a pending node in a cycle would would have a circular
+                # dependency on itself, preventing any progress being made
+                # by the workflow execution.
+                cc = node_scc[n]
+                depend -= set(cc)
+            pending_downstream.update(depend)
 
         log.debug("Pending nodes: %s", pending)
         log.debug("Blocking nodes: %s", blocking_nodes)
@@ -595,3 +616,60 @@ def unique(iterable):
         return observed
 
     return (el for el in iterable if not observed(el))
+
+
+def strongly_connected_components(nodes, expand):
+    """
+    Return a list of strongly connected components.
+
+    Implementation of Tarjan's SCC algorithm.
+    """
+    # SCC found
+    components = []
+    # node stack in BFS
+    stack = []
+    # == set(stack) : a set of all nodes in stack (for faster lookup)
+    stackset = set()
+
+    # node -> int increasing node numbering as encountered in DFS traversal
+    index = {}
+    # node -> int the lowest node index reachable from a node
+    lowlink = {}
+
+    indexgen = itertools.count()
+
+    def push_node(v):
+        """Push node onto the stack."""
+        stack.append(v)
+        stackset.add(v)
+        index[v] = lowlink[v] = next(indexgen)
+
+    def pop_scc(v):
+        """Pop from the stack a SCC rooted at node v."""
+        i = stack.index(v)
+        scc = stack[i:]
+        del stack[i:]
+        stackset.difference_update(scc)
+        return scc
+
+    isvisited = lambda node: node in index
+
+    def strong_connect(v):
+        push_node(v)
+
+        for w in expand(v):
+            if not isvisited(w):
+                strong_connect(w)
+                lowlink[v] = min(lowlink[v], lowlink[w])
+            elif w in stackset:
+                lowlink[v] = min(lowlink[v], index[w])
+
+        if index[v] == lowlink[v]:
+            scc = pop_scc(v)
+            components.append(scc)
+
+    for node in nodes:
+        if not isvisited(node):
+            strong_connect(node)
+
+    return components
