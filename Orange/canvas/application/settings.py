@@ -16,7 +16,7 @@ from ..utils.propertybindings import (
 from AnyQt.QtWidgets import (
     QWidget, QMainWindow, QComboBox, QCheckBox, QListView, QTabWidget,
     QToolBar, QAction, QStackedWidget, QVBoxLayout, QHBoxLayout,
-    QFormLayout, QSizePolicy, QLineEdit,
+    QFormLayout, QSizePolicy, QLineEdit, QLabel
 )
 
 from AnyQt.QtCore import (
@@ -391,6 +391,12 @@ class UserSettingsDialog(QMainWindow):
         conda.layout().addWidget(cb_conda_install)
 
         form.addRow(self.tr("Conda"), conda)
+
+        form.addRow(self.tr("Pip"), QLabel("Pip install arguments:"))
+        line_edit_pip = QLineEdit()
+        self.bind(line_edit_pip, "text", "add-ons/pip-install-arguments")
+        form.addRow("", line_edit_pip)
+
         tab.setLayout(form)
 
         if self.__macUnified:

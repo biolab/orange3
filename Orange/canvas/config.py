@@ -124,6 +124,9 @@ spec = \
 
      ("add-ons/allow-conda-experimental", bool, False,
       "Install add-ons with conda"),
+
+     ("add-ons/pip-install-arguments", str, '',
+      'Arguments to pass to "pip install" when installing add-ons.'),
      ]
 
 spec = [config_slot(*t) for t in spec]

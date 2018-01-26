@@ -811,8 +811,13 @@ class Installer(QObject):
 
 class PipInstaller:
 
+    def __init__(self):
+        arguments = QSettings().value('add-ons/pip-install-arguments', '', type=str)
+        self.arguments = shlex.split(arguments)
+
     def install(self, pkg):
         cmd = ["python", "-m", "pip", "install"]
+        cmd.extend(self.arguments)
         if pkg.package_url.startswith("http://"):
             cmd.append(pkg.name)
         else:
@@ -829,6 +834,7 @@ class PipInstaller:
 
     def upgrade_no_deps(self, package):
         cmd = ["python", "-m", "pip", "install", "--upgrade", "--no-deps"]
+        cmd.extend(self.arguments)
         cmd.append(package.name)
 
         run_command(cmd)
