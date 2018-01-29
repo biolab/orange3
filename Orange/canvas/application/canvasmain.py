@@ -351,7 +351,7 @@ class CanvasMainWindow(QMainWindow):
         self.help_dock.setAllowedAreas(Qt.NoDockWidgetArea)
         if USE_WEB_ENGINE:
             self.help_view = QWebEngineView()
-        else:
+        elif QWebView:
             self.help_view = QWebView()
             manager = self.help_view.page().networkAccessManager()
             cache = QNetworkDiskCache()
@@ -359,7 +359,10 @@ class CanvasMainWindow(QMainWindow):
                 os.path.join(config.cache_dir(), "help", "help-view-cache")
             )
             manager.setCache(cache)
-        self.help_dock.setWidget(self.help_view)
+        else:
+            self.help_view = None
+        if self.help_view:
+            self.help_dock.setWidget(self.help_view)
         self.addDockWidget(
             QSettings().value('help-dock/area', Qt.RightDockWidgetArea, type=int),
             self.help_dock)
@@ -1885,7 +1888,7 @@ class CanvasMainWindow(QMainWindow):
                 # again.
                 url = QUrl(url.toString())
                 QDesktopServices.openUrl(url)
-        else:
+        elif self.help_view:
             self.help_view.load(QUrl(url))
             self.help_dock.show()
             self.help_dock.raise_()
