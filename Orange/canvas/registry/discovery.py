@@ -259,12 +259,10 @@ class WidgetDiscovery(object):
                 if desc is None:
                     try:
                         module = asmodule(name)
-                    except ImportError:
-                        log.info("Could not import %r.", name, exc_info=True)
-                        continue
                     except Exception:
-                        log.warning("Error while importing %r.", name,
-                                    exc_info=True)
+                        log.error("Error while importing %r. "
+                                  "The widget will not be shown.", name,
+                                  exc_info=True)
                         continue
 
                     try:
