@@ -21,16 +21,11 @@ available ([binaries] and [sources]).
 
 Installing
 ----------
-This version of Orange requires Python 3.4 or newer. To build it and install
+Orange requires Python 3.4 or newer. To build it and install
 it in a development environment, run:
 
     # Install some build requirements via your system's package manager
-    sudo apt-get install virtualenv git build-essential
-
-    # Also install Qt dependencies for the GUI
-    sudo apt-get install python3-pyqt4
-    # or if python version is >= 3.5
-    #  pip install pyqt5 
+    sudo apt install virtualenv git build-essential python3-dev
 
     # Create a separate Python environment for Orange and its dependencies ...
     virtualenv --python=python3 --system-site-packages orange3venv
@@ -41,7 +36,12 @@ it in a development environment, run:
     git clone https://github.com/biolab/orange3.git
     cd orange3
 
-    # Install the minimum required dependencies first
+    # Install Qt dependencies for the GUI
+    pip install PyQt5
+    # Of if Python <= 3.4 and/or with package manager
+    # sudo apt install python3-pyqt4
+    
+    # Install other minimum required dependencies
     pip install -r requirements-core.txt  # For Orange Python library
     pip install -r requirements-gui.txt   # For Orange GUI
 
