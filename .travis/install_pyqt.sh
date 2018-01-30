@@ -1,5 +1,5 @@
 if [ ! "$PYQT4" ]; then
-    foldable pip install sip pyqt5
+    foldable pip install sip 'pyqt5!=5.10'  # 5.10 exhibits QTBUG-65235
     return $?;
 fi
 
