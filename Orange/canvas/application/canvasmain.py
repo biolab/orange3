@@ -1551,9 +1551,27 @@ class CanvasMainWindow(QMainWindow):
                 openselectedbutton.setEnabled(False)
         dlg.currentIndexChanged.connect(on_page_changed)
 
+        def open_example_workflow(path):
+            # open a workflow without filename/directory tracking.
+            if not self.pre_close_save():
+                return QDialog.Rejected
+
+            wf = self.new_scheme_from(path)
+            if wf is not None:
+                self.set_new_scheme(wf)
+                return QDialog.Accepted
+            else:
+                return QDialog.Rejected
+
         def on_clicked(button):
             current = dlg.currentIndex()
             path = None
+            open_workflow_file = None
+            if current in {PageTemplates, PageWelcome}:
+                open_workflow_file = open_example_workflow
+            elif current == PageRecent:
+                open_workflow_file = self.open_scheme_file
+
             if button is openselectedbutton and \
                     current in {PageTemplates, PageRecent}:
                 w = dlg.widget(current)
@@ -1569,7 +1587,7 @@ class CanvasMainWindow(QMainWindow):
                 path = w.item(w.currentIndex()).property("path")
 
             if path is not None and \
-                    self.open_scheme_file(path) == QDialog.Accepted:
+                    open_workflow_file(path) == QDialog.Accepted:
                 dlg.accept()
         buttons.clicked.connect(on_clicked)
 
