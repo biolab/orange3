@@ -211,7 +211,7 @@ def variables_filter(model, parent=None):
     filter_edit.setPlaceholderText("Filter")
 
     completer_model = QStringListModel()
-    completer = QCompleter(completer_model)
+    completer = QCompleter(completer_model, filter_edit)
     completer.setCompletionMode(QCompleter.InlineCompletion)
     completer.setModelSorting(QCompleter.CaseSensitivelySortedModel)
 
