@@ -407,16 +407,6 @@ class AddonManagerWidget(QWidget):
             item = self.__model.item(index, 1)
             item = item.data(Qt.UserRole)
             assert isinstance(item, (Installed, Available))
-#             if isinstance(item, Available):
-#                 self.__installed_label.setText("")
-#                 self.__available_label.setText(str(item.available.version))
-#             elif item.installable is not None:
-#                 self.__installed_label.setText(str(item.local.version))
-#                 self.__available_label.setText(str(item.available.version))
-#             else:
-#                 self.__installed_label.setText(str(item.local.version))
-#                 self.__available_label.setText("")
-
             text = self._detailed_text(item)
             self.__details.setText(text)
 
