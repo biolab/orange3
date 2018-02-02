@@ -752,7 +752,7 @@ class datasets:
     @classmethod
     def missing_data_1(cls):
         """
-        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        Dataset with 3 continuous features (X{1,2,3}) where all the columns
         and rows contain at least one NaN value.
 
         One discrete class D with NaN values
@@ -767,7 +767,7 @@ class datasets:
     @classmethod
     def missing_data_2(cls):
         """
-        Data set with 3 continuous features (X{1,2,3}) where all the columns
+        Dataset with 3 continuous features (X{1,2,3}) where all the columns
         and rows contain at least one NaN value and X1, X2 are constant.
 
         One discrete constant class D with NaN values.
@@ -782,7 +782,7 @@ class datasets:
     @classmethod
     def missing_data_3(cls):
         """
-        Data set with 3 discrete features D{1,2,3} where all the columns and
+        Dataset with 3 discrete features D{1,2,3} where all the columns and
         rows contain at least one NaN value
 
         One discrete class D with NaN values
@@ -797,7 +797,7 @@ class datasets:
     @classmethod
     def data_one_column_vals(cls, value=np.nan):
         """
-        Data set with two continuous features and one discrete. One continuous
+        Dataset with two continuous features and one discrete. One continuous
         columns has custom set values (default nan).
 
         Returns
@@ -821,7 +821,7 @@ class datasets:
     @classmethod
     def data_one_column_nans(cls):
         """
-        Data set with two continuous features and one discrete. One continuous
+        Dataset with two continuous features and one discrete. One continuous
         columns has missing values (NaN).
 
         Returns

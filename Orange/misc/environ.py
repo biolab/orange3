@@ -45,23 +45,27 @@ def data_dir_base():
     return base
 
 
-def data_dir():
+def data_dir(versioned=True):
     """
     Return the platform dependent Orange data directory.
 
-    This is ``data_dir_base()``/Orange/__VERSION__/ directory.
+    This is ``data_dir_base()``/Orange/__VERSION__/ directory if versioned is
+    `True` and ``data_dir_base()``/Orange/ otherwise.
     """
     base = data_dir_base()
-    return os.path.join(base, "Orange", Orange.__version__)
+    if versioned:
+        return os.path.join(base, "Orange", Orange.__version__)
+    else:
+        return os.path.join(base, "Orange")
 
 
-def widget_settings_dir():
+def widget_settings_dir(versioned=True):
     """
     Return the platform dependent directory where widgets save their settings.
 
-    This a subdirectory of ``data_dir()`` named "widgets"
+    This a subdirectory of ``data_dir(versioned)`` named "widgets"
     """
-    return os.path.join(data_dir(), "widgets")
+    return os.path.join(data_dir(versioned=versioned), "widgets")
 
 
 def cache_dir(*args):

@@ -8,7 +8,7 @@ from Orange.widgets import gui
 
 class OWDataSamplerC(OWWidget):
     name = "Data Sampler (C)"
-    description = "Randomly selects a subset of instances from the data set."
+    description = "Randomly selects a subset of instances from the dataset."
     icon = "icons/DataSamplerC.svg"
     priority = 30
 
@@ -53,7 +53,7 @@ class OWDataSamplerC(OWWidget):
     def set_data(self, dataset):
         if dataset is not None:
             self.dataset = dataset
-            self.infoa.setText('%d instances in input data set' % len(dataset))
+            self.infoa.setText('%d instances in input dataset' % len(dataset))
             self.optionsBox.setDisabled(False)
             self.selection()
         else:

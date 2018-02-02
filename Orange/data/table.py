@@ -1567,7 +1567,7 @@ class Table(MutableSequence, Storage):
                       for row in table] if feature_names_column else \
             [ContinuousVariable(feature_name + " " + str(i + 1).zfill(
                 int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
-        if old_domain and feature_names_column:
+        if old_domain is not None and feature_names_column:
             for i, _ in enumerate(attributes):
                 if attributes[i].name in old_domain:
                     var = old_domain[attributes[i].name]
@@ -1608,7 +1608,7 @@ class Table(MutableSequence, Storage):
 
         # class_vars - attributes of attributes to class - from old domain
         class_vars = []
-        if old_domain:
+        if old_domain is not None:
             class_vars = old_domain.class_vars
         self.Y = get_table_from_attributes_of_attributes(class_vars)
 
@@ -1635,10 +1635,10 @@ class Table(MutableSequence, Storage):
             return variable
 
         _metas = [StringVariable(n) for n in names]
-        if old_domain:
+        if old_domain is not None:
             _metas = [m for m in old_domain.metas if m.name != meta_attr_name]
         M = get_table_from_attributes_of_attributes(_metas, _dtype=object)
-        if not old_domain:
+        if old_domain is None:
             _metas = [guessed_var(i, m.name) for i, m in enumerate(_metas)]
         if _metas:
             self.metas = np.hstack((self.metas, M))

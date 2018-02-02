@@ -13,11 +13,11 @@ Signals
 
 -  **Data**
 
-   An input data set.
+   An input dataset.
 
 -  **Data Subset**
 
-   A subset of instances from the input data set.
+   A subset of instances from the input dataset.
 
 **Outputs**:
 
@@ -54,7 +54,7 @@ instances that are close to a set of variable anchors have higher values for
 these variables than for the others.
 
 The snapshot shown below shows a Radviz widget with a visualization of the
-data set from functional genomics ([2]_). In this particular
+dataset from functional genomics ([2]_). In this particular
 visualization the data instances are colored according to the corresponding
 class, and the visualization space is colored according to the computed class
 probability. Notice that the particular visualization very nicely separates

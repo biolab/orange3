@@ -18,7 +18,7 @@ except ImportError:
 class OWDataInfo(widget.OWWidget):
     name = "Data Info"
     id = "orange.widgets.data.info"
-    description = """Display basic information about the data set, such
+    description = """Display basic information about the dataset, such
     as the number and type of variables in the columns and the number of rows."""
     icon = "icons/DataInfo.svg"
     priority = 80

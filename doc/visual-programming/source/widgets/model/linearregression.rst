@@ -14,11 +14,11 @@ Signals
 
 -  **Data**
 
-   A data set
+   A dataset
 
 -  **Preprocessor**
 
-   A preprocessed data set.
+   A preprocessed dataset.
 
 **Outputs**:
 
@@ -58,6 +58,6 @@ Linear regreesion works only on regression tasks.
 Example
 -------
 
-Below, is a simple workflow with *housing* data set. We trained **Linear Regression** and :doc:`Random Forest <../model/randomforest>` and evaluated their performance in :doc:`Test&Score <../evaluation/testandscore>`.
+Below, is a simple workflow with *housing* dataset. We trained **Linear Regression** and :doc:`Random Forest <../model/randomforest>` and evaluated their performance in :doc:`Test&Score <../evaluation/testandscore>`.
 
 .. figure:: images/LinearRegression-regression.png

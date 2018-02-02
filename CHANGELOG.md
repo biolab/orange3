@@ -6,6 +6,19 @@ Change Log
 * ...
 
 
+[3.9.1] - 2018-02-02
+--------------------
+##### Enhancements
+* Add parameters and similarity measures to tSNE ([#2510](../../pull/2510))
+* Canvas: Add zoom ([#2841](../../pull/2841))
+
+##### Bugfixes
+* OWWidget: Store quicktip displayed state in non versioned settings dir ([#2875](../../pull/2875))
+* Impute: Fix state serialization/restore ([#2830](../../pull/2830))
+* Feature Constructor: Make FeatureFunc picklable ([#2873](../../pull/2873))
+* Projection widgets: transform data properly ([#2871](../../pull/2871))
+
+
 [3.9.0] - 2018-01-19
 --------------------
 ##### Enhancements
@@ -754,7 +767,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.9.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.9.1...HEAD
+[3.9.1]: https://github.com/biolab/orange3/compare/3.9.0...3.9.1
 [3.9.0]: https://github.com/biolab/orange3/compare/3.8.0...3.9.0
 [3.8.0]: https://github.com/biolab/orange3/compare/3.7.1...3.8.0
 [3.7.1]: https://github.com/biolab/orange3/compare/3.7.0...3.7.1

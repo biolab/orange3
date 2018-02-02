@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input data set.
+   An input dataset.
 
 -  **Data subset**
 
@@ -39,7 +39,7 @@ The **Mosaic plot** is a graphical representation of a two-way frequency table o
 Example
 -------
 
-We loaded the *titanic* data set and connected it to the **Mosaic Display** widget. We decided to focus on two variables, namely status, sex and survival. We colored the interiors according to Pearson residuals in order to demonstrate the difference between observed and fitted values. 
+We loaded the *titanic* dataset and connected it to the **Mosaic Display** widget. We decided to focus on two variables, namely status, sex and survival. We colored the interiors according to Pearson residuals in order to demonstrate the difference between observed and fitted values. 
 
 .. figure:: images/Mosaic-Display-Example.png
 

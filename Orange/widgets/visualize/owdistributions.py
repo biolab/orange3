@@ -142,7 +142,7 @@ class OWDistributions(widget.OWWidget):
     priority = 120
 
     class Inputs:
-        data = Input("Data", Orange.data.Table, doc="Set the input data set")
+        data = Input("Data", Orange.data.Table, doc="Set the input dataset")
 
     settingsHandler = settings.DomainContextHandler(
         match_values=settings.DomainContextHandler.MATCH_VALUES_ALL)

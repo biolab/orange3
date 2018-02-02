@@ -32,7 +32,7 @@ The script outputs the tree::
    |    |    TAX<=534.500: 45.9
    |    |    TAX>534.500: 21.9
 
-Following is initialization of few other regressors and their prediction of the first five data instances in housing price data set:
+Following is initialization of few other regressors and their prediction of the first five data instances in housing price dataset:
 
 .. index::
    single: regression; linear

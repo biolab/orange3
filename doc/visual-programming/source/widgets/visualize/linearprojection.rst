@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input data set
+   An input dataset
 
 -  **Data Subset**
 
@@ -49,7 +49,7 @@ of class-labeled data. It supports various types of projections such as circular
 custom projection.
 
 Consider, for a start, a projection of the *Iris*
-data set shown below. Notice that it is the sepal width and sepal length
+dataset shown below. Notice that it is the sepal width and sepal length
 that already separate *Iris setosa* from the other two, while the petal
 length is the attribute best separating *Iris versicolor* from *Iris
 virginica*.

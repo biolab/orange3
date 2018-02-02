@@ -2,6 +2,8 @@ import unittest
 import ast
 import sys
 import math
+import pickle
+import copy
 
 import numpy as np
 
@@ -14,9 +16,9 @@ from Orange.widgets.data.owfeatureconstructor import (
     construct_variables, OWFeatureConstructor,
     FeatureEditor, DiscreteFeatureEditor)
 
-from Orange.widgets.data.owfeatureconstructor import freevars, validate_exp
-
-import dill as pickle  # Import dill after Orange because patched
+from Orange.widgets.data.owfeatureconstructor import (
+    freevars, validate_exp, FeatureFunc
+)
 
 
 class FeatureConstructorTest(unittest.TestCase):
@@ -87,27 +89,6 @@ class FeatureConstructorTest(unittest.TestCase):
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
         ContinuousVariable._clear_all_caches()
-
-
-GLOBAL_CONST = 2
-
-
-class PicklingTest(unittest.TestCase):
-    CLASS_CONST = 3
-
-    def test_lambdas_pickle(self):
-        NONLOCAL_CONST = 5
-
-        lambda_func = lambda x, local_const=7: \
-            x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
-
-        def nested_func(x, local_const=7):
-            return x * local_const * NONLOCAL_CONST * self.CLASS_CONST * GLOBAL_CONST
-
-        self.assertEqual(lambda_func(11),
-                         pickle.loads(pickle.dumps(lambda_func))(11))
-        self.assertEqual(nested_func(11),
-                         pickle.loads(pickle.dumps(nested_func))(11))
 
 
 class TestTools(unittest.TestCase):
@@ -216,6 +197,30 @@ class TestTools(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             validate_("{a:1 for a in s}")
+
+
+class FeatureFuncTest(unittest.TestCase):
+    def test_reconstruct(self):
+        f = FeatureFunc("a * x + c", [("x", "x")], {"a": 2, "c": 10})
+        self.assertEqual(f({"x": 2}), 14)
+        f1 = pickle.loads(pickle.dumps(f))
+        self.assertEqual(f1({"x": 2}), 14)
+        fc = copy.copy(f)
+        self.assertEqual(fc({"x": 3}), 16)
+
+    def test_repr(self):
+        self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
+                         "FeatureFunc('a + 1', [('a', 2)], {})")
+
+    def test_call(self):
+        f = FeatureFunc("a + 1", [("a", "a")])
+        self.assertEqual(f({"a": 2}), 3)
+
+        iris = Table("iris")
+        f = FeatureFunc("sepal_width + 10",
+                        [("sepal_width", iris.domain["sepal width"])])
+        r = f(iris)
+        np.testing.assert_array_equal(r, iris.X[:, 1] + 10)
 
 
 class OWFeatureConstructorTests(WidgetTest):

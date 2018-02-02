@@ -301,7 +301,7 @@ class RecentPathsWidgetMixin:
     `RecentPathsWidgetMixin.__init__(self)`.
     """
 
-    #: list with search paths; overload to add, say, documentation data sets dir
+    #: list with search paths; overload to add, say, documentation datasets dir
     SEARCH_PATHS = []
 
     #: List[RecentPath]

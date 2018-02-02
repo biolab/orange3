@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A data set.
+   A dataset.
 
 -  **Preprocessor**
 
@@ -80,7 +80,7 @@ The widget works for both classification and regression tasks.
 Examples
 --------
 
-In the first (regression) example, we have used *housing* data set and split the data into two data subsets (*Data Sample* and *Remaining Data*) with :doc:`Data Sampler <../data/datasampler>`. The sample was sent to SVM which produced a *Model*, which was then used in :doc:`Predictions <../evaluation/predictions>` to predict the values in *Remaining Data*. A similar schema can be used if the data is already in two separate files; in this case, two :doc:`File <../data/file>` widgets would be used instead of the :doc:`File <../data/file>` - :doc:`Data Sampler <../data/datasampler>` combination.
+In the first (regression) example, we have used *housing* dataset and split the data into two data subsets (*Data Sample* and *Remaining Data*) with :doc:`Data Sampler <../data/datasampler>`. The sample was sent to SVM which produced a *Model*, which was then used in :doc:`Predictions <../evaluation/predictions>` to predict the values in *Remaining Data*. A similar schema can be used if the data is already in two separate files; in this case, two :doc:`File <../data/file>` widgets would be used instead of the :doc:`File <../data/file>` - :doc:`Data Sampler <../data/datasampler>` combination.
 
 .. figure:: images/SVM-predictions.png
 

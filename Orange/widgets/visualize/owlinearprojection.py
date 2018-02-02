@@ -464,13 +464,7 @@ class OWLinearProjection(widget.OWWidget):
             QApplication.postEvent(self, QEvent(self.ReplotRequest), Qt.LowEventPriority - 10)
 
     def init_attr_values(self):
-        domain = self.data and len(self.data) and self.data.domain or None
-        for model in self.models:
-            model.set_domain(domain)
-        self.graph.attr_color = self.data.domain.class_var if domain else None
-        self.graph.attr_shape = None
-        self.graph.attr_size = None
-        self.graph.attr_label = None
+        self.graph.set_domain(self.data)
 
     def _vizrank_color_change(self):
         is_enabled = False
@@ -732,8 +726,9 @@ class OWLinearProjection(widget.OWWidget):
         valid_mask = self.plotdata.valid_mask
         array = np.zeros((len(self.data), 2), dtype=np.float)
         array[valid_mask] = self.plotdata.embedding_coords
-        self.plotdata.data = data = Table.from_numpy(
-            domain, X=self.data.X, Y=self.data.Y, metas=np.hstack((self.data.metas, array)))
+        self.plotdata.data = data = self.data.transform(domain)
+        data[:, self.variable_x] = array[:, 0].reshape(-1, 1)
+        data[:, self.variable_y] = array[:, 1].reshape(-1, 1)
         subset_data = data[self._subset_mask & valid_mask]\
             if self._subset_mask is not None and len(self._subset_mask) else None
         self.plotdata.data = data

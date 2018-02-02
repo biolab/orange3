@@ -18,7 +18,7 @@ from Orange.util import Reprable
 class OWDataSampler(OWWidget):
     name = "Data Sampler"
     description = "Randomly draw a subset of data points " \
-                  "from the input data set."
+                  "from the input dataset."
     icon = "icons/DataSampler.svg"
     priority = 100
     category = "Data"
@@ -57,7 +57,7 @@ class OWDataSampler(OWWidget):
         too_many_folds = Msg("Number of folds exceeds data size")
         sample_larger_than_data = Msg("Sample must be smaller than data")
         not_enough_to_stratify = Msg("Data is too small to stratify")
-        no_data = Msg("Data set is empty")
+        no_data = Msg("Dataset is empty")
 
     def __init__(self):
         super().__init__()
@@ -175,7 +175,7 @@ class OWDataSampler(OWWidget):
             self.cb_stratify.setVisible(not sql)
             self.cb_sql_dl.setVisible(sql)
             self.dataInfoLabel.setText(
-                '{}{} instances in input data set.'.format(*(
+                '{}{} instances in input dataset.'.format(*(
                     ('~', dataset.approx_len()) if sql else
                     ('', len(dataset)))))
             if not sql:

@@ -2,10 +2,11 @@
 Canvas Graphics View
 """
 import logging
+from math import copysign
 
 from AnyQt.QtWidgets import QGraphicsView
-from AnyQt.QtGui import QCursor, QIcon
-from AnyQt.QtCore import Qt, QRect, QSize, QRectF, QPoint, QTimer
+from AnyQt.QtGui import QCursor, QIcon, QTransform, QWheelEvent
+from AnyQt.QtCore import QT_VERSION, Qt, QRect, QSize, QRectF, QPoint, QTimer
 
 log = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ class CanvasView(QGraphicsView):
         self.__autoScrollMargin = 16
         self.__autoScrollTimer = QTimer(self)
         self.__autoScrollTimer.timeout.connect(self.__autoScrollAdvance)
+
+        self.__scale = 10
 
     def setScene(self, scene):
         QGraphicsView.setScene(self, scene)
@@ -62,6 +65,33 @@ class CanvasView(QGraphicsView):
             self.__stopAutoScroll()
 
         return QGraphicsView.mouseReleaseEvent(self, event)
+
+    def reset_zoom(self):
+        self.__set_zoom(10)
+
+    def change_zoom(self, delta):
+        self.__set_zoom(self.__scale + delta)
+
+    def __set_zoom(self, scale):
+        self.__scale = min(15, max(scale, 3))
+        transform = QTransform()
+        transform.scale(self.__scale / 10, self.__scale / 10)
+        self.setTransform(transform)
+
+    def wheelEvent(self, event: QWheelEvent):
+        # use mouse position as anchor while zooming
+        self.setTransformationAnchor(2)
+        if event.modifiers() & Qt.ControlModifier \
+                and event.buttons() == Qt.NoButton:
+            delta = event.angleDelta().y()
+            if QT_VERSION >= 0x050500 \
+                    and event.source() != Qt.MouseEventNotSynthesized \
+                    and abs(delta) < 50:
+                self.change_zoom(delta / 10)
+            else:
+                self.change_zoom(copysign(1, delta))
+        else:
+            super().wheelEvent(event)
 
     def __shouldAutoScroll(self, pos):
         if self.__autoScroll:

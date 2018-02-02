@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input data set.
+   An input dataset.
 
 **Outputs**:
 
@@ -25,7 +25,7 @@ Description
 
 `Heat map <https://en.wikipedia.org/wiki/Heat_map>`_ is a graphical
 method for visualizing attribute values by class in a two-way matrix.
-It only works on data sets containing continuous variables. 
+It only works on datasets containing continuous variables. 
 The values are represented by color: the higher a certain value is, the
 darker the represented color. By combining class and attributes on x and
 y axes, we see where the attribute values are the strongest and where the
@@ -39,7 +39,7 @@ range (continuous) for each class.
    attributes with high values).
 2. Merge data. 
 3. Sort columns and rows:
-   - **No Sorting** (lists attributes as found in the data set)
+   - **No Sorting** (lists attributes as found in the dataset)
    - **Clustering** (clusters data by similarity)
    - **Clustering with ordered leaves** (maximizes the sum of similarities of adjacent elements)
 4. Set what is displayed in the plot in **Annotation & Legend**.
@@ -55,14 +55,14 @@ range (continuous) for each class.
 Example
 -------
 
-The **Heat Map** below displays attribute values for the *Housing* data set. 
-The aforementioned data set concerns the housing values in the suburbs of Boston. 
+The **Heat Map** below displays attribute values for the *Housing* dataset. 
+The aforementioned dataset concerns the housing values in the suburbs of Boston. 
 The first thing we see in the map are the 'B' and 'Tax' attributes, which are
 the only two colored in dark orange. The 'B' attribute provides information 
 on the proportion of blacks by town and the 'Tax' attribute informs us about 
 the full-value property-tax rate per $10,000. In order to get a clearer heat map,
 we then use the :doc:`Select Columns <../data/selectcolumns>` widget and remove
-the two attributes from the data set. Then we again feed the data to the **Heat map**.
+the two attributes from the dataset. Then we again feed the data to the **Heat map**.
 The new projection offers additional information. 
 By removing 'B' and 'Tax', we can see other deciding factors, 
 namely 'Age' and 'ZN'. The ‘Age’ attribute provides information 
@@ -77,4 +77,4 @@ By removing some of the more pronounced features, we came across new information
 References
 ----------
 
-`Housing Data Set <https://archive.ics.uci.edu/ml/datasets/Housing>`_
+`Housing Dataset <https://archive.ics.uci.edu/ml/datasets/Housing>`_

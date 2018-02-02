@@ -8,7 +8,7 @@ from Orange.widgets import gui
 
 class OWDataSamplerA(OWWidget):
     name = "Data Sampler"
-    description = "Randomly selects a subset of instances from the data set"
+    description = "Randomly selects a subset of instances from the dataset"
     icon = "icons/DataSamplerA.svg"
     priority = 10
 
@@ -33,7 +33,7 @@ class OWDataSamplerA(OWWidget):
     @Inputs.data
     def set_data(self, dataset):
         if dataset is not None:
-            self.infoa.setText('%d instances in input data set' % len(dataset))
+            self.infoa.setText('%d instances in input dataset' % len(dataset))
             indices = numpy.random.permutation(len(dataset))
             indices = indices[:int(numpy.ceil(len(dataset) * 0.1))]
             sample = dataset[indices]

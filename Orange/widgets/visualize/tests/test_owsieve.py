@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 from math import isnan
 from unittest.mock import patch
+
 import numpy as np
 
 from AnyQt.QtCore import QEvent, QPoint, Qt
@@ -22,9 +23,54 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
 
         cls.signal_name = "Data"
         cls.signal_data = cls.data
+        cls.titanic = Table("titanic")
+        cls.iris = Table("iris")
 
     def setUp(self):
         self.widget = self.create_widget(OWSieveDiagram)
+
+    def test_context_settings(self):
+        # Set titanic and check first two attributes on display
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertEqual(self.widget.attr_x, self.titanic.domain.class_var)
+        self.assertEqual(self.widget.attr_y, self.titanic.domain.attributes[0])
+        # Change attributes to two different ones
+        self.widget.attr_x = self.titanic.domain.attributes[1]
+        self.widget.attr_y = self.titanic.domain.attributes[2]
+        # Remove data signal
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(self.widget.attr_x, None)
+        self.assertEqual(self.widget.attr_y, None)
+        self.assertIsNone(self.widget.discrete_data)
+        # Set data back to titanic and check if selected attributes are
+        # remembered in the settings
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertEqual(self.widget.attr_x, self.titanic.domain.attributes[1])
+        self.assertEqual(self.widget.attr_y, self.titanic.domain.attributes[2])
+
+    def test_continuous_data(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertEqual(self.widget.attr_x, self.iris.domain.class_var)
+        self.assertEqual(self.widget.attr_y, self.iris.domain.attributes[0])
+        self.assertTrue(self.widget.discrete_data.domain[0].is_discrete)
+
+    def test_few_attributes(self):
+        # Test widget behaviour when data has only a few attributes
+        # Test for 2 attributes
+        attr2 = self.titanic.domain[:2]
+        domain2 = Domain(attr2)
+        data2 = Table(domain2, self.titanic)
+        self.send_signal(self.widget.Inputs.data, data2)
+        # Test for 1 attributes
+        attr1 = self.titanic.domain[:1]
+        domain1 = Domain(attr1)
+        data1 = Table(domain1, self.titanic)
+        self.send_signal(self.widget.Inputs.data, data1)
+        # Test for 0 attributes
+        attr0 = self.titanic.domain[:0]
+        domain0 = Domain(attr0)
+        data0 = Table(domain0, self.titanic)
+        self.send_signal(self.widget.Inputs.data, data0)
 
     def _select_data(self):
         self.widget.attr_x, self.widget.attr_y = self.data.domain[:2]
@@ -42,19 +88,18 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         data = Table(Domain(attrs, class_var), X, np.array([np.nan] * 6))
         self.send_signal(self.widget.Inputs.data, data)
 
-    def test_keyerror(self):
-        """gh-2007
+    def test_single_line(self):
+        """
         Check if it works when a table has only one row or duplicates.
         Discretizer must have remove_const set to False.
         """
-        data = Table("iris")
-        data = data[0:1]
+        data = self.titanic[0:1]
         self.send_signal(self.widget.Inputs.data, data)
 
     def test_chisquare(self):
         """
-         gh-2031
-         Check if it can calculate chi square when there are no attributes which suppose to be.
+        Check if it can calculate chi square when there are no attributes
+        which suppose to be.
         """
         a = DiscreteVariable("a", values=["y", "n"])
         b = DiscreteVariable("b", values=["y", "n", "o"])
@@ -64,9 +109,9 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
 
     def test_metadata(self):
         """
-        Widget should intepret meta data which are continuous or discrete in the same way
-        as features or target. However still one variable should be target or feature.
-        gh-2098
+        Widget should interpret meta data which are continuous or discrete in
+        the same way as features or target. However still one variable should
+        be target or feature.
         """
         table = Table(
             Domain(
@@ -90,16 +135,14 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
     def test_sparse_data(self):
         """
         Sparse support.
-        GH-2160
-        GH-2260
         """
-        table = Table("iris")
-        self.send_signal(self.widget.Inputs.data, table)
-        self.assertEqual(len(self.widget.discrete_data.domain), len(table.domain))
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertEqual(len(self.widget.discrete_data.domain),
+                         len(self.iris.domain))
         output = self.get_output("Data")
         self.assertFalse(output.is_sparse())
 
-        table = table.to_sparse()
+        table = self.iris.to_sparse()
         self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(len(self.widget.discrete_data.domain), 2)
         output = self.get_output("Data")

@@ -12,13 +12,13 @@ Signals
 
 -  **Data**
 
-   Attribute-valued data set.
+   Attribute-valued dataset.
 
 **Outputs**:
 
 -  **Data**
 
-   Attribute-valued data set composed using the domain specification from
+   Attribute-valued dataset composed using the domain specification from
    the widget.
 
 Description
@@ -40,9 +40,9 @@ before the name of the attribute (D, C, S, respectively).
 
 1. Left-out data attributes that will not be in the output data file
 2. Data attributes in the new data file
-3. Target variable. If none, the new data set will be without a target variable. 
+3. Target variable. If none, the new dataset will be without a target variable. 
 4. Meta attributes of the new data file. These attributes are included
-   in the data set but are, for most methods, not considered in the
+   in the dataset but are, for most methods, not considered in the
    analysis.
 5. Produce a report.
 6. Reset the domain composition to that of the input data file.
@@ -57,13 +57,13 @@ Examples
 In the workflow below, the *Iris* data from the :doc:`File <../data/file>` widget is fed into
 the **Select Columns** widget, where we select to output only two
 attributes (namely petal width and petal length). We view both the
-original data set and the data set with selected columns in the :doc:`Data
+original dataset and the dataset with selected columns in the :doc:`Data
 Table <../data/datatable>` widget.
 
 .. figure:: images/SelectColumns-Example1.png 
 
 For a more complex use of the widget, we composed a workflow to redefine
-the classification problem in the *heart-disease* data set. Originally, the
+the classification problem in the *heart-disease* dataset. Originally, the
 task was to predict if the patient has a coronary artery diameter
 narrowing. We changed the problem to that of gender classification, based
 on age, chest pain and cholesterol level, and informatively kept the

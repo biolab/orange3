@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   A data set.
+   A dataset.
 
 **Outputs**:
 
@@ -52,7 +52,7 @@ combines four separate widgets for simpler processing.
 Example
 -------
 
-In the example below, we have used the *adult* data set and preprocessed the
+In the example below, we have used the *adult* dataset and preprocessed the
 data. We continuized discrete values (age, education and marital
 status...) as *one attribute per value*, we imputed missing values
 (replacing ? with average values), selected 10 most relevant attributes

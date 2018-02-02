@@ -171,16 +171,6 @@ class SchemeEditWidget(QWidget):
         self.__linkMenu.addAction(self.__linkResetAction)
 
     def __setupActions(self):
-
-        self.__zoomAction = \
-            QAction(self.tr("Zoom"), self,
-                    objectName="zoom-action",
-                    checkable=True,
-                    shortcut=QKeySequence.ZoomIn,
-                    toolTip=self.tr("Zoom in the workflow."),
-                    toggled=self.toggleZoom,
-                    )
-
         self.__cleanUpAction = \
             QAction(self.tr("Clean Up"), self,
                     objectName="cleanup-action",
@@ -467,14 +457,12 @@ class SchemeEditWidget(QWidget):
         Return a list of actions that can be inserted into a toolbar.
         At the moment these are:
 
-            - 'Zoom' action
             - 'Clean up' action (align to grid)
             - 'New text annotation' action (with a size menu)
             - 'New arrow annotation' action (with a color menu)
 
         """
-        return [self.__zoomAction,
-                self.__cleanUpAction,
+        return [self.__cleanUpAction,
                 self.__newTextAnnotationAction,
                 self.__newArrowAnnotationAction]
 
@@ -866,18 +854,6 @@ class SchemeEditWidget(QWidget):
         for item in self.__scene.items():
             if item.flags() & QGraphicsItem.ItemIsSelectable:
                 item.setSelected(True)
-
-    def toggleZoom(self, zoom):
-        """
-        Toggle view zoom. If `zoom` is True the scheme is displayed
-        scaled to 150%.
-
-        """
-        view = self.view()
-        if zoom:
-            view.scale(1.5, 1.5)
-        else:
-            view.resetTransform()
 
     def alignToGrid(self):
         """

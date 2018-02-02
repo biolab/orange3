@@ -328,7 +328,7 @@ class OWScatterPlot(OWWidget):
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
         self.graph.new_data(self.data, self.subset_data)
-        if self.attribute_selection_list and self.graph.domain and \
+        if self.attribute_selection_list and self.graph.domain is not None and \
                 all(attr in self.graph.domain
                         for attr in self.attribute_selection_list):
             self.attr_x = self.attribute_selection_list[0]
@@ -359,16 +359,13 @@ class OWScatterPlot(OWWidget):
             self.attribute_selection_list = None
 
     def init_attr_values(self):
-        domain = self.data and self.data.domain
-        for model in self.models:
-            model.set_domain(domain)
+        data = self.data
+        domain = data.domain if data and len(data) else None
+        self.xy_model.set_domain(domain)
         self.attr_x = self.xy_model[0] if self.xy_model else None
         self.attr_y = self.xy_model[1] if len(self.xy_model) >= 2 \
             else self.attr_x
-        self.graph.attr_color = self.data.domain.class_var if domain else None
-        self.graph.attr_shape = None
-        self.graph.attr_size = None
-        self.graph.attr_label = None
+        self.graph.set_domain(data)
 
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y

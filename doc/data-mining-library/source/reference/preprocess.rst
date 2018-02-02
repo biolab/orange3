@@ -40,11 +40,11 @@ features:
 The variable in the new data table indicate the bins to which the original
 values belong. ::
 
-    Original data set:
+    Original dataset:
     [5.1, 3.5, 1.4, 0.2 | Iris-setosa]
     [4.9, 3.0, 1.4, 0.2 | Iris-setosa]
     [4.7, 3.2, 1.3, 0.2 | Iris-setosa]
-    Discretized data set:
+    Discretized dataset:
     [<5.5, >=3.2, <2.5, <0.8 | Iris-setosa]
     [<5.5, [2.8, 3.2), <2.5, <0.8 | Iris-setosa]
     [<5.5, >=3.2, <2.5, <0.8 | Iris-setosa]
@@ -159,7 +159,7 @@ Continuization
            Note that these variables are not independent, so they cannot be
            used (directly) in, for instance, linear or logistic regression.
 
-           For example, data set "titanic" has feature "status" with
+           For example, dataset "titanic" has feature "status" with
            values "crew", "first", "second" and "third", in that order. Its
            value for the 15th row is "first". Continuization replaces the
            variable with variables "status=crew", "status=first",
@@ -280,7 +280,7 @@ Continuization
     :obj:`Orange.preprocess.Continuize` calls `DomainContinuizer` to construct
     the domain.
 
-    Domain continuizers can be given either a data set or a domain, and return
+    Domain continuizers can be given either a dataset or a domain, and return
     a new domain. When given only the domain, use the most frequent value as
     the base value.
 
@@ -316,7 +316,7 @@ prediction of the dependant (class) variable. Orange provides classes
 that compute the common feature scores for classification and regression.
 
 The code below computes the information gain of feature "tear_rate"
-in the Lenses data set:
+in the Lenses dataset:
 
     >>> data = Orange.data.Table("lenses")
     >>> Orange.preprocess.score.InfoGain(data, "tear_rate")
@@ -388,12 +388,12 @@ to obtain the feature scores as calculated by these learners. For example:
 -------------------
 
 We can use feature selection to limit the analysis to only the most relevant
-or informative features in the data set.
+or informative features in the dataset.
 
 Feature selection with a scoring method that works on continuous features will
 retain all discrete features and vice versa.
 
-The code below constructs a new data set consisting of two best features
+The code below constructs a new dataset consisting of two best features
 according to the ANOVA method:
 
     >>> data = Orange.data.Table("wine")

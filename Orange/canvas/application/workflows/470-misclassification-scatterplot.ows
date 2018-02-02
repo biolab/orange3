@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="Cross-validation of, say, logistic regression can expose the data instances which were misclassified. There are six such instances for Iris Data set and ridge-regularized logistic regression. We can select different types of misclassification in Confusion Matrix and highlight them in the Scatter Plot. No surprise: the misclassified instances are close to the class-bordering regions in the scatter plot projection." title="Where are Misclassifications?" version="2.0">
+<scheme description="Cross-validation of, say, logistic regression can expose the data instances which were misclassified. There are six such instances for Iris Dataset and ridge-regularized logistic regression. We can select different types of misclassification in Confusion Matrix and highlight them in the Scatter Plot. No surprise: the misclassified instances are close to the class-bordering regions in the scatter plot projection." title="Where are Misclassifications?" version="2.0">
 	<nodes>
 		<node id="0" name="File" position="(77.0, 71.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
 		<node id="1" name="Test &amp; Score" position="(196.0, 149.0)" project_name="Orange3" qualified_name="Orange.widgets.evaluate.owtestlearners.OWTestLearners" title="Test &amp; Score" version="" />
@@ -15,8 +15,8 @@
 		<link enabled="true" id="4" sink_channel="Data Subset" sink_node_id="4" source_channel="Selected Data" source_node_id="3" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="12" id="0" rect="(266.0, 236.0, 150.0, 72.0)">Shows different types of misclassifications. For Iris data set, Iris virginica are confused with versicolor and vice versa.</text>
-		<text font-family="Helvetica" font-size="12" id="1" rect="(469.0, 146.0, 150.0, 60.0)">Misclassifications for Iris data sets are best seen in petal length-petal width projection.</text>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(266.0, 236.0, 150.0, 72.0)">Shows different types of misclassifications. For Iris dataset, Iris virginica are confused with versicolor and vice versa.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(469.0, 146.0, 150.0, 60.0)">Misclassifications for Iris datasets are best seen in petal length-petal width projection.</text>
 		<text font-family="Helvetica" font-size="12" id="2" rect="(36.0, 319.0, 150.0, 48.0)">Replace logistic regression with any other classification method.</text>
 		<arrow end="(494.0, 98.0)" fill="#C1272D" id="3" start="(522.0, 142.0)" />
 		<arrow end="(337.0, 199.0)" fill="#C1272D" id="4" start="(335.0, 233.0)" />

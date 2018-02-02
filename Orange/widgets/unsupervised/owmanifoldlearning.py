@@ -93,11 +93,29 @@ class TSNEParametersEditor(ManifoldParametersEditor):
     # rename l2 to Euclidean
     metric_values = [("l2", "Euclidean")] + metric_values
 
+    perplexity = Setting(30)
+    early_exaggeration = Setting(12)
+    learning_rate = Setting(200)
+    n_iter = Setting(1000)
+
+    init_index = Setting(0)
+    init_values = [("pca", "PCA"), ("random", "Random")]
+
     def __init__(self, parent):
         super().__init__(parent)
+
         self.metric_combo = self._create_combo_parameter(
             "metric", "Metric:")
-        self.parameters["init"] = "pca"
+        self.perplexity_spin = self._create_spin_parameter(
+            "perplexity", 1, 100, "Perplexity:")
+        self.early_exaggeration_spin = self._create_spin_parameter(
+            "early_exaggeration", 1, 100, "Early exaggeration:")
+        self.lr_spin = self._create_spin_parameter(
+            "learning_rate", 1, 1000, "Learning rate:")
+        self.n_iter_spin = self._create_spin_parameter(
+            "n_iter", 250, 1e5, "Max iterations:")
+        self.init_radio = self._create_radio_parameter(
+            "init", "Initialization:")
 
 
 class MDSParametersEditor(ManifoldParametersEditor):
@@ -276,14 +294,14 @@ class OWManifoldLearning(OWWidget):
                 self.Error.out_of_memory()
             except np.linalg.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
+
         self.Outputs.transformed_data.send(out)
 
     def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components)
         parameters.update(self.params_widget.parameters)
         if data is not None and data.is_sparse() and method == TSNE:
-            parameters.update(method='exact',
-                              init='random')
+            parameters.update(method='exact', init='random')
         return parameters
 
     def send_report(self):

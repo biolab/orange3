@@ -556,7 +556,7 @@ class OWPlotGUI:
         AntialiasPlot : ('Antialias plot', 'antialias_plot', 'update_antialiasing'),
         AntialiasPoints : ('Antialias points', 'antialias_points', 'update_antialiasing'),
         AntialiasLines : ('Antialias lines', 'antialias_lines', 'update_antialiasing'),
-        AutoAdjustPerformance : ('Disable effects for large data sets', 'auto_adjust_performance',
+        AutoAdjustPerformance : ('Disable effects for large datasets', 'auto_adjust_performance',
                                  'update_performance')
     }
 

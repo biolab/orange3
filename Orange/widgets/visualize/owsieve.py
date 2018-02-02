@@ -166,6 +166,7 @@ class OWSieveDiagram(OWWidget):
         if self.data is None:
             self.attrs[:] = []
             self.domain_model.set_domain(None)
+            self.discrete_data = None
         else:
             self.domain_model.set_domain(data.domain)
         self.attrs = [x for x in self.domain_model if isinstance(x, Variable)]

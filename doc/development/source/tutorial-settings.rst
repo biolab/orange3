@@ -15,7 +15,7 @@ What we added is an Options box, with a spin entry box to set the
 sample size, and a check box and button to commit (send out) any
 change we made in setting. If the check box with "Commit data on
 selection change" is checked, than any change in the sample size will
-make the widget send out the sampled data set. If data sets are large
+make the widget send out the sampled dataset. If datasets are large
 (say of several thousands or more) instances, we may want to send out
 the sample data only after we are done setting the sample size, hence
 we left the commit check box unchecked and press "Commit" when we are
@@ -167,15 +167,15 @@ selection with which one can select the examples based on values of
 certain attributes. Before applying the saved settings, these widgets
 needs to check their compliance with the domain of the actual data
 set. To be truly useful, context dependent settings needs to save a
-setting configuration for each particular data set used. That is, when
-given a particular data set, it has to select the saved settings that
-is applicable and matches best currently used data set.
+setting configuration for each particular dataset used. That is, when
+given a particular dataset, it has to select the saved settings that
+is applicable and matches best currently used dataset.
 
 Saving, loading and matching contexts is taken care of by context
 handlers. Currently, there are only two classes of context handlers
 implemented. The first one is the abstract :class:`ContextHandler`
 and the second one is :class:`DomainContextHandler` in which the
-context is defined by the data set domain and where the settings
+context is defined by the dataset domain and where the settings
 contain attribute names. The latter should cover most of your needs,
 while for more complicated widgets you will need to derive a new
 classes from it. There may even be some cases in which the context is

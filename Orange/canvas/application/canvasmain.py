@@ -292,10 +292,9 @@ class CanvasMainWindow(QMainWindow):
 
         tool_actions = self.current_document().toolbarActions()
 
-        (self.canvas_zoom_action, self.canvas_align_to_grid_action,
+        (self.canvas_align_to_grid_action,
          self.canvas_text_action, self.canvas_arrow_action,) = tool_actions
 
-        self.canvas_zoom_action.setIcon(canvas_icons("Search.svg"))
         self.canvas_align_to_grid_action.setIcon(canvas_icons("Grid.svg"))
         self.canvas_text_action.setIcon(canvas_icons("Text Size.svg"))
         self.canvas_arrow_action.setIcon(canvas_icons("Arrow.svg"))
@@ -536,6 +535,21 @@ class CanvasMainWindow(QMainWindow):
                     shortcut=QKeySequence(Qt.ShiftModifier | Qt.Key_R)
                     )
 
+        self.zoom_in_action = \
+            QAction(self.tr("Zoom in"), self,
+                    triggered=self.zoom_in,
+                    shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Plus))
+
+        self.zoom_out_action = \
+            QAction(self.tr("Zoom out"), self,
+                    triggered=self.zoom_out,
+                    shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Minus))
+
+        self.zoom_reset_action = \
+            QAction(self.tr("Reset Zoom"), self,
+                    triggered=self.zoom_reset,
+                    shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0))
+
         if sys.platform == "darwin":
             # Actions for native Mac OSX look and feel.
             self.minimize_action = \
@@ -650,6 +664,12 @@ class CanvasMainWindow(QMainWindow):
         self.view_menu.addAction(self.show_report_action)
 
         self.view_menu.addSeparator()
+        self.view_menu.addAction(self.zoom_in_action)
+        self.view_menu.addAction(self.zoom_out_action)
+        self.view_menu.addAction(self.zoom_reset_action)
+
+        self.view_menu.addSeparator()
+
         self.view_menu.addAction(self.toogle_margins_action)
         menu_bar.addMenu(self.view_menu)
 
@@ -1595,7 +1615,13 @@ class CanvasMainWindow(QMainWindow):
             self.__update_from_settings()
 
     def open_addons(self):
-        from .addons import AddonManagerDialog
+        from .addons import AddonManagerDialog, have_install_permissions
+        if not have_install_permissions():
+            QMessageBox(QMessageBox.Warning,
+                        "Add-ons: insufficient permissions",
+                        "Insufficient permissions to install add-ons. Try starting Orange "
+                        "as a system administrator or install Orange in user folders.",
+                        parent=self).exec_()
         dlg = AddonManagerDialog(self, windowTitle=self.tr("Add-ons"))
         dlg.setAttribute(Qt.WA_DeleteOnClose)
         return dlg.exec_()
@@ -1893,6 +1919,15 @@ class CanvasMainWindow(QMainWindow):
                     self.window_menu.setEnabled(not self.isMinimized())
 
             QMainWindow.changeEvent(self, event)
+
+    def zoom_in(self):
+        self.scheme_widget.view().change_zoom(1)
+
+    def zoom_out(self):
+        self.scheme_widget.view().change_zoom(-1)
+
+    def zoom_reset(self):
+        self.scheme_widget.view().reset_zoom()
 
     def sizeHint(self):
         """

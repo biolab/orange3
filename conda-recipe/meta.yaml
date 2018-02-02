@@ -48,7 +48,6 @@ requirements:
     - anyqt         >=0.0.6
     - joblib
     - python.app    # [osx]
-    - dill          # pickle anything
     - commonmark
     - serverfiles
 

@@ -166,9 +166,9 @@ class Results:
                     probabilities is not None and probabilities.shape[1]],
             "mismatching number of rows")
         nclasses = set_or_raise(
-            nclasses, [domain and (len(domain.class_var.values)
-                                   if domain.has_discrete_class
-                                   else None),
+            nclasses, [len(domain.class_var.values)
+                       if domain is not None and domain.has_discrete_class
+                       else None,
                        probabilities is not None and probabilities.shape[2]],
             "mismatching number of class values")
         if nclasses is not None and probabilities is not None:
@@ -538,7 +538,7 @@ class ShuffleSplit(Results):
 
 class TestOnTestData(Results):
     """
-    Test on a separate test data set.
+    Test on a separate test dataset.
     """
     def __init__(self, train_data, test_data, learners, store_data=False,
                  store_models=False, preprocessor=None, callback=None, n_jobs=1):
@@ -577,7 +577,7 @@ def sample(table, n=0.7, stratified=False, replace=False,
            random_state=None):
     """
     Samples data instances from a data table. Returns the sample and
-    a data set from input data table that are not in the sample. Also
+    a dataset from input data table that are not in the sample. Also
     uses several sampling functions from
     `scikit-learn <http://scikit-learn.org>`_.
 

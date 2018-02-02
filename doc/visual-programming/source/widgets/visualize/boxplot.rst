@@ -12,7 +12,7 @@ Signals
 
 -  **Data**
 
-   An input data set
+   An input dataset
 
 **Outputs**:
 
@@ -48,14 +48,14 @@ For continuous attributes the widget displays:
 6. The median (yellow vertical line). The thin blue line represents the
    area between the first (25%) and the third (75%) quantile, while the
    thin dotted line represents the entire range of values (from the
-   lowest to the highest value in the data set for the selected
+   lowest to the highest value in the dataset for the selected
    parameter).
 7. Save image.
 8. Produce a report. 
 
 For discrete attributes, the bars represent the number of instances with
 each particular attribute value. The plot shows the number of different
-animal types in the *Zoo* data set: there are 41 mammals, 13 fish, 20
+animal types in the *Zoo* dataset: there are 41 mammals, 13 fish, 20
 birds and so on.
 
 .. figure:: images/BoxPlot-Discrete.png
@@ -64,8 +64,8 @@ Example
 -------
 
 The **Box Plot** widget is most commonly used immediately after the :doc:`File <../data/file>` widget
-to observe the statistical properties of a data set. It is also useful for
-finding the properties of a specific data set, for instance a set of
+to observe the statistical properties of a dataset. It is also useful for
+finding the properties of a specific dataset, for instance a set of
 instances manually defined in another widget (e.g. :doc:`Scatterplot <../visualize/scatterplot>`) or
 instances belonging to some cluster or a classification tree node, as
 shown in the schema below.
