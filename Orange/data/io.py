@@ -151,10 +151,10 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                     continue
                 bn.replace(column, offset + oldval, new_order.index(val))
 
-    def get_number_of_decimals():
-        ndecimals = max((len(value) - value.find(".")
-                         for value in orig_values
-                         if isinstance(value, str) and "." in value),
+    def get_number_of_decimals(values):
+        len_ = len
+        ndecimals = max((len_(value) - value.find(".")
+                         for value in values if "." in value),
                         default=1)
         return ndecimals - 1
 
@@ -170,7 +170,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
         coltype_kwargs.update(values=valuemap)
 
     if coltype is StringVariable:
-        values = ['' if i is np.nan else i for i in orig_values]
+        values = orig_values
 
     var = None
     if domain_vars is not None:
@@ -191,7 +191,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
     # The number of decimals is increased if not set manually (in which case
     # var.adjust_decimals would be 0).
     if isinstance(var, ContinuousVariable) and var.adjust_decimals:
-        ndecimals = get_number_of_decimals()
+        ndecimals = get_number_of_decimals(orig_values)
         if var.adjust_decimals == 2 or ndecimals > var.number_of_decimals:
             var.number_of_decimals = ndecimals
             var.adjust_decimals = 1
@@ -550,8 +550,7 @@ class FileFormat(metaclass=FileFormatMeta):
     def data_table(cls, data, headers=None):
         """
         Return Orange.data.Table given rows of `headers` (iterable of iterable)
-        and rows of `data` (iterable of iterable; if ``numpy.ndarray``, might
-        as well **have it sorted column-major**, e.g. ``order='F'``).
+        and rows of `data` (iterable of iterable).
 
         Basically, the idea of subclasses is to produce those two iterables,
         however they might.
@@ -622,6 +621,14 @@ class FileFormat(metaclass=FileFormatMeta):
                     uses[name] += 1
                     names[i] = "{}_{}".format(name, uses[name])
 
+        # check only against str values
+        missing = {v for v in MISSING_VALUES if isinstance(v, str)}
+        # Note: The only speed benefit is from conversion to bool array
+        # by specifying the `out` parameter
+        isnastr = np.frompyfunc(missing.__contains__, 1, 1)
+        strip = np.frompyfunc(str.strip, 1, 1)
+
+        namask = np.empty(data.shape[0], dtype=bool)
         # Iterate through the columns
         for col in range(rowlen):
             flag = Flags(Flags.split(flags[col]))
@@ -630,14 +637,11 @@ class FileFormat(metaclass=FileFormatMeta):
 
             type_flag = types and types[col].strip()
             try:
-                orig_values = [np.nan if i in MISSING_VALUES else i
-                               for i in (i.strip() for i in data[:, col])]
+                orig_values = strip(data[:, col])  # object array of str, NA are ""
             except IndexError:
-                # No data instances leads here
-                orig_values = []
-                # In this case, coltype could be anything. It's set as-is
-                # only to satisfy test_table.TableTestCase.test_append
-                coltype = DiscreteVariable
+                orig_values = np.array([], dtype=object)
+            namask = isnastr(orig_values, out=namask)
+            orig_values[namask] = ""
 
             coltype_kwargs = {}
             valuemap = []
@@ -647,14 +651,18 @@ class FileFormat(metaclass=FileFormatMeta):
                 coltype = StringVariable
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
+                values = np.empty(data.shape[0], dtype=float)
                 try:
-                    values = [float(i) for i in orig_values]
+                    np.copyto(values, orig_values, casting="unsafe",
+                              where=~namask)
+                    values[namask] = np.nan
                 except ValueError:
                     for row, num in enumerate(orig_values):
-                        try:
-                            float(num)
-                        except ValueError:
-                            break
+                        if num != "":
+                            try:
+                                float(num)
+                            except ValueError:
+                                break
                     raise ValueError('Non-continuous value in (1-based) '
                                      'line {}, column {}'.format(row + len(headers) + 1,
                                                                  col + 1))
@@ -669,7 +677,7 @@ class FileFormat(metaclass=FileFormatMeta):
                     valuemap = Flags.split(type_flag)
                     coltype_kwargs.update(ordered=True)
                 else:
-                    valuemap = sorted(set(orig_values) - {np.nan})
+                    valuemap = sorted(set(orig_values) - {""})
 
             else:
                 # No known type specified, use heuristics
