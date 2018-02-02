@@ -48,11 +48,16 @@ log = logging.getLogger(__name__)
 
 OFFICIAL_ADDONS = [
     "Orange-Bioinformatics",
-    "Orange3-DataFusion",
     "Orange3-Prototypes",
     "Orange3-Text",
     "Orange3-Network",
     "Orange3-Associate",
+    "Orange-Spectroscopy",
+    "Orange3-Textable",
+    "Orange3-Educational",
+    "Orange3-Geo",
+    "Orange3-ImageAnalytics",
+    "Orange3-Timeseries",
 ]
 
 Installable = namedtuple(
