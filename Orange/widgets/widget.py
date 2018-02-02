@@ -821,7 +821,13 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.__showMessage(message)
 
     def __quicktipOnce(self):
-        filename = os.path.join(settings.widget_settings_dir(),
+        dirpath = settings.widget_settings_dir(versioned=False)
+        try:
+            os.makedirs(dirpath, exist_ok=True)
+        except OSError:  # EPERM, EEXISTS, ...
+            pass
+
+        filename = os.path.join(settings.widget_settings_dir(versioned=False),
                                 "user-session-state.ini")
         namespace = ("user-message-history/{0.__module__}.{0.__qualname__}"
                      .format(type(self)))
