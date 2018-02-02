@@ -30,4 +30,12 @@ cd $TRAVIS_BUILD_DIR/doc/data-mining-library
 make html
 cd $TRAVIS_BUILD_DIR/doc/visual-programming
 make html
-./build_widget_catalog.py --input build/html/index.html --output build/html/widgets.json --url-prefix "http://docs.orange.biolab.si/3/visual-programming/"
+
+# create widget catalog
+export PYTHONPATH=$TRAVIS_BUILD_DIR:$PYTHONPATH
+# Screen must be 24bpp lest pyqt5 crashes, see pytest-dev/pytest-qt/35
+XVFBARGS="-screen 0 1280x1024x24"
+catchsegv xvfb-run -a -s "$XVFBARGS" \
+    python $TRAVIS_BUILD_DIR/scripts/create_widget_catalog.py \
+        --output build/html/ \
+        --url-prefix "http://docs.orange.biolab.si/3/visual-programming/"

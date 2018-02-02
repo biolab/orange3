@@ -226,4 +226,4 @@ class HtmlIndexProvider(BaseInventoryProvider):
         if entry is not None:
             return self.inventory.resolved(QUrl(entry))
         else:
-            raise KeyError()
+            raise KeyError(desc.name.lower())
