@@ -1,31 +1,18 @@
 Silhouette Plot
 ===============
 
-.. figure:: icons/silhouette-plot.png
-
 A graphical representation of consistency within clusters of data. 
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        data with an additional column showing whether a point is selected
 
--  **Data**
-
-   A dataset.
-
-**Outputs**
-
--  **Selected Data**
-
-   A subset of instances that the user has manually selected from the plot.
-
--  **Other Data**
-
-   Remaining data.
-
-Description
------------
 
 The **Silhouette Plot** widget offers a graphical representation of consistency within clusters of data and provides the user with the means to visually assess cluster quality. The silhouette score is a measure of how similar an object is to its own cluster in comparison to other clusters and is crucial in the creation of a silhoutte plot. The silhouette score close to 1 indicates that the data instance is close to the center of the cluster and instances posessing the silhouette scores close to 0 are on the border between two clusters. 
 

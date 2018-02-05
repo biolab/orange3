@@ -1,25 +1,16 @@
 Edit Domain
 ===========
 
-.. figure:: icons/edit-domain.png
+Rename features and their values.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with edited domain
 
--  **Data**
-
-   An input dataset
-
-**Outputs**:
-
--  **Data**
-
-   An edited output dataset
-
-Description
------------
 
 This widget can be used to edit/change a dataset's domain. 
 

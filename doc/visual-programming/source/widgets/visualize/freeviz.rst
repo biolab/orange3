@@ -1,44 +1,22 @@
-=======
 FreeViz
 =======
 
-.. figure:: icons/freeviz.png
-
 Displays FreeViz projection.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Data Subset
+        subset of instances
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        data with an additional column showing whether a point is selected
+    Components
+        FreeViz vectors
 
--  **Data**
-
-   An input dataset.
-
--  **Data Subset**
-
-   A subset of instances from the input dataset.
-
-**Outputs**:
-
--  **Selected Data**
-
-   A subset of instances that the user manually selected from the
-   freeviz plot.
-
--  **Data**
-
-   Data with an additional column showing whether a point is selected. If more
-   than one group is selected then also the group name is written instead.
-
--  **Components**
-
-   FreeViz vectors
-
-
-
-Description
------------
 
 **FreeViz** uses a paradigm borrowed from particle physics: points in the same class attract
 each other, those from different class repel each other, and the resulting forces are exerted on
@@ -65,8 +43,7 @@ from the visualization using Radius slider in Show anchors box.
 3. Anchors inside a circle are hidden. Circle radius can be be changed using a slider.
 4. Adjust *plot properties*:
 
-   -  Set `jittering <https://en.wikipedia.org/wiki/Jitter>`_ to prevent
-   the dots from overlapping (especially for discrete attributes).
+   -  Set `jittering <https://en.wikipedia.org/wiki/Jitter>`_ to prevent the dots from overlapping (especially for discrete attributes).
 
    -  *Show legend* displays a legend on the right. Click and drag the legend to move it.
 

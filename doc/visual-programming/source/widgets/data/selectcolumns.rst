@@ -1,28 +1,16 @@
 Select Columns
 ==============
 
-.. figure:: icons/select-columns.png
-
 Manual selection of data attributes and composition of data domain.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+   Data
+        dataset with columns as set in the widget
 
--  **Data**
-
-   Attribute-valued dataset.
-
-**Outputs**:
-
--  **Data**
-
-   Attribute-valued dataset composed using the domain specification from
-   the widget.
-
-Description
------------
 
 The **Select Columns** widget is used to manually compose your `data domain <https://en.wikipedia.org/wiki/Data_domain>`_. The user can decide
 which attributes will be used and how. Orange distinguishes between

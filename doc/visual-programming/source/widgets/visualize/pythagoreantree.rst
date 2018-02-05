@@ -1,25 +1,14 @@
 Pythagorean Tree
 ================
 
-.. figure:: icons/pythagorean-tree.png
-
 Pythagorean tree visualisation for classification or regression trees.
 
-Signals
--------
+Inputs
+    Tree
+        tree model
+    Selected Data
+        instances selected from the tree
 
-**Inputs**:
-
--  **Tree**
-
-   A decision tree model.
-
-- **Selected Data**
-
-   A subset of instances that the user has manually selected from the Pythagorean tree.
-
-Description
------------
 
 **Pythagorean Trees** are plane fractals that can be used to depict general tree hierarchies as presented in an article by `Fabian Beck and co-authors <http://publications.fbeck.com/ivapp14-pythagoras.pdf>`_. In our case, they are used for visualizing and exploring tree models, such as 
 :doc:`Tree <../model/tree>`.

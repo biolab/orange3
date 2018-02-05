@@ -1,36 +1,22 @@
 Rank
 ====
 
-.. figure:: icons/rank.png
-
 Ranking of attributes in classification or regression datasets.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Scorer
+        models for feature scoring
 
-**Inputs**:
+Outputs
+    Reduced Data
+        dataset with selected attributes
 
--  **Data**
-
-   An input dataset.
-
-- **Scorer**  (multiple)
-
-  Models that implement the feature scoring interface, such as linear /
-  logistic regression, random forest, stochastic gradient descent, etc.
-
-**Outputs**:
-
--  **Reduced Data**
-
-   A dataset whith selected attributes.
-
-Description
------------
 
 The **Rank** widget considers class-labeled datasets (classification or
 regression) and scores the attributes according to their correlation
-with the class.
+with the class. Rank accepts also models for scoring, such as linear regression, logistic regression, random forest, SGD, etc.
 
 .. figure:: images/Rank-stamped.png
 
@@ -54,8 +40,8 @@ Scoring methods
 
 Additionally, you can connect certain learners that enable scoring the features
 according to how important they are in models that the learners build (e.g.
-:ref:`Linear <model.lr>` / :ref:`Logistic Regression <model.logit>`,
-:ref:`Random Forest <model.rf>`, :ref:`SGD <model.sgd>`, …).
+:doc:`Linear Regression <../model/linearregression>` / :doc:`Logistic Regression <../model/logisticregression>`,
+:doc:`Random Forest <../model/randomforest>`, :doc:`SGD <../model/stochasticgradient>`…).
 
 
 Example: Attribute Ranking and Selection

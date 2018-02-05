@@ -1,31 +1,18 @@
 Mosaic Display
 ==============
 
-.. figure:: icons/mosaic-display.png
+Display data in a mosaic plot.
 
-Display data in a mosaic plot. 
+Inputs
+    Data
+        input dataset
+    Data subset
+        subset of instances
 
-Signals
--------
+Outputs
+    Selected data
+        instances selected from the plot
 
-**Inputs**:
-
--  **Data**
-
-   An input dataset.
-
--  **Data subset**
-
-   An input data subset. 
-
-**Outputs**:
-
--  **Selected data**
-
-   A subset of instances that the user has manually selected from the plot.
-
-Description
------------
 
 The **Mosaic plot** is a graphical representation of a two-way frequency table or a contingency table. It is used for visualizing data from two or more qualitative variables and was introduced in 1981 by Hartigan and Kleiner and expanded and refined by Friendly in 1994. It provides the user with the means to more efficiently recognize relationships between different variables. If you wish to read up on the history of Mosaic Display, additional reading is available `here <http://www.datavis.ca/papers/moshist.pdf>`_.
 

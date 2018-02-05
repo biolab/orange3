@@ -1,25 +1,14 @@
 Nomogram
 ========
 
-.. figure:: icons/nomogram.png
-
 Nomograms for visualization of Naive Bayes and Logistic Regression classifiers.
 
-Signals
--------
+Inputs
+    Classifier
+        trained classifier
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Classifier**
-
-   A trained classifier (Naive Bayes or Logistic regression).
-
--  **Data**
-
-   Data instance.
-
-Description
------------
 
 The **Nomogram** enables some classifier's (more precisely Naive Bayes classifier
 and Logistic Regression classifier) visual representation. It offers an insight

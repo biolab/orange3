@@ -1,25 +1,12 @@
 Load Model
 ==========
 
-.. figure:: icons/load-model.png
-
 Load a model from an input file.
 
-Signals
--------
+Outputs
+    Model
+        trained model
 
-**Inputs**:
-
--  None
-
-**Outputs**:
-
--  **Model**
-
-   A model with selected parameters.
-
-Description
------------
 
 .. figure:: images/LoadModel-stamped.png
    :scale: 50 %

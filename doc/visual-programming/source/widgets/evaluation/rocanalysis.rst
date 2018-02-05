@@ -1,25 +1,12 @@
 ROC Analysis
 ============
 
-.. figure:: icons/roc-analysis.png
-
 Plots a true positive rate against a false positive rate of a test.
 
-Signals
--------
+Inputs
+    Evaluation Results
+        results of testing classification algorithms
 
-**Inputs**:
-
--  **Evaluation Results**
-
-   Results of classifiers’ tests on data
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 The widget shows ROC curves for the tested models and the corresponding
 convex hull. It serves as a mean of comparison between classification

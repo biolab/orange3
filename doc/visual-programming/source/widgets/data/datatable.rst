@@ -1,27 +1,16 @@
 Data Table
 ==========
 
-.. figure:: icons/data-table.png
-
 Displays attribute-value data in a spreadsheet.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the table
 
--  **Data**
-
-   Attribute-valued dataset.
-
-**Outputs**:
-
--  **Selected Data**
-
-   Selected data instances.
-
-Description
------------
 
 The **Data Table** widget receives one or more datasets in its input and
 presents them as a spreadsheet. Data instances may be sorted by

@@ -1,31 +1,18 @@
 PCA
 ===
 
-.. figure:: icons/pca.png
-
 PCA linear transformation of input data.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Transformed Data
+        PCA transformed data
+    Components
+        `Eigenvectors <https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors>`_.
 
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  **Transformed Data**
-
-   PCA transformed input data.
-
--  **Components**
-
-   `Eigenvectors <https://en.wikipedia.org/wiki/Eigenvalues_and_eigenvectors>`_.
-
-Description
------------
 
 `Principal Component Analysis <https://en.wikipedia.org/wiki/Principal_component_analysis>`_
 (PCA) computes the PCA linear transformation of the input data. It

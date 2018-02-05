@@ -1,0 +1,37 @@
+p + dl {
+    border-top: 2px solid gray;
+    border-bottom: 2px solid gray;
+    padding: 12px;
+}
+
+p + dl dd:last-of-type {
+    margin-bottom: 0;
+}
+
+p + dl dt {
+    font-weight: bold;
+}
+
+p + dl dt::after {
+    content: ":";
+}
+
+dd dt {
+    font-weight: bold;
+    display: inline-block;
+}
+
+dd dt::after {
+    content: ":";
+}
+
+dd dd {
+    display: inline;
+    margin: 0;
+  }
+
+dd dd:after{
+    display: block;
+    content: '';
+  }
+

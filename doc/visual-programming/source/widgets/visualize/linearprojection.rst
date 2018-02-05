@@ -1,46 +1,24 @@
 Linear Projection
 =================
 
-.. figure:: icons/linear-projection.png
-
 A linear projection method with explorative data analysis.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Data Subset
+        subset of instances
+    Projection
+        custom projection vectors
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        data with an additional column showing whether a point is selected
+    Components
+        projection vectors
 
--  **Data**
-
-   An input dataset
-
--  **Data Subset**
-
-   A subset of data instances
-
--  **Projection**
-
-   Custom projection vectors
-
-**Outputs**:
-
--  **Selected Data**
-
-   A data subset that the user has manually selected in the projection.
-
--  **Data**
-
-   Data with an additional column showing whether a point is selected. If more
-   than one group is selected then also the group name is written instead.
-
--  **Components**
-
-   Projection vectors
-
-
-
-Description
------------
 
 This widget displays `linear projections <https://en.wikipedia.org/wiki/Projection_(linear_algebra)>`_
 of class-labeled data. It supports various types of projections such as circular,

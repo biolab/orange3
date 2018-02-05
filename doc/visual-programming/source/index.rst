@@ -62,7 +62,6 @@ Visualize
    widgets/visualize/scatterplot
    widgets/visualize/venndiagram
    widgets/visualize/linearprojection
-   widgets/visualize/scattermap
    widgets/visualize/sievediagram
    widgets/visualize/pythagoreantree
    widgets/visualize/pythagoreanforest

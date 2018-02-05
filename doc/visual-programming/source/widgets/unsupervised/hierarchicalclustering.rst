@@ -1,31 +1,18 @@
 Hierarchical Clustering
 =======================
 
-.. figure:: icons/hierarchical-clustering.png
-
 Groups items using a hierarchical clustering algorithm.
 
-Signals
--------
+Inputs
+    Distances
+        distance matrix
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the plot
+    Data
+        data with an additional column showing whether an instance is selected
 
--  **Distances**
-
-   A distance matrix
-
-**Outputs**:
-
--  **Selected Data**
-
-   A data subset
-
--  **Other Data**
-
-   Remaining data
-
-Description
------------
 
 The widget computes `hierarchical clustering <https://en.wikipedia.org/wiki/Hierarchical_clustering>`_ of
 arbitrary types of objects from a matrix of distances and shows a

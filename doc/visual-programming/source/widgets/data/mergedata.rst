@@ -1,32 +1,18 @@
 Merge Data
 ==========
 
-.. figure:: icons/merge-data.png
-
 Merges two datasets, based on values of selected attributes.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Extra Data
+        additional dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with features added from extra data
 
--  **Data**
-
-   Attribute-valued dataset.
-
--  **Extra Data**
-
-   Attribute-valued dataset.
-
-**Outputs**:
-
--  **Data**
-
-   Instances from input data to which attributes from input extra data are
-   added.
-
-Description
------------
 
 The **Merge Data** widget is used to horizontally merge two datasets, based
 on values of selected attributes. In the input, two datasets are

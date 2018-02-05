@@ -1,25 +1,12 @@
 Distance File
 ===============
 
-.. figure:: icons/distance-file.png
-
 Loads an existing distance file. 
 
-Signals
--------
+Outputs
+    Distance File
+        distance matrix
 
-**Inputs**:
-
--  None
-
-**Outputs**:
-
--  **Distance File**
-
-   A distance matrix. 
-
-Description
------------
 
 .. figure:: images/DistanceFile-stamped.png
 

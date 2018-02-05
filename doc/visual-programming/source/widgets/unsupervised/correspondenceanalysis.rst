@@ -1,23 +1,12 @@
 Correspondence Analysis
 =======================
 
-.. figure:: icons/correspondence-analysis.png
+Correspondence analysis for categorical multivariate data.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 `Correspondence Analysis <https://en.wikipedia.org/wiki/Correspondence_analysis>`_ (CA)
 computes the CA linear transformation of the input data. While it is

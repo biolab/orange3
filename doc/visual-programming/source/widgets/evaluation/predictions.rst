@@ -1,31 +1,20 @@
 Predictions
 ===========
 
-.. figure:: icons/predictions.png
-
 Shows models' predictions on the data.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Predictors
+        predictors to be used on the data
 
-**Inputs**
+Outputs
+    Predictions
+        data with added predictions
+    Evaluation Results
+        results of testing classification algorithms
 
--  **Data**
-
-   A dataset.
-
--  **Predictors**
-
-   Predictors to be used on the data.
-
-**Outputs**
-
--  **Predictions**
-
-   Original data with added predictions.
-
-Description
------------
 
 The widget receives a dataset and one or more predictors (classifiers,
 not learning algorithms - see the example below). It outputs the data

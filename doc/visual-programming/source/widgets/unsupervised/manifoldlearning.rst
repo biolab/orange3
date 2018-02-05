@@ -1,27 +1,16 @@
 Manifold Learning
 =================
 
-.. figure:: icons/manifold-learning.png
-
 Nonlinear dimensionality reduction.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Transformed Data
+        dataset with reduced coordinates
 
--  **Data**
-
-   A dataset
-
-**Outputs**:
-
--  **Transformed Data**
-
-   A dataset with new, reduced coordinates.
-
-Description
------------
 
 `Manifold Learning <https://en.wikipedia.org/wiki/Nonlinear_dimensionality_reduction>`_ is a
 technique which finds a non-linear manifold within the higher-dimensional space. The widget then

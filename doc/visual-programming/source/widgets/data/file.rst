@@ -2,25 +2,12 @@
 File
 ====
 
-.. figure:: icons/file.png
-
 Reads attribute-value data from an input file.
 
-Signals
--------
+Outputs
+    Data
+        dataset from the file
 
-**Inputs**:
-
--  (None)
-
-**Outputs**:
-
--  **Data**
-
-   Attribute-valued data from the input file
-
-Description
------------
 
 The **File** widget :doc:`reads the input data
 file <../../loading-your-data/index>` (data table

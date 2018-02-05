@@ -27,5 +27,5 @@ WIDGET_HELP_PATH = (
     ("{DEVELOP_ROOT}/doc/visual-programming/build/htmlhelp/index.html", None),
 #     os.path.join(sysconfig.get_path("data"),
 #                  "share", "doc", "Orange-{}".format(Orange.__version__)),
-    ("http://docs.orange.biolab.si/3/visual-programming/", "")
+    ("https://docs.orange.biolab.si/3/visual-programming/", "")
 )

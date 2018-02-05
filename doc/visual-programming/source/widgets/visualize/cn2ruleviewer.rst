@@ -1,33 +1,18 @@
 CN2 Rule Viewer
 ===============
 
-.. figure:: icons/cn2ruleviewer.png
-
 CN2 Rule Viewer
 
-Signals
--------
+Inputs
+    Data
+        dataset to filter
+    CN2 Rule Classifier
+        CN2 Rule Classifier, including a list of induced rules
 
-**Inputs**:
+Outputs
+    Filtered Data
+        data instances covered by all selected rules
 
-- **Data**
-
-   Dataset to filter.
-
-- **CN2 Rule Classifier**
-
-   CN2 Rule Classifier, including a list of induced rules.
-
-**Outputs**:
-
-- **Filtered Data**
-
-   If data is connected, upon active selection (at least one rule is
-   selected), filtered data is emitted. Output are data instances covered
-   by all selected rules.
-
-Description
------------
 
 A widget that displays `CN2 classification <https://en.wikipedia.org/wiki/CN2_algorithm>`_ rules.
 If data is also connected, upon rule selection, one can analyze which instances abide to the conditions.
