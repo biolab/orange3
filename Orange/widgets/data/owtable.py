@@ -33,6 +33,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.headerview import HeaderView
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
@@ -401,6 +402,15 @@ class TableView(gui.HScrollStepMixin, QTableView):
 class DataTableView(TableView):
     dataset: Table
     input_slot: TableSlot
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        hheader = HeaderView(Qt.Horizontal, self, highlightSections=True)
+        vheader = HeaderView(Qt.Vertical, self, highlightSections=True)
+        hheader.setSectionsClickable(True)
+        vheader.setSectionsClickable(True)
+        self.setHorizontalHeader(hheader)
+        self.setVerticalHeader(vheader)
 
 
 class OWDataTable(OWWidget):
