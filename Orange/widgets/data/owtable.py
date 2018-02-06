@@ -42,8 +42,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import TableModel
 
 
-class RichTableDecorator(QIdentityProxyModel):
-    """A proxy model for a TableModel with some bells and whistles
+class RichTableModel(TableModel):
+    """A TableModel with some extra bells and whistles/
 
     (adds support for gui.BarRole, include variable labels and icons
     in the header)
@@ -51,41 +51,17 @@ class RichTableDecorator(QIdentityProxyModel):
     #: Rich header data flags.
     Name, Labels, Icon = 1, 2, 4
 
-    def __init__(self, source, parent=None):
-        super().__init__(parent)
+    def __init__(self, sourcedata, parent=None):
+        super().__init__(sourcedata, parent)
 
-        self._header_flags = RichTableDecorator.Name
-        self._labels = []
-        self._continuous = []
-
-        self.setSourceModel(source)
-
-    @property
-    def source(self):
-        return getattr(self.sourceModel(), "source", None)
-
-    @property
-    def vars(self):
-        return getattr(self.sourceModel(), "vars", [])
-
-    def setSourceModel(self, source):
-        if source is not None and \
-                not isinstance(source, TableModel):
-            raise TypeError()
-
-        if source is not None:
-            self._continuous = [var.is_continuous for var in source.vars]
-            labels = []
-            for var in source.vars:
-                if isinstance(var, Orange.data.Variable):
-                    labels.extend(var.attributes.keys())
-            self._labels = list(sorted(
-                {label for label in labels if not label.startswith("_")}))
-        else:
-            self._continuous = []
-            self._labels = []
-
-        super().setSourceModel(source)
+        self._header_flags = RichTableModel.Name
+        self._continuous = [var.is_continuous for var in self.vars]
+        labels = []
+        for var in self.vars:
+            if isinstance(var, Orange.data.Variable):
+                labels.extend(var.attributes.keys())
+        self._labels = list(sorted(
+            {label for label in labels if not label.startswith("_")}))
 
     def data(self, index, role=Qt.DisplayRole,
              # for faster local lookup
@@ -106,36 +82,30 @@ class RichTableDecorator(QIdentityProxyModel):
             return super().data(index, role)
 
     def headerData(self, section, orientation, role):
-        if self.sourceModel() is None:
-            return None
-
-        # NOTE: Always use `self.sourceModel().heaerData(...)` and not
-        # super().headerData(...). The later does not work for zero length
-        # source models
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            var = self.sourceModel().headerData(
+            var = super().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is None:
-                return self.sourceModel().headerData(
+                return super().headerData(
                     section, orientation, Qt.DisplayRole)
 
             lines = []
-            if self._header_flags & RichTableDecorator.Name:
+            if self._header_flags & RichTableModel.Name:
                 lines.append(var.name)
-            if self._header_flags & RichTableDecorator.Labels:
+            if self._header_flags & RichTableModel.Labels:
                 lines.extend(str(var.attributes.get(label, ""))
                              for label in self._labels)
             return "\n".join(lines)
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
-                self._header_flags & RichTableDecorator.Icon:
-            var = self.sourceModel().headerData(
+                self._header_flags & RichTableModel.Icon:
+            var = super().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is not None:
                 return gui.attributeIconDict[var]
             else:
                 return None
         else:
-            return self.sourceModel().headerData(section, orientation, role)
+            return super().headerData(section, orientation, role)
 
     def setRichHeaderFlags(self, flags):
         if flags != self._header_flags:
@@ -145,24 +115,6 @@ class RichTableDecorator(QIdentityProxyModel):
 
     def richHeaderFlags(self):
         return self._header_flags
-
-    if QT_VERSION < 0xFFFFFF:  # TODO: change when QTBUG-44143 is fixed
-        def sort(self, column, order):
-            # Preempt the layout change notification
-            self.layoutAboutToBeChanged.emit()
-            # Block signals to suppress repeated layout[AboutToBe]Changed
-            # TODO: Are any other signals emitted during a sort?
-            self.blockSignals(True)
-            try:
-                rval = self.sourceModel().sort(column, order)
-            finally:
-                self.blockSignals(False)
-            # Tidy up.
-            self.layoutChanged.emit()
-            return rval
-    else:
-        def sort(self, column, order):
-            return self.sourceModel().sort(column, order)
 
 
 class TableSliceProxy(QIdentityProxyModel):
@@ -574,8 +526,7 @@ class OWDataTable(widget.OWWidget):
             view.setModel(None)
             return
 
-        datamodel = TableModel(data)
-        datamodel = RichTableDecorator(datamodel)
+        datamodel = RichTableModel(data)
 
         rowcount = data.approx_len()
 
@@ -707,7 +658,7 @@ class OWDataTable(widget.OWWidget):
 
         if self.show_attribute_labels:
             model.setRichHeaderFlags(
-                RichTableDecorator.Labels | RichTableDecorator.Name)
+                RichTableModel.Labels | RichTableModel.Name)
 
             labelnames = set()
             for a in model.source.domain.variables:
@@ -716,7 +667,7 @@ class OWDataTable(widget.OWWidget):
                 [label for label in labelnames if not label.startswith("_")])
             self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
-            model.setRichHeaderFlags(RichTableDecorator.Name)
+            model.setRichHeaderFlags(RichTableModel.Name)
             self.set_corner_text(view, "")
 
     def _on_show_variable_labels_changed(self):
