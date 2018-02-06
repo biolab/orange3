@@ -331,8 +331,6 @@ class OWKMeans(widget.OWWidget):
             task.watcher.exceptionReadyAt.disconnect(self.__on_exception)
             task.watcher.doneAll.disconnect(self.__commit_finished)
 
-            concurrent.futures.wait(task.futures)
-            task.watcher.flush()
             self.progressBarFinished()
             self.setBlocking(False)
 
