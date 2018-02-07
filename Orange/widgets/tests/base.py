@@ -258,8 +258,9 @@ class WidgetTest(GuiTest):
         if widget is None:
             widget = self.widget
 
-        spy = QSignalSpy(widget.blockingStateChanged)
-        self.assertTrue(spy.wait(timeout=wait))
+        if widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
 
     def commit_and_wait(self, widget=None, wait=1000):
         """Unconditinal commit and wait to stop blocking if needed.
@@ -275,18 +276,8 @@ class WidgetTest(GuiTest):
         if widget is None:
             widget = self.widget
 
-        blocking = False
-
-        def __set_blocking():
-            nonlocal blocking
-            blocking = True
-
-        widget.blockingStateChanged.connect(__set_blocking)
         widget.unconditional_commit()
-        widget.blockingStateChanged.disconnect(__set_blocking)
-
-        if blocking:
-            self.wait_until_stop_blocking(widget=widget, wait=wait)
+        self.wait_until_stop_blocking(widget=widget, wait=wait)
 
     def get_output(self, output, widget=None, wait=5000):
         """Return the last output that has been sent from the widget.
