@@ -13,10 +13,10 @@ import itertools
 import warnings
 
 from collections import namedtuple, defaultdict, deque
-from operator import attrgetter, add
+from operator import attrgetter
 from functools import partial
 
-from AnyQt.QtCore import QObject, QCoreApplication, QEvent, QTimer
+from AnyQt.QtCore import QObject, QTimer
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
@@ -435,9 +435,9 @@ class SignalManager(QObject):
         scheme = self.scheme()
 
         def expand(node):
-            return [link.sink_node for
-                link in scheme.find_links(source_node=node) if
-                link.enabled]
+            return [link.sink_node
+                    for link in scheme.find_links(source_node=node)
+                    if link.enabled]
 
         components = strongly_connected_components(scheme.nodes, expand)
         node_scc = {node: scc for scc in components for node in scc}

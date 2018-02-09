@@ -860,6 +860,6 @@ class Scheme(QObject):
         """
         return types.MappingProxyType(self.__env)
 
-    def dump_settings(self, node: SchemeNode):
+    def dump_settings(self, node, SchemeNode):
         """Dump current settings of the `node` to the standard output"""
         print(node.properties)

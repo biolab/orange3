@@ -2,6 +2,7 @@
 Tests for Scheme
 """
 
+import unittest
 from ...gui import test
 from ...registry.tests import small_testing_registry
 from ...registry import WidgetRegistry
@@ -14,7 +15,6 @@ from .. import (
 
 from ...registry.description import WidgetDescription, CategoryDescription
 from ...registry.description import InputSignal, OutputSignal
-import unittest
 
 
 class TestScheme(test.QCoreAppTestCase):
