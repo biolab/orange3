@@ -299,7 +299,8 @@ class OWKMeans(widget.OWWidget):
 
         if self.optimize_k and all(isinstance(self.clusterings[i], str)
                                    for i in range(self.k_from, self.k_to + 1)):
-            self.Error.failed('All failed')
+            # Show the error of the last clustering
+            self.Error.failed(self.clusterings[self.k_to])
 
         self.send_data()
 
