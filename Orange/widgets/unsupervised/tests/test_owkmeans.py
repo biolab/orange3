@@ -61,7 +61,7 @@ class TestOWKMeans(WidgetTest):
     def test_optimization_report_display(self):
         """Check visibility of the table after selecting number of clusters"""
         self.widget.auto_commit = True
-        self.send_signal(self.widget.Inputs.data, self.iris, wait=1000)
+        self.send_signal(self.widget.Inputs.data, self.iris[:25], wait=2000)
         self.widget.optimize_k = True
         radio_buttons = self.widget.controls.optimize_k.findChildren(QRadioButton)
 
