@@ -277,7 +277,9 @@ class Continuous(Distribution):
         return self[0, -1]
 
     def sample(self, size=None, replace=True):
-        return np.random.choice(self[0, :], size, replace, self.normalize()[1, :])
+        normalized = Continuous(self, self.variable, self.unknowns)
+        normalized.normalize()
+        return np.random.choice(self[0, :], size, replace, normalized[1, :])
 
     def mean(self):
         return np.average(np.asarray(self[0]), weights=np.asarray(self[1]))
