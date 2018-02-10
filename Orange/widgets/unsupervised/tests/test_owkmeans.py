@@ -4,16 +4,14 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
-
-from AnyQt.QtWidgets import QRadioButton
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QRadioButton
 
+import Orange.clustering
+from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
-import Orange.clustering
-
-from Orange.data import Table
 
 
 class TestClusterTableModel(unittest.TestCase):
@@ -171,7 +169,7 @@ class TestOWKMeans(WidgetTest):
 
             self.commit_and_wait()
             self.assertEqual(compute.call_count, 1)
-            compute.assert_called_with(3)
+            self.assertEqual(compute.call_args[1]['k'], 3)
 
             widget.k_from = 2
             widget.k_to = 3
@@ -182,7 +180,7 @@ class TestOWKMeans(WidgetTest):
             # Since 3 was already computed before when we weren't optimizing,
             # we only need to compute for 3
             self.assertEqual(compute.call_count, 1)
-            compute.assert_called_with(2)
+            self.assertEqual(compute.call_args[1]['k'], 2)
 
             # Commiting again should not recompute the clusterings
             compute.reset_mock()

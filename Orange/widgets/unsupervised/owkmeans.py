@@ -245,20 +245,16 @@ class OWKMeans(widget.OWWidget):
         """k cannot be larger than the number of data instances."""
         return len(self.data) >= k
 
-    def _compute_clustering(self, k):
-        # type: (int) -> KMeansModel
-        # False positives (Setting is not recognized as int)
-        # pylint: disable=invalid-sequence-index
-        if k > len(self.data):
+    @staticmethod
+    def _compute_clustering(data, k, init, n_init, max_iter, silhouette):
+        # type: (Table, int, str, int, int, bool) -> KMeansModel
+        if k > len(data):
             raise NotEnoughData()
 
         return KMeans(
-            n_clusters=k,
-            init=['random', 'k-means++'][self.smart_init],
-            n_init=self.n_init,
-            max_iter=self.max_iterations,
-            compute_silhouette_score=True,
-        )(self.data)
+            n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
+            compute_silhouette_score=silhouette,
+        )(data)
 
     @Slot(int, int)
     def __progress_changed(self, n, d):
@@ -310,7 +306,15 @@ class OWKMeans(widget.OWWidget):
     def __launch_tasks(self, ks):
         # type: (List[int]) -> None
         """Execute clustering in separate threads for all given ks."""
-        futures = [self.__executor.submit(self._compute_clustering, k) for k in ks]
+        futures = [self.__executor.submit(
+            self._compute_clustering,
+            data=self.data,
+            k=k,
+            init=['random', 'k-means++'][self.smart_init],
+            n_init=self.n_init,
+            max_iter=self.max_iterations,
+            silhouette=True,
+        ) for k in ks]
         watcher = FutureSetWatcher(futures)
         watcher.resultReadyAt.connect(self.__clustering_complete)
         watcher.progressChanged.connect(self.__progress_changed)
