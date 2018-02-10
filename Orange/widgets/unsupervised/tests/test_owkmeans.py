@@ -363,6 +363,20 @@ class TestOWKMeans(WidgetTest):
         np.testing.assert_array_less(-0.01, outtable)
         self.assertFalse(widget.Warning.no_silhouettes.is_shown())
 
+    def test_invalidate_clusterings_cancels_jobs(self):
+        widget = self.widget
+        widget.auto_commit = False
+
+        # Send the data without waiting
+        self.send_signal(widget.Inputs.data, self.iris)
+        widget.unconditional_commit()
+        # Now, invalidate by changing max_iter
+        widget.max_iterations = widget.max_iterations + 1
+        widget.invalidate()
+        self.wait_until_stop_blocking()
+
+        self.assertEqual(widget.clusterings, {})
+
 
 if __name__ == "__main__":
     unittest.main()

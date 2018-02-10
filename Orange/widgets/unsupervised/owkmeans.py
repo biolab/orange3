@@ -393,6 +393,7 @@ class OWKMeans(widget.OWWidget):
         QTimer.singleShot(100, self.adjustSize)
 
     def invalidate(self, force=False):
+        self.cancel()
         self.Error.clear()
         self.Warning.clear()
         self.clusterings = {}
