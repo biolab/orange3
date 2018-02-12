@@ -3,6 +3,7 @@
 
 from unittest.mock import patch, MagicMock
 
+from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
 
 from Orange.widgets.gui import OWComponent
@@ -76,6 +77,15 @@ class WidgetTestCase(WidgetTest):
         help_action = widget.findChild(QAction, "action-help")
         help_action.setEnabled(True)
         help_action.setVisible(True)
+
+    def test_widget_without_basic_layout(self):
+        class TestWidget2(OWWidget):
+            name = "Test"
+
+            want_basic_layout = False
+
+        w = TestWidget2()
+        w.showEvent(QShowEvent())
 
 
 class WidgetMsgTestCase(WidgetTest):
