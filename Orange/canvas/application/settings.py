@@ -26,6 +26,11 @@ from AnyQt.QtCore import (
 log = logging.getLogger(__name__)
 
 
+def refresh_proxies():
+    from Orange.canvas.__main__ import fix_set_proxy_env
+    fix_set_proxy_env()
+
+
 class UserDefaultsPropertyBinding(AbstractBoundProperty):
     """
     A Property binding for a setting in a
@@ -399,6 +404,20 @@ class UserSettingsDialog(QMainWindow):
 
         tab.setLayout(form)
 
+        # Network Tab
+        tab = QWidget()
+        self.addTab(tab, self.tr("Network"),
+                    toolTip="Settings related to networking")
+
+        form = QFormLayout()
+        line_edit_http_proxy = QLineEdit()
+        self.bind(line_edit_http_proxy, "text", "network/http-proxy")
+        form.addRow("HTTP proxy:", line_edit_http_proxy)
+        line_edit_https_proxy = QLineEdit()
+        self.bind(line_edit_https_proxy, "text", "network/https-proxy")
+        form.addRow("HTTPS proxy:", line_edit_https_proxy)
+        tab.setLayout(form)
+
         if self.__macUnified:
             # Need some sensible size otherwise mac unified toolbar 'takes'
             # the space that should be used for layout of the contents
@@ -461,6 +480,7 @@ class UserSettingsDialog(QMainWindow):
         self.show()
         status = self.__loop.exec_()
         self.__loop = None
+        refresh_proxies()
         return status
 
     def hideEvent(self, event):
