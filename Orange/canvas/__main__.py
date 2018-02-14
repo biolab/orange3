@@ -52,6 +52,9 @@ import pyqtgraph
 pyqtgraph.setConfigOption("exitCleanup", False)
 
 
+default_proxies = None
+
+
 def fix_osx_10_9_private_font():
     # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
     if sys.platform == "darwin":
@@ -88,10 +91,26 @@ def fix_win_pythonw_std_stream():
 def fix_set_proxy_env():
     """
     Set http_proxy/https_proxy environment variables (for requests, pip, ...)
-    from system settings on OS X and from registry on Windos. On unix, no-op.
+    from user-specified settings or, if none, from system settings on OS X
+    and from registry on Windos.
     """
-    for scheme, proxy in getproxies().items():
-        os.environ[scheme + '_proxy'] = proxy
+    # save default proxies so that setting can be reset
+    global default_proxies
+    if default_proxies is None:
+        default_proxies = getproxies()  # can also read windows and macos settings
+
+    settings = QSettings()
+    proxies = getproxies()
+    for scheme in set(["http", "https"]) | set(proxies):
+        from_settings = settings.value("network/" + scheme + "-proxy", "", type=str)
+        from_default = default_proxies.get(scheme, "")
+        env_scheme = scheme + '_proxy'
+        if from_settings:
+            os.environ[env_scheme] = from_settings
+        elif from_default:
+            os.environ[env_scheme] = from_default  # crucial for windows/macos support
+        else:
+            os.environ.pop(env_scheme, "")
 
 
 def make_sql_logger(level=logging.INFO):
@@ -247,9 +266,6 @@ def main(argv=None):
     # Try to fix fonts on OSX Mavericks
     fix_osx_10_9_private_font()
 
-    # Set http_proxy environment variable(s) for some clients
-    fix_set_proxy_env()
-
     # File handler should always be at least INFO level so we need
     # the application root level to be at least at INFO.
     root_level = min(levels[options.log_level], logging.INFO)
@@ -312,6 +328,9 @@ def main(argv=None):
         shutil.rmtree(
             config.widget_settings_dir(),
             ignore_errors=True)
+
+    # Set http_proxy environment variables, after (potentially) clearing settings
+    fix_set_proxy_env()
 
     file_handler = logging.FileHandler(
         filename=os.path.join(config.log_dir(), "canvas.log"),
