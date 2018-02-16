@@ -26,6 +26,8 @@ from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.canvas import report
 from Orange.widgets.widget import Msg
+from Orange.widgets.utils.annotated_data import (create_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME)
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -79,6 +81,7 @@ class OWSelectRows(widget.OWWidget):
     class Outputs:
         matching_data = Output("Matching Data", Table, default=True)
         unmatched_data = Output("Unmatched Data", Table)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     want_main_area = False
 
@@ -465,6 +468,8 @@ class OWSelectRows(widget.OWWidget):
     def commit(self):
         matching_output = self.data
         non_matching_output = None
+        annotated_output = None
+
         self.Error.clear()
         if self.data:
             domain = self.data.domain
@@ -511,6 +516,8 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = self.filters(self.data)
                 self.filters.negate = True
                 non_matching_output = self.filters(self.data)
+                rowsel = [self.filters(d) for d in self.data]
+                annotated_output = create_annotated_table(self.data, rowsel)
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
@@ -530,13 +537,19 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
 
+                remover = Remove(attr_flags)  # do not remove class for annotated data
+                annotated_output = remover(annotated_output)
+
         if matching_output is not None and not len(matching_output):
             matching_output = None
         if non_matching_output is not None and not len(non_matching_output):
             non_matching_output = None
+        if annotated_output is not None and not len(annotated_output):
+            annotated_output = None
 
         self.Outputs.matching_data.send(matching_output)
         self.Outputs.unmatched_data.send(non_matching_output)
+        self.Outputs.annotated_data.send(annotated_output)
 
         self.match_desc = report.describe_data_brief(matching_output)
         self.nonmatch_desc = report.describe_data_brief(non_matching_output)

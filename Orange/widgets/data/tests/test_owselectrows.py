@@ -231,6 +231,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertFalse(self.widget.Error.parsing_error.is_shown())
         self.assertEqual(len(self.get_output("Matching Data")), 3)
         self.assertEqual(len(self.get_output("Unmatched Data")), 1)
+        self.assertEqual(len(self.get_output("Data")), len(data))
 
         # Test saving of settings
         self.widget.settingsHandler.pack_data(self.widget)
@@ -255,7 +256,9 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(data.domain[0], "is below", "-1")
         self.assertIsNone(self.get_output("Matching Data"))
         self.assertEqual(len(self.get_output("Unmatched Data")), len_data)
+        self.assertEqual(len(self.get_output("Data")), len_data)
         self.widget.remove_all_button.click()
         self.enterFilter(data.domain[0], "is below", "10")
         self.assertIsNone(self.get_output("Unmatched Data"))
         self.assertEqual(len(self.get_output("Matching Data")), len_data)
+        self.assertEqual(len(self.get_output("Data")), len_data)
