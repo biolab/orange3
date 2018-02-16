@@ -28,6 +28,7 @@ from Orange.canvas import report
 from Orange.widgets.widget import Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+import numpy as np
 
 
 class SelectRowsContextHandler(DomainContextHandler):
@@ -516,8 +517,9 @@ class OWSelectRows(widget.OWWidget):
                 matching_output = self.filters(self.data)
                 self.filters.negate = True
                 non_matching_output = self.filters(self.data)
-                rowsel = [self.filters(d) for d in self.data]
-                annotated_output = create_annotated_table(self.data, rowsel)
+
+                row_sel = np.in1d(self.data.ids, matching_output.ids)
+                annotated_output = create_annotated_table(self.data, row_sel)
 
             # if hasattr(self.data, "name"):
             #     matching_output.name = self.data.name
