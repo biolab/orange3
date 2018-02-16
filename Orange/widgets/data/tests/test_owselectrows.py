@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
-from AnyQt.QtWidgets import QLineEdit
+from AnyQt.QtWidgets import QLineEdit, QComboBox
 
 from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable)
@@ -125,21 +125,32 @@ class TestOWSelectRows(WidgetTest):
         oper_combo = self.widget.cond_list.cellWidget(row, 1)
         simulate.combobox_activate_item(oper_combo, filter, delay=0)
 
-        value_inputs = self._get_value_line_edits(row)
+        value_inputs = self.__get_value_widgets(row)
         for i, value in enumerate([value, value2]):
             if value is None:
                 continue
-            QTest.mouseClick(value_inputs[i], Qt.LeftButton)
-            QTest.keyClicks(value_inputs[i], value, delay=0)
-            QTest.keyClick(value_inputs[i], Qt.Key_Enter)
+            self.__set_value(value_inputs[i], value)
 
-    def _get_value_line_edits(self, row):
+    def __get_value_widgets(self, row):
         value_inputs = self.widget.cond_list.cellWidget(row, 2)
         if value_inputs:
-            value_inputs = [w for w in value_inputs.children()
-                            if isinstance(w, QLineEdit)]
+            if isinstance(value_inputs, QComboBox):
+                value_inputs = [value_inputs]
+            else:
+                value_inputs = [
+                    w for w in value_inputs.children()
+                    if isinstance(w, QLineEdit)]
         return value_inputs
 
+    def __set_value(self, widget, value):
+        if isinstance(widget, QLineEdit):
+            QTest.mouseClick(widget, Qt.LeftButton)
+            QTest.keyClicks(widget, value, delay=0)
+            QTest.keyClick(widget, Qt.Key_Enter)
+        elif isinstance(widget, QComboBox):
+            simulate.combobox_activate_item(widget, value)
+        else:
+            raise ValueError("Unsupported widget {}".format(widget))
 
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
@@ -155,8 +166,6 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         saved_condition = context.values["conditions"][0]
         self.assertEqual(saved_condition[2][0], 5.2)
-
-
 
     @override_locale(QLocale.C)
     def test_restores_continuous_filter_in_c_locale(self):
@@ -225,7 +234,6 @@ class TestOWSelectRows(WidgetTest):
 
         data = Table(datasets.path("testing_dataset_cls"))
         self.send_signal(self.widget.Inputs.data, data)
-
 
         self.enterFilter(data.domain["c2"], "is defined")
         self.assertFalse(self.widget.Error.parsing_error.is_shown())
