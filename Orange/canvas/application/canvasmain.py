@@ -19,7 +19,8 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
 
 from AnyQt.QtCore import (
-    Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION
+    Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION,
+    QObject
 )
 
 try:
@@ -34,7 +35,7 @@ except ImportError:
     USE_WEB_ENGINE = False
 
 
-from AnyQt.QtCore import pyqtProperty as Property
+from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
 if QT_VERSION >= 0x50000:
     from AnyQt.QtCore import QStandardPaths
@@ -234,6 +235,11 @@ class CanvasMainWindow(QMainWindow):
         self.setWindowFilePath(self.scheme_widget.path())
         self.scheme_widget.pathChanged.connect(self.setWindowFilePath)
         self.scheme_widget.modificationChanged.connect(self.setWindowModified)
+
+        dropfilter = UrlDropEventFilter(self)
+        dropfilter.urlDropped.connect(self.open_scheme_file)
+        self.scheme_widget.setAcceptDrops(True)
+        self.scheme_widget.installEventFilter(dropfilter)
 
         # QMainWindow's Dock widget
         self.dock_widget = CollapsibleDockWidget(objectName="main-area-dock")
@@ -2040,3 +2046,30 @@ def index(sequence, *what, **kwargs):
         if predicate(what, item_key):
             return i
     raise ValueError("%r not in sequence" % what)
+
+
+class UrlDropEventFilter(QObject):
+    urlDropped = Signal(QUrl)
+
+    def eventFilter(self, obj, event):
+        etype = event.type()
+        if etype == QEvent.DragEnter or etype == QEvent.DragMove:
+            mime = event.mimeData()
+            if mime.hasUrls() and len(mime.urls()) == 1:
+                url = mime.urls()[0]
+                if url.isLocalFile():
+                    filename = url.toLocalFile()
+                    _, ext = os.path.splitext(filename)
+                    if ext == ".ows":
+                        event.acceptProposedAction()
+                        return True
+
+        elif etype == QEvent.Drop:
+            mime = event.mimeData()
+            urls = mime.urls()
+            if urls:
+                url = urls[0]
+                self.urlDropped.emit(url)
+                return True
+
+        return QObject.eventFilter(self, obj, event)
