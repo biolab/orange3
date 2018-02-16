@@ -538,8 +538,6 @@ class OWSelectRows(widget.OWWidget):
 
                 matching_output = remover(matching_output)
                 non_matching_output = remover(non_matching_output)
-
-                remover = Remove(attr_flags)  # do not remove class for annotated data
                 annotated_output = remover(annotated_output)
 
         if matching_output is not None and not len(matching_output):
