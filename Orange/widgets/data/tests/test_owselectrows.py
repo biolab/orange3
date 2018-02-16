@@ -4,6 +4,8 @@ from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
 
+import numpy as np
+
 from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable)
 from Orange.widgets.data.owselectrows import (
@@ -12,6 +14,7 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 
 CFValues = {
     FilterContinuous.Equal: ["5.4"],
@@ -225,6 +228,18 @@ class TestOWSelectRows(WidgetTest):
         self.assertIsNone(self.get_output("Unmatched Data"))
         self.assertEqual(len(self.get_output("Matching Data")), len_data)
         self.assertEqual(len(self.get_output("Data")), len_data)
+
+    def test_annotated_data(self):
+        iris = Table("iris")
+        self.send_signal(self.widget.Inputs.data, iris)
+
+        self.enterFilter(iris.domain["iris"], "is", "Iris-setosa")
+
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(annotated), 150)
+        annotations = annotated.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0]
+        np.testing.assert_equal(annotations[:50], True)
+        np.testing.assert_equal(annotations[50:], False)
 
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
