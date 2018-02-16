@@ -115,43 +115,6 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(iris.domain[2], "is below", "5.2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
 
-    def enterFilter(self, variable, filter, value=None, value2=None):
-        row = self.widget.cond_list.model().rowCount()
-        self.widget.add_button.click()
-
-        var_combo = self.widget.cond_list.cellWidget(row, 0)
-        simulate.combobox_activate_item(var_combo, variable.name, delay=0)
-
-        oper_combo = self.widget.cond_list.cellWidget(row, 1)
-        simulate.combobox_activate_item(oper_combo, filter, delay=0)
-
-        value_inputs = self.__get_value_widgets(row)
-        for i, value in enumerate([value, value2]):
-            if value is None:
-                continue
-            self.__set_value(value_inputs[i], value)
-
-    def __get_value_widgets(self, row):
-        value_inputs = self.widget.cond_list.cellWidget(row, 2)
-        if value_inputs:
-            if isinstance(value_inputs, QComboBox):
-                value_inputs = [value_inputs]
-            else:
-                value_inputs = [
-                    w for w in value_inputs.children()
-                    if isinstance(w, QLineEdit)]
-        return value_inputs
-
-    def __set_value(self, widget, value):
-        if isinstance(widget, QLineEdit):
-            QTest.mouseClick(widget, Qt.LeftButton)
-            QTest.keyClicks(widget, value, delay=0)
-            QTest.keyClick(widget, Qt.Key_Enter)
-        elif isinstance(widget, QComboBox):
-            simulate.combobox_activate_item(widget, value)
-        else:
-            raise ValueError("Unsupported widget {}".format(widget))
-
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
         iris = Table("iris")[:5]
@@ -244,14 +207,6 @@ class TestOWSelectRows(WidgetTest):
         # Test saving of settings
         self.widget.settingsHandler.pack_data(self.widget)
 
-    def widget_with_context(self, domain, conditions):
-        ch = SelectRowsContextHandler()
-        context = ch.new_context(domain, *ch.encode_domain(domain))
-        context.values = dict(conditions=conditions)
-        settings = dict(context_settings=[context])
-
-        return self.create_widget(OWSelectRows, settings)
-
     def test_output_filter(self):
         """
         None on output when there is no data.
@@ -270,3 +225,48 @@ class TestOWSelectRows(WidgetTest):
         self.assertIsNone(self.get_output("Unmatched Data"))
         self.assertEqual(len(self.get_output("Matching Data")), len_data)
         self.assertEqual(len(self.get_output("Data")), len_data)
+
+    def widget_with_context(self, domain, conditions):
+        ch = SelectRowsContextHandler()
+        context = ch.new_context(domain, *ch.encode_domain(domain))
+        context.values = dict(conditions=conditions)
+        settings = dict(context_settings=[context])
+
+        return self.create_widget(OWSelectRows, settings)
+
+    def enterFilter(self, variable, filter, value=None, value2=None):
+        row = self.widget.cond_list.model().rowCount()
+        self.widget.add_button.click()
+
+        var_combo = self.widget.cond_list.cellWidget(row, 0)
+        simulate.combobox_activate_item(var_combo, variable.name, delay=0)
+
+        oper_combo = self.widget.cond_list.cellWidget(row, 1)
+        simulate.combobox_activate_item(oper_combo, filter, delay=0)
+
+        value_inputs = self.__get_value_widgets(row)
+        for i, value in enumerate([value, value2]):
+            if value is None:
+                continue
+            self.__set_value(value_inputs[i], value)
+
+    def __get_value_widgets(self, row):
+        value_inputs = self.widget.cond_list.cellWidget(row, 2)
+        if value_inputs:
+            if isinstance(value_inputs, QComboBox):
+                value_inputs = [value_inputs]
+            else:
+                value_inputs = [
+                    w for w in value_inputs.children()
+                    if isinstance(w, QLineEdit)]
+        return value_inputs
+
+    def __set_value(self, widget, value):
+        if isinstance(widget, QLineEdit):
+            QTest.mouseClick(widget, Qt.LeftButton)
+            QTest.keyClicks(widget, value, delay=0)
+            QTest.keyClick(widget, Qt.Key_Enter)
+        elif isinstance(widget, QComboBox):
+            simulate.combobox_activate_item(widget, value)
+        else:
+            raise ValueError("Unsupported widget {}".format(widget))
