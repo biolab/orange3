@@ -16,8 +16,9 @@ from os.path import dirname
 
 import Orange
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
-    Domain, DiscreteVariable
+    Domain, DiscreteVariable, ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
+
 from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile
@@ -392,6 +393,25 @@ a
             data = self.get_output(self.widget.Outputs.data)
             self.assertSequenceEqual(data.metas.ravel().tolist(), ['1', '', '3'])
 
+    def test_domaineditor_makes_variables(self):
+        # Variables created with domain editor should be interchangeable
+        # with variables read from file.
+
+        dat = """V0\tV1\nc\td\n\n1.0\t2"""
+        v0 = StringVariable.make("V0")
+        v1 = ContinuousVariable.make("V1")
+
+        with named_file(dat, suffix=".tab") as filename:
+            self.open_dataset(filename)
+
+            model = self.widget.domain_editor.model()
+            model.setData(model.createIndex(0, 1), "text", Qt.EditRole)
+            model.setData(model.createIndex(1, 1), "numeric", Qt.EditRole)
+            self.widget.apply_button.click()
+
+            data = self.get_output(self.widget.Outputs.data)
+            self.assertEqual(data.domain["V0"], v0)
+            self.assertEqual(data.domain["V1"], v1)
 
     def test_url_no_scheme(self):
         mock_urlreader = Mock(side_effect=ValueError())

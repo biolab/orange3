@@ -297,7 +297,7 @@ class DomainEditor(QTableView):
                 var = tpe(name, values)
                 col_data = self._to_column(col_data, is_sparse)
             elif tpe == StringVariable:
-                var = tpe(name)
+                var = tpe.make(name)
                 if type(orig_var) == DiscreteVariable:
                     col_data = [orig_var.repr_val(x) if not np.isnan(x) else ""
                                 for x in self._iter_vals(col_data)]
@@ -311,7 +311,7 @@ class DomainEditor(QTableView):
                 # in metas which are transformed to dense below
                 col_data = self._to_column(col_data, False, dtype=object)
             elif tpe == ContinuousVariable and type(orig_var) == DiscreteVariable:
-                var = tpe(name)
+                var = tpe.make(name)
                 if may_be_numeric:
                     col_data = [np.nan if self._is_missing(x) else float(orig_var.values[int(x)])
                                 for x in self._iter_vals(col_data)]
