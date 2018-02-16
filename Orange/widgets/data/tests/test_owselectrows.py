@@ -249,7 +249,7 @@ class TestOWSelectRows(WidgetTest):
 
         return self.create_widget(OWSelectRows, settings)
 
-    def enterFilter(self, variable, filter, value=None, value2=None):
+    def enterFilter(self, variable, filter, value1=None, value2=None):
         row = self.widget.cond_list.model().rowCount()
         self.widget.add_button.click()
 
@@ -260,7 +260,7 @@ class TestOWSelectRows(WidgetTest):
         simulate.combobox_activate_item(oper_combo, filter, delay=0)
 
         value_inputs = self.__get_value_widgets(row)
-        for i, value in enumerate([value, value2]):
+        for i, value in enumerate([value1, value2]):
             if value is None:
                 continue
             self.__set_value(value_inputs[i], value)

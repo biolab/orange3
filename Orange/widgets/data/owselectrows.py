@@ -1,7 +1,8 @@
 import enum
-
 from collections import OrderedDict
 from itertools import chain
+
+import numpy as np
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
@@ -28,7 +29,6 @@ from Orange.canvas import report
 from Orange.widgets.widget import Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-import numpy as np
 
 
 class SelectRowsContextHandler(DomainContextHandler):
