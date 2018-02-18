@@ -187,11 +187,11 @@ class OWPythagoreanForest(OWWidget):
     @classmethod
     def migrate_settings(cls, settings, version):
         if version < 2:
-            del settings['selected_tree_index']
+            settings.pop('selected_tree_index', None)
             v1_min, v1_max = 20, 150
             v2_min, v2_max = 100, 400
             ratio = (v2_max - v2_min) / (v1_max - v1_min)
-            settings['zoom'] = int(settings['zoom'] * ratio + v2_min)
+            settings['zoom'] = int(ratio * (settings['zoom'] - v1_min) + v2_min)
 
     def __init__(self):
         super().__init__()

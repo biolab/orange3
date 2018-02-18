@@ -29,6 +29,24 @@ class TestOWPythagoreanForest(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPythagoreanForest)  # type: OWPythagoreanForest
 
+    def test_migrate_version_1_settings(self):
+        # Version 1 zoom ranged from 20-150, version 2 zoom ranges from 100-400
+        # Test minimium value falls into the range
+        widget_min_zoom = self.create_widget(
+            OWPythagoreanForest,
+            stored_settings={'zoom': 20, 'version': 2},
+        )  # type: OWPythagoreanForest
+        self.assertTrue(widget_min_zoom.zoom <= 400)
+        self.assertTrue(widget_min_zoom.zoom >= 100)
+
+        # Test maximum value falls into the range
+        widget_max_zoom = self.create_widget(
+            OWPythagoreanForest,
+            stored_settings={'zoom': 150, 'version': 2},
+        )  # type: OWPythagoreanForest
+        self.assertTrue(widget_max_zoom.zoom <= 400)
+        self.assertTrue(widget_max_zoom.zoom >= 100)
+
     def get_tree_widgets(self):
         model = self.widget.forest_model
         trees = []
