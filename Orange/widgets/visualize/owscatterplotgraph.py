@@ -83,7 +83,6 @@ class LegendItem(LegendItem):
         super().__init__(size, offset)
 
         self.layout.setContentsMargins(5, 5, 5, 5)
-        self.layout.setVerticalSpacing(0)
         self.layout.setHorizontalSpacing(15)
         self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
 
