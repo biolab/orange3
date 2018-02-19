@@ -12,6 +12,8 @@ Outputs
         instances that match the conditions
     Non-Matching Data
         instances that do not match the conditions
+    Data
+        data with an additional column showing whether a instance is selected
 
 
 This widget selects a subset from an input dataset, based on user-defined
