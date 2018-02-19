@@ -133,8 +133,8 @@ class OWKMeans(widget.OWWidget):
         # type: (Dict, int) -> None
         if version < 2:
             if 'auto_apply' in settings:
-                settings['auto_commit'] = settings['auto_apply']
-                del settings['auto_apply']
+                settings['auto_commit'] = settings.get('auto_apply', True)
+                settings.pop('auto_apply', None)
 
     def __init__(self):
         super().__init__()
