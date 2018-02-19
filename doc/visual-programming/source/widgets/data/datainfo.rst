@@ -1,29 +1,12 @@
 Data Info
 =========
 
-.. figure:: icons/data-info.png
-
 Displays information on a selected dataset.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
-
--  **Data**
-
-   A dataset.
-
--  **Selected Data**
-
-   A data subset.
-
-**Outputs**:
-
--  (None)
-
-Description
------------
 
 A simple widget that presents information on dataset size, features,
 targets, meta attributes, and location. 

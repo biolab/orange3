@@ -683,7 +683,7 @@ class LinkItem(QGraphicsWidget):
             self.__state = state
 
             if state & LinkItem.Pending:
-                self.sinkIndicator.setBrush(QBrush(Qt.yellow))
+                self.sinkIndicator.setBrush(QBrush(Qt.red))
             else:
                 self.sinkIndicator.setBrush(QBrush(QColor("#9CACB4")))
             self.__updatePen()

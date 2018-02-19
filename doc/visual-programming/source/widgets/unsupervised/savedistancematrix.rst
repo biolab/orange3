@@ -1,25 +1,12 @@
 Save Distance Matrix
 ====================
 
-.. figure:: icons/save-distance-matrix.png
-
 Saves a distance matrix. 
 
-Signals
--------
+Inputs
+    Distances
+        distance matrix 
 
-**Inputs**:
-
--  **Distances**
-
-   A distance matrix. 
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 .. figure:: images/SaveDistanceMatrix-stamped.png
 

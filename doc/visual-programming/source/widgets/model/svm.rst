@@ -1,39 +1,22 @@
 SVM
 ===
 
-.. figure:: icons/svm.png
-
 Support Vector Machines map inputs to higher-dimensional feature spaces.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        linear regression learning algorithm
+    Model
+        trained model
+    Support Vectors
+        instances used as support vectors
 
--  **Data**
-
-   A dataset.
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A support vector machine learning algorithm with settings as specified in the dialog.
-
--  **Model**
-
-   A trained model. Output signal sent only if input *Data* is present.
-
--  **Support Vectors**
-
-   A subset of data instances from the training set that were used as support vectors in the trained model.
-
-Description
------------
 
 `Support vector machine <https://en.wikipedia.org/wiki/Support_vector_machine>`_ (SVM) is a machine learning technique that separates the attribute space with a hyperplane, thus maximizing the margin between the instances of different classes or class values. The technique often yields supreme predictive performance results. Orange embeds a popular implementation of SVM from the `LIBSVM <https://www.csie.ntu.edu.tw/~cjlin/libsvm/>`_ package. This widget is its graphical user interface.
 

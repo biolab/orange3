@@ -1,27 +1,16 @@
 Confusion Matrix
 ================
 
-.. figure:: icons/confusion-matrix.png
-
 Shows proportions between the predicted and actual class.
 
-Signals
--------
+Inputs
+    Evaluation results
+        results of testing classification algorithms
 
-**Inputs**:
+Outputs
+    Selected Data
+        data subset selected from confusion matrix
 
--  **Evaluation results**
-
-   Results of testing the algorithms; typically from **Test Learners**
-
-**Outputs**:
-
--  **Selected Data**
-
-   A data subset from the selected cells in the confusion matrix.
-
-Description
------------
 
 The `Confusion Matrix <https://en.wikipedia.org/wiki/Confusion_matrix>`_ gives the
 number/proportion of instances between the predicted and actual class.

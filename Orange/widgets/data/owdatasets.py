@@ -443,14 +443,14 @@ class OWDataSets(widget.OWWidget):
         self.__update_cached_state()
 
         if path is not None:
-            data = Orange.data.Table(path)
+            data = self.load_data(path)
         else:
             data = None
         self.Outputs.data.send(data)
 
     def commit_cached(self, file_path):
         path = LocalFiles(self.local_cache_path).localpath(*file_path)
-        self.Outputs.data.send(Orange.data.Table(path))
+        self.Outputs.data.send(self.load_data(path))
 
     @Slot()
     def __progress_advance(self):
@@ -471,6 +471,10 @@ class OWDataSets(widget.OWWidget):
         self.splitter_state = bytes(self.splitter.saveState())
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
+
+    @staticmethod
+    def load_data(path):
+        return Orange.data.Table(path)
 
     def list_remote(self):
         # type: () -> Dict[Tuple[str, ...], dict]

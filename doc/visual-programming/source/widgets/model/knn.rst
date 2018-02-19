@@ -1,35 +1,20 @@
 kNN
 ===
 
-.. figure:: icons/knn.png
-
 Predict according to the nearest training instances.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
 
-**Inputs**:
+Outputs
+    Learner
+        kNN learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
-**Outputs**:
-
--  **Learner**
-
-   A kNN learning algorithm with settings as specified in the dialog.
-
--  **Model**
-
-   A trained model. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 The **kNN** widget uses the `kNN algorithm <https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm>`_ that searches for k closest training examples in feature space and uses their average as prediction.
 

@@ -1,36 +1,21 @@
 Test & Score
 ============
 
-.. figure:: icons/test-and-score.png
-
 Tests learning algorithms on data.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Test Data
+        separate data for testing
+    Learner
+        learning algorithm(s)
 
-**Inputs**
 
--  **Data**
+Outputs
+    Evaluation Results
+        results of testing classification algorithms
 
-   Data for training and, if there is no separate test dataset, also
-   testing.
-
--  **Test Data**
-
-   Separate data for testing.
-
--  **Learner**
-
-   One or more learning algorithms.
-
-**Outputs**
-
--  **Evaluation results**
-
-   Results of testing the algorithms.
-
-Description
------------
 
 The widget tests learning algorithms. Different sampling schemes are
 available, including using separate test data. The widget does two

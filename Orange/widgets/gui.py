@@ -798,7 +798,10 @@ class LineEditWFocusOut(QtWidgets.QLineEdit):
         self.__changed = True
 
     def returnPressedHandler(self):
-        self.clearFocus()
+        self.selectAll()
+        self.__callback_if_changed()
+
+    def __callback_if_changed(self):
         if self.__changed:
             self.__changed = False
             if hasattr(self, "cback") and self.cback:
@@ -812,7 +815,7 @@ class LineEditWFocusOut(QtWidgets.QLineEdit):
 
     def focusOutEvent(self, *e):
         super().focusOutEvent(*e)
-        self.returnPressedHandler()
+        self.__callback_if_changed()
 
     def focusInEvent(self, *e):
         self.__changed = False

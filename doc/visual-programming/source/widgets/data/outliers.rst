@@ -1,35 +1,20 @@
 Outliers
 ========
 
-.. figure:: icons/outliers.png
-
 Simple outlier detection by comparing distances between instances.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Distances
+        distance matrix
 
-**Inputs**:
+Outputs
+    Outliers
+        instances scored as outliers
+    Inliers
+        instances not scored as outliers
 
--  **Data**
-
-   A dataset
-
--  **Distances**
-
-   A distance matrix
-
-**Outputs**:
-
--  **Outliers**
-
-   A dataset containing instances scored as outliers
-
--  **Inliers**
-
-   A dataset containing instances not scored as outliers
-
-Description
------------
 
 The **Outliers** widget applies one of the two methods for outlier
 detection. Both methods apply classification to the dataset, one with
@@ -74,4 +59,3 @@ errors, more support vectors). Then we observed the outliers in the
 Plot <../visualize/scatterplot>`.
 
 .. figure:: images/Outliers-Example.png
- 

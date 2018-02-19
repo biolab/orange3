@@ -572,7 +572,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         QDialog.showEvent(self, event)
         if self.save_position and not self.__was_restored:
             # Restore saved geometry on (first) show
-            self.__splitter.setControlAreaVisible(self.controlAreaVisible)
+            if self.__splitter is not None:
+                self.__splitter.setControlAreaVisible(self.controlAreaVisible)
             self.__restoreWidgetGeometry()
             self.__was_restored = True
         self.__quicktipOnce()

@@ -1,31 +1,18 @@
 Tree Viewer
 ===========
 
-.. figure:: icons/tree-viewer.png
-
 A visualization of classification and regression trees. 
 
-Signals
--------
+Inputs
+    Tree
+        decision tree
 
-**Inputs**:
+Outputs
+    Selected Data
+        instances selected from the tree node
+    Data
+        data with an additional column showing whether a point is selected
 
--  **Tree**
-
-   A decision tree.
-
-**Outputs**:
-
--  **Selected Data**
-
-   Data from a selected tree node.
-
--  **Data**
-
-   Dataset with an additional attribute for selection labels.
-
-Description
------------
 
 This is a versatile widget with 2-D visualization of `classification and regression trees <https://en.wikipedia.org/wiki/Decision_tree_learning>`_. The user can select a node, instructing the widget to output the data associated with the node, thus enabling explorative data analysis.
 

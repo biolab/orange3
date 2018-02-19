@@ -1,39 +1,22 @@
 AdaBoost
 ========
 
-.. figure:: icons/adaboost.png
-
 An ensemble meta-algorithm that combines weak learners and adapts to the 'hardness' of each training sample.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
+    Preprocessor
+        preprocessing method(s)
+    Learner
+        learning algorithm
 
-**Inputs**:
+Outputs
+    Learner
+        AdaBoost learning algorithm
+    Model
+        trained model
 
--  **Data**
-
-   A dataset. 
-
--  **Preprocessor**
-
-   Preprocessing method(s)
-
--  **Learner**
-
-   A learning algorithm. 
-
-**Outputs**:
-
--  **Learner**
-
-   AdaBoost learning algorithm with settings as specified in the dialog.
-
--  **Model**
-
-   A trained model. Output signal sent only if input *Data* is present.
-
-Description
------------
 
 The `AdaBoost <https://en.wikipedia.org/wiki/AdaBoost>`_ (short for "Adaptive boosting") widget is a machine-learning algorithm, formulated by `Yoav Freund and Robert Schapire <https://cseweb.ucsd.edu/~yfreund/papers/IntroToBoosting.pdf>`_. It can be used with other learning algorithms to boost their performance. It does so by tweaking the weak learners.
 

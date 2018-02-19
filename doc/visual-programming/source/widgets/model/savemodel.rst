@@ -1,25 +1,12 @@
 Save Model
 ==========
 
-.. figure:: icons/save-model.png
-
 Save a trained model to an output file.
 
-Signals
--------
+Inputs
+    Model
+        trained model
 
-**Inputs**:
-
--  **Model**
-
-   A model with selected parameters
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 .. figure:: images/SaveModel-stamped.png
    :scale: 50 %

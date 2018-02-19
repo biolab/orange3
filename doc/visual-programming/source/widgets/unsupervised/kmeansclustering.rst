@@ -1,27 +1,16 @@
 k-Means
 =======
 
-.. figure:: icons/k-means.png
-
 Groups items using the k-Means clustering algorithm.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with cluster index as a class attribute
 
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  **Data**
-
-   A dataset with cluster index as a class attribute.
-
-Description
------------
 
 The widget applies the `k-Means clustering <https://en.wikipedia.org/wiki/K-means_clustering>`_
 algorithm to the data and outputs a new dataset in which the cluster

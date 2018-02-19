@@ -1,28 +1,17 @@
 Purge Domain
 ============
 
-.. figure:: icons/purge-domain.png
-
 Removes unused attribute values and useless attributes, sorts the
 remaining values.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        filtered dataset
 
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  **Data**
-
-   A filtered dataset
-
-Description
------------
 
 Definitions of nominal attributes sometimes contain values which don’t
 appear in the data. Even if this does not happen in the original data,

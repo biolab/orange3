@@ -1,29 +1,18 @@
 Concatenate
 ===========
 
-.. figure:: icons/concatenate.png
-
 Concatenates data from multiple sources.
 
-Signals
--------
+Inputs
+    Primary Data
+        dataset that defines the attribute set
+    Additional Data
+        additional dataset
 
-**Inputs**:
+Outputs
+    Data
+        concatenated data
 
--  **Primary Data**
-
-   A dataset that defines the attribute set.
-
--  **Additional Data**
-
-   An additional dataset.
-
-**Outputs**:
-
--  **Data**
-
-Description
------------
 
 The widget concatenates multiple sets of instances (datasets). The
 merge is “vertical”, in a sense that two sets of 10 and 5 instances

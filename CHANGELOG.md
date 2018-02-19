@@ -6,6 +6,18 @@ Change Log
 * ...
 
 
+[3.10.0] - 2018-02-19
+--------------------
+##### Enhancements
+* Select Rows: Add annotated data output ([#2908](../../pull/2908))
+* canvas: Open dropped ows files ([#2885](../../pull/2885))
+* Settings for HTTP and HTTPS proxies in the canvas ([#2906](../../pull/2906))
+* Add-ons: Option to list only trusted add-ons ([#2899](../../pull/2899))
+
+##### Bugfixes
+* SPG Legend: Fix vertical spacing ([#2914](../../pull/2914))
+
+
 [3.9.1] - 2018-02-02
 --------------------
 ##### Enhancements
@@ -767,7 +779,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.9.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.10.0...HEAD
+[3.10.0]: https://github.com/biolab/orange3/compare/3.9.1...3.10.0
 [3.9.1]: https://github.com/biolab/orange3/compare/3.9.0...3.9.1
 [3.9.0]: https://github.com/biolab/orange3/compare/3.8.0...3.9.0
 [3.8.0]: https://github.com/biolab/orange3/compare/3.7.1...3.8.0

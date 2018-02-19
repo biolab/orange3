@@ -2,7 +2,9 @@
 # pylint: disable=missing-docstring
 from AnyQt.QtCore import QLocale, Qt
 from AnyQt.QtTest import QTest
-from AnyQt.QtWidgets import QLineEdit
+from AnyQt.QtWidgets import QLineEdit, QComboBox
+
+import numpy as np
 
 from Orange.data import (
     Table, ContinuousVariable, StringVariable, DiscreteVariable)
@@ -12,6 +14,7 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 
 CFValues = {
     FilterContinuous.Equal: ["5.4"],
@@ -115,32 +118,6 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(iris.domain[2], "is below", "5.2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
 
-    def enterFilter(self, variable, filter, value=None, value2=None):
-        row = self.widget.cond_list.model().rowCount()
-        self.widget.add_button.click()
-
-        var_combo = self.widget.cond_list.cellWidget(row, 0)
-        simulate.combobox_activate_item(var_combo, variable.name, delay=0)
-
-        oper_combo = self.widget.cond_list.cellWidget(row, 1)
-        simulate.combobox_activate_item(oper_combo, filter, delay=0)
-
-        value_inputs = self._get_value_line_edits(row)
-        for i, value in enumerate([value, value2]):
-            if value is None:
-                continue
-            QTest.mouseClick(value_inputs[i], Qt.LeftButton)
-            QTest.keyClicks(value_inputs[i], value, delay=0)
-            QTest.keyClick(value_inputs[i], Qt.Key_Enter)
-
-    def _get_value_line_edits(self, row):
-        value_inputs = self.widget.cond_list.cellWidget(row, 2)
-        if value_inputs:
-            value_inputs = [w for w in value_inputs.children()
-                            if isinstance(w, QLineEdit)]
-        return value_inputs
-
-
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
         iris = Table("iris")[:5]
@@ -155,8 +132,6 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         saved_condition = context.values["conditions"][0]
         self.assertEqual(saved_condition[2][0], 5.2)
-
-
 
     @override_locale(QLocale.C)
     def test_restores_continuous_filter_in_c_locale(self):
@@ -226,22 +201,14 @@ class TestOWSelectRows(WidgetTest):
         data = Table(datasets.path("testing_dataset_cls"))
         self.send_signal(self.widget.Inputs.data, data)
 
-
         self.enterFilter(data.domain["c2"], "is defined")
         self.assertFalse(self.widget.Error.parsing_error.is_shown())
         self.assertEqual(len(self.get_output("Matching Data")), 3)
         self.assertEqual(len(self.get_output("Unmatched Data")), 1)
+        self.assertEqual(len(self.get_output("Data")), len(data))
 
         # Test saving of settings
         self.widget.settingsHandler.pack_data(self.widget)
-
-    def widget_with_context(self, domain, conditions):
-        ch = SelectRowsContextHandler()
-        context = ch.new_context(domain, *ch.encode_domain(domain))
-        context.values = dict(conditions=conditions)
-        settings = dict(context_settings=[context])
-
-        return self.create_widget(OWSelectRows, settings)
 
     def test_output_filter(self):
         """
@@ -255,7 +222,66 @@ class TestOWSelectRows(WidgetTest):
         self.enterFilter(data.domain[0], "is below", "-1")
         self.assertIsNone(self.get_output("Matching Data"))
         self.assertEqual(len(self.get_output("Unmatched Data")), len_data)
+        self.assertEqual(len(self.get_output("Data")), len_data)
         self.widget.remove_all_button.click()
         self.enterFilter(data.domain[0], "is below", "10")
         self.assertIsNone(self.get_output("Unmatched Data"))
         self.assertEqual(len(self.get_output("Matching Data")), len_data)
+        self.assertEqual(len(self.get_output("Data")), len_data)
+
+    def test_annotated_data(self):
+        iris = Table("iris")
+        self.send_signal(self.widget.Inputs.data, iris)
+
+        self.enterFilter(iris.domain["iris"], "is", "Iris-setosa")
+
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(annotated), 150)
+        annotations = annotated.get_column_view(ANNOTATED_DATA_FEATURE_NAME)[0]
+        np.testing.assert_equal(annotations[:50], True)
+        np.testing.assert_equal(annotations[50:], False)
+
+    def widget_with_context(self, domain, conditions):
+        ch = SelectRowsContextHandler()
+        context = ch.new_context(domain, *ch.encode_domain(domain))
+        context.values = dict(conditions=conditions)
+        settings = dict(context_settings=[context])
+
+        return self.create_widget(OWSelectRows, settings)
+
+    def enterFilter(self, variable, filter, value1=None, value2=None):
+        row = self.widget.cond_list.model().rowCount()
+        self.widget.add_button.click()
+
+        var_combo = self.widget.cond_list.cellWidget(row, 0)
+        simulate.combobox_activate_item(var_combo, variable.name, delay=0)
+
+        oper_combo = self.widget.cond_list.cellWidget(row, 1)
+        simulate.combobox_activate_item(oper_combo, filter, delay=0)
+
+        value_inputs = self.__get_value_widgets(row)
+        for i, value in enumerate([value1, value2]):
+            if value is None:
+                continue
+            self.__set_value(value_inputs[i], value)
+
+    def __get_value_widgets(self, row):
+        value_inputs = self.widget.cond_list.cellWidget(row, 2)
+        if value_inputs:
+            if isinstance(value_inputs, QComboBox):
+                value_inputs = [value_inputs]
+            else:
+                value_inputs = [
+                    w for w in value_inputs.children()
+                    if isinstance(w, QLineEdit)]
+        return value_inputs
+
+    def __set_value(self, widget, value):
+        if isinstance(widget, QLineEdit):
+            QTest.mouseClick(widget, Qt.LeftButton)
+            QTest.keyClicks(widget, value, delay=0)
+            QTest.keyClick(widget, Qt.Key_Enter)
+        elif isinstance(widget, QComboBox):
+            simulate.combobox_activate_item(widget, value)
+        else:
+            raise ValueError("Unsupported widget {}".format(widget))

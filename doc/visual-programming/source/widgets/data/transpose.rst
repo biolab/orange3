@@ -1,27 +1,16 @@
 Transpose
 =========
 
-.. figure:: icons/transpose.png
-
 Transposes a data table.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        transposed dataset
 
--  **Data**
-
-   A dataset.
-
-**Outputs**:
-
--  **Data**
-
-   Transposed dataset
-
-Description
------------
 
 **Transpose** widget transposes data table.
 

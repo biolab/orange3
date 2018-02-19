@@ -1,27 +1,16 @@
 Create Class
 ============
 
-.. figure:: icons/create-class.png
-
 Create class attribute from a string attribute.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        dataset with a new class variable
 
--  **Data**
-
-   Attribute-valued dataset.
-
-**Outputs**:
-
--  **Data**
-
-   Attribute-valued dataset.
-
-Description
------------
 
 **Create Class** creates a new class attribute from an existing discrete or string attribute. The widget matches the string value of the selected attribute and constructs a new user-defined value for matching instances.
 

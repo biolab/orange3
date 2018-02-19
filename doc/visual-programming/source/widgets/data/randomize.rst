@@ -1,27 +1,16 @@
 Randomize
 =========
 
-.. figure:: icons/randomize.png
-
 Shuffles classes, attributes and/or metas of an input dataset.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Data
+        randomized dataset
 
--  **Data**
-
-   Dataset.
-
-**Outputs**:
-
--  **Data**
-
-   Randomized dataset.
-
-Description
------------
 
 The **Randomize** widget receives a dataset in the input and outputs the same
 dataset in which the classes, attributes or/and metas are shuffled.

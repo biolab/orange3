@@ -1,31 +1,20 @@
 Select Rows
 ===========
 
-.. figure:: icons/select-rows.png
-
 Selects data instances based on conditions over data features.
 
-Signals
--------
+Inputs
+    Data
+        input dataset
 
-**Inputs**:
+Outputs
+    Matching Data
+        instances that match the conditions
+    Non-Matching Data
+        instances that do not match the conditions
+    Data
+        data with an additional column showing whether a instance is selected
 
--  **Data**
-
-   Dataset.
-
-**Outputs**:
-
--  **Matching Data**
-
-   Instances that match the conditions.
-
--  **Non-Matching Data**
-
-   Instances that do not match the conditions.
-
-Description
------------
 
 This widget selects a subset from an input dataset, based on user-defined
 conditions. Instances that match the selection rule are placed in the

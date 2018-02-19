@@ -1,26 +1,13 @@
 Lift Curve
 ==========
 
-.. figure:: icons/lift-curve.png
-
 Measures the performance of a chosen classifier against a random
 classifier.
 
-Signals
--------
+Inputs
+    Evaluation Results
+        results of testing classification algorithms
 
-**Inputs**:
-
--  **Evaluation Results**
-
-   Results of classifiers’ tests on data.
-
-**Outputs**:
-
--  None
-
-Description
------------
 
 The **Lift curve** shows the relation between the number of instances which
 were predicted positive and those that are indeed positive and
