@@ -148,11 +148,7 @@ class OWKMeans(widget.OWWidget):
         layout = QGridLayout()
         bg = gui.radioButtonsInBox(
             self.controlArea, self, "optimize_k", orientation=layout,
-            box="Number of Clusters",
-            # Because commit is only wrapped when creating the auto_commit
-            # buttons, we can't pass it as the callback here, so we can add
-            # this hacky lambda to call the wrapped commit when necessary
-            callback=lambda: self.commit(),
+            box="Number of Clusters", callback=self.update_method,
         )
 
         layout.addWidget(
@@ -226,18 +222,25 @@ class OWKMeans(widget.OWWidget):
         s = self.sizeHint()
         self.resize(s)
 
+    def update_method(self):
+        self.table_model.clear_scores()
+        self.commit()
+
     def update_k(self):
         self.optimize_k = False
+        self.table_model.clear_scores()
         self.commit()
 
     def update_from(self):
         self.k_to = max(self.k_from + 1, self.k_to)
         self.optimize_k = True
+        self.table_model.clear_scores()
         self.commit()
 
     def update_to(self):
         self.k_from = min(self.k_from, self.k_to - 1)
         self.optimize_k = True
+        self.table_model.clear_scores()
         self.commit()
 
     def enough_data_instances(self, k):
