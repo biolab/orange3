@@ -360,6 +360,7 @@ class OWKMeans(widget.OWWidget):
     def cluster(self):
         # Check if the k already has a computed clustering
         if self.k in self.clusterings:
+            self.send_data()
             return
 
         # Check if there is enough data
