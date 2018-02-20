@@ -395,17 +395,14 @@ class OWKMeans(widget.OWWidget):
 
         QTimer.singleShot(100, self.adjustSize)
 
-    def invalidate(self, force=False):
+    def invalidate(self):
         self.cancel()
         self.Error.clear()
         self.Warning.clear()
         self.clusterings = {}
         self.table_model.clear_scores()
 
-        if force:
-            self.unconditional_commit()
-        else:
-            self.commit()
+        self.commit()
 
     def update_results(self):
         scores = [
@@ -437,7 +434,7 @@ class OWKMeans(widget.OWWidget):
             k = self.k
 
         km = self.clusterings.get(k)
-        if not self.data or km is None or isinstance(km, str):
+        if self.data is None or km is None or isinstance(km, str):
             self.Outputs.annotated_data.send(None)
             self.Outputs.centroids.send(None)
             return
