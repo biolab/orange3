@@ -8,7 +8,7 @@ import sys
 import warnings
 
 from ast import literal_eval
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
@@ -21,7 +21,6 @@ from urllib.request import urlopen, Request
 from fnmatch import fnmatch
 from glob import glob
 
-import bottleneck as bn
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
@@ -114,7 +113,7 @@ def guess_data_type(orig_values):
     """
     Use heuristics to guess data type.
     """
-    valuemap, values = [], orig_values
+    valuemap, values = None, orig_values
     is_discrete = is_discrete_values(orig_values)
     if is_discrete:
         valuemap = sorted(is_discrete)
@@ -137,19 +136,7 @@ def guess_data_type(orig_values):
 
 def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                       domain_vars, existing_var, new_var_name, data=None):
-    def reorder_values():
-        new_order, old_order = \
-            var.values, coltype_kwargs.get('values', var.values)
-        if new_order != old_order:
-            offset = len(new_order)
-            column = values if data.ndim > 1 else data
-            column += offset
-            for _, val in enumerate(var.values):
-                try:
-                    oldval = old_order.index(val)
-                except ValueError:
-                    continue
-                bn.replace(column, offset + oldval, new_order.index(val))
+    assert issubclass(coltype, Variable)
 
     def get_number_of_decimals(values):
         len_ = len
@@ -158,32 +145,33 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                         default=1)
         return ndecimals - 1
 
-    if valuemap:
-        # Map discrete data to ints
-        def valuemap_index(val):
-            try:
-                return valuemap.index(val)
-            except ValueError:
-                return np.nan
-
-        values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
+    if issubclass(coltype, DiscreteVariable) and valuemap is not None:
         coltype_kwargs.update(values=valuemap)
+
+    if existing_var:
+        # Use existing variable if available
+        var = coltype.make(existing_var.strip(), **coltype_kwargs)
+    else:
+        # Never use existing for un-named variables
+        var = coltype(new_var_name, **coltype_kwargs)
+
+    if isinstance(var, DiscreteVariable):
+        # Map discrete data to 'ints' (or at least what passes as int around
+        # here)
+        mapping = defaultdict(
+            lambda: np.nan,
+            {val: i for i, val in enumerate(var.values)},
+        )
+        mapping[""] = np.nan
+        mapvalues_ = np.frompyfunc(mapping.__getitem__, 1, 1)
+
+        def mapvalues(arr):
+            arr = np.asarray(arr, dtype=object)
+            return mapvalues_(arr, out=np.empty_like(arr, dtype=float))
+        values = mapvalues(orig_values)
 
     if coltype is StringVariable:
         values = orig_values
-
-    var = None
-    if domain_vars is not None:
-        if existing_var:
-            # Use existing variable if available
-            var = coltype.make(existing_var.strip(), **coltype_kwargs)
-        else:
-            # Never use existing for un-named variables
-            var = coltype(new_var_name, **coltype_kwargs)
-
-        if var.is_discrete and not var.ordered:
-            # Reorder discrete values to match existing variable
-            reorder_values()
 
     # ContinuousVariable.number_of_decimals is supposed to be handled by
     # ContinuousVariable.to_val. In the interest of speed, the reader bypasses
@@ -643,7 +631,7 @@ class FileFormat(metaclass=FileFormatMeta):
             orig_values[namask] = ""
 
             coltype_kwargs = {}
-            valuemap = []
+            valuemap = None
             values = orig_values
 
             if type_flag in StringVariable.TYPE_HEADERS:
@@ -699,9 +687,12 @@ class FileFormat(metaclass=FileFormatMeta):
                 if not existing_var:
                     new_var_name = next(NAMEGEN)
 
-            values, var = sanitize_variable(
-                valuemap, values, orig_values, coltype, coltype_kwargs,
-                domain_vars, existing_var, new_var_name, data)
+            if domain_vars is not None:
+                values, var = sanitize_variable(
+                    valuemap, values, orig_values, coltype, coltype_kwargs,
+                    domain_vars, existing_var, new_var_name, data)
+            else:
+                var = None
             if domain_vars is not None:
                 var.attributes.update(flag.attributes)
                 domain_vars.append(var)
