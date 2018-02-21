@@ -76,7 +76,7 @@ class OWSGD(OWBaseLearner):
     learning_rate_index = Setting(0)
     eta0 = Setting(.01)
     power_t = Setting(.25)
-    max_iter = Setting(10)
+    max_iter = Setting(5)
 
     def add_main_layout(self):
         self._add_algorithm_to_layout()
