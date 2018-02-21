@@ -306,6 +306,11 @@ class OWSGD(OWBaseLearner):
                 coeffs.name = "coefficients"
         self.Outputs.coefficients.send(coeffs)
 
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_["max_iter"] = settings_.pop("n_iter", 5)
+
 
 if __name__ == '__main__':
     import sys
