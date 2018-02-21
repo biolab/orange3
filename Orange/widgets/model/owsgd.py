@@ -76,7 +76,7 @@ class OWSGD(OWBaseLearner):
     learning_rate_index = Setting(0)
     eta0 = Setting(.01)
     power_t = Setting(.25)
-    n_iter = Setting(5)
+    max_iter = Setting(10)
 
     def add_main_layout(self):
         self._add_algorithm_to_layout()
@@ -150,8 +150,8 @@ class OWSGD(OWBaseLearner):
             callback=self.settings_changed)
         gui.separator(box, height=12)
 
-        self.n_iter_spin = gui.spin(
-            box, self, 'n_iter', 1, MAXINT - 1, label='Number of iterations: ',
+        self.max_iter_spin = gui.spin(
+            box, self, 'max_iter', 1, MAXINT - 1, label='Number of iterations: ',
             controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
         # Wrap shuffle_cbx inside another hbox to align it with the random_seed
@@ -246,7 +246,7 @@ class OWSGD(OWBaseLearner):
             learning_rate=self.learning_rates[self.learning_rate_index][1],
             eta0=self.eta0,
             power_t=self.power_t,
-            n_iter=self.n_iter,
+            max_iter=self.max_iter,
             preprocessors=self.preprocessors,
             **params)
 
