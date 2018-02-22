@@ -692,7 +692,6 @@ class FileFormat(metaclass=FileFormatMeta):
                 append_to = (Xcols, attrs)
 
             cols, domain_vars = append_to
-            cols.append(col)
 
             existing_var, new_var_name = None, None
             if domain_vars is not None:
@@ -707,10 +706,13 @@ class FileFormat(metaclass=FileFormatMeta):
                 var.attributes.update(flag.attributes)
                 domain_vars.append(var)
 
-            # Write back the changed data. This is needeed to pass the
-            # correct, converted values into Table.from_numpy below
+            if isinstance(values, np.ndarray) and not values.flags.owndata:
+                values = values.copy()  # might view `data` (string columns)
+            cols.append(values)
+
             try:
-                data[:, col] = values
+                # allow gc to reclaim memory used by string values
+                data[:, col] = None
             except IndexError:
                 pass
 
@@ -719,11 +721,21 @@ class FileFormat(metaclass=FileFormatMeta):
         if not data.size:
             return Table.from_domain(domain, 0)
 
-        table = Table.from_numpy(domain,
-                                 data[:, Xcols].astype(float, order='C'),
-                                 data[:, Ycols].astype(float, order='C'),
-                                 data[:, Mcols].astype(object, order='C'),
-                                 data[:, Wcols].astype(float, order='C'))
+        X = Y = M = W = None
+        if Xcols:
+            X = np.c_[tuple(Xcols)]
+            assert X.dtype == np.float_
+        else:
+            X = np.empty((data.shape[0], 0), dtype=np.float_)
+        if Ycols:
+            Y = np.c_[tuple(Ycols)]
+            assert Y.dtype == np.float_
+        if Mcols:
+            M = np.c_[tuple(Mcols)].astype(object)
+        if Wcols:
+            W = np.c_[tuple(Wcols)].astype(float)
+
+        table = Table.from_numpy(domain, X, Y, M, W)
         return table
 
     @staticmethod
