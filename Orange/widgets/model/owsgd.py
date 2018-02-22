@@ -76,7 +76,8 @@ class OWSGD(OWBaseLearner):
     learning_rate_index = Setting(0)
     eta0 = Setting(.01)
     power_t = Setting(.25)
-    max_iter = Setting(5)
+    max_iter = Setting(1000)
+    tol = Setting(1e-3)
 
     def add_main_layout(self):
         self._add_algorithm_to_layout()
@@ -154,6 +155,13 @@ class OWSGD(OWBaseLearner):
             box, self, 'max_iter', 1, MAXINT - 1, label='Number of iterations: ',
             controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+
+        self.tol_spin = gui.spin(
+            box, self, 'tol', 0, 10., .1e-3, spinType=float, controlWidth=80,
+            label='Tolerance (stopping criterion): ', alignment=Qt.AlignRight,
+            callback=self.settings_changed)
+        gui.separator(box, height=12)
+
         # Wrap shuffle_cbx inside another hbox to align it with the random_seed
         # spin box on OSX
         self.shuffle_cbx = gui.checkBox(
@@ -247,6 +255,7 @@ class OWSGD(OWBaseLearner):
             eta0=self.eta0,
             power_t=self.power_t,
             max_iter=self.max_iter,
+            tol=self.tol,
             preprocessors=self.preprocessors,
             **params)
 
@@ -305,11 +314,6 @@ class OWSGD(OWBaseLearner):
                 coeffs = Table(domain, list(zip(cfs, names)))
                 coeffs.name = "coefficients"
         self.Outputs.coefficients.send(coeffs)
-
-    @classmethod
-    def migrate_settings(cls, settings_, version):
-        if version < 2:
-            settings_["max_iter"] = settings_.pop("n_iter", 5)
 
 
 if __name__ == '__main__':
