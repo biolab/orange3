@@ -592,8 +592,9 @@ class FileFormat(metaclass=FileFormatMeta):
             return lst
 
         # Ensure all data is of equal width in a column-contiguous array
-        data = np.array([_equal_length(list(row)) for row in data if any(row)],
-                        copy=False, dtype=object, order='F')
+        data = [_equal_length([s.strip() for s in row])
+                for row in data if any(row)]
+        data = np.array(data, dtype=object, order='F')
 
         # Data may actually be longer than headers were
         try:
@@ -626,8 +627,6 @@ class FileFormat(metaclass=FileFormatMeta):
         # Note: The only speed benefit is from conversion to bool array
         # by specifying the `out` parameter
         isnastr = np.frompyfunc(missing.__contains__, 1, 1)
-        strip = np.frompyfunc(str.strip, 1, 1)
-
         namask = np.empty(data.shape[0], dtype=bool)
         # Iterate through the columns
         for col in range(rowlen):
@@ -637,7 +636,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
             type_flag = types and types[col].strip()
             try:
-                orig_values = strip(data[:, col])  # object array of str, NA are ""
+                orig_values = data[:, col]  # object array of str, NA are ""
             except IndexError:
                 orig_values = np.array([], dtype=object)
             namask = isnastr(orig_values, out=namask)
