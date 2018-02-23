@@ -7,7 +7,7 @@ import numpy as np
 from AnyQt.QtWidgets import QMenu
 from AnyQt.QtCore import QPoint
 
-from Orange.classification import MajorityLearner
+from Orange.classification import MajorityLearner, LogisticRegressionLearner
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData
 from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
@@ -246,6 +246,35 @@ class TestOWTestLearners(WidgetTest):
             del Score.registry["NewScore"]
             del Score.registry["NewClassificationScore"]
             del Score.registry["NewRegressionScore"]
+
+    def test_target_changing(self):
+        data = Table("iris")
+        w = self.widget  #: OWTestLearners
+
+        w.n_folds = 2
+        self.send_signal(self.widget.Inputs.train_data, data)
+        self.send_signal(self.widget.Inputs.learner,
+                         LogisticRegressionLearner(), 0, wait=5000)
+
+        average_auc = float(w.view.model().item(0, 1).text())
+
+        w.class_selection = "Iris-setosa"
+        w._on_target_class_changed()
+        setosa_auc = float(w.view.model().item(0, 1).text())
+
+        w.class_selection = "Iris-versicolor"
+        w._on_target_class_changed()
+        versicolor_auc = float(w.view.model().item(0, 1).text())
+
+        w.class_selection = "Iris-virginica"
+        w._on_target_class_changed()
+        virginica_auc = float(w.view.model().item(0, 1).text())
+
+        self.assertGreater(average_auc, versicolor_auc)
+        self.assertGreater(average_auc, virginica_auc)
+        self.assertLess(average_auc, setosa_auc)
+        self.assertGreater(setosa_auc, versicolor_auc)
+        self.assertGreater(setosa_auc, virginica_auc)
 
 
 class TestHelpers(unittest.TestCase):
