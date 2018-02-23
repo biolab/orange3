@@ -19,7 +19,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_data = cls.data
 
     def setUp(self):
-        self.widget = self.create_widget(OWHeatMap)
+        self.widget = self.create_widget(OWHeatMap)  # type: OWHeatMap
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
@@ -117,3 +117,12 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         table = datasets.data_one_column_nans()
         self.widget.controls.merge_kmeans.setChecked(True)
         self.send_signal(self.widget.Inputs.data, table)
+
+    def test_cluster_column_on_all_zero_column(self):
+        # Pearson distance used for clustering of columns does not
+        # handle all zero columns well
+        iris = Table("iris")
+        iris[:, 0] = 0
+
+        self.widget.col_clustering = True
+        self.widget.set_dataset(iris)
