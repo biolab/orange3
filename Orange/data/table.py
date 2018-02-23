@@ -1730,22 +1730,59 @@ def _check_inf(array):
 
 
 def _subarray(arr, rows, cols):
+    rows = _optimize_indices(rows, arr.shape[0])
+    cols = _optimize_indices(cols, arr.shape[1])
     return arr[_rxc_ix(rows, cols)]
+
+
+def _optimize_indices(indices, maxlen):
+    """
+    Convert integer indices to slice if possible. It only converts increasing
+    integer ranges with positive steps and valid starts and ends.
+    Only convert valid ends so that invalid ranges will still raise
+    an exception.
+
+    Allows numpy to reuse the data array, because it defaults to copying
+    if given indices.
+
+    Parameters
+    ----------
+    indices : 1D sequence, slice or Ellipsis
+    """
+    if isinstance(indices, slice):
+        return indices
+
+    if indices is ...:
+        return slice(None, None, 1)
+
+    if len(indices) >= 1:
+        indices = np.asarray(indices)
+        if indices.dtype != np.bool:
+            begin = indices[0]
+            end = indices[-1]
+            steps = np.diff(indices) if len(indices) > 1 else np.array([1])
+            step = steps[0]
+
+            # continuous ranges with constant step and valid start and stop index can be slices
+            if np.all(steps == step) and step > 0 and begin >= 0 and end < maxlen:
+                return slice(begin, end + step, step)
+
+    return indices
 
 
 def _rxc_ix(rows, cols):
     """
     Construct an index object to index the `rows` x `cols` cross product.
 
-    Rows and columns can be a 1d bool or int sequence, a slice or an
-    Ellipsis (`...`). The later is a convenience and is interpreted the same
+    Rows and columns can be a 1d bool or int sequence, or a slice.
+    The later is a convenience and is interpreted the same
     as `slice(None, None, -1)`
 
     Parameters
     ----------
-    rows : 1D sequence, slice or Ellipsis
+    rows : 1D sequence, slice
         Row indices.
-    cols : 1D sequence, slice or Ellipsis
+    cols : 1D sequence, slice
         Column indices.
 
     See Also
@@ -1759,13 +1796,10 @@ def _rxc_ix(rows, cols):
     >>> a[_rxc_ix([0, 1], [3, 4])]
     array([[3, 4],
            [8, 9]])
-    >>> a[_rxc_ix([False, True], ...)]
+    >>> a[_rxc_ix([False, True], slice(None, None, 1))]
     array([[5, 6, 7, 8, 9]])
 
     """
-    rows = slice(None, None, 1) if rows is ... else rows
-    cols = slice(None, None, 1) if cols is ... else cols
-
     isslice = (isinstance(rows, slice), isinstance(cols, slice))
     if isslice == (True, True):
         return rows, cols

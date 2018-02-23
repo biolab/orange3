@@ -16,6 +16,7 @@ from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.tests import test_dirname, assert_array_nanequal
+from Orange.data.table import _optimize_indices
 
 
 class TableTestCase(unittest.TestCase):
@@ -2034,6 +2035,34 @@ class TableIndexingTests(TableTests):
                 np.testing.assert_almost_equal(table.Y, Y)
                 np.testing.assert_almost_equal(table.metas,
                                                self.table.metas[r, metas])
+
+
+    def test_optimize_indices(self):
+        # ordinary conversion
+        self.assertEqual(_optimize_indices([1, 2, 3], 4), slice(1, 4, 1))
+        self.assertEqual(_optimize_indices([], 1), [])
+        self.assertEqual(_optimize_indices([0, 2], 3), slice(0, 4, 2))
+
+        # not slices
+        np.testing.assert_equal(_optimize_indices([1, 2, 4], 5), [1, 2, 4])
+        np.testing.assert_equal(_optimize_indices((1, 2, 4), 5), [1, 2, 4])
+
+        # leave boolean arrays
+        np.testing.assert_equal(_optimize_indices([True, False, True], 3), [True, False, True])
+
+        # do not convert if step is negative
+        np.testing.assert_equal(_optimize_indices([4, 2, 0], 5), [4, 2, 0])
+
+        # try range
+        np.testing.assert_equal(_optimize_indices([3, 4, 5], 5), [3, 4, 5])  # out of range
+        self.assertEqual(_optimize_indices((3, 4, 5), 6), slice(3, 6, 1))
+
+        # negative elements
+        np.testing.assert_equal(_optimize_indices([-1, 0, 1], 5), [-1, 0, 1])
+
+        # single element
+        self.assertEqual(_optimize_indices([1], 2), slice(1, 2, 1))
+        np.testing.assert_equal(_optimize_indices([1], 1), [1])
 
 
 class TableElementAssignmentTest(TableTests):
