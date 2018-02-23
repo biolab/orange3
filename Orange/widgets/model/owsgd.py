@@ -24,6 +24,8 @@ class OWSGD(OWBaseLearner):
     ]
     priority = 90
 
+    settings_version = 2
+
     LEARNER = SGDLearner
 
     class Outputs(OWBaseLearner.Outputs):
@@ -78,6 +80,7 @@ class OWSGD(OWBaseLearner):
     power_t = Setting(.25)
     max_iter = Setting(1000)
     tol = Setting(1e-3)
+    tol_enabled = Setting(True)
 
     def add_main_layout(self):
         self._add_algorithm_to_layout()
@@ -158,8 +161,8 @@ class OWSGD(OWBaseLearner):
 
         self.tol_spin = gui.spin(
             box, self, 'tol', 0, 10., .1e-3, spinType=float, controlWidth=80,
-            label='Tolerance (stopping criterion): ', alignment=Qt.AlignRight,
-            callback=self.settings_changed)
+            label='Tolerance (stopping criterion): ', checked='tol_enabled',
+            alignment=Qt.AlignRight, callback=self.settings_changed)
         gui.separator(box, height=12)
 
         # Wrap shuffle_cbx inside another hbox to align it with the random_seed
@@ -255,7 +258,7 @@ class OWSGD(OWBaseLearner):
             eta0=self.eta0,
             power_t=self.power_t,
             max_iter=self.max_iter,
-            tol=self.tol,
+            tol=self.tol if self.tol_enabled else None,
             preprocessors=self.preprocessors,
             **params)
 
@@ -314,6 +317,12 @@ class OWSGD(OWBaseLearner):
                 coeffs = Table(domain, list(zip(cfs, names)))
                 coeffs.name = "coefficients"
         self.Outputs.coefficients.send(coeffs)
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_["max_iter"] = settings_.pop("n_iter", 5)
+            settings_["tol_enabled"] = False
 
 
 if __name__ == '__main__':
