@@ -24,6 +24,8 @@ class OWSGD(OWBaseLearner):
     ]
     priority = 90
 
+    settings_version = 2
+
     LEARNER = SGDLearner
 
     class Outputs(OWBaseLearner.Outputs):
@@ -76,7 +78,9 @@ class OWSGD(OWBaseLearner):
     learning_rate_index = Setting(0)
     eta0 = Setting(.01)
     power_t = Setting(.25)
-    n_iter = Setting(5)
+    max_iter = Setting(1000)
+    tol = Setting(1e-3)
+    tol_enabled = Setting(True)
 
     def add_main_layout(self):
         self._add_algorithm_to_layout()
@@ -150,10 +154,17 @@ class OWSGD(OWBaseLearner):
             callback=self.settings_changed)
         gui.separator(box, height=12)
 
-        self.n_iter_spin = gui.spin(
-            box, self, 'n_iter', 1, MAXINT - 1, label='Number of iterations: ',
+        self.max_iter_spin = gui.spin(
+            box, self, 'max_iter', 1, MAXINT - 1, label='Number of iterations: ',
             controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+
+        self.tol_spin = gui.spin(
+            box, self, 'tol', 0, 10., .1e-3, spinType=float, controlWidth=80,
+            label='Tolerance (stopping criterion): ', checked='tol_enabled',
+            alignment=Qt.AlignRight, callback=self.settings_changed)
+        gui.separator(box, height=12)
+
         # Wrap shuffle_cbx inside another hbox to align it with the random_seed
         # spin box on OSX
         self.shuffle_cbx = gui.checkBox(
@@ -246,7 +257,8 @@ class OWSGD(OWBaseLearner):
             learning_rate=self.learning_rates[self.learning_rate_index][1],
             eta0=self.eta0,
             power_t=self.power_t,
-            n_iter=self.n_iter,
+            max_iter=self.max_iter,
+            tol=self.tol if self.tol_enabled else None,
             preprocessors=self.preprocessors,
             **params)
 
@@ -305,6 +317,12 @@ class OWSGD(OWBaseLearner):
                 coeffs = Table(domain, list(zip(cfs, names)))
                 coeffs.name = "coefficients"
         self.Outputs.coefficients.send(coeffs)
+
+    @classmethod
+    def migrate_settings(cls, settings_, version):
+        if version < 2:
+            settings_["max_iter"] = settings_.pop("n_iter", 5)
+            settings_["tol_enabled"] = False
 
 
 if __name__ == '__main__':
