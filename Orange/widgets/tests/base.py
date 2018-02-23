@@ -244,6 +244,41 @@ class WidgetTest(GuiTest):
             spy = QSignalSpy(widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout=wait))
 
+    def wait_until_stop_blocking(self, widget=None, wait=1000):
+        """Wait until the widget stops blocking i.e. finishes computation.
+
+        Parameters
+        ----------
+        widget : Optional[OWWidget]
+            widget to send signal to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
+
+        """
+        if widget is None:
+            widget = self.widget
+
+        if widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
+
+    def commit_and_wait(self, widget=None, wait=1000):
+        """Unconditinal commit and wait to stop blocking if needed.
+
+        Parameters
+        ----------
+        widget : Optional[OWWidget]
+            widget to send signal to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
+
+        """
+        if widget is None:
+            widget = self.widget
+
+        widget.unconditional_commit()
+        self.wait_until_stop_blocking(widget=widget, wait=wait)
+
     def get_output(self, output, widget=None, wait=5000):
         """Return the last output that has been sent from the widget.
 
@@ -273,7 +308,6 @@ class WidgetTest(GuiTest):
         assert output in (out.name for out in outputs), \
             "widget {} has no output {}".format(widget.name, output)
         return self.signal_manager.outputs.get((widget, output), None)
-
 
     @contextmanager
     def modifiers(self, modifiers):
