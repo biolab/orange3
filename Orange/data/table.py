@@ -1519,7 +1519,7 @@ class Table(MutableSequence, Storage):
             cont_vars = [v for v in vars if v[2].is_continuous]
             if cont_vars:
 
-                classes = row_data.astype(dtype=np.int8)
+                classes = row_data.astype(dtype=np.intp)
                 if W is not None:
                     W = W.astype(dtype=np.float64)
                 if sp.issparse(arr):

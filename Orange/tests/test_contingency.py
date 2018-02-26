@@ -253,3 +253,20 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
                                               [0, 0, 2], [0, 1, 0]])
 
+    def test_compute_contingency_invalid(self):
+        rstate = np.random.RandomState(0xFFFF)
+        X = data.ContinuousVariable("X")
+        C = data.DiscreteVariable("C", values=["C{}".format(i + 1) for i in range(1024)])
+        domain = data.Domain([X], [C])
+        d = data.Table.from_numpy(
+            domain,
+            rstate.uniform(size=(20, 1)).round(1),
+            rstate.randint(0, 1024, size=(20, 1)),
+        )
+        c = contingency.get_contingency(d, X, C)
+        self.assertEqual(c.counts.shape[0], 1024)
+
+        d.Y[5] = 1024
+        with self.assertRaises(IndexError):
+            contingency.get_contingency(d, X, C)
+
