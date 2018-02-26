@@ -230,7 +230,7 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        conts = contingency.get_contingencies(d, skipDiscrete=True)
+        conts = contingency.get_contingencies(d, skip_discrete=True)
         self.assertEqual(len(conts), 10)
         cont = conts[4]
         self.assertIsInstance(cont, contingency.Continuous)
@@ -238,7 +238,7 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont["b"], [[1], [1]])
         np.testing.assert_almost_equal(cont[2], [[2], [1]])
 
-        conts = contingency.get_contingencies(d, skipContinuous=True)
+        conts = contingency.get_contingencies(d, skip_continuous=True)
         self.assertEqual(len(conts), 10)
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
