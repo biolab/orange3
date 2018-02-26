@@ -418,8 +418,6 @@ class CorrelationDistanceModel(DistanceModel):
         self.absolute = absolute
 
     def compute_distances(self, x1, x2):
-        if x2 is None:
-            x2 = x1
         rho = self.compute_correlation(x1, x2)
         if self.absolute:
             return (1. - np.abs(rho)) / 2.
@@ -427,16 +425,121 @@ class CorrelationDistanceModel(DistanceModel):
             return (1. - rho) / 2.
 
     def compute_correlation(self, x1, x2):
-        pass
+        raise NotImplementedError()
 
 
 class SpearmanModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
-        rho = stats.spearmanr(x1, x2, axis=self.axis)[0]
-        if isinstance(rho, np.float):
-            return np.array([[rho]])
-        slc = x1.shape[1 - self.axis]
-        return rho[:slc, slc:]
+        if x2 is None:
+            n1 = x1.shape[1 - self.axis]
+            if n1 == 2:
+                # Special case to properly fill degenerate self correlations
+                # (nan, inf on the diagonals)
+                rho = stats.spearmanr(x1, x1, axis=self.axis)[0]
+                assert rho.shape == (4, 4)
+                rho = rho[:2, :2].copy()
+            else:
+                # scalar if n1 == 1
+                rho = stats.spearmanr(x1, axis=self.axis)[0]
+            return np.atleast_2d(rho)
+        else:
+            return _spearmanr2(x1, x2, axis=self.axis)
+
+
+def _spearmanr2(a, b, axis=0):
+    """
+    Compute all pairwise spearman rank moment correlations between rows
+    or columns of a and b
+
+    Parameters
+    ----------
+    a : (N, M) numpy.ndarray
+        The input cases a.
+    b : (J, K) numpy.ndarray
+        The input cases b. In case of axis == 0: J must equal N;
+        otherwise if axis == 1 then K must equal M.
+    axis : int
+        If 0 the correlation are computed between a and b's columns.
+        Otherwise if 1 the correlations are computed between rows.
+
+    Returns
+    -------
+    cor : (N, J) or (M, K) nd.array
+        If axis == 0 then (N, J) matrix of correlations between a x b columns
+        else a (N, J) matrix of correlations between a x b rows.
+
+    See Also
+    --------
+    scipy.stats.spearmanr
+    """
+    a, b = np.atleast_2d(a, b)
+    assert a.shape[axis] == b.shape[axis]
+    ar = np.apply_along_axis(stats.rankdata, axis, a)
+    br = np.apply_along_axis(stats.rankdata, axis, b)
+
+    return _corrcoef2(ar, br, axis=axis)
+
+
+def _corrcoef2(a, b, axis=0):
+    """
+    Compute all pairwise Pearson product-moment correlation coefficients
+    between rows or columns of a and b
+
+    Parameters
+    ----------
+    a : (N, M) numpy.ndarray
+        The input cases a.
+    b : (J, K) numpy.ndarray
+        The input cases b. In case of axis == 0: J must equal N;
+        otherwise if axis == 1 then K must equal M.
+    axis : int
+        If 0 the correlation are computed between a and b's columns.
+        Otherwise if 1 the correlations are computed between rows.
+
+    Returns
+    -------
+    cor : (N, J) or (M, K) nd.array
+        If axis == 0 then (N, J) matrix of correlations between a x b columns
+        else a (N, J) matrix of correlations between a x b rows.
+
+    See Also
+    --------
+    numpy.corrcoef
+    """
+    a, b = np.atleast_2d(a, b)
+    if not (axis == 0 or axis == 1):
+        raise ValueError("Invalid axis {} (only 0 or 1 accepted)".format(axis))
+
+    mean_a = np.mean(a, axis=axis, keepdims=True)
+    mean_b = np.mean(b, axis=axis, keepdims=True)
+    assert a.shape[axis] == b.shape[axis]
+
+    n = a.shape[1 - axis]
+    m = b.shape[1 - axis]
+
+    a = a - mean_a
+    b = b - mean_b
+
+    if axis == 0:
+        C = a.T.dot(b)
+        assert C.shape == (n, m)
+    elif axis == 1:
+        C = a.dot(b.T)
+        assert C.shape == (n, m)
+
+    ss_a = np.sum(a ** 2, axis=axis, keepdims=True)
+    ss_b = np.sum(b ** 2, axis=axis, keepdims=True)
+
+    if axis == 0:
+        ss_a = ss_a.T
+    else:
+        ss_b = ss_b.T
+
+    assert ss_a.shape == (n, 1)
+    assert ss_b.shape == (1, m)
+    C /= np.sqrt(ss_a)
+    C /= np.sqrt(ss_b)
+    return C
 
 
 class CorrelationDistance(Distance):
@@ -455,10 +558,11 @@ class SpearmanRAbsolute(CorrelationDistance):
 
 class PearsonModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
-        if self.axis == 0:
-            x1 = x1.T
-            x2 = x2.T
-        return np.array([[stats.pearsonr(i, j)[0] for j in x2] for i in x1])
+        if x2 is None:
+            c = np.corrcoef(x1, rowvar=self.axis == 1)
+            return np.atleast_2d(c)
+        else:
+            return _corrcoef2(x1, x2, axis=self.axis)
 
 
 class PearsonR(CorrelationDistance):
