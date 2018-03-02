@@ -92,6 +92,10 @@ class TestOWDataSampler(WidgetTest):
         in_size, _, actual_size = self._set_bigger_sample_size(False)
         self.assertEqual(in_size, actual_size)
 
+    def test_bigger_output_warning(self):
+        self._set_bigger_sample_size(with_replacement=True)
+        self.assertTrue(self.widget.Warning.bigger_sample.is_shown())
+
     def _set_bigger_sample_size(self, with_replacement):
         """Load data, set sample size and click to generate samples.
 

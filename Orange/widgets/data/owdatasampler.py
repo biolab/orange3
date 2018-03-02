@@ -24,6 +24,8 @@ class OWDataSampler(OWWidget):
     category = "Data"
     keywords = ["data", "sample"]
 
+    _MAX_SAMPLE_SIZE = 2 ** 31 - 1
+
     class Inputs:
         data = Input("Data", Table)
 
@@ -52,6 +54,7 @@ class OWDataSampler(OWWidget):
 
     class Warning(OWWidget.Warning):
         could_not_stratify = Msg("Stratification failed\n{}")
+        bigger_sample = Msg('Sample is bigger than input')
 
     class Error(OWWidget.Error):
         too_many_folds = Msg("Number of folds exceeds data size")
@@ -91,7 +94,7 @@ class OWDataSampler(OWWidget):
         ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
             ibox, self, "sampleSizeNumber", label="Instances: ",
-            minv=1, maxv=2 ** 31 - 1,
+            minv=1, maxv=self._MAX_SAMPLE_SIZE,
             callback=set_sampling_type(self.FixedSize))
         gui.checkBox(
             ibox, self, "replacement", "Sample with replacement",
@@ -162,6 +165,7 @@ class OWDataSampler(OWWidget):
         self.sampling_type = self.CrossValidation
 
     def settings_changed(self):
+        self._update_sample_max_size()
         self.indices = None
 
     @Inputs.data
@@ -179,7 +183,7 @@ class OWDataSampler(OWWidget):
                     ('~', dataset.approx_len()) if sql else
                     ('', len(dataset)))))
             if not sql:
-                self.sampleSizeSpin.setMaximum(len(dataset))
+                self._update_sample_max_size()
                 self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
@@ -187,6 +191,13 @@ class OWDataSampler(OWWidget):
             self.indices = None
             self.clear_messages()
         self.commit()
+
+    def _update_sample_max_size(self):
+        """Limit number of instances to input size unless using replacement."""
+        if not self.data or self.replacement:
+            self.sampleSizeSpin.setMaximum(self._MAX_SAMPLE_SIZE)
+        else:
+            self.sampleSizeSpin.setMaximum(len(self.data))
 
     def commit(self):
         if self.data is None:
@@ -231,6 +242,7 @@ class OWDataSampler(OWWidget):
 
     def updateindices(self):
         self.Error.clear()
+        self.Warning.clear()
         repl = True
         data_length = len(self.data)
         num_classes = len(self.data.domain.class_var.values) \
@@ -259,6 +271,12 @@ class OWDataSampler(OWWidget):
         if self.Error.active:
             self.indices = None
             return
+
+        # By the above, we can safely assume there is data
+        if self.sampling_type == self.FixedSize and repl and size and \
+                size > len(self.data):
+            # This should only be possible when using replacement
+            self.Warning.bigger_sample()
 
         stratified = (self.stratify and
                       type(self.data) == Table and
