@@ -6,6 +6,8 @@ rem Target install prefix
 set PREFIX=%~1
 rem Path to conda executable
 set CONDA=%~2
+rem Path to activate.bat
+set ACTIVATE=%CONDA%\..\activate.bat
 
 if not exist "%PREFIX%\python.exe" (
     echo Creating a conda env in "%PREFIX%"
@@ -25,18 +27,6 @@ if not exist "%PREFIX%\python.exe" (
     )
 )
 
-rem # `conda create` does not add a conda.bat script when used
-rem # with a local package, we need to create it manually.
-echo @echo off           > "%PREFIX%\Scripts\conda.bat"
-echo call "%CONDA%" %%* >> "%PREFIX%\Scripts\conda.bat"
-
-rem # same for activate.bat
-rem #
-for %%f in ( "%CONDA%" ) do ( set "CONDA_DIR=%%~dpf" )
-echo @echo off                           > "%PREFIX%\Scripts\activate.bat"
-echo call "%CONDA_DIR%\activate.bat" %%* >> "%PREFIX%\Scripts\activate.bat"
-set CONDA_DIR=
-
 rem # Create .condarc file that includes conda-forge channel
 rem # We need it so add-ons can be installed from conda-forge
 echo Appending conda-forge channel
@@ -49,3 +39,8 @@ for %%f in ( *.tar.bz2 ) do (
     "%CONDA%" install --yes  --copy --quiet --prefix "%PREFIX%" "%CD%\%%f" ^
         || exit /b !ERRORLEVEL!
 )
+
+rem # Activate the environment makes conda create
+rem # activate.bat, conda.bat and other shortcuts.
+echo Activating the environment for the first time"
+"%ACTIVATE%" "%PREFIX%"
