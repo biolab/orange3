@@ -95,7 +95,8 @@ class OWDataSampler(OWWidget):
         self.sampleSizeSpin = gui.spin(
             ibox, self, "sampleSizeNumber", label="Instances: ",
             minv=1, maxv=self._MAX_SAMPLE_SIZE,
-            callback=set_sampling_type(self.FixedSize))
+            callback=set_sampling_type(self.FixedSize),
+            controlWidth=90)
         gui.checkBox(
             ibox, self, "replacement", "Sample with replacement",
             callback=set_sampling_type(self.FixedSize),

@@ -83,39 +83,35 @@ class TestOWDataSampler(WidgetTest):
 
     def test_bigger_size_with_replacement(self):
         """Allow bigger output without replacement."""
-        _, out_size, actual_size = self._set_bigger_sample_size(True)
-        self.assertEqual(out_size, actual_size,
-                         'Sample size should not be lowered with replacement')
+        self.send_signal('Data', self.iris[:2])
+        sample_size = self.set_fixed_sample_size(3, with_replacement=True)
+        self.assertEqual(3, sample_size, 'Should be able to set a bigger size '
+                         'with replacement')
 
     def test_bigger_size_without_replacement(self):
         """Lower output samples to match input's without replacement."""
-        in_size, _, actual_size = self._set_bigger_sample_size(False)
-        self.assertEqual(in_size, actual_size)
+        self.send_signal('Data', self.iris[:2])
+        sample_size = self.set_fixed_sample_size(3)
+        self.assertEqual(2, sample_size)
 
     def test_bigger_output_warning(self):
-        self._set_bigger_sample_size(with_replacement=True)
+        """Should warn when sample size is bigger than input."""
+        self.send_signal('Data', self.iris[:2])
+        self.set_fixed_sample_size(3, with_replacement=True)
         self.assertTrue(self.widget.Warning.bigger_sample.is_shown())
 
-    def _set_bigger_sample_size(self, with_replacement):
-        """Load data, set sample size and click to generate samples.
+    def set_fixed_sample_size(self, sample_size, with_replacement=False):
+        """Set fixed sample size and return the number of gui spin.
 
-        The sample size is set to out_size which is bigger than the input size
-        in_size.
-
-        Returns integers in_size, out_size and the actual gui sample size.
+        Return the actual number in gui so we can check whether it is different
+        from sample_size. The number can be changed depending on the spin
+        maximum value.
         """
-        in_size = 2
-        out_size = in_size + 1
-        data = self.iris[:in_size]
-        self.widget.set_data(data)
-
         self.select_sampling_type(self.widget.FixedSize)
         self.widget.controls.replacement.setChecked(with_replacement)
-        self.widget.sampleSizeSpin.setValue(out_size)
+        self.widget.sampleSizeSpin.setValue(sample_size)
         self.widget.commit()
-
-        actual_size = self.widget.sampleSizeSpin.value()
-        return in_size, out_size, actual_size
+        return self.widget.sampleSizeSpin.value()
 
     def assertNoIntersection(self, sample, other):
         for inst in sample:
