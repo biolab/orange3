@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt
 import numpy as np
 import sklearn.model_selection as skl
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
@@ -77,10 +77,10 @@ class OWDataSampler(OWWidget):
                                     callback=self.sampling_type_changed)
 
         def set_sampling_type(i):
-            def f():
+            def set_sampling_type_i():
                 self.sampling_type = i
                 self.sampling_type_changed()
-            return f
+            return set_sampling_type_i
 
         gui.appendRadioButton(sampling, "Fixed proportion of data:")
         self.sampleSizePercentageSlider = gui.hSlider(
@@ -134,7 +134,6 @@ class OWDataSampler(OWWidget):
                         callback=set_sampling_type(self.SqlProportion))
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
-
 
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.cb_seed = gui.checkBox(
@@ -279,7 +278,7 @@ class OWDataSampler(OWWidget):
             self.Warning.bigger_sample()
 
         stratified = (self.stratify and
-                      type(self.data) == Table and
+                      isinstance(self.data, Table) and
                       self.data.domain.has_discrete_class)
         try:
             self.indices = self.sample(data_length, size, stratified)
@@ -295,7 +294,8 @@ class OWDataSampler(OWWidget):
                 random_state=rnd)
         elif self.sampling_type == self.FixedProportion:
             self.indice_gen = SampleRandomP(
-                self.sampleSizePercentage / 100, stratified=stratified, random_state=rnd)
+                self.sampleSizePercentage / 100, stratified=stratified,
+                random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
             self.indice_gen = SampleBootstrap(data_length, random_state=rnd)
         else:
@@ -341,7 +341,8 @@ class SampleFoldIndices(Reprable):
         Args:
             folds (int): Number of folds
             stratified (bool): Return stratified indices (if applicable).
-            random_state (Random): An initial state for replicable random behavior
+            random_state (Random): An initial state for replicable random
+            behavior
 
         Returns:
             tuple-of-arrays: A tuple of array indices one for each fold.
@@ -367,7 +368,7 @@ class SampleFoldIndices(Reprable):
 
 class SampleRandomN(Reprable):
     def __init__(self, n=0, stratified=False, replace=False,
-                    random_state=None):
+                 random_state=None):
         self.n = n
         self.stratified = stratified
         self.replace = replace
