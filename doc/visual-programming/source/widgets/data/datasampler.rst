@@ -30,7 +30,8 @@ provided and *Sample Data* is pressed.
    -  **Fixed sample size** returns a selected number of data instances
       with a chance to set *Sample with replacement*, which always samples
       from the entire dataset (does not subtract instances already in
-      the subset)
+      the subset). With replacement, you can generate more instances than
+      available in the input dataset.
    -  `Cross Validation <https://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_
       partitions data instances into complementary subsets, where you can
       select the number of folds (subsets) and which fold you want to
