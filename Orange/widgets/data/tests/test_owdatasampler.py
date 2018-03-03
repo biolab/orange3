@@ -81,6 +81,38 @@ class TestOWDataSampler(WidgetTest):
                     self.assertEqual(len(self.zoo), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
 
+    def test_bigger_size_with_replacement(self):
+        """Allow bigger output without replacement."""
+        _, out_size, actual_size = self._set_bigger_sample_size(True)
+        self.assertEqual(out_size, actual_size,
+                         'Sample size should not be lowered with replacement')
+
+    def test_bigger_size_without_replacement(self):
+        """Lower output samples to match input's without replacement."""
+        in_size, _, actual_size = self._set_bigger_sample_size(False)
+        self.assertEqual(in_size, actual_size)
+
+    def _set_bigger_sample_size(self, with_replacement):
+        """Load data, set sample size and click to generate samples.
+
+        The sample size is set to out_size which is bigger than the input size
+        in_size.
+
+        Returns integers in_size, out_size and the actual gui sample size.
+        """
+        in_size = 2
+        out_size = in_size + 1
+        data = self.iris[:in_size]
+        self.widget.set_data(data)
+
+        self.select_sampling_type(self.widget.FixedSize)
+        self.widget.controls.replacement.setChecked(with_replacement)
+        self.widget.sampleSizeSpin.setValue(out_size)
+        self.widget.commit()
+
+        actual_size = self.widget.sampleSizeSpin.value()
+        return in_size, out_size, actual_size
+
     def assertNoIntersection(self, sample, other):
         for inst in sample:
             self.assertNotIn(inst, other)
