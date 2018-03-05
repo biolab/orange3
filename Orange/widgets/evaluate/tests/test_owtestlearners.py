@@ -5,9 +5,11 @@ import unittest
 
 import numpy as np
 from AnyQt.QtWidgets import QMenu
-from AnyQt.QtCore import QPoint
+from AnyQt.QtCore import QPoint, Qt
+from AnyQt.QtTest import QTest
 
 from Orange.classification import MajorityLearner, LogisticRegressionLearner
+from Orange.classification.majority import ConstantModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import Results, TestOnTestData
 from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
@@ -19,6 +21,7 @@ from Orange.widgets.evaluate.owtestlearners import (
 from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 
 
 class TestOWTestLearners(WidgetTest):
@@ -258,16 +261,13 @@ class TestOWTestLearners(WidgetTest):
 
         average_auc = float(w.view.model().item(0, 1).text())
 
-        w.class_selection = "Iris-setosa"
-        w._on_target_class_changed()
+        simulate.combobox_activate_item(w.controls.class_selection, "Iris-setosa")
         setosa_auc = float(w.view.model().item(0, 1).text())
 
-        w.class_selection = "Iris-versicolor"
-        w._on_target_class_changed()
+        simulate.combobox_activate_item(w.controls.class_selection, "Iris-versicolor")
         versicolor_auc = float(w.view.model().item(0, 1).text())
 
-        w.class_selection = "Iris-virginica"
-        w._on_target_class_changed()
+        simulate.combobox_activate_item(w.controls.class_selection, "Iris-virginica")
         virginica_auc = float(w.view.model().item(0, 1).text())
 
         self.assertGreater(average_auc, versicolor_auc)
@@ -275,6 +275,51 @@ class TestOWTestLearners(WidgetTest):
         self.assertLess(average_auc, setosa_auc)
         self.assertGreater(setosa_auc, versicolor_auc)
         self.assertGreater(setosa_auc, virginica_auc)
+
+    def test_resort_on_data_change(self):
+        iris = Table("iris")
+        # one example is included from the other class
+        # to keep F1 from complaining
+        setosa = iris[:51]
+        versicolor = iris[49:100]
+
+        class SetosaLearner:
+            def __call__(self, data):
+                model = ConstantModel([1., 0, 0])
+                model.domain = iris.domain
+                return model
+
+        class VersicolorLearner:
+            def __call__(self, data):
+                model = ConstantModel([0, 1., 0])
+                model.domain = iris.domain
+                return model
+
+        # this is done manually to avoid multiple computations
+        self.widget.resampling = 5
+        self.widget.set_train_data(iris)
+        self.widget.set_learner(SetosaLearner(), 1)
+        self.widget.set_learner(VersicolorLearner(), 2)
+
+        self.send_signal(self.widget.Inputs.test_data, setosa, wait=5000)
+
+        self.widget.show()
+        header = self.widget.view.horizontalHeader()
+        QTest.mouseClick(header.viewport(), Qt.LeftButton)
+
+        # Ensure that the click on header caused an ascending sort
+        # Ascending sort means that wrong model should be listed first
+        self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
+        self.assertEqual(
+            self.widget.view.model().item(0, 0).text(),
+            "VersicolorLearner")
+
+        self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
+        self.assertEqual(
+            self.widget.view.model().item(0, 0).text(),
+            "SetosaLearner")
+
+        self.widget.hide()
 
 
 class TestHelpers(unittest.TestCase):

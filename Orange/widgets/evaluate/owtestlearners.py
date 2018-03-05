@@ -586,6 +586,13 @@ class OWTestLearners(OWWidget):
 
             model.appendRow(row)
 
+        # Resort rows based on current sorting
+        header = self.view.horizontalHeader()
+        model.sort(
+            header.sortIndicatorSection(),
+            header.sortIndicatorOrder()
+        )
+
         self.error("\n".join(errors), shown=bool(errors))
         self.Warning.scores_not_computed(shown=has_missing_scores)
 
