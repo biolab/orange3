@@ -95,7 +95,10 @@ class OWKMeans(widget.OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
+        annotated_data = Output(
+            ANNOTATED_DATA_SIGNAL_NAME, Table, default=True,
+            replaces=["Annotated Data"]
+        )
         centroids = Output("Centroids", Table)
 
     class Error(widget.OWWidget.Error):
