@@ -293,6 +293,7 @@ class OWTestLearners(OWWidget):
 
         self.view = gui.TableView(
             wordWrap=True,
+            editTriggers=gui.TableView.NoEditTriggers
         )
         header = self.view.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
