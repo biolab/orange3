@@ -6,6 +6,22 @@ Change Log
 * ...
 
 
+[3.11.0] - 2018-03-07
+--------------------
+##### Enhancements
+* Distances: Optimize PearsonR/SpearmanR ([#2852](../../pull/2852))
+* Data Table: Optimize performance ([#2905](../../pull/2905))
+
+##### Bugfixes
+* Save Image to SVG fixed on Qt5 ([#2930](../../pull/2930))
+* Test & Score: Resort scores when data changes ([#2931](../../pull/2931))
+* distribution.py: Fix computation on multiclass data ([#2903](../../pull/2903))
+* contingency.pyx: Fix out of bound write ([#2924](../../pull/2924))
+* Test and Score: Fix averaging over classes for binary scores ([#2918](../../pull/2918))
+* sgd: Change deprecated n_iter to max_iter ([#2920](../../pull/2920))
+* heatmap: Do not crash on all zero column ([#2916](../../pull/2916))
+
+
 [3.10.0] - 2018-02-19
 --------------------
 ##### Enhancements
@@ -778,7 +794,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.10.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.11.0...HEAD
+[3.11.0]: https://github.com/biolab/orange3/compare/3.10.0...3.11.0
 [3.10.0]: https://github.com/biolab/orange3/compare/3.9.1...3.10.0
 [3.9.1]: https://github.com/biolab/orange3/compare/3.9.0...3.9.1
 [3.9.0]: https://github.com/biolab/orange3/compare/3.8.0...3.9.0
