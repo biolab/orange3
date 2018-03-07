@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt
 import numpy as np
 import sklearn.model_selection as skl
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
@@ -23,6 +23,8 @@ class OWDataSampler(OWWidget):
     priority = 100
     category = "Data"
     keywords = ["data", "sample"]
+
+    _MAX_SAMPLE_SIZE = 2 ** 31 - 1
 
     class Inputs:
         data = Input("Data", Table)
@@ -52,6 +54,7 @@ class OWDataSampler(OWWidget):
 
     class Warning(OWWidget.Warning):
         could_not_stratify = Msg("Stratification failed\n{}")
+        bigger_sample = Msg('Sample is bigger than input')
 
     class Error(OWWidget.Error):
         too_many_folds = Msg("Number of folds exceeds data size")
@@ -74,10 +77,10 @@ class OWDataSampler(OWWidget):
                                     callback=self.sampling_type_changed)
 
         def set_sampling_type(i):
-            def f():
+            def set_sampling_type_i():
                 self.sampling_type = i
                 self.sampling_type_changed()
-            return f
+            return set_sampling_type_i
 
         gui.appendRadioButton(sampling, "Fixed proportion of data:")
         self.sampleSizePercentageSlider = gui.hSlider(
@@ -91,8 +94,9 @@ class OWDataSampler(OWWidget):
         ibox = gui.indentedBox(sampling)
         self.sampleSizeSpin = gui.spin(
             ibox, self, "sampleSizeNumber", label="Instances: ",
-            minv=1, maxv=2 ** 31 - 1,
-            callback=set_sampling_type(self.FixedSize))
+            minv=1, maxv=self._MAX_SAMPLE_SIZE,
+            callback=set_sampling_type(self.FixedSize),
+            controlWidth=90)
         gui.checkBox(
             ibox, self, "replacement", "Sample with replacement",
             callback=set_sampling_type(self.FixedSize),
@@ -132,7 +136,6 @@ class OWDataSampler(OWWidget):
         spin.setSuffix(" %")
         self.sql_box.setVisible(False)
 
-
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.cb_seed = gui.checkBox(
             self.options_box, self, "use_seed",
@@ -162,6 +165,7 @@ class OWDataSampler(OWWidget):
         self.sampling_type = self.CrossValidation
 
     def settings_changed(self):
+        self._update_sample_max_size()
         self.indices = None
 
     @Inputs.data
@@ -179,7 +183,7 @@ class OWDataSampler(OWWidget):
                     ('~', dataset.approx_len()) if sql else
                     ('', len(dataset)))))
             if not sql:
-                self.sampleSizeSpin.setMaximum(len(dataset))
+                self._update_sample_max_size()
                 self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
@@ -187,6 +191,13 @@ class OWDataSampler(OWWidget):
             self.indices = None
             self.clear_messages()
         self.commit()
+
+    def _update_sample_max_size(self):
+        """Limit number of instances to input size unless using replacement."""
+        if not self.data or self.replacement:
+            self.sampleSizeSpin.setMaximum(self._MAX_SAMPLE_SIZE)
+        else:
+            self.sampleSizeSpin.setMaximum(len(self.data))
 
     def commit(self):
         if self.data is None:
@@ -231,6 +242,7 @@ class OWDataSampler(OWWidget):
 
     def updateindices(self):
         self.Error.clear()
+        self.Warning.clear()
         repl = True
         data_length = len(self.data)
         num_classes = len(self.data.domain.class_var.values) \
@@ -260,8 +272,14 @@ class OWDataSampler(OWWidget):
             self.indices = None
             return
 
+        # By the above, we can safely assume there is data
+        if self.sampling_type == self.FixedSize and repl and size and \
+                size > len(self.data):
+            # This should only be possible when using replacement
+            self.Warning.bigger_sample()
+
         stratified = (self.stratify and
-                      type(self.data) == Table and
+                      isinstance(self.data, Table) and
                       self.data.domain.has_discrete_class)
         try:
             self.indices = self.sample(data_length, size, stratified)
@@ -277,7 +295,8 @@ class OWDataSampler(OWWidget):
                 random_state=rnd)
         elif self.sampling_type == self.FixedProportion:
             self.indice_gen = SampleRandomP(
-                self.sampleSizePercentage / 100, stratified=stratified, random_state=rnd)
+                self.sampleSizePercentage / 100, stratified=stratified,
+                random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
             self.indice_gen = SampleBootstrap(data_length, random_state=rnd)
         else:
@@ -323,7 +342,8 @@ class SampleFoldIndices(Reprable):
         Args:
             folds (int): Number of folds
             stratified (bool): Return stratified indices (if applicable).
-            random_state (Random): An initial state for replicable random behavior
+            random_state (Random): An initial state for replicable random
+            behavior
 
         Returns:
             tuple-of-arrays: A tuple of array indices one for each fold.
@@ -349,7 +369,7 @@ class SampleFoldIndices(Reprable):
 
 class SampleRandomN(Reprable):
     def __init__(self, n=0, stratified=False, replace=False,
-                    random_state=None):
+                 random_state=None):
         self.n = n
         self.stratified = stratified
         self.replace = replace

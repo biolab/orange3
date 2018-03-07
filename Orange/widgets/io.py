@@ -158,7 +158,7 @@ class SvgFormat(ImgFormat):
 
     @staticmethod
     def _get_exporter():
-        from pyqtgraph.exporters.SVGExporter import SVGExporter
+        from Orange.widgets.utils.SVGExporter import SVGExporter
         return SVGExporter
 
     @staticmethod

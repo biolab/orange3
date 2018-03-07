@@ -233,7 +233,8 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
         The maximal value in the array
     max_y : int
         The maximal value in `y`
-    weights : ...
+    weights : array_like
+        Row weights. When not None, contingencies contain weighted counts
     mask : sequence
         Discrete columns of X.
 
@@ -247,9 +248,6 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
     nans : array_like
         Number of nans in each column of X for each unique value of y.
     """
-    if weights is not None and np.any(weights) and np.unique(weights)[0] != 1:
-        raise ValueError('weights not yet supported')
-
     was_1d = False
     if X.ndim == 1:
         X = X[..., np.newaxis]
@@ -268,7 +266,8 @@ def contingency(X, y, max_X=None, max_y=None, weights=None, mask=None):
             col = np.ravel(col.todense())
         contingencies.append(
             bincount(y + ny * col,
-                     minlength=ny * nx)[0].reshape(nx, ny).T)
+                     minlength=ny * nx,
+                     weights=weights)[0].reshape(nx, ny).T)
         nans.append(
             bincount(y[np.isnan(col)], minlength=ny)[0])
     if was_1d:

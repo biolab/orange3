@@ -6,6 +6,8 @@ import itertools
 import concurrent.futures
 
 from collections import OrderedDict, namedtuple
+from typing import List, Tuple, Iterable  # pylint: disable=unused-import
+
 from math import isnan
 
 import numpy
@@ -40,8 +42,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import TableModel
 
 
-class RichTableDecorator(QIdentityProxyModel):
-    """A proxy model for a TableModel with some bells and whistles
+class RichTableModel(TableModel):
+    """A TableModel with some extra bells and whistles/
 
     (adds support for gui.BarRole, include variable labels and icons
     in the header)
@@ -49,41 +51,17 @@ class RichTableDecorator(QIdentityProxyModel):
     #: Rich header data flags.
     Name, Labels, Icon = 1, 2, 4
 
-    def __init__(self, source, parent=None):
-        super().__init__(parent)
+    def __init__(self, sourcedata, parent=None):
+        super().__init__(sourcedata, parent)
 
-        self._header_flags = RichTableDecorator.Name
-        self._labels = []
-        self._continuous = []
-
-        self.setSourceModel(source)
-
-    @property
-    def source(self):
-        return getattr(self.sourceModel(), "source", None)
-
-    @property
-    def vars(self):
-        return getattr(self.sourceModel(), "vars", [])
-
-    def setSourceModel(self, source):
-        if source is not None and \
-                not isinstance(source, TableModel):
-            raise TypeError()
-
-        if source is not None:
-            self._continuous = [var.is_continuous for var in source.vars]
-            labels = []
-            for var in source.vars:
-                if isinstance(var, Orange.data.Variable):
-                    labels.extend(var.attributes.keys())
-            self._labels = list(sorted(
-                {label for label in labels if not label.startswith("_")}))
-        else:
-            self._continuous = []
-            self._labels = []
-
-        super().setSourceModel(source)
+        self._header_flags = RichTableModel.Name
+        self._continuous = [var.is_continuous for var in self.vars]
+        labels = []
+        for var in self.vars:
+            if isinstance(var, Orange.data.Variable):
+                labels.extend(var.attributes.keys())
+        self._labels = list(sorted(
+            {label for label in labels if not label.startswith("_")}))
 
     def data(self, index, role=Qt.DisplayRole,
              # for faster local lookup
@@ -104,36 +82,30 @@ class RichTableDecorator(QIdentityProxyModel):
             return super().data(index, role)
 
     def headerData(self, section, orientation, role):
-        if self.sourceModel() is None:
-            return None
-
-        # NOTE: Always use `self.sourceModel().heaerData(...)` and not
-        # super().headerData(...). The later does not work for zero length
-        # source models
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            var = self.sourceModel().headerData(
+            var = super().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is None:
-                return self.sourceModel().headerData(
+                return super().headerData(
                     section, orientation, Qt.DisplayRole)
 
             lines = []
-            if self._header_flags & RichTableDecorator.Name:
+            if self._header_flags & RichTableModel.Name:
                 lines.append(var.name)
-            if self._header_flags & RichTableDecorator.Labels:
+            if self._header_flags & RichTableModel.Labels:
                 lines.extend(str(var.attributes.get(label, ""))
                              for label in self._labels)
             return "\n".join(lines)
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
-                self._header_flags & RichTableDecorator.Icon:
-            var = self.sourceModel().headerData(
+                self._header_flags & RichTableModel.Icon:
+            var = super().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is not None:
                 return gui.attributeIconDict[var]
             else:
                 return None
         else:
-            return self.sourceModel().headerData(section, orientation, role)
+            return super().headerData(section, orientation, role)
 
     def setRichHeaderFlags(self, flags):
         if flags != self._header_flags:
@@ -143,24 +115,6 @@ class RichTableDecorator(QIdentityProxyModel):
 
     def richHeaderFlags(self):
         return self._header_flags
-
-    if QT_VERSION < 0xFFFFFF:  # TODO: change when QTBUG-44143 is fixed
-        def sort(self, column, order):
-            # Preempt the layout change notification
-            self.layoutAboutToBeChanged.emit()
-            # Block signals to suppress repeated layout[AboutToBe]Changed
-            # TODO: Are any other signals emitted during a sort?
-            self.blockSignals(True)
-            try:
-                rval = self.sourceModel().sort(column, order)
-            finally:
-                self.blockSignals(False)
-            # Tidy up.
-            self.layoutChanged.emit()
-            return rval
-    else:
-        def sort(self, column, order):
-            return self.sourceModel().sort(column, order)
 
 
 class TableSliceProxy(QIdentityProxyModel):
@@ -235,55 +189,54 @@ class BlockSelectionModel(QItemSelectionModel):
         if isinstance(selection, QModelIndex):
             selection = QItemSelection(selection, selection)
 
+        if not self.__selectBlocks:
+            super().select(selection, flags)
+            return
+
         model = self.model()
-        indexes = self.selectedIndexes()
 
-        rows = set(ind.row() for ind in indexes)
-        cols = set(ind.column() for ind in indexes)
+        def to_ranges(spans):
+            return list(range(*r) for r in spans)
 
-        if flags & QItemSelectionModel.Select and \
-                not flags & QItemSelectionModel.Clear and self.__selectBlocks:
-            indexes = selection.indexes()
-            sel_rows = set(ind.row() for ind in indexes).union(rows)
-            sel_cols = set(ind.column() for ind in indexes).union(cols)
+        if flags & QItemSelectionModel.Current:  # no current selection support
+            flags &= ~QItemSelectionModel.Current
+        if flags & QItemSelectionModel.Toggle:  # no toggle support either
+            flags &= ~QItemSelectionModel.Toggle
+            flags |= QItemSelectionModel.Select
 
+        if flags == QItemSelectionModel.ClearAndSelect:
+            # extend selection ranges in `selection` to span all row/columns
+            sel_rows = selection_rows(selection)
+            sel_cols = selection_columns(selection)
             selection = QItemSelection()
-
-            for r_start, r_end in ranges(sorted(sel_rows)):
-                for c_start, c_end in ranges(sorted(sel_cols)):
-                    top_left = model.index(r_start, c_start)
-                    bottom_right = model.index(r_end - 1, c_end - 1)
-                    selection.select(top_left, bottom_right)
-        elif self.__selectBlocks and flags & QItemSelectionModel.Deselect:
-            indexes = selection.indexes()
-
-            def to_ranges(indices):
-                return list(range(*r) for r in ranges(indices))
-
-            selected_rows = to_ranges(sorted(rows))
-            selected_cols = to_ranges(sorted(cols))
-
-            desel_rows = to_ranges(set(ind.row() for ind in indexes))
-            desel_cols = to_ranges(set(ind.column() for ind in indexes))
-
-            selection = QItemSelection()
-
-            # deselection extended vertically
             for row_range, col_range in \
-                    itertools.product(selected_rows, desel_cols):
+                    itertools.product(to_ranges(sel_rows), to_ranges(sel_cols)):
                 selection.select(
                     model.index(row_range.start, col_range.start),
                     model.index(row_range.stop - 1, col_range.stop - 1)
                 )
-            # deselection extended horizontally
+        elif flags & (QItemSelectionModel.Select |
+                      QItemSelectionModel.Deselect):
+            # extend all selection ranges in `selection` with the full current
+            # row/col spans
+            rows, cols = selection_blocks(self.selection())
+            sel_rows = selection_rows(selection)
+            sel_cols = selection_columns(selection)
+            ext_selection = QItemSelection()
             for row_range, col_range in \
-                    itertools.product(desel_rows, selected_cols):
-                selection.select(
+                    itertools.product(to_ranges(rows), to_ranges(sel_cols)):
+                ext_selection.select(
                     model.index(row_range.start, col_range.start),
                     model.index(row_range.stop - 1, col_range.stop - 1)
                 )
-
-        QItemSelectionModel.select(self, selection, flags)
+            for row_range, col_range in \
+                    itertools.product(to_ranges(sel_rows), to_ranges(cols)):
+                ext_selection.select(
+                    model.index(row_range.start, col_range.start),
+                    model.index(row_range.stop - 1, col_range.stop - 1)
+                )
+            selection.merge(ext_selection, QItemSelectionModel.Select)
+        super().select(selection, flags)
 
     def selectBlocks(self):
         """Is the block selection in effect."""
@@ -299,7 +252,59 @@ class BlockSelectionModel(QItemSelectionModel):
         self.__selectBlocks = state
 
 
+def selection_rows(selection):
+    # type: (QItemSelection) -> List[Tuple[int, int]]
+    """
+    Return a list of ranges for all referenced rows contained in selection
+
+    Parameters
+    ----------
+    selection : QItemSelection
+
+    Returns
+    -------
+    rows : List[Tuple[int, int]]
+    """
+    spans = set(range(s.top(), s.bottom() + 1) for s in selection)
+    indices = sorted(set(itertools.chain(*spans)))
+    return list(ranges(indices))
+
+
+def selection_columns(selection):
+    # type: (QItemSelection) -> List[Tuple[int, int]]
+    """
+    Return a list of ranges for all referenced columns contained in selection
+
+    Parameters
+    ----------
+    selection : QItemSelection
+
+    Returns
+    -------
+    rows : List[Tuple[int, int]]
+    """
+    spans = {range(s.left(), s.right() + 1) for s in selection}
+    indices = sorted(set(itertools.chain(*spans)))
+    return list(ranges(indices))
+
+
+def selection_blocks(selection):
+    # type: (QItemSelection) -> Tuple[List[Tuple[int, int]], List[Tuple[int, int]]]
+    if selection.count() > 0:
+        rowranges = {range(span.top(), span.bottom() + 1)
+                     for span in selection}
+        colranges = {range(span.left(), span.right() + 1)
+                     for span in selection}
+    else:
+        return [], []
+
+    rows = sorted(set(itertools.chain(*rowranges)))
+    cols = sorted(set(itertools.chain(*colranges)))
+    return list(ranges(rows)), list(ranges(cols))
+
+
 def ranges(indices):
+    # type: (Iterable[int]) -> Iterable[Tuple[int, int]]
     """
     Group consecutive indices into `(start, stop)` tuple 'ranges'.
 
@@ -521,8 +526,7 @@ class OWDataTable(widget.OWWidget):
             view.setModel(None)
             return
 
-        datamodel = TableModel(data)
-        datamodel = RichTableDecorator(datamodel)
+        datamodel = RichTableModel(data)
 
         rowcount = data.approx_len()
 
@@ -654,7 +658,7 @@ class OWDataTable(widget.OWWidget):
 
         if self.show_attribute_labels:
             model.setRichHeaderFlags(
-                RichTableDecorator.Labels | RichTableDecorator.Name)
+                RichTableModel.Labels | RichTableModel.Name)
 
             labelnames = set()
             for a in model.source.domain.variables:
@@ -663,7 +667,7 @@ class OWDataTable(widget.OWWidget):
                 [label for label in labelnames if not label.startswith("_")])
             self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
-            model.setRichHeaderFlags(RichTableDecorator.Name)
+            model.setRichHeaderFlags(RichTableModel.Name)
             self.set_corner_text(view, "")
 
     def _on_show_variable_labels_changed(self):
@@ -764,24 +768,26 @@ class OWDataTable(widget.OWWidget):
         """
         Return the selected row and column indices of the selection in view.
         """
-        selection = view.selectionModel().selection()
+        selmodel = view.selectionModel()
+
+        selection = selmodel.selection()
         model = view.model()
         # map through the proxies into input table.
         while isinstance(model, QAbstractProxyModel):
             selection = model.mapSelectionToSource(selection)
             model = model.sourceModel()
 
+        assert isinstance(selmodel, BlockSelectionModel)
         assert isinstance(model, TableModel)
 
-        indexes = selection.indexes()
-
-        rows = numpy.unique([ind.row() for ind in indexes])
+        row_spans, col_spans = selection_blocks(selection)
+        rows = list(itertools.chain.from_iterable(itertools.starmap(range, row_spans)))
+        cols = list(itertools.chain.from_iterable(itertools.starmap(range, col_spans)))
+        rows = numpy.array(rows, dtype=numpy.intp)
         # map the rows through the applied sorting (if any)
         rows = model.mapToSourceRows(rows)
         rows.sort()
         rows = rows.tolist()
-
-        cols = sorted(set(ind.column() for ind in indexes))
         return rows, cols
 
     @staticmethod

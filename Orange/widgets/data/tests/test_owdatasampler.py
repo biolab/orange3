@@ -81,6 +81,38 @@ class TestOWDataSampler(WidgetTest):
                     self.assertEqual(len(self.zoo), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
 
+    def test_bigger_size_with_replacement(self):
+        """Allow bigger output without replacement."""
+        self.send_signal('Data', self.iris[:2])
+        sample_size = self.set_fixed_sample_size(3, with_replacement=True)
+        self.assertEqual(3, sample_size, 'Should be able to set a bigger size '
+                         'with replacement')
+
+    def test_bigger_size_without_replacement(self):
+        """Lower output samples to match input's without replacement."""
+        self.send_signal('Data', self.iris[:2])
+        sample_size = self.set_fixed_sample_size(3)
+        self.assertEqual(2, sample_size)
+
+    def test_bigger_output_warning(self):
+        """Should warn when sample size is bigger than input."""
+        self.send_signal('Data', self.iris[:2])
+        self.set_fixed_sample_size(3, with_replacement=True)
+        self.assertTrue(self.widget.Warning.bigger_sample.is_shown())
+
+    def set_fixed_sample_size(self, sample_size, with_replacement=False):
+        """Set fixed sample size and return the number of gui spin.
+
+        Return the actual number in gui so we can check whether it is different
+        from sample_size. The number can be changed depending on the spin
+        maximum value.
+        """
+        self.select_sampling_type(self.widget.FixedSize)
+        self.widget.controls.replacement.setChecked(with_replacement)
+        self.widget.sampleSizeSpin.setValue(sample_size)
+        self.widget.commit()
+        return self.widget.sampleSizeSpin.value()
+
     def assertNoIntersection(self, sample, other):
         for inst in sample:
             self.assertNotIn(inst, other)
