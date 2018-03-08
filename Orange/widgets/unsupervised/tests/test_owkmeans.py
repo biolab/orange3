@@ -1,5 +1,4 @@
 # pylint: disable=protected-access
-
 import unittest
 from unittest.mock import patch, Mock
 
@@ -15,7 +14,6 @@ from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
 
 
 class TestClusterTableModel(unittest.TestCase):
-    # This test would belong to a separate class, but needs a widget
     def test_model(self):
         model = ClusterTableModel()
         model.set_scores(["bad", 0.250, "another bad"], 3)
