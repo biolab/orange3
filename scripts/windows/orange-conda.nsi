@@ -672,37 +672,37 @@ Section -Register SectionRegister
 
     # Register uninstaller in Add/Remove Programs
 
-    ${LogWrite} "Register uninstaller (${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY})"
+    ${LogWrite} "Register uninstaller (${APPLICATION_UNINSTALL_REGKEY})"
 
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 DisplayName "${APPLICATIONNAME} ${APPVERSION} (${BITS} bit)"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 DisplayVersion "${APPVERSION}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 DisplayIcon "$InstDir\${UNINSTALL_EXEFILE}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 "UninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 "QuietUninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode /S'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 InstallLocation "$InstDir"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 URLInfoAbout http://orange.biolab.si
 
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                  "${APPLICATION_UNINSTALL_REGKEY}" \
                    NoModify 1
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
+                  "${APPLICATION_UNINSTALL_REGKEY}" \
                   NoRepair 1
 SectionEnd
 
@@ -724,14 +724,14 @@ Function un.Register
     ${EndIf}
 
     ReadRegStr $un.InstallDir SHCTX \
-               "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" InstallLocation
+               "${APPLICATION_UNINSTALL_REGKEY}" InstallLocation
     ${If} $un.InstallDir != ""
     ${AndIf} $un.InstallDir == $InstDir
-        ${LogWrite} "Deleting reg key: ${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
-        DeleteRegKey SHCTX "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
+        ${LogWrite} "Deleting reg key: ${APPLICATION_UNINSTALL_REGKEY}"
+        DeleteRegKey SHCTX "${APPLICATION_UNINSTALL_REGKEY}"
     ${Else}
         ${LogWrite} "InstallLocation from \
-                     ${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY} does not match \
+                     ${APPLICATION_UNINSTALL_REGKEY} does not match \
                      InstDir ($0 != $InstDir). Leaving it."
     ${EndIf}
 FunctionEnd
