@@ -337,7 +337,7 @@ EOF
              -DPYINSTALLER=${pyinstaller} \
              -DINSTALL_REGISTRY_KEY=OrangeCanvas \
              -DINSTALLERICON=scripts/windows/OrangeInstall.ico \
-             -DICONDIR="orange3/icons" \
+             -DICONDIR="orange3\icons" \
              -DLICENSE_FILE="${BASEDIR}"/license.txt \
              -DLAUNCHERMODULE="Orange.canvas" \
              "${extransisparams[@]}" \
