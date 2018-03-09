@@ -339,6 +339,7 @@ EOF
              -DINSTALLERICON=scripts/windows/OrangeInstall.ico \
              -DICONDIR="orange3/icons" \
              -DLICENSE_FILE="${BASEDIR}"/license.txt \
+             -DLAUNCHERMODULE="Orange.canvas" \
              "${extransisparams[@]}" \
              -NOCD \
              -V4 -WX \
