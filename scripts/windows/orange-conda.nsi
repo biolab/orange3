@@ -58,14 +58,18 @@
     !error "Invalid PYARCH ${PYARCH}"
 !endif
 
+!ifndef LAUNCHERMODULE
+    !error "LAUNCHERMODULE must be defined"
+!endif
+
 
 !ifndef OUTFILENAME
     !define OUTFILENAME ${APPNAME}-${APPVERSION}-setup.exe
 !endif
 
 
-OutFile ${OUTFILENAME}
-Name ${APPLICATIONNAME}-${VERSION}
+OutFile "${OUTFILENAME}"
+Name ${APPNAME}-${VERSION}
 
 # Default install folder name
 !ifndef DEFAULT_INSTALL_FOLDER
@@ -664,7 +668,7 @@ Section -Register SectionRegister
 
     WriteRegStr SHELL_CONTEXT \
                 "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
-                DisplayName "${APPNAME} ${APPVERSION} (${BITS} bit)"
+                DisplayName "${APPLICATIONNAME} ${APPVERSION} (${BITS} bit)"
     WriteRegStr SHELL_CONTEXT \
                 "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 DisplayVersion "${APPVERSION}"
