@@ -22,13 +22,19 @@
 #   install.bat
 
 
-
+# Short name, used in paths
 !ifndef APPNAME
     !error "APPNAME must be defined"
 !endif
 
+# Long name, used for shortcuts
 !ifndef APPLICATIONNAME
     !define APPLICATIONNAME ${APPNAME}
+!endif
+
+# Name used in registry keys
+!ifndef INSTALL_REGISTRY_KEY
+    !define INSTALL_REGISTRY_KEY ${APPNAME}
 !endif
 
 !ifdef VERMAJOR & VERMINOR
@@ -83,11 +89,7 @@ SetCompress "off"
 
 # Application launcher shortcut name (in start menu or on the desktop)
 !ifndef LAUNCHER_SHORTCUT_NAME
-    !define LAUNCHER_SHORTCUT_NAME "${APPNAME}"
-!endif
-
-!ifndef INSTALL_REGISTRY_KEY
-    !error 'INSTALL_REGISTRY_KEY must be defined'
+    !define LAUNCHER_SHORTCUT_NAME "${APPLICATIONNAME}"
 !endif
 
 # Registry key/values where the installation layout is saved
@@ -644,51 +646,51 @@ Section -Register SectionRegister
 
     ${LogWrite} "Register .ows filetype"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\.ows" "" "OrangeCanvas"
+        "Software\Classes\.ows" "" ${INSTALL_REGISTRY_KEY}
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas" "" "Orange Workflow"
+        "Software\Classes\${INSTALL_REGISTRY_KEY}" "" "Orange Workflow"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas\DefaultIcon" "" \
+        "Software\Classes\${INSTALL_REGISTRY_KEY}\DefaultIcon" "" \
         "$PythonPrefix\share\orange3\icons\OrangeOWS.ico"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas\Shell\Open\Command\" "" \
+        "Software\Classes\${INSTALL_REGISTRY_KEY}\Shell\Open\Command\" "" \
         '"$PythonExecPrefix\pythonw.exe" -m Orange.canvas "%1"'
 
     WriteUninstaller "$InstDir\${UNINSTALL_EXEFILE}"
 
     # Register uninstaller in Add/Remove Programs
 
-    ${LogWrite} "Register uninstaller (${WINDOWS_UNINSTALL_REGKEY}\${APPNAME})"
+    ${LogWrite} "Register uninstaller (${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY})"
 
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 DisplayName "${APPNAME} ${APPVERSION} (${BITS} bit)"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 DisplayVersion "${APPVERSION}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 DisplayIcon "$InstDir\${UNINSTALL_EXEFILE}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 "UninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 "QuietUninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode /S'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 InstallLocation "$InstDir"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                 URLInfoAbout http://orange.biolab.si
 
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                  "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                    NoModify 1
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                  "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" \
                   NoRepair 1
 SectionEnd
 
@@ -702,19 +704,19 @@ Function un.Register
     ${AndIf} $un.InstallDir == $InstDir
         ${LogWrite} "Deleting reg key: ${INSTALL_SETTINGS_KEY}"
         DeleteRegKey SHCTX "${INSTALL_SETTINGS_KEY}"
-        ${LogWrite} "Deleting reg key: Software\Classes\OrangeCanvas"
-        DeleteRegKey SHCTX Software\Classes\OrangeCanvas
+        ${LogWrite} "Deleting reg key: Software\Classes\${INSTALL_REGISTRY_KEY}"
+        DeleteRegKey SHCTX Software\Classes\${INSTALL_REGISTRY_KEY}
     ${Else}
         ${LogWrite} "InstallDir from ${INSTALL_SETTINGS_KEY} does not match \
                     InstDir ($un.InstallDir != $InstDir). Leaving it."
     ${EndIf}
 
     ReadRegStr $un.InstallDir SHCTX \
-               "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" InstallLocation
+               "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}" InstallLocation
     ${If} $un.InstallDir != ""
     ${AndIf} $un.InstallDir == $InstDir
-        ${LogWrite} "Deleting reg key: ${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
-        DeleteRegKey SHCTX "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
+        ${LogWrite} "Deleting reg key: ${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
+        DeleteRegKey SHCTX "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
     ${Else}
         ${LogWrite} "InstallLocation from \
                      ${WINDOWS_UNINSTALL_REGKEY}\${APPNAME} does not match \
