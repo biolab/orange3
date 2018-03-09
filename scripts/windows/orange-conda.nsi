@@ -250,7 +250,7 @@ Var StartMenuFolder
     "Software\Microsoft\Windows\CurrentVersion\Uninstall"
 
 # Full key path for the application uninstall entry in Add/Remove Programs
-!define APPLICATION_UNINSTALL_REGKEY "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
+!define APPLICATION_UNINSTALL_REGKEY "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
 
 # Uninstaller base name
 !ifndef UNINSTALL_EXEFILE
@@ -731,7 +731,7 @@ Function un.Register
         DeleteRegKey SHCTX "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
     ${Else}
         ${LogWrite} "InstallLocation from \
-                     ${WINDOWS_UNINSTALL_REGKEY}\${APPNAME} does not match \
+                     ${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY} does not match \
                      InstDir ($0 != $InstDir). Leaving it."
     ${EndIf}
 FunctionEnd
