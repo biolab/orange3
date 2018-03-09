@@ -10,65 +10,73 @@
 		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Selected Data" source_node_id="1" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="12" id="0" rect="(26.0, 7.0, 150.0, 112.59375)">This File widget is set to read the Iris dataset. Double click on the icon to change the input data file and observe how this workflow works for some other datasets such as housing or auto-mpg.</text>
-		<text font-family="Helvetica" font-size="12" id="1" rect="(224.0, 24.0, 150.0, 83.0)">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
-		<text font-family="Helvetica" font-size="12" id="2" rect="(412.0, 55.0, 150.0, 48.0)">Data Table widget shows the data subset selected in the Scatter Plot.</text>
+		<text font-family="Helvetica" font-size="12" id="0" rect="(26.0, 7.0, 150.0, 112.59375)" type="text/plain">This File widget is set to read the Iris dataset. Double click on the icon to change the input data file and observe how this workflow works for some other datasets such as housing or auto-mpg.</text>
+		<text font-family="Helvetica" font-size="12" id="1" rect="(224.0, 24.0, 150.0, 83.0)" type="text/plain">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
+		<text font-family="Helvetica" font-size="12" id="2" rect="(412.0, 55.0, 150.0, 48.0)" type="text/plain">Data Table widget shows the data subset selected in the Scatter Plot.</text>
 		<arrow end="(99.00000000000003, 175.0)" fill="#C1272D" id="3" start="(98.00000000000003, 118.0)" />
 		<arrow end="(270.0, 170.00000000000003)" fill="#C1272D" id="4" start="(271.0, 114.00000000000003)" />
 		<arrow end="(417.0, 173.0)" fill="#C1272D" id="5" start="(465.0, 112.00000000000001)" />
-		<text font-family="Helvetica" font-size="12" id="6" rect="(146.0, 300.0, 301.0, 72.0)">Try to connect some other widget to the output of the Scatter Plot. Say, a Box Plot widget (toolbox, Visualize pane). Box Plot will display distributions of the data subset selected in the Scatter Plot.</text>
+		<text font-family="Helvetica" font-size="12" id="6" rect="(146.0, 300.0, 301.0, 72.0)" type="text/plain">Try to connect some other widget to the output of the Scatter Plot. Say, a Box Plot widget (toolbox, Visualize pane). Box Plot will display distributions of the data subset selected in the Scatter Plot.</text>
 		<arrow end="(302.0, 221.0)" fill="#39B54A" id="7" start="(335.0, 294.0)" />
 	</annotations>
 	<thumbnail />
 	<node_properties>
-		<properties format="pickle" node_id="0">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFjc2lwCl91bnBpY2tsZV90eXBlCnECWAwA
-AABQeVF0NC5RdENvcmVxA1gKAAAAUUJ5dGVBcnJheXEEQy4B2dDLAAEAAAAAA/8AAAJcAAAF8AAA
-Ay0AAAP/AAACcgAABfAAAAMtAAAAAAAAcQWFcQaHcQdScQhYDAAAAHJlY2VudF9wYXRoc3EJXXEK
-Y09yYW5nZS53aWRnZXRzLnV0aWxzLmZpbGVkaWFsb2dzClJlY2VudFBhdGgKcQspgXEMfXENKFgH
-AAAAcmVscGF0aHEOWAgAAABpcmlzLnRhYnEPWAcAAABhYnNwYXRocRBYgAAAAC9BcHBsaWNhdGlv
-bnMvT3JhbmdlMy5hcHAvQ29udGVudHMvRnJhbWV3b3Jrcy9QeXRob24uZnJhbWV3b3JrL1ZlcnNp
-b25zLzMuNC9saWIvcHl0aG9uMy40L3NpdGUtcGFja2FnZXMvT3JhbmdlL2RhdGFzZXRzL2lyaXMu
-dGFicRFYBQAAAHRpdGxlcRJYAAAAAHETWAYAAABwcmVmaXhxFFgPAAAAc2FtcGxlLWRhdGFzZXRz
-cRVYBQAAAHNoZWV0cRZoE3ViYVgDAAAAdXJscRdoE1gQAAAAY29udGV4dF9zZXR0aW5nc3EYXXEZ
-WAYAAABzb3VyY2VxGksAWAsAAAByZWNlbnRfdXJsc3EbXXEcWAsAAABzaGVldF9uYW1lc3EdfXEe
-dS4=
+		<properties format="pickle" node_id="0">gAN9cQAoWBIAAABjb250cm9sQXJlYVZpc2libGVxAYhYDAAAAHJlY2VudF9wYXRoc3ECXXEDY09y
+YW5nZS53aWRnZXRzLnV0aWxzLmZpbGVkaWFsb2dzClJlY2VudFBhdGgKcQQpgXEFfXEGKFgHAAAA
+YWJzcGF0aHEHWDAAAAAvVXNlcnMvYW56ZS9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJp
+cy50YWJxCFgGAAAAcHJlZml4cQlYDwAAAHNhbXBsZS1kYXRhc2V0c3EKWAcAAAByZWxwYXRocQtY
+CAAAAGlyaXMudGFicQxYBQAAAHRpdGxlcQ1YAAAAAHEOWAUAAABzaGVldHEPaA5YCwAAAGZpbGVf
+Zm9ybWF0cRBOdWJhWAsAAAByZWNlbnRfdXJsc3ERXXESWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5
+cRNDMgHZ0MsAAgAAAAACEwAAATwAAAQlAAADUgAAAhMAAAFSAAAEJQAAA1IAAAAAAAAAAAWgcRRY
+CwAAAHNoZWV0X25hbWVzcRV9cRZYBgAAAHNvdXJjZXEXSwBYAwAAAHVybHEYaA5YDQAAAGRvbWFp
+bl9lZGl0b3JxGX1xGlgLAAAAX192ZXJzaW9uX19xG0sBWBAAAABjb250ZXh0X3NldHRpbmdzcRxd
+cR1jT3JhbmdlLndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxHimBcR99cSAoWAQAAAB0aW1lcSFH
+QdanFiOv2ZBYBgAAAHZhbHVlc3EifXEjKFgJAAAAdmFyaWFibGVzcSRdcSVYCQAAAHhsc19zaGVl
+dHEmaA5K/////4ZxJ2gZfXEoaCRdcSkoXXEqKFgMAAAAc2VwYWwgbGVuZ3RocStjT3JhbmdlLmRh
+dGEudmFyaWFibGUKQ29udGludW91c1ZhcmlhYmxlCnEsSwBoDohlXXEtKFgLAAAAc2VwYWwgd2lk
+dGhxLmgsSwBoDohlXXEvKFgMAAAAcGV0YWwgbGVuZ3RocTBoLEsAaA6IZV1xMShYCwAAAHBldGFs
+IHdpZHRocTJoLEsAaA6IZV1xMyhYBAAAAGlyaXNxNGNPcmFuZ2UuZGF0YS52YXJpYWJsZQpEaXNj
+cmV0ZVZhcmlhYmxlCnE1SwFYLAAAAElyaXMtc2V0b3NhLCBJcmlzLXZlcnNpY29sb3IsIElyaXMt
+dmlyZ2luaWNhcTaJZWVzaBtLAXVYCgAAAGF0dHJpYnV0ZXNxNyhYDAAAAHNlcGFsIGxlbmd0aHE4
+SwKGcTlYCwAAAHNlcGFsIHdpZHRocTpLAoZxO1gMAAAAcGV0YWwgbGVuZ3RocTxLAoZxPVgLAAAA
+cGV0YWwgd2lkdGhxPksChnE/dHFAWAUAAABtZXRhc3FBKVgKAAAAY2xhc3NfdmFyc3FCWAQAAABp
+cmlzcUNdcUQoWAsAAABJcmlzLXNldG9zYXFFWA8AAABJcmlzLXZlcnNpY29sb3JxRlgOAAAASXJp
+cy12aXJnaW5pY2FxR2WGcUiFcUlYEgAAAG1vZGlmaWVkX3ZhcmlhYmxlc3FKXXFLdWJhdS4=
 </properties>
-		<properties format="pickle" node_id="1">gAN9cQAoWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQFDLgHZ0MsAAQAAAAADrQAAAawAAAZsAAAE
-ewAAA60AAAHCAAAGbAAABHsAAAAAAABxAlgQAAAAY29udGV4dF9zZXR0aW5nc3EDXXEEY09yYW5n
-ZS53aWRnZXRzLnNldHRpbmdzCkNvbnRleHQKcQUpgXEGfXEHKFgKAAAAYXR0cmlidXRlc3EIfXEJ
-KFgLAAAAc2VwYWwgd2lkdGhxCksCWAQAAABpcmlzcQtLAVgLAAAAcGV0YWwgd2lkdGhxDEsCWAwA
-AABzZXBhbCBsZW5ndGhxDUsCWAwAAABwZXRhbCBsZW5ndGhxDksCdVgEAAAAdGltZXEPR0HV4ZSk
-F+urWAUAAABtZXRhc3EQfXERWAYAAAB2YWx1ZXNxEn1xEyhYEwAAAHNhdmVkV2lkZ2V0R2VvbWV0
-cnlxFGgCSv7///+GcRVYBgAAAGF0dHJfeXEWWAsAAABzZXBhbCB3aWR0aHEXSwKGcRhYBgAAAGF0
-dHJfeHEZWAwAAABzZXBhbCBsZW5ndGhxGksChnEbWAUAAABncmFwaHEcfXEdKFgJAAAAYXR0cl9z
-aXplcR5YAAAAAHEfSv7///+GcSBYEQAAAHRvb2x0aXBfc2hvd3NfYWxscSGJSv7///+GcSJYCwAA
-AGppdHRlcl9zaXplcSNLCkr+////hnEkWAoAAABhdHRyX3NoYXBlcSVoH0r+////hnEmWAsAAABz
-aG93X2xlZ2VuZHEniEr+////hnEoWBMAAABsYWJlbF9vbmx5X3NlbGVjdGVkcSmJSv7///+GcSpY
-CgAAAGF0dHJfbGFiZWxxK2gfSv7///+GcSxYCwAAAGFscGhhX3ZhbHVlcS1LgEr+////hnEuWA0A
-AABjbGFzc19kZW5zaXR5cS+JSv7///+GcTBYCwAAAHBvaW50X3dpZHRocTFLCkr+////hnEyWBEA
-AABqaXR0ZXJfY29udGludW91c3EziUr+////hnE0WAoAAABhdHRyX2NvbG9ycTVoC0sBhnE2WAkA
-AABzaG93X2dyaWRxN4lK/v///4ZxOHVYEwAAAGF1dG9fc2VuZF9zZWxlY3Rpb25xOYhK/v///4Zx
-OlgLAAAAYXV0b19zYW1wbGVxO4hK/v///4ZxPFgRAAAAdG9vbGJhcl9zZWxlY3Rpb25xPUsASv7/
-//+GcT51WA4AAABvcmRlcmVkX2RvbWFpbnE/XXFAKGgNSwKGcUFoCksChnFCaA5LAoZxQ2gMSwKG
-cURoC0sBhnFFZXViYVgFAAAAZ3JhcGhxRn1xRyhYEwAAAGxhYmVsX29ubHlfc2VsZWN0ZWRxSIlY
-EQAAAHRvb2x0aXBfc2hvd3NfYWxscUmJWA0AAABjbGFzc19kZW5zaXR5cUqJWAsAAABqaXR0ZXJf
-c2l6ZXFLSwpYCwAAAHBvaW50X3dpZHRocUxLClgLAAAAYWxwaGFfdmFsdWVxTUuAWBEAAABqaXR0
-ZXJfY29udGludW91c3FOiVgLAAAAc2hvd19sZWdlbmRxT4hYCQAAAHNob3dfZ3JpZHFQiXVYEwAA
-AGF1dG9fc2VuZF9zZWxlY3Rpb25xUYhYCwAAAGF1dG9fc2FtcGxlcVKIWBEAAAB0b29sYmFyX3Nl
-bGVjdGlvbnFTSwB1Lg==
+		<properties format="pickle" node_id="1">gAN9cQAoWAsAAABhdXRvX3NhbXBsZXEBiFgTAAAAYXV0b19zZW5kX3NlbGVjdGlvbnECiFgSAAAA
+Y29udHJvbEFyZWFWaXNpYmxlcQOIWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQRDLgHZ0MsAAQAA
+AAADrQAAAawAAAZsAAAEewAAA60AAAHCAAAGbAAABHsAAAAAAABxBVgPAAAAc2VsZWN0aW9uX2dy
+b3VwcQZOWBEAAAB0b29sYmFyX3NlbGVjdGlvbnEHSwBYBQAAAGdyYXBocQh9cQkoWAsAAABhbHBo
+YV92YWx1ZXEKS4BYDQAAAGNsYXNzX2RlbnNpdHlxC4lYEQAAAGppdHRlcl9jb250aW51b3VzcQyJ
+WAsAAABqaXR0ZXJfc2l6ZXENSwpYEwAAAGxhYmVsX29ubHlfc2VsZWN0ZWRxDolYCwAAAHBvaW50
+X3dpZHRocQ9LClgJAAAAc2hvd19ncmlkcRCJWAsAAABzaG93X2xlZ2VuZHERiFgNAAAAc2hvd19y
+ZWdfbGluZXESiVgRAAAAdG9vbHRpcF9zaG93c19hbGxxE4l1WAsAAABfX3ZlcnNpb25fX3EUSwJY
+EAAAAGNvbnRleHRfc2V0dGluZ3NxFV1xFmNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0
+CnEXKYFxGH1xGShYCgAAAGF0dHJpYnV0ZXNxGn1xGyhYCwAAAHNlcGFsIHdpZHRocRxLAlgEAAAA
+aXJpc3EdSwFYCwAAAHBldGFsIHdpZHRocR5LAlgMAAAAc2VwYWwgbGVuZ3RocR9LAlgMAAAAcGV0
+YWwgbGVuZ3RocSBLAnVYBAAAAHRpbWVxIUdB1qcWI7zvG1gFAAAAbWV0YXNxIn1xI1gGAAAAdmFs
+dWVzcSR9cSUoWAYAAABhdHRyX3hxJlgMAAAAc2VwYWwgbGVuZ3RocSdLZoZxKFgGAAAAYXR0cl95
+cSlYCwAAAHNlcGFsIHdpZHRocSpLZoZxK2gIfXEsKFgKAAAAYXR0cl9jb2xvcnEtWAQAAABpcmlz
+cS5LZYZxL1gKAAAAYXR0cl9sYWJlbHEwTkr+////hnExWAoAAABhdHRyX3NoYXBlcTJOSv7///+G
+cTNYCQAAAGF0dHJfc2l6ZXE0Tkr+////hnE1dWgUSwJ1WA4AAABvcmRlcmVkX2RvbWFpbnE2XXE3
+KGgfSwKGcThoHEsChnE5aCBLAoZxOmgeSwKGcTtoHUsBhnE8ZXViYXUu
 </properties>
-		<properties format="pickle" node_id="2">gAN9cQAoWA4AAABkaXN0X2NvbG9yX1JHQnEBKEvcS9xL3Ev/dHECWBMAAABzYXZlZFdpZGdldEdl
-b21ldHJ5cQNOWAsAAABzZWxlY3Rfcm93c3EEiFgLAAAAYXV0b19jb21taXRxBYhYEAAAAGNvbnRl
-eHRfc2V0dGluZ3NxBl1xB2NPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0CnEIKYFxCX1x
-CihYCgAAAGF0dHJpYnV0ZXNxC31xDChYCwAAAHNlcGFsIHdpZHRocQ1LAlgEAAAAaXJpc3EOXXEP
-KFgLAAAASXJpcy1zZXRvc2FxEFgPAAAASXJpcy12ZXJzaWNvbG9ycRFYDgAAAElyaXMtdmlyZ2lu
-aWNhcRJlWAsAAABwZXRhbCB3aWR0aHETSwJYDAAAAHNlcGFsIGxlbmd0aHEUSwJYDAAAAHBldGFs
-IGxlbmd0aHEVSwJ1WAQAAAB0aW1lcRZHQdXgmRCzIppYBQAAAG1ldGFzcRd9cRhYBgAAAHZhbHVl
-c3EZfXEaKGgBaAJK/v///4ZxG2gDTkr+////hnEcaASISv7///+GcR1oBYhK/v///4ZxHlgNAAAA
-c2VsZWN0ZWRfcm93c3EfXXEgWA4AAABjb2xvcl9ieV9jbGFzc3EhiEr+////hnEiWA0AAABzZWxl
-Y3RlZF9jb2xzcSNdcSRYEgAAAHNob3dfZGlzdHJpYnV0aW9uc3EliUr+////hnEmWBUAAABzaG93
-X2F0dHJpYnV0ZV9sYWJlbHNxJ4hK/v///4ZxKHVYDgAAAG9yZGVyZWRfZG9tYWlucSldcSooaBRL
-AoZxK2gNSwKGcSxoFUsChnEtaBNLAoZxLmgOSwGGcS9ldWJhaCGIaCWJaCeIdS4=
+		<properties format="pickle" node_id="2">gAN9cQAoWAsAAABhdXRvX2NvbW1pdHEBiFgOAAAAY29sb3JfYnlfY2xhc3NxAohYEgAAAGNvbnRy
+b2xBcmVhVmlzaWJsZXEDiFgOAAAAZGlzdF9jb2xvcl9SR0JxBChL3EvcS9xL/3RxBVgTAAAAc2F2
+ZWRXaWRnZXRHZW9tZXRyeXEGTlgLAAAAc2VsZWN0X3Jvd3NxB4hYFQAAAHNob3dfYXR0cmlidXRl
+X2xhYmVsc3EIiFgSAAAAc2hvd19kaXN0cmlidXRpb25zcQmJWAsAAABfX3ZlcnNpb25fX3EKSwFY
+EAAAAGNvbnRleHRfc2V0dGluZ3NxC11xDGNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0
+CnENKYFxDn1xDyhYCgAAAGF0dHJpYnV0ZXNxEH1xEShYCwAAAHNlcGFsIHdpZHRocRJLAlgEAAAA
+aXJpc3ETXXEUKFgLAAAASXJpcy1zZXRvc2FxFVgPAAAASXJpcy12ZXJzaWNvbG9ycRZYDgAAAEly
+aXMtdmlyZ2luaWNhcRdlWAsAAABwZXRhbCB3aWR0aHEYSwJYDAAAAHNlcGFsIGxlbmd0aHEZSwJY
+DAAAAHBldGFsIGxlbmd0aHEaSwJ1WAQAAAB0aW1lcRtHQdXgmRCzIppYBQAAAG1ldGFzcRx9cR1Y
+BgAAAHZhbHVlc3EefXEfKFgOAAAAZGlzdF9jb2xvcl9SR0JxIGgFSv7///+GcSFYEwAAAHNhdmVk
+V2lkZ2V0R2VvbWV0cnlxIk5K/v///4ZxI1gLAAAAc2VsZWN0X3Jvd3NxJIhK/v///4ZxJVgLAAAA
+YXV0b19jb21taXRxJohK/v///4ZxJ1gNAAAAc2VsZWN0ZWRfcm93c3EoXXEpWA4AAABjb2xvcl9i
+eV9jbGFzc3EqiEr+////hnErWA0AAABzZWxlY3RlZF9jb2xzcSxdcS1YEgAAAHNob3dfZGlzdHJp
+YnV0aW9uc3EuiUr+////hnEvWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxMIhK/v///4ZxMWgK
+SwF1WA4AAABvcmRlcmVkX2RvbWFpbnEyXXEzKGgZSwKGcTRoEksChnE1aBpLAoZxNmgYSwKGcTdo
+E0sBhnE4ZXViYXUu
 </properties>
 	</node_properties>
 </scheme>
