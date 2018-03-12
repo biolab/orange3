@@ -561,7 +561,7 @@ Section -Launchers
     # to the console that remains visible after exit
     CreateShortCut \
         "$InstDir\${LAUNCHER_SHORTCUT_NAME} Debug.lnk" \
-        "%COMSPEC%" '/K "$PythonExecPrefix\python.exe" "-m ${LAUNCHERMODULE}" -l4' \
+        "%COMSPEC%" '/K "$PythonExecPrefix\python.exe" -m ${LAUNCHERMODULE} -l4' \
         "$PythonPrefix\share\${ICONDIR}\${APPICON}" 0
     # A utility shortcut for activating the environment
     CreateShortCut \
@@ -666,7 +666,7 @@ Section -Register SectionRegister
         "$PythonPrefix\share\${ICONDIR}\OrangeOWS.ico"
     WriteRegStr SHELL_CONTEXT \
         "Software\Classes\${INSTALL_REGISTRY_KEY}\Shell\Open\Command\" "" \
-        '"$PythonExecPrefix\pythonw.exe" "-m ${LAUNCHERMODULE}" "%1"'
+        '"$PythonExecPrefix\pythonw.exe" -m ${LAUNCHERMODULE} "%1"'
 
     WriteUninstaller "$InstDir\${UNINSTALL_EXEFILE}"
 
