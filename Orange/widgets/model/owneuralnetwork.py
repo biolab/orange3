@@ -1,14 +1,48 @@
+from functools import partial
+import logging
 import re
 import sys
+from unittest.mock import patch
+import concurrent.futures
 
-from AnyQt.QtWidgets import QApplication
-from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QApplication, qApp
+from AnyQt.QtCore import Qt, QThread
+from AnyQt.QtCore import pyqtSlot as Slot
 
 from Orange.data import Table
 from Orange.modelling import NNLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+
+from Orange.widgets.utils.concurrent import (
+    ThreadExecutor, FutureWatcher, methodinvoke
+)
+
+
+
+class Task:
+    """
+    A class that will hold the state for an learner evaluation.
+    """
+    future = ...       # type: concurrent.futures.Future
+    watcher = ...      # type: FutureWatcher
+    cancelled = False  # type: bool
+
+    def cancel(self):
+        """
+        Cancel the task.
+
+        Set the `cancelled` field to True and block until the future is done.
+        """
+        # set cancelled state
+        self.cancelled = True
+        self.future.cancel()
+        concurrent.futures.wait([self.future])
+
+
+class CancelThreadException(BaseException):
+    pass
 
 
 class OWNNLearner(OWBaseLearner):
@@ -58,6 +92,15 @@ class OWNNLearner(OWBaseLearner):
             alignment=Qt.AlignRight, callback=self.settings_changed,
             controlWidth=80)
 
+    def setup_layout(self):
+        super().setup_layout()
+
+        self._task = None  # type: Optional[Task]
+        self._executor = ThreadExecutor()
+
+        # just a test cancel button
+        gui.button(self.controlArea, self, "Cancel", callback=self.cancel)
+
     def create_learner(self):
         return self.LEARNER(
             hidden_layer_sizes=self.get_hidden_layers(),
@@ -80,6 +123,118 @@ class OWNNLearner(OWBaseLearner):
             layers = (100,)
             self.hidden_layers_edit.setText("100,")
         return layers
+
+    def update_model(self):
+        self.show_fitting_failed(None)
+        self.model = None
+        if self.check_data():
+            self.__update()
+        else:
+            self.Outputs.model.send(self.model)
+
+    @Slot(float)
+    def setProgressValue(self, value):
+        assert self.thread() is QThread.currentThread()
+        self.progressBarSet(value)
+
+    def __update(self):
+        if self._task is not None:
+            # First make sure any pending tasks are cancelled.
+            self.cancel()
+        assert self._task is None
+
+        self.setBlocking(True)
+
+        self._task = task = Task()
+
+        # A thread safe way to invoke a method
+        set_progress = methodinvoke(self, "setProgressValue", (float,))
+
+        max_iter = self.learner.kwargs["max_iter"]
+
+        def callback(iteration=None):
+            if task.cancelled:
+                raise CancelThreadException()  # this stop the thread
+            if iteration is not None:
+                set_progress(iteration/max_iter*100)
+
+        def print_callback(*args, **kwargs):
+            iters = None
+            # try to parse iteration number
+            if args and args[0] and isinstance(args[0], str):
+                find = re.findall(r"Iteration (\d+)", args[0])
+                if find:
+                    iters = int(find[0])
+            callback(iters)
+
+        def build_model(data, learner):
+            if learner.kwargs["solver"] != "lbfgs":
+                # enable verbose printouts within scikit and redirect them
+                with patch.dict(learner.kwargs, {"verbose": True}),\
+                     patch("builtins.print", print_callback):
+                    return learner(data)
+            else:
+                # lbfgs solver uses different mechanism
+                return learner(data)
+
+        build_model_func = partial(build_model, self.data, self.learner)
+
+        self.progressBarInit()
+
+        task.future = self._executor.submit(build_model_func)
+        task.watcher = FutureWatcher(task.future)
+        task.watcher.done.connect(self._task_finished)
+
+    @Slot(concurrent.futures.Future)
+    def _task_finished(self, f):
+        """
+        Parameters
+        ----------
+        f : Future
+            The future instance holding the built model
+        """
+        assert self.thread() is QThread.currentThread()
+        assert self._task is not None
+        assert self._task.future is f
+        assert f.done()
+
+        self.setBlocking(False)
+
+        self._task = None
+        self.progressBarFinished()
+
+        try:
+            self.model = f.result()
+        except Exception as ex:  # pylint: disable=broad-except
+            # Log the exception with a traceback
+            log = logging.getLogger()
+            log.exception(__name__, exc_info=True)
+            self.model = None
+            self.show_fitting_failed(ex)
+        else:
+            self.model.name = self.learner_name
+            self.model.instances = self.data
+            self.Outputs.model.send(self.model)
+
+    def cancel(self):
+        """
+        Cancel the current task (if any).
+        """
+        if self._task is not None:
+            self._task.cancel()
+            assert self._task.future.done()
+            # disconnect the `_task_finished` slot
+            self._task.watcher.done.disconnect(self._task_finished)
+            self._task = None
+        # threads use signals to run functions in the main thread and some
+        # can still be quoued (perhaps change)
+        qApp.processEvents()
+        self.progressBarFinished()
+        self.setBlocking(False)
+
+    def onDeleteWidget(self):
+        self.cancel()
+        super().onDeleteWidget()
 
 
 if __name__ == "__main__":
