@@ -51,6 +51,8 @@ and initialize the task field.
    :start-after: start-snippet-3
    :end-before: end-snippet-3
 
+All code snippets are from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`.
+
 
 ***************************
 Starting a task in a thread
@@ -63,7 +65,8 @@ In `handleNewSignals` we call `_update`.
    :end-before: end-snippet-4
 
 
-And finally the `_update` function that will start/schedule all updates.
+And finally the `_update` function (from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`)
+that will start/schedule all updates.
 
 .. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
    :start-after: start-snippet-5
@@ -112,8 +115,8 @@ a FutureWatcher instance to notify us when the task completes (via a
 Collecting results
 ******************
 
-In `_task_finished` we handle the completed task (either success or failure)
-and then update the displayed score table.
+In `_task_finished` (from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`)
+we handle the completed task (either success or failure) and then update the displayed score table.
 
 .. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
    :start-after: start-snippet-9
