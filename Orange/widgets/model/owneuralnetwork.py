@@ -87,7 +87,7 @@ class OWNNLearner(OWBaseLearner):
             label="Alpha:", decimals=5, alignment=Qt.AlignRight,
             callback=self.settings_changed, controlWidth=80)
         self.max_iter_spin = gui.spin(
-            box, self, "max_iterations", 10, 300, step=10,
+            box, self, "max_iterations", 10, 10000, step=10,
             label="Max iterations:", orientation=Qt.Horizontal,
             alignment=Qt.AlignRight, callback=self.settings_changed,
             controlWidth=80)
