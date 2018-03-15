@@ -110,6 +110,12 @@ a FutureWatcher instance to notify us when the task completes (via a
    :start-after: start-snippet-8
    :end-before: end-snippet-8
 
+For the above code to work, the `setProgressValue` needs defined as a pyqtSlot.
+
+.. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
+   :start-after: start-snippet-progress
+   :end-before: end-snippet-progress
+
 
 ******************
 Collecting results
