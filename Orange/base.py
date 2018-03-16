@@ -242,12 +242,9 @@ class Model(Reprable):
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
-        elif isinstance(data, Instance):
-            if data.domain != self.domain:
-                data = Instance(self.domain, data)
-            data = Table(data.domain, [data])
-            prediction = self.predict_storage(data)
-        elif isinstance(data, Table):
+        elif isinstance(data, (Table, Instance)):
+            if isinstance(data, Instance):
+                data = Table(data.domain, [data])
             if data.domain != self.domain:
                 data = data.transform(self.domain)
             prediction = self.predict_storage(data)
