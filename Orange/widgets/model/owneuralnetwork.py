@@ -1,8 +1,8 @@
 from functools import partial
+import copy
 import logging
 import re
 import sys
-from unittest.mock import patch
 import concurrent.futures
 
 from AnyQt.QtWidgets import QApplication, qApp
@@ -18,7 +18,6 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.concurrent import (
     ThreadExecutor, FutureWatcher, methodinvoke
 )
-
 
 
 class Task:
@@ -152,32 +151,20 @@ class OWNNLearner(OWBaseLearner):
 
         max_iter = self.learner.kwargs["max_iter"]
 
-        def callback(iteration=None):
+        def callback(iteration):
             if task.cancelled:
                 raise CancelThreadException()  # this stop the thread
-            if iteration is not None:
-                set_progress(iteration/max_iter*100)
+            set_progress(iteration/max_iter*100)
 
-        def print_callback(*args, **kwargs):
-            iters = None
-            # try to parse iteration number
-            if args and args[0] and isinstance(args[0], str):
-                find = re.findall(r"Iteration (\d+)", args[0])
-                if find:
-                    iters = int(find[0])
-            callback(iters)
+        # copy to set the callback so that the learner output is not modified
+        # (currently we can not pass callbacks to learners __call__)
+        learner = copy.copy(self.learner)
+        learner.callback = callback
 
         def build_model(data, learner):
-            if learner.kwargs["solver"] != "lbfgs":
-                # enable verbose printouts within scikit and redirect them
-                with patch.dict(learner.kwargs, {"verbose": True}),\
-                     patch("builtins.print", print_callback):
-                    return learner(data)
-            else:
-                # lbfgs solver uses different mechanism
-                return learner(data)
+            return learner(data)
 
-        build_model_func = partial(build_model, self.data, self.learner)
+        build_model_func = partial(build_model, self.data, learner)
 
         self.progressBarInit()
 
