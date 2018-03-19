@@ -581,6 +581,7 @@ class WidgetManager(QObject):
                 widget.close()
                 widget.saveSettings()
                 widget.onDeleteWidget()
+                widget.deleteLater()
 
             event.accept()
             return True
