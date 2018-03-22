@@ -639,16 +639,21 @@ class WidgetManager(QObject):
         A widget processing state has changed (progressBarInit/Finished)
         """
         widget = self.sender()
-        try:
-            node = self.node_for_widget(widget)
-        except KeyError:
-            return
 
         if state:
             self.__widget_processing_state[widget] |= self.ProcessingUpdate
         else:
             self.__widget_processing_state[widget] &= ~self.ProcessingUpdate
-        self.__update_node_processing_state(node)
+
+        # propagate the change to the workflow model.
+        try:
+            # we can still track widget state after it was removed from the
+            # workflow model (`__delay_delete`)
+            node = self.node_for_widget(widget)
+        except KeyError:
+            pass
+        else:
+            self.__update_node_processing_state(node)
 
     def __on_processing_started(self, node):
         """
@@ -708,8 +713,12 @@ class WidgetManager(QObject):
     def __try_delete(self, widget):
         if self.__widget_processing_state[widget] == 0:
             self.__delay_delete.remove(widget)
-            widget.deleteLater()
             del self.__widget_processing_state[widget]
+            widget.blockingStateChanged.disconnect(
+                self.__on_blocking_state_changed)
+            widget.processingStateChanged.disconnect(
+                self.__on_processing_state_changed)
+            widget.deleteLater()
 
     def __on_env_changed(self, key, newvalue, oldvalue):
         # Notify widgets of a runtime environment change
