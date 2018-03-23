@@ -329,6 +329,9 @@ class OWSieveDiagram(OWWidget):
         def width(txt):
             return text(txt, 0, 0, show=False).boundingRect().width()
 
+        def height(txt):
+            return text(txt, 0, 0, show=False).boundingRect().height()
+
         def fmt(val):
             return str(int(val)) if val % 1 == 0 else "{:.2f}".format(val)
 
@@ -431,7 +434,7 @@ class OWSieveDiagram(OWWidget):
         chi = ChiSqStats(self.discrete_data, disc_x, disc_y)
         max_ylabel_w = max((width(val) for val in disc_y.values), default=0)
         max_ylabel_w = min(max_ylabel_w, 200)
-        x_off = width(attr_x.name) + max_ylabel_w
+        x_off = height(attr_y.name) + max_ylabel_w
         y_off = 15
         square_size = min(view.width() - x_off - 35, view.height() - y_off - 80)
         square_size = max(square_size, 10)
