@@ -229,7 +229,7 @@ class AddonManagerWidget(QWidget):
             placeholderText=self.tr("Filter")
         )
         self.__only_trusted = QCheckBox(
-            self.tr("Show only trusted add-ons"),
+            self.tr("Show only official add-ons"),
         )
 
         topline = QHBoxLayout()
