@@ -229,7 +229,7 @@ class AddonManagerWidget(QWidget):
             placeholderText=self.tr("Filter")
         )
         self.__only_trusted = QCheckBox(
-            self.tr("Show only trusted add-ons"),
+            self.tr("Show only official add-ons"),
         )
 
         topline = QHBoxLayout()
@@ -706,6 +706,10 @@ def list_pypi_addons():
     releases = multicall()
     multicall = xmlrpc.client.MultiCall(pypi)
     for addon, versions in zip(addons, releases):
+        # Skip unavailable
+        if not versions:
+            continue
+
         # Workaround for PyPI bug of search not returning the latest versions
         # https://bitbucket.org/pypa/pypi/issues/326/my-package-doesnt-appear-in-the-search
         version_ = max(versions, key=version.LooseVersion)
