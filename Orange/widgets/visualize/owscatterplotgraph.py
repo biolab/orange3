@@ -36,6 +36,8 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 SELECTION_WIDTH = 5
 MAX = 11  # maximum number of colors or shapes (including Other)
+MAX_POINTS_IN_TOOLTIP = 20
+
 
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
@@ -1227,8 +1229,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
         points = self.scatterplot_item.pointsAt(act_pos)
+
         if len(points):
-            text = "<hr/>".join(point_data(point) for point in points)
+            if len(points) > MAX_POINTS_IN_TOOLTIP:
+                text = "{} instances<hr/>{}<hr/>...".format(
+                    len(points),
+                    "<hr/>".join(point_data(point) for point in points[:5])
+                )
+            else:
+                text = "<hr/>".join(point_data(point) for point in points)
+
             QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
             return True
         else:
