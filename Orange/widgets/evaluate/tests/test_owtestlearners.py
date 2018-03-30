@@ -29,6 +29,12 @@ class TestOWTestLearners(WidgetTest):
         super().setUp()
         self.widget = self.create_widget(OWTestLearners)  # type: OWTestLearners
 
+        self.scores_domain = Domain(
+            [ContinuousVariable("a"), ContinuousVariable("b")],
+            [DiscreteVariable("c", values=["y", "n"])])
+
+        self.scores_table_values = [[1, 1, 1.23, 23.8], [1., 2., 3., 4.]]
+
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
@@ -320,6 +326,100 @@ class TestOWTestLearners(WidgetTest):
             "SetosaLearner")
 
         self.widget.hide()
+
+    def _retrieve_scores(self):
+        w = self.widget
+        auc = w.view.model().item(0, 1).text()
+        auc = float(auc) if auc != "" else None
+        ca = float(w.view.model().item(0, 2).text())
+        f1 = float(w.view.model().item(0, 3).text())
+        precision = float(w.view.model().item(0, 4).text())
+        recall = float(w.view.model().item(0, 5).text())
+        return auc, ca, f1, precision, recall
+
+    def _test_scores(self, train_data, test_data, learner, sampling, n_folds):
+        w = self.widget  #: OWTestLearners
+        w.controls.resampling.buttons[sampling].click()
+        if n_folds is not None:
+            w.n_folds = n_folds
+
+        self.send_signal(self.widget.Inputs.train_data, train_data)
+        if test_data is not None:
+            self.send_signal(self.widget.Inputs.test_data, test_data)
+        self.send_signal(self.widget.Inputs.learner, learner, 0, wait=5000)
+        return self._retrieve_scores()
+
+    def test_scores_constant_all_same(self):
+        table = Table(
+            self.scores_domain,
+            list(zip(*self.scores_table_values + [list("yyyy")]))
+        )
+
+        self.assertTupleEqual(self._test_scores(
+            table, table, ConstantLearner(), OWTestLearners.TestOnTest, None),
+                              (None, 1, 1, 1, 1))
+
+    def test_scores_log_reg_overfitted(self):
+        table = Table(
+            self.scores_domain,
+            list(zip(*self.scores_table_values + [list("yyyn")]))
+        )
+
+        self.assertTupleEqual(self._test_scores(
+            table, table, LogisticRegressionLearner(),
+            OWTestLearners.TestOnTest, None),
+                              (1, 1, 1, 1, 1))
+
+    def test_scores_log_reg_bad(self):
+        table_train = Table(
+            self.scores_domain,
+            list(zip(*self.scores_table_values + [list("nnny")]))
+        )
+        table_test = Table(
+            self.scores_domain,
+            list(zip(*self.scores_table_values + [list("yyyn")]))
+        )
+
+        self.assertTupleEqual(self._test_scores(
+            table_train, table_test, LogisticRegressionLearner(),
+            OWTestLearners.TestOnTest, None),
+                              (0, 0, 0, 0, 0))
+
+    def test_scores_log_reg_bad2(self):
+        table_train = Table(
+            self.scores_domain,
+            list(zip(*(self.scores_table_values + [list("nnyy")]))))
+        table_test = Table(
+            self.scores_domain,
+            list(zip(*(self.scores_table_values + [list("yynn")]))))
+        self.assertTupleEqual(self._test_scores(
+            table_train, table_test, LogisticRegressionLearner(),
+            OWTestLearners.TestOnTest, None),
+                              (0, 0, 0, 0, 0))
+
+    def test_scores_log_reg_advanced(self):
+        table_train = Table(
+            self.scores_domain, list(zip(
+                [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yyynn"))
+        )
+        table_test = Table(
+            self.scores_domain, list(zip(
+                [1, 1, 1.23, 23.8, 5.], [1., 2., 3., 4., 3.], "yynnn"))
+        )
+
+        self.assertTupleEqual(self._test_scores(
+            table_train, table_test, LogisticRegressionLearner(),
+            OWTestLearners.TestOnTest, None),
+                              (0.667, 0.8, 0.8, 0.867, 0.8))
+
+    def test_scores_cross_validation(self):
+        """
+        Test more than two classes and cross-validation
+        """
+        self.assertTupleEqual(self._test_scores(
+            Table("iris")[::15], None, LogisticRegressionLearner(),
+            OWTestLearners.KFold, 0),
+                              (0.917, 0.7, 0.6, 0.55, 0.7))
 
 
 class TestHelpers(unittest.TestCase):
