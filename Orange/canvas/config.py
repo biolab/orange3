@@ -8,6 +8,8 @@ import sys
 import logging
 import pickle as pickle
 import itertools
+from typing import List
+from types import SimpleNamespace
 
 import pkg_resources
 
@@ -311,3 +313,61 @@ def application_icon():
     )
     return QIcon(path)
 
+
+FEEDBACK_URL = "http://orange.biolab.si/survey/long.html"
+
+
+class WelcomeScreenSpecs(SimpleNamespace):
+    class Item(SimpleNamespace):
+        path = ""  # type: str
+        icon = ""  # type: str
+        text = ""  # type: str
+        tooltip = ""  # type: str
+
+    image = ""  # type: str
+    css = ""  # Any extra css to apply to the welcome screen widget
+    items = []  # type: List[WelcomeScreenSpecs.Item]
+
+
+def welcome_screen_specs():
+    """
+    Returns
+    -------
+    spec : WelcomeScreenSpecs
+    """
+    def resource_filename(filename):
+        return pkg_resources.resource_filename(
+            "Orange.canvas.application.workflows", filename)
+
+    items = [
+        WelcomeScreenSpecs.Item(
+            path=resource_filename("110-file-and-data-table-widget.ows"),
+            icon="canvas_icons:orange-canvas.svg",
+            text="Lorem ipsum",
+            tooltip="Something to do with latin",
+        ),
+        WelcomeScreenSpecs.Item(
+            path=resource_filename("310-clustering.ows"),
+            icon="canvas_icons:orange-canvas.svg",
+            text="Dolor sit",
+            tooltip="And now for something completely different"
+        ),
+        WelcomeScreenSpecs.Item(
+            path=resource_filename("450-cross-validation.ows"),
+            icon="canvas_icons:orange-canvas.svg",
+            text="Dolor sit",
+            tooltip=(
+                '<p style="color: #555;">'
+                '<div style="font-size: large; white-space: nowrap;" >'
+                'And now for something <b>completely different</b><hr/>'
+                '</div>'
+                '&hellip;'
+                '</p>'
+            )
+        )
+    ]
+    return WelcomeScreenSpecs(
+        image="canvas_icons:orange-start-background.png",
+        css="StartItem { background-color: rgb(123, 164, 214) }",
+        items=items,
+    )

@@ -3,7 +3,7 @@ A dialog widget for selecting an item.
 """
 
 from AnyQt.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QLabel, QSizePolicy
+    QDialog, QWidget, QVBoxLayout, QDialogButtonBox, QSizePolicy
 )
 from AnyQt.QtCore import Qt, QStringListModel
 from AnyQt.QtCore import pyqtSignal as Signal
@@ -29,16 +29,10 @@ class PreviewDialog(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         self.setContentsMargins(0, 0, 0, 0)
 
-        heading = self.tr("Preview")
-        heading = "<h3>{0}</h3>".format(heading)
-        self.__heading = QLabel(heading, self,
-                                objectName="heading")
-
-        self.__heading.setContentsMargins(12, 12, 12, 0)
-
-        self.__browser = previewbrowser.PreviewBrowser(self)
-
-        self.__buttons = QDialogButtonBox(QDialogButtonBox.Open | \
+        self.__browser = previewbrowser.PreviewBrowser(
+            self, heading="<h3>{0}</h3>".format(self.tr("Preview"))
+        )
+        self.__buttons = QDialogButtonBox(QDialogButtonBox.Open |
                                           QDialogButtonBox.Cancel,
                                           Qt.Horizontal,)
         self.__buttons.button(QDialogButtonBox.Open).setAutoDefault(True)
@@ -56,7 +50,6 @@ class PreviewDialog(QDialog):
 
         buttons_l.addWidget(self.__buttons)
 
-        layout.addWidget(self.__heading)
         layout.addWidget(self.__browser)
 
         layout.addWidget(buttons)
@@ -101,7 +94,7 @@ class PreviewDialog(QDialog):
         by default).
 
         """
-        self.__heading.setText(heading)
+        self.__browser.setHeading(heading)
 
     def heading(self):
         """Return the heading string.

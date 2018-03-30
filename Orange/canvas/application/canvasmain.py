@@ -14,10 +14,10 @@ import pkg_resources
 from AnyQt.QtWidgets import (
     QMainWindow, QWidget, QAction, QActionGroup, QMenu, QMenuBar, QDialog,
     QFileDialog, QMessageBox, QVBoxLayout, QSizePolicy, QToolBar, QToolButton,
-    QDockWidget, QApplication, QShortcut
+    QDockWidget, QApplication, QShortcut, QDialogButtonBox, QPushButton,
+    QCheckBox
 )
-from AnyQt.QtGui import QColor, QIcon, QDesktopServices, QKeySequence
-
+from AnyQt.QtGui import QColor, QIcon, QImage, QDesktopServices, QKeySequence
 from AnyQt.QtCore import (
     Qt, QEvent, QSize, QUrl, QTimer, QFile, QByteArray, QSettings, QT_VERSION,
     QObject
@@ -69,7 +69,7 @@ from ..scheme import widgetsscheme
 from ..scheme.readwrite import scheme_load, sniff_version
 
 from . import welcomedialog
-from ..preview import previewdialog, previewmodel
+from ..preview import previewdialog, previewmodel, previewbrowser
 
 from .. import config
 
@@ -95,6 +95,10 @@ def style_icons(widget, standard_pixmap):
     return QIcon(widget.style().standardPixmap(standard_pixmap))
 
 
+def resource_path(name):
+    return pkg_resources.resource_filename(config.__name__, name)
+
+
 def canvas_icons(name):
     """Return the named canvas icon.
     """
@@ -102,10 +106,7 @@ def canvas_icons(name):
     if icon_file.exists():
         return QIcon("canvas_icons:" + name)
     else:
-        return QIcon(pkg_resources.resource_filename(
-                      config.__name__,
-                      os.path.join("icons", name))
-                     )
+        return QIcon(resource_path("icons/" + name))
 
 
 class FakeToolBar(QToolBar):
@@ -437,7 +438,7 @@ class CanvasMainWindow(QMainWindow):
             QAction(self.tr("Welcome"), self,
                     objectName="welcome-action",
                     toolTip=self.tr("Show welcome screen."),
-                    triggered=self.welcome_dialog,
+                    triggered=self.welcome_dialog_paged,
                     )
 
         self.get_started_action = \
@@ -709,6 +710,12 @@ class CanvasMainWindow(QMainWindow):
         self.help_menu.addAction(self.welcome_action)
         self.help_menu.addAction(self.tutorials_action)
         self.help_menu.addAction(self.examples_action)
+        self.help_menu.addSeparator()
+        if config.FEEDBACK_URL:
+            a = self.help_menu.addAction("Help us improve...")
+            a.triggered.connect(
+                lambda: QDesktopServices.openUrl(QUrl(config.FEEDBACK_URL)))
+
         menu_bar.addMenu(self.help_menu)
 
         self.setMenuBar(menu_bar)
@@ -1414,10 +1421,191 @@ class CanvasMainWindow(QMainWindow):
 
         return status
 
+    def welcome_dialog_paged(self):
+        """
+        Show a modal multipaged welcome screen.
+        """
+        dlg = welcomedialog.PagedDialog(
+            self, windowTitle=self.tr("Orange Data Mining"),
+        )
+        dlg.setWindowModality(Qt.ApplicationModal)
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+        dlg.layout().setSizeConstraint(QVBoxLayout.SetFixedSize)
+        main = welcomedialog.FancyWelcomeScreen()
+        spec = config.welcome_screen_specs()
+        if spec.image:
+            background = QImage(spec.image)
+        else:
+            background = QImage("canvas_icons:orange-start-background.png")
+        main.setImage(background)
+
+        if spec.css:
+            main.setStyleSheet(spec.css)
+        else:
+            main.setStyleSheet(
+                "StartItem { background-color: rgb(123, 164, 214) }"
+            )
+
+        def decorate_icon(icon):
+            return welcomedialog.decorate_welcome_icon(icon, "antiquewhite")
+
+        for i, item in zip(range(3), spec.items):
+            main.setItemText(i, item.text)
+            main.setItemToolTip(i, item.tooltip)
+            main.setItemIcon(i, decorate_icon(QIcon(item.icon)))
+            main.item(i).setProperty("path", item.path)
+
+        main.setCurrentIndex(0)
+        main.activated.connect(lambda: openselectedbutton.click())
+
+        PageWelcome = dlg.addPage(
+            canvas_icons("orange-canvas.svg"), "Welcome", main
+        )
+        examples = workflows.example_workflows()
+        items = [previewmodel.PreviewItem(path=t.abspath()) for t in examples]
+        model = previewmodel.PreviewModel(items=items)
+        model.delayedScanUpdate()
+        browser = previewbrowser.PreviewBrowser(
+            heading="<h2>Templates</h2>", previewMargins=25
+        )
+        browser.setModel(model)
+
+        PageTemplates = dlg.addPage(
+            self.examples_action.icon(), "Templates", browser
+        )
+        browser.activated.connect(lambda: openselectedbutton.click())
+
+        recent = [previewmodel.PreviewItem(name=title, path=path)
+                  for title, path in self.recent_schemes]
+        model = previewmodel.PreviewModel(items=recent)
+        browser = previewbrowser.PreviewBrowser(
+            heading="<h2>Recent</h2>", previewMargins=25
+        )
+        browser.setModel(model)
+        model.delayedScanUpdate()
+
+        PageRecent = dlg.addPage(
+            self.recent_action.icon(), "Recent", browser
+        )
+        browser.activated.connect(lambda: openselectedbutton.click())
+        dlg.setPageEnabled(PageRecent, model.rowCount() > 0)
+
+        page = welcomedialog.SingleLinkPage(
+            image=QImage(resource_path("icons/getting-started-video-tutorials.png")),
+            heading="Getting Started",
+            link=QUrl(LINKS["youtube"]),
+        )
+        page.setContentsMargins(25, 25, 25, 25)
+        PageGetStarted = dlg.addPage(
+            canvas_icons("YouTube.svg"), "Get Started", page,
+        )
+        buttons = dlg.buttonBox()
+        buttons.setVisible(True)
+        buttons.setStandardButtons(QDialogButtonBox.Open |
+                                   QDialogButtonBox.Cancel)
+        # choose the selected workflow button
+        openselectedbutton = buttons.button(QDialogButtonBox.Open)
+        openselectedbutton.setText(self.tr("Open"))
+        openselectedbutton.setToolTip("Open the selected workflow")
+        openselectedbutton.setDefault(True)
+
+        newbutton = QPushButton(
+            "New", toolTip="Create a new workflow")
+        s = QShortcut(QKeySequence.New, newbutton)
+        s.activated.connect(newbutton.click)
+        buttons.addButton(newbutton, QDialogButtonBox.AcceptRole)
+
+        openexisting = QPushButton(
+            "Open Existing\N{HORIZONTAL ELLIPSIS}",
+            toolTip="Open an existing workflow file"
+        )
+        s = QShortcut(QKeySequence.Open, dlg)
+        s.activated.connect(openexisting.click)
+        buttons.addButton(openexisting, QDialogButtonBox.AcceptRole)
+
+        settings = QSettings()
+
+        show_start_key = "startup/show-welcome-screen"
+        show_start = QCheckBox(
+            "Show at startup",
+            checked=settings.value(show_start_key, True, type=bool)
+        )
+        # Abusing ResetRole to push the check box to the left in all button
+        # layouts.
+        buttons.addButton(show_start, QDialogButtonBox.ResetRole)
+
+        def update_show_at_startup(value):
+            settings.setValue(show_start_key, value)
+        show_start.toggled.connect(update_show_at_startup)
+
+        def on_page_changed(index):
+            if index == PageWelcome:
+                openselectedbutton.setEnabled(True)
+            elif index == PageTemplates:
+                openselectedbutton.setEnabled(bool(examples))
+            elif index == PageRecent:
+                openselectedbutton.setEnabled(bool(recent))
+            elif index == PageGetStarted:
+                openselectedbutton.setEnabled(False)
+            else:
+                openselectedbutton.setEnabled(False)
+        dlg.currentIndexChanged.connect(on_page_changed)
+
+        def open_example_workflow(path):
+            # open a workflow without filename/directory tracking.
+            if not self.pre_close_save():
+                return QDialog.Rejected
+
+            wf = self.new_scheme_from(path)
+            if wf is not None:
+                self.set_new_scheme(wf)
+                return QDialog.Accepted
+            else:
+                return QDialog.Rejected
+
+        def on_clicked(button):
+            current = dlg.currentIndex()
+            path = None
+            open_workflow_file = None
+            if current in {PageTemplates, PageWelcome}:
+                open_workflow_file = open_example_workflow
+            elif current == PageRecent:
+                open_workflow_file = self.open_scheme_file
+
+            if button is openselectedbutton and \
+                    current in {PageTemplates, PageRecent}:
+                w = dlg.widget(current)
+                assert isinstance(w, previewbrowser.PreviewBrowser)
+                assert w.currentIndex() != -1
+                model = w.model()
+                item = model.item(w.currentIndex())
+                path = item.path()
+            elif button is openselectedbutton and current == PageWelcome:
+                w = dlg.widget(current)
+                assert isinstance(w, welcomedialog.FancyWelcomeScreen)
+                assert w.currentIndex() != -1
+                path = w.item(w.currentIndex()).property("path")
+
+            if path is not None and \
+                    open_workflow_file(path) == QDialog.Accepted:
+                dlg.accept()
+        buttons.clicked.connect(on_clicked)
+
+        def on_open_existing():
+            if self.open_scheme() == QDialog.Accepted:
+                dlg.accept()
+        openexisting.clicked.connect(on_open_existing)
+
+        def on_new_workflow():
+            if self.new_scheme() == QDialog.Accepted:
+                dlg.accept()
+        newbutton.clicked.connect(on_new_workflow)
+
+        dlg.show()
+
     def welcome_dialog(self):
         """Show a modal welcome dialog for Orange Canvas.
         """
-
         dialog = welcomedialog.WelcomeDialog(self)
         dialog.setWindowTitle(self.tr("Welcome to Orange Data Mining"))
 

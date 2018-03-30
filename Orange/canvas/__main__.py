@@ -469,7 +469,7 @@ def main(argv=None):
     app.fileOpenRequest.connect(canvas_window.open_scheme_file)
 
     if want_welcome and not args and not open_requests:
-        canvas_window.welcome_dialog()
+        canvas_window.welcome_dialog_paged()
 
     elif args:
         log.info("Loading a scheme from the command line argument %r",
