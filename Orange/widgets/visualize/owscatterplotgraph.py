@@ -36,7 +36,7 @@ from Orange.widgets.settings import Setting, ContextSetting
 
 SELECTION_WIDTH = 5
 MAX = 11  # maximum number of colors or shapes (including Other)
-MAX_POINTS_IN_TOOLTIP = 20
+MAX_POINTS_IN_TOOLTIP = 5
 
 
 class PaletteItemSample(ItemSample):
@@ -1234,7 +1234,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             if len(points) > MAX_POINTS_IN_TOOLTIP:
                 text = "{} instances<hr/>{}<hr/>...".format(
                     len(points),
-                    "<hr/>".join(point_data(point) for point in points[:5])
+                    "<hr/>".join(point_data(point) for point in points[:MAX_POINTS_IN_TOOLTIP])
                 )
             else:
                 text = "<hr/>".join(point_data(point) for point in points)
