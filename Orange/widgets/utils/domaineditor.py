@@ -40,8 +40,8 @@ class VarTableModel(QAbstractTableModel):
     name2type = dict(zip(typenames, vartypes))
     type2name = dict(zip(vartypes, typenames))
 
-    def __init__(self, variables):
-        super().__init__()
+    def __init__(self, variables, *args):
+        super().__init__(*args)
         self.variables = variables
 
     def set_variables(self, variables):
@@ -186,7 +186,8 @@ class DomainEditor(QTableView):
         widget.contextOpened.connect(lambda: self.model().set_variables(self.variables))
         widget.contextClosed.connect(lambda: self.model().set_variables([]))
 
-        self.setModel(VarTableModel(self.variables))
+        self.setModel(VarTableModel(self.variables, self))
+
         self.setSelectionMode(QTableView.NoSelection)
         self.horizontalHeader().setStretchLastSection(True)
         self.setShowGrid(False)
