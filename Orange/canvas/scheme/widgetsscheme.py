@@ -136,6 +136,10 @@ class WidgetManager(QObject):
 
     InputUpdate, BlockingUpdate, ProcessingUpdate, Initializing = ProcessingState
 
+    #: State mask for widgets that cannot be deleted immediately
+    #: (see __try_delete)
+    _DelayDeleteMask = InputUpdate | BlockingUpdate
+
     #: Widget initialization states
     Delayed = namedtuple(
         "Delayed", ["node"])
@@ -182,9 +186,6 @@ class WidgetManager(QObject):
         # the time in an input update loop and could not be deleted
         # immediately
         self.__delay_delete = set()
-
-        #: Deleted/removed during creation/initialization.
-        self.__delete_after_create = []
 
         #: processing state flags for all widgets (including the ones
         #: in __delay_delete).
@@ -386,16 +387,17 @@ class WidgetManager(QObject):
         Delete the OWBaseWidget instance.
         """
         widget.close()
-
         # Save settings to user global settings.
         widget.saveSettings()
-
         # Notify the widget it will be deleted.
         widget.onDeleteWidget()
 
-        if self.__widget_processing_state[widget] != 0:
+        state = self.__widget_processing_state[widget]
+        if state & WidgetManager._DelayDeleteMask:
             # If the widget is in an update loop and/or blocking we
             # delay the scheduled deletion until the widget is done.
+            log.debug("Widget %s removed but still in state :%s. "
+                      "Deferring deletion.", widget, state)
             self.__delay_delete.add(widget)
         else:
             widget.deleteLater()
@@ -581,6 +583,7 @@ class WidgetManager(QObject):
                 widget.close()
                 widget.saveSettings()
                 widget.onDeleteWidget()
+                widget.deleteLater()
 
             event.accept()
             return True
@@ -638,16 +641,21 @@ class WidgetManager(QObject):
         A widget processing state has changed (progressBarInit/Finished)
         """
         widget = self.sender()
-        try:
-            node = self.node_for_widget(widget)
-        except KeyError:
-            return
 
         if state:
             self.__widget_processing_state[widget] |= self.ProcessingUpdate
         else:
             self.__widget_processing_state[widget] &= ~self.ProcessingUpdate
-        self.__update_node_processing_state(node)
+
+        # propagate the change to the workflow model.
+        try:
+            # we can still track widget state after it was removed from the
+            # workflow model (`__delay_delete`)
+            node = self.node_for_widget(widget)
+        except KeyError:
+            pass
+        else:
+            self.__update_node_processing_state(node)
 
     def __on_processing_started(self, node):
         """
@@ -705,10 +713,16 @@ class WidgetManager(QObject):
         node.set_processing_state(1 if state else 0)
 
     def __try_delete(self, widget):
-        if self.__widget_processing_state[widget] == 0:
+        if not (self.__widget_processing_state[widget]
+                & WidgetManager._DelayDeleteMask):
+            log.debug("Delayed delete for widget %s", widget)
             self.__delay_delete.remove(widget)
-            widget.deleteLater()
             del self.__widget_processing_state[widget]
+            widget.blockingStateChanged.disconnect(
+                self.__on_blocking_state_changed)
+            widget.processingStateChanged.disconnect(
+                self.__on_processing_state_changed)
+            widget.deleteLater()
 
     def __on_env_changed(self, key, newvalue, oldvalue):
         # Notify widgets of a runtime environment change
