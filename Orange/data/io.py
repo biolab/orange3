@@ -8,7 +8,7 @@ import sys
 import warnings
 
 from ast import literal_eval
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
@@ -21,7 +21,6 @@ from urllib.request import urlopen, Request
 from fnmatch import fnmatch
 from glob import glob
 
-import bottleneck as bn
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
@@ -114,7 +113,7 @@ def guess_data_type(orig_values):
     """
     Use heuristics to guess data type.
     """
-    valuemap, values = [], orig_values
+    valuemap, values = None, orig_values
     is_discrete = is_discrete_values(orig_values)
     if is_discrete:
         valuemap = sorted(is_discrete)
@@ -137,53 +136,42 @@ def guess_data_type(orig_values):
 
 def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
                       domain_vars, existing_var, new_var_name, data=None):
-    def reorder_values():
-        new_order, old_order = \
-            var.values, coltype_kwargs.get('values', var.values)
-        if new_order != old_order:
-            offset = len(new_order)
-            column = values if data.ndim > 1 else data
-            column += offset
-            for _, val in enumerate(var.values):
-                try:
-                    oldval = old_order.index(val)
-                except ValueError:
-                    continue
-                bn.replace(column, offset + oldval, new_order.index(val))
+    assert issubclass(coltype, Variable)
 
-    def get_number_of_decimals():
-        ndecimals = max((len(value) - value.find(".")
-                         for value in orig_values
-                         if isinstance(value, str) and "." in value),
+    def get_number_of_decimals(values):
+        len_ = len
+        ndecimals = max((len_(value) - value.find(".")
+                         for value in values if "." in value),
                         default=1)
         return ndecimals - 1
 
-    if valuemap:
-        # Map discrete data to ints
-        def valuemap_index(val):
-            try:
-                return valuemap.index(val)
-            except ValueError:
-                return np.nan
-
-        values = np.vectorize(valuemap_index, otypes=[float])(orig_values)
+    if issubclass(coltype, DiscreteVariable) and valuemap is not None:
         coltype_kwargs.update(values=valuemap)
 
+    if existing_var:
+        # Use existing variable if available
+        var = coltype.make(existing_var.strip(), **coltype_kwargs)
+    else:
+        # Never use existing for un-named variables
+        var = coltype(new_var_name, **coltype_kwargs)
+
+    if isinstance(var, DiscreteVariable):
+        # Map discrete data to 'ints' (or at least what passes as int around
+        # here)
+        mapping = defaultdict(
+            lambda: np.nan,
+            {val: i for i, val in enumerate(var.values)},
+        )
+        mapping[""] = np.nan
+        mapvalues_ = np.frompyfunc(mapping.__getitem__, 1, 1)
+
+        def mapvalues(arr):
+            arr = np.asarray(arr, dtype=object)
+            return mapvalues_(arr, out=np.empty_like(arr, dtype=float))
+        values = mapvalues(orig_values)
+
     if coltype is StringVariable:
-        values = ['' if i is np.nan else i for i in orig_values]
-
-    var = None
-    if domain_vars is not None:
-        if existing_var:
-            # Use existing variable if available
-            var = coltype.make(existing_var.strip(), **coltype_kwargs)
-        else:
-            # Never use existing for un-named variables
-            var = coltype(new_var_name, **coltype_kwargs)
-
-        if var.is_discrete and not var.ordered:
-            # Reorder discrete values to match existing variable
-            reorder_values()
+        values = orig_values
 
     # ContinuousVariable.number_of_decimals is supposed to be handled by
     # ContinuousVariable.to_val. In the interest of speed, the reader bypasses
@@ -191,7 +179,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
     # The number of decimals is increased if not set manually (in which case
     # var.adjust_decimals would be 0).
     if isinstance(var, ContinuousVariable) and var.adjust_decimals:
-        ndecimals = get_number_of_decimals()
+        ndecimals = get_number_of_decimals(orig_values)
         if var.adjust_decimals == 2 or ndecimals > var.number_of_decimals:
             var.number_of_decimals = ndecimals
             var.adjust_decimals = 1
@@ -550,8 +538,7 @@ class FileFormat(metaclass=FileFormatMeta):
     def data_table(cls, data, headers=None):
         """
         Return Orange.data.Table given rows of `headers` (iterable of iterable)
-        and rows of `data` (iterable of iterable; if ``numpy.ndarray``, might
-        as well **have it sorted column-major**, e.g. ``order='F'``).
+        and rows of `data` (iterable of iterable).
 
         Basically, the idea of subclasses is to produce those two iterables,
         however they might.
@@ -593,8 +580,9 @@ class FileFormat(metaclass=FileFormatMeta):
             return lst
 
         # Ensure all data is of equal width in a column-contiguous array
-        data = np.array([_equal_length(list(row)) for row in data if any(row)],
-                        copy=False, dtype=object, order='F')
+        data = [_equal_length([s.strip() for s in row])
+                for row in data if any(row)]
+        data = np.array(data, dtype=object, order='F')
 
         # Data may actually be longer than headers were
         try:
@@ -622,6 +610,12 @@ class FileFormat(metaclass=FileFormatMeta):
                     uses[name] += 1
                     names[i] = "{}_{}".format(name, uses[name])
 
+        # check only against str values
+        missing = {v for v in MISSING_VALUES if isinstance(v, str)}
+        # Note: The only speed benefit is from conversion to bool array
+        # by specifying the `out` parameter
+        isnastr = np.frompyfunc(missing.__contains__, 1, 1)
+        namask = np.empty(data.shape[0], dtype=bool)
         # Iterate through the columns
         for col in range(rowlen):
             flag = Flags(Flags.split(flags[col]))
@@ -630,31 +624,32 @@ class FileFormat(metaclass=FileFormatMeta):
 
             type_flag = types and types[col].strip()
             try:
-                orig_values = [np.nan if i in MISSING_VALUES else i
-                               for i in (i.strip() for i in data[:, col])]
+                orig_values = data[:, col]  # object array of str, NA are ""
             except IndexError:
-                # No data instances leads here
-                orig_values = []
-                # In this case, coltype could be anything. It's set as-is
-                # only to satisfy test_table.TableTestCase.test_append
-                coltype = DiscreteVariable
+                orig_values = np.array([], dtype=object)
+            namask = isnastr(orig_values, out=namask)
+            orig_values[namask] = ""
 
             coltype_kwargs = {}
-            valuemap = []
+            valuemap = None
             values = orig_values
 
             if type_flag in StringVariable.TYPE_HEADERS:
                 coltype = StringVariable
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
+                values = np.empty(data.shape[0], dtype=float)
                 try:
-                    values = [float(i) for i in orig_values]
+                    np.copyto(values, orig_values, casting="unsafe",
+                              where=~namask)
+                    values[namask] = np.nan
                 except ValueError:
                     for row, num in enumerate(orig_values):
-                        try:
-                            float(num)
-                        except ValueError:
-                            break
+                        if num != "":
+                            try:
+                                float(num)
+                            except ValueError:
+                                break
                     raise ValueError('Non-continuous value in (1-based) '
                                      'line {}, column {}'.format(row + len(headers) + 1,
                                                                  col + 1))
@@ -669,7 +664,7 @@ class FileFormat(metaclass=FileFormatMeta):
                     valuemap = Flags.split(type_flag)
                     coltype_kwargs.update(ordered=True)
                 else:
-                    valuemap = sorted(set(orig_values) - {np.nan})
+                    valuemap = sorted(set(orig_values) - {""})
 
             else:
                 # No known type specified, use heuristics
@@ -685,7 +680,6 @@ class FileFormat(metaclass=FileFormatMeta):
                 append_to = (Xcols, attrs)
 
             cols, domain_vars = append_to
-            cols.append(col)
 
             existing_var, new_var_name = None, None
             if domain_vars is not None:
@@ -693,17 +687,23 @@ class FileFormat(metaclass=FileFormatMeta):
                 if not existing_var:
                     new_var_name = next(NAMEGEN)
 
-            values, var = sanitize_variable(
-                valuemap, values, orig_values, coltype, coltype_kwargs,
-                domain_vars, existing_var, new_var_name, data)
+            if domain_vars is not None:
+                values, var = sanitize_variable(
+                    valuemap, values, orig_values, coltype, coltype_kwargs,
+                    domain_vars, existing_var, new_var_name, data)
+            else:
+                var = None
             if domain_vars is not None:
                 var.attributes.update(flag.attributes)
                 domain_vars.append(var)
 
-            # Write back the changed data. This is needeed to pass the
-            # correct, converted values into Table.from_numpy below
+            if isinstance(values, np.ndarray) and not values.flags.owndata:
+                values = values.copy()  # might view `data` (string columns)
+            cols.append(values)
+
             try:
-                data[:, col] = values
+                # allow gc to reclaim memory used by string values
+                data[:, col] = None
             except IndexError:
                 pass
 
@@ -712,11 +712,21 @@ class FileFormat(metaclass=FileFormatMeta):
         if not data.size:
             return Table.from_domain(domain, 0)
 
-        table = Table.from_numpy(domain,
-                                 data[:, Xcols].astype(float, order='C'),
-                                 data[:, Ycols].astype(float, order='C'),
-                                 data[:, Mcols].astype(object, order='C'),
-                                 data[:, Wcols].astype(float, order='C'))
+        X = Y = M = W = None
+        if Xcols:
+            X = np.c_[tuple(Xcols)]
+            assert X.dtype == np.float_
+        else:
+            X = np.empty((data.shape[0], 0), dtype=np.float_)
+        if Ycols:
+            Y = np.c_[tuple(Ycols)]
+            assert Y.dtype == np.float_
+        if Mcols:
+            M = np.c_[tuple(Mcols)].astype(object)
+        if Wcols:
+            W = np.c_[tuple(Wcols)].astype(float)
+
+        table = Table.from_numpy(domain, X, Y, M, W)
         return table
 
     @staticmethod
