@@ -25,10 +25,13 @@ def _count_nans_per_row_sparse(X, weights, dtype=None):
 
         w = sp.coo_matrix((data_weights, (nan_rows, nan_cols)), shape=X.shape)
         w = w.tocsr()
+        return np.asarray(w.sum(axis=1), dtype=dtype).ravel()
 
-        return np.fromiter((np.sum(row.data) for row in w), dtype=dtype)
-
-    return np.fromiter((np.isnan(row.data).sum() for row in X), dtype=dtype)
+    if isinstance(X, (sp.csr_matrix, sp.csc_matrix)):
+        X = type(X)((np.isnan(X.data), X.indices, X.indptr), X.shape)
+        return np.asarray(X.sum(axis=1), dtype=dtype).ravel()
+    else:  # pragma: no cover
+        raise TypeError("unsupported type '{}'".format(type(X).__name__))
 
 
 def sparse_count_implicit_zeros(x):

@@ -1,4 +1,3 @@
-import enum
 import logging
 import numbers
 import os
@@ -6,10 +5,11 @@ import sys
 import traceback
 
 from xml.sax.saxutils import escape
-from concurrent.futures import ThreadPoolExecutor, Future
+from concurrent.futures import ThreadPoolExecutor, Future  # pylint: disable=unused-import
 
-from types import SimpleNamespace as namespace
-from typing import Optional, Dict, Tuple
+from types import SimpleNamespace
+from typing import Optional, Dict, Tuple, List  # pylint: disable=unused-import
+from collections import namedtuple
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
@@ -54,20 +54,6 @@ def format_exception(error):
     return "\n".join(traceback.format_exception_only(type(error), error))
 
 
-# Model header
-class Header(enum.IntEnum):
-    Local = 0
-    Name = 1
-    Size = 2
-    Instances = 3
-    Variables = 4
-    Target = 5
-    Tags = 6
-
-
-HEADER = ["", "Title", "Size", "Instances", "Variables", "Target", "Tags"]
-
-
 class SizeDelegate(QStyledItemDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
@@ -89,6 +75,34 @@ class NumericalDelegate(QStyledItemDelegate):
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
 
+class Namespace(SimpleNamespace):
+    def __init__(self, **kwargs):
+        self.file_path = None
+        self.prefix = None
+        self.filename = None
+        self.islocal = None
+        self.outdated = None
+
+        # tags from JSON info file
+        self.title = None
+        self.description = None
+        self.instances = None
+        self.variables = None
+        self.target = None
+        self.size = None
+        self.source = None
+        self.year = None
+        self.references = []
+        self.seealso = []
+        self.tags = []
+
+        super(Namespace, self).__init__(**kwargs)
+
+        # if title missing, use filename
+        if not self.title and self.filename:
+            self.title = self.filename
+
+
 class OWDataSets(widget.OWWidget):
     name = "Datasets"
     description = "Load a dataset from an online repository"
@@ -101,6 +115,18 @@ class OWDataSets(widget.OWWidget):
     # Take care when refactoring! (used in e.g. single-cell)
     INDEX_URL = "http://datasets.orange.biolab.si/"
     DATASET_DIR = "datasets"
+
+    # override HEADER_SCHEMA to define new columns
+    # if schema is changed override methods: self.assign_delegates and self.create_model
+    HEADER_SCHEMA = [
+        ['islocal', {'label': ''}],
+        ['title', {'label': 'Title'}],
+        ['size', {'label': 'Size'}],
+        ['instances', {'label': 'Instances'}],
+        ['variables', {'label': 'Variables'}],
+        ['target', {'label': 'Target'}],
+        ['tags', {'label': 'Tags'}]
+    ]  # type: List[str, dict]
 
     class Error(widget.OWWidget.Error):
         no_remote_datasets = Msg("Could not fetch dataset list")
@@ -124,6 +150,10 @@ class OWDataSets(widget.OWWidget):
     def __init__(self):
         super().__init__()
         self.local_cache_path = os.path.join(data_dir(), self.DATASET_DIR)
+
+        self._header_labels = [header['label'] for _, header in self.HEADER_SCHEMA]
+        self._header_index = namedtuple('_header_index', [info_tag for info_tag, _ in self.HEADER_SCHEMA])
+        self.Header = self._header_index(*[index for index, _ in enumerate(self._header_labels)])
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
@@ -175,10 +205,7 @@ class OWDataSets(widget.OWWidget):
         self.controlArea.layout().addStretch(10)
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send Data")
 
-        model = QStandardItemModel(self)
-        model.setHorizontalHeaderLabels(HEADER)
         proxy = QSortFilterProxyModel()
-        proxy.setSourceModel(model)
         proxy.setFilterKeyColumn(-1)
         proxy.setFilterCaseSensitivity(False)
         self.view.setModel(proxy)
@@ -186,16 +213,7 @@ class OWDataSets(widget.OWWidget):
         if self.splitter_state:
             self.splitter.restoreState(self.splitter_state)
 
-        self.view.setItemDelegateForColumn(
-            Header.Size, SizeDelegate(self))
-        self.view.setItemDelegateForColumn(
-            Header.Local, gui.IndicatorItemDelegate(self, role=Qt.DisplayRole))
-        self.view.setItemDelegateForColumn(
-            Header.Instances, NumericalDelegate(self))
-        self.view.setItemDelegateForColumn(
-            Header.Variables, NumericalDelegate(self))
-
-        self.view.resizeColumnToContents(Header.Local)
+        self.assign_delegates()
 
         if self.header_state:
             self.view.header().restoreState(self.header_state)
@@ -208,71 +226,58 @@ class OWDataSets(widget.OWWidget):
         w = FutureWatcher(f, parent=self)
         w.done.connect(self.__set_index)
 
-    @Slot(object)
-    def __set_index(self, f):
-        # type: (Future) -> None
-        # set results from `list_remote` query.
-        assert QThread.currentThread() is self.thread()
-        assert f.done()
-        self.setBlocking(False)
-        self.setStatusMessage("")
-        allinfolocal = self.list_local()
-        try:
-            res = f.result()
-        except Exception:
-            log.exception("Error while fetching updated index")
-            if not allinfolocal:
-                self.Error.no_remote_datasets()
-            else:
-                self.Warning.only_local_datasets()
-            res = {}
+    def assign_delegates(self):
+        self.view.setItemDelegateForColumn(
+            self.Header.islocal,
+            gui.IndicatorItemDelegate(self, role=Qt.DisplayRole)
+        )
+        self.view.setItemDelegateForColumn(
+            self.Header.size,
+            Orange.widgets.data.owdatasets.SizeDelegate(self))
 
-        allinforemote = res  # type: Dict[Tuple[str, ...], dict]
-        allkeys = set(allinfolocal)
-        if allinforemote is not None:
-            allkeys = allkeys | set(allinforemote)
+        self.view.setItemDelegateForColumn(
+            self.Header.instances,
+            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+        )
+        self.view.setItemDelegateForColumn(
+            self.Header.variables,
+            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+        )
+
+    def _parse_info(self, file_path):
+        if file_path in self.allinfo_remote:
+            info = self.allinfo_remote[file_path]
+        else:
+            info = self.allinfo_local[file_path]
+
+        islocal = file_path in self.allinfo_local
+        isremote = file_path in self.allinfo_remote
+
+        outdated = islocal and isremote and (
+                self.allinfo_remote[file_path].get('version', '') != self.allinfo_local[file_path].get('version', '')
+        )
+        islocal &= not outdated
+
+        prefix = os.path.join('', *file_path[:-1])
+        filename = file_path[-1]
+
+        return Namespace(file_path=file_path, prefix=prefix, filename=filename,
+                         islocal=islocal, outdated=outdated, **info)
+
+    def create_model(self):
+        allkeys = set(self.allinfo_local)
+
+        if self.allinfo_remote is not None:
+            allkeys = allkeys | set(self.allinfo_remote)
+
         allkeys = sorted(allkeys)
 
-        def info(file_path):
-            if file_path in allinforemote:
-                info = allinforemote[file_path]
-            else:
-                info = allinfolocal[file_path]
-            islocal = file_path in allinfolocal
-            isremote = file_path in allinforemote
-            outdated = islocal and isremote and (
-                allinforemote[file_path].get('version', '') !=
-                allinfolocal[file_path].get('version', ''))
-            islocal &= not outdated
-            prefix = os.path.join('', *file_path[:-1])
-            filename = file_path[-1]
-
-            return namespace(
-                file_path=file_path,
-                prefix=prefix, filename=filename,
-                title=info.get("title", filename),
-                datetime=info.get("datetime", None),
-                description=info.get("description", None),
-                references=info.get("references", []),
-                seealso=info.get("seealso", []),
-                source=info.get("source", None),
-                year=info.get("year", None),
-                instances=info.get("instances", None),
-                variables=info.get("variables", None),
-                target=info.get("target", None),
-                missing=info.get("missing", None),
-                tags=info.get("tags", []),
-                size=info.get("size", None),
-                islocal=islocal,
-                outdated=outdated
-            )
-
         model = QStandardItemModel(self)
-        model.setHorizontalHeaderLabels(HEADER)
+        model.setHorizontalHeaderLabels(self._header_labels)
 
         current_index = -1
         for i, file_path in enumerate(allkeys):
-            datainfo = info(file_path)
+            datainfo = self._parse_info(file_path)
             item1 = QStandardItem()
             item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
             item1.setData(datainfo, Qt.UserRole)
@@ -296,17 +301,39 @@ class OWDataSets(widget.OWWidget):
             if os.path.join(*file_path) == self.selected_id:
                 current_index = i
 
-        hs = self.view.header().saveState()
-        model_ = self.view.model().sourceModel()
+        return model, current_index
+
+    @Slot(object)
+    def __set_index(self, f):
+        # type: (Future) -> None
+        # set results from `list_remote` query.
+        assert QThread.currentThread() is self.thread()
+        assert f.done()
+        self.setBlocking(False)
+        self.setStatusMessage("")
+        self.allinfo_local = self.list_local()
+
+        try:
+            self.allinfo_remote = f.result()  # type: Dict[Tuple[str, ...], dict]
+        except Exception:
+            log.exception("Error while fetching updated index")
+            if not self.allinfo_local:
+                self.Error.no_remote_datasets()
+            else:
+                self.Warning.only_local_datasets()
+            self.allinfo_remote = {}
+
+        model, current_index = self.create_model()
+
         self.view.model().setSourceModel(model)
-        self.view.header().restoreState(hs)
-        model_.deleteLater()
-        model_.setParent(None)
         self.view.selectionModel().selectionChanged.connect(
             self.__on_selection
         )
+
+        self.view.resizeColumnToContents(0)
+
         # Update the info text
-        self.infolabel.setText(format_info(model.rowCount(), len(allinfolocal)))
+        self.infolabel.setText(format_info(model.rowCount(), len(self.allinfo_local)))
 
         if current_index != -1:
             selmodel = self.view.selectionModel()
@@ -335,14 +362,14 @@ class OWDataSets(widget.OWWidget):
 
         Returns
         -------
-        info : Optional[namespace]
+        info : Optional[Namespace]
         """
         rows = self.view.selectionModel().selectedRows(0)
         assert 0 <= len(rows) <= 1
         current = rows[0] if rows else None  # type: Optional[QModelIndex]
         if current is not None:
             info = current.data(Qt.UserRole)
-            assert isinstance(info, namespace)
+            assert isinstance(info, Namespace)
         else:
             info = None
         return info
@@ -472,8 +499,7 @@ class OWDataSets(widget.OWWidget):
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
 
-    @staticmethod
-    def load_data(path):
+    def load_data(self, path):
         return Orange.data.Table(path)
 
     def list_remote(self):
@@ -526,6 +552,7 @@ def make_html_list(items):
     if items is None:
         return ''
     style = '"margin: 5px; text-indent: -40px; margin-left: 40px;"'
+
     def format_item(i):
         return '<p style={}><small>{}</small></p>'.format(style, i)
 
@@ -533,13 +560,14 @@ def make_html_list(items):
 
 
 def description_html(datainfo):
-    # type: (namespace) -> str
+    # type: (Namespace) -> str
     """
     Summarize a data info as a html fragment.
     """
     html = []
     year = " ({})".format(str(datainfo.year)) if datainfo.year else ""
     source = ", from {}".format(datainfo.source) if datainfo.source else ""
+
     html.append("<b>{}</b>{}{}".format(escape(datainfo.title), year, source))
     html.append("<p>{}</p>".format(datainfo.description))
     seealso = make_html_list(datainfo.seealso)
@@ -563,6 +591,7 @@ def main(args=None):
     w.saveSettings()
     w.onDeleteWidget()
     return rv
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -22,13 +22,19 @@
 #   install.bat
 
 
-
+# Short name, used in paths
 !ifndef APPNAME
     !error "APPNAME must be defined"
 !endif
 
+# Long name, used for shortcuts
 !ifndef APPLICATIONNAME
     !define APPLICATIONNAME ${APPNAME}
+!endif
+
+# Name used in registry keys
+!ifndef INSTALL_REGISTRY_KEY
+    !define INSTALL_REGISTRY_KEY ${APPNAME}
 !endif
 
 !ifdef VERMAJOR & VERMINOR
@@ -52,14 +58,18 @@
     !error "Invalid PYARCH ${PYARCH}"
 !endif
 
+!ifndef LAUNCHERMODULE
+    !error "LAUNCHERMODULE must be defined"
+!endif
+
 
 !ifndef OUTFILENAME
     !define OUTFILENAME ${APPNAME}-${APPVERSION}-setup.exe
 !endif
 
 
-OutFile ${OUTFILENAME}
-Name ${APPLICATIONNAME}-${VERSION}
+OutFile "${OUTFILENAME}"
+Name ${APPNAME}-${VERSION}
 
 # Default install folder name
 !ifndef DEFAULT_INSTALL_FOLDER
@@ -77,17 +87,21 @@ SetCompress "off"
     !define MUI_UNICON ${INSTALLERICON}
 !endif
 
+!ifndef APPICON
+    !define APPICON "${APPNAME}.ico"
+!endif
+
+!ifndef ICONDIR
+    !define ICONDIR "${APPNAME}\icons"
+!endif
+
 !ifndef BASEDIR
     !define BASEDIR .
 !endif
 
 # Application launcher shortcut name (in start menu or on the desktop)
 !ifndef LAUNCHER_SHORTCUT_NAME
-    !define LAUNCHER_SHORTCUT_NAME "${APPNAME}"
-!endif
-
-!ifndef INSTALL_REGISTRY_KEY
-    !error 'INSTALL_REGISTRY_KEY must be defined'
+    !define LAUNCHER_SHORTCUT_NAME "${APPLICATIONNAME}"
 !endif
 
 # Registry key/values where the installation layout is saved
@@ -236,7 +250,7 @@ Var StartMenuFolder
     "Software\Microsoft\Windows\CurrentVersion\Uninstall"
 
 # Full key path for the application uninstall entry in Add/Remove Programs
-!define APPLICATION_UNINSTALL_REGKEY "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
+!define APPLICATION_UNINSTALL_REGKEY "${WINDOWS_UNINSTALL_REGKEY}\${INSTALL_REGISTRY_KEY}"
 
 # Uninstaller base name
 !ifndef UNINSTALL_EXEFILE
@@ -525,11 +539,11 @@ FunctionEnd
 
 Section -Icons
     # Layout icons if necessary (are not present)
-    ${IfNot} ${FileExists} $PythonPrefix\share\orange3\icons\*.ico"
+    ${IfNot} ${FileExists} $PythonPrefix\share\${ICONDIR}\*.ico"
         ${ExtractTempRec} "${BASEDIR}\icons\*.ico" "${TEMPDIR}\icons"
-        CreateDirectory "$PythonPrefix\share\orange3\icons"
+        CreateDirectory "$PythonPrefix\share\${ICONDIR}"
         CopyFiles /SILENT "${TEMPDIR}\icons\*.ico" \
-                          "$PythonPrefix\share\orange3\icons"
+                          "$PythonPrefix\share\${ICONDIR}"
     ${EndIf}
 SectionEnd
 
@@ -541,14 +555,14 @@ Section -Launchers
     # Startup shortcut
     CreateShortCut \
         "$InstDir\${LAUNCHER_SHORTCUT_NAME}.lnk" \
-        "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas" \
-        "$PythonPrefix\share\orange3\icons\orange.ico" 0
+        "$PythonExecPrefix\pythonw.exe" "-m ${LAUNCHERMODULE}" \
+        "$PythonPrefix\share\${ICONDIR}\${APPICON}" 0
     # Utility shortcut to launch the application with max log level attached
     # to the console that remains visible after exit
     CreateShortCut \
         "$InstDir\${LAUNCHER_SHORTCUT_NAME} Debug.lnk" \
-        "%COMSPEC%" '/K "$PythonExecPrefix\python.exe" -m Orange.canvas -l4' \
-        "$PythonPrefix\share\orange3\icons\orange.ico" 0
+        "%COMSPEC%" '/K "$PythonExecPrefix\python.exe" -m ${LAUNCHERMODULE} -l4' \
+        "$PythonPrefix\share\${ICONDIR}\${APPICON}" 0
     # A utility shortcut for activating the environment
     CreateShortCut \
         "$InstDir\${APPNAME} Command Prompt.lnk" \
@@ -576,8 +590,8 @@ Section "Start Menu Shortcuts" SectionStartMenu
         CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
         CreateShortCut \
             "$SMPROGRAMS\$StartMenuFolder\${LAUNCHER_SHORTCUT_NAME}.lnk" \
-            "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas" \
-            "$PythonPrefix\share\orange3\icons\orange.ico" 0
+            "$PythonExecPrefix\pythonw.exe" "-m ${LAUNCHERMODULE}" \
+            "$PythonPrefix\share\${ICONDIR}\${APPICON}" 0
 
         # A utility shortcut for activating the environment
         CreateShortCut \
@@ -600,8 +614,8 @@ Section "Desktop Shortcuts" SectionDesktop
     DetailPrint "Installing Desktop shortcurt"
     CreateShortCut \
         "$DESKTOP\${LAUNCHER_SHORTCUT_NAME}.lnk" \
-        "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas" \
-        "$PythonPrefix\share\orange3\icons\orange.ico" 0
+        "$PythonExecPrefix\pythonw.exe" "-m ${LAUNCHERMODULE}" \
+        "$PythonPrefix\share\${ICONDIR}\${APPICON}" 0
 SectionEnd
 SectionGroupEnd
 
@@ -644,51 +658,51 @@ Section -Register SectionRegister
 
     ${LogWrite} "Register .ows filetype"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\.ows" "" "OrangeCanvas"
+        "Software\Classes\.ows" "" ${INSTALL_REGISTRY_KEY}
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas" "" "Orange Workflow"
+        "Software\Classes\${INSTALL_REGISTRY_KEY}" "" "Orange Workflow"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas\DefaultIcon" "" \
-        "$PythonPrefix\share\orange3\icons\OrangeOWS.ico"
+        "Software\Classes\${INSTALL_REGISTRY_KEY}\DefaultIcon" "" \
+        "$PythonPrefix\share\${ICONDIR}\OrangeOWS.ico"
     WriteRegStr SHELL_CONTEXT \
-        "Software\Classes\OrangeCanvas\Shell\Open\Command\" "" \
-        '"$PythonExecPrefix\pythonw.exe" -m Orange.canvas "%1"'
+        "Software\Classes\${INSTALL_REGISTRY_KEY}\Shell\Open\Command\" "" \
+        '"$PythonExecPrefix\pythonw.exe" -m ${LAUNCHERMODULE} "%1"'
 
     WriteUninstaller "$InstDir\${UNINSTALL_EXEFILE}"
 
     # Register uninstaller in Add/Remove Programs
 
-    ${LogWrite} "Register uninstaller (${WINDOWS_UNINSTALL_REGKEY}\${APPNAME})"
+    ${LogWrite} "Register uninstaller (${APPLICATION_UNINSTALL_REGKEY})"
 
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
-                DisplayName "${APPNAME} ${APPVERSION} (${BITS} bit)"
+                "${APPLICATION_UNINSTALL_REGKEY}" \
+                DisplayName "${APPLICATIONNAME} ${APPVERSION} (${BITS} bit)"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 DisplayVersion "${APPVERSION}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 DisplayIcon "$InstDir\${UNINSTALL_EXEFILE}"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 "UninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 "QuietUninstallString" \
                 '"$InstDir\${UNINSTALL_EXEFILE}" /$MultiUser.InstallMode /S'
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 InstallLocation "$InstDir"
     WriteRegStr SHELL_CONTEXT \
-                "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                "${APPLICATION_UNINSTALL_REGKEY}" \
                 URLInfoAbout http://orange.biolab.si
 
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                  "${APPLICATION_UNINSTALL_REGKEY}" \
                    NoModify 1
     WriteRegDWORD SHELL_CONTEXT \
-                  "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" \
+                  "${APPLICATION_UNINSTALL_REGKEY}" \
                   NoRepair 1
 SectionEnd
 
@@ -702,28 +716,28 @@ Function un.Register
     ${AndIf} $un.InstallDir == $InstDir
         ${LogWrite} "Deleting reg key: ${INSTALL_SETTINGS_KEY}"
         DeleteRegKey SHCTX "${INSTALL_SETTINGS_KEY}"
-        ${LogWrite} "Deleting reg key: Software\Classes\OrangeCanvas"
-        DeleteRegKey SHCTX Software\Classes\OrangeCanvas
+        ${LogWrite} "Deleting reg key: Software\Classes\${INSTALL_REGISTRY_KEY}"
+        DeleteRegKey SHCTX Software\Classes\${INSTALL_REGISTRY_KEY}
     ${Else}
         ${LogWrite} "InstallDir from ${INSTALL_SETTINGS_KEY} does not match \
                     InstDir ($un.InstallDir != $InstDir). Leaving it."
     ${EndIf}
 
     ReadRegStr $un.InstallDir SHCTX \
-               "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}" InstallLocation
+               "${APPLICATION_UNINSTALL_REGKEY}" InstallLocation
     ${If} $un.InstallDir != ""
     ${AndIf} $un.InstallDir == $InstDir
-        ${LogWrite} "Deleting reg key: ${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
-        DeleteRegKey SHCTX "${WINDOWS_UNINSTALL_REGKEY}\${APPNAME}"
+        ${LogWrite} "Deleting reg key: ${APPLICATION_UNINSTALL_REGKEY}"
+        DeleteRegKey SHCTX "${APPLICATION_UNINSTALL_REGKEY}"
     ${Else}
         ${LogWrite} "InstallLocation from \
-                     ${WINDOWS_UNINSTALL_REGKEY}\${APPNAME} does not match \
+                     ${APPLICATION_UNINSTALL_REGKEY} does not match \
                      InstDir ($0 != $InstDir). Leaving it."
     ${EndIf}
 FunctionEnd
 
 Function LaunchApplication
-    ExecShell "open" "$PythonExecPrefix\pythonw.exe" "-m Orange.canvas"
+    ExecShell "open" "$PythonExecPrefix\pythonw.exe" "-m ${LAUNCHERMODULE}"
 FunctionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN

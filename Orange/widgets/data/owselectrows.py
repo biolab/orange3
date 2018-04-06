@@ -1,3 +1,4 @@
+import sys
 import enum
 from collections import OrderedDict
 from itertools import chain
@@ -89,8 +90,8 @@ class OWSelectRows(widget.OWWidget):
     settingsHandler = SelectRowsContextHandler()
     conditions = ContextSetting([])
     update_on_change = Setting(True)
-    purge_attributes = Setting(True)
-    purge_classes = Setting(True)
+    purge_attributes = Setting(False, schema_only=True)
+    purge_classes = Setting(False, schema_only=True)
     auto_commit = Setting(True)
 
     Operators = {
@@ -698,13 +699,20 @@ class DropDownToolButton(QToolButton):
         self.set_text()
 
 
-def test():
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
+    app = QApplication(argv or [])
+    argv = app.arguments()
+    if len(argv) > 1:
+        filename = argv[1]
+    else:
+        filename = "zoo"
+
     w = OWSelectRows()
-    w.set_data(Table("zoo"))
+    w.set_data(Table(filename))
     w.show()
     app.exec_()
 
-if __name__ == "__main__":
-    test()
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main(sys.argv))

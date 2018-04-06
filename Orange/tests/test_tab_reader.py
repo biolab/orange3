@@ -6,6 +6,7 @@ from os import path, remove
 import unittest
 import tempfile
 import shutil
+import time
 from collections import OrderedDict
 
 import numpy as np
@@ -257,3 +258,13 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(data.domain["RI"].number_of_decimals, 5)
         self.assertEqual(data.domain["Na"].number_of_decimals, 2)
         self.assertEqual(data.domain["Fe"].number_of_decimals, 2)
+
+    def test_many_discrete(self):
+        b = io.StringIO()
+        b.write("Poser\nd\n\n")
+        b.writelines("K" + str(i) + "\n" for i in range(30000))
+        start = time.time()
+        _ = TabReader(b).read()
+        elapsed = time.time() - start
+        if elapsed > 2:
+            raise AssertionError()

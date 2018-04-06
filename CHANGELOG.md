@@ -6,6 +6,25 @@ Change Log
 * ...
 
 
+[3.12.0] - 2018-04-06
+--------------------
+##### Enhancements
+* owselectrows: Change defaults for 'Purging' ([#2969](../../pull/2969))
+* statistics: Speed up countnans for sparse matrices ([#2965](../../pull/2965))
+
+##### Bugfixes
+* Sieve Diagram: Fix spacing of axis labels ([#2971](../../pull/2971))
+* Fix data reading speed ([#2923](../../pull/2923))
+* KMeans clear results on k change, do not recluster ([#2915](../../pull/2915))
+* gui.ControlledList: Take a weakref to listBox ([#2962](../../pull/2962))
+* WidgetManager: Schedule delayed deletion for managed OWWidgets ([#2963](../../pull/2963))
+* domaineditor: Give the VarTableModel a parent ([#2961](../../pull/2961))
+* scatterplot: limit number of points displayed in tooltip ([#2980](../../pull/2980))
+* Speed-up prediction by circumventing Instance-specific prediction. ([#2959](../../pull/2959))
+* Vizrank: Properly shutdown/wait when parent deleted ([#2960](../../pull/2960))
+* Test & Score: Make the scores view table non-editable ([#2947](../../pull/2947))
+
+
 [3.11.0] - 2018-03-07
 --------------------
 ##### Enhancements
@@ -795,7 +814,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.11.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.12.0...HEAD
+[3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0
 [3.11.0]: https://github.com/biolab/orange3/compare/3.10.0...3.11.0
 [3.10.0]: https://github.com/biolab/orange3/compare/3.9.1...3.10.0
 [3.9.1]: https://github.com/biolab/orange3/compare/3.9.0...3.9.1

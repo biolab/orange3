@@ -136,8 +136,8 @@ class OWKMeans(widget.OWWidget):
         # type: (Dict, int) -> None
         if version < 2:
             if 'auto_apply' in settings:
-                settings['auto_commit'] = settings['auto_apply']
-                del settings['auto_apply']
+                settings['auto_commit'] = settings.get('auto_apply', True)
+                settings.pop('auto_apply', None)
 
     def __init__(self):
         super().__init__()
@@ -151,11 +151,7 @@ class OWKMeans(widget.OWWidget):
         layout = QGridLayout()
         bg = gui.radioButtonsInBox(
             self.controlArea, self, "optimize_k", orientation=layout,
-            box="Number of Clusters",
-            # Because commit is only wrapped when creating the auto_commit
-            # buttons, we can't pass it as the callback here, so we can add
-            # this hacky lambda to call the wrapped commit when necessary
-            callback=lambda: self.commit(),
+            box="Number of Clusters", callback=self.update_method,
         )
 
         layout.addWidget(
@@ -229,18 +225,25 @@ class OWKMeans(widget.OWWidget):
         s = self.sizeHint()
         self.resize(s)
 
+    def update_method(self):
+        self.table_model.clear_scores()
+        self.commit()
+
     def update_k(self):
         self.optimize_k = False
+        self.table_model.clear_scores()
         self.commit()
 
     def update_from(self):
         self.k_to = max(self.k_from + 1, self.k_to)
         self.optimize_k = True
+        self.table_model.clear_scores()
         self.commit()
 
     def update_to(self):
         self.k_from = min(self.k_from, self.k_to - 1)
         self.optimize_k = True
+        self.table_model.clear_scores()
         self.commit()
 
     def enough_data_instances(self, k):
@@ -395,17 +398,14 @@ class OWKMeans(widget.OWWidget):
 
         QTimer.singleShot(100, self.adjustSize)
 
-    def invalidate(self, force=False):
+    def invalidate(self):
         self.cancel()
         self.Error.clear()
         self.Warning.clear()
         self.clusterings = {}
         self.table_model.clear_scores()
 
-        if force:
-            self.unconditional_commit()
-        else:
-            self.commit()
+        self.commit()
 
     def update_results(self):
         scores = [
@@ -437,7 +437,7 @@ class OWKMeans(widget.OWWidget):
             k = self.k
 
         km = self.clusterings.get(k)
-        if not self.data or km is None or isinstance(km, str):
+        if self.data is None or km is None or isinstance(km, str):
             self.Outputs.annotated_data.send(None)
             self.Outputs.centroids.send(None)
             return
@@ -469,8 +469,14 @@ class OWKMeans(widget.OWWidget):
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        self.data = data
-        self.invalidate()
+        self.data, old_data = data, self.data
+
+        # Do not needlessly recluster the data if X hasn't changed
+        if old_data and self.data and np.array_equal(self.data.X, old_data.X):
+            if self.auto_commit:
+                self.send_data()
+        else:
+            self.invalidate()
 
     def send_report(self):
         # False positives (Setting is not recognized as int)

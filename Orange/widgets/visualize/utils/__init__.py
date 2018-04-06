@@ -86,7 +86,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
-        QDialog.__init__(self, windowTitle=self.captionTitle)
+        QDialog.__init__(self, master, windowTitle=self.captionTitle)
         WidgetMessagesMixin.__init__(self)
         self.setLayout(QVBoxLayout())
 
@@ -182,6 +182,10 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         def deleteEvent():
             vizrank.keep_running = False
+            if vizrank._thread is not None and vizrank._thread.isRunning():
+                vizrank._thread.quit()
+                vizrank._thread.wait()
+
             master_delete_event()
 
         master.closeEvent = closeEvent
