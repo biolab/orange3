@@ -50,6 +50,27 @@ class TestTabReader(unittest.TestCase):
         np.testing.assert_almost_equal(table.X, np.array([[0, 0], [np.nan, 1], [1, 0]]))
         np.testing.assert_almost_equal(table.Y, np.array([[1, 1], [2, 0], [0, np.nan]]))
 
+    def test_read_save_quoted(self):
+        quoted = '''\
+        S\tA
+        s\td
+        m\t
+        """a"""\ti
+        """b"""\tj
+        """c\td"""\tk
+        '''
+        expected = ['"a"', '"b"', '"c\td"']
+        f = io.StringIO(quoted)
+        table = read_tab_file(f)
+        self.assertSequenceEqual(table.metas[:, 0].tolist(), expected)
+
+        f = io.StringIO()
+        f.close = lambda: None
+        TabReader.write_file(f, table)
+        saved = f.getvalue()
+        table1 = read_tab_file(io.StringIO(saved))
+        self.assertSequenceEqual(table1.metas[:, 0].tolist(), expected)
+
     def test_read_and_save_attributes(self):
         samplefile = """\
         Feature 1\tFeature 2\tClass 1\tClass 42
