@@ -824,18 +824,21 @@ class CSVReader(FileFormat):
                         # Take first couple of *complete* lines as sample
                         ''.join(file.readline() for _ in range(10)),
                         self.DELIMITERS)
+                    delimiter = dialect.delimiter
+                    quotechar = dialect.quotechar
                 except UnicodeDecodeError as e:
                     error = e
                     continue
                 except csv.Error:
-                    dialect = csv.excel()
-                    dialect.delimiter = self.DELIMITERS[0]
+                    delimiter = self.DELIMITERS[0]
+                    quotechar = csv.excel.quotechar
 
                 file.seek(0)
-                dialect.skipinitialspace = True
-
                 try:
-                    reader = csv.reader(file, dialect=dialect)
+                    reader = csv.reader(
+                        file, delimiter=delimiter, quotechar=quotechar,
+                        skipinitialspace=True,
+                    )
                     data = self.data_table(reader)
 
                     # TODO: Name can be set unconditionally when/if
