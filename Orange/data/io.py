@@ -822,7 +822,7 @@ class CSVReader(FileFormat):
                 try:
                     dialect = csv.Sniffer().sniff(
                         # Take first couple of *complete* lines as sample
-                        ''.join(file.readline() for _ in range(5)),
+                        ''.join(file.readline() for _ in range(10)),
                         self.DELIMITERS)
                 except UnicodeDecodeError as e:
                     error = e
