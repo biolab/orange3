@@ -46,7 +46,7 @@ from Orange.widgets.utils import vartype
 
 log = logging.getLogger(__name__)
 
-__all__ = ["Setting", "SettingsHandler",
+__all__ = ["Setting", "SettingsHandler", "SettingProvider",
            "ContextSetting", "ContextHandler",
            "DomainContextHandler", "PerfectDomainContextHandler",
            "ClassValuesContextHandler", "widget_settings_dir"]
