@@ -1497,11 +1497,18 @@ def valueSlider(widget, master, value, box=None, label=None,
 class OrangeComboBox(QtWidgets.QComboBox):
     """
     A QComboBox subclass extended to support bounded contents width hint.
+
+    Prefer to use this class in place of plain QComboBox when the used
+    model will possibly contain many items.
     """
     def __init__(self, parent=None, maximumContentsLength=-1, **kwargs):
         # Forward-declared for sizeHint()
         self.__maximumContentsLength = maximumContentsLength
         super().__init__(parent, **kwargs)
+        view = self.view()
+        # optimization for displaying large models
+        if isinstance(view, QListView):
+            view.setUniformItemSizes(True)
 
     def setMaximumContentsLength(self, length):
         """
@@ -1513,11 +1520,11 @@ class OrangeComboBox(QtWidgets.QComboBox):
 
         .. note::
              This property does not affect the widget's `maximumSize`.
-             The widget can still grow depending in it's sizePolicy.
+             The widget can still grow depending on its `sizePolicy`.
 
         Parameters
         ----------
-        lenght : int
+        length : int
             Maximum contents length hint.
         """
         if self.__maximumContentsLength != length:
