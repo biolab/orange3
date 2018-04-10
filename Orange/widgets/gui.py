@@ -1090,6 +1090,7 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
                        CallFrontListView(view),
                        CallBackListView(model, view, master, value))
     misc.setdefault('addSpace', True)
+    misc.setdefault('uniformItemSizes', True)
     miscellanea(view, bg, widget, **misc)
     return view
 

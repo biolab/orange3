@@ -177,7 +177,9 @@ class OWDistributions(widget.OWWidget):
         self.groupvarmodel = []
 
         self.varview = QListView(
-            selectionMode=QListView.SingleSelection)
+            selectionMode=QListView.SingleSelection,
+            uniformItemSizes=True,
+        )
         self.varview.setSizePolicy(
             QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.varview.setModel(self.varmodel)

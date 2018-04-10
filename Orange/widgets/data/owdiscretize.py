@@ -203,7 +203,10 @@ class OWDiscretize(widget.OWWidget):
         )
 
         # List view with all attributes
-        self.varview = QListView(selectionMode=QListView.ExtendedSelection)
+        self.varview = QListView(
+            selectionMode=QListView.ExtendedSelection,
+            uniformItemSizes=True,
+        )
         self.varview.setItemDelegate(DiscDelegate())
         self.varmodel = itemmodels.VariableListModel()
         self.varview.setModel(self.varmodel)
