@@ -1,3 +1,5 @@
+from AnyQt.QtCore import Qt
+
 from Orange.data import ContinuousVariable
 from Orange.widgets import gui
 from Orange.widgets.tests.base import GuiTest
@@ -70,6 +72,17 @@ class TestListModel(GuiTest):
         selection = view.selectedIndexes()
         self.assertEqual(len(selection), 2)
         self.assertEqual({selection[0].row(), selection[1].row()}, {1, 2})
+
+
+class TestFloatSlider(GuiTest):
+
+    def test_set_value(self):
+        w = gui.FloatSlider(Qt.Horizontal, 0., 1., 0.5)
+        w.setValue(1)
+        self.assertEqual(w.value(), 2)
+        w = gui.FloatSlider(Qt.Horizontal, 0., 1., 0.05)
+        w.setValue(1)
+        self.assertEqual(w.value(), 20)
 
 
 class ComboBoxTest(GuiTest):
