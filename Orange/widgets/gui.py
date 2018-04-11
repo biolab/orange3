@@ -2501,6 +2501,7 @@ class CallFrontListView(ControlledCallFront):
 
         selection = QItemSelection()
         for value in values:
+            index = None
             if not isinstance(value, int):
                 if isinstance(value, Variable):
                     search_role = TableVariable
@@ -2509,9 +2510,12 @@ class CallFrontListView(ControlledCallFront):
                     value = str(value)
                 for i in range(model.rowCount()):
                     if model.data(model.index(i), search_role) == value:
-                        value = i
+                        index = i
                         break
-            selection.select(model.index(value), model.index(value))
+            else:
+                index = value
+            if index is not None:
+                selection.select(model.index(index), model.index(index))
         sel_model.select(selection, sel_model.ClearAndSelect)
 
 
