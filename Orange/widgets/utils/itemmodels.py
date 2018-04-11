@@ -543,7 +543,7 @@ class PyListModel(QAbstractListModel):
 
     # noinspection PyMethodOverriding
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else len(self)
+        return 0 if parent.isValid() else len(self._list)
 
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else 1
