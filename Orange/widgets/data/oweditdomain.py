@@ -394,7 +394,8 @@ class OWEditDomain(widget.OWWidget):
 
         self.domain_model = itemmodels.VariableListModel()
         self.domain_view = QListView(
-            selectionMode=QListView.SingleSelection
+            selectionMode=QListView.SingleSelection,
+            uniformItemSizes=True
         )
         self.domain_view.setModel(self.domain_model)
         self.domain_view.selectionModel().selectionChanged.connect(

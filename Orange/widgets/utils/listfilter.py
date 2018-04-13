@@ -53,6 +53,7 @@ class VariablesListItemView(QListView):
         self.setDragDropMode(self.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
         self.setDragDropOverwriteMode(False)
+        self.setUniformItemSizes(True)
         self.viewport().setAcceptDrops(True)
 
         #: type | Tuple[type]

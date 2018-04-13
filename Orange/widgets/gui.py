@@ -1090,6 +1090,7 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
                        CallFrontListView(view),
                        CallBackListView(model, view, master, value))
     misc.setdefault('addSpace', True)
+    misc.setdefault('uniformItemSizes', True)
     miscellanea(view, bg, widget, **misc)
     return view
 
@@ -1497,11 +1498,18 @@ def valueSlider(widget, master, value, box=None, label=None,
 class OrangeComboBox(QtWidgets.QComboBox):
     """
     A QComboBox subclass extended to support bounded contents width hint.
+
+    Prefer to use this class in place of plain QComboBox when the used
+    model will possibly contain many items.
     """
     def __init__(self, parent=None, maximumContentsLength=-1, **kwargs):
         # Forward-declared for sizeHint()
         self.__maximumContentsLength = maximumContentsLength
         super().__init__(parent, **kwargs)
+        view = self.view()
+        # optimization for displaying large models
+        if isinstance(view, QListView):
+            view.setUniformItemSizes(True)
 
     def setMaximumContentsLength(self, length):
         """
@@ -1513,11 +1521,11 @@ class OrangeComboBox(QtWidgets.QComboBox):
 
         .. note::
              This property does not affect the widget's `maximumSize`.
-             The widget can still grow depending in it's sizePolicy.
+             The widget can still grow depending on its `sizePolicy`.
 
         Parameters
         ----------
-        lenght : int
+        length : int
             Maximum contents length hint.
         """
         if self.__maximumContentsLength != length:
@@ -2493,6 +2501,7 @@ class CallFrontListView(ControlledCallFront):
 
         selection = QItemSelection()
         for value in values:
+            index = None
             if not isinstance(value, int):
                 if isinstance(value, Variable):
                     search_role = TableVariable
@@ -2501,9 +2510,12 @@ class CallFrontListView(ControlledCallFront):
                     value = str(value)
                 for i in range(model.rowCount()):
                     if model.data(model.index(i), search_role) == value:
-                        value = i
+                        index = i
                         break
-            selection.select(model.index(value), model.index(value))
+            else:
+                index = value
+            if index is not None:
+                selection.select(model.index(index), model.index(index))
         sel_model.select(selection, sel_model.ClearAndSelect)
 
 

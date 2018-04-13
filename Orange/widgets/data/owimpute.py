@@ -189,7 +189,8 @@ class OWImpute(OWWidget):
         main_layout.addWidget(box)
 
         self.varview = QListView(
-            selectionMode=QListView.ExtendedSelection
+            selectionMode=QListView.ExtendedSelection,
+            uniformItemSizes=True
         )
         self.varview.setItemDelegate(DisplayFormatDelegate())
         self.varmodel = itemmodels.VariableListModel()

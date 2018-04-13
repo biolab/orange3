@@ -536,14 +536,6 @@ class PyListModel(QAbstractListModel):
         self._other_data = [_store() for _ in lst]
         self.endResetModel()
 
-
-    # noinspection PyMethodOverriding
-    def index(self, row, column=0, parent=QModelIndex()):
-        if self._is_index_valid(row) and column == 0:
-            return QAbstractListModel.createIndex(self, row, column, parent)
-        else:
-            return QModelIndex()
-
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return str(section)
@@ -551,7 +543,7 @@ class PyListModel(QAbstractListModel):
 
     # noinspection PyMethodOverriding
     def rowCount(self, parent=QModelIndex()):
-        return 0 if parent.isValid() else len(self)
+        return 0 if parent.isValid() else len(self._list)
 
     def columnCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else 1

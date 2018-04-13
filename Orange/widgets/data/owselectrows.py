@@ -205,7 +205,7 @@ class OWSelectRows(widget.OWWidget):
         row = model.rowCount()
         model.insertRow(row)
 
-        attr_combo = QComboBox(
+        attr_combo = gui.OrangeComboBox(
             minimumContentsLength=12,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row

@@ -72,7 +72,10 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Variables")
         self.varlist = itemmodels.VariableListModel()
-        self.varview = view = QListView(selectionMode=QListView.MultiSelection)
+        self.varview = view = QListView(
+            selectionMode=QListView.MultiSelection,
+            uniformItemSizes=True
+        )
         view.setModel(self.varlist)
         view.selectionModel().selectionChanged.connect(self._var_changed)
 

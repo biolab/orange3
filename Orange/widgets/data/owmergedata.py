@@ -88,12 +88,14 @@ class OWMergeData(widget.OWWidget):
             model[:] = [getattr(self, 'attr_{}_data'.format(merge_type))]
             extra_model[:] = [getattr(self, 'attr_{}_extra'.format(merge_type))]
             cb = gui.comboBox(box, self, 'attr_{}_data'.format(merge_type),
-                              callback=self._invalidate, model=model)
+                              contentsLength=12, callback=self._invalidate,
+                              model=model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
             cb.setFixedWidth(190)
             gui.widgetLabel(box, between_label)
             cb = gui.comboBox(box, self, 'attr_{}_extra'.format(merge_type),
-                              callback=self._invalidate, model=extra_model)
+                              contentsLength=12, callback=self._invalidate,
+                              model=extra_model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
             cb.setFixedWidth(190)
             vbox.layout().addSpacing(6)
