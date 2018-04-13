@@ -15,12 +15,14 @@ from collections import defaultdict, Sequence
 import pkg_resources
 
 from AnyQt import QtWidgets, QtCore, QtGui
-from AnyQt.QtCore import Qt, QSize, QItemSelection, pyqtSignal as Signal
+# pylint: disable=unused-import
+from AnyQt.QtCore import (
+    Qt, QObject, QEvent, QSize, QItemSelection, QTimer, pyqtSignal as Signal
+)
 from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
-    QComboBox, QLineEdit, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
+    QComboBox, QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
     QTableView, QHeaderView, QListView
 )
 
@@ -1506,10 +1508,15 @@ class OrangeComboBox(QtWidgets.QComboBox):
         # Forward-declared for sizeHint()
         self.__maximumContentsLength = maximumContentsLength
         super().__init__(parent, **kwargs)
+
+        self.__in_mousePressEvent = False
+        # Yet Another Mouse Release Ignore Timer
+        self.__yamrit = QTimer(self, singleShot=True)
         view = self.view()
         # optimization for displaying large models
         if isinstance(view, QListView):
             view.setUniformItemSizes(True)
+            view.viewport().installEventFilter(self)
 
     def setMaximumContentsLength(self, length):
         """
@@ -1555,6 +1562,29 @@ class OrangeComboBox(QtWidgets.QComboBox):
                      + self.iconSize().width() + 4)
             sh = sh.boundedTo(QtCore.QSize(width, sh.height()))
         return sh
+
+    # workaround for QTBUG-67583
+    def mousePressEvent(self, event):
+        # reimplemented
+        self.__in_mousePressEvent = True
+        super().mousePressEvent(event)
+        self.__in_mousePressEvent = False
+
+    def showPopup(self):
+        # reimplemented
+        super().showPopup()
+        if self.__in_mousePressEvent:
+            self.__yamrit.start(QApplication.doubleClickInterval())
+
+    def eventFilter(self, obj, event):
+        # type: (QObject, QEvent) -> bool
+        if event.type() == QEvent.MouseButtonRelease \
+                and event.button() == Qt.LeftButton \
+                and obj is self.view().viewport() \
+                and self.__yamrit.isActive():
+            return True
+        else:
+            return super().eventFilter(obj, event)
 
 
 # TODO comboBox looks overly complicated:
