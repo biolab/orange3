@@ -113,8 +113,9 @@ class OWSilhouettePlot(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Cluster Label")
         self.cluster_var_cb = gui.comboBox(
-            box, self, "cluster_var_idx", addSpace=4,
-            callback=self._invalidate_scores)
+            box, self, "cluster_var_idx", contentsLength=14, addSpace=4,
+            callback=self._invalidate_scores
+        )
         gui.checkBox(
             box, self, "group_by_cluster", "Group by cluster",
             callback=self._replot)
@@ -128,7 +129,8 @@ class OWSilhouettePlot(widget.OWWidget):
             callback=self._update_bar_size, addSpace=6)
         gui.widgetLabel(box, "Annotations:")
         self.annotation_cb = gui.comboBox(
-            box, self, "annotation_var_idx", callback=self._update_annotations)
+            box, self, "annotation_var_idx", contentsLength=14,
+            callback=self._update_annotations)
         self.annotation_var_model = itemmodels.VariableListModel(parent=self)
         self.annotation_var_model[:] = ["None"]
         self.annotation_cb.setModel(self.annotation_var_model)

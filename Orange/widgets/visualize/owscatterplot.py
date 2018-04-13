@@ -158,7 +158,8 @@ class OWScatterPlot(OWWidget):
 
         common_options = dict(
             labelWidth=50, orientation=Qt.Horizontal, sendSelectedValue=True,
-            valueType=str)
+            valueType=str, contentsLength=14
+        )
         box = gui.vBox(self.controlArea, "Axis Data")
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)

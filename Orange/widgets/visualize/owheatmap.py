@@ -541,9 +541,9 @@ class OWHeatMap(widget.OWWidget):
 
         annotbox = gui.vBox(box, "Row Annotations", addSpace=False)
         annotbox.setFlat(True)
-        self.annotations_cb = gui.comboBox(annotbox, self, "annotation_index",
-                                           items=self.annotation_vars,
-                                           callback=self.update_annotations)
+        self.annotations_cb = gui.comboBox(
+            annotbox, self, "annotation_index", contentsLength=12,
+            items=self.annotation_vars, callback=self.update_annotations)
 
         posbox = gui.vBox(box, "Column Labels Position", addSpace=False)
         posbox.setFlat(True)
