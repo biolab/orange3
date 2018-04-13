@@ -756,7 +756,7 @@ def have_install_permissions():
             pass
         os.remove(fn)
         return True
-    except PermissionError:
+    except OSError:
         return False
 
 
