@@ -277,8 +277,28 @@ class FeatureConstructorHandlerTests(unittest.TestCase):
         self.assertTrue(
             FeatureConstructorHandler().is_valid_item(
                 OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str(A)"),
+                StringDescriptor("X", "str(A) + str(B)"),
                 {"A": vartype(DiscreteVariable)},
+                {"B": vartype(DiscreteVariable)}
+            )
+        )
+
+        # no variables is also ok
+        self.assertTrue(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "str('foo')"),
+                {},
+                {}
+            )
+        )
+
+        # should fail on unknown variables
+        self.assertFalse(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "str(X)"),
+                {},
                 {}
             )
         )
