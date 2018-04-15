@@ -877,7 +877,8 @@ class DomainModel(VariableListModel):
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
     def __init__(self, order=SEPARATED, separators=True, placeholder=None,
-                 valid_types=None, alphabetical=False, skip_hidden_vars=True, **kwargs):
+                 valid_types=None, alphabetical=False, skip_hidden_vars=True,
+                 match_exact_types=False, **kwargs):
         """
 
         Parameters
@@ -894,6 +895,9 @@ class DomainModel(VariableListModel):
             If true, variables are sorted alphabetically.
         skip_hidden_vars: bool
             If true, variables marked as "hidden" are skipped.
+        match_exact_types: bool
+            If true, variable subtypes will not be shown e.g. datetime is a
+            subtype of continuous.
         """
         super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
@@ -910,6 +914,7 @@ class DomainModel(VariableListModel):
         self.valid_types = valid_types
         self.alphabetical = alphabetical
         self.skip_hidden_vars = skip_hidden_vars
+        self.match_exact_types = match_exact_types
         self._within_set_domain = False
         self.set_domain(None)
 
@@ -933,9 +938,14 @@ class DomainModel(VariableListModel):
                       if (1 << i) & section)))
                 if self.skip_hidden_vars:
                     to_add = list(filter_visible(to_add))
-                if self.valid_types is not None:
-                    to_add = [var for var in to_add
-                              if isinstance(var, self.valid_types)]
+
+                # Match any subtype of the given variable
+                if self.valid_types is not None and not self.match_exact_types:
+                    to_add = [var for var in to_add if isinstance(var, self.valid_types)]
+                # Or disallow subtypes e.g. datetime is subtype of continuous
+                elif self.valid_types is not None:
+                    to_add = [var for var in to_add if any(type(var) is vt for vt in self.valid_types)]
+
                 if self.alphabetical:
                     to_add = sorted(to_add, key=lambda x: x.name)
             elif isinstance(section, list):

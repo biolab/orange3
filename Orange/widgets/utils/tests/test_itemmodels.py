@@ -535,6 +535,7 @@ class TestVariableListModel(unittest.TestCase):
     def test_invalid_index(self):
         self.assertIsNone(self.model.data(self.model.index(0).parent()))
 
+
 class TestDomainModel(unittest.TestCase):
     def test_init_with_single_section(self):
         model = DomainModel(order=DomainModel.CLASSES)
@@ -672,6 +673,21 @@ class TestDomainModel(unittest.TestCase):
 
         self.assertRaises(TypeError, model.insertRows, 0, 0)
         self.assertRaises(TypeError, model.removeRows, 0, 0)
+
+    def test_match_exact_types(self):
+        cont = [ContinuousVariable(n) for n in "abc"]
+        time = [TimeVariable(n) for n in "def"]
+
+        # By default, we should match subtypes
+        model = DomainModel(valid_types=(ContinuousVariable,))
+        model.set_domain(Domain(cont + time))
+        self.assertEqual(list(model), cont + time)
+
+        # Enable matching exact types
+        model.match_exact_types = True
+        model.set_domain(Domain(cont + time))
+        self.assertEqual(list(model), cont)
+
 
 if __name__ == "__main__":
     unittest.main()
