@@ -650,13 +650,17 @@ def list_available_versions():
 
     packages = []
     for addon in addons:
-        info = addon["info"]
-        packages.append(
-            Installable(info["name"], info["version"],
-                        info["summary"], info["description"],
-                        info["package_url"],
-                        info["package_url"])
-        )
+        try:
+            info = addon["info"]
+            packages.append(
+                Installable(info["name"], info["version"],
+                            info["summary"], info["description"],
+                            info["package_url"],
+                            info["package_url"])
+            )
+        except (TypeError, KeyError):
+            continue  # skip invalid packages
+
     return packages
 
 
