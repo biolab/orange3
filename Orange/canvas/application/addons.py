@@ -12,10 +12,9 @@ import concurrent.futures
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
-import urllib.request
-import xmlrpc.client
 
 import pkg_resources
+import requests
 
 try:
     import docutils.core
@@ -26,7 +25,7 @@ from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
-    QApplication, QHBoxLayout, QCheckBox
+    QApplication, QHBoxLayout
 )
 
 from AnyQt.QtGui import (
@@ -44,21 +43,12 @@ from ..gui.utils import message_warning, message_information, \
                         OSX_NSURL_toLocalFile
 from ..help.manager import get_dist_meta, trim, parse_meta
 
-log = logging.getLogger(__name__)
 
-OFFICIAL_ADDONS = [
-    "Orange3-Bioinformatics",
-    "Orange3-Prototypes",
-    "Orange3-Text",
-    "Orange3-Network",
-    "Orange3-Associate",
-    "Orange-Spectroscopy",
-    "Orange3-Textable",
-    "Orange3-Educational",
-    "Orange3-Geo",
-    "Orange3-ImageAnalytics",
-    "Orange3-Timeseries",
-]
+PYPI_API_JSON = "https://pypi.org/pypi/{name}/json"
+OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
+
+
+log = logging.getLogger(__name__)
 
 Installable = namedtuple(
     "Installable",
@@ -195,23 +185,6 @@ def cleanup(name, sep="-"):
     return " ".join(re.findall("[A-Z][a-z]*", name[0].upper() + name[1:]))
 
 
-class SortFilterProxyTrusted(QSortFilterProxyModel):
-
-    show_only_trusted = True
-
-    def set_show_only_trusted(self, s):
-        self.show_only_trusted = s
-        self.invalidateFilter()
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        if self.show_only_trusted:
-            model = self.sourceModel()
-            item = self.sourceModel().data(model.index(source_row, 1), Qt.UserRole)
-            if isinstance(item, Available) and item.installable.name not in OFFICIAL_ADDONS:
-                return False
-        return super().filterAcceptsRow(source_row, source_parent)
-
-
 class AddonManagerWidget(QWidget):
 
     statechanged = Signal()
@@ -228,18 +201,10 @@ class AddonManagerWidget(QWidget):
         self.__search = QLineEdit(
             placeholderText=self.tr("Filter")
         )
-        self.__only_trusted = QCheckBox(
-            self.tr("Show only trusted add-ons"),
-        )
 
         topline = QHBoxLayout()
         topline.addWidget(self.__search)
-        topline.addWidget(self.__only_trusted)
         self.layout().addLayout(topline)
-
-        self.__only_trusted.setChecked(True)
-        self.show_only_trusted = True
-        self.__only_trusted.stateChanged.connect(self._show_only_trusted_changed)
 
         self.__view = view = QTreeView(
             rootIsDecorated=False,
@@ -253,7 +218,7 @@ class AddonManagerWidget(QWidget):
         self.__model = model = QStandardItemModel()
         model.setHorizontalHeaderLabels(["", "Name", "Version", "Action"])
         model.dataChanged.connect(self.__data_changed)
-        self.__proxy = proxy = SortFilterProxyTrusted(
+        self.__proxy = proxy = QSortFilterProxyModel(
             filterKeyColumn=1,
             filterCaseSensitivity=Qt.CaseInsensitive
         )
@@ -280,9 +245,6 @@ class AddonManagerWidget(QWidget):
         palette.setColor(QPalette.Base, Qt.transparent)
         self.__details.setPalette(palette)
         self.layout().addWidget(self.__details)
-
-    def _show_only_trusted_changed(self):
-        self.__proxy.set_show_only_trusted(self.__only_trusted.isChecked())
 
     def set_items(self, items):
         self.__items = items
@@ -485,7 +447,7 @@ class AddonManagerDialog(QDialog):
 
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         if AddonManagerDialog._packages is None:
-            self._f_pypi_addons = self._executor.submit(list_pypi_addons)
+            self._f_pypi_addons = self._executor.submit(list_available_versions)
         else:
             self._f_pypi_addons = concurrent.futures.Future()
             self._f_pypi_addons.set_result(AddonManagerDialog._packages)
@@ -670,62 +632,35 @@ class AddonManagerDialog(QDialog):
         self.accept()
 
 
-class SafeUrllibTransport(xmlrpc.client.Transport):
-    """Urllib for HTTPS connections that automatically handles proxies."""
-
-    def single_request(self, host, handler, request_body, verbose=False):
-        req = urllib.request.Request('https://%s%s' % (host, handler), request_body)
-        req.add_header('User-agent', self.user_agent)
-        req.add_header('Content-Type', 'text/xml')
-        self.verbose = verbose
-        opener = urllib.request.build_opener()
-        return self.parse_response(opener.open(req))
-
-
-def list_pypi_addons():
+def list_available_versions():
     """
-    List add-ons available on pypi.
+    List add-ons available.
     """
-    from ..config import ADDON_PYPI_SEARCH_SPEC
+    addons = requests.get(OFFICIAL_ADDON_LIST).json()
 
-    pypi = xmlrpc.client.ServerProxy(
-        "https://pypi.python.org/pypi/",
-        transport=SafeUrllibTransport()
-    )
-    addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
+    # query pypi.org for installed add-ons that are not in our list
+    installed = list_installed_addons()
+    missing = set(dist.project_name for dist in installed) - \
+              set(a.get("info", {}).get("name", "") for a in addons)
+    for p in missing:
+        response = requests.get(PYPI_API_JSON.format(name=p))
+        if response.status_code != 200:
+            continue
+        addons.append(response.json())
 
-    for addon in OFFICIAL_ADDONS:
-        if not any(a for a in addons if a['name'] == addon):
-            addons.append({"name": addon, "version": '0'})
-
-    multicall = xmlrpc.client.MultiCall(pypi)
-    for addon in addons:
-        name = addon["name"]
-        multicall.package_releases(name)
-
-    releases = multicall()
-    multicall = xmlrpc.client.MultiCall(pypi)
-    for addon, versions in zip(addons, releases):
-        # Workaround for PyPI bug of search not returning the latest versions
-        # https://bitbucket.org/pypa/pypi/issues/326/my-package-doesnt-appear-in-the-search
-        version_ = max(versions, key=version.LooseVersion)
-
-        name = addon["name"]
-        multicall.release_data(name, version_)
-
-    results = list(multicall())
     packages = []
-
-    for release in results:
-        if release:
-            # ignore releases without actual source/wheel/egg files,
-            # or with empty metadata (deleted from PyPi?).
+    for addon in addons:
+        try:
+            info = addon["info"]
             packages.append(
-                Installable(release["name"], release["version"],
-                            release["summary"], release["description"],
-                            release["package_url"],
-                            release["package_url"])
+                Installable(info["name"], info["version"],
+                            info["summary"], info["description"],
+                            info["package_url"],
+                            info["package_url"])
             )
+        except (TypeError, KeyError):
+            continue  # skip invalid packages
+
     return packages
 
 
@@ -843,7 +778,7 @@ class PipInstaller:
     def install(self, pkg):
         cmd = ["python", "-m", "pip", "install"]
         cmd.extend(self.arguments)
-        if pkg.package_url.startswith("http://"):
+        if pkg.package_url.startswith("http://") or pkg.package_url.startswith("https://"):
             cmd.append(pkg.name)
         else:
             # Package url is path to the (local) wheel
