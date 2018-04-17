@@ -14,7 +14,7 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
-from Orange.canvas.report.owreport import OWReport
+from Orange.widgets.report.owreport import OWReport
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.tests.base import WidgetTest
@@ -95,27 +95,27 @@ class TestReport(WidgetTest):
             '<h2>Name</h2><table>\n'
             '<tr>'
             '<th style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:left;vertical-align:middle;">a</th>'
+            'text-align:left;vertical-align:middle;">a</th>'
             '<th style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:left;vertical-align:middle;">b</th>'
+            'text-align:left;vertical-align:middle;">b</th>'
             '<th style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:left;vertical-align:middle;">c</th>'
+            'text-align:left;vertical-align:middle;">c</th>'
             '</tr>'
             '<tr>'
             '<td style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:center;vertical-align:top;">x</td>'
+            'text-align:center;vertical-align:top;">x</td>'
             '<td style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:right;vertical-align:middle;">1</td>'
+            'text-align:right;vertical-align:middle;">1</td>'
             '<td style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            'text-align:right;vertical-align:middle;">2</td>'
             '</tr>'
             '<tr>'
             '<td style="color:black;border:0;background:transparent;'
-            'font-weight:bold;text-align:left;vertical-align:middle;">y</td>'
+            'font-weight: bold;text-align:left;vertical-align:middle;">y</td>'
             '<td style="color:black;border:0;background:transparent;'
-            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            'text-align:right;vertical-align:middle;">2</td>'
             '<td style="color:black;border:0;background:#ff0000;'
-            'font-weight:normal;text-align:right;vertical-align:middle;">2</td>'
+            'text-align:right;vertical-align:middle;">2</td>'
             '</tr></table>')
 
     def test_save_report_permission(self):
@@ -124,13 +124,13 @@ class TestReport(WidgetTest):
         GH-2147
         """
         rep = OWReport.get_instance()
-        patch_target_1 = "Orange.canvas.report.owreport.open"
+        patch_target_1 = "Orange.widgets.report.owreport.open"
         patch_target_2 = "AnyQt.QtWidgets.QFileDialog.getSaveFileName"
         patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
         filenames = ["f.report", "f.html"]
         for filename in filenames:
             with unittest.mock.patch(patch_target_1, create=True, side_effect=PermissionError),\
-                    unittest.mock.patch(patch_target_2, return_value=(filename, 0)),\
+                    unittest.mock.patch(patch_target_2, return_value=(filename, 'HTML (*.html)')),\
                     unittest.mock.patch(patch_target_3, return_value=True):
                 rep.save_report()
 
@@ -143,7 +143,7 @@ class TestReport(WidgetTest):
         temp_name = os.path.join(temp_dir, "f.report")
         try:
             with mock.patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName",
-                            return_value=(temp_name, 0)), \
+                            return_value=(temp_name, 'Report (*.report)')), \
                     mock.patch("AnyQt.QtWidgets.QMessageBox.exec_",
                                return_value=True):
                 rep.save_report()

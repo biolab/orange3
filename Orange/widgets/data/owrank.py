@@ -27,7 +27,7 @@ from Orange.data import (Table, Domain, ContinuousVariable, DiscreteVariable,
                          StringVariable)
 from Orange.misc.cache import memoize_method
 from Orange.preprocess import score
-from Orange.canvas import report
+from Orange.widgets import report
 from Orange.widgets import gui
 from Orange.widgets.settings import (DomainContextHandler, Setting,
                                      ContextSetting)

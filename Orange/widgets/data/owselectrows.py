@@ -26,7 +26,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
-from Orange.canvas import report
+from Orange.widgets import report
 from Orange.widgets.widget import Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)

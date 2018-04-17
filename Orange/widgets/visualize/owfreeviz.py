@@ -25,7 +25,7 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph, Inte
     HelpEventDelegate
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.widget import Input, Output
-from Orange.canvas import report
+from Orange.widgets import report
 
 
 class AsyncUpdateLoop(QObject):

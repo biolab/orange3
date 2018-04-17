@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from AnyQt.QtCore import Qt
 
-from Orange.canvas.report import bool_str
+from Orange.widgets.report import bool_str
 from Orange.data import ContinuousVariable, StringVariable, Domain, Table
 from Orange.modelling.linear import SGDLearner
 from Orange.widgets import gui

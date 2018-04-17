@@ -397,7 +397,7 @@ class OWColor(widget.OWWidget):
     def send_report(self):
         """Send report"""
         def _report_variables(variables, orig_variables):
-            from Orange.canvas.report import colored_square as square
+            from Orange.widgets.report import colored_square as square
 
             def was(n, o):
                 return n if n == o else "{} (was: {})".format(n, o)

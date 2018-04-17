@@ -26,7 +26,7 @@ class Report:
         """
         Raise the report window.
         """
-        from Orange.canvas.report.owreport import OWReport
+        from Orange.widgets.report.owreport import OWReport
 
         report = OWReport.get_instance()
         self.create_report_html()
@@ -606,7 +606,7 @@ def describe_domain(domain):
     Description contains keys "Features", "Meta attributes" and "Targets"
     with the corresponding clipped lists of names. If the domain contains no
     meta attributes or targets, the value is `False`, which prevents it from
-    being rendered by :obj:`~Orange.canvas.report.render_items`.
+    being rendered by :obj:`~Orange.widgets.report.render_items`.
 
     :param domain: domain
     :type domain: Orange.data.Domain
