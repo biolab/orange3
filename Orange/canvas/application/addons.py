@@ -43,6 +43,11 @@ from ..gui.utils import message_warning, message_information, \
                         OSX_NSURL_toLocalFile
 from ..help.manager import get_dist_meta, trim, parse_meta
 
+
+PYPI_API_JSON = "https://pypi.org/pypi/{name}/json"
+OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
+
+
 log = logging.getLogger(__name__)
 
 Installable = namedtuple(
@@ -631,7 +636,17 @@ def list_available_versions():
     """
     List add-ons available.
     """
-    addons = requests.get("https://orange.biolab.si/addons/list").json()
+    addons = requests.get(OFFICIAL_ADDON_LIST).json()
+
+    # query pypi.org for installed add-ons that are not in our list
+    installed = list_installed_addons()
+    missing = set(dist.project_name for dist in installed) - \
+              set(a.get("info", {}).get("name", "") for a in addons)
+    for p in missing:
+        response = requests.get(PYPI_API_JSON.format(name=p))
+        if response.status_code != 200:
+            continue
+        addons.append(response.json())
 
     packages = []
     for addon in addons:
