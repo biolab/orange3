@@ -109,7 +109,34 @@ def detect_encoding(filename):
         return _from_file(filename)
 
 
-def guess_data_type(orig_values):
+__isnastr = np.frompyfunc(
+    {v for v in MISSING_VALUES if isinstance(v, str)}.__contains__, 1, 1)
+
+# wrapper for __isnastr with proper default out dtype
+def isnastr(arr, out=None):
+    """
+    Given an (object) array of string values, return a boolean mask array
+    that is True where the `arr` contains one of the string constants
+    considered as N/A.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array of strings.
+    out : Optional[np.ndarray]
+        Optional output array of the same shape as arr
+
+    Returns
+    -------
+    mask : np.ndarray
+    """
+    arr = np.asarray(arr)
+    if out is None and arr.shape != ():
+        out = np.empty_like(arr, dtype=bool)
+    return __isnastr(arr, out=out)
+
+
+def guess_data_type(orig_values, namask=None):
     """
     Use heuristics to guess data type.
     """
@@ -119,14 +146,22 @@ def guess_data_type(orig_values):
         valuemap = sorted(is_discrete)
         coltype = DiscreteVariable
     else:
+        # try to parse as float
+        orig_values = np.asarray(orig_values)
+        if namask is None:
+            namask = isnastr(orig_values)
+        values = np.empty_like(orig_values, dtype=float)
+        values[namask] = np.nan
         try:
-            values = [float(i) for i in orig_values]
+            np.copyto(values, orig_values, where=~namask, casting="unsafe")
         except ValueError:
             tvar = TimeVariable('_')
             try:
-                values = [tvar.parse(i) for i in orig_values]
+                values[~namask] = [tvar.parse(i) for i in orig_values[~namask]]
             except ValueError:
                 coltype = StringVariable
+                # return original_values
+                values = orig_values
             else:
                 coltype = TimeVariable
         else:
@@ -610,11 +645,6 @@ class FileFormat(metaclass=FileFormatMeta):
                     uses[name] += 1
                     names[i] = "{}_{}".format(name, uses[name])
 
-        # check only against str values
-        missing = {v for v in MISSING_VALUES if isinstance(v, str)}
-        # Note: The only speed benefit is from conversion to bool array
-        # by specifying the `out` parameter
-        isnastr = np.frompyfunc(missing.__contains__, 1, 1)
         namask = np.empty(data.shape[0], dtype=bool)
         # Iterate through the columns
         for col in range(rowlen):
@@ -624,11 +654,11 @@ class FileFormat(metaclass=FileFormatMeta):
 
             type_flag = types and types[col].strip()
             try:
-                orig_values = data[:, col]  # object array of str, NA are ""
+                orig_values = data[:, col]
             except IndexError:
                 orig_values = np.array([], dtype=object)
+
             namask = isnastr(orig_values, out=namask)
-            orig_values[namask] = ""
 
             coltype_kwargs = {}
             valuemap = None
@@ -636,6 +666,7 @@ class FileFormat(metaclass=FileFormatMeta):
 
             if type_flag in StringVariable.TYPE_HEADERS:
                 coltype = StringVariable
+                values = orig_values
             elif type_flag in ContinuousVariable.TYPE_HEADERS:
                 coltype = ContinuousVariable
                 values = np.empty(data.shape[0], dtype=float)
@@ -645,7 +676,7 @@ class FileFormat(metaclass=FileFormatMeta):
                     values[namask] = np.nan
                 except ValueError:
                     for row, num in enumerate(orig_values):
-                        if num != "":
+                        if not isnastr(num):
                             try:
                                 float(num)
                             except ValueError:
@@ -656,19 +687,19 @@ class FileFormat(metaclass=FileFormatMeta):
 
             elif type_flag in TimeVariable.TYPE_HEADERS:
                 coltype = TimeVariable
-
+                values = np.where(namask, "", orig_values)
             elif (type_flag in DiscreteVariable.TYPE_HEADERS or
                   _RE_DISCRETE_LIST.match(type_flag)):
                 coltype = DiscreteVariable
+                orig_values = values = np.where(namask, "", orig_values)
                 if _RE_DISCRETE_LIST.match(type_flag):
                     valuemap = Flags.split(type_flag)
                     coltype_kwargs.update(ordered=True)
                 else:
                     valuemap = sorted(set(orig_values) - {""})
-
             else:
                 # No known type specified, use heuristics
-                valuemap, values, coltype = guess_data_type(orig_values)
+                valuemap, values, coltype = guess_data_type(orig_values, namask)
 
             if flag.m or coltype is StringVariable:
                 append_to = (Mcols, metas)
