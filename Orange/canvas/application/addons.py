@@ -25,7 +25,7 @@ from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
-    QApplication, QHBoxLayout, QCheckBox
+    QApplication, QHBoxLayout
 )
 
 from AnyQt.QtGui import (
@@ -44,20 +44,6 @@ from ..gui.utils import message_warning, message_information, \
 from ..help.manager import get_dist_meta, trim, parse_meta
 
 log = logging.getLogger(__name__)
-
-OFFICIAL_ADDONS = [
-    "Orange3-Bioinformatics",
-    "Orange3-Prototypes",
-    "Orange3-Text",
-    "Orange3-Network",
-    "Orange3-Associate",
-    "Orange-Spectroscopy",
-    "Orange3-Textable",
-    "Orange3-Educational",
-    "Orange3-Geo",
-    "Orange3-ImageAnalytics",
-    "Orange3-Timeseries",
-]
 
 Installable = namedtuple(
     "Installable",
@@ -194,23 +180,6 @@ def cleanup(name, sep="-"):
     return " ".join(re.findall("[A-Z][a-z]*", name[0].upper() + name[1:]))
 
 
-class SortFilterProxyTrusted(QSortFilterProxyModel):
-
-    show_only_trusted = True
-
-    def set_show_only_trusted(self, s):
-        self.show_only_trusted = s
-        self.invalidateFilter()
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        if self.show_only_trusted:
-            model = self.sourceModel()
-            item = self.sourceModel().data(model.index(source_row, 1), Qt.UserRole)
-            if isinstance(item, Available) and item.installable.name not in OFFICIAL_ADDONS:
-                return False
-        return super().filterAcceptsRow(source_row, source_parent)
-
-
 class AddonManagerWidget(QWidget):
 
     statechanged = Signal()
@@ -227,18 +196,10 @@ class AddonManagerWidget(QWidget):
         self.__search = QLineEdit(
             placeholderText=self.tr("Filter")
         )
-        self.__only_trusted = QCheckBox(
-            self.tr("Show only trusted add-ons"),
-        )
 
         topline = QHBoxLayout()
         topline.addWidget(self.__search)
-        topline.addWidget(self.__only_trusted)
         self.layout().addLayout(topline)
-
-        self.__only_trusted.setChecked(True)
-        self.show_only_trusted = True
-        self.__only_trusted.stateChanged.connect(self._show_only_trusted_changed)
 
         self.__view = view = QTreeView(
             rootIsDecorated=False,
@@ -252,7 +213,7 @@ class AddonManagerWidget(QWidget):
         self.__model = model = QStandardItemModel()
         model.setHorizontalHeaderLabels(["", "Name", "Version", "Action"])
         model.dataChanged.connect(self.__data_changed)
-        self.__proxy = proxy = SortFilterProxyTrusted(
+        self.__proxy = proxy = QSortFilterProxyModel(
             filterKeyColumn=1,
             filterCaseSensitivity=Qt.CaseInsensitive
         )
@@ -279,9 +240,6 @@ class AddonManagerWidget(QWidget):
         palette.setColor(QPalette.Base, Qt.transparent)
         self.__details.setPalette(palette)
         self.layout().addWidget(self.__details)
-
-    def _show_only_trusted_changed(self):
-        self.__proxy.set_show_only_trusted(self.__only_trusted.isChecked())
 
     def set_items(self, items):
         self.__items = items
