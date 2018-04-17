@@ -7,6 +7,8 @@ import errno
 import shlex
 import subprocess
 import itertools
+import json
+import traceback
 import concurrent.futures
 
 from collections import namedtuple, deque
@@ -25,7 +27,7 @@ from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
-    QApplication, QHBoxLayout
+    QApplication, QHBoxLayout,  QPushButton, QFormLayout
 )
 
 from AnyQt.QtGui import (
@@ -438,8 +440,15 @@ class AddonManagerDialog(QDialog):
 
         buttons = QDialogButtonBox(
             orientation=Qt.Horizontal,
-            standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+            standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
         )
+        addmore = QPushButton(
+            "Add more...", toolTip="Add an add-on not listed above",
+            autoDefault=False
+        )
+        addmore.clicked.connect(self.__run_add_package_dialog)
+        buttons.addButton(addmore, QDialogButtonBox.ActionRole)
+
         buttons.accepted.connect(self.__accepted)
         buttons.rejected.connect(self.reject)
 
@@ -462,6 +471,82 @@ class AddonManagerDialog(QDialog):
 
         if not self._f_pypi_addons.done():
             self.__progressDialog()
+
+    def __run_add_package_dialog(self):
+        dlg = QDialog(self, windowTitle="Add add-on by name")
+        dlg.setAttribute(Qt.WA_DeleteOnClose)
+
+        vlayout = QVBoxLayout()
+        form = QFormLayout()
+        form.setContentsMargins(0, 0, 0, 0)
+        nameentry = QLineEdit(
+            placeholderText="Package name",
+            toolTip="Enter a package name as displayed on "
+                    "PyPI (capitalization is not important)")
+        nameentry.setMinimumWidth(250)
+        form.addRow("Name:", nameentry)
+        vlayout.addLayout(form)
+        buttons = QDialogButtonBox(
+            standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        )
+        okb = buttons.button(QDialogButtonBox.Ok)
+        okb.setEnabled(False)
+        okb.setText("Add")
+
+        def changed(name):
+            okb.setEnabled(bool(name))
+        nameentry.textChanged.connect(changed)
+        vlayout.addWidget(buttons)
+        vlayout.setSizeConstraint(QVBoxLayout.SetFixedSize)
+        dlg.setLayout(vlayout)
+        f = None
+
+        def query():
+            nonlocal f
+            name = nameentry.text()
+            f = self._executor.submit(pypi_json_query_project_meta, [name])
+            okb.setDisabled(True)
+
+            def ondone(f):
+                error_text = ""
+                error_details = ""
+                try:
+                    pkgs = f.result()
+                except Exception:
+                    log.error("Query error:", exc_info=True)
+                    error_text = "Failed to query package index"
+                    error_details = traceback.format_exc()
+                    pkg = None
+                else:
+                    pkg = pkgs[0]
+                    if pkg is None:
+                        error_text = "'{}' not was not found".format(name)
+                if pkg:
+                    method_queued(self.add_package, (object,))(pkg)
+                    method_queued(dlg.accept, ())()
+                else:
+                    method_queued(self.__show_error_for_query, (str, str)) \
+                        (error_text, error_details)
+                    method_queued(dlg.reject, ())()
+
+            f.add_done_callback(ondone)
+
+        buttons.accepted.connect(query)
+        buttons.rejected.connect(dlg.reject)
+        dlg.exec_()
+
+    @Slot(str, str)
+    def __show_error_for_query(self, text, error_details):
+        message_error(text, title="Error", details=error_details)
+
+    @Slot(object)
+    def add_package(self, installable):
+        # type: (Installable) -> None
+        if installable.name in {p.name for p in self._packages}:
+            return
+        else:
+            packages = self._packages + [installable]
+        self.set_packages(packages)
 
     def __progressDialog(self):
         if self.__progress is None:
@@ -487,7 +572,7 @@ class AddonManagerDialog(QDialog):
 
         try:
             packages = f.result()
-        except (IOError, OSError, ValueError) as err:
+        except Exception as err:
             message_warning(
                 "Could not retrieve package list",
                 title="Error",
@@ -496,11 +581,15 @@ class AddonManagerDialog(QDialog):
             )
             log.error(str(err), exc_info=True)
             packages = []
-        except Exception:
-            raise
         else:
             AddonManagerDialog._packages = packages
 
+        self.set_packages(packages)
+
+    @Slot(object)
+    def set_packages(self, installable):
+        # type: (List[Installable]) -> None
+        self._packages = packages = installable  # type: List[Installable]
         installed = list_installed_addons()
         dists = {dist.project_name: dist for dist in installed}
         packages = {pkg.name: pkg for pkg in packages}
@@ -662,6 +751,60 @@ def list_available_versions():
             continue  # skip invalid packages
 
     return packages
+
+
+def pypi_json_query_project_meta(projects, session=None):
+    # type: (List[str], str, Optional[requests.Session]) -> List[Installable]
+    """
+    Parameters
+    ----------
+    projects : List[str]
+        List of project names to query
+    session : Optional[requests.Session]
+    """
+    if session is None:
+        session = requests.Session()
+
+    rval = []
+    for name in projects:
+        r = session.get(PYPI_API_JSON.format(name=name))
+        if r.status_code != 200:
+            rval.append(None)
+        else:
+            try:
+                meta = r.json()
+            except json.JSONDecodeError:
+                rval.append(None)
+            else:
+                try:
+                    rval.append(installable_from_json_response(meta))
+                except (TypeError, KeyError):
+                    rval.append(None)
+    return rval
+
+
+def installable_from_json_response(meta):
+    # type: (dict) -> Installable
+    """
+    Extract relevant project meta data from a PyPiJSONRPC response
+
+    Parameters
+    ----------
+    meta : dict
+        JSON response decoded into python native dict.
+
+    Returns
+    -------
+    installable : Installable
+    """
+    info = meta["info"]
+    name = info["name"]
+    version = info.get("version", "0")
+    summary = info.get("summary", "")
+    description = info.get("description", "")
+    package_url = info.get("package_url", "")
+
+    return Installable(name, version, summary, description, package_url, [])
 
 
 def list_installed_addons():
