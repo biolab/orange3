@@ -5,6 +5,17 @@ Change Log
 ------------
 * ...
 
+[3.12.0] - 2018-04-17
+--------------------
+##### Enhancements
+* canvas/add-ons: Add extra packages via a name input dialog ([#3006](../../pull/3006))
+* Variable lists (with QListView) optimizations ([#2994](../../pull/2994))
+
+##### Bugfixes
+* Add-ons working again (PyPI JSON interface + local official index) ([#3005](../../pull/3005))
+* Fix variable type guessing ([#2998](../../pull/2998))
+* Addon dialog crashes when site-packages directory does not exist ([#2988](../../pull/2988))
+* Fix reading double quoted text fields ([#2989](../../pull/2989))
 
 [3.12.0] - 2018-04-06
 --------------------
@@ -814,7 +825,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.12.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.13.0...HEAD
+[3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
 [3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0
 [3.11.0]: https://github.com/biolab/orange3/compare/3.10.0...3.11.0
 [3.10.0]: https://github.com/biolab/orange3/compare/3.9.1...3.10.0
