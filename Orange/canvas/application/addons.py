@@ -204,7 +204,7 @@ class AddonManagerWidget(QWidget):
             placeholderText=self.tr("Filter")
         )
 
-        topline = QHBoxLayout()
+        self.tophlayout = topline = QHBoxLayout()
         topline.addWidget(self.__search)
         self.layout().addLayout(topline)
 
@@ -443,11 +443,11 @@ class AddonManagerDialog(QDialog):
             standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
         )
         addmore = QPushButton(
-            "Add more...", toolTip="Add an add-on not listed above",
+            "Add more...", toolTip="Add an add-on not listed below",
             autoDefault=False
         )
+        self.addonwidget.tophlayout.addWidget(addmore)
         addmore.clicked.connect(self.__run_add_package_dialog)
-        buttons.addButton(addmore, QDialogButtonBox.ActionRole)
 
         buttons.accepted.connect(self.__accepted)
         buttons.rejected.connect(self.reject)
