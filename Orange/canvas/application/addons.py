@@ -12,10 +12,9 @@ import concurrent.futures
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
-import urllib.request
-import xmlrpc.client
 
 import pkg_resources
+import requests
 
 try:
     import docutils.core
@@ -485,7 +484,7 @@ class AddonManagerDialog(QDialog):
 
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         if AddonManagerDialog._packages is None:
-            self._f_pypi_addons = self._executor.submit(list_pypi_addons)
+            self._f_pypi_addons = self._executor.submit(list_available_versions)
         else:
             self._f_pypi_addons = concurrent.futures.Future()
             self._f_pypi_addons.set_result(AddonManagerDialog._packages)
@@ -670,62 +669,21 @@ class AddonManagerDialog(QDialog):
         self.accept()
 
 
-class SafeUrllibTransport(xmlrpc.client.Transport):
-    """Urllib for HTTPS connections that automatically handles proxies."""
-
-    def single_request(self, host, handler, request_body, verbose=False):
-        req = urllib.request.Request('https://%s%s' % (host, handler), request_body)
-        req.add_header('User-agent', self.user_agent)
-        req.add_header('Content-Type', 'text/xml')
-        self.verbose = verbose
-        opener = urllib.request.build_opener()
-        return self.parse_response(opener.open(req))
-
-
-def list_pypi_addons():
+def list_available_versions():
     """
-    List add-ons available on pypi.
+    List add-ons available.
     """
-    from ..config import ADDON_PYPI_SEARCH_SPEC
+    addons = requests.get("https://orange.biolab.si/addons/list").json()
 
-    pypi = xmlrpc.client.ServerProxy(
-        "https://pypi.python.org/pypi/",
-        transport=SafeUrllibTransport()
-    )
-    addons = pypi.search(ADDON_PYPI_SEARCH_SPEC)
-
-    for addon in OFFICIAL_ADDONS:
-        if not any(a for a in addons if a['name'] == addon):
-            addons.append({"name": addon, "version": '0'})
-
-    multicall = xmlrpc.client.MultiCall(pypi)
-    for addon in addons:
-        name = addon["name"]
-        multicall.package_releases(name)
-
-    releases = multicall()
-    multicall = xmlrpc.client.MultiCall(pypi)
-    for addon, versions in zip(addons, releases):
-        # Workaround for PyPI bug of search not returning the latest versions
-        # https://bitbucket.org/pypa/pypi/issues/326/my-package-doesnt-appear-in-the-search
-        version_ = max(versions, key=version.LooseVersion)
-
-        name = addon["name"]
-        multicall.release_data(name, version_)
-
-    results = list(multicall())
     packages = []
-
-    for release in results:
-        if release:
-            # ignore releases without actual source/wheel/egg files,
-            # or with empty metadata (deleted from PyPi?).
-            packages.append(
-                Installable(release["name"], release["version"],
-                            release["summary"], release["description"],
-                            release["package_url"],
-                            release["package_url"])
-            )
+    for addon in addons:
+        info = addon["info"]
+        packages.append(
+            Installable(info["name"], info["version"],
+                        info["summary"], info["description"],
+                        info["package_url"],
+                        info["package_url"])
+        )
     return packages
 
 
