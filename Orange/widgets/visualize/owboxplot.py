@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import (
     QGraphicsPathItem, QGraphicsRectItem, QSizePolicy
 )
 from AnyQt.QtGui import QPen, QColor, QBrush, QPainterPath, QPainter, QFont
-from AnyQt.QtCore import Qt, QEvent, QRectF, QSize
+from AnyQt.QtCore import Qt, QEvent, QRectF, QSize, QRect
 
 import scipy.special
 from scipy.stats import f_oneway, chisquare
@@ -557,12 +557,17 @@ class OWBoxPlot(widget.OWWidget):
                 self.box_scene.addItem(label)
 
             if self.show_labels and self.attribute is not self.group_var:
+                label = None
                 for text_item, bar_part in zip(box[1::2], box[::2]):
-                    label = QGraphicsSimpleTextItem(
+                    label = self.Label(
                         text_item.toPlainText())
                     label.setPos(bar_part.boundingRect().x(),
                                  y - label.boundingRect().height() - 8)
+                    label.setMaxWidth(bar_part.boundingRect().width())
                     self.box_scene.addItem(label)
+                if label is not None and bar_part.boundingRect().width() >= label.MIN_LABEL_WIDTH:
+                    # last label in row can extend beyond its bar
+                    label.setMaxWidth(None)
             for item in box:
                 if isinstance(item, QGraphicsTextItem):
                     continue
@@ -971,6 +976,50 @@ class OWBoxPlot(widget.OWWidget):
             text += "grouped by '{}'".format(self.group_var.name)
         if text:
             self.report_caption(text)
+
+    class Label(QGraphicsSimpleTextItem):
+        """Boxplot Label with settable maxSize"""
+        # Minimum width to display label text
+        MIN_LABEL_WIDTH = 25
+
+        # amount of whitespace between the cut point on the label and
+        # the right bar boundary
+        RIGHT_PADDING = 3
+
+        __max_width = None
+
+        def maxWidth(self):
+            return self.__max_width
+
+        def setMaxWidth(self, max_width):
+            self.__max_width = max_width
+
+        def paint(self, painter, option, widget):
+            """Overrides QGraphicsSimpleTextItem.paint
+
+            If text is wider than maxWidth, a white rect is drawn to obscure
+            letters that extend beyond allowed width.
+            """
+            super().paint(painter, option, widget)
+
+            if self.__max_width is None or self.boundingRect().width() < self.__max_width:
+                return
+
+            if self.__max_width < self.MIN_LABEL_WIDTH:
+                # hide text for narrow labels
+                self.__draw_white_rect(painter, option.rect)
+            else:
+                # hide text extending over the boundary
+                r = QRect(option.rect)
+                r.setX(r.x() + self.__max_width - self.RIGHT_PADDING)
+                self.__draw_white_rect(painter, r)
+
+        def __draw_white_rect(self, painter, rect):
+            painter.save()
+            painter.setBrush(Qt.white)
+            painter.setPen(Qt.white)
+            painter.drawRect(rect)
+            painter.restore()
 
 
 def main(argv=None):
