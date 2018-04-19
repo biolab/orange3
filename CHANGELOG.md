@@ -825,6 +825,7 @@ Change Log
 
 
 [next]: https://github.com/biolab/orange3/compare/3.13.0...HEAD
+[3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
 [3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0
 [3.11.0]: https://github.com/biolab/orange3/compare/3.10.0...3.11.0
 [3.10.0]: https://github.com/biolab/orange3/compare/3.9.1...3.10.0
