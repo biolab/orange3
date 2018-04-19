@@ -397,8 +397,10 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             c.layout().addWidget(sb)
 
             help = self.__help_action
+            icon = QIcon(gui.resource_filename("icons/help.svg"))
+            icon.addFile(gui.resource_filename("icons/help-hover.svg"), mode=QIcon.Active)
             help_button = SimpleButton(
-                icon=QIcon(gui.resource_filename("icons/help.svg")),
+                icon=icon,
                 toolTip="Show widget help", visible=help.isVisible(),
             )
             @help.changed.connect
@@ -409,15 +411,19 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             sb.addWidget(help_button)
 
             if self.graph_name is not None:
+                icon = QIcon(gui.resource_filename("icons/chart.svg"))
+                icon.addFile(gui.resource_filename("icons/chart-hover.svg"), mode=QIcon.Active)
                 b = SimpleButton(
-                    icon=QIcon(gui.resource_filename("icons/chart.svg")),
+                    icon=icon,
                     toolTip="Save Image",
                 )
                 b.clicked.connect(self.save_graph)
                 sb.addWidget(b)
             if hasattr(self, "send_report"):
+                icon = QIcon(gui.resource_filename("icons/report.svg"))
+                icon.addFile(gui.resource_filename("icons/report-hover.svg"), mode=QIcon.Active)
                 b = SimpleButton(
-                    icon=QIcon(gui.resource_filename("icons/report.svg")),
+                    icon=icon,
                     toolTip="Report"
                 )
                 b.clicked.connect(self.show_report)
