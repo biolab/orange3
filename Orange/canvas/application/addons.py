@@ -311,6 +311,7 @@ class AddonManagerWidget(QWidget):
                 self.__view.model().index(0, 0),
                 QItemSelectionModel.Select | QItemSelectionModel.Rows
             )
+        self.__proxy.sort(1)  # sorting list of add-ons in alphabetical order
 
     def item_state(self):
         steps = []
