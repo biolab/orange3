@@ -3245,8 +3245,8 @@ class FloatSlider(QSlider):
         self.setSingleStep(1)
         if self.min_value != self.max_value:
             self.setEnabled(True)
-            self.setMinimum(int(self.min_value / self.step))
-            self.setMaximum(int(self.max_value / self.step))
+            self.setMinimum(int(round(self.min_value / self.step)))
+            self.setMaximum(int(round(self.max_value / self.step)))
         else:
             self.setEnabled(False)
 
@@ -3262,7 +3262,7 @@ class FloatSlider(QSlider):
         Args:
             value: new value
         """
-        super().setValue(value // self.step)
+        super().setValue(int(round(value / self.step)))
 
     def setScale(self, minValue, maxValue, step=0):
         """
