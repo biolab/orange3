@@ -2,8 +2,8 @@
 from typing import Optional
 
 from AnyQt.QtCore import (
-    Qt, QEvent, QObject, QAbstractItemModel, QModelIndex,
-    QSortFilterProxyModel, QSize, QRect, QMargins, QCoreApplication
+    Qt, QEvent, QObject, QAbstractItemModel, QSortFilterProxyModel,
+    QModelIndex, QSize, QRect, QMargins, QCoreApplication, QElapsedTimer
 )
 
 from AnyQt.QtGui import QMouseEvent, QKeyEvent
@@ -33,6 +33,7 @@ class ComboBoxSearch(QComboBox):
         self.__searchline.setFocusProxy(self)
         self.__popup = None  # type: Optional[QAbstractItemModel]
         self.__proxy = None  # type: Optional[QSortFilterProxyModel]
+        self.__popupTimer = QElapsedTimer()
 
     def showPopup(self):
         # type: () -> None
@@ -149,6 +150,7 @@ class ComboBoxSearch(QComboBox):
         popup.installEventFilter(self)
         popup.viewport().installEventFilter(self)
         self.update()
+        self.__popupTimer.restart()
 
     def hidePopup(self):
         """Reimplemented"""
@@ -226,7 +228,9 @@ class ComboBoxSearch(QComboBox):
                 return True
 
         if etype == QEvent.MouseButtonRelease and self.__popup is not None \
-                and obj is self.__popup.viewport():
+                and obj is self.__popup.viewport() \
+                and self.__popupTimer.hasExpired(
+                        QApplication.doubleClickInterval()):
             event = event  # type: QMouseEvent
             index = self.__popup.indexAt(event.pos())
             if index.isValid():
