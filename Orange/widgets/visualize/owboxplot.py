@@ -541,43 +541,93 @@ class OWBoxPlot(widget.OWWidget):
 
         for row, box in enumerate(self.boxes):
             y = (-len(self.boxes) + row) * 40 + 10
+            bars, labels = box[::2], box[1::2]
 
-            label = self.attr_labels[row]
-            b = label.boundingRect()
-            label.setPos(-b.width() - 10, y - b.height() / 2)
-            self.box_scene.addItem(label)
+            self.__draw_group_labels(y, row)
             if not self.stretched:
-                label = self.labels[row]
-                b = label.boundingRect()
-                if self.group_var:
-                    right = self.scale_x * sum(self.conts[row])
-                else:
-                    right = self.scale_x * sum(self.dist)
-                label.setPos(right + 10, y - b.height() / 2)
-                self.box_scene.addItem(label)
-
+                self.__draw_row_counts(y, row)
             if self.show_labels and self.attribute is not self.group_var:
-                label = None
-                for text_item, bar_part in zip(box[1::2], box[::2]):
-                    label = self.Label(
-                        text_item.toPlainText())
-                    label.setPos(bar_part.boundingRect().x(),
-                                 y - label.boundingRect().height() - 8)
-                    label.setMaxWidth(bar_part.boundingRect().width())
-                    self.box_scene.addItem(label)
-                if label is not None and bar_part.boundingRect().width() >= label.MIN_LABEL_WIDTH:
-                    # last label in row can extend beyond its bar
-                    label.setMaxWidth(None)
-            for item in box:
-                if isinstance(item, QGraphicsTextItem):
-                    continue
-                self.box_scene.addItem(item)
-                item.setPos(0, y)
+                self.__draw_bar_labels(y, bars, labels)
+            self.__draw_bars(y, bars)
+
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
                                     self.scene_width, len(self.boxes * 40) + 90)
         self.infot1.setText("")
         self.select_box_items()
+
+    def __draw_group_labels(self, y, row):
+        """Draw group labels
+
+        Parameters
+        ----------
+        y: int
+            vertical offset of bars
+        row: int
+            row index
+        """
+        label = self.attr_labels[row]
+        b = label.boundingRect()
+        label.setPos(-b.width() - 10, y - b.height() / 2)
+        self.box_scene.addItem(label)
+
+    def __draw_row_counts(self, y, row):
+        """Draw row counts
+
+        Parameters
+        ----------
+        y: int
+            vertical offset of bars
+        row: int
+            row index
+        """
+        label = self.labels[row]
+        b = label.boundingRect()
+        if self.group_var:
+            right = self.scale_x * sum(self.conts[row])
+        else:
+            right = self.scale_x * sum(self.dist)
+        label.setPos(right + 10, y - b.height() / 2)
+        self.box_scene.addItem(label)
+
+    def __draw_bar_labels(self, y, bars, labels):
+        """Draw bar labels
+
+        Parameters
+        ----------
+        y: int
+            vertical offset of bars
+        bars: List[FilterGraphicsRectItem]
+            list of bars being drawn
+        labels: List[QGraphicsTextItem]
+            list of labels for corresponding bars
+        """
+        label = bar_part = None
+        for text_item, bar_part in zip(labels, bars):
+            label = self.Label(
+                text_item.toPlainText())
+            label.setPos(bar_part.boundingRect().x(),
+                         y - label.boundingRect().height() - 8)
+            label.setMaxWidth(bar_part.boundingRect().width())
+            self.box_scene.addItem(label)
+        if label is not None and bar_part.boundingRect().width() >= label.MIN_LABEL_WIDTH:
+            # last label in row can extend beyond its bar
+            label.setMaxWidth(None)
+
+    def __draw_bars(self, y, bars):
+        """Draw bars
+
+        Parameters
+        ----------
+        y: int
+            vertical offset of bars
+
+        bars: List[FilterGraphicsRectItem]
+            list of bars to draw
+        """
+        for item in bars:
+            item.setPos(0, y)
+            self.box_scene.addItem(item)
 
     # noinspection PyPep8Naming
     def compute_tests(self):
