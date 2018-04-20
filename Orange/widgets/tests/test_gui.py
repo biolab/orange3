@@ -79,9 +79,12 @@ class TestFloatSlider(GuiTest):
     def test_set_value(self):
         w = gui.FloatSlider(Qt.Horizontal, 0., 1., 0.5)
         w.setValue(1)
+        # Float slider returns value divided by step
+        # 1/0.5 = 2
         self.assertEqual(w.value(), 2)
         w = gui.FloatSlider(Qt.Horizontal, 0., 1., 0.05)
         w.setValue(1)
+        # 1/0.05 = 20
         self.assertEqual(w.value(), 20)
 
 
