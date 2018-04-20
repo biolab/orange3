@@ -6,11 +6,24 @@ from AnyQt.QtCore import (
     QModelIndex, QSize, QRect, QMargins, QCoreApplication, QElapsedTimer
 )
 
-from AnyQt.QtGui import QMouseEvent, QKeyEvent
+from AnyQt.QtGui import QMouseEvent, QKeyEvent, QPainter, QPalette, QPen
 from AnyQt.QtWidgets import (
     QWidget, QComboBox, QLineEdit, QAbstractItemView, QListView,
-    QStyleOptionComboBox, QStyle, QStylePainter, QApplication
+    QStyleOptionComboBox, QStyleOptionViewItem, QStyle, QStylePainter,
+    QStyledItemDelegate, QApplication
 )
+
+
+class _ComboBoxListDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        # type: (QPainter, QStyleOptionViewItem, QModelIndex) -> None
+        super().paint(painter, option, index)
+        if index.data(Qt.AccessibleDescriptionRole) == "separator":
+            palette = option.palette  # type: QPalette
+            painter.setPen(QPen(palette.dark(), 1.0))
+            rect = option.rect  # type: QRect
+            y = rect.center().y()
+            painter.drawLine(rect.left(), y, rect.left() + rect.width(), y)
 
 
 class ComboBoxSearch(QComboBox):
@@ -64,6 +77,7 @@ class ComboBoxSearch(QComboBox):
         )
         popup.setFocusProxy(self.__searchline)
         popup.setParent(self, Qt.Popup | Qt.FramelessWindowHint)
+        popup.setItemDelegate(_ComboBoxListDelegate(popup))
         proxy = QSortFilterProxyModel(
             popup, filterCaseSensitivity=Qt.CaseInsensitive
         )
