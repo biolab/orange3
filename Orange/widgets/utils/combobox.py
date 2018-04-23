@@ -3,7 +3,7 @@ from typing import Optional
 
 from AnyQt.QtCore import (
     Qt, QEvent, QObject, QAbstractItemModel, QSortFilterProxyModel,
-    QModelIndex, QSize, QRect, QMargins, QCoreApplication, QElapsedTimer
+    QModelIndex, QSize, QRect, QPoint, QMargins, QCoreApplication, QElapsedTimer
 )
 from AnyQt.QtGui import QMouseEvent, QKeyEvent, QPainter, QPalette, QPen
 from AnyQt.QtWidgets import (
@@ -135,22 +135,8 @@ class ComboBoxSearch(QComboBox):
                       .boundedTo(screenrect.size()))
         popuprect = QRect(popuprect_origin.bottomLeft(), popup_size)
 
-        # if the popup extends bellow the screen and there is more room above
-        # the popup origin ...
-        if popuprect.bottom() > screenrect.bottom() \
-                and popuprect_origin.center().y() > screenrect.center().y():
-            # ...flip the rect about the popup_origin so it extends upwards
-            popuprect.moveBottom(popuprect_origin.topLeft().y())
-
-        # fixup horizontal position if it extends outside the screen
-        if popuprect.left() < screenrect.left():
-            popuprect.moveLeft(screenrect.left())
-        if popuprect.right() > screenrect.right():
-            popuprect.moveRight(screenrect.right())
-
-        # bound by screen geometry
-        popuprect = popuprect.intersected(screenrect)
-
+        popuprect = dropdown_popup_geometry(
+            popuprect, popuprect_origin, screenrect)
         popup.setGeometry(popuprect)
 
         current = proxy.mapFromSource(
@@ -312,3 +298,42 @@ def qwidget_margin_within(widget, ancestor):
     return QMargins(topleft.x(), topleft.y(),
                     r2.right() - bottomright.x(),
                     r2.bottom() - bottomright.y())
+
+
+def dropdown_popup_geometry(geometry, origin, screen):
+    # type: (QRect, QRect, QRect) -> QRect
+    """
+    Move/constrain the geometry for a drop down popup.
+
+    Parameters
+    ----------
+    geometry : QRect
+        The base popup geometry if not constrained.
+    origin : QRect
+        The origin rect from which the popup extends.
+    screen : QRect
+        The available screen geometry into which the popup must fit.
+
+    Returns
+    -------
+    geometry: QRect
+        Constrained drop down list geometry to fit into  screen
+    """
+    # if the popup  geometry extends bellow the screen and there is more room
+    # above the popup origin ...
+    geometry = QRect(geometry)
+    geometry.moveTopLeft(origin.bottomLeft() + QPoint(0, 1))
+
+    if geometry.bottom() > screen.bottom() \
+            and origin.center().y() > screen.center().y():
+        # ...flip the rect about the origin so it extends upwards
+        geometry.moveBottom(origin.top() - 1)
+
+    # fixup horizontal position if it extends outside the screen
+    if geometry.left() < screen.left():
+        geometry.moveLeft(screen.left())
+    if geometry.right() > screen.right():
+        geometry.moveRight(screen.right())
+
+    # bounded by screen geometry
+    return geometry.intersected(screen)
