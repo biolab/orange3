@@ -60,9 +60,10 @@ class ComboBoxSearch(QComboBox):
         The .popup(), .lineEdit(), .completer() of the base class are not used.
         """
         if self.__popup is not None:
-            self.__popup.hide()
-            self.__popup.deleteLater()
+            popup = self.__popup
             self.__popup = self.__proxy = None
+            popup.hide()
+            popup.deleteLater()
 
         if self.count() == 0:
             return
@@ -92,8 +93,6 @@ class ComboBoxSearch(QComboBox):
         self.__searchline.setText("")
         self.__searchline.setPlaceholderText("Filter...")
         self.__searchline.setVisible(True)
-        # focus proxy is cleared in hidePopup
-        self.__searchline.setFocusProxy(self)
         self.__searchline.textEdited.connect(proxy.setFilterFixedString)
 
         style = self.style()  # type: QStyle
@@ -169,12 +168,15 @@ class ComboBoxSearch(QComboBox):
     def hidePopup(self):
         """Reimplemented"""
         if self.__popup is not None:
-            self.__popup.deleteLater()
+            popup = self.__popup
             self.__popup = self.__proxy = None
+            popup.setFocusProxy(None)
+            popup.hide()
+            popup.deleteLater()
+
         # need to call base hidePopup even though the base showPopup was not
         # called (update internal state wrt. 'pressed' arrow, ...
         super().hidePopup()
-        self.__searchline.setFocusProxy(None)
         self.__searchline.hide()
         self.update()
 
