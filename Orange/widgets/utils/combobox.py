@@ -46,6 +46,7 @@ class ComboBoxSearch(QComboBox):
         self.__popup = None  # type: Optional[QAbstractItemModel]
         self.__proxy = None  # type: Optional[QSortFilterProxyModel]
         self.__popupTimer = QElapsedTimer()
+        self.setFocusPolicy(Qt.ClickFocus | Qt.TabFocus)
 
     def showPopup(self):
         # type: () -> None
