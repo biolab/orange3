@@ -1,11 +1,10 @@
-
+# pylint: disable=unused-import
 from typing import Optional
 
 from AnyQt.QtCore import (
     Qt, QEvent, QObject, QAbstractItemModel, QSortFilterProxyModel,
     QModelIndex, QSize, QRect, QMargins, QCoreApplication, QElapsedTimer
 )
-
 from AnyQt.QtGui import QMouseEvent, QKeyEvent, QPainter, QPalette, QPen
 from AnyQt.QtWidgets import (
     QWidget, QComboBox, QLineEdit, QAbstractItemView, QListView,
@@ -162,6 +161,7 @@ class ComboBoxSearch(QComboBox):
         popup.setFocus(Qt.PopupFocusReason)
         popup.installEventFilter(self)
         popup.viewport().installEventFilter(self)
+        popup.viewport().setMouseTracking(True)
         self.update()
         self.__popupTimer.restart()
 
@@ -201,14 +201,13 @@ class ComboBoxSearch(QComboBox):
         """Reimplemented."""
         opt = QStyleOptionComboBox()
         self.initStyleOption(opt)
-
         painter = QStylePainter(self)
         painter.drawComplexControl(QStyle.CC_ComboBox, opt)
         if not self.__searchline.isVisibleTo(self):
             opt.editable = False
             painter.drawControl(QStyle.CE_ComboBoxLabel, opt)
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj, event):  # pylint: disable=too-many-branches
         # type: (QObject, QEvent) -> bool
         """Reimplemented."""
         etype = event.type()
@@ -251,6 +250,18 @@ class ComboBoxSearch(QComboBox):
             index = self.__popup.indexAt(event.pos())
             if index.isValid():
                 self.__activateProxyIndex(index)
+
+        if etype == QEvent.MouseMove and self.__popup is not None \
+                and obj is self.__popup.viewport():
+            event = event  # type: QMouseEvent
+            opt = QStyleOptionComboBox()
+            self.initStyleOption(opt)
+            style = self.style()  # type: QStyle
+            if style.styleHint(QStyle.SH_ComboBox_ListMouseTracking, opt, self):
+                index = self.__popup.indexAt(event.pos())
+                if index.isValid() and \
+                        index.flags() & (Qt.ItemIsEnabled | Qt.ItemIsSelectable):
+                    self.__popup.setCurrentIndex(index)
 
         return super().eventFilter(obj, event)
 
