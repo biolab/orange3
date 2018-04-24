@@ -14,6 +14,7 @@ import concurrent.futures
 from collections import namedtuple, deque
 from xml.sax.saxutils import escape
 from distutils import version
+from typing import Optional, List, Union, Tuple  # pylint: disable=unused-import
 
 import pkg_resources
 import requests
@@ -27,7 +28,7 @@ from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
-    QApplication, QHBoxLayout,  QPushButton, QFormLayout
+    QApplication, QHBoxLayout, QPushButton, QFormLayout
 )
 
 from AnyQt.QtGui import (
@@ -83,8 +84,12 @@ Installed = namedtuple(
      "local"]
 )
 
+#: An installable item/slot
+Item = Union[Available, Installed]
+
 
 def is_updatable(item):
+    # type: (Item) -> bool
     if isinstance(item, Available):
         return False
     elif item.installable is None:
@@ -249,6 +254,7 @@ class AddonManagerWidget(QWidget):
         self.layout().addWidget(self.__details)
 
     def set_items(self, items):
+        # type: (List[Item]) -> None
         self.__items = items
         model = self.__model
         model.setRowCount(0)
@@ -313,7 +319,12 @@ class AddonManagerWidget(QWidget):
                 QItemSelectionModel.Select | QItemSelectionModel.Rows
             )
 
+    def items(self):
+        # type: () -> List[Item]
+        return list(self.__items)
+
     def item_state(self):
+        # type: () -> List['Action']
         steps = []
         for i in range(self.__model.rowCount()):
             modelitem = self.__model.item(i, 0)
@@ -327,6 +338,37 @@ class AddonManagerWidget(QWidget):
                 steps.append((Uninstall, item))
 
         return steps
+
+    def set_item_state(self, steps):
+        # type: (List['Action']) -> None
+        model = self.__model
+        if model.rowCount() == 0:
+            return
+
+        for row in range(model.rowCount()):
+            modelitem = model.item(row, 0)  # type: QStandardItem
+            item = modelitem.data(Qt.UserRole)  # type: Item
+            # Find the action command in the steps list for the item
+            cmd = -1
+            for cmd_, item_ in steps:
+                if item == item_:
+                    cmd = cmd_
+                    break
+            if isinstance(item, Available):
+                modelitem.setCheckState(
+                    Qt.Checked if cmd == Install else Qt.Unchecked
+                )
+            elif isinstance(item, Installed):
+                if cmd == Upgrade:
+                    modelitem.setCheckState(Qt.Checked)
+                elif cmd == Uninstall:
+                    modelitem.setCheckState(Qt.Unchecked)
+                elif is_updatable(item):
+                    modelitem.setCheckState(Qt.PartiallyChecked)
+                else:
+                    modelitem.setCheckState(Qt.Checked)
+            else:
+                assert False
 
     def __selected_row(self):
         indices = self.__view.selectedIndexes()
@@ -548,7 +590,9 @@ class AddonManagerDialog(QDialog):
             return
         else:
             packages = self._packages + [installable]
+        state = self.addonwidget.item_state()
         self.set_packages(packages)
+        self.addonwidget.set_item_state(state)
 
     def __progressDialog(self):
         if self.__progress is None:
@@ -677,10 +721,19 @@ class AddonManagerDialog(QDialog):
                 packages.append(
                     Installable(name, vers, summary,
                                 descr or summary, path, [path]))
-        future = concurrent.futures.Future()
-        future.set_result((AddonManagerDialog._packages or []) + packages)
-        self._set_packages(future)
-        self.addonwidget.set_install_projects(names)
+
+        if packages:
+            state = self.addonwidget.item_state()
+            self.set_packages((self._packages or []) + packages)
+            items = self.addonwidget.items()
+            # mark for installation the added packages
+            for item in items:
+                if item.installable in packages:
+                    if isinstance(item, Available):
+                        state.append((Install, item))
+                    elif isinstance(item, Installed) and is_updatable(item):
+                        state.append((Upgrade, item))
+            self.addonwidget.set_item_state(state)
 
     def __accepted(self):
         steps = self.addonwidget.item_state()
@@ -841,6 +894,8 @@ def have_install_permissions():
 
 
 Install, Upgrade, Uninstall = 1, 2, 3
+
+Action = Tuple[int, Item]
 
 
 class CommandFailed(Exception):
