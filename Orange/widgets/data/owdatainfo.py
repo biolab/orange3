@@ -37,7 +37,7 @@ class OWDataInfo(widget.OWWidget):
         self.data_set_size = self.features = self.meta_attributes = ""
         self.location = ""
         for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
-                    "Location"):
+                    "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
             bo = gui.vBox(self.controlArea, box,
                           addSpace=False and box != "Meta Attributes")
@@ -54,6 +54,7 @@ class OWDataInfo(widget.OWWidget):
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         self.targets = ""
+        self.data_attributes = ""
         self.data_desc = None
 
     @Inputs.data
@@ -179,9 +180,13 @@ class OWDataInfo(widget.OWWidget):
             ("{} textual", str_metas)
         ))
 
+        if data.attributes:
+            self.data_attributes = pack_table(data.attributes.items())
+
     def send_report(self):
         if self.data_desc:
             self.report_items(self.data_desc)
+
 
 if __name__ == "__main__":
     a = QtWidgets.QApplication([])
