@@ -236,9 +236,6 @@ class OWDataSets(widget.OWWidget):
 
         self.assign_delegates()
 
-        if self.header_state:
-            self.view.header().restoreState(self.header_state)
-
         self.setBlocking(True)
         self.setStatusMessage("Initializing")
 
@@ -358,6 +355,12 @@ class OWDataSets(widget.OWWidget):
         )
 
         self.view.resizeColumnToContents(0)
+        self.view.setColumnWidth(
+            1, min(self.view.sizeHintForColumn(1),
+                   self.view.fontMetrics().width("X" * 24)))
+
+        header = self.view.header()
+        header.restoreState(self.header_state)
 
         # Update the info text
         self.infolabel.setText(format_info(model.rowCount(), len(self.allinfo_local)))
