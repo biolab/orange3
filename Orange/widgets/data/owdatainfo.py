@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import threading
+import textwrap
 
 from AnyQt import QtWidgets
 
@@ -65,9 +66,10 @@ class OWDataInfo(widget.OWWidget):
             return sum(isinstance(x, tpe) for x in s)
 
         def pack_table(info):
-            return "<table>\n" + "\n".join(
+            return '<table>\n' + "\n".join(
                 '<tr><td align="right" width="90">%s:</td>\n'
-                '<td width="40">%s</td></tr>\n' % dv for dv in info
+                '<td width="40">%s</td></tr>\n' % (d, textwrap.shorten(str(v), width=30, placeholder="..."))
+                for d, v in info
             ) + "</table>\n"
 
         if data is None:
@@ -179,6 +181,8 @@ class OWDataInfo(widget.OWWidget):
 
         if data.attributes:
             self.data_attributes = pack_table(data.attributes.items())
+        else:
+            self.data_attributes = ""
 
     def send_report(self):
         if self.data_desc:

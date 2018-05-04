@@ -10,7 +10,7 @@ class TestOWDataInfo(WidgetTest):
         self.widget = self.create_widget(OWDataInfo)
 
     def test_data(self):
-        """No crash on empty data"""
+        """No crash on iris"""
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
 
