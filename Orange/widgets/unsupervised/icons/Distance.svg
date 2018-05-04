@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generator: Adobe Illustrator 16.1.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generator: Adobe Illustrator 22.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
+	 viewBox="0 0 48 48" style="enable-background:new 0 0 48 48;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FFFFFF;}
+	.st1{fill:#333333;}
+	.st2{fill:none;stroke:#333333;stroke-width:2;stroke-miterlimit:10;}
+	.st3{fill:#B2B2B2;}
+	.st4{fill:#F0F0F0;}
+	.st5{fill:#666666;}
+	.st6{fill:none;stroke:#333333;stroke-miterlimit:10;}
+	.st7{fill:none;stroke:#333333;stroke-width:3;stroke-miterlimit:10;}
+	.st8{fill:none;stroke:#333333;stroke-width:2;stroke-linecap:round;stroke-miterlimit:10;}
+	.st9{fill:none;stroke:#C6C6C6;stroke-width:3;stroke-miterlimit:10;}
+</style>
 <g>
-	<path fill="#333333" d="M23.665,12h0.687l11.071,24H12.578L23.665,12z M15.991,33.934l13.613,0.02l-6.652-15.349L15.991,33.934z"/>
+	<path class="st1" d="M23.4,6h1L41,42H6.8L23.4,6z M11.9,38.9l20.4,0l-10-23L11.9,38.9z"/>
 </g>
 </svg>
