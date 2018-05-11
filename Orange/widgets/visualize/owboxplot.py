@@ -610,9 +610,6 @@ class OWBoxPlot(widget.OWWidget):
                          y - label.boundingRect().height() - 8)
             label.setMaxWidth(bar_part.boundingRect().width())
             self.box_scene.addItem(label)
-        if label is not None and bar_part.boundingRect().width() >= label.MIN_LABEL_WIDTH:
-            # last label in row can extend beyond its bar
-            label.setMaxWidth(None)
 
     def __draw_bars(self, y, bars):
         """Draw bars
