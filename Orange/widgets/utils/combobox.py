@@ -60,10 +60,9 @@ class ComboBoxSearch(QComboBox):
         The .popup(), .lineEdit(), .completer() of the base class are not used.
         """
         if self.__popup is not None:
-            popup = self.__popup
-            self.__popup = self.__proxy = None
-            popup.hide()
-            popup.deleteLater()
+            # We have user entered state that cannot be disturbed
+            # (entered filter text, scroll offset, ...)
+            return  # pragma: no cover
 
         if self.count() == 0:
             return
@@ -163,7 +162,7 @@ class ComboBoxSearch(QComboBox):
             popup.deleteLater()
 
         # need to call base hidePopup even though the base showPopup was not
-        # called (update internal state wrt. 'pressed' arrow, ...
+        # called (update internal state wrt. 'pressed' arrow, ...)
         super().hidePopup()
         self.__searchline.hide()
         self.update()
