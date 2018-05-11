@@ -743,8 +743,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
+        if self.show_reg_line:
+            _x_data = self.data.get_column_view(self.shown_x)[0]
+            _y_data = self.data.get_column_view(self.shown_y)[0]
+            _x_data = _x_data[self.valid_data]
+            _y_data = _y_data[self.valid_data]
+            assert _x_data.size
+            assert _y_data.size
+            self.draw_regression_line(
+                _x_data, _y_data, np.min(_x_data), np.max(_y_data))
 
-        self.draw_regression_line(x_data, y_data, min_x, max_x)
         self.update_labels()
         self.make_legend()
         self.plot_widget.replot()
