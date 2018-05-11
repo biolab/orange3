@@ -1,10 +1,9 @@
 import itertools
 import time
 from collections import OrderedDict, Iterable
-from itertools import chain
 
 from AnyQt.QtCore import (
-    Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice, QLocale
+    Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
 )
 from AnyQt.QtGui import QColor, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QTableView
@@ -22,14 +21,27 @@ class Report:
     report_html = ""
     name = ""
 
+    # Report view. The canvas framework will override this when it needs to
+    # route reports to a specific window.
+    # `friend class WidgetsScheme`
+    __report_view = None  # type: Optional[Callable[[], OWReport]]
+
+    def _get_designated_report_view(self):
+        # OWReport is a Report
+        from Orange.widgets.report.owreport import OWReport
+        if self.__report_view is not None:
+            return self.__report_view()
+        else:
+            return OWReport.get_instance()
+
     def show_report(self):
         """
         Raise the report window.
         """
-        from Orange.widgets.report.owreport import OWReport
-
-        report = OWReport.get_instance()
         self.create_report_html()
+        report = self._get_designated_report_view()
+        # Should really have a signal `report_ready` or similar to decouple
+        # the implementations.
         report.make_report(self)
         report.show()
         report.raise_()

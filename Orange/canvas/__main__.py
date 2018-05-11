@@ -400,6 +400,7 @@ def main(argv=None):
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
     canvas_window = CanvasMainWindow()
+    canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
 
     if stylesheet_string is not None:
@@ -481,8 +482,8 @@ def main(argv=None):
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
     # local references prevent destruction
-    _ = show_survey()
-    __ = check_for_updates()
+    survey = show_survey()
+    update_check = check_for_updates()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.log_view()
@@ -503,19 +504,21 @@ def main(argv=None):
     log.info("Entering main event loop.")
     try:
         with patch('sys.excepthook',
-                   ExceptHook(stream=stderr, canvas=canvas_window,
+                   ExceptHook(stream=stderr,
                               handledException=handle_exception)),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
             status = app.exec_()
     except BaseException:
         log.error("Error in main event loop.", exc_info=True)
+        status = 42
 
-    canvas_window.deleteLater()
+    del canvas_window
+    del survey
+    del update_check
+
     app.processEvents()
     app.flush()
-    del canvas_window
-
     # Collect any cycles before deleting the QApplication instance
     gc.collect()
 
