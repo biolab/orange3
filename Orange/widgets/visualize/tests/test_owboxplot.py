@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring
 
 import numpy as np
+from AnyQt.QtCore import QItemSelectionModel
+from AnyQt.QtTest import QTest
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
@@ -88,11 +90,6 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             m.setCurrentIndex(group_list.model().index(i), m.ClearAndSelect)
             self._select_list_items(self.widget.controls.attribute)
 
-    def _select_list_items(self, _list):
-        model = _list.selectionModel()
-        for i in range(len(_list.model())):
-            model.setCurrentIndex(_list.model().index(i), model.ClearAndSelect)
-
     def test_apply_sorting(self):
         controls = self.widget.controls
         group_list = controls.group_var
@@ -148,6 +145,23 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         np.testing.assert_array_equal(self.get_output(self.widget.Outputs.selected_data).X,
                                       self.data.X[selected_indices])
 
+    def test_continuous_metas(self):
+        domain = self.iris.domain
+        metas = domain.attributes[:-1] + (StringVariable("str"),)
+        domain = Domain([], domain.class_var, metas)
+        data = Table.from_table(domain, self.iris)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.controls.order_by_importance.setChecked(True)
+
+    def test_label_overlap(self):
+        self.send_signal(self.widget.Inputs.data, self.heart)
+        self.widget.stretched = False
+        self.__select_variable("chest pain")
+        self.__select_group("gender")
+        self.widget.show()
+        QTest.qWait(3000)
+        self.widget.hide()
+
     def _select_data(self):
         items = [item for item in self.widget.box_scene.items()
                  if isinstance(item, FilterGraphicsRectItem)]
@@ -156,10 +170,27 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                 120, 123, 124, 126, 128, 132, 133, 136, 137,
                 139, 140, 141, 143, 144, 145, 146, 147, 148]
 
-    def test_continuous_metas(self):
-        domain = self.iris.domain
-        metas = domain.attributes[:-1] + (StringVariable("str"),)
-        domain = Domain([], domain.class_var, metas)
-        data = Table.from_table(domain, self.iris)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.controls.order_by_importance.setChecked(True)
+    def _select_list_items(self, _list):
+        model = _list.selectionModel()
+        for i in range(len(_list.model())):
+            model.setCurrentIndex(_list.model().index(i), model.ClearAndSelect)
+
+    def __select_variable(self, name, widget=None):
+        if widget is None:
+            widget = self.widget
+
+        self.__select_value(widget.controls.attribute, name)
+
+    def __select_group(self, name, widget=None):
+        if widget is None:
+            widget = self.widget
+
+        self.__select_value(widget.controls.group_var, name)
+
+    def __select_value(self, list, value):
+        m = list.model()
+        for i in range(m.rowCount()):
+            idx = m.index(i)
+            if m.data(idx) == value:
+                list.selectionModel().setCurrentIndex(
+                    idx, QItemSelectionModel.ClearAndSelect)
