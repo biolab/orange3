@@ -317,9 +317,14 @@ class FeatureConstructorHandler(DomainContextHandler):
         except Exception:
             return False
 
-        for name in freevars(exp_ast, []):
-            if not (name in attrs or name in metas):
-                return False
+        available = dict(globals()["__GLOBALS"])
+        for var in attrs:
+            available[sanitized_name(var)] = None
+        for var in metas:
+            available[sanitized_name(var)] = None
+
+        if freevars(exp_ast, available):
+            return False
         return True
 
 
