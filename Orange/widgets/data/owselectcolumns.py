@@ -96,39 +96,6 @@ class VariablesListItemModel(VariableListModel):
         return True
 
 
-class ClassVarListItemModel(VariablesListItemModel):
-    def dropMimeData(self, mime, action, row, column, parent):
-        """ Ensure only one variable can be dropped onto the view.
-        """
-        vars = mime.property('_items')
-        if vars is None:
-            return False
-        if action == Qt.IgnoreAction:
-            return True
-        return VariableListModel.dropMimeData(
-            self, mime, action, row, column, parent)
-
-
-class ClassVariableItemView(VariablesListItemView):
-    def __init__(self, parent=None, acceptedType=Orange.data.Variable):
-        VariablesListItemView.__init__(self, parent, acceptedType)
-        self.setDropIndicatorShown(False)
-
-    def acceptsDropEvent(self, event):
-        """
-        Reimplemented
-
-        Ensure only one variable is in the model.
-        """
-        accepts = super().acceptsDropEvent(event)
-        mime = event.mimeData()
-        vars = mime.property('_items')
-        if vars is None:
-            return False
-
-        return accepts
-
-
 class OWSelectAttributes(widget.OWWidget):
     # pylint: disable=too-many-instance-attributes
     name = "Select Columns"
@@ -205,8 +172,8 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 0, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
-        self.class_attrs = ClassVarListItemModel(enable_dnd=True)
-        self.class_attrs_view = ClassVariableItemView(
+        self.class_attrs = VariablesListItemModel()
+        self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
         self.class_attrs_view.setModel(self.class_attrs)
