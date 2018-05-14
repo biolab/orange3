@@ -16,6 +16,7 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_no_internet_connection(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
         self.assertTrue(w.Error.no_remote_datasets.is_shown())
 
     @patch("Orange.widgets.data.owdatasets.OWDataSets.list_remote",
@@ -25,6 +26,7 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_only_local(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
         self.assertTrue(w.Warning.only_local_datasets.is_shown())
         self.assertEqual(w.view.model().rowCount(), 1)
 
@@ -36,6 +38,7 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_filtering(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
         self.assertEqual(w.view.model().rowCount(), 2)
         w.filterLineEdit.setText("foo")
         self.assertEqual(w.view.model().rowCount(), 1)
@@ -52,6 +55,7 @@ class TestOWDataSets(WidgetTest):
            Mock(return_value="iris.tab"))
     def test_download_iris(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
         # select the only dataset
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
@@ -67,4 +71,5 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_dir_depth(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
         self.assertEqual(w.view.model().rowCount(), 2)
