@@ -5,10 +5,10 @@ from typing import Optional  # pylint: disable=unused-import
 from AnyQt.QtWidgets import QWidget, QGridLayout
 from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
 from AnyQt.QtCore import (
-    Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel
+    Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
+    QMimeData
 )
 
-from Orange.util import deprecated
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
@@ -41,13 +41,62 @@ def source_indexes(indexes, view):
         return indexes
 
 
-# owloadcorpus in orange3-text used this
-@deprecated('Orange.widgets.utils.itemmodels.VariableListModel')
-def VariablesListItemModel(*args, **kwargs):
-    return VariableListModel(*args, enable_dnd=True, **kwargs)
+class VariablesListItemModel(VariableListModel):
+    """
+    An Variable list item model specialized for Drag and Drop.
+    """
+    MIME_TYPE = "application/x-Orange-VariableListModelData"
+
+    def flags(self, index):
+        flags = super().flags(index)
+        if index.isValid():
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags |= Qt.ItemIsDropEnabled
+        return flags
+
+    def supportedDropActions(self):
+        return Qt.MoveAction
+
+    def supportedDragActions(self):
+        return Qt.MoveAction
+
+    def mimeTypes(self):
+        return [self.MIME_TYPE]
+
+    def mimeData(self, indexlist):
+        """
+        Reimplemented.
+
+        For efficiency reasons only the variable instances are set on the
+        mime data (under `'_items'` property)
+        """
+        items = [self[index.row()] for index in indexlist]
+        mime = QMimeData()
+        # the encoded 'data' is empty, variables are passed by properties
+        mime.setData(self.MIME_TYPE, b'')
+        mime.setProperty("_items", items)
+        return mime
+
+    def dropMimeData(self, mime, action, row, column, parent):
+        """
+        Reimplemented.
+        """
+        if action == Qt.IgnoreAction:
+            return True
+        if not mime.hasFormat(self.MIME_TYPE):
+            return False
+        variables = mime.property("_items")
+        if variables is None:
+            return False
+        if row < 0:
+            row = self.rowCount()
+
+        self[row:row] = variables
+        return True
 
 
-class ClassVarListItemModel(VariableListModel):
+class ClassVarListItemModel(VariablesListItemModel):
     def dropMimeData(self, mime, action, row, column, parent):
         """ Ensure only one variable can be dropped onto the view.
         """
@@ -126,7 +175,7 @@ class OWSelectAttributes(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Available Variables",
                        addToLayout=False)
 
-        self.available_attrs = VariableListModel(enable_dnd=True)
+        self.available_attrs = VariablesListItemModel()
         filter_edit, self.available_attrs_view = variables_filter(
             parent=self, model=self.available_attrs)
         box.layout().addWidget(filter_edit)
@@ -143,7 +192,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 0, 0, 3, 1)
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
-        self.used_attrs = VariableListModel(enable_dnd=True)
+        self.used_attrs = VariablesListItemModel()
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
@@ -169,7 +218,7 @@ class OWSelectAttributes(widget.OWWidget):
         layout.addWidget(box, 1, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
-        self.meta_attrs = VariableListModel(enable_dnd=True)
+        self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
