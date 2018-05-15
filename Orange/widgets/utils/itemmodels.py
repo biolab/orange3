@@ -582,6 +582,9 @@ class PyListModel(QAbstractListModel):
 
     def setItemData(self, index, data):
         data = dict(data)
+        if not data:
+            return True
+
         with signal_blocking(self):
             for role, value in data.items():
                 if role == Qt.EditRole and \
@@ -758,8 +761,16 @@ class PyListModel(QAbstractListModel):
         if len(indexlist) <= 0:
             return None
 
+        def itemData(row):
+            # type: (int) -> Dict[int, Any]
+            if row < len(self._other_data):
+                return {key: val for key, val in self._other_data[row].items()
+                        if isinstance(key, int)}
+            else:
+                return {}
+
         items = [self[i.row()] for i in indexlist]
-        itemdata = [self.itemData(i) for i in indexlist]
+        itemdata = [itemData(i.row()) for i in indexlist]
         mime = QMimeData()
         mime.setData(self.MIME_TYPE, b'see properties: _items, _itemdata')
         mime.setProperty('_items', items)
