@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
     Qt, QObject, QAbstractListModel, QAbstractTableModel, QModelIndex,
-    QItemSelectionModel, QT_VERSION
+    QItemSelectionModel, QMimeData, QT_VERSION
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor
@@ -752,7 +752,7 @@ class PyListModel(QAbstractListModel):
         return self._supportedDropActions
 
     def mimeTypes(self):
-        return [self.MIME_TYPE] + list(QAbstractListModel.mimeTypes(self))
+        return [self.MIME_TYPE]
 
     def mimeData(self, indexlist):
         if len(indexlist) <= 0:
@@ -760,7 +760,7 @@ class PyListModel(QAbstractListModel):
 
         items = [self[i.row()] for i in indexlist]
         itemdata = [self.itemData(i) for i in indexlist]
-        mime = QAbstractListModel.mimeData(self, indexlist)
+        mime = QMimeData()
         mime.setData(self.MIME_TYPE, b'see properties: _items, _itemdata')
         mime.setProperty('_items', items)
         mime.setProperty('_itemdata', itemdata)
