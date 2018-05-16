@@ -1,8 +1,12 @@
 import sys
 from functools import partial
+from typing import Optional  # pylint: disable=unused-import
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtCore import Qt, QSortFilterProxyModel, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
+from AnyQt.QtCore import (
+    Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel
+)
 
 from Orange.util import deprecated
 from Orange.widgets import gui, widget
@@ -77,6 +81,7 @@ class ClassVariableItemView(VariablesListItemView):
 
 
 class OWSelectAttributes(widget.OWWidget):
+    # pylint: disable=too-many-instance-attributes
     name = "Select Columns"
     description = "Select columns from the data table and assign them to " \
                   "data features, classes or meta variables."
@@ -99,6 +104,20 @@ class OWSelectAttributes(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        # Schedule interface updates (enabled buttons) using a coalescing
+        # single shot timer (complex interactions on selection and filtering
+        # updates in the 'available_attrs_view')
+        self.__interface_update_timer = QTimer(self, interval=0, singleShot=True)
+        self.__interface_update_timer.timeout.connect(
+            self.__update_interface_state)
+        # The last view that has the selection for move operation's source
+        self.__last_active_view = None  # type: Optional[QListView]
+
+        def update_on_change(view):
+            # Schedule interface state update on selection change in `view`
+            self.__last_active_view = view
+            self.__interface_update_timer.start()
+
         self.controlArea = QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
         layout = QGridLayout()
@@ -117,9 +136,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.commit()
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.available_attrs_view))
-        self.available_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.available_attrs_view))
+            partial(update_on_change, self.available_attrs_view))
         self.available_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
 
         box.layout().addWidget(self.available_attrs_view)
@@ -133,7 +150,7 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.used_attrs_view.setModel(self.used_attrs)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.used_attrs_view))
+            partial(update_on_change, self.used_attrs_view))
         self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
@@ -145,7 +162,7 @@ class OWSelectAttributes(widget.OWWidget):
                           Orange.data.ContinuousVariable))
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.class_attrs_view))
+            partial(update_on_change, self.class_attrs_view))
         self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         self.class_attrs_view.setMaximumHeight(72)
         box.layout().addWidget(self.class_attrs_view)
@@ -157,7 +174,7 @@ class OWSelectAttributes(widget.OWWidget):
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.meta_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.meta_attrs_view))
+            partial(update_on_change, self.meta_attrs_view))
         self.meta_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
@@ -338,10 +355,16 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.commit()
 
+    def __update_interface_state(self):
+        last_view = self.__last_active_view
+        if last_view is not None:
+            self.update_interface_state(last_view)
+
     def update_interface_state(self, focus=None, selected=None, deselected=None):
         for view in [self.available_attrs_view, self.used_attrs_view,
                      self.class_attrs_view, self.meta_attrs_view]:
-            if view is not focus and not view.hasFocus() and self.selected_rows(view):
+            if view is not focus and not view.hasFocus() \
+                    and view.selectionModel().hasSelection():
                 view.selectionModel().clear()
 
         def selected_vars(view):
@@ -358,7 +381,7 @@ class OWSelectAttributes(widget.OWWidget):
                             for var in available_types)
 
         move_attr_enabled = (available_selected and all_primitive) or \
-                            attrs_selected
+                             attrs_selected
 
         self.move_attr_button.setEnabled(bool(move_attr_enabled))
         if move_attr_enabled:
@@ -374,6 +397,9 @@ class OWSelectAttributes(widget.OWWidget):
         self.move_meta_button.setEnabled(bool(move_meta_enabled))
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
+
+        self.__last_active_view = None
+        self.__interface_update_timer.stop()
 
     def commit(self):
         self.update_domain_role_hints()
@@ -418,7 +444,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def test_main(argv=None):
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
@@ -440,5 +466,6 @@ def test_main(argv=None):
     w.saveSettings()
     return rval
 
-if __name__ == "__main__":
-    sys.exit(test_main())
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())
