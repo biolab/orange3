@@ -3,7 +3,7 @@ Regression
 
 .. index:: regression
 
-Regression in Orange is from the interface very similar to classification. These both require class-labeled data. Just like in classification, regression is implemented with learners and regression models (regressors). Regression learners are objects that accept data and return regressors. Regression models are given data items to predict the value of continuous class:
+Regression in Orange is, from the interface, very similar to classification. These both require class-labeled data. Just like in classification, regression is implemented with learners and regression models (regressors). Regression learners are objects that accept data and return regressors. Regression models are given data items to predict the value of continuous class:
 
 .. literalinclude:: code/regression.py
 
@@ -14,7 +14,7 @@ Handful of Regressors
 .. index::
    single: regression; tree
 
-Let us start with regression trees. Below is an example script that builds the tree from data on housing prices and prints out the tree in textual form:
+Let us start with regression trees. Below is an example script that builds a tree from data on housing prices and prints out the tree in textual form:
 
 .. literalinclude:: code/regression-tree.py
    :lines: 3-
@@ -32,7 +32,7 @@ The script outputs the tree::
    |    |    TAX<=534.500: 45.9
    |    |    TAX>534.500: 21.9
 
-Following is initialization of few other regressors and their prediction of the first five data instances in housing price dataset:
+Following is the initialization of a few other regressors and their prediction of the first five data instances in the housing price dataset:
 
 .. index::
    single: regression; linear
@@ -64,7 +64,7 @@ Evaluation and scoring methods are available at ``Orange.evaluation``:
 .. index:
    single: regression; R2
 
-We have scored the regression two measures for goodnes of fit: `root-mean-square error <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ and `coefficient of determination <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_, or R squared. Random forest has the lowest root mean squared error::
+We have scored the regression with two measures for goodness of fit: `root-mean-square error <https://en.wikipedia.org/wiki/Root-mean-square_deviation>`_ and `coefficient of determination <https://en.wikipedia.org/wiki/Coefficient_of_determination>`_, or R squared. Random forest has the lowest root mean squared error::
 
       Learner  RMSE  R2
       linreg   4.88  0.72
@@ -72,4 +72,4 @@ We have scored the regression two measures for goodnes of fit: `root-mean-square
       ridge    4.91  0.71
       mean     9.20 -0.00
 
-Not much difference here. Each regression method has a set of parameters. We have been running them with default parameters, and parameter fitting would help. Also, we have included ``MeanLearner`` in a list of our regression; this regressors simply predicts the mean value from the training set, and is used as a baseline.
+Not much difference here. Each regression method has a set of parameters. We have been running them with default parameters, and parameter fitting would help. Also, we have included ``MeanLearner`` in the list of our regressors; this regressor simply predicts the mean value from the training set, and is used as a baseline.

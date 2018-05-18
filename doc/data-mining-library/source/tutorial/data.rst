@@ -11,7 +11,7 @@ Data Input
 ..  index:: 
     single: data; input
 
-Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file type, like CSV and Excel. Native format starts with a header row with feature (column) names. Second header row gives the attribute type, which can be continuous, discrete, time, or string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta).
+Orange can read files in native tab-delimited format, or can load data from any of the major standard spreadsheet file types, like CSV and Excel. Native format starts with a header row with feature (column) names. The second header row gives the attribute type, which can be continuous, discrete, time, or string. The third header line contains meta information to identify dependent features (class), irrelevant features (ignore) or meta features (meta).
 More detailed specification is available in :doc:`../reference/data.io`.
 Here are the first few lines from a dataset :download:`lenses.tab <code/lenses.tab>`::
 
@@ -37,7 +37,7 @@ The rest of the table gives the data. Note that there are 5 instances in our tab
     >>> data = Orange.data.Table("lenses")
     >>>
 
-Note that for the file name no suffix is needed; as Orange checks if any files in the current directory are of the readable type. The call to ``Orange.data.Table`` creates an object called ``data`` that holds your dataset and information about the lenses domain:
+Note that for the file name no suffix is needed, as Orange checks if any files in the current directory are of a readable type. The call to ``Orange.data.Table`` creates an object called ``data`` that holds your dataset and information about the lenses domain:
 
     >>> data.domain.attributes
     (DiscreteVariable('age', values=['pre-presbyopic', 'presbyopic', 'young']),
@@ -54,7 +54,7 @@ Note that for the file name no suffix is needed; as Orange checks if any files i
     [young, myope, yes, reduced | none]
     >>>
 
-The following script wraps-up everything we have done so far and lists first 5 data instances with ``soft`` perscription:
+The following script wraps-up everything we have done so far and lists first 5 data instances with ``soft`` prescription:
 
 .. literalinclude:: code/data-lenses.py
 
@@ -112,7 +112,7 @@ Data Instances
 ..  index::
     single: data; examples
 
-Data table stores data instances (or examples). These can be index or traversed as any Python list. Data instances can be considered as vectors, accessed through element index, or through feature name.
+Data table stores data instances (or examples). These can be indexed or traversed as any Python list. Data instances can be considered as vectors, accessed through element index, or through feature name.
 
 ..  literalinclude:: code/data-instances1.py
 
@@ -127,12 +127,12 @@ The script above displays the following output::
     Value of 'sepal width' for the first instance: 3.500
     The 3rd value of the 25th data instance: 1.900
 
-Iris dataset we have used above has four continous attributes. Here's a script that computes their mean:
+The Iris dataset we have used above has four continous attributes. Here's a script that computes their mean:
 
 ..  literalinclude:: code/data-instances2.py
     :lines: 3-
 
-Above also illustrates indexing of data instances with objects that store features; in ``d[x]`` variable ``x`` is an Orange object. Here's the output::
+The above script also illustrates indexing of data instances with objects that store features; in ``d[x]`` variable ``x`` is an Orange object. Here's the output::
 
     Feature         Mean
     sepal length    5.84
@@ -141,12 +141,12 @@ Above also illustrates indexing of data instances with objects that store featur
     petal width     1.20
 
 
-A slightly more complicated, but more interesting is a code that computes per-class averages:
+A slightly more complicated, but also more interesting, code that computes per-class averages:
 
 ..  literalinclude:: code/data-instances3.py
     :lines: 3-
 
-Of the four features, petal width and length look quite discriminative for the type of iris:
+Of the four features, petal width and length look quite discriminative for the type of iris::
 
     Feature             Iris-setosa Iris-versicolor  Iris-virginica
     sepal length               5.01            5.94            6.59
@@ -191,7 +191,7 @@ If we want to provide meaninful names to attributes, we need to construct an app
     >>> data.domain
     [lenght, width]
 
-Here is another example, this time with construction of dataset that includes a numerical class and different type of attributes:
+Here is another example, this time with the construction of a dataset that includes a numerical class and different types of attributes:
 
 ..  literalinclude:: code/data-domain-numpy.py
     :lines: 4-
@@ -209,7 +209,7 @@ Often, we wish to include descriptive fields in the data that will not be used i
 
 ..  literalinclude:: code/zoo.tab
 
-Values of meta attributes and all other (non-meta) attributes are treated similarly in Orange, but stored in the separate numpy arrays:
+Values of meta attributes and all other (non-meta) attributes are treated similarly in Orange, but stored in separate numpy arrays:
 
     >>> data = Orange.data.Table("zoo")
     >>> data[0]["name"]
