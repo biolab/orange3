@@ -28,7 +28,7 @@ import sip
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
-from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
+from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent, QSettings
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
@@ -597,6 +597,9 @@ class WidgetManager(QObject):
         widget.setCaption(node.title)
         # befriend class Report
         widget._Report__report_view = self.scheme().report_view
+
+        self.__set_float_on_top(widget)
+
         # Schedule an update with the signal manager, due to the cleared
         # implicit Initializing flag
         self.signal_manager()._update()
@@ -626,6 +629,15 @@ class WidgetManager(QObject):
 
         """
         return self.__widget_processing_state[widget]
+
+    def show_widgets_on_top_changed(self):
+        """
+        `Float Widgets on Top` menu option has changed.
+
+        Update the flag on existing widgets.
+        """
+        for widget in self.__widget_for_node.values():
+            self.__set_float_on_top(widget)
 
     def __create_delayed(self):
         if self.__init_queue:
@@ -789,6 +801,25 @@ class WidgetManager(QObject):
         # Notify widgets of a runtime environment change
         for widget in self.__widget_for_node.values():
             widget.workflowEnvChanged(key, newvalue, oldvalue)
+
+    def __set_float_on_top(self, widget):
+        """Set or unset widget's float on top flag"""
+        settings = QSettings()
+        should_float_on_top = settings.value("mainwindow/widgets-float-on-top", False, type=bool)
+        float_on_top = widget.windowFlags() & Qt.WindowStaysOnTopHint
+
+        if float_on_top == should_float_on_top:
+            return
+
+        widget_was_visible = widget.isVisible()
+        if should_float_on_top:
+            widget.setWindowFlags(Qt.WindowStaysOnTopHint)
+        else:
+            widget.setWindowFlags(widget.windowFlags() & ~Qt.WindowStaysOnTopHint)
+
+        # Changing window flags hid the widget
+        if widget_was_visible:
+            widget.show()
 
 
 def user_message_from_state(message_group):
