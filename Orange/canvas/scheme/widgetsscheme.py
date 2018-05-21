@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 
 import sip
 
-from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
+from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction, qApp
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent, QSettings
@@ -257,6 +257,9 @@ class WidgetManager(QObject):
 
         # Tracks the widget in the update loop by the SignalManager
         self.__updating_widget = None
+
+        # disables/enables widget floating when app (de)activates
+        qApp.applicationStateChanged.connect(self.show_widgets_on_top_changed)
 
     def set_scheme(self, scheme):
         """
@@ -806,6 +809,7 @@ class WidgetManager(QObject):
         """Set or unset widget's float on top flag"""
         settings = QSettings()
         should_float_on_top = settings.value("mainwindow/widgets-float-on-top", False, type=bool)
+        should_float_on_top &= qApp.applicationState() == Qt.ApplicationActive
         float_on_top = widget.windowFlags() & Qt.WindowStaysOnTopHint
 
         if float_on_top == should_float_on_top:
