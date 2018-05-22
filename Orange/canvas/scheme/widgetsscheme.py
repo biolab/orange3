@@ -258,8 +258,10 @@ class WidgetManager(QObject):
         # Tracks the widget in the update loop by the SignalManager
         self.__updating_widget = None
 
-        # disables/enables widget floating when app (de)activates
-        qApp.applicationStateChanged.connect(self.show_widgets_on_top_changed)
+        if hasattr(qApp, "applicationStateChanged"):
+            # disables/enables widget floating when app (de)activates
+            # available in Qt >= 5.2
+            qApp.applicationStateChanged.connect(self.show_widgets_on_top_changed)
 
     def set_scheme(self, scheme):
         """
@@ -809,7 +811,10 @@ class WidgetManager(QObject):
         """Set or unset widget's float on top flag"""
         settings = QSettings()
         should_float_on_top = settings.value("mainwindow/widgets-float-on-top", False, type=bool)
-        should_float_on_top &= qApp.applicationState() == Qt.ApplicationActive
+        if hasattr(qApp, "applicationState"):
+            # only float on top when the application is active
+            # available in Qt >= 5.2
+            should_float_on_top &= qApp.applicationState() == Qt.ApplicationActive
         float_on_top = widget.windowFlags() & Qt.WindowStaysOnTopHint
 
         if float_on_top == should_float_on_top:
