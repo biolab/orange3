@@ -114,6 +114,10 @@ class MosaicVizRankTests(WidgetTest):
         self.widget = self.create_widget(OWMosaicDisplay)
         self.vizrank = self.widget.vizrank
 
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
+
     def test_count(self):
         """MosaicVizrank correctly computes the number of combinations"""
         widget = self.widget
