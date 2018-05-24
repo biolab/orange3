@@ -583,7 +583,7 @@ class PyListModel(QAbstractListModel):
     def setItemData(self, index, data):
         data = dict(data)
         if not data:
-            return True
+            return True  # pragma: no cover
 
         with signal_blocking(self):
             for role, value in data.items():
@@ -767,7 +767,7 @@ class PyListModel(QAbstractListModel):
                 return {key: val for key, val in self._other_data[row].items()
                         if isinstance(key, int)}
             else:
-                return {}
+                return {}  # pragma: no cover
 
         items = [self[i.row()] for i in indexlist]
         itemdata = [itemData(i.row()) for i in indexlist]
@@ -779,19 +779,19 @@ class PyListModel(QAbstractListModel):
 
     def dropMimeData(self, mime, action, row, column, parent):
         if action == Qt.IgnoreAction:
-            return True
+            return True  # pragma: no cover
 
         if not mime.hasFormat(self.MIME_TYPE):
-            return False
+            return False  # pragma: no cover
 
         items = mime.property('_items')
         itemdata = mime.property('_itemdata')
 
         if not items:
-            return False
+            return False  # pragma: no cover
 
         if row == -1:
-            row = len(self)
+            row = len(self)  # pragma: no cover
 
         self[row:row] = items
         for i, data in enumerate(itemdata):

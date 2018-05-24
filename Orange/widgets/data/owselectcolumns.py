@@ -56,10 +56,10 @@ class VariablesListItemModel(VariableListModel):
         return flags
 
     def supportedDropActions(self):
-        return Qt.MoveAction
+        return Qt.MoveAction  # pragma: no cover
 
     def supportedDragActions(self):
-        return Qt.MoveAction
+        return Qt.MoveAction  # pragma: no cover
 
     def mimeTypes(self):
         return [self.MIME_TYPE]
@@ -83,12 +83,12 @@ class VariablesListItemModel(VariableListModel):
         Reimplemented.
         """
         if action == Qt.IgnoreAction:
-            return True
+            return True  # pragma: no cover
         if not mime.hasFormat(self.MIME_TYPE):
-            return False
+            return False  # pragma: no cover
         variables = mime.property("_items")
         if variables is None:
-            return False
+            return False  # pragma: no cover
         if row < 0:
             row = self.rowCount()
 
