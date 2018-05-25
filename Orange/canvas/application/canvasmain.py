@@ -937,6 +937,7 @@ class CanvasMainWindow(QMainWindow):
         window.restoreState(self.saveState(self.SETTINGS_VERSION),
                             self.SETTINGS_VERSION)
         window.set_tool_dock_expanded(self.dock_widget.expanded())
+        window.set_float_widgets_on_top_enabled(self.float_widgets_on_top_action.isChecked())
 
         logview = window.log_view()  # type: OutputView
         te = logview.findChild(QPlainTextEdit)
@@ -1668,6 +1669,9 @@ class CanvasMainWindow(QMainWindow):
                     parent=self)
 
     def set_float_widgets_on_top_enabled(self, enabled):
+        if self.float_widgets_on_top_action.isChecked() != enabled:
+            self.float_widgets_on_top_action.setChecked(enabled)
+
         wm = self.current_document().scheme().widget_manager
         wm.set_float_widgets_on_top(enabled)
 
