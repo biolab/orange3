@@ -183,7 +183,7 @@ class WidgetTest(GuiTest):
         if until is None:
             until = lambda: True
 
-        started = time.clock()
+        started = time.perf_counter()
         while True:
             app.processEvents()
             try:
@@ -192,7 +192,7 @@ class WidgetTest(GuiTest):
                     return result
             except Exception:  # until can fail with anything; pylint: disable=broad-except
                 pass
-            if (time.clock() - started) * 1000 > timeout:
+            if (time.perf_counter() - started) * 1000 > timeout:
                 raise TimeoutError()
             time.sleep(.05)
 
