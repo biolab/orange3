@@ -1,5 +1,8 @@
 from unittest import TestCase
 from unittest.mock import Mock
+
+from AnyQt.QtCore import Qt
+
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
@@ -7,7 +10,7 @@ from Orange.widgets.settings import ContextSetting
 from Orange.widgets.utils import vartype
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.data.owselectcolumns \
-    import OWSelectAttributes
+    import OWSelectAttributes, VariablesListItemModel
 
 Continuous = vartype(ContinuousVariable())
 Discrete = vartype(DiscreteVariable())
@@ -98,6 +101,28 @@ class TestSelectAttributesDomainContextHandler(TestCase):
         self.assertEqual(widget.domain_role_hints, {})
 
 
+class TestModel(TestCase):
+    def test_drop_mime(self):
+        iris = Table("iris")
+        m = VariablesListItemModel(iris.domain.variables)
+        mime = m.mimeData([m.index(1, 0)])
+        self.assertTrue(mime.hasFormat(VariablesListItemModel.MIME_TYPE))
+        assert m.dropMimeData(mime, Qt.MoveAction, 5, 0, m.index(-1, -1))
+        self.assertIs(m[5], m[1])
+        assert m.dropMimeData(mime, Qt.MoveAction, -1, -1, m.index(-1, -1))
+        self.assertIs(m[6], m[1])
+
+    def test_flags(self):
+        m = VariablesListItemModel([ContinuousVariable("X")])
+        index = m.index(0)
+        flags = m.flags(m.index(0))
+        self.assertTrue(flags & Qt.ItemIsDragEnabled)
+        self.assertFalse(flags & Qt.ItemIsDropEnabled)
+        # 'invalid' index is drop enabled -> indicates insertion capability
+        flags = m.flags(m.index(-1, -1))
+        self.assertTrue(flags & Qt.ItemIsDropEnabled)
+
+
 class SimpleWidget:
     domain_role_hints = ContextSetting({})
     required = ContextSetting("", required=ContextSetting.REQUIRED)
@@ -107,6 +132,7 @@ class SimpleWidget:
 
     def storeSpecificSettings(self):
         pass
+
 
 class TestOWSelectAttributes(WidgetTest):
     def setUp(self):

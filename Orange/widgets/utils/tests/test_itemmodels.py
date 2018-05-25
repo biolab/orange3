@@ -234,6 +234,25 @@ class TestPyListModel(unittest.TestCase):
 
         self.assertEqual(model.itemData(model.index(5)), {})
 
+    def test_mimeData(self):
+        model = PyListModel([1, 2])
+        model._other_data[:] = [{Qt.UserRole: "a"}, {}]
+        mime = model.mimeData([model.index(0), model.index(1)])
+        self.assertTrue(mime.hasFormat(PyListModel.MIME_TYPE))
+
+    def test_dropMimeData(self):
+        model = PyListModel([1, 2])
+        model.setData(model.index(0), "a", Qt.UserRole)
+        mime = model.mimeData([model.index(0)])
+        self.assertTrue(
+            model.dropMimeData(mime, Qt.CopyAction, 2, -1, model.index(-1, -1))
+        )
+        self.assertEqual(len(model), 3)
+        self.assertEqual(
+            model.itemData(model.index(2)),
+            {Qt.DisplayRole: 1, Qt.EditRole: 1, Qt.UserRole: "a"}
+        )
+
     def test_parent(self):
         self.assertFalse(self.model.parent(self.model.index(2)).isValid())
 
@@ -672,6 +691,7 @@ class TestDomainModel(unittest.TestCase):
 
         self.assertRaises(TypeError, model.insertRows, 0, 0)
         self.assertRaises(TypeError, model.removeRows, 0, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
