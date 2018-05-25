@@ -231,8 +231,8 @@ class ComboBoxSearch(QComboBox):
 
         if etype == QEvent.MouseButtonRelease and self.__popup is not None \
                 and obj is self.__popup.viewport() \
-                and self.__popupTimer.hasExpired(
-                        QApplication.doubleClickInterval()):
+                and self.__popupTimer.elapsed() >= \
+                    QApplication.doubleClickInterval():
             event = event  # type: QMouseEvent
             index = self.__popup.indexAt(event.pos())
             if index.isValid():

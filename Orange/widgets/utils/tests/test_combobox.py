@@ -69,18 +69,21 @@ class TestComboBoxSearch(GuiTest):
         cb.hidePopup()
 
     def test_click(self):
+        interval = QApplication.doubleClickInterval()
+        QApplication.setDoubleClickInterval(0)
         cb = self.cb
+        spy = QSignalSpy(cb.activated[int])
         cb.showPopup()
         popup = cb.findChild(QListView)  # type: QListView
         model = popup.model()
-        rect = popup.visualRect(model.index(1, 0))
-        spy = QSignalSpy(cb.activated[int])
-        QTest.mouseClick(popup.viewport(), Qt.LeftButton, Qt.NoModifier,
-                         rect.center(), QApplication.doubleClickInterval() + 10)
-
-        self.assertEqual(spy[0], [1])
-        self.assertEqual(cb.currentIndex(), 1)
-        self.assertEqual(cb.currentText(), "Two")
+        rect = popup.visualRect(model.index(2, 0))
+        QTest.mouseRelease(
+            popup.viewport(), Qt.LeftButton, Qt.NoModifier, rect.center()
+        )
+        QApplication.setDoubleClickInterval(interval)
+        self.assertEqual(len(spy), 1)
+        self.assertEqual(spy[0], [2])
+        self.assertEqual(cb.currentIndex(), 2)
 
     def test_focus_out(self):
         cb = self.cb
