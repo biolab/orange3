@@ -74,8 +74,6 @@ class TestComboBoxSearch(GuiTest):
         popup = cb.findChild(QListView)  # type: QListView
         model = popup.model()
         rect = popup.visualRect(model.index(1, 0))
-        if hasattr(Qt, "WA_DontShowOnScreen"):
-            popup.window().setAttribute(Qt.WA_DontShowOnScreen, True)
         spy = QSignalSpy(cb.activated[int])
         QTest.mouseClick(popup.viewport(), Qt.LeftButton, Qt.NoModifier,
                          rect.center(), QApplication.doubleClickInterval() + 10)
