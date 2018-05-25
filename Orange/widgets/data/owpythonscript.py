@@ -210,6 +210,9 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
         for line in lines:
             self.write(line)
 
+    def flush(self):
+        pass
+
     def push(self, line):
         if self.history[0] != line:
             self.history.insert(0, line)
