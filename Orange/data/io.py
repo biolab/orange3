@@ -297,13 +297,13 @@ class FileFormatMeta(Registry):
             for compression in Compression.all:
                 for ext in newcls.EXTENSIONS:
                     new_extensions.append(ext + compression)
-                    # OSX file dialog doesn't support filtering on double
-                    # extensions (e.g. .csv.gz)
-                    # https://bugreports.qt.io/browse/QTBUG-38303
-                    # This is just here for OWFile that gets QFileDialog
-                    # filters from FileFormat.readers.keys()
-                    if sys.platform == 'darwin':
-                        new_extensions.append(compression)
+                # OSX file dialog doesn't support filtering on double
+                # extensions (e.g. .csv.gz)
+                # https://bugreports.qt.io/browse/QTBUG-38303
+                # This is just here for OWFile that gets QFileDialog
+                # filters from FileFormat.readers.keys()
+                if sys.platform == 'darwin':
+                    new_extensions.append(compression)
             newcls.EXTENSIONS = tuple(new_extensions)
 
         return newcls
