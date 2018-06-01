@@ -13,7 +13,7 @@ from collections import namedtuple
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate, QApplication
+    QStyleOptionViewItem, QStyledItemDelegate, QStyle, QApplication
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import (
@@ -54,7 +54,23 @@ def format_exception(error):
     return "\n".join(traceback.format_exception_only(type(error), error))
 
 
-class SizeDelegate(QStyledItemDelegate):
+class UniformHeightDelegate(QStyledItemDelegate):
+    """
+    Item delegate that always includes the icon size in the size hint.
+    """
+    def sizeHint(self, option, index):
+        # type: (QStyleOptionViewItem, QModelIndex) -> QSize
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(option, index)
+        opt.features |= QStyleOptionViewItem.HasDecoration
+        widget = option.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        sh = style.sizeFromContents(
+            QStyle.CT_ItemViewItem, opt, QSize(), widget)
+        return sh
+
+
+class SizeDelegate(UniformHeightDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
@@ -64,7 +80,7 @@ class SizeDelegate(QStyledItemDelegate):
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
 
-class NumericalDelegate(QStyledItemDelegate):
+class NumericalDelegate(UniformHeightDelegate):
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex) -> None
         super().initStyleOption(option, index)
@@ -73,6 +89,11 @@ class NumericalDelegate(QStyledItemDelegate):
         if align is None and isinstance(data, numbers.Number):
             # Right align if the model does not specify otherwise
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
+
+
+class UniformHeightIndicatorDelegate(
+        UniformHeightDelegate, gui.IndicatorItemDelegate):
+    pass
 
 
 class Namespace(SimpleNamespace):
@@ -176,8 +197,8 @@ class OWDataSets(widget.OWWidget):
             alternatingRowColors=True,
             rootIsDecorated=False,
             editTriggers=QTreeView.NoEditTriggers,
+            uniformRowHeights=True,
         )
-
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
@@ -215,9 +236,6 @@ class OWDataSets(widget.OWWidget):
 
         self.assign_delegates()
 
-        if self.header_state:
-            self.view.header().restoreState(self.header_state)
-
         self.setBlocking(True)
         self.setStatusMessage("Initializing")
 
@@ -227,22 +245,28 @@ class OWDataSets(widget.OWWidget):
         w.done.connect(self.__set_index)
 
     def assign_delegates(self):
+        # NOTE: All columns must have size hinting delegates.
+        # QTreeView queries only the columns displayed in the viewport so
+        # the layout would be different depending in the horizontal scroll
+        # position
+        self.view.setItemDelegate(UniformHeightDelegate(self))
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
-            gui.IndicatorItemDelegate(self, role=Qt.DisplayRole)
+            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole)
         )
         self.view.setItemDelegateForColumn(
             self.Header.size,
-            Orange.widgets.data.owdatasets.SizeDelegate(self))
-
+            SizeDelegate(self)
+        )
         self.view.setItemDelegateForColumn(
             self.Header.instances,
-            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+            NumericalDelegate(self)
         )
         self.view.setItemDelegateForColumn(
             self.Header.variables,
-            Orange.widgets.data.owdatasets.NumericalDelegate(self)
+            NumericalDelegate(self)
         )
+        self.view.resizeColumnToContents(self.Header.islocal)
 
     def _parse_info(self, file_path):
         if file_path in self.allinfo_remote:
@@ -331,6 +355,12 @@ class OWDataSets(widget.OWWidget):
         )
 
         self.view.resizeColumnToContents(0)
+        self.view.setColumnWidth(
+            1, min(self.view.sizeHintForColumn(1),
+                   self.view.fontMetrics().width("X" * 24)))
+
+        header = self.view.header()
+        header.restoreState(self.header_state)
 
         # Update the info text
         self.infolabel.setText(format_info(model.rowCount(), len(self.allinfo_local)))
