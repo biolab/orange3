@@ -5,14 +5,14 @@ Classification
 .. index::
    single: data mining; supervised
 
-Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on the data with class-labeled instances, like that of senate voting. Here is a code that loads this dataset, displays the first data instance and shows its predicted class (``republican``)::
+Much of Orange is devoted to machine learning methods for classification, or supervised data mining. These methods rely on data with class-labeled instances, like that of senate voting. Here is a code that loads this dataset, displays the first data instance and shows its predicted class (``republican``)::
 
    >>> import Orange
    >>> data = Orange.data.Table("voting")
    >>> data[0]
    [n, y, n, y, y, ... | republican]
 
-Orange implements function for construction of classification models, their evaluation and scoring. In a nutshel, here is the code that reports on cross-validated accuracy and AUC for logistic regression and random forests:
+Orange implements functions for construction of classification models, their evaluation and scoring. In a nutshell, here is the code that reports on cross-validated accuracy and AUC for logistic regression and random forests:
 
 .. literalinclude:: code/classification-cv3.py
 
@@ -21,7 +21,7 @@ It turns out that for this domain logistic regression does well::
     Accuracy: [ 0.96321839  0.95632184]
     AUC: [ 0.96233796  0.95671252]
 
-For supervised learning, Orange uses learners. These are objects that recieve the data and return classifiers. Learners are passed to evaluation rutines, such as cross-validation above.
+For supervised learning, Orange uses learners. These are objects that receive the data and return classifiers. Learners are passed to evaluation routines, such as cross-validation above.
 
 Learners and Classifiers
 ------------------------
@@ -61,7 +61,7 @@ Logistic regression has made a mistake in the second case, but otherwise predict
 Probabilistic Classification
 ----------------------------
 
-To find out what is the probability that the classifier assigns to, say, democrat class, we need to call the classifier with additional parameter that specifies the classification output type.
+To find out what is the probability that the classifier assigns to, say, democrat class, we need to call the classifier with an additional parameter that specifies the classification output type.
 
 ..  literalinclude:: code/classification-classifier2.py
     :lines: 3-
@@ -78,7 +78,7 @@ Cross-Validation
 
 .. index:: cross-validation
 
-Validating the accuracy of classifiers on the training data, as we did above, serves demonstration purposes only. Any performance measure that assess accuracy should be estimated on the independent test set. Such is also a procedure called `cross-validation <http://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_, which averages the evaluation scores across several runs, each time considering a different training and test subsets as sampled from the original dataset:
+Validating the accuracy of classifiers on the training data, as we did above, serves demonstration purposes only. Any performance measure that assesses accuracy should be estimated on the independent test set. Such is also a procedure called `cross-validation <http://en.wikipedia.org/wiki/Cross-validation_(statistics)>`_, which averages the evaluation scores across several runs, each time considering a different training and test subsets as sampled from the original dataset:
 
 .. literalinclude:: code/classification-cv.py
    :lines: 3-
@@ -90,7 +90,7 @@ Validating the accuracy of classifiers on the training data, as we did above, se
 .. index::
    single: classification; accuracy
 
-Cross-validation is expecting a list of learners. The performance estimators also return a list of scores, one for every learner. There was just one learner (`lr`) in the script above, hence the array of length one was return. The script estimates classification accuracy and area under ROC curve::
+Cross-validation is expecting a list of learners. The performance estimators also return a list of scores, one for every learner. There was just one learner (`lr`) in the script above, hence an array of length one was returned. The script estimates classification accuracy and area under ROC curve::
 
     Accuracy: 0.779
     AUC:      0.704
@@ -105,7 +105,7 @@ Orange includes a variety of classification algorithms, most of them wrapped fro
 - k-nearest neighbors (``Orange.classification.knn.KNNLearner``)
 - support vector machines (say, ``Orange.classification.svm.LinearSVMLearner``)
 - classification trees (``Orange.classification.tree.SklTreeLearner``)
-- radnom forest (``Orange.classification.RandomForestLearner``)
+- random forest (``Orange.classification.RandomForestLearner``)
 
 Some of these are included in the code that estimates the probability of a target class on a testing data. This time, training and test datasets are disjoint:
 
