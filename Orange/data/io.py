@@ -913,19 +913,20 @@ class PickleReader(FileFormat):
     """Reader for pickled Table objects"""
     EXTENSIONS = ('.pickle', '.pkl')
     DESCRIPTION = 'Pickled Python object file'
+    SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = True
 
     def read(self):
-        with open(self.filename, 'rb') as f:
+        with self.open(self.filename, 'rb') as f:
             table = pickle.load(f)
             if not isinstance(table, Table):
                 raise TypeError("file does not contain a data table")
             else:
                 return table
 
-    @staticmethod
-    def write_file(filename, data):
-        with open(filename, 'wb') as f:
+    @classmethod
+    def write_file(cls, filename, data):
+        with cls.open(filename, 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
