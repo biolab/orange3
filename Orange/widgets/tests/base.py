@@ -514,13 +514,16 @@ class WidgetLearnerTestMixin:
         self.assertEqual(self.widget.data, None)
         self.send_signal("Data", self.data)
         self.assertEqual(self.widget.data, self.data)
+        self.wait_until_stop_blocking()
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
         self.send_signal("Data", self.data)
         self.assertEqual(self.widget.data, self.data)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.send_signal("Data", None)
+        self.wait_until_stop_blocking()
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
 
@@ -529,9 +532,11 @@ class WidgetLearnerTestMixin:
         for inadequate in self.inadequate_dataset:
             self.send_signal("Data", inadequate)
             self.widget.apply_button.button.click()
+            self.wait_until_stop_blocking()
             self.assertTrue(self.widget.Error.data_error.is_shown())
         for valid in self.valid_datasets:
             self.send_signal("Data", valid)
+            self.wait_until_stop_blocking()
             self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_input_preprocessor(self):
@@ -542,6 +547,7 @@ class WidgetLearnerTestMixin:
             randomize, self.widget.preprocessors,
             'Preprocessor not added to widget preprocessors')
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertEqual(
             (randomize,), self.widget.learner.preprocessors,
             'Preprocessors were not passed to the learner')
@@ -551,6 +557,7 @@ class WidgetLearnerTestMixin:
         pp_list = PreprocessorList([Randomize(), RemoveNaNColumns()])
         self.send_signal("Preprocessor", pp_list)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertEqual(
             (pp_list,), self.widget.learner.preprocessors,
             '`PreprocessorList` was not added to preprocessors')
@@ -560,10 +567,12 @@ class WidgetLearnerTestMixin:
         randomize = Randomize()
         self.send_signal("Preprocessor", randomize)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertEqual(randomize, self.widget.preprocessors)
 
         self.send_signal("Preprocessor", None)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.preprocessors,
                           'Preprocessors not removed on disconnect.')
 
@@ -585,6 +594,7 @@ class WidgetLearnerTestMixin:
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)
         self.assertIsInstance(model, self.widget.LEARNER.__returns__)
@@ -598,6 +608,7 @@ class WidgetLearnerTestMixin:
                          self.widget.name_line_edit.text())
         self.widget.name_line_edit.setText(new_name)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertEqual(self.get_output("Learner").name, new_name)
 
     def test_output_model_name(self):
@@ -606,6 +617,7 @@ class WidgetLearnerTestMixin:
         self.widget.name_line_edit.setText(new_name)
         self.send_signal("Data", self.data)
         self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
         self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
     def _get_param_value(self, learner, param):
@@ -626,6 +638,7 @@ class WidgetLearnerTestMixin:
         for dataset in self.valid_datasets:
             self.send_signal("Data", dataset)
             self.widget.apply_button.button.click()
+            self.wait_until_stop_blocking()
             for parameter in self.parameters:
                 # Skip if the param isn't used for the given data type
                 if self._should_check_parameter(parameter, dataset):
@@ -639,6 +652,7 @@ class WidgetLearnerTestMixin:
         # to only certain problem types
         for dataset in self.valid_datasets:
             self.send_signal("Data", dataset)
+            self.wait_until_stop_blocking()
 
             for parameter in self.parameters:
                 # Skip if the param isn't used for the given data type
@@ -650,6 +664,7 @@ class WidgetLearnerTestMixin:
                 for value in parameter.values:
                     parameter.set_value(value)
                     self.widget.apply_button.button.click()
+                    self.wait_until_stop_blocking()
                     param = self._get_param_value(self.widget.learner, parameter)
                     self.assertEqual(
                         param, parameter.get_value(),
@@ -674,6 +689,7 @@ class WidgetLearnerTestMixin:
         """Check that the learner gets updated whenever a param is changed."""
         for dataset in self.valid_datasets:
             self.send_signal("Data", dataset)
+            self.wait_until_stop_blocking()
 
             for parameter in self.parameters:
                 # Skip if the param isn't used for the given data type
