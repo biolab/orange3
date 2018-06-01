@@ -616,6 +616,13 @@ class CanvasMainWindow(QMainWindow):
             QAction(self.tr("Reset Widget Settings..."), self,
                     triggered=self.reset_widget_settings)
 
+        self.float_widgets_on_top_action = \
+            QAction(self.tr("Display Widgets on Top"), self,
+                    checkable=True,
+                    toolTip=self.tr("Widgets are always displayed above other windows."))
+        self.float_widgets_on_top_action.toggled.connect(
+            self.set_float_widgets_on_top_enabled)
+
     def setup_menu(self):
         if sys.platform == "darwin" and QT_VERSION >= 0x50000:
             self.__menu_glob = QMenuBar(None)
@@ -694,6 +701,7 @@ class CanvasMainWindow(QMainWindow):
         self.view_menu.addSeparator()
 
         self.view_menu.addAction(self.toogle_margins_action)
+        self.view_menu.addAction(self.float_widgets_on_top_action)
         menu_bar.addMenu(self.view_menu)
 
         # Options menu
@@ -758,6 +766,10 @@ class CanvasMainWindow(QMainWindow):
 
         self.canvas_tool_dock.setQuickHelpVisible(
             settings.value("quick-help/visible", True, type=bool)
+        )
+
+        self.float_widgets_on_top_action.setChecked(
+            settings.value("widgets-float-on-top", False, type=bool)
         )
 
         self.__update_from_settings()
@@ -925,6 +937,7 @@ class CanvasMainWindow(QMainWindow):
         window.restoreState(self.saveState(self.SETTINGS_VERSION),
                             self.SETTINGS_VERSION)
         window.set_tool_dock_expanded(self.dock_widget.expanded())
+        window.set_float_widgets_on_top_enabled(self.float_widgets_on_top_action.isChecked())
 
         logview = window.log_view()  # type: OutputView
         te = logview.findChild(QPlainTextEdit)
@@ -1655,6 +1668,13 @@ class CanvasMainWindow(QMainWindow):
                     "Settings will still be reset at next application start",
                     parent=self)
 
+    def set_float_widgets_on_top_enabled(self, enabled):
+        if self.float_widgets_on_top_action.isChecked() != enabled:
+            self.float_widgets_on_top_action.setChecked(enabled)
+
+        wm = self.current_document().scheme().widget_manager
+        wm.set_float_widgets_on_top(enabled)
+
     def show_report_view(self):
         from Orange.canvas.report.owreport import OWReport
         doc = self.current_document()
@@ -1822,6 +1842,8 @@ class CanvasMainWindow(QMainWindow):
 
         settings.setValue("quick-help/visible",
                           self.canvas_tool_dock.quickHelpVisible())
+        settings.setValue("widgets-float-on-top",
+                          self.float_widgets_on_top_action.isChecked())
 
         settings.endGroup()
         self.help_dock.close()
@@ -1973,6 +1995,11 @@ class CanvasMainWindow(QMainWindow):
         self.num_recent_schemes = settings.value("num-recent-schemes",
                                                  defaultValue=15,
                                                  type=int)
+
+        float_widgets_on_top = settings.value("widgets-float-on-top",
+                                              defaultValue=False,
+                                              type=bool)
+        self.set_float_widgets_on_top_enabled(float_widgets_on_top)
 
         settings.endGroup()
         settings.beginGroup("quickmenu")

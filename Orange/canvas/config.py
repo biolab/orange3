@@ -85,6 +85,9 @@ spec = \
       "Use a popover menu to select a widget when clicking on a category "
       "button"),
 
+     ("mainwindow/widgets-float-on-top", bool, False,
+      "Float widgets on top of other windows"),
+
      ("mainwindow/number-of-recent-schemes", int, 15,
       "Number of recent workflows to keep in history"),
 
