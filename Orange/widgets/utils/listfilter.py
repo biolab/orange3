@@ -179,8 +179,7 @@ def variables_filter(model, parent=None):
 
         """
         nonlocal original_completer_items
-        items = [var.name for var in model]
-        items += ["%s=%s" % item for v in model for item in v.attributes.items()]
+        items = ["%s=%s" % item for v in model for item in v.attributes.items()]
 
         new = sorted(set(items))
         if new != original_completer_items:
