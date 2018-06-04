@@ -136,49 +136,45 @@ only dates in 1 A.D. or later are supported.
 Derived variables
 -----------------
 
+The :obj:`~Variable.compute_value` mechanism is used throughout Orange to
+compute all preprocessing on training data and applying the same
+transformations to the testing data without hassle.
+
 Method `compute_value` is usually invoked behind the scenes in
-conversion of domains::
+conversion of domains. Such conversions are are typically implemented
+within the provided wrappers and cross-validation schemes.
 
-    >>> from Orange.data import Table
-    >>> from Orange.preprocess import DomainDiscretizer
+Example with discretization
+```````````````````````````
 
-    >>> iris = Table("iris")
+The following example converts features to discrete::
+
+    >>> iris = Orange.data.Table("iris")
     >>> iris_1 = iris[::2]
-    >>> discretizer = DomainDiscretizer()
+    >>> discretizer = Orange.preprocess.DomainDiscretizer()
     >>> d_iris_1 = discretizer(iris_1)
+
+A dataset is loaded and a new table with every second instance is created.
+On this dataset, we compute discretized data, which uses the same data
+to set proper discretization intervals.
+
+The discretized variable "D_sepal length" stores a function that can derive
+continous values into discrete::
 
     >>> d_iris_1[0]
     DiscreteVariable('D_sepal length')
-    >>> d_iris_1[0].source_variable
-    ContinuousVariable('sepal length')
     >>> d_iris_1[0].compute_value
     <Orange.feature.discretization.Discretizer at 0x10d5108d0>
 
-The data is loaded and the instances on even places are put into a new
-table, from which we compute discretized data. The discretized variable
-"D_sepal length" refers to the original as its source and stores a function
-for conversion of the original continuous values into the discrete.
-This function (and the corresponding functions for other variables)
-is used for converting the remaining data::
+The function is used for converting the remaining data (as automatically
+happens within model validation in Orange)::
 
-    >>> iris_2 = iris[1::2]
-    >>> d_iris_2 = Table(d_iris_1.domain, iris_2)
+    >>> iris_2 = iris[1::2]  # previously unselected
+    >>> d_iris_2 = iris_2.transform(d_iris_1.domain)
     >>> d_iris_2[0]
     [<5.2, [2.8, 3), <1.6, <0.2 | Iris-setosa]
 
-In the first line we select the instances with odd indices in the original
-table, that is, the data which was not used for computing the
-discretization. In the second line we construct a new data table with the
-discrete domain `d_iris_1.domain` and using the original data `iris_2`.
-Behind the scenes, the values for those variables in the destination domain
-(`d_iris_1.domain`) that do not appear in the source domain
-(`iris_2.domain`) are computed by passing the source data instance to the
-destination variables' :obj:`Variable.compute_value`.
-
-This mechanism is used throughout Orange to compute all preprocessing on
-training data and applying the same transformations on the testing data
-without hassle.
-
-Note that even such conversions are typically not coded in user scripts
-but implemented within the provided wrappers and cross-validation
-schemes.
+The code transforms previously unused data into the discrete domain
+`d_iris_1.domain`. Behind the scenes, the values for the destination
+domain that are not yet in the source domain (`iris_2.domain`) are computed
+with the destination variables' :obj:`~Variable.compute_value`.
