@@ -230,3 +230,54 @@ The code transforms previously unused data into the discrete domain
 `d_iris_1.domain`. Behind the scenes, the values for the destination
 domain that are not yet in the source domain (`iris_2.domain`) are computed
 with the destination variables' :obj:`~Variable.compute_value`.
+
+Optimization for repeated computation
+`````````````````````````````````````
+
+Some transformations share parts of computation across variables. For
+example, :obj:`~Orange.projection.pca.PCA` uses all input features to
+compute the PCA transform. If each output PCA component was implemented with
+ordinary :obj:`~Variable.compute_value`, the PCA transform would be repeatedly
+computed for each PCA component. To avoid repeated computation,
+set :obj:`~Variable.compute_value` to a subclass of
+:obj:`~Orange.data.util.SharedComputeValue`.
+
+.. autoclass:: Orange.data.util.SharedComputeValue
+
+    .. automethod:: compute
+
+The following example creates normalized features that divide values
+by row sums and then tranforms the data. In the example the function
+`row_sum` is called only once; if we did not use
+:obj:`~Orange.data.util.SharedComputeValue`, `row_sum` would be called
+four times, once for each feature.
+
+::
+
+    iris = Orange.data.Table("iris")
+
+    def row_sum(data):
+        return data.X.sum(axis=1, keepdims=True)
+
+    class DivideWithMean(Orange.data.util.SharedComputeValue):
+
+        def __init__(self, var, fn):
+            super().__init__(fn)
+            self.var = var
+
+        def compute(self, data, shared_data):
+            return data[:, self.var].X / shared_data
+
+    divided_attributes = [
+        Orange.data.ContinuousVariable(
+            "Divided " + attr.name,
+            compute_value=DivideWithMean(attr, row_sum)
+        ) for attr in iris.domain.attributes]
+
+    divided_domain = Orange.data.Domain(
+        divided_attributes,
+        iris.domain.class_vars
+    )
+
+    divided_iris = iris.transform(divided_domain)
+
