@@ -144,6 +144,58 @@ Method `compute_value` is usually invoked behind the scenes in
 conversion of domains. Such conversions are are typically implemented
 within the provided wrappers and cross-validation schemes.
 
+
+Derived variables in Orange
+```````````````````````````
+
+Orange saves variable transformations into the domain as
+:obj:`~Variable.compute_value` functions. If Orange was not using
+:obj:`~Variable.compute_value`, we would have to manually transform
+the data::
+
+    >>> from Orange.data import Domain, ContinuousVariable
+    >>> data = Orange.data.Table("iris")
+    >>> train = data[::2]  # every second row
+    >>> test = data[1::2]  # every other second instance
+
+We will create a new data set with a single feature, "petals", that will be a
+sum of petal lengths and widths::
+
+    >>> petals = ContinuousVariable("petals")
+    >>> derived_train = train.transform(Domain([petals],
+    ...                                 data.domain.class_vars))
+    >>> derived_train.X = train[:, "petal width"].X + \
+    ...                   train[:, "petal length"].X
+
+We have set :obj:`~Orange.data.Table`'s `X` directly. Next, we build and evaluate
+a classification tree::
+
+    >>> learner = Orange.classification.TreeLearner()
+    >>> from Orange.evaluation import CrossValidation, TestOnTestData
+    >>> res = CrossValidation(derived_train, [learner], k=5)
+    >>> Orange.evaluation.scoring.CA(res)[0]
+    0.88
+    >>> res = TestOnTestData(derived_train, test, [learner])
+    >>> Orange.evaluation.scoring.CA(res)[0]
+    0.3333333333333333
+
+A classification tree shows good accuracy with cross validation, but not on
+separate test data, because Orange can not reconstruct the "petals"
+feature for test data---we would have to reconstruct it ourselves.
+But if we define :obj:`~Variable.compute_value` and therefore store the
+transformation in the domain, Orange could transform both training and test data::
+
+    >>> petals = ContinuousVariable("petals",
+    ...    compute_value=lambda data: data[:, "petal width"].X + \
+    ...                               data[:, "petal length"].X)
+    >>> derived_train = train.transform(Domain([petals],
+                                        data.domain.class_vars))
+    >>> res = TestOnTestData(derived_train, test, [learner])
+    >>> Orange.evaluation.scoring.CA(res)[0]
+    0.9733333333333334
+
+All preprocessors in Orange use :obj:`~Variable.compute_value`.
+
 Example with discretization
 ```````````````````````````
 
