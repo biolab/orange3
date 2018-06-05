@@ -4,9 +4,11 @@ import unittest
 import numpy as np
 
 from Orange.data import Table, Variable
+from Orange.data.filter import SameValue
 from Orange.widgets.utils.annotated_data import (
     create_annotated_table, get_next_name, get_unique_names,
-    ANNOTATED_DATA_FEATURE_NAME)
+    create_groups_table, ANNOTATED_DATA_FEATURE_NAME
+)
 
 
 class TestGetNextName(unittest.TestCase):
@@ -115,3 +117,14 @@ class TestAnnotatedData(unittest.TestCase):
                  "bravo (3)"]
         self.assertEqual(get_unique_names(names, ["bravo", "charlie"]),
                          ["bravo (5)", "charlie (5)"])
+
+    def test_create_groups_table_include_unselected(self):
+        group_indices = random.sample(range(0, len(self.zoo)), 20)
+        selection = np.zeros(len(self.zoo), dtype=np.uint8)
+        selection[group_indices[:10]] = 1
+        selection[group_indices[10:]] = 2
+        table = create_groups_table(self.zoo, selection)
+        self.assertEqual(
+            len(SameValue(table.domain["Selected"], "Unselected")(table)),
+            len(self.zoo) - len(group_indices)
+        )

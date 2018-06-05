@@ -117,9 +117,16 @@ def create_groups_table(data, selection,
                         var_name=ANNOTATED_DATA_FEATURE_NAME):
     if data is None:
         return None
-    values = ["G{}".format(i + 1) for i in range(np.max(selection))]
+    max_sel = np.max(selection)
+    values = ["G{}".format(i + 1) for i in range(max_sel)]
     if include_unselected:
-        values.insert(0, "Unselected")
+        # Place Unselected instances in the "last group", so that the group
+        # colors and scatter diagram marker colors will match
+        values.append("Unselected")
+        mask = (selection != 0)
+        selection = selection.copy()
+        selection[mask] = selection[mask] - 1
+        selection[~mask] = selection[~mask] = max_sel
     else:
         mask = np.flatnonzero(selection)
         data = data[mask]
