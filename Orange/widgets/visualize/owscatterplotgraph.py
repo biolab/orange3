@@ -851,12 +851,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         _make_pen(QColor(255, 190, 0, 255),
                                   SELECTION_WIDTH + 1.)]
             else:
-                # Start with the first color so that the colors of the
-                # additional attribute in annotation (which start with 0,
-                # unselected) will match these colors
                 palette = ColorPaletteGenerator(number_of_colors=sels + 1)
                 pens = [nopen] + \
-                       [_make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                       [_make_pen(palette[i], SELECTION_WIDTH + 1.)
                         for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:

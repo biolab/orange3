@@ -196,7 +196,9 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
             graph.select(points[5:10])
         np.testing.assert_equal(selectedx(), x[:10])
         np.testing.assert_equal(selected_groups(), np.array([0] * 5 + [1] * 5))
-        sel_column[5:10] = 2
+        sel_column[:5] = 0
+        sel_column[5:10] = 1
+        sel_column[10:] = 2
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
 
@@ -232,7 +234,9 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         # ... then Ctrl-Shift-select (add-to-last) 10:17; we have 17:25, 30:40
         with self.modifiers(Qt.ShiftModifier | Qt.ControlModifier):
             graph.select(points[35:40])
-        sel_column[30:40] = 2
+        sel_column[:] = 2
+        sel_column[17:25] = 0
+        sel_column[30:40] = 1
         np.testing.assert_equal(selected_groups(), np.array([0] * 8 + [1] * 10))
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
