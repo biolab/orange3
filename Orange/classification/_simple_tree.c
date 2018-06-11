@@ -53,7 +53,7 @@ enum { IntVar, FloatVar };
  *
  */
 
-#if (defined __APPLE__ || defined __DARWIN__ || defined __BSD__)
+#if (defined __APPLE__ || defined __DARWIN__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __NetBSD__ || defined __DragonFly__)
 #define QSORT_R_STYLE_BSD
 #define QSORT_R_FUNC(base, nel, size, thunk, compar) \
 	qsort_r(base, nel, size, thunk, compar)
