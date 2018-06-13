@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import (
     QProgressBar, QAction
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QSettings, QUrl, pyqtSignal as Signal
+    Qt, QByteArray, QDataStream, QBuffer, QSettings, QUrl, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
@@ -479,8 +479,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     def storeControlAreaVisibility(self, visible):
         self.controlAreaVisible = visible
 
-    def __restoreWidgetGeometry(self):
-
+    def __restoreWidgetGeometry(self, geometry):
+        # type: (bytes) -> bool
         def _fullscreen_to_maximized(geometry):
             """Don't restore windows into full screen mode because it loses
             decorations and can't be de-fullscreened at least on some platforms.
@@ -493,31 +493,29 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             return w.saveGeometry()
 
         restored = False
-        if self.save_position:
-            geometry = self.savedWidgetGeometry
-            if geometry is not None:
-                geometry = _fullscreen_to_maximized(geometry)
-                restored = self.restoreGeometry(geometry)
+        if geometry:
+            geometry = _fullscreen_to_maximized(geometry)
+            restored = self.restoreGeometry(geometry)
 
-            if restored and not self.windowState() & \
-                    (Qt.WindowMaximized | Qt.WindowFullScreen):
-                space = QApplication.desktop().availableGeometry(self)
-                frame, geometry = self.frameGeometry(), self.geometry()
+        if restored and not self.windowState() & \
+                (Qt.WindowMaximized | Qt.WindowFullScreen):
+            space = QApplication.desktop().availableGeometry(self)
+            frame, geometry = self.frameGeometry(), self.geometry()
 
-                #Fix the widget size to fit inside the available space
-                width = space.width() - (frame.width() - geometry.width())
-                width = min(width, geometry.width())
-                height = space.height() - (frame.height() - geometry.height())
-                height = min(height, geometry.height())
-                self.resize(width, height)
+            # Fix the widget size to fit inside the available space
+            width = space.width() - (frame.width() - geometry.width())
+            width = min(width, geometry.width())
+            height = space.height() - (frame.height() - geometry.height())
+            height = min(height, geometry.height())
+            self.resize(width, height)
 
-                # Move the widget to the center of available space if it is
-                # currently outside it
-                if not space.contains(self.frameGeometry()):
-                    x = max(0, space.width() / 2 - width / 2)
-                    y = max(0, space.height() / 2 - height / 2)
+            # Move the widget to the center of available space if it is
+            # currently outside it
+            if not space.contains(self.frameGeometry()):
+                x = max(0, space.width() / 2 - width / 2)
+                y = max(0, space.height() / 2 - height / 2)
 
-                    self.move(x, y)
+                self.move(x, y)
 
         # Mark as explicitly moved/resized if not already. QDialog would
         # otherwise adjust position/size on subsequent hide/show
@@ -580,7 +578,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             # Restore saved geometry on (first) show
             if self.__splitter is not None:
                 self.__splitter.setControlAreaVisible(self.controlAreaVisible)
-            self.__restoreWidgetGeometry()
+            if self.savedWidgetGeometry is not None:
+                self.__restoreWidgetGeometry(bytes(self.savedWidgetGeometry))
             self.__was_restored = True
         self.__quicktipOnce()
 
@@ -775,6 +774,63 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         The default implementation does nothing.
         """
         pass
+
+    def saveGeometryAndLayoutState(self):
+        # type: () -> QByteArray
+        """
+        Save the current geometry and layout state of this widget and
+        child windows (if applicable).
+
+        Returns
+        -------
+        state : QByteArray
+            Saved state.
+        """
+        version = 0x1
+        have_spliter = 0
+        splitter_state = 0
+        if self.__splitter is not None:
+            have_spliter = 1
+            splitter_state = 1 if self.controlAreaVisible else 0
+        data = QByteArray()
+        stream = QDataStream(data, QBuffer.WriteOnly)
+        stream.writeUInt32(version)
+        stream.writeUInt8((have_spliter << 1) | splitter_state)
+        stream << self.saveGeometry()
+        return data
+
+    def restoreGeometryAndLayoutState(self, state):
+        # type: (QByteArray) -> bool
+        """
+        Restore the geometry and layout of this widget to a state previously
+        saved with :func:`saveGeometryAndLayoutState`.
+
+        Parameters
+        ----------
+        state : QByteArray
+            Saved state.
+
+        Returns
+        -------
+        success : bool
+            `True` if the state was successfully restored, `False` otherwise.
+        """
+        version = 0x1
+        stream = QDataStream(state, QBuffer.ReadOnly)
+        version_ = stream.readUInt32()
+        if stream.status() != QDataStream.Ok or version_ != version:
+            return False
+        splitter_state = stream.readUInt8()
+        has_spliter = splitter_state & 0x2
+        splitter_state = splitter_state & 0x1
+        if has_spliter and self.__splitter is not None:
+            self.__splitter.setControlAreaVisible(bool(splitter_state))
+        geometry = QByteArray()
+        stream >> geometry
+        if stream.status() == QDataStream.Ok:
+            return self.__restoreWidgetGeometry(bytes(geometry))
+        else:
+            return False  # pragma: no cover
 
     def __showMessage(self, message):
         if self.__msgwidget is not None:
