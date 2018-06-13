@@ -684,11 +684,14 @@ class CanvasMainWindow(QMainWindow):
 
         # View menu
         self.view_menu = QMenu(self.tr("&View"), self)
-        self.toolbox_menu = QMenu(self.tr("Widget Toolbox Style"),
-                                  self.view_menu)
-        self.toolbox_menu_group = \
-            QActionGroup(self, objectName="toolbox-menu-group")
+        # find and insert window group presets submenu
+        window_groups = self.scheme_widget.findChild(
+            QAction, "window-groups-action"
+        )
+        if isinstance(window_groups, QAction):
+            self.view_menu.addAction(window_groups)
 
+        self.view_menu.addSeparator()
         self.view_menu.addAction(self.toggle_tool_dock_expand)
         self.view_menu.addAction(self.show_log_action)
         self.view_menu.addAction(self.show_report_action)
