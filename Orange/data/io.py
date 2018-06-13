@@ -297,13 +297,15 @@ class FileFormatMeta(Registry):
             for compression in Compression.all:
                 for ext in newcls.EXTENSIONS:
                     new_extensions.append(ext + compression)
+                if sys.platform in ('darwin', 'win32'):
                     # OSX file dialog doesn't support filtering on double
                     # extensions (e.g. .csv.gz)
                     # https://bugreports.qt.io/browse/QTBUG-38303
                     # This is just here for OWFile that gets QFileDialog
                     # filters from FileFormat.readers.keys()
-                    if sys.platform == 'darwin':
-                        new_extensions.append(compression)
+                    # EDIT: Windows exhibit similar problems:
+                    # while .tab.gz works, .tab.xz and .tab.bz2 do not!
+                    new_extensions.append(compression)
             newcls.EXTENSIONS = tuple(new_extensions)
 
         return newcls
@@ -911,21 +913,22 @@ class TabReader(CSVReader):
 
 class PickleReader(FileFormat):
     """Reader for pickled Table objects"""
-    EXTENSIONS = ('.pickle', '.pkl')
+    EXTENSIONS = ('.pkl', '.pickle')
     DESCRIPTION = 'Pickled Python object file'
+    SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = True
 
     def read(self):
-        with open(self.filename, 'rb') as f:
+        with self.open(self.filename, 'rb') as f:
             table = pickle.load(f)
             if not isinstance(table, Table):
                 raise TypeError("file does not contain a data table")
             else:
                 return table
 
-    @staticmethod
-    def write_file(filename, data):
-        with open(filename, 'wb') as f:
+    @classmethod
+    def write_file(cls, filename, data):
+        with cls.open(filename, 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
 
