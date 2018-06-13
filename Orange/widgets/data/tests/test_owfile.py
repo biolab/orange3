@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from os import path, remove
+from os import path, remove, getcwd
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
@@ -27,6 +27,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
+orig_path_exists = path.exists
 
 
 class FailedSheetsFormat(FileFormat):
@@ -440,3 +441,27 @@ a
         attrs = data1.domain["image"].attributes
         self.assertIn("origin", attrs)
         self.assertIn("origin1", attrs["origin"])
+
+    @patch("Orange.widgets.widget.OWWidget.workflowEnv",
+           Mock(return_value={"basedir": getcwd()}))
+    def test_open_moved_workflow(self):
+        """Test opening workflow that has been moved to another location
+        (i.e. sent by email), considering data file is stored in the same
+        directory as the workflow.
+        """
+        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
+        file_name = temp_file.name
+        temp_file.close()
+        base_name = path.basename(file_name)
+        try:
+            recent_path = RecentPath(
+                path.join("temp/datasets", base_name), "",
+                path.join("datasets", base_name)
+            )
+            stored_settings = {"recent_paths": [recent_path]}
+            w = self.create_widget(OWFile, stored_settings=stored_settings)
+            w.load_data()
+            self.assertEqual(w.file_combo.count(), 1)
+            self.assertFalse(w.Error.file_not_found.is_shown())
+        finally:
+            remove(file_name)
