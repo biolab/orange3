@@ -25,7 +25,7 @@ from urllib.parse import urlencode
 
 import sip
 
-from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction, qApp
+from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
@@ -260,12 +260,6 @@ class WidgetManager(QObject):
 
         # Widgets float above other windows
         self.__float_widgets_on_top = False
-        if hasattr(qApp, "applicationStateChanged"):
-            # disables/enables widget floating when app (de)activates
-            # available in Qt >= 5.2
-            def reapply_float_on_top():
-                self.set_float_widgets_on_top(self.__float_widgets_on_top)
-            qApp.applicationStateChanged.connect(reapply_float_on_top)
 
     def set_scheme(self, scheme):
         """
@@ -644,7 +638,6 @@ class WidgetManager(QObject):
         Set `Float Widgets on Top` flag on all widgets.
         """
         self.__float_widgets_on_top = float_on_top
-
         for widget in self.__widget_for_node.values():
             self.__set_float_on_top_flag(widget)
 
@@ -814,10 +807,6 @@ class WidgetManager(QObject):
     def __set_float_on_top_flag(self, widget):
         """Set or unset widget's float on top flag"""
         should_float_on_top = self.__float_widgets_on_top
-        if hasattr(qApp, "applicationState"):
-            # only float on top when the application is active
-            # available in Qt >= 5.2
-            should_float_on_top &= qApp.applicationState() == Qt.ApplicationActive
         float_on_top = widget.windowFlags() & Qt.WindowStaysOnTopHint
 
         if float_on_top == should_float_on_top:
