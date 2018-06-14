@@ -807,7 +807,7 @@ class WidgetManager(QObject):
     def __set_float_on_top_flag(self, widget):
         """Set or unset widget's float on top flag"""
         should_float_on_top = self.__float_widgets_on_top
-        float_on_top = widget.windowFlags() & Qt.WindowStaysOnTopHint
+        float_on_top = bool(widget.windowFlags() & Qt.WindowStaysOnTopHint)
 
         if float_on_top == should_float_on_top:
             return
