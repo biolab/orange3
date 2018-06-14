@@ -814,7 +814,7 @@ class WidgetManager(QObject):
 
         widget_was_visible = widget.isVisible()
         if should_float_on_top:
-            widget.setWindowFlags(Qt.WindowStaysOnTopHint)
+            widget.setWindowFlags(widget.windowFlags() | Qt.WindowStaysOnTopHint)
         else:
             widget.setWindowFlags(widget.windowFlags() & ~Qt.WindowStaysOnTopHint)
 
