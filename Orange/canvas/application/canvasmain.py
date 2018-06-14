@@ -1176,6 +1176,9 @@ class CanvasMainWindow(QMainWindow):
         if self.freeze_action.isChecked():
             manager.pause()
 
+        new_scheme.widget_manager.set_float_widgets_on_top(
+            self.float_widgets_on_top_action.isChecked()
+        )
         scheme_doc.setScheme(new_scheme)
 
         # Send a close event to the Scheme, it is responsible for
