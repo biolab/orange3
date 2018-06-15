@@ -651,7 +651,7 @@ class OWPlotGUI:
         '''
             Creates a slider that controls point size
         '''
-        self._slider(widget, 'point_width', "Symbol size:   ", 1, 20, 1, 'update_point_size')
+        self._slider(widget, 'point_width', "Symbol size:   ", 1, 20, 1, 'update_size')
 
     def alpha_value_slider(self, widget):
         '''

@@ -1,6 +1,7 @@
 from itertools import chain
 
 import numpy as np
+from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QTimer, QSize
 from AnyQt.QtGui import QPen, QPalette
@@ -19,7 +20,8 @@ from Orange.widgets.io import MatplotlibFormat, MatplotlibPDFFormat
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.itemmodels import DomainModel
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph
+from Orange.widgets.utils.scaling import ScaleScatterPlotData
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg, Input, Output
 from Orange.widgets.utils.annotated_data import (
@@ -89,6 +91,91 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         return [a for _, a in attrs]
 
 
+
+class OwScatterPlotGraph(OWScatterPlotBase, ScaleScatterPlotData):
+    show_reg_line = Setting(False)
+
+    def __init__(self, scatter_widget, parent):
+        OWScatterPlotBase.__init__(scatter_widget, parent, "ScatterPlot")
+        ScaleScatterPlotData.__init__(self)
+
+        self.reg_line_item = None
+        self.shown_x = self.shown_y = None
+
+    def new_data(self, data, subset_data=None, new=True, **args):
+        if new:
+            self.reg_line_item = None
+        super().new_data(data, subset_data, new, **args)
+
+    def clear_plot_widget(self):
+        super().clear_plot_widget()
+        if self.reg_line_item:
+            self.plot_widget.removeItem(self.reg_line_item)
+            self.reg_line_item = None
+
+    def update_data(self, attr_x, attr_y, reset_view=True):
+        super().update_data(attr_x, attr_y, reset_view)
+        if self.show_reg_line:
+            _x_data = self.data.get_column_view(self.shown_x)[0]
+            _y_data = self.data.get_column_view(self.shown_y)[0]
+            _x_data = _x_data[self.valid_data]
+            _y_data = _y_data[self.valid_data]
+            assert _x_data.size
+            assert _y_data.size
+            self.draw_regression_line(
+                _x_data, _y_data, np.min(_x_data), np.max(_y_data))
+
+    def draw_regression_line(self, x_data, y_data, min_x, max_x):
+        if self.show_reg_line and self.can_draw_regresssion_line():
+            slope, intercept, rvalue, _, _ = linregress(x_data, y_data)
+            start_y = min_x * slope + intercept
+            end_y = max_x * slope + intercept
+            angle = np.degrees(np.arctan((end_y - start_y) / (max_x - min_x)))
+            rotate = ((angle + 45) % 180) - 45 > 90
+            color = QColor("#505050")
+            l_opts = dict(color=color, position=abs(int(rotate) - 0.85),
+                          rotateAxis=(1, 0), movable=True)
+            self.reg_line_item = InfiniteLine(
+                pos=QPointF(min_x, start_y), pen=pg.mkPen(color=color, width=1),
+                angle=angle, label="r = {:.2f}".format(rvalue), labelOpts=l_opts)
+            if rotate:
+                self.reg_line_item.label.angle = 180
+                self.reg_line_item.label.updateTransform()
+            self.plot_widget.addItem(self.reg_line_item)
+
+    def can_draw_regresssion_line(self):
+        return self.domain is not None and \
+               self.shown_x.is_continuous and \
+               self.shown_y.is_continuous
+
+    def used_attributes(self):
+        return super().used_attributes | {self.shown_x, self.shown_y}
+
+    def get_xy_data(self):
+        self.master.Warning.missing_coords.clear()
+        self.master.Information.missing_coords.clear()
+
+        if attr_x not in self.data.domain or attr_y not in self.data.domain:
+            data = self.sparse_to_dense()
+            self.set_data(data)
+
+        if self.jittered_data is None or not len(self.jittered_data):
+            self.valid_data = None
+        else:
+            self.valid_data = self.get_valid_list([attr_x, attr_y])
+            if not np.any(self.valid_data):
+                self.valid_data = None
+        if self.valid_data is None:
+            self.selection = None
+            self.n_points = 0
+            self.master.Warning.missing_coords(
+                self.shown_x.name, self.shown_y.name)
+            return
+
+        x_data, y_data = self.get_xy_data_positions(
+            attr_x, attr_y, self.valid_data)
+        self.n_points = len(x_data)
+        return x_data, y_data
 
 class OWScatterPlot(OWWidget):
     """Scatterplot visualization with explorative analysis and intelligent

@@ -426,9 +426,6 @@ class OWFreeViz(widget.OWWidget):
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
-        p = self.graph.plot_widget.palette()
-        self.graph.set_palette(p)
-
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
         self.graph.zoom_actions(self)

@@ -6,6 +6,7 @@ from Orange.data import Domain
 from Orange.statistics.basic_stats import DomainBasicStats
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.datacaching import getCached, setCached
+from Orange.widgets.utils.scaling import ScaleScatterPlotData
 
 
 class ScaleData:

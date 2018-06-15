@@ -232,9 +232,6 @@ class OWMDS(OWWidget):
         self.controlArea.layout().addStretch(100)
         self.icons = gui.attributeIconDict
 
-        palette = self.graph.plot_widget.palette()
-        self.graph.set_palette(palette)
-
         gui.rubber(self.controlArea)
 
         self.graph.box_zoom_select(self.controlArea)
