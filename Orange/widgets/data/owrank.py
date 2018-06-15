@@ -523,9 +523,6 @@ class OWRank(OWWidget):
         selected_attrs = []
         if self.data is not None:
             attributes = self.data.domain.attributes
-            if len(attributes) == len(self.selected_rows):
-                self.selectionMethod = OWRank.SelectAll
-                self.selectButtons.button(self.selectionMethod).setChecked(True)
             selected_attrs = [attributes[i]
                               for i in self.selected_rows]
         if not selected_attrs:
