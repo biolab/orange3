@@ -388,6 +388,17 @@ class SchemeEditWidget(QWidget):
         groups_menu.addAction(self.__clearWindowGroupsAction)
         self.__windowGroupsAction.setMenu(groups_menu)
 
+        # the counterpart to Control + Key_Up to raise the containing workflow
+        # view (maybe move that shortcut here)
+        self.__raiseWidgetsAction = QAction(
+            self.tr("Bring Widgets to Front"), self,
+            objectName="bring-widgets-to-front-action",
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_Down),
+            shortcutContext=Qt.WindowShortcut,
+        )
+        self.__raiseWidgetsAction.triggered.connect(self.__raiseToFont)
+        self.addAction(self.__raiseWidgetsAction)
+
     def __setupUi(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -1800,6 +1811,12 @@ class SchemeEditWidget(QWidget):
         self.__undoStack.push(
             commands.SimpleUndoCommand(redo, undo, "Delete All Window Groups")
         )
+
+    def __raiseToFont(self):
+        # Raise current visible widgets to front
+        wf = self.__scheme
+        if wf is not None:
+            wf.widget_manager.raise_widgets_to_front()
 
 
 class SaveWindowGroup(QDialog):

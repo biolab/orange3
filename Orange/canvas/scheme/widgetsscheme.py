@@ -20,6 +20,7 @@ import sys
 import logging
 import traceback
 import enum
+import itertools
 from collections import namedtuple, deque
 from urllib.parse import urlencode
 
@@ -195,6 +196,20 @@ class WidgetsScheme(Scheme):
         QCoreApplication.sendEvent(self, QEvent(QEvent.Close))
 
 
+class ActivationMonitor(QObject):
+    """
+    An event filter for monitoring QWidgets for `WindowActivation` events.
+    """
+    #: Signal emitted with the `QWidget` instance that was activated.
+    activated = Signal(QWidget)
+
+    def eventFilter(self, obj, event):
+        # type: (QObject, QEvent) -> bool
+        if event.type() == QEvent.WindowActivate:
+            self.activated.emit(obj)
+        return False
+
+
 class WidgetManager(QObject):
     """
     OWWidget instance manager class.
@@ -283,6 +298,13 @@ class WidgetManager(QObject):
 
         # Widgets float above other windows
         self.__float_widgets_on_top = False
+
+        self.__activation_monitor = ActivationMonitor(self)
+        counter = itertools.count()
+
+        def __order(obj):
+            obj.setProperty("__activation_order", next(counter))
+        self.__activation_monitor.activated.connect(__order)
 
     def set_scheme(self, scheme):
         """
@@ -432,6 +454,7 @@ class WidgetManager(QObject):
 
         state = WidgetManager.Materialized(node, widget)
         self.__initstate_for_node[node] = state
+        widget.installEventFilter(self.__activation_monitor)
         self.widget_for_node_added.emit(node, widget)
 
         return state
@@ -455,6 +478,7 @@ class WidgetManager(QObject):
             del self.__node_for_widget[state.widget]
             node.title_changed.disconnect(state.widget.setCaption)
             state.widget.progressBarValueChanged.disconnect(node.set_progress)
+            state.widget.removeEventFilter(self.__activation_monitor)
             del state.widget._Report__report_view
             self.widget_for_node_removed.emit(node, state.widget)
             self._delete_widget(state.widget)
@@ -663,6 +687,29 @@ class WidgetManager(QObject):
         self.__float_widgets_on_top = float_on_top
         for widget in self.__widget_for_node.values():
             self.__set_float_on_top_flag(widget)
+
+    def raise_widgets_to_front(self):
+        """
+        Raise all current visible widgets to the front.
+
+        The widgets will be stacked by activation order.
+        """
+        workflow = self.__scheme  # type: WidgetsScheme
+        if workflow is None:
+            return
+
+        widgets = filter(
+            lambda w: w.isVisible() if w is not None else False,
+            map(self.__widget_for_node.get, workflow.nodes))
+        widgets = sorted(
+            widgets, key=lambda _: _.property("__activation_order") or 0,
+        )
+        widgets = list(widgets)
+        for w in widgets:
+            w.raise_()
+        if widgets:
+            # give focus to the last active window
+            widgets[-1].activateWindow()
 
     def __create_delayed(self):
         if self.__init_queue:
