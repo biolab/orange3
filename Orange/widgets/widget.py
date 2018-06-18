@@ -795,7 +795,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         data = QByteArray()
         stream = QDataStream(data, QBuffer.WriteOnly)
         stream.writeUInt32(version)
-        stream.writeUInt8((have_spliter << 1) | splitter_state)
+        stream.writeUInt16((have_spliter << 1) | splitter_state)
         stream << self.saveGeometry()
         return data
 
@@ -820,7 +820,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         version_ = stream.readUInt32()
         if stream.status() != QDataStream.Ok or version_ != version:
             return False
-        splitter_state = stream.readUInt8()
+        splitter_state = stream.readUInt16()
         has_spliter = splitter_state & 0x2
         splitter_state = splitter_state & 0x1
         if has_spliter and self.__splitter is not None:
