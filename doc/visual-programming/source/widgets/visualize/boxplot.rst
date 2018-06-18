@@ -33,15 +33,12 @@ outliers, and alike.
 
 For continuous attributes the widget displays:
 
-4. The mean (the dark blue vertical line)
+4. The mean (the dark blue vertical line). The thin blue line represents the `standard deviation <http://mathworld.wolfram.com/StandardDeviation.html>`_.
 
-5. Border values for the `standard deviation of the mean <https://en.wikipedia.org/wiki/Standard_deviation#Standard_deviation_of_the_mean>`_. The blue highlighted area is the entire standard deviation of the mean.
+5. Values of the first (25%) and the third (75%) quantile. The blue 
+   highlighted area represents the values between the first and the third quartile.
 
-6. The median (yellow vertical line). The thin blue line represents the
-   area between the first (25%) and the third (75%) quantile, while the
-   thin dotted line represents the entire range of values (from the
-   lowest to the highest value in the dataset for the selected
-   parameter).
+6. The median (yellow vertical line).
 
 7. If *Send automatically* is ticked, changes are communicated automatically.
    Alternatively, press *Send*.
