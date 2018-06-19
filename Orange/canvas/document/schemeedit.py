@@ -38,7 +38,7 @@ from ..registry.qt import whats_this_helper
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
 from ..scheme import (
-    scheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation
+    scheme, signalmanager, Scheme, SchemeNode, SchemeLink, BaseSchemeAnnotation
 )
 from ..scheme import widgetsscheme
 from ..canvas.scene import CanvasScene
@@ -691,16 +691,15 @@ class SchemeEditWidget(QWidget):
             a.deleteLater()
 
         if scheme:
-            presets = scheme.property("_presets") or []
+            presets = scheme.window_group_presets()
             sep = menu.findChild(QAction, "groups-separator")
-            assert isinstance(sep, QAction)
-            for name, state in presets:
-                a = QAction(name, menu)
+            for g in presets:
+                a = QAction(g.name, menu)
                 a.setShortcut(
                     QKeySequence("Meta+P, Ctrl+{}"
                                  .format(len(group.actions()) + 1))
                 )
-                a.setData(state)
+                a.setData(g)
                 group.addAction(a)
                 menu.insertAction(sep, a)
 
@@ -1707,6 +1706,9 @@ class SchemeEditWidget(QWidget):
         # Run a 'Save Window Group' dialog
         workflow = self.__scheme  # type: widgetsscheme.WidgetsScheme
         state = []
+
+        # TODO: This should be moved to WidgetManager
+        # e.g. manager.save_current_window_state
         for node in workflow.nodes:  # type: SchemeNode
             w = workflow.widget_for_node(node)
             stackorder = w.property("__activation_order") or -1
@@ -1717,8 +1719,8 @@ class SchemeEditWidget(QWidget):
         state = [(node, data)
                  for _, node, data in sorted(state, key=lambda t: t[0])]
 
-        presets = workflow.property("_presets") or []
-        items = [name for name, _ in presets]
+        presets = workflow.window_group_presets()
+        items = [g.name for g in presets]
 
         dlg = SaveWindowGroup(
             self, windowTitle="Save Group as...")
@@ -1736,33 +1738,34 @@ class SchemeEditWidget(QWidget):
             except ValueError:
                 idx = -1
             newpresets = list(presets)
+            newpreset = Scheme.WindowGroup(text, False, state)
             if idx == -1:
                 # new group slot
-                newpresets.append((text, state))
+                newpresets.append(newpreset)
                 action = QAction(text, menu)
                 action.setShortcut(
                     QKeySequence("Meta+P, Ctrl+{}".format(len(newpresets)))
                 )
-                oldstate = None
+                oldpreset = None
             else:
-                newpresets[idx] = (text, state)
+                newpresets[idx] = newpreset
                 action = actions[idx]
                 # store old state for undo
-                _, oldstate = presets[idx]
+                oldpreset = presets[idx]
 
             sep = menu.findChild(QAction, "groups-separator")
             assert isinstance(sep, QAction) and sep.isSeparator()
 
             def redo():
-                action.setData(state)
-                workflow.setProperty("_presets", newpresets)
+                action.setData(newpreset)
+                workflow.set_window_group_presets(newpresets)
                 if idx == -1:
                     group.addAction(action)
                     menu.insertAction(sep, action)
 
             def undo():
-                action.setData(oldstate)
-                workflow.setProperty("_presets", presets)
+                action.setData(oldpreset)
+                workflow.set_window_group_presets(presets)
                 if idx == -1:
                     group.removeAction(action)
                     menu.removeAction(action)
@@ -1779,11 +1782,12 @@ class SchemeEditWidget(QWidget):
 
     def __activateWindowGroup(self, action):
         # type: (QAction) -> None
-        data = action.data()
+        data = action.data()  # type: Scheme.WindowGroup
+        assert isinstance(data, Scheme.WindowGroup)
         workflow = self.__scheme
         if not isinstance(workflow, widgetsscheme.WidgetsScheme):
             return
-        visible = {node for node, _ in data}
+        visible = {node for node, _ in data.state}
 
         # first hide all other widgets
         for node in workflow.nodes:
@@ -1792,7 +1796,7 @@ class SchemeEditWidget(QWidget):
                 w.hide()
         # restore state for visible group; maintain window stacking order
         last = None
-        for node, state in data:
+        for node, state in data.state:
             workflow.restore_widget_geometry_for_node(node, state)
             w = workflow.widget_for_node(node)
             w.show()
@@ -1804,20 +1808,20 @@ class SchemeEditWidget(QWidget):
             last.activateWindow()
 
     def __clearWindowGroups(self):
-        workflow = self.__scheme
-        presets = workflow.property("_presets") or []
+        workflow = self.__scheme  # type: Scheme
+        presets = workflow.window_group_presets()
         menu = self.__windowGroupsAction.menu()  # type: QMenu
         group = self.__windowGroupsActionGroup
         actions = group.actions()
 
         def redo():
-            workflow.setProperty("_presets", [])
+            workflow.set_window_group_presets([])
             for action in reversed(actions):
                 group.removeAction(action)
                 menu.removeAction(action)
 
         def undo():
-            workflow.setProperty("_presets", presets)
+            workflow.set_window_group_presets(presets)
             sep = menu.findChild(QAction, "groups-separator")
             for action in actions:
                 group.addAction(action)
