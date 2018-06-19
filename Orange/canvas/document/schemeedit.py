@@ -1709,9 +1709,13 @@ class SchemeEditWidget(QWidget):
         state = []
         for node in workflow.nodes:  # type: SchemeNode
             w = workflow.widget_for_node(node)
+            stackorder = w.property("__activation_order") or -1
             if w.isVisible():
                 data = workflow.save_widget_geometry_for_node(node)
-                state.append((node, data))
+                state.append((stackorder, node, data))
+
+        state = [(node, data)
+                 for _, node, data in sorted(state, key=lambda t: t[0])]
 
         presets = workflow.property("_presets") or []
         items = [name for name, _ in presets]
@@ -1775,18 +1779,29 @@ class SchemeEditWidget(QWidget):
 
     def __activateWindowGroup(self, action):
         # type: (QAction) -> None
-        state = action.data()
+        data = action.data()
         workflow = self.__scheme
         if not isinstance(workflow, widgetsscheme.WidgetsScheme):
             return
+        visible = {node for node, _ in data}
 
-        state = {node: geom for node, geom in state}
+        # first hide all other widgets
         for node in workflow.nodes:
-            w = workflow.widget_for_node(node)  # type: QWidget
-            w.setVisible(node in state)
-            if node in state:
-                workflow.restore_widget_geometry_for_node(node, state[node])
-                w.raise_()
+            if node not in visible:
+                w = workflow.widget_for_node(node)  # type: QWidget
+                w.hide()
+        # restore state for visible group; maintain window stacking order
+        last = None
+        for node, state in data:
+            workflow.restore_widget_geometry_for_node(node, state)
+            w = workflow.widget_for_node(node)
+            w.show()
+            w.raise_()
+            last = w
+
+        # activate (give focus to) the last window
+        if last is not None:
+            last.activateWindow()
 
     def __clearWindowGroups(self):
         workflow = self.__scheme
