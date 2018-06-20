@@ -688,7 +688,7 @@ class CanvasMainWindow(QMainWindow):
         window_groups = self.scheme_widget.findChild(
             QAction, "window-groups-action"
         )
-        if isinstance(window_groups, QAction):
+        if window_groups is not None:
             self.view_menu.addAction(window_groups)
 
         self.view_menu.addSeparator()
@@ -704,6 +704,12 @@ class CanvasMainWindow(QMainWindow):
         self.view_menu.addSeparator()
 
         self.view_menu.addAction(self.toogle_margins_action)
+        raise_widgets_action = self.scheme_widget.findChild(
+            QAction, "bring-widgets-to-front-action"
+        )
+        if raise_widgets_action is not None:
+            self.view_menu.addAction(raise_widgets_action)
+
         self.view_menu.addAction(self.float_widgets_on_top_action)
         menu_bar.addMenu(self.view_menu)
 
