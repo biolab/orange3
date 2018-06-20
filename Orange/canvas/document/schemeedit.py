@@ -1705,20 +1705,7 @@ class SchemeEditWidget(QWidget):
     def __saveWindowGroup(self):
         # Run a 'Save Window Group' dialog
         workflow = self.__scheme  # type: widgetsscheme.WidgetsScheme
-        state = []
-
-        # TODO: This should be moved to WidgetManager
-        # e.g. manager.save_current_window_state
-        for node in workflow.nodes:  # type: SchemeNode
-            w = workflow.widget_for_node(node)
-            stackorder = w.property("__activation_order") or -1
-            if w.isVisible():
-                data = workflow.save_widget_geometry_for_node(node)
-                state.append((stackorder, node, data))
-
-        state = [(node, data)
-                 for _, node, data in sorted(state, key=lambda t: t[0])]
-
+        state = workflow.widget_manager.save_window_state()
         presets = workflow.window_group_presets()
         items = [g.name for g in presets]
 
@@ -1783,29 +1770,10 @@ class SchemeEditWidget(QWidget):
     def __activateWindowGroup(self, action):
         # type: (QAction) -> None
         data = action.data()  # type: Scheme.WindowGroup
-        assert isinstance(data, Scheme.WindowGroup)
         workflow = self.__scheme
         if not isinstance(workflow, widgetsscheme.WidgetsScheme):
             return
-        visible = {node for node, _ in data.state}
-
-        # first hide all other widgets
-        for node in workflow.nodes:
-            if node not in visible:
-                w = workflow.widget_for_node(node)  # type: QWidget
-                w.hide()
-        # restore state for visible group; maintain window stacking order
-        last = None
-        for node, state in data.state:
-            workflow.restore_widget_geometry_for_node(node, state)
-            w = workflow.widget_for_node(node)
-            w.show()
-            w.raise_()
-            last = w
-
-        # activate (give focus to) the last window
-        if last is not None:
-            last.activateWindow()
+        workflow.widget_manager.activate_window_group(data)
 
     def __clearWindowGroups(self):
         workflow = self.__scheme  # type: Scheme
