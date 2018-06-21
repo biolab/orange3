@@ -1105,6 +1105,9 @@ class CanvasMainWindow(QMainWindow):
             scheme_doc_widget.setPath(filename)
 
             self.add_recent_scheme(new_scheme.title, filename)
+            if not self.freeze_action.isChecked():
+                # activate the default window group.
+                scheme_doc_widget.activateDefaultWindowGroup()
 
     def load_scheme_xml(self, xml):
         new_scheme = widgetsscheme.WidgetsScheme(parent=self)

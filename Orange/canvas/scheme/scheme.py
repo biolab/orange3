@@ -682,7 +682,7 @@ class Scheme(QObject):
         default = ...  # type: bool
         state = ...    # type: List[Tuple[SchemeNode, bytes]]
 
-        def __init__(self, name, default, state):
+        def __init__(self, name="", default=False, state=[]):
             super().__init__(name=name, default=default, state=state)
 
     def window_group_presets(self):

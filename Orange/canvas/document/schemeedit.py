@@ -6,7 +6,6 @@ Scheme Editor Widget
 
 """
 
-import sys
 import logging
 import itertools
 import unicodedata
@@ -21,7 +20,7 @@ from AnyQt.QtWidgets import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
     QUndoStack, QUndoCommand, QGraphicsItem, QGraphicsObject,
     QGraphicsTextItem, QFormLayout, QComboBox, QDialog, QDialogButtonBox,
-    QMessageBox
+    QMessageBox, QCheckBox
 )
 from AnyQt.QtGui import (
     QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QIcon,
@@ -1708,24 +1707,27 @@ class SchemeEditWidget(QWidget):
         state = workflow.widget_manager.save_window_state()
         presets = workflow.window_group_presets()
         items = [g.name for g in presets]
-
+        default = [i for i, g in enumerate(presets) if g.default]
         dlg = SaveWindowGroup(
             self, windowTitle="Save Group as...")
         dlg.setWindowModality(Qt.ApplicationModal)
         dlg.setItems(items)
+        if default:
+            dlg.setDefaultIndex(default[0])
 
         menu = self.__windowGroupsAction.menu()  # type: QMenu
         group = self.__windowGroupsActionGroup
 
         def store_group():
             text = dlg.selectedText()
+            default = dlg.isDefaultChecked()
             actions = group.actions()  # type: List[QAction]
             try:
                 idx = items.index(text)
             except ValueError:
                 idx = -1
-            newpresets = list(presets)
-            newpreset = Scheme.WindowGroup(text, False, state)
+            newpresets = [copy.copy(g) for g in presets]  # shallow copy
+            newpreset = Scheme.WindowGroup(text, default, state)
             if idx == -1:
                 # new group slot
                 newpresets.append(newpreset)
@@ -1736,10 +1738,15 @@ class SchemeEditWidget(QWidget):
                 oldpreset = None
             else:
                 newpresets[idx] = newpreset
+
                 action = actions[idx]
                 # store old state for undo
                 oldpreset = presets[idx]
 
+            if newpreset.default:
+                idx_ = idx if idx >= 0 else len(newpresets) - 1
+                for g in newpresets[:idx_] + newpresets[idx_ + 1:]:
+                    g.default = False
             sep = menu.findChild(QAction, "groups-separator")
             assert isinstance(sep, QAction) and sep.isSeparator()
 
@@ -1805,6 +1812,21 @@ class SchemeEditWidget(QWidget):
         if wf is not None:
             wf.widget_manager.raise_widgets_to_front()
 
+    def activateDefaultWindowGroup(self):
+        # type: () -> bool
+        """
+        Activate the default window group if one exists.
+
+        Return `True` if a default group exists and was activated; `False` if
+        not.
+        """
+        for action in self.__windowGroupsActionGroup.actions():
+            g = action.data()
+            if g.default:
+                action.trigger()
+                return True
+        return False
+
 
 class SaveWindowGroup(QDialog):
     """
@@ -1824,10 +1846,16 @@ class SaveWindowGroup(QDialog):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             insertPolicy=QComboBox.NoInsert,
         )
+        cb.currentIndexChanged.connect(self.__currentIndexChanged)
         # default text if no items are present
         cb.setEditText(self.tr("Window Group 1"))
         cb.lineEdit().selectAll()
         form.addRow(self.tr("Save As:"), cb)
+        self._checkbox = check = QCheckBox(
+            self.tr("Use as default"),
+            toolTip="Automatically use this preset when opening the workflow."
+        )
+        form.setWidget(1, QFormLayout.FieldRole, check)
         bb = QDialogButtonBox(
             standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(self.__accept_check)
@@ -1840,6 +1868,12 @@ class SaveWindowGroup(QDialog):
             "workflow view presets."
         )
         cb.setFocus(Qt.NoFocusReason)
+
+    def __currentIndexChanged(self, idx):
+        state = self._combobox.itemData(idx, Qt.UserRole + 1)
+        if not isinstance(state, bool):
+            state = False
+        self._checkbox.setChecked(state)
 
     def __accept_check(self):
         cb = self._combobox
@@ -1873,10 +1907,20 @@ class SaveWindowGroup(QDialog):
         if items:
             self._combobox.setCurrentIndex(len(items) - 1)
 
+    def setDefaultIndex(self, idx):
+        # type: (int) -> None
+        self._combobox.setItemData(idx, True, Qt.UserRole + 1)
+        self._checkbox.setChecked(self._combobox.currentIndex() == idx)
+
     def selectedText(self):
         # type: () -> str
         """Return the current entered text."""
         return self._combobox.currentText()
+
+    def isDefaultChecked(self):
+        # type: () -> bool
+        """Return the state of the 'Use as default' check box."""
+        return self._checkbox.isChecked()
 
 
 def geometry_from_annotation_item(item):
