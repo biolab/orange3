@@ -828,7 +828,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         geometry = QByteArray()
         stream >> geometry
         if stream.status() == QDataStream.Ok:
-            return self.__restoreWidgetGeometry(bytes(geometry))
+            state = self.__restoreWidgetGeometry(bytes(geometry))
+            self.__was_restored = self.__was_restored or state
+            return state
         else:
             return False  # pragma: no cover
 
