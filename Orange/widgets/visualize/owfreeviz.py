@@ -224,8 +224,8 @@ class OWFreeVizGraph(OWScatterPlotGraph):
         for axis_loc in ["left", "bottom"]:
             self.plot_widget.hideAxis(axis_loc)
 
-    def update_data(self, attr_x, attr_y, reset_view=False):
-        super().update_data(attr_x, attr_y, reset_view=reset_view)
+    def update_data(self, attr_x, attr_y, reset_view=True):
+        super().create_plot_items(attr_x, attr_y, reset_view=reset_view)
         for axis in ["left", "bottom"]:
             self.plot_widget.hideAxis(axis)
 

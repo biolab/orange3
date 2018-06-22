@@ -380,7 +380,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         # combo_y.setCurrentIndex(combo_y.model().indexOf(data.domain[3]))
         # This is a workaround
         self.widget.attr_y = data.domain[3]
-        self.widget.update_attr()
+        self.widget.attr_changed()
 
         features = self.get_output(self.widget.Outputs.features)
         self.assertEqual(features, [data.domain[0], data.domain[3]])

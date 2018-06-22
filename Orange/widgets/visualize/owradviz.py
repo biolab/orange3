@@ -290,7 +290,7 @@ class OWRadvizGraph(OWScatterPlotGraph):
         if reset_view:
             self.view_box.setRange(RANGE, padding=0.025)
             self.view_box.setAspectLocked(True, 1)
-        super().update_data(attr_x, attr_y, reset_view=False)
+        super().create_plot_items(attr_x, attr_y, reset_view=False)
         self.hide_axes()
 
     def show_arc_arrow(self, x=None, y=None, point_i=None):
