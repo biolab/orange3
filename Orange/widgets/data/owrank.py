@@ -182,7 +182,7 @@ class OWRank(OWWidget):
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
-    nSelected = Setting(5)
+    nSelected = ContextSetting(5)
     auto_apply = Setting(True)
 
     sorting = Setting((0, Qt.DescendingOrder))
@@ -339,6 +339,7 @@ class OWRank(OWWidget):
             self.selectionMethod = OWRank.SelectNBest
 
         self.openContext(data)
+        self.selectButtons.button(self.selectionMethod).setChecked(True)
 
     def handleNewSignals(self):
         self.setStatusMessage('Running')
@@ -459,9 +460,8 @@ class OWRank(OWWidget):
         self.commit()
 
     def setSelectionMethod(self, method):
-        if self.selectionMethod != method:
-            self.selectionMethod = method
-            self.selectButtons.button(method).setChecked(True)
+        self.selectionMethod = method
+        self.selectButtons.button(method).setChecked(True)
         self.autoSelection()
         self.on_select()
 
