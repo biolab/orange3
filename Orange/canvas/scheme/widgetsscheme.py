@@ -725,8 +725,8 @@ class WidgetManager(QObject):
         w = None
         for node, state in filter(lambda t: t[0] in allnodes, state):
             w = self.widget_for_node(node)  # also create it if needed
-            w.restoreGeometryAndLayoutState(QByteArray(state))
             w.show()
+            w.restoreGeometryAndLayoutState(QByteArray(state))
             w.raise_()
             self.__mark_activated(w)
 
