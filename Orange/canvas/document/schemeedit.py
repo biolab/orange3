@@ -15,10 +15,13 @@ import copy
 from operator import attrgetter
 from urllib.parse import urlencode
 
+from typing import List
+
 from AnyQt.QtWidgets import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
     QUndoStack, QUndoCommand, QGraphicsItem, QGraphicsObject,
-    QGraphicsTextItem
+    QGraphicsTextItem, QFormLayout, QComboBox, QDialog, QDialogButtonBox,
+    QMessageBox
 )
 from AnyQt.QtGui import (
     QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QIcon,
@@ -352,6 +355,39 @@ class SchemeEditWidget(QWidget):
                  self.__selectAllAction,
                  self.__duplicateSelectedAction]
 
+        #: Top 'Window Groups' action
+        self.__windowGroupsAction = QAction(
+            self.tr("Window Groups"), self, objectName="window-groups-action",
+            toolTip="Manage preset widget groups"
+        )
+        #: Action group containing action for every window group
+        self.__windowGroupsActionGroup = QActionGroup(
+            self.__windowGroupsAction, objectName="window-groups-action-group",
+        )
+        self.__windowGroupsActionGroup.triggered.connect(
+            self.__activateWindowGroup
+        )
+        self.__saveWindowGroupAction = QAction(
+            self.tr("Save Window Group..."), self,
+            toolTip="Create and save a new window group."
+        )
+        self.__saveWindowGroupAction.triggered.connect(self.__saveWindowGroup)
+        self.__clearWindowGroupsAction = QAction(
+            self.tr("Delete All Groups"), self,
+            toolTip="Delete all saved widget presets"
+        )
+        self.__clearWindowGroupsAction.triggered.connect(
+            self.__clearWindowGroups
+        )
+
+        groups_menu = QMenu(self)
+        sep = groups_menu.addSeparator()
+        sep.setObjectName("groups-separator")
+        groups_menu.addAction(self.__saveWindowGroupAction)
+        groups_menu.addSeparator()
+        groups_menu.addAction(self.__clearWindowGroupsAction)
+        self.__windowGroupsAction.setMenu(groups_menu)
+
     def __setupUi(self):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -634,6 +670,28 @@ class SchemeEditWidget(QWidget):
                 nodes = self.__scheme.nodes
                 if nodes:
                     self.ensureVisible(nodes[0])
+
+        group = self.__windowGroupsActionGroup
+        menu = self.__windowGroupsAction.menu()
+        actions = group.actions()
+        for a in actions:
+            group.removeAction(a)
+            menu.removeAction(a)
+            a.deleteLater()
+
+        if scheme:
+            presets = scheme.property("_presets") or []
+            sep = menu.findChild(QAction, "groups-separator")
+            assert isinstance(sep, QAction)
+            for name, state in presets:
+                a = QAction(name, menu)
+                a.setShortcut(
+                    QKeySequence("Meta+P, Ctrl+{}"
+                                 .format(len(group.actions()) + 1))
+                )
+                a.setData(state)
+                group.addAction(a)
+                menu.insertAction(sep, a)
 
     def ensureVisible(self, node):
         """
@@ -1633,6 +1691,188 @@ class SchemeEditWidget(QWidget):
         else:
             role = QPalette.Window
         self.__view.viewport().setBackgroundRole(role)
+
+    def __saveWindowGroup(self):
+        # Run a 'Save Window Group' dialog
+        workflow = self.__scheme  # type: widgetsscheme.WidgetsScheme
+        state = []
+        for node in workflow.nodes:  # type: SchemeNode
+            w = workflow.widget_for_node(node)
+            if w.isVisible():
+                data = workflow.save_widget_geometry_for_node(node)
+                state.append((node, data))
+
+        presets = workflow.property("_presets") or []
+        items = [name for name, _ in presets]
+
+        dlg = SaveWindowGroup(
+            self, windowTitle="Save Group as...")
+        dlg.setWindowModality(Qt.ApplicationModal)
+        dlg.setItems(items)
+
+        menu = self.__windowGroupsAction.menu()  # type: QMenu
+        group = self.__windowGroupsActionGroup
+
+        def store_group():
+            text = dlg.selectedText()
+            actions = group.actions()  # type: List[QAction]
+            try:
+                idx = items.index(text)
+            except ValueError:
+                idx = -1
+            newpresets = list(presets)
+            if idx == -1:
+                # new group slot
+                newpresets.append((text, state))
+                action = QAction(text, menu)
+                action.setShortcut(
+                    QKeySequence("Meta+P, Ctrl+{}".format(len(newpresets)))
+                )
+                oldstate = None
+            else:
+                newpresets[idx] = (text, state)
+                action = actions[idx]
+                # store old state for undo
+                _, oldstate = presets[idx]
+
+            sep = menu.findChild(QAction, "groups-separator")
+            assert isinstance(sep, QAction) and sep.isSeparator()
+
+            def redo():
+                action.setData(state)
+                workflow.setProperty("_presets", newpresets)
+                if idx == -1:
+                    group.addAction(action)
+                    menu.insertAction(sep, action)
+
+            def undo():
+                action.setData(oldstate)
+                workflow.setProperty("_presets", presets)
+                if idx == -1:
+                    group.removeAction(action)
+                    menu.removeAction(action)
+            if idx == -1:
+                text = "Store Window Group"
+            else:
+                text = "Update Window Group"
+            self.__undoStack.push(
+                commands.SimpleUndoCommand(redo, undo, text)
+            )
+        dlg.accepted.connect(store_group)
+        dlg.show()
+        dlg.raise_()
+
+    def __activateWindowGroup(self, action):
+        # type: (QAction) -> None
+        state = action.data()
+        workflow = self.__scheme
+        if not isinstance(workflow, widgetsscheme.WidgetsScheme):
+            return
+
+        state = {node: geom for node, geom in state}
+        for node in workflow.nodes:
+            w = workflow.widget_for_node(node)  # type: QWidget
+            w.setVisible(node in state)
+            if node in state:
+                workflow.restore_widget_geometry_for_node(node, state[node])
+                w.raise_()
+
+    def __clearWindowGroups(self):
+        workflow = self.__scheme
+        presets = workflow.property("_presets") or []
+        menu = self.__windowGroupsAction.menu()  # type: QMenu
+        group = self.__windowGroupsActionGroup
+        actions = group.actions()
+
+        def redo():
+            workflow.setProperty("_presets", [])
+            for action in reversed(actions):
+                group.removeAction(action)
+                menu.removeAction(action)
+
+        def undo():
+            workflow.setProperty("_presets", presets)
+            sep = menu.findChild(QAction, "groups-separator")
+            for action in actions:
+                group.addAction(action)
+                menu.insertAction(sep, action)
+
+        self.__undoStack.push(
+            commands.SimpleUndoCommand(redo, undo, "Delete All Window Groups")
+        )
+
+
+class SaveWindowGroup(QDialog):
+    """
+    A dialog for saving window groups.
+
+    The user can select an existing group to overwrite or enter a new group
+    name.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        layout = QVBoxLayout()
+        form = QFormLayout(
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow)
+        layout.addLayout(form)
+        self._combobox = cb = QComboBox(
+            editable=True, minimumContentsLength=16,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
+            insertPolicy=QComboBox.NoInsert,
+        )
+        # default text if no items are present
+        cb.setEditText(self.tr("Window Group 1"))
+        cb.lineEdit().selectAll()
+        form.addRow(self.tr("Save As:"), cb)
+        bb = QDialogButtonBox(
+            standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self.__accept_check)
+        bb.rejected.connect(self.reject)
+        layout.addWidget(bb)
+        layout.setSizeConstraint(QVBoxLayout.SetFixedSize)
+        self.setLayout(layout)
+        self.setWhatsThis(
+            "Save the current open widgets' window arrangement to the "
+            "workflow view presets."
+        )
+        cb.setFocus(Qt.NoFocusReason)
+
+    def __accept_check(self):
+        cb = self._combobox
+        text = cb.currentText()
+        if cb.findText(text) == -1:
+            self.accept()
+            return
+        # Ask for overwrite confirmation
+        mb = QMessageBox(
+            self, windowTitle=self.tr("Confirm Overwrite"),
+            icon=QMessageBox.Question,
+            standardButtons=QMessageBox.Yes | QMessageBox.Cancel,
+            text=self.tr("The window group '{}' already exists. Do you want " +
+                         "to replace it?").format(text),
+        )
+        mb.setDefaultButton(QMessageBox.Yes)
+        mb.setEscapeButton(QMessageBox.Cancel)
+        mb.setWindowModality(Qt.WindowModal)
+        button = mb.button(QMessageBox.Yes)
+        button.setText(self.tr("Replace"))
+        mb.finished.connect(
+            lambda status: status == QMessageBox.Yes and self.accept()
+        )
+        mb.show()
+
+    def setItems(self, items):
+        # type: (List[str]) -> None
+        """Set a list of existing items/names to present to the user"""
+        self._combobox.clear()
+        self._combobox.addItems(items)
+        if items:
+            self._combobox.setCurrentIndex(len(items) - 1)
+
+    def selectedText(self):
+        # type: () -> str
+        """Return the current entered text."""
+        return self._combobox.currentText()
 
 
 def geometry_from_annotation_item(item):

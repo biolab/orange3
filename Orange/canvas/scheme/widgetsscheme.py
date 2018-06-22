@@ -28,7 +28,10 @@ import sip
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
-from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
+from AnyQt.QtCore import (
+    Qt, QObject, QCoreApplication, QTimer, QEvent, QByteArray
+)
+
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
@@ -84,6 +87,26 @@ class WidgetsScheme(Scheme):
         Return the SchemeNode instance for the `widget`.
         """
         return self.widget_manager.node_for_widget(widget)
+
+    def save_widget_geometry_for_node(self, node):
+        # type: (SchemeNode) -> bytes
+        """
+        Save and return the current geometry and state for node
+
+        Parameters
+        ----------
+        node : Scheme
+        """
+        w = self.widget_for_node(node)  # type: OWWidget
+        return bytes(w.saveGeometryAndLayoutState())
+
+    def restore_widget_geometry_for_node(self, node, state):
+        # type: (SchemeNode, bytes) -> bool
+        w = self.widget_for_node(node)
+        if w is not None:
+            return w.restoreGeometryAndLayoutState(QByteArray(state))
+        else:
+            return False
 
     def sync_node_properties(self):
         """
