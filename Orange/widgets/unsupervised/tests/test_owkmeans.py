@@ -411,6 +411,31 @@ class TestOWKMeans(WidgetTest):
             self.commit_and_wait()
             self.assertEqual(call_count + 1, commit.call_count)
 
+    def test_always_same_cluster(self):
+        """A single instance should always return the same clusters"""
+        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+
+        def cluster():
+            self.widget.invalidate()  # reset caches
+            self.commit_and_wait()
+            return self.get_output(self.widget.Outputs.annotated_data).metas[:, 0]
+
+        def assert_all_same(l):
+            for a1, a2 in zip(l, l[1:]):
+                np.testing.assert_equal(a1, a2)
+
+        self.widget.smart_init = 0
+        assert_all_same([cluster() for _ in range(5)])
+
+        self.widget.smart_init = 1
+        assert_all_same([cluster() for _ in range(5)])
+
+    def test_new_random(self):
+        old_random = self.widget.random_state
+        self.widget.new_random()
+        new_random = self.widget.random_state
+        self.assertNotEqual(old_random, new_random)
+
 
 if __name__ == "__main__":
     unittest.main()
