@@ -411,6 +411,21 @@ class TestOWKMeans(WidgetTest):
             self.commit_and_wait()
             self.assertEqual(call_count + 1, commit.call_count)
 
+    def test_correct_smart_init(self):
+        # due to a bug where wrong init was passed to _compute_clustering
+        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+        self.widget.smart_init = 0
+        with patch.object(self.widget, "_compute_clustering",
+                          wraps=self.widget._compute_clustering) as compute:
+            self.commit_and_wait()
+            self.assertEqual(compute.call_args[1]['init'], "k-means++")
+        self.widget.invalidate()  # reset caches
+        self.widget.smart_init = 1
+        with patch.object(self.widget, "_compute_clustering",
+                          wraps=self.widget._compute_clustering) as compute:
+            self.commit_and_wait()
+            self.assertEqual(compute.call_args[1]['init'], "random")
+
 
 if __name__ == "__main__":
     unittest.main()
