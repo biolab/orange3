@@ -450,3 +450,10 @@ class TestOWMergeData(WidgetTest):
 
         output_sparse.X = output_sparse.X.toarray()
         self.assertTablesEqual(output_dense, output_sparse)
+
+    def test_disable_auto_apply(self):
+        """Check if no output on auto apply false"""
+        self.widget.auto_apply = False
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
