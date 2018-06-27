@@ -250,8 +250,7 @@ class OWMergeData(widget.OWWidget):
         self.Outputs.data.send(merged_data)
 
     def _invalidate(self):
-        if self.auto_apply:
-            self.commit()
+        self.commit()
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index
