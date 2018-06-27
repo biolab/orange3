@@ -208,7 +208,7 @@ class OWDistanceMatrix(widget.OWWidget):
 
     class Outputs:
         distances = Output("Distances", DistMatrix, dynamic=False)
-        table = Output("Table", Table)
+        table = Output("Selected Data", Table, replaces=["Table"])
 
     settingsHandler = DistanceMatrixContextHandler()
     auto_commit = Setting(True)
