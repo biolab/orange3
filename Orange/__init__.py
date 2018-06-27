@@ -32,3 +32,14 @@ else:
 
         AnyQt.importhooks.install_backport_hook('pyqt4')
     del AnyQt
+
+
+# A hack that prevents segmentation fault with Nvidia drives on Linux if Qt's browser window
+# is shown (seen in https://github.com/spyder-ide/spyder/pull/7029/files)
+try:
+    import ctypes
+    ctypes.CDLL("libGL.so.1", mode=ctypes.RTLD_GLOBAL)
+except:  # pylint: disable=bare-except
+    pass
+finally:
+    del ctypes
