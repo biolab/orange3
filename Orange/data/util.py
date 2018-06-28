@@ -46,7 +46,7 @@ class SharedComputeValue:
         multiple variables. Variables sharing computation need to set
         the same instance.
     variable: Orange.data.Variable
-        The original variable on which this compute value is set.
+        The original variable on which this compute value is set. Optional.
     """
 
     def __init__(self, compute_shared, variable=None):
@@ -61,7 +61,8 @@ class SharedComputeValue:
 
     def compute(self, data, shared_data):
         """Given precomputed shared data, perform variable-specific
-        part of computation and return new variable values."""
+        part of computation and return new variable values.
+        Subclasses need to implement this function."""
         raise NotImplementedError
 
 

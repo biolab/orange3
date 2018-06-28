@@ -277,7 +277,9 @@ class Variable(Reprable, metaclass=VariableMeta):
     .. attribute:: compute_value
 
         A function for computing the variable's value when converting from
-        another domain which does not contain this variable. The base class
+        another domain which does not contain this variable. The function will
+        be called with a data set (`Orange.data.Table`) and has to return
+        an array of computed values for all its instances. The base class
         defines a static method `compute_value`, which returns `Unknown`.
         Non-primitive variables must redefine it to return `None`.
 
