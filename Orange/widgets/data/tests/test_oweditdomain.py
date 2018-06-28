@@ -7,9 +7,10 @@ import numpy as np
 from AnyQt.QtCore import QModelIndex, Qt
 
 from Orange.data import ContinuousVariable, DiscreteVariable, \
-    StringVariable, Table, Domain
+    StringVariable, TimeVariable, Table, Domain
 from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
-    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor
+    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor, \
+    TimeVariableEditor
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 
@@ -169,6 +170,33 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
 
+    def test_time_variable_preservation(self):
+        """Test if time variables preserve format specific attributes"""
+        table = Table("cyber-security-breaches")
+        self.send_signal(self.widget.Inputs.data, table)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
+        # if continuous variable edit is used have_time and have_date is not
+        # copied and the time string format is changed
+        idx = self.widget.domain_view.model().index(4)
+        self.widget.domain_view.setCurrentIndex(idx)
+        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
+
+        editor.name_edit.setText("Date_Posted")
+        editor.commit()
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertNotEqual(str(table[0, 4]), str(output[0, 4]))
+
+        self.widget.reset_selected()
+        editor = self.widget.editor_stack.findChild(TimeVariableEditor)
+        editor.name_edit.setText("Date")
+        editor.commit()
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
@@ -210,6 +238,23 @@ class TestEditors(GuiTest):
         self.assertIs(w.get_data(), None)
 
         v = DiscreteVariable("C", values=["a", "b", "c"])
+        v.attributes.update({"A": 1, "B": "b"})
+        w.set_data(v)
+
+        self.assertEqual(w.name_edit.text(), v.name)
+        self.assertEqual(w.labels_model.get_dict(), v.attributes)
+        self.assertTrue(w.is_same())
+
+        w.set_data(None)
+        self.assertEqual(w.name_edit.text(), "")
+        self.assertEqual(w.labels_model.get_dict(), {})
+        self.assertIs(w.get_data(), None)
+
+    def test_time_editor(self):
+        w = TimeVariableEditor()
+        self.assertIs(w.get_data(), None)
+
+        v = TimeVariable("T")
         v.attributes.update({"A": 1, "B": "b"})
         w.set_data(v)
 
