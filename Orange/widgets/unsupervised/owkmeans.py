@@ -1,4 +1,5 @@
 from concurrent.futures import Future  # pylint: disable=unused-import
+import random
 from typing import Optional, List, Dict  # pylint: disable=unused-import
 
 import numpy as np
@@ -127,6 +128,7 @@ class OWKMeans(widget.OWWidget):
     max_iterations = Setting(300)
     n_init = Setting(10)
     smart_init = Setting(0)  # KMeans++
+    random_state = Setting(None)
     auto_commit = Setting(True)
 
     settings_version = 2
@@ -144,6 +146,9 @@ class OWKMeans(widget.OWWidget):
 
         self.data = None  # type: Optional[Table]
         self.clusterings = {}
+
+        if self.random_state is None:  # fix random state for this instance
+            self.random_state = random.randint(0, 10**9)
 
         self.__executor = ThreadExecutor(parent=self)
         self.__task = None  # type: Optional[Task]
@@ -200,6 +205,7 @@ class OWKMeans(widget.OWWidget):
             sb, self, "max_iterations", controlWidth=60, valueType=int,
             validator=QIntValidator(), callback=self.invalidate)
 
+        gui.button(self.buttonsArea, self, "New Random", callback=self.new_random)
         self.apply_button = gui.auto_commit(
             self.buttonsArea, self, "auto_commit", "Apply", box=None,
             commit=self.commit)
@@ -251,14 +257,14 @@ class OWKMeans(widget.OWWidget):
         return len(self.data) >= k
 
     @staticmethod
-    def _compute_clustering(data, k, init, n_init, max_iter, silhouette):
+    def _compute_clustering(data, k, init, n_init, max_iter, silhouette, random_state):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
         if k > len(data):
             raise NotEnoughData()
 
         return KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
-            compute_silhouette_score=silhouette,
+            compute_silhouette_score=silhouette, random_state=random_state,
         )(data)
 
     @Slot(int, int)
@@ -320,6 +326,7 @@ class OWKMeans(widget.OWWidget):
             n_init=self.n_init,
             max_iter=self.max_iterations,
             silhouette=True,
+            random_state=self.random_state,
         ) for k in ks]
         watcher = FutureSetWatcher(futures)
         watcher.resultReadyAt.connect(self.__clustering_complete)
@@ -397,6 +404,10 @@ class OWKMeans(widget.OWWidget):
             self.cluster()
 
         QTimer.singleShot(100, self.adjustSize)
+
+    def new_random(self):
+        self.random_state = random.randint(0, 10 ** 9)
+        self.invalidate()
 
     def invalidate(self):
         self.cancel()
