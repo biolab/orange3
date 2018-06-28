@@ -52,10 +52,14 @@ than one widget to test multiple learners with the same procedures.
       we select *Separate Test Data* signal in the communication channel
       and select Test on test data.
 
-2. Only *Test on test data* requires a target class, e.g. having the
-   disease or being of subvariety *Iris setosa*. When *Target class* is
-   (None), the methods return the average value. Target class can be
-   selected at the bottom of the widget. 
+2. For classification, *Target class* can be selected at the bottom of the widget.
+   When *Target class* is (Average over classes),
+   methods return scores that are weighted averages over all classes.
+   For example, in case of the classifier with 3 classes,
+   scores are computed for class 1 as a target class, class 2 as a target class,
+   and class 3 as a target class. Those scores are averaged with weights
+   based on the class size to retrieve the final score.
+
 3. Produce a report. 
 4. The widget will compute a number of performance statistics:
 
