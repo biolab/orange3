@@ -55,20 +55,19 @@ def variable_description(var, skip_attributes=False):
                 var.name,
                 (("values", tuple(var.values)),),
                 attributes)
+    elif var.is_time:
+        return (var_type.__module__,
+                var_type.__name__,
+                var.name,
+                (("have_date", var.have_date),
+                 ("have_time", var.have_time)),
+                attributes)
     else:
-        if var.is_time:
-            return (var_type.__module__,
-                    var_type.__name__,
-                    var.name,
-                    (("have_date", var.have_date),
-                     ("have_time", var.have_time)),
-                    attributes)
-        else:
-            return (var_type.__module__,
-                    var_type.__name__,
-                    var.name,
-                    (),
-                    attributes)
+        return (var_type.__module__,
+                var_type.__name__,
+                var.name,
+                (),
+                attributes)
 
 
 def variable_from_description(description, compute_value=None):
@@ -83,12 +82,8 @@ def variable_from_description(description, compute_value=None):
         raise ValueError("Invalid descriptor type '{}.{}"
                          "".format(module, type_name))
 
-    kwargs = dict(list(args))
-    var = constructor(name, compute_value=compute_value, **kwargs)
+    var = constructor(name, compute_value=compute_value, **dict(list(args)))
     var.attributes.update(attrs)
-    if var.is_time:
-        var.have_date = kwargs['have_date']
-        var.have_time = kwargs['have_time']
     return var
 
 
@@ -449,8 +444,8 @@ class OWEditDomain(widget.OWWidget):
         self.editor_stack = QStackedWidget()
 
         self.editor_stack.addWidget(DiscreteVariableEditor())
-        self.editor_stack.addWidget(TimeVariableEditor())
         self.editor_stack.addWidget(ContinuousVariableEditor())
+        self.editor_stack.addWidget(TimeVariableEditor())
         self.editor_stack.addWidget(VariableEditor())
 
         box.layout().addWidget(self.editor_stack)
@@ -549,10 +544,11 @@ class OWEditDomain(widget.OWWidget):
         editor_index = 3
         if var.is_discrete:
             editor_index = 0
+        # TimeVariable is also continuous, first check if time
         elif var.is_time:
-            editor_index = 1
-        elif var.is_continuous:
             editor_index = 2
+        elif var.is_continuous:
+            editor_index = 1
         editor = self.editor_stack.widget(editor_index)
         self.editor_stack.setCurrentWidget(editor)
 
