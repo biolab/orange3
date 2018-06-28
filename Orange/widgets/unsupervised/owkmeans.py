@@ -115,7 +115,8 @@ class OWKMeans(widget.OWWidget):
             "Too few ({}) unique data instances for {} clusters"
         )
 
-    INIT_METHODS = "Initialize with KMeans++", "Random initialization"
+    INIT_METHODS = (("Initialize with KMeans++", "k-means++"),
+                    ("Random initialization", "random"))
 
     resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
@@ -181,7 +182,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Initialization")
         gui.comboBox(
-            box, self, "smart_init", items=self.INIT_METHODS,
+            box, self, "smart_init", items=[m[0] for m in self.INIT_METHODS],
             callback=self.invalidate)
 
         layout = QGridLayout()
@@ -316,7 +317,7 @@ class OWKMeans(widget.OWWidget):
             self._compute_clustering,
             data=self.data,
             k=k,
-            init=['random', 'k-means++'][self.smart_init],
+            init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
             max_iter=self.max_iterations,
             silhouette=True,
@@ -485,7 +486,7 @@ class OWKMeans(widget.OWWidget):
             k_clusters = self.k_from + self.selected_row()
         else:
             k_clusters = self.k
-        init_method = self.INIT_METHODS[self.smart_init]
+        init_method = self.INIT_METHODS[self.smart_init][0]
         init_method = init_method[0].lower() + init_method[1:]
         self.report_items((
             ("Number of clusters", k_clusters),
