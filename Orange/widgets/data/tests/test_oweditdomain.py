@@ -177,19 +177,6 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
 
-        # if continuous variable edit is used have_time and have_date is not
-        # copied and the time string format is changed
-        idx = self.widget.domain_view.model().index(4)
-        self.widget.domain_view.setCurrentIndex(idx)
-        editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
-
-        editor.name_edit.setText("Date_Posted")
-        editor.commit()
-        self.widget.commit()
-        output = self.get_output(self.widget.Outputs.data)
-        self.assertNotEqual(str(table[0, 4]), str(output[0, 4]))
-
-        self.widget.reset_selected()
         editor = self.widget.editor_stack.findChild(TimeVariableEditor)
         editor.name_edit.setText("Date")
         editor.commit()
@@ -254,13 +241,17 @@ class TestEditors(GuiTest):
         w = TimeVariableEditor()
         self.assertIs(w.get_data(), None)
 
-        v = TimeVariable("T")
+        v = TimeVariable("T", have_date=1)
         v.attributes.update({"A": 1, "B": "b"})
         w.set_data(v)
 
         self.assertEqual(w.name_edit.text(), v.name)
         self.assertEqual(w.labels_model.get_dict(), v.attributes)
         self.assertTrue(w.is_same())
+
+        var = w.get_data()
+        self.assertTrue(var.have_date)
+        self.assertFalse(var.have_time)
 
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
