@@ -127,7 +127,7 @@ The script above displays the following output::
     Value of 'sepal width' for the first instance: 3.500
     The 3rd value of the 25th data instance: 1.900
 
-The Iris dataset we have used above has four continous attributes. Here's a script that computes their mean:
+The Iris dataset we have used above has four continuous attributes. Here's a script that computes their mean:
 
 ..  literalinclude:: code/data-instances2.py
     :lines: 3-
