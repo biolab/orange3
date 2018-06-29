@@ -417,6 +417,12 @@ time,continuous
         var = TimeVariable('time')
         self.assertEqual(var.repr_val(Value(var, 416.3)), '416.3')
 
+    def test_have_date_have_time_in_construct(self):
+        """Test if have_time and have_date is correctly set"""
+        var = TimeVariable('time', have_date=1)
+        self.assertTrue(var.have_date)
+        self.assertFalse(var.have_time)
+
 
 PickleContinuousVariable = create_pickling_tests(
     "PickleContinuousVariable",

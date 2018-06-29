@@ -931,10 +931,10 @@ class TimeVariable(ContinuousVariable):
     utc_offset = None
     timezone = timezone.utc
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, have_date=0, have_time=0, **kwargs):
         super().__init__(*args, **kwargs)
-        self.have_date = 0
-        self.have_time = 0
+        self.have_date = have_date
+        self.have_time = have_time
 
     def copy(self, compute_value=None):
         copy = super().copy(compute_value=compute_value)
