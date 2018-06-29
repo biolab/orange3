@@ -183,12 +183,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
     if issubclass(coltype, DiscreteVariable) and valuemap is not None:
         coltype_kwargs.update(values=valuemap)
 
-    if existing_var:
-        # Use existing variable if available
-        var = coltype.make(existing_var.strip(), **coltype_kwargs)
-    else:
-        # Never use existing for un-named variables
-        var = coltype(new_var_name, **coltype_kwargs)
+    var = coltype.make(existing_var.strip() if existing_var else new_var_name, **coltype_kwargs)
 
     if isinstance(var, DiscreteVariable):
         # Map discrete data to 'ints' (or at least what passes as int around
