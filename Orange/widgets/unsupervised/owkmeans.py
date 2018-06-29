@@ -8,7 +8,7 @@ from AnyQt.QtGui import QIntValidator
 from AnyQt.QtWidgets import QGridLayout, QTableView
 
 from Orange.clustering import KMeans
-from Orange.clustering.kmeans import KMeansModel  # pylint: disable=unused-import
+from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES  # pylint: disable=unused-import
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -109,7 +109,8 @@ class OWKMeans(widget.OWWidget):
 
     class Warning(widget.OWWidget.Warning):
         no_silhouettes = widget.Msg(
-            "Silhouette scores are not computed for >5000 samples"
+            "Silhouette scores are not computed for >{} samples".format(
+                SILHOUETTE_MAX_SAMPLES)
         )
         not_enough_data = widget.Msg(
             "Too few ({}) unique data instances for {} clusters"

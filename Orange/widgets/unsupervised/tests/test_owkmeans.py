@@ -347,10 +347,11 @@ class TestOWKMeans(WidgetTest):
         widget.optimize_k = False
 
         random = np.random.RandomState(0)  # Avoid randomness in the test
-        table = Table(random.rand(5010, 2))
-        self.send_signal(self.widget.Inputs.data, table)
-        outtable = self.get_output(widget.Outputs.annotated_data)
-        outtable = outtable.get_column_view("Silhouette")[0]
+        table = Table(random.rand(110, 2))
+        with patch("Orange.clustering.kmeans.SILHOUETTE_MAX_SAMPLES", 100):
+            self.send_signal(self.widget.Inputs.data, table)
+            outtable = self.get_output(widget.Outputs.annotated_data)
+            outtable = outtable.get_column_view("Silhouette")[0]
         self.assertTrue(np.all(np.isnan(outtable)))
         self.assertTrue(widget.Warning.no_silhouettes.is_shown())
 
