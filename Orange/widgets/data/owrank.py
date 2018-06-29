@@ -463,7 +463,6 @@ class OWRank(OWWidget):
         self.selectionMethod = method
         self.selectButtons.button(method).setChecked(True)
         self.autoSelection()
-        self.on_select()
 
     def autoSelection(self):
         selModel = self.ranksView.selectionModel()
@@ -522,8 +521,7 @@ class OWRank(OWWidget):
     def commit(self):
         selected_attrs = []
         if self.data is not None:
-            attributes = self.data.domain.attributes
-            selected_attrs = [attributes[i]
+            selected_attrs = [self.data.domain.attributes[i]
                               for i in self.selected_rows]
         if not selected_attrs:
             self.Outputs.reduced_data.send(None)
