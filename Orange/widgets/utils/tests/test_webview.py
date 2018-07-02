@@ -1,5 +1,5 @@
-import time
 from os.path import dirname
+from unittest import skip
 
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
 from AnyQt.QtWidgets import QDialog
@@ -11,6 +11,7 @@ from Orange.widgets.utils.webview import WebviewWidget, HAVE_WEBKIT, wait
 SOME_URL = WebviewWidget.toFileURL(dirname(__file__))
 
 
+@skip("Times out on Travis")
 class WebviewWidgetTest(WidgetTest):
     def test_base(self):
         w = WebviewWidget()
