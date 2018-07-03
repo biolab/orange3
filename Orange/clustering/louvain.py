@@ -12,7 +12,7 @@ from sklearn.neighbors import NearestNeighbors
 
 import Orange
 from Orange.data import Table
-from ._louvain import best_partition
+from community import best_partition
 
 
 def jaccard(x, y):
