@@ -113,12 +113,6 @@ def partition_at_level(dendrogram, level):
     best_partition which directly combines partition_at_level and
     generate_dendrogram to obtain the partition of highest modularity
 
-    Examples
-    --------
-    >>> G=nx.erdos_renyi_graph(100, 0.01)
-    >>> dendrogram = generate_dendrogram(G)
-    >>> for level in range(len(dendrogram) - 1) :
-    >>>     print("partition at level", level, "is", partition_at_level(dendrogram, level))  # NOQA
     """
     partition = dendrogram[0].copy()
     for index in range(1, level + 1):
@@ -160,11 +154,6 @@ def modularity(partition, graph, weight='weight'):
     .. 1. Newman, M.E.J. & Girvan, M. Finding and evaluating community
     structure in networks. Physical Review E 69, 26113(2004).
 
-    Examples
-    --------
-    >>> G=nx.erdos_renyi_graph(100, 0.01)
-    >>> part = best_partition(G)
-    >>> modularity(part, G)
     """
     if graph.is_directed():
         raise TypeError("Bad graph type, use only non directed graph")
@@ -242,30 +231,6 @@ def best_partition(graph, partition=None,
     .. 1. Blondel, V.D. et al. Fast unfolding of communities in
     large networks. J. Stat. Mech 10008, 1-12(2008).
 
-    Examples
-    --------
-    >>>  #Basic usage
-    >>> G=nx.erdos_renyi_graph(100, 0.01)
-    >>> part = best_partition(G)
-
-    >>> #other example to display a graph with its community :
-    >>> #better with karate_graph() as defined in networkx examples
-    >>> #erdos renyi don't have true community structure
-    >>> G = nx.erdos_renyi_graph(30, 0.05)
-    >>> #first compute the best partition
-    >>> partition = community.best_partition(G)
-    >>>  #drawing
-    >>> size = float(len(set(partition.values())))
-    >>> pos = nx.spring_layout(G)
-    >>> count = 0.
-    >>> for com in set(partition.values()) :
-    >>>     count += 1.
-    >>>     list_nodes = [nodes for nodes in partition.keys()
-    >>>                                 if partition[nodes] == com]
-    >>>     nx.draw_networkx_nodes(G, pos, list_nodes, node_size = 20,
-                                    node_color = str(count / size))
-    >>> nx.draw_networkx_edges(G, pos, alpha=0.5)
-    >>> plt.show()
     """
     dendo = generate_dendrogram(graph,
                                 partition,
@@ -327,15 +292,6 @@ def generate_dendrogram(graph,
     .. 1. Blondel, V.D. et al. Fast unfolding of communities in large
     networks. J. Stat. Mech 10008, 1-12(2008).
 
-    Examples
-    --------
-    >>> G=nx.erdos_renyi_graph(100, 0.01)
-    >>> dendo = generate_dendrogram(G)
-    >>> for level in range(len(dendo) - 1) :
-    >>>     print("partition at level", level,
-    >>>           "is", partition_at_level(dendo, level))
-    :param weight:
-    :type weight:
     """
     if graph.is_directed():
         raise TypeError("Bad graph type, use only non directed graph")
@@ -395,18 +351,6 @@ def induced_graph(partition, graph, weight="weight"):
     g : networkx.Graph
        a networkx graph where nodes are the parts
 
-    Examples
-    --------
-    >>> n = 5
-    >>> g = nx.complete_graph(2*n)
-    >>> part = dict([])
-    >>> for node in g.nodes() :
-    >>>     part[node] = node % 2
-    >>> ind = induced_graph(part, g)
-    >>> goal = nx.Graph()
-    >>> goal.add_weighted_edges_from([(0,1,n*n),(0,0,n*(n-1)/2), (1, 1, n*(n-1)/2)])  # NOQA
-    >>> nx.is_isomorphic(int, goal)
-    True
     """
     ret = nx.Graph()
     ret.add_nodes_from(partition.values())
