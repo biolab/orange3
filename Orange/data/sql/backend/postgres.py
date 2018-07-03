@@ -22,6 +22,7 @@ class Psycopg2Backend(Backend):
     display_name = "PostgreSQL"
     connection_pool = None
     auto_create_extensions = True
+    missing_extension = ""
 
     def __init__(self, connection_params):
         super().__init__(connection_params)
@@ -45,8 +46,9 @@ class Psycopg2Backend(Backend):
                 query = "CREATE EXTENSION IF NOT EXISTS {}".format(ext)
                 with self.execute_sql_query(query):
                     pass
-            except OperationalError:
+            except BackendError:
                 warnings.warn("Database is missing extension {}".format(ext))
+                self.missing_extension = ext
 
     def create_sql_query(self, table_name, fields, filters=(),
                          group_by=None, order_by=None,

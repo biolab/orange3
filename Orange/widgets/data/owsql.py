@@ -74,7 +74,9 @@ class OWSql(OWWidget):
     class Error(OWWidget.Error):
         connection = Msg("{}")
         no_backends = Msg("Please install a backend to use this widget")
-        missing_extension = Msg("Database is missing extension{}: {}")
+
+    class Warning(OWWidget.Warning):
+        missing_extension = Msg("Database is missing extension: {}")
 
     def __init__(self):
         super().__init__()
@@ -135,7 +137,6 @@ class OWSql(OWWidget):
         self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
-        self.connect()
 
         index = self.tablecombo.findText(str(self.table))
         if index != -1:
@@ -170,11 +171,13 @@ class OWSql(OWWidget):
                      "Auto-discover categorical variables",
                      callback=self.open_table)
 
-        gui.checkBox(box, self, "download",
-                     "Download data to local memory",
-                     callback=self.open_table)
+        self.downloadcb = gui.checkBox(box, self, "download",
+                                       "Download data to local memory",
+                                       callback=self.open_table)
 
         gui.rubber(self.buttonsArea)
+
+        self.connect()
 
         QTimer.singleShot(0, self.select_table)
 
@@ -223,6 +226,8 @@ class OWSql(OWWidget):
         self.database, _, self.schema = self.databasetext.text().partition('/')
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
+        self.Warning.missing_extension.clear()
+        self.downloadcb.setEnabled(True)
         try:
             if self.backendcombo.currentIndex() < 0:
                 return
@@ -235,6 +240,12 @@ class OWSql(OWWidget):
                 password=self.password
             ))
             self.Error.connection.clear()
+            if hasattr(self.backend, 'missing_extension') and \
+                    self.backend.missing_extension:
+                self.Warning.missing_extension(self.backend.missing_extension)
+                self.download = True
+                self.downloadcb.setEnabled(False)
+
             self._save_credentials()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
@@ -249,7 +260,6 @@ class OWSql(OWWidget):
 
     def refresh_tables(self):
         self.tables.clear()
-        self.Error.missing_extension.clear()
         if self.backend is None:
             self.data_desc_table = None
             return
