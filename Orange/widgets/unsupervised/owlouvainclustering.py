@@ -1,15 +1,14 @@
 from collections import deque
-from concurrent.futures import Future
+from concurrent.futures import Future  # pylint: disable=unused-import
 from enum import Enum
 
-import networkx as nx
+import networkx as nx  # pylint: disable=unused-import
 import numpy as np
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, QObject
-from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget
+from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget  # pylint: disable=unused-import
 from types import SimpleNamespace as namespace
-from typing import Optional
+from typing import Optional  # pylint: disable=unused-import
 
-import Orange.statistics.util as ut
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
 from Orange.projection import PCA
