@@ -857,6 +857,12 @@ class SchemeEditWidget(QWidget):
         command = commands.RemoveLinkCommand(self.__scheme, link)
         self.__undoStack.push(command)
 
+    def onNewLink(self, func):
+        """
+        Runs function when new link is added to current scheme.
+        """
+        self.__scheme.link_added.connect(func)
+
     def addAnnotation(self, annotation):
         """
         Add `annotation` (:class:`.BaseSchemeAnnotation`) to the scheme
