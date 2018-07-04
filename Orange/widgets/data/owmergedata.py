@@ -44,6 +44,7 @@ class OWMergeData(widget.OWWidget):
     attr_combine_data = settings.Setting('', schema_only=True)
     attr_combine_extra = settings.Setting('', schema_only=True)
     merging = settings.Setting(0)
+    auto_apply = settings.Setting(True)
 
     want_main_area = False
     resizing_enabled = False
@@ -110,6 +111,9 @@ class OWMergeData(widget.OWWidget):
                    "where", "equals", "combine",
                    self.model_unique_with_id, self.extra_model_unique_with_id)
         self.set_merging()
+
+        gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
+                        box=False)
 
     def set_merging(self):
         # pylint: disable=invalid-sequence-index

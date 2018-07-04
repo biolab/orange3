@@ -1,29 +1,38 @@
 """
 """
+import warnings
 import traceback
 
 from AnyQt.QtWidgets import QWidget, QPlainTextEdit, QVBoxLayout, QSizePolicy
-from AnyQt.QtGui import QTextCursor, QTextCharFormat, QFont
+from AnyQt.QtGui import (
+    QTextCursor, QTextCharFormat, QFont, QTextOption, QFontDatabase
+)
 from AnyQt.QtCore import Qt, QObject, QCoreApplication, QThread, QSize
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 
 class TerminalView(QPlainTextEdit):
     def __init__(self, *args, **kwargs):
-        QPlainTextEdit.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.setFrameStyle(QPlainTextEdit.NoFrame)
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
 
-        font = self.font()
-        font.setStyleHint(QFont.Monospace)
-        font.setFamily("Monospace")
+        try:
+            # Since Qt 5.2
+            font = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        except AttributeError:
+            font = self.font()
+            font.setStyleHint(QFont.Monospace)
+            font.setFamily("Monospace")
+
         self.setFont(font)
+        self.setAttribute(Qt.WA_SetFont, False)
 
     def sizeHint(self):
         metrics = self.fontMetrics()
-        width = metrics.boundingRect("_" * 81).width()
+        width = metrics.boundingRect("X" * 81).width()
         height = metrics.lineSpacing()
         scroll_width = self.verticalScrollBar().width()
         size = QSize(width + scroll_width, height * 25)
@@ -32,7 +41,7 @@ class TerminalView(QPlainTextEdit):
 
 class OutputView(QWidget):
     def __init__(self, parent=None, **kwargs):
-        QWidget.__init__(self, parent, **kwargs)
+        super().__init__(parent, **kwargs)
 
         self.__lines = 5000
 
@@ -40,6 +49,7 @@ class OutputView(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.__text = TerminalView()
+        self.__text.setWordWrapMode(QTextOption.NoWrap)
 
         self.__currentCharFormat = self.__text.currentCharFormat()
 
@@ -63,11 +73,13 @@ class OutputView(QWidget):
         """
         Clear the displayed text.
         """
+        assert QThread.currentThread() is self.thread()
         self.__text.clear()
 
     def setCurrentCharFormat(self, charformat):
         """Set the QTextCharFormat to be used when writing.
         """
+        assert QThread.currentThread() is self.thread()
         if self.__currentCharFormat != charformat:
             self.__currentCharFormat = charformat
 
@@ -81,36 +93,43 @@ class OutputView(QWidget):
         return self.__text.toPlainText()
 
     # A file like interface.
+    @Slot(str)
     def write(self, string):
+        assert QThread.currentThread() is self.thread()
         self.__text.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
         self.__text.setCurrentCharFormat(self.__currentCharFormat)
 
         self.__text.insertPlainText(string)
 
+    @Slot(object)
     def writelines(self, lines):
+        assert QThread.currentThread() is self.thread()
         self.write("".join(lines))
 
+    @Slot()
     def flush(self):
-        pass
+        assert QThread.currentThread() is self.thread()
 
     def writeWithFormat(self, string, charformat):
+        assert QThread.currentThread() is self.thread()
         self.__text.moveCursor(QTextCursor.End, QTextCursor.MoveAnchor)
         self.__text.setCurrentCharFormat(charformat)
         self.__text.insertPlainText(string)
 
     def writelinesWithFormat(self, lines, charformat):
+        assert QThread.currentThread() is self.thread()
         self.writeWithFormat("".join(lines), charformat)
 
     def formated(self, color=None, background=None, weight=None,
                  italic=None, underline=None, font=None):
         """
-        Return a formated file like object proxy.
+        Return a formatted file like object proxy.
         """
         charformat = update_char_format(
             self.currentCharFormat(), color, background, weight,
             italic, underline, font
         )
-        return formater(self, charformat)
+        return Formatter(self, charformat)
 
 
 def update_char_format(baseformat, color=None, background=None, weight=None,
@@ -162,17 +181,23 @@ def update_font(basefont, weight=None, italic=None, underline=None,
     return font
 
 
-class formater(object):
+class Formatter(QObject):
     def __init__(self, outputview, charformat):
+        # type: (OutputView, QTextCharFormat) -> None
+        # Parent to the output view. Ensure the formatter does not outlive it.
+        super().__init__(outputview)
         self.outputview = outputview
         self.charformat = charformat
 
+    @Slot(str)
     def write(self, string):
         self.outputview.writeWithFormat(string, self.charformat)
 
+    @Slot(object)
     def writelines(self, lines):
-        self.outputview.writelines(lines, self.charformat)
+        self.outputview.writelinesWithFormat(lines, self.charformat)
 
+    @Slot()
     def flush(self):
         self.outputview.flush()
 
@@ -180,7 +205,7 @@ class formater(object):
                  italic=None, underline=None, font=None):
         charformat = update_char_format(self.charformat, color, background,
                                         weight, italic, underline, font)
-        return formater(self.outputview, charformat)
+        return Formatter(self.outputview, charformat)
 
     def __enter__(self):
         return self
@@ -188,14 +213,24 @@ class formater(object):
     def __exit__(self, *args):
         self.outputview = None
         self.charformat = None
+        self.setParent(None)
+
+
+class formater(Formatter):
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "Deprecated: Renamed to Formatter.",
+            DeprecationWarning, stacklevel=2
+        )
+        super().__init__(*args, **kwargs)
 
 
 class TextStream(QObject):
     stream = Signal(str)
     flushed = Signal()
 
-    def __init__(self, parent=None):
-        QObject.__init__(self, parent)
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
 
     def write(self, string):
         self.stream.emit(string)
@@ -210,10 +245,9 @@ class TextStream(QObject):
 class ExceptHook(QObject):
     handledException = Signal(object)
 
-    def __init__(self, parent=None, stream=None, canvas=None, **kwargs):
+    def __init__(self, parent=None, stream=None, **kwargs):
         QObject.__init__(self, parent, **kwargs)
         self._stream = stream
-        self._canvas = canvas
 
     def __call__(self, exc_type, exc_value, tb):
         if self._stream:
@@ -225,4 +259,4 @@ class ExceptHook(QObject):
             text.append('-' * 79 + '\n')
             self._stream.writelines(text)
 
-        self.handledException.emit(((exc_type, exc_value, tb), self._canvas))
+        self.handledException.emit((exc_type, exc_value, tb))

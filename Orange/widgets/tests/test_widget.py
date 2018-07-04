@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 
 from unittest.mock import patch, MagicMock
-
+from AnyQt.QtCore import QRect, QByteArray
 from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
 
@@ -187,3 +187,26 @@ class WidgetMsgTestCase(WidgetTest):
 
         w.Error.clear()
         self.assertEqual(len(messages), 0)
+
+    def test_store_restore_layout_geom(self):
+        class Widget(OWWidget):
+            name = "Who"
+            want_control_area = True
+
+        w = Widget()
+        splitter = w._OWWidget__splitter  # type: OWWidget._Splitter
+        splitter.setControlAreaVisible(False)
+        w.setGeometry(QRect(51, 52, 53, 54))
+        state = w.saveGeometryAndLayoutState()
+        w1 = Widget()
+        self.assertTrue(w1.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+        self.assertFalse(w1.controlAreaVisible)
+
+        Widget.want_control_area = False
+        w2 = Widget()
+        self.assertTrue(w2.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+
+        self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
+        self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))

@@ -22,6 +22,10 @@ thread periodically check (at known predetermined points) whether we should
 continue, and if not return early (in our case by raising an exception).
 
 
+**********
+Setting up
+**********
+
 We use :class:`Orange.widgets.utils.concurrent.ThreadExecutor` for thread
 allocation/management (but could easily replace it with stdlib's
 :class:`concurrent.futures.ThreadPoolExecutor`).
@@ -47,6 +51,12 @@ and initialize the task field.
    :start-after: start-snippet-3
    :end-before: end-snippet-3
 
+All code snippets are from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`.
+
+
+***************************
+Starting a task in a thread
+***************************
 
 In `handleNewSignals` we call `_update`.
 
@@ -55,7 +65,8 @@ In `handleNewSignals` we call `_update`.
    :end-before: end-snippet-4
 
 
-And finally the `_update` function that will start/schedule all updates.
+And finally the `_update` function (from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`)
+that will start/schedule all updates.
 
 .. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
    :start-after: start-snippet-5
@@ -99,14 +110,28 @@ a FutureWatcher instance to notify us when the task completes (via a
    :start-after: start-snippet-8
    :end-before: end-snippet-8
 
+For the above code to work, the `setProgressValue` needs defined as a pyqtSlot.
 
-In `_task_finished` we handle the completed task (either success or failure)
-and then update the displayed score table.
+.. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
+   :start-after: start-snippet-progress
+   :end-before: end-snippet-progress
+
+
+******************
+Collecting results
+******************
+
+In `_task_finished` (from :download:`OWLearningCurveC.py <orange-demo/orangedemo/OWLearningCurveC.py>`)
+we handle the completed task (either success or failure) and then update the displayed score table.
 
 .. literalinclude:: orange-demo/orangedemo/OWLearningCurveC.py
    :start-after: start-snippet-9
    :end-before: end-snippet-9
 
+
+********
+Stopping
+********
 
 Also of interest is the `cancel` method. Note that we also disconnect the
 `_task_finished` slot so that `_task_finished` does not receive stale

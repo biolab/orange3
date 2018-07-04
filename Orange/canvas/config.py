@@ -8,6 +8,7 @@ import sys
 import logging
 import pickle as pickle
 import itertools
+import warnings
 
 import pkg_resources
 
@@ -44,6 +45,7 @@ def init():
     # Make it a null op.
     global init
     init = lambda: None
+
 
 rc = {}
 
@@ -82,6 +84,9 @@ spec = \
      ("mainwindow/toolbox-dock-use-popover-menu", bool, True,
       "Use a popover menu to select a widget when clicking on a category "
       "button"),
+
+     ("mainwindow/widgets-float-on-top", bool, False,
+      "Float widgets on top of other windows"),
 
      ("mainwindow/number-of-recent-schemes", int, 15,
       "Number of recent workflows to keep in history"),
@@ -194,18 +199,18 @@ def widget_settings_dir():
 
 
 def open_config():
-    global rc
-    app_dir = data_dir()
-    filename = os.path.join(app_dir, "canvas-rc.pck")
-    if os.path.exists(filename):
-        with open(os.path.join(app_dir, "canvas-rc.pck"), "rb") as f:
-            rc.update(pickle.load(f))
+    warnings.warn(
+        "open_config was never used and will be removed in the future",
+        DeprecationWarning, stacklevel=2
+    )
+    return
 
 
 def save_config():
-    app_dir = data_dir()
-    with open(os.path.join(app_dir, "canvas-rc.pck"), "wb") as f:
-        pickle.dump(rc, f)
+    warnings.warn(
+        "save_config was never used and will be removed in the future",
+        DeprecationWarning, stacklevel=2
+    )
 
 
 def recent_schemes():

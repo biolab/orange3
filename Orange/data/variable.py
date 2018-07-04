@@ -277,7 +277,9 @@ class Variable(Reprable, metaclass=VariableMeta):
     .. attribute:: compute_value
 
         A function for computing the variable's value when converting from
-        another domain which does not contain this variable. The base class
+        another domain which does not contain this variable. The function will
+        be called with a data set (`Orange.data.Table`) and has to return
+        an array of computed values for all its instances. The base class
         defines a static method `compute_value`, which returns `Unknown`.
         Non-primitive variables must redefine it to return `None`.
 
@@ -929,10 +931,10 @@ class TimeVariable(ContinuousVariable):
     utc_offset = None
     timezone = timezone.utc
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, have_date=0, have_time=0, **kwargs):
         super().__init__(*args, **kwargs)
-        self.have_date = 0
-        self.have_time = 0
+        self.have_date = have_date
+        self.have_time = have_time
 
     def copy(self, compute_value=None):
         copy = super().copy(compute_value=compute_value)

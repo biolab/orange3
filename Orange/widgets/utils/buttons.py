@@ -3,7 +3,7 @@ from AnyQt.QtWidgets import (
     QStyleOptionButton
 )
 from AnyQt.QtGui import QPalette, QIcon
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtCore import Qt, QSize, QEvent
 
 
 class VariableTextPushButton(QPushButton):
@@ -92,6 +92,11 @@ class SimpleButton(QAbstractButton):
             self.__focusframe.deleteLater()
             self.__focusframe = None
 
+    def event(self, event):
+        if event.type() == QEvent.Enter or event.type() == QEvent.Leave:
+            self.update()
+        return super().event(event)
+
     def sizeHint(self):
         # reimplemented
         self.ensurePolished()
@@ -119,8 +124,8 @@ class SimpleButton(QAbstractButton):
 
         if not option.icon.isNull():
             if option.state & QStyle.State_Active:
-                mode = (QIcon.Normal if option.state & QStyle.State_MouseOver
-                        else QIcon.Active)
+                mode = (QIcon.Active if option.state & QStyle.State_MouseOver
+                        else QIcon.Normal)
             else:
                 mode = QIcon.Disabled
             if self.isChecked():

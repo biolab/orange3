@@ -380,8 +380,11 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         m.params = self.params
         return m
 
+    def _initialize_wrapped(self):
+        return self.__wraps__(**self.params)
+
     def fit(self, X, Y, W=None):
-        clf = self.__wraps__(**self.params)
+        clf = self._initialize_wrapped()
         Y = Y.reshape(-1)
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))

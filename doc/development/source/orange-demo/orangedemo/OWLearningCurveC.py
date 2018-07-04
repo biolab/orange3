@@ -289,10 +289,12 @@ class OWLearningCurveC(widget.OWWidget):
         task.watcher.done.connect(self._task_finished)
 # [end-snippet-8]
 
+# [start-snippet-progress]
     @pyqtSlot(float)
     def setProgressValue(self, value):
         assert self.thread() is QThread.currentThread()
         self.progressBarSet(value)
+# [end-snippet-progress]
 
 # [start-snippet-9]
     @pyqtSlot(concurrent.futures.Future)

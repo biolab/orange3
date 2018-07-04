@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional  # pylint: disable=unused-import
 
 from AnyQt.QtWidgets import (
     QListView, QHBoxLayout, QStyledItemDelegate, QApplication
@@ -146,7 +147,7 @@ class OWDiscretize(widget.OWWidget):
     want_main_area = False
     resizing_enabled = False
 
-    def  __init__(self):
+    def __init__(self):
         super().__init__()
 
         #: input data
@@ -433,14 +434,11 @@ class OWDiscretize(widget.OWWidget):
         rows = self.varview.selectionModel().selectedRows()
         return [index.row() for index in rows]
 
-    def discretized_var(self, source):
-        index = list(self.varmodel).index(source)
+    def discretized_var(self, index):
+        # type: (int) -> Optional[Orange.data.DiscreteVariable]
         state = self.var_state[index]
-        if state.disc_var is None:
-            return None
-        elif state.disc_var is source:
-            return source
-        elif state.points == []:
+        if state.disc_var is not None and state.points == []:
+            # Removed by MDL Entropy
             return None
         else:
             return state.disc_var
@@ -452,20 +450,22 @@ class OWDiscretize(widget.OWWidget):
         if self.data is None:
             return None
 
-        def disc_var(source):
-            if source and source.is_continuous:
-                return self.discretized_var(source)
-            else:
-                return source
+        # a mapping of all applied changes for variables in `varmodel`
+        mapping = {var: self.discretized_var(i)
+                   for i, var in enumerate(self.varmodel)}
 
+        def disc_var(source):
+            return mapping.get(source, source)
+
+        # map the full input domain to the new variables (where applicable)
         attributes = [disc_var(v) for v in self.data.domain.attributes]
         attributes = [v for v in attributes if v is not None]
 
-        class_var = disc_var(self.data.domain.class_var)
+        class_vars = [disc_var(v) for v in self.data.domain.class_vars]
+        class_vars = [v for v in class_vars if v is not None]
 
         domain = Orange.data.Domain(
-            attributes, class_var,
-            metas=self.data.domain.metas
+            attributes, class_vars, metas=self.data.domain.metas
         )
         return domain
 

@@ -346,6 +346,14 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, DiscreteVariable)
 
+    def test_discrete_bigger_char(self):
+        """Test if the discrete values are the same for bigger char fields"""
+        table = np.array(['M', 'F', 'M', 'F', 'M', 'F']).reshape(-1, 1)
+        conn, table_name = self.create_sql_table(table, ['char(10)'])
+
+        sql_table = SqlTable(conn, table_name, inspect_values=True)
+        self.assertSequenceEqual(sql_table.domain[0].values, ['F', 'M'])
+
     def test_meta_char(self):
         table = np.array(list('ABCDEFGHIJKLMNOPQRSTUVW')).reshape(-1, 1)
         conn, table_name = self.create_sql_table(table, ['char(1)'])

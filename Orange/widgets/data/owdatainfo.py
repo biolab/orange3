@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import threading
+import textwrap
 
 from AnyQt import QtWidgets
-from AnyQt import QtCore
 
 from Orange.widgets import widget, gui
 from Orange.widgets.widget import Input
@@ -37,7 +37,7 @@ class OWDataInfo(widget.OWWidget):
         self.data_set_size = self.features = self.meta_attributes = ""
         self.location = ""
         for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
-                    "Location"):
+                    "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
             bo = gui.vBox(self.controlArea, box,
                           addSpace=False and box != "Meta Attributes")
@@ -54,6 +54,7 @@ class OWDataInfo(widget.OWWidget):
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
         self.targets = ""
+        self.data_attributes = ""
         self.data_desc = None
 
     @Inputs.data
@@ -64,13 +65,11 @@ class OWDataInfo(widget.OWWidget):
         def count(s, tpe):
             return sum(isinstance(x, tpe) for x in s)
 
-        def count_n(s, tpe):
-            return n_or_none(count(s, tpe))
-
-        def pack_table(data):
-            return "<table>\n" + "\n".join(
+        def pack_table(info):
+            return '<table>\n' + "\n".join(
                 '<tr><td align="right" width="90">%s:</td>\n'
-                '<td width="40">%s</td></tr>\n' % dv for dv in data
+                '<td width="40">%s</td></tr>\n' % (d, textwrap.shorten(str(v), width=30, placeholder="..."))
+                for d, v in info
             ) + "</table>\n"
 
         if data is None:
@@ -78,24 +77,25 @@ class OWDataInfo(widget.OWWidget):
             self.features = self.targets = self.meta_attributes = "None"
             self.location = ""
             self.data_desc = None
+            self.data_attributes = ""
             return
 
-        sparses = [s for s, m in (("features", data.X_density),
-                                  ("meta attributes", data.metas_density),
-                                  ("targets", data.Y_density)) if m() > 1]
-        if sparses:
-            sparses = "<p>Sparse representation: %s</p>" % ", ".join(sparses)
+        sparseness = [s for s, m in (("features", data.X_density),
+                                     ("meta attributes", data.metas_density),
+                                     ("targets", data.Y_density)) if m() > 1]
+        if sparseness:
+            sparseness = "<p>Sparse representation: %s</p>" % ", ".join(sparseness)
         else:
-            sparses = ""
+            sparseness = ""
         domain = data.domain
         self.data_set_size = pack_table((
             ("Rows", '~{}'.format(data.approx_len())),
-            ("Variables", len(domain)))) + sparses
+            ("Columns", len(domain)+len(domain.metas)))) + sparseness
 
         def update_size():
             self.data_set_size = pack_table((
                 ("Rows", len(data)),
-                ("Variables", len(domain)))) + sparses
+                ("Columns", len(domain)+len(domain.metas)))) + sparseness
 
         threading.Thread(target=update_size).start()
 
@@ -131,13 +131,13 @@ class OWDataInfo(widget.OWWidget):
             disc_class = count(domain.class_vars, DiscreteVariable)
             cont_class = count(domain.class_vars, ContinuousVariable)
             if not cont_class:
-                self.targets = "Multitarget data,\n%i categorical targets" % \
+                self.targets = "Multi-target data,\n%i categorical targets" % \
                                n_or_none(disc_class)
             elif not disc_class:
-                self.targets = "Multitarget data,\n%i numeric targets" % \
+                self.targets = "Multi-target data,\n%i numeric targets" % \
                                n_or_none(cont_class)
             else:
-                self.targets = "<p>Multi target data</p>\n" + pack_table(
+                self.targets = "<p>Multi-target data</p>\n" + pack_table(
                     (("Categorical", disc_class), ("Numeric", cont_class)))
 
         self.data_desc = dd = OrderedDict()
@@ -179,9 +179,15 @@ class OWDataInfo(widget.OWWidget):
             ("{} textual", str_metas)
         ))
 
+        if data.attributes:
+            self.data_attributes = pack_table(data.attributes.items())
+        else:
+            self.data_attributes = ""
+
     def send_report(self):
         if self.data_desc:
             self.report_items(self.data_desc)
+
 
 if __name__ == "__main__":
     a = QtWidgets.QApplication([])

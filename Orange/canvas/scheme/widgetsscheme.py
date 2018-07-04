@@ -28,11 +28,14 @@ import sip
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
 from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
 
-from AnyQt.QtCore import Qt, QObject, QCoreApplication, QTimer, QEvent
+from AnyQt.QtCore import (
+    Qt, QObject, QCoreApplication, QTimer, QEvent, QByteArray
+)
+
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from .signalmanager import SignalManager, compress_signals, can_enable_dynamic
-from .scheme import Scheme, SchemeNode, SchemeLink
+from .scheme import Scheme, SchemeNode
 from .node import UserMessage
 from ..utils import name_lookup
 from ..resources import icon_loader
@@ -51,6 +54,11 @@ class WidgetsScheme(Scheme):
     propagation to an instance of `WidgetsSignalManager`.
     """
 
+    #: Emitted when a report_view is requested for the first time, before a
+    #: default instance is created. Clients can connect to this signal to
+    #: set a report view (`set_report_view`) to use instead.
+    report_view_requested = Signal()
+
     def __init__(self, parent=None, title=None, description=None, env={}):
         Scheme.__init__(self, parent, title, description, env=env)
 
@@ -66,6 +74,7 @@ class WidgetsScheme(Scheme):
 
         self.signal_manager.stateChanged.connect(onchanged)
         self.widget_manager.set_scheme(self)
+        self.__report_view = None  # type: Optional[OWReport]
 
     def widget_for_node(self, node):
         """
@@ -78,6 +87,26 @@ class WidgetsScheme(Scheme):
         Return the SchemeNode instance for the `widget`.
         """
         return self.widget_manager.node_for_widget(widget)
+
+    def save_widget_geometry_for_node(self, node):
+        # type: (SchemeNode) -> bytes
+        """
+        Save and return the current geometry and state for node
+
+        Parameters
+        ----------
+        node : Scheme
+        """
+        w = self.widget_for_node(node)  # type: OWWidget
+        return bytes(w.saveGeometryAndLayoutState())
+
+    def restore_widget_geometry_for_node(self, node, state):
+        # type: (SchemeNode, bytes) -> bool
+        w = self.widget_for_node(node)
+        if w is not None:
+            return w.restoreGeometryAndLayoutState(QByteArray(state))
+        else:
+            return False
 
     def sync_node_properties(self):
         """
@@ -96,10 +125,58 @@ class WidgetsScheme(Scheme):
         return changed
 
     def show_report_view(self):
-        from Orange.canvas.report.owreport import OWReport
-        inst = OWReport.get_instance()
+        inst = self.report_view()
         inst.show()
         inst.raise_()
+
+    def has_report(self):
+        """
+        Does this workflow have an associated report
+
+        Returns
+        -------
+        has_report: bool
+        """
+        return self.__report_view is not None
+
+    def report_view(self):
+        """
+        Return a OWReport instance used by the workflow.
+
+        If a report window has not been set then the `report_view_requested`
+        signal is emitted to allow the framework to setup the report window.
+        If the report window is still not set after the signal is emitted, a
+        new default OWReport instance is constructed and returned.
+
+        Returns
+        -------
+        report : OWReport
+        """
+        from Orange.canvas.report.owreport import OWReport
+        if self.__report_view is None:
+            self.report_view_requested.emit()
+
+        if self.__report_view is None:
+            parent = self.parent()
+            if isinstance(parent, QWidget):
+                window = parent.window()  # type: QWidget
+            else:
+                window = None
+
+            self.__report_view = OWReport()
+            if window is not None:
+                self.__report_view.setParent(window, Qt.Window)
+        return self.__report_view
+
+    def set_report_view(self, view):
+        """
+        Set the designated OWReport view for this workflow.
+
+        Parameters
+        ----------
+        view : Optional[OWReport]
+        """
+        self.__report_view = view
 
     def dump_settings(self, node: SchemeNode):
         from Orange.widgets.settings import SettingsPrinter
@@ -107,6 +184,15 @@ class WidgetsScheme(Scheme):
 
         pp = SettingsPrinter(indent=4)
         pp.pprint(widget.settingsHandler.pack_data(widget))
+
+    def event(self, event):
+        if event.type() == QEvent.Close and \
+                self.__report_view is not None:
+            self.__report_view.close()
+        return super().event(event)
+
+    def close(self):
+        QCoreApplication.sendEvent(self, QEvent(QEvent.Close))
 
 
 class WidgetManager(QObject):
@@ -194,6 +280,9 @@ class WidgetManager(QObject):
 
         # Tracks the widget in the update loop by the SignalManager
         self.__updating_widget = None
+
+        # Widgets float above other windows
+        self.__float_widgets_on_top = False
 
     def set_scheme(self, scheme):
         """
@@ -366,7 +455,7 @@ class WidgetManager(QObject):
             del self.__node_for_widget[state.widget]
             node.title_changed.disconnect(state.widget.setCaption)
             state.widget.progressBarValueChanged.disconnect(node.set_progress)
-
+            del state.widget._Report__report_view
             self.widget_for_node_removed.emit(node, state.widget)
             self._delete_widget(state.widget)
         elif isinstance(state, WidgetManager.PartiallyInitialized):
@@ -532,6 +621,10 @@ class WidgetManager(QObject):
             icon_loader.from_description(desc).get(desc.icon)
         )
         widget.setCaption(node.title)
+        # befriend class Report
+        widget._Report__report_view = self.scheme().report_view
+
+        self.__set_float_on_top_flag(widget)
 
         # Schedule an update with the signal manager, due to the cleared
         # implicit Initializing flag
@@ -563,6 +656,14 @@ class WidgetManager(QObject):
         """
         return self.__widget_processing_state[widget]
 
+    def set_float_widgets_on_top(self, float_on_top):
+        """
+        Set `Float Widgets on Top` flag on all widgets.
+        """
+        self.__float_widgets_on_top = float_on_top
+        for widget in self.__widget_for_node.values():
+            self.__set_float_on_top_flag(widget)
+
     def __create_delayed(self):
         if self.__init_queue:
             state = self.__init_queue.popleft()
@@ -584,9 +685,6 @@ class WidgetManager(QObject):
                 widget.saveSettings()
                 widget.onDeleteWidget()
                 widget.deleteLater()
-
-            event.accept()
-            return True
 
         return QObject.eventFilter(self, receiver, event)
 
@@ -728,6 +826,24 @@ class WidgetManager(QObject):
         # Notify widgets of a runtime environment change
         for widget in self.__widget_for_node.values():
             widget.workflowEnvChanged(key, newvalue, oldvalue)
+
+    def __set_float_on_top_flag(self, widget):
+        """Set or unset widget's float on top flag"""
+        should_float_on_top = self.__float_widgets_on_top
+        float_on_top = bool(widget.windowFlags() & Qt.WindowStaysOnTopHint)
+
+        if float_on_top == should_float_on_top:
+            return
+
+        widget_was_visible = widget.isVisible()
+        if should_float_on_top:
+            widget.setWindowFlags(widget.windowFlags() | Qt.WindowStaysOnTopHint)
+        else:
+            widget.setWindowFlags(widget.windowFlags() & ~Qt.WindowStaysOnTopHint)
+
+        # Changing window flags hid the widget
+        if widget_was_visible:
+            widget.show()
 
 
 def user_message_from_state(message_group):

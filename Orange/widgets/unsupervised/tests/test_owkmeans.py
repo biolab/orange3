@@ -347,10 +347,11 @@ class TestOWKMeans(WidgetTest):
         widget.optimize_k = False
 
         random = np.random.RandomState(0)  # Avoid randomness in the test
-        table = Table(random.rand(5010, 2))
-        self.send_signal(self.widget.Inputs.data, table)
-        outtable = self.get_output(widget.Outputs.annotated_data)
-        outtable = outtable.get_column_view("Silhouette")[0]
+        table = Table(random.rand(110, 2))
+        with patch("Orange.clustering.kmeans.SILHOUETTE_MAX_SAMPLES", 100):
+            self.send_signal(self.widget.Inputs.data, table)
+            outtable = self.get_output(widget.Outputs.annotated_data)
+            outtable = outtable.get_column_view("Silhouette")[0]
         self.assertTrue(np.all(np.isnan(outtable)))
         self.assertTrue(widget.Warning.no_silhouettes.is_shown())
 
@@ -410,6 +411,21 @@ class TestOWKMeans(WidgetTest):
             self.send_signal(self.widget.Inputs.data, table3)
             self.commit_and_wait()
             self.assertEqual(call_count + 1, commit.call_count)
+
+    def test_correct_smart_init(self):
+        # due to a bug where wrong init was passed to _compute_clustering
+        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+        self.widget.smart_init = 0
+        with patch.object(self.widget, "_compute_clustering",
+                          wraps=self.widget._compute_clustering) as compute:
+            self.commit_and_wait()
+            self.assertEqual(compute.call_args[1]['init'], "k-means++")
+        self.widget.invalidate()  # reset caches
+        self.widget.smart_init = 1
+        with patch.object(self.widget, "_compute_clustering",
+                          wraps=self.widget._compute_clustering) as compute:
+            self.commit_and_wait()
+            self.assertEqual(compute.call_args[1]['init'], "random")
 
 
 if __name__ == "__main__":

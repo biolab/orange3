@@ -743,8 +743,16 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         self.scatterplot_item.selected_points = []
         self.scatterplot_item.sigClicked.connect(self.select_by_click)
+        if self.show_reg_line:
+            _x_data = self.data.get_column_view(self.shown_x)[0]
+            _y_data = self.data.get_column_view(self.shown_y)[0]
+            _x_data = _x_data[self.valid_data]
+            _y_data = _y_data[self.valid_data]
+            assert _x_data.size
+            assert _y_data.size
+            self.draw_regression_line(
+                _x_data, _y_data, np.min(_x_data), np.max(_y_data))
 
-        self.draw_regression_line(x_data, y_data, min_x, max_x)
         self.update_labels()
         self.make_legend()
         self.plot_widget.replot()
@@ -843,12 +851,9 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                         _make_pen(QColor(255, 190, 0, 255),
                                   SELECTION_WIDTH + 1.)]
             else:
-                # Start with the first color so that the colors of the
-                # additional attribute in annotation (which start with 0,
-                # unselected) will match these colors
                 palette = ColorPaletteGenerator(number_of_colors=sels + 1)
                 pens = [nopen] + \
-                       [_make_pen(palette[i + 1], SELECTION_WIDTH + 1.)
+                       [_make_pen(palette[i], SELECTION_WIDTH + 1.)
                         for i in range(sels)]
             pen = [pens[a] for a in self.selection[self.valid_data]]
         else:

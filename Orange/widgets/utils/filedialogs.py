@@ -5,7 +5,7 @@ from AnyQt.QtGui import QBrush
 from AnyQt.QtWidgets import \
     QMessageBox, QFileDialog, QFileIconProvider, QComboBox
 
-from Orange.data.io import FileFormat
+from Orange.data.io import FileFormat, Compression
 from Orange.widgets.settings import Setting
 from Orange.util import deprecated
 
@@ -82,6 +82,9 @@ def open_filename_dialog_save(start_dir, start_filter, file_formats):
             return None, None, None
 
         base, ext = os.path.splitext(filename)
+        if ext in Compression.all:
+            base, base_ext = os.path.splitext(base)
+            ext = base_ext + ext
         if not ext:
             filename += format.EXTENSIONS[0]
         elif ext not in format.EXTENSIONS:

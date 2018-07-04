@@ -25,7 +25,8 @@ from AnyQt.QtCore import (
 )
 import pyqtgraph as pg
 
-from Orange.data import Domain, Table, DiscreteVariable, StringVariable
+from Orange.data import Domain, Table, DiscreteVariable, StringVariable, \
+    TimeVariable
 from Orange.data.sql.table import SqlTable
 import Orange.distance
 
@@ -699,7 +700,9 @@ class OWHeatMap(widget.OWWidget):
         if data is not None:
             variables = self.data.domain.class_vars + self.data.domain.metas
             variables = [var for var in variables
-                         if isinstance(var, (DiscreteVariable, StringVariable))]
+                         if isinstance(var, (DiscreteVariable,
+                                             StringVariable,
+                                             TimeVariable))]
             self.annotation_vars.extend(variables)
 
             for var in variables:

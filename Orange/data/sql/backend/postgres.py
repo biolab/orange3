@@ -165,6 +165,8 @@ class Psycopg2Backend(Backend):
         if type_code in CHAR_TYPES:
             if inspect_table:
                 values = self.get_distinct_values(field_name, inspect_table)
+                # remove trailing spaces
+                values = [v.rstrip() for v in values]
                 if values:
                     return DiscreteVariable.make(field_name, values)
 

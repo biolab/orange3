@@ -10,11 +10,12 @@ import numpy as np
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable)
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
-    FeatureEditor, DiscreteFeatureEditor)
+    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
@@ -269,3 +270,45 @@ class TestFeatureEditor(unittest.TestCase):
     def test_has_functions(self):
         self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
         self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt)
+
+
+class FeatureConstructorHandlerTests(unittest.TestCase):
+    def test_handles_builtins_in_expression(self):
+        self.assertTrue(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "str(A) + str(B)"),
+                {"A": vartype(DiscreteVariable)},
+                {"B": vartype(DiscreteVariable)}
+            )
+        )
+
+        # no variables is also ok
+        self.assertTrue(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "str('foo')"),
+                {},
+                {}
+            )
+        )
+
+        # should fail on unknown variables
+        self.assertFalse(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "str(X)"),
+                {},
+                {}
+            )
+        )
+
+    def test_handles_special_characters_in_var_names(self):
+        self.assertTrue(
+            FeatureConstructorHandler().is_valid_item(
+                OWFeatureConstructor.descriptors,
+                StringDescriptor("X", "A_2_f"),
+                {"A.2 f": vartype(DiscreteVariable)},
+                {}
+            )
+        )

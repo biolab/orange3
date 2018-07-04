@@ -383,7 +383,7 @@ class OWMosaicDisplay(OWWidget):
 
         icons = gui.attributeIconDict
         for attr in chain(data.domain.variables, data.domain.metas):
-            if attr.is_primitive:
+            if attr.is_primitive():
                 for combo in self.attr_combos:
                     combo.addItem(icons[attr], attr.name)
 

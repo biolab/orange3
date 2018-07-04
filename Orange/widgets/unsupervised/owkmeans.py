@@ -8,7 +8,7 @@ from AnyQt.QtGui import QIntValidator
 from AnyQt.QtWidgets import QGridLayout, QTableView
 
 from Orange.clustering import KMeans
-from Orange.clustering.kmeans import KMeansModel  # pylint: disable=unused-import
+from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES  # pylint: disable=unused-import
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -109,13 +109,15 @@ class OWKMeans(widget.OWWidget):
 
     class Warning(widget.OWWidget.Warning):
         no_silhouettes = widget.Msg(
-            "Silhouette scores are not computed for >5000 samples"
+            "Silhouette scores are not computed for >{} samples".format(
+                SILHOUETTE_MAX_SAMPLES)
         )
         not_enough_data = widget.Msg(
             "Too few ({}) unique data instances for {} clusters"
         )
 
-    INIT_METHODS = "Initialize with KMeans++", "Random initialization"
+    INIT_METHODS = (("Initialize with KMeans++", "k-means++"),
+                    ("Random initialization", "random"))
 
     resizing_enabled = False
     buttons_area_orientation = Qt.Vertical
@@ -181,7 +183,7 @@ class OWKMeans(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Initialization")
         gui.comboBox(
-            box, self, "smart_init", items=self.INIT_METHODS,
+            box, self, "smart_init", items=[m[0] for m in self.INIT_METHODS],
             callback=self.invalidate)
 
         layout = QGridLayout()
@@ -316,7 +318,7 @@ class OWKMeans(widget.OWWidget):
             self._compute_clustering,
             data=self.data,
             k=k,
-            init=['random', 'k-means++'][self.smart_init],
+            init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
             max_iter=self.max_iterations,
             silhouette=True,
@@ -485,7 +487,7 @@ class OWKMeans(widget.OWWidget):
             k_clusters = self.k_from + self.selected_row()
         else:
             k_clusters = self.k
-        init_method = self.INIT_METHODS[self.smart_init]
+        init_method = self.INIT_METHODS[self.smart_init][0]
         init_method = init_method[0].lower() + init_method[1:]
         self.report_items((
             ("Number of clusters", k_clusters),

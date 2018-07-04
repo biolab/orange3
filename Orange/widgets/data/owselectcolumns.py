@@ -1,10 +1,14 @@
 import sys
 from functools import partial
+from typing import Optional  # pylint: disable=unused-import
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtCore import Qt, QSortFilterProxyModel, QItemSelection, QItemSelectionModel
+from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
+from AnyQt.QtCore import (
+    Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
+    QMimeData
+)
 
-from Orange.util import deprecated
 from Orange.widgets import gui, widget
 from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
@@ -37,46 +41,63 @@ def source_indexes(indexes, view):
         return indexes
 
 
-# owloadcorpus in orange3-text used this
-@deprecated('Orange.widgets.utils.itemmodels.VariableListModel')
-def VariablesListItemModel(*args, **kwargs):
-    return VariableListModel(*args, enable_dnd=True, **kwargs)
+class VariablesListItemModel(VariableListModel):
+    """
+    An Variable list item model specialized for Drag and Drop.
+    """
+    MIME_TYPE = "application/x-Orange-VariableListModelData"
 
+    def flags(self, index):
+        flags = super().flags(index)
+        if index.isValid():
+            flags |= Qt.ItemIsDragEnabled
+        else:
+            flags |= Qt.ItemIsDropEnabled
+        return flags
 
-class ClassVarListItemModel(VariableListModel):
+    def supportedDropActions(self):
+        return Qt.MoveAction  # pragma: no cover
+
+    def supportedDragActions(self):
+        return Qt.MoveAction  # pragma: no cover
+
+    def mimeTypes(self):
+        return [self.MIME_TYPE]
+
+    def mimeData(self, indexlist):
+        """
+        Reimplemented.
+
+        For efficiency reasons only the variable instances are set on the
+        mime data (under `'_items'` property)
+        """
+        items = [self[index.row()] for index in indexlist]
+        mime = QMimeData()
+        # the encoded 'data' is empty, variables are passed by properties
+        mime.setData(self.MIME_TYPE, b'')
+        mime.setProperty("_items", items)
+        return mime
+
     def dropMimeData(self, mime, action, row, column, parent):
-        """ Ensure only one variable can be dropped onto the view.
         """
-        vars = mime.property('_items')
-        if vars is None:
-            return False
+        Reimplemented.
+        """
         if action == Qt.IgnoreAction:
-            return True
-        return VariableListModel.dropMimeData(
-            self, mime, action, row, column, parent)
+            return True  # pragma: no cover
+        if not mime.hasFormat(self.MIME_TYPE):
+            return False  # pragma: no cover
+        variables = mime.property("_items")
+        if variables is None:
+            return False  # pragma: no cover
+        if row < 0:
+            row = self.rowCount()
 
-
-class ClassVariableItemView(VariablesListItemView):
-    def __init__(self, parent=None, acceptedType=Orange.data.Variable):
-        VariablesListItemView.__init__(self, parent, acceptedType)
-        self.setDropIndicatorShown(False)
-
-    def acceptsDropEvent(self, event):
-        """
-        Reimplemented
-
-        Ensure only one variable is in the model.
-        """
-        accepts = super().acceptsDropEvent(event)
-        mime = event.mimeData()
-        vars = mime.property('_items')
-        if vars is None:
-            return False
-
-        return accepts
+        self[row:row] = variables
+        return True
 
 
 class OWSelectAttributes(widget.OWWidget):
+    # pylint: disable=too-many-instance-attributes
     name = "Select Columns"
     description = "Select columns from the data table and assign them to " \
                   "data features, classes or meta variables."
@@ -99,6 +120,20 @@ class OWSelectAttributes(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        # Schedule interface updates (enabled buttons) using a coalescing
+        # single shot timer (complex interactions on selection and filtering
+        # updates in the 'available_attrs_view')
+        self.__interface_update_timer = QTimer(self, interval=0, singleShot=True)
+        self.__interface_update_timer.timeout.connect(
+            self.__update_interface_state)
+        # The last view that has the selection for move operation's source
+        self.__last_active_view = None  # type: Optional[QListView]
+
+        def update_on_change(view):
+            # Schedule interface state update on selection change in `view`
+            self.__last_active_view = view
+            self.__interface_update_timer.start()
+
         self.controlArea = QWidget(self.controlArea)
         self.layout().addWidget(self.controlArea)
         layout = QGridLayout()
@@ -107,7 +142,7 @@ class OWSelectAttributes(widget.OWWidget):
         box = gui.vBox(self.controlArea, "Available Variables",
                        addToLayout=False)
 
-        self.available_attrs = VariableListModel(enable_dnd=True)
+        self.available_attrs = VariablesListItemModel()
         filter_edit, self.available_attrs_view = variables_filter(
             parent=self, model=self.available_attrs)
         box.layout().addWidget(filter_edit)
@@ -117,47 +152,45 @@ class OWSelectAttributes(widget.OWWidget):
                 self.commit()
 
         self.available_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.available_attrs_view))
-        self.available_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.available_attrs_view))
+            partial(update_on_change, self.available_attrs_view))
         self.available_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
 
         box.layout().addWidget(self.available_attrs_view)
         layout.addWidget(box, 0, 0, 3, 1)
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
-        self.used_attrs = VariableListModel(enable_dnd=True)
+        self.used_attrs = VariablesListItemModel()
         self.used_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
 
         self.used_attrs_view.setModel(self.used_attrs)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.used_attrs_view))
+            partial(update_on_change, self.used_attrs_view))
         self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Target Variable", addToLayout=False)
-        self.class_attrs = ClassVarListItemModel(enable_dnd=True)
-        self.class_attrs_view = ClassVariableItemView(
+        self.class_attrs = VariablesListItemModel()
+        self.class_attrs_view = VariablesListItemView(
             acceptedType=(Orange.data.DiscreteVariable,
                           Orange.data.ContinuousVariable))
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.class_attrs_view))
+            partial(update_on_change, self.class_attrs_view))
         self.class_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         self.class_attrs_view.setMaximumHeight(72)
         box.layout().addWidget(self.class_attrs_view)
         layout.addWidget(box, 1, 2, 1, 1)
 
         box = gui.vBox(self.controlArea, "Meta Attributes", addToLayout=False)
-        self.meta_attrs = VariableListModel(enable_dnd=True)
+        self.meta_attrs = VariablesListItemModel()
         self.meta_attrs_view = VariablesListItemView(
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.meta_attrs_view.selectionModel().selectionChanged.connect(
-            partial(self.update_interface_state, self.meta_attrs_view))
+            partial(update_on_change, self.meta_attrs_view))
         self.meta_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
         box.layout().addWidget(self.meta_attrs_view)
         layout.addWidget(box, 2, 2, 1, 1)
@@ -338,10 +371,16 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.commit()
 
+    def __update_interface_state(self):
+        last_view = self.__last_active_view
+        if last_view is not None:
+            self.update_interface_state(last_view)
+
     def update_interface_state(self, focus=None, selected=None, deselected=None):
         for view in [self.available_attrs_view, self.used_attrs_view,
                      self.class_attrs_view, self.meta_attrs_view]:
-            if view is not focus and not view.hasFocus() and self.selected_rows(view):
+            if view is not focus and not view.hasFocus() \
+                    and view.selectionModel().hasSelection():
                 view.selectionModel().clear()
 
         def selected_vars(view):
@@ -358,7 +397,7 @@ class OWSelectAttributes(widget.OWWidget):
                             for var in available_types)
 
         move_attr_enabled = (available_selected and all_primitive) or \
-                            attrs_selected
+                             attrs_selected
 
         self.move_attr_button.setEnabled(bool(move_attr_enabled))
         if move_attr_enabled:
@@ -374,6 +413,9 @@ class OWSelectAttributes(widget.OWWidget):
         self.move_meta_button.setEnabled(bool(move_meta_enabled))
         if move_meta_enabled:
             self.move_meta_button.setText(">" if available_selected else "<")
+
+        self.__last_active_view = None
+        self.__interface_update_timer.stop()
 
     def commit(self):
         self.update_domain_role_hints()
@@ -418,7 +460,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def test_main(argv=None):
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     if argv is None:
         argv = sys.argv
@@ -440,5 +482,6 @@ def test_main(argv=None):
     w.saveSettings()
     return rval
 
-if __name__ == "__main__":
-    sys.exit(test_main())
+
+if __name__ == "__main__":  # pragma: no cover
+    sys.exit(main())

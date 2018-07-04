@@ -3,6 +3,8 @@ foldable pip install -U setuptools pip codecov
 # Don't install PyQt5 if PyQt4 is requested
 [ "$PYQT4" ] && sed -i '/pyqt5/Id' requirements-doc.txt
 
+if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then pip install pandas==0.20.3; fi
+
 # Install dependencies sequentially
 cat requirements-core.txt \
     requirements-gui.txt \

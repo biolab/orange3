@@ -352,6 +352,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         else:
             self.button.setText("Continue")
             self._thread.quit()
+            # Need to sync state (the worker must read the keep_running
+            # state and stop) for reliable restart.
+            self._thread.wait()
 
     def before_running(self):
         """Code that is run before running vizrank in its own thread"""

@@ -2,6 +2,7 @@
 Undo/Redo Commands
 
 """
+from typing import Callable
 
 from AnyQt.QtWidgets import QUndoCommand
 
@@ -203,3 +204,34 @@ class SetAttrCommand(QUndoCommand):
 
     def undo(self):
         setattr(self.obj, self.attrname, self.oldvalue)
+
+
+class SimpleUndoCommand(QUndoCommand):
+    """
+    Simple undo/redo command specified by callable function pair.
+    Parameters
+    ----------
+    redo: Callable[[], None]
+        A function expressing a redo action.
+    undo : Callable[[], None]
+        A function expressing a undo action.
+    text : str
+        The command's text (see `QUndoCommand.setText`)
+    parent : Optional[QUndoCommand]
+    """
+
+    def __init__(self, redo, undo, text, parent=None):
+        # type: (Callable[[], None], Callable[[], None], ...) -> None
+        super().__init__(text, parent)
+        self._redo = redo
+        self._undo = undo
+
+    def undo(self):
+        # type: () -> None
+        """Reimplemented."""
+        self._undo()
+
+    def redo(self):
+        # type: () -> None
+        """Reimplemented."""
+        self._redo()

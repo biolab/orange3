@@ -55,6 +55,13 @@ def variable_description(var, skip_attributes=False):
                 var.name,
                 (("values", tuple(var.values)),),
                 attributes)
+    elif var.is_time:
+        return (var_type.__module__,
+                var_type.__name__,
+                var.name,
+                (("have_date", var.have_date),
+                 ("have_time", var.have_time)),
+                attributes)
     else:
         return (var_type.__module__,
                 var_type.__name__,
@@ -68,14 +75,14 @@ def variable_from_description(description, compute_value=None):
     :func:`variable_description`).
 
     """
-    module, type_name, name, kwargs, attrs = description
+    module, type_name, name, args, attrs = description
     try:
         constructor = get_qualified(module, type_name)
     except (ImportError, AttributeError):
         raise ValueError("Invalid descriptor type '{}.{}"
                          "".format(module, type_name))
 
-    var = constructor(name, compute_value=compute_value, **dict(list(kwargs)))
+    var = constructor(name, compute_value=compute_value, **dict(list(args)))
     var.attributes.update(attrs)
     return var
 
@@ -364,6 +371,31 @@ class ContinuousVariableEditor(VariableEditor):
     pass
 
 
+class TimeVariableEditor(VariableEditor):
+    """An editor widget for editing a Time variable.
+
+       Extends the :class:`VariableEditor` to enable editing of
+       time variables.
+
+    """
+    def get_data(self):
+        """Retrieve the modified variable"""
+        name = str(self.name_edit.text()).strip()
+        labels = self.labels_model.get_dict()
+
+        # Is the variable actually changed.
+        if self.var is not None and not self.is_same():
+            var = type(self.var)(name)
+            var.attributes.update(labels)
+            var.have_date = self.var.have_date
+            var.have_time = self.var.have_time
+            self.var = var
+        else:
+            var = self.var
+
+        return var
+
+
 class OWEditDomain(widget.OWWidget):
     name = "Edit Domain"
     description = "Rename features and their values."
@@ -413,6 +445,7 @@ class OWEditDomain(widget.OWWidget):
 
         self.editor_stack.addWidget(DiscreteVariableEditor())
         self.editor_stack.addWidget(ContinuousVariableEditor())
+        self.editor_stack.addWidget(TimeVariableEditor())
         self.editor_stack.addWidget(VariableEditor())
 
         box.layout().addWidget(self.editor_stack)
@@ -508,9 +541,12 @@ class OWEditDomain(widget.OWWidget):
 
         var = self.domain_model[index]
 
-        editor_index = 2
+        editor_index = 3
         if var.is_discrete:
             editor_index = 0
+        # TimeVariable is also continuous, first check if time
+        elif var.is_time:
+            editor_index = 2
         elif var.is_continuous:
             editor_index = 1
         editor = self.editor_stack.widget(editor_index)

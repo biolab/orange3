@@ -182,7 +182,7 @@ class OWRank(OWWidget):
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
-    nSelected = Setting(5)
+    nSelected = ContextSetting(5)
     auto_apply = Setting(True)
 
     sorting = Setting((0, Qt.DescendingOrder))
@@ -339,6 +339,7 @@ class OWRank(OWWidget):
             self.selectionMethod = OWRank.SelectNBest
 
         self.openContext(data)
+        self.selectButtons.button(self.selectionMethod).setChecked(True)
 
     def handleNewSignals(self):
         self.setStatusMessage('Running')
@@ -459,11 +460,9 @@ class OWRank(OWWidget):
         self.commit()
 
     def setSelectionMethod(self, method):
-        if self.selectionMethod != method:
-            self.selectionMethod = method
-            self.selectButtons.button(method).setChecked(True)
+        self.selectionMethod = method
+        self.selectButtons.button(method).setChecked(True)
         self.autoSelection()
-        self.on_select()
 
     def autoSelection(self):
         selModel = self.ranksView.selectionModel()
@@ -522,11 +521,7 @@ class OWRank(OWWidget):
     def commit(self):
         selected_attrs = []
         if self.data is not None:
-            attributes = self.data.domain.attributes
-            if len(attributes) == len(self.selected_rows):
-                self.selectionMethod = OWRank.SelectAll
-                self.selectButtons.button(self.selectionMethod).setChecked(True)
-            selected_attrs = [attributes[i]
+            selected_attrs = [self.data.domain.attributes[i]
                               for i in self.selected_rows]
         if not selected_attrs:
             self.Outputs.reduced_data.send(None)

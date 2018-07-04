@@ -7,9 +7,10 @@ import numpy as np
 from AnyQt.QtCore import QModelIndex, Qt
 
 from Orange.data import ContinuousVariable, DiscreteVariable, \
-    StringVariable, Table, Domain
+    StringVariable, TimeVariable, Table, Domain
 from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
-    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor
+    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor, \
+    TimeVariableEditor
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 
@@ -169,6 +170,20 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
 
+    def test_time_variable_preservation(self):
+        """Test if time variables preserve format specific attributes"""
+        table = Table("cyber-security-breaches")
+        self.send_signal(self.widget.Inputs.data, table)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
+        editor = self.widget.editor_stack.findChild(TimeVariableEditor)
+        editor.name_edit.setText("Date")
+        editor.commit()
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
@@ -216,6 +231,27 @@ class TestEditors(GuiTest):
         self.assertEqual(w.name_edit.text(), v.name)
         self.assertEqual(w.labels_model.get_dict(), v.attributes)
         self.assertTrue(w.is_same())
+
+        w.set_data(None)
+        self.assertEqual(w.name_edit.text(), "")
+        self.assertEqual(w.labels_model.get_dict(), {})
+        self.assertIs(w.get_data(), None)
+
+    def test_time_editor(self):
+        w = TimeVariableEditor()
+        self.assertIs(w.get_data(), None)
+
+        v = TimeVariable("T", have_date=1)
+        v.attributes.update({"A": 1, "B": "b"})
+        w.set_data(v)
+
+        self.assertEqual(w.name_edit.text(), v.name)
+        self.assertEqual(w.labels_model.get_dict(), v.attributes)
+        self.assertTrue(w.is_same())
+
+        var = w.get_data()
+        self.assertTrue(var.have_date)
+        self.assertFalse(var.have_time)
 
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
