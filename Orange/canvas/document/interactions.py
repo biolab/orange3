@@ -22,6 +22,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
+from .suggestions import Suggestions
 from ..registry.description import WidgetDescription
 from ..registry.qt import QtWidgetRegistry
 from .. import scheme
@@ -458,6 +459,14 @@ class NewLinkAction(UserInteraction):
         if self.direction == self.FROM_SINK:
             # Reverse the argument order.
             is_compatible = reversed_arguments(is_compatible)
+            suggestions = Suggestions.instance.get_source_suggestions(from_desc.id)
+        else:
+            suggestions = Suggestions.instance.get_sink_suggestions(from_desc.id)
+
+        def sort(index):
+            return None  # TODO, using suggestinos
+
+        menu.setSortingFunc(sort)
 
         def filter(index):
             desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
