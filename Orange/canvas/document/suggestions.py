@@ -1,9 +1,12 @@
+from collections import defaultdict
+
+
 class Suggestions:
     def __init__(self, scheme):
         self.__scheme = scheme
-        self.links_added = []
+        self.link_frequencies = defaultdict(int)
         self.__scheme.onNewLink(self.new_link)
 
     def new_link(self, link):
-        self.links_added.append(link)
-        print(self.links_added)
+        link_key = (link.source_node.description.id, link.sink_node.description.id)
+        self.link_frequencies[link_key] += 1
