@@ -4,7 +4,7 @@ import warnings
 from contextlib import contextmanager
 from time import time
 
-from psycopg2 import Error, OperationalError
+from psycopg2 import Error
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
