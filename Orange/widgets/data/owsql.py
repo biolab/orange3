@@ -44,7 +44,7 @@ class OWSql(OWWidget):
     icon = "icons/SQLTable.svg"
     priority = 30
     category = "Data"
-    keywords = ["data", "file", "load", "read", "SQL"]
+    keywords = ["file", "load", "read", "SQL"]
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")

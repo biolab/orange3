@@ -77,7 +77,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     icon = "icons/File.svg"
     priority = 10
     category = "Data"
-    keywords = ["data", "file", "load", "read"]
+    keywords = ["file", "load", "read"]
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")

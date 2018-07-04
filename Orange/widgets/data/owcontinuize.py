@@ -24,7 +24,7 @@ class OWContinuize(widget.OWWidget):
                    "optionally, normalize numeric values.")
     icon = "icons/Continuize.svg"
     category = "Data"
-    keywords = ["data", "continuize"]
+    keywords = ["continuize"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

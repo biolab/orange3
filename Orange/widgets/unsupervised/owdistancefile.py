@@ -17,7 +17,7 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
     icon = "icons/DistanceFile.svg"
     priority = 10
     category = "Data"
-    keywords = ["data", "distances", "load", "read"]
+    keywords = ["distances", "load", "read"]
 
     class Outputs:
         distances = Output("Distances", DistMatrix, dynamic=False)
