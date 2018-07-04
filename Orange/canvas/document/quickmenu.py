@@ -340,8 +340,8 @@ class SortFilterProxyModel(QSortFilterProxyModel):
             return accepted
 
     def setSortingFunc(self, func):
-        self.invalidate()
         self.__sortingFunc = func
+        self.invalidate()
         self.sort(0)
 
     def sortingFunc(self):

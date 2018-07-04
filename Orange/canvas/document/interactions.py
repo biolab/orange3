@@ -460,9 +460,9 @@ class NewLinkAction(UserInteraction):
         if self.direction == self.FROM_SINK:
             # Reverse the argument order.
             is_compatible = reversed_arguments(is_compatible)
-            suggestion_sort = self.suggestions.get_source_suggestions(node.title)
+            suggestion_sort = self.suggestions.get_source_suggestions(from_desc.name)
         else:
-            suggestion_sort = self.suggestions.get_sink_suggestions(node.title)
+            suggestion_sort = self.suggestions.get_sink_suggestions(from_desc.name)
 
         def sort(left, right):
             return suggestion_sort[left] > suggestion_sort[right]  # list stores frequencies, so sign is flipped

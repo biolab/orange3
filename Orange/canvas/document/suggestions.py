@@ -11,13 +11,12 @@ class Suggestions:
         self.sink_frequencies = defaultdict(lambda: defaultdict(int))
 
     def new_link(self, link):
-        source_id = link.source_node.title
-        sink_id = link.sink_node.title
+        source_id = link.source_node.description.name
+        sink_id = link.sink_node.description.name
 
         link_key = (source_id, sink_id)
         self.link_frequencies[link_key] += 1
 
-        # optimize by making a 2d matrix of id (string) indices
         self.source_frequencies[source_id][sink_id] += 1
         self.sink_frequencies[sink_id][source_id] += 1
 
