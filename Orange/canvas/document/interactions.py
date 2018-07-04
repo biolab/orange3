@@ -22,7 +22,6 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
-from .suggestions import Suggestions
 from ..registry.description import WidgetDescription
 from ..registry.qt import QtWidgetRegistry
 from .. import scheme
@@ -456,6 +455,8 @@ class NewLinkAction(UserInteraction):
             return any(scheme.compatible_channels(output, input) \
                        for output in source.outputs \
                        for input in sink.inputs)
+
+        self.suggestions.set_last_direction(self.direction)
 
         if self.direction == self.FROM_SINK:
             # Reverse the argument order.

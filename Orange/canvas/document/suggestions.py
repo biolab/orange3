@@ -3,13 +3,15 @@ import pickle
 from collections import defaultdict
 
 from Orange.canvas import config
+from .interactions import NewLinkAction
 
 
 class Suggestions:
     def __init__(self):
-        self.__frequencies_path = config.data_dir() + "widget-use-frequency.p"
+        self.__frequencies_path = config.data_dir() + "/widget-use-frequency.p"
 
         self.__scheme = None
+        self.__last_direction = None
         self.link_frequencies = defaultdict(int)
         self.source_probability = defaultdict(lambda: defaultdict(float))
         self.sink_probability = defaultdict(lambda: defaultdict(float))
@@ -27,13 +29,12 @@ class Suggestions:
         return True
 
     def default_link_frequency(self):
-        self.link_frequencies[("File", "Data Table")] = 3
+        self.link_frequencies[("File", "Data Table", NewLinkAction.FROM_SOURCE)] = 3
         self.overwrite_probabilities_with_frequencies()
 
     def overwrite_probabilities_with_frequencies(self):
         for link, count in self.link_frequencies.items():
-            self.source_probability[link[0]][link[1]] = count
-            self.sink_probability[link[1]][link[0]] = count
+            self.increment_probability(link[0], link[1], link[2], count)
 
     def write_link_frequency(self):
         pickle.dump(self.link_frequencies, open(self.__frequencies_path, "wb"))
@@ -42,13 +43,20 @@ class Suggestions:
         source_id = link.source_node.description.name
         sink_id = link.sink_node.description.name
 
-        link_key = (source_id, sink_id)
+        link_key = (source_id, sink_id, self.__last_direction)
         self.link_frequencies[link_key] += 1
 
-        self.source_probability[source_id][sink_id] += 1
-        self.sink_probability[sink_id][source_id] += 1
+        self.increment_probability(source_id, sink_id, self.__last_direction, 1)
 
         self.write_link_frequency()
+
+    def increment_probability(self, source_id, sink_id, direction, factor):
+        if direction == NewLinkAction.FROM_SOURCE:
+            self.source_probability[source_id][sink_id] += factor
+            self.sink_probability[sink_id][source_id] += factor * 0.5
+        else:  # FROM_SINK
+            self.source_probability[source_id][sink_id] += factor * 0.5
+            self.sink_probability[sink_id][source_id] += factor
 
     def get_sink_suggestions(self, source_id):
         return self.source_probability[source_id]
@@ -59,3 +67,10 @@ class Suggestions:
     def set_scheme(self, scheme):
         self.__scheme = scheme
         scheme.onNewLink(self.new_link)
+
+    def set_last_direction(self, direction):
+        """
+        When opening quick menu, before the widget is created, set the direction
+        of creation (FROM_SINK, FROM_SOURCE).
+        """
+        self.__last_direction = direction
