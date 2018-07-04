@@ -429,6 +429,7 @@ class NewLinkAction(UserInteraction):
                 else:
                     source_node = node
                     sink_node = self.scene.node_for_item(self.sink_item)
+                self.suggestions.set_direction(self.direction)
                 self.connect_nodes(source_node, sink_node)
 
                 if not self.isCanceled() or not self.isFinished() and \
@@ -455,8 +456,6 @@ class NewLinkAction(UserInteraction):
             return any(scheme.compatible_channels(output, input) \
                        for output in source.outputs \
                        for input in sink.inputs)
-
-        self.suggestions.set_last_direction(self.direction)
 
         if self.direction == self.FROM_SINK:
             # Reverse the argument order.
