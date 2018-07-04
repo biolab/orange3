@@ -5,6 +5,47 @@ Change Log
 ------------
 * ...
 
+
+[3.14.0] - 2018-07-04
+--------------------
+##### Enhancements
+* MergeData: add autocommit button ([#3091](../../pull/3091))
+* Canvas: Window Groups ([#3066](../../pull/3066))
+* Save data with compression ([#3047](../../pull/3047))
+* Neural network widget that works in a separate thread ([#2958](../../pull/2958))
+* Display Widgets on Top option ([#3038](../../pull/3038))
+* Implement multi window editing ([#2820](../../pull/2820))
+* Data Info widget displays data attributes ([#3022](../../pull/3022))
+* Icon redesign: k-means, clustering, distances ([#3018](../../pull/3018))
+
+##### Bugfixes
+* postgres: Fix wrong discrete values ([#3109](../../pull/3109))
+* OWRank: Select Attributes fixes and improvements ([#3084](../../pull/3084))
+* EditDomain: Editing TimeVariable broke formatting ([#3101](../../pull/3101))
+* OWMosaic: Don't offer String meta attributes ([#3072](../../pull/3072))
+* owkmeans: fix initialization choice ([#3090](../../pull/3090))
+* Workaround for segfaults with Nvidia on Linux ([#3100](../../pull/3100))
+* Canvas: Fix 'Widgest on top' ([#3068](../../pull/3068))
+* Re-cythonize with Cython 0.28 for Python 3.7 compatibility ([#3067](../../pull/3067))
+* BSD compatibility patch ([#3061](../../pull/3061))
+* OWScatterOWScatterPlotGraph: Match group colors with marker colors ([#3053](../../pull/3053))
+* listfilter: Fix filter line edit completion ([#2896](../../pull/2896))
+* VizRank: Fix race condition in `toggle` ([#3042](../../pull/3042))
+* Heat Map: Allow labeling by TimeVariable ([#3026](../../pull/3026))
+* Select Columns: Drag/drop ([#3032](../../pull/3032))
+* gui: Suppress mouse button release on the combo box popup ([#3025](../../pull/3025))
+* tests: Fix time tracking in process_events ([#3041](../../pull/3041))
+* test_owmosaic: Cleanup/join threads on test tear down ([#3040](../../pull/3040))
+* owselectcolumns: Fix performance on filtering with selection ([#3030](../../pull/3030))
+* test: Fix tests for 'Datasets' widget ([#3033](../../pull/3033))
+* Sorting add-ons in the alphabetical order ([#3013](../../pull/3013))
+* owscatterplot: Use correct data for regression line ([#3024](../../pull/3024))
+* Add-ons dialog: Restore state ([#3017](../../pull/3017))
+* Feature constructor does not restore features when loading from saved workflow ([#2996](../../pull/2996))
+* boxplot labels overlap ([#3011](../../pull/3011))
+* owdiscretize: Fix quadratic complexitiy in the n variables ([#3016](../../pull/3016))
+
+
 [3.13.0] - 2018-04-17
 --------------------
 ##### Enhancements
@@ -824,7 +865,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.13.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.14.0...HEAD
+[3.14.0]: https://github.com/biolab/orange3/compare/3.13.0...3.14.0
 [3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
 [3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0
 [3.11.0]: https://github.com/biolab/orange3/compare/3.10.0...3.11.0
