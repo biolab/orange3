@@ -81,6 +81,7 @@ class UserInteraction(QObject):
         self.document = document
         self.scene = document.scene()
         self.scheme = document.scheme()
+        self.suggestions = document.suggestions()
         self.deleteOnEnd = deleteOnEnd
 
         self.cancelOnEsc = False
@@ -459,12 +460,12 @@ class NewLinkAction(UserInteraction):
         if self.direction == self.FROM_SINK:
             # Reverse the argument order.
             is_compatible = reversed_arguments(is_compatible)
-            suggestions = Suggestions.instance.get_source_suggestions(from_desc.id)
+            suggestion_sort = self.suggestions.get_source_suggestions(node.title)
         else:
-            suggestions = Suggestions.instance.get_sink_suggestions(from_desc.id)
+            suggestion_sort = self.suggestions.get_sink_suggestions(node.title)
 
-        def sort(index):
-            return None  # TODO, using suggestinos
+        def sort(left, right):
+            return suggestion_sort[left] > suggestion_sort[right]  # list stores frequencies, so sign is flipped
 
         menu.setSortingFunc(sort)
 

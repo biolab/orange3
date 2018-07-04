@@ -34,6 +34,7 @@ from AnyQt.QtCore import (
 
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
+from .suggestions import Suggestions
 from ..registry.qt import whats_this_helper
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
@@ -172,6 +173,8 @@ class SchemeEditWidget(QWidget):
         self.__linkMenu.addSeparator()
         self.__linkMenu.addAction(self.__linkRemoveAction)
         self.__linkMenu.addAction(self.__linkResetAction)
+
+        self.__suggestions = Suggestions()
 
     def __setupActions(self):
         self.__cleanUpAction = \
@@ -640,6 +643,7 @@ class SchemeEditWidget(QWidget):
                         self.__signalManagerStateChanged)
 
             self.__scheme = scheme
+            self.__suggestions.set_scheme(self)
 
             self.setPath("")
 
@@ -727,6 +731,12 @@ class SchemeEditWidget(QWidget):
 
         """
         return self.__view
+
+    def suggestions(self):
+        """
+        Return the widget suggestion prediction class.
+        """
+        return self.__suggestions
 
     def setRegistry(self, registry):
         # Is this method necessary?

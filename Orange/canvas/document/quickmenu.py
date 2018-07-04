@@ -297,21 +297,24 @@ class SuggestMenuPage(MenuPage):
         filter_proxy.setFilterFunc(func)
 
     def setSortingFunc(self, func):
+        """
+        Set a sorting function.
+        """
         filter_proxy = self.view().model()
         filter_proxy.setSortingFunc(func)
 
 
 class SortFilterProxyModel(QSortFilterProxyModel):
     """
-    An filter proxy model used to filter items based on a filtering
-    function.
+    An filter proxy model used to sort and filter items based on
+    a sort and filtering function.
 
     """
     def __init__(self, parent=None):
         QSortFilterProxyModel.__init__(self, parent)
 
         self.__filterFunc = None
-        self.__order = None
+        self.__sortingFunc = None
 
     def setFilterFunc(self, func):
         """
@@ -337,12 +340,18 @@ class SortFilterProxyModel(QSortFilterProxyModel):
             return accepted
 
     def setSortingFunc(self, func):
+        self.invalidate()
         self.__sortingFunc = func
+        self.sort(0)
+
+    def sortingFunc(self):
+        return self.__sortingFunc
 
     def lessThan(self, left, right):
         model = self.sourceModel()
-        # TODO
-        return self.__sortingFunc(left, right)
+        left_data = model.data(left)
+        right_data = model.data(right)
+        return self.__sortingFunc(left_data, right_data)
 
 
 class SearchWidget(LineEdit):
@@ -864,7 +873,7 @@ class QuickMenu(FramelessWindow):
         self.setWindowFlags(Qt.Popup)
 
         self.__filterFunc = None
-        self.__ordering = None
+        self.__sortingFunc = None
 
         self.__setupUi()
 
@@ -1028,10 +1037,15 @@ class QuickMenu(FramelessWindow):
         self.__model = model
         self.__suggestPage.setModel(model)
 
-    def setOrdering(self, suggestions):
-        if self.__ordering != suggestions:
-            self.__ordering = suggestions
-            #TODO
+    def setSortingFunc(self, func):
+        """
+        Set a sorting function in the suggest (search) menu.
+        """
+        if self.__sortingFunc != func:
+            self.__sortingFunc = func
+            for i in range(0, self.__pages.count()):
+                if isinstance(self.__pages.page(i), SuggestMenuPage):
+                    self.__pages.page(i).setSortingFunc(func)
 
     def setFilterFunc(self, func):
         """

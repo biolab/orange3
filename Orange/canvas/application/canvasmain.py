@@ -66,7 +66,6 @@ from .outputview import OutputView, TextStream
 from .settings import UserSettingsDialog
 
 from ..document.schemeedit import SchemeEditWidget
-from ..document.suggestions import Suggestions
 
 from ..scheme import widgetsscheme
 from ..scheme.readwrite import scheme_load
@@ -177,8 +176,6 @@ class CanvasMainWindow(QMainWindow):
         self.setup_actions()
         self.setup_ui()
         self.setup_menu()
-
-        self.suggestions = Suggestions(self.scheme_widget)
 
         self.restore()
 
