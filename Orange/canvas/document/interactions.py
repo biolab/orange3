@@ -465,7 +465,8 @@ class NewLinkAction(UserInteraction):
             suggestion_sort = self.suggestions.get_sink_suggestions(from_desc.name)
 
         def sort(left, right):
-            return suggestion_sort[left] > suggestion_sort[right]  # list stores frequencies, so sign is flipped
+            # list stores frequencies, so sign is flipped
+            return suggestion_sort[left] > suggestion_sort[right]
 
         menu.setSortingFunc(sort)
 
