@@ -12,6 +12,7 @@ class Suggestions:
     """
     def __init__(self):
         self.__frequencies_path = config.data_dir() + "/widget-use-frequency.p"
+        self.__import_factor = 0.8  # every time you reopen orange, imported frequencies are reduced
 
         self.__scheme = None
         self.__direction = None
@@ -26,8 +27,11 @@ class Suggestions:
         if not os.path.isfile(self.__frequencies_path):
             return False
         file = open(self.__frequencies_path, "rb")
-        self.link_frequencies = pickle.load(file)
+        imported_freq = pickle.load(file)
+        for k, v in imported_freq.items():
+            imported_freq[k] = self.__import_factor * v
 
+        self.link_frequencies = imported_freq
         self.overwrite_probabilities_with_frequencies()
         return True
 
