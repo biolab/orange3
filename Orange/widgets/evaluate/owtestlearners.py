@@ -141,6 +141,7 @@ class OWTestLearners(OWWidget):
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
+    keywords = []
 
     class Inputs:
         train_data = Input("Data", Table, default=True)

@@ -160,6 +160,7 @@ class OWPythagoreanForest(OWWidget):
     description = 'Pythagorean forest for visualising random forests.'
     icon = 'icons/PythagoreanForest.svg'
     settings_version = 2
+    keywords = ["fractal"]
 
     priority = 1001
 

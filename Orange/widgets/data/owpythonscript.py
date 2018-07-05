@@ -368,6 +368,7 @@ class OWPythonScript(widget.OWWidget):
     description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
     priority = 3150
+    keywords = ["file", "program"]
 
     class Inputs:
         data = Input("Data", Table, replaces=["in_data"],

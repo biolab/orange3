@@ -12,6 +12,7 @@ class OWTranspose(OWWidget):
     description = "Transpose data table."
     icon = "icons/Transpose.svg"
     priority = 2000
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table)

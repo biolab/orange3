@@ -44,6 +44,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     icon = "icons/SilhouettePlot.svg"
     priority = 300
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

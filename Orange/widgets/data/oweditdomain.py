@@ -401,6 +401,7 @@ class OWEditDomain(widget.OWWidget):
     description = "Rename features and their values."
     icon = "icons/EditDomain.svg"
     priority = 3125
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

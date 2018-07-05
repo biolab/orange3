@@ -140,6 +140,7 @@ class OWDistributions(widget.OWWidget):
     description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
     priority = 120
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Set the input dataset")

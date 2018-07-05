@@ -90,7 +90,7 @@ class OWKMeans(widget.OWWidget):
                   "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
-    keywords = ["means", "kmeans"]
+    keywords = ["kmeans", "clustering"]
 
     class Inputs:
         data = Input("Data", Table)

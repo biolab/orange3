@@ -16,6 +16,7 @@ class OWKNNLearner(OWBaseLearner):
         "Orange.widgets.regression.owknnregression.OWKNNRegression",
     ]
     priority = 20
+    keywords = ["k nearest", "knearest", "neighbor", "neighbour"]
 
     LEARNER = KNNLearner
 

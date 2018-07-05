@@ -13,6 +13,7 @@ class OWConstant(OWBaseLearner):
         "Orange.widgets.regression.owmean.OWMean",
     ]
     priority = 10
+    keywords = ["majority", "mean"]
 
     LEARNER = ConstantLearner
 

@@ -13,7 +13,7 @@ class OWSave(widget.OWWidget):
     description = "Save data to an output file."
     icon = "icons/Save.svg"
     category = "Data"
-    keywords = ["save"]
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table)

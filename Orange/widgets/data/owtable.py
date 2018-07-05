@@ -370,6 +370,7 @@ class OWDataTable(widget.OWWidget):
     description = "View the dataset in a spreadsheet."
     icon = "icons/Table.svg"
     priority = 50
+    keywords = []
 
     buttons_area_orientation = Qt.Vertical
 
