@@ -279,6 +279,11 @@ class SuggestMenuPage(MenuPage):
         """
         filter_proxy = self.view().model()
         filter_proxy.setFilterRegExp(pattern)
+
+        # re-sorts to make sure items that match by title are on top
+        filter_proxy.invalidate()
+        filter_proxy.sort(0)
+
         self.ensureCurrent()
 
     def setFilterWildCard(self, pattern):
@@ -353,6 +358,16 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         model = self.sourceModel()
         left_data = model.data(left)
         right_data = model.data(right)
+
+        flat_model = self.sourceModel()
+        left_description = flat_model.data(left, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+        right_description = flat_model.data(right, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+
+        left_matches_title = self.filterRegExp().indexIn(left_description.name) > -1
+        right_matches_title = self.filterRegExp().indexIn(right_description.name) > -1
+
+        if left_matches_title != right_matches_title:
+            return left_matches_title
         return self.__sortingFunc(left_data, right_data)
 
 
@@ -1179,6 +1194,14 @@ class QuickMenu(FramelessWindow):
         patt.setCaseSensitivity(False)
         self.__suggestPage.setFilterRegExp(patt)
         self.__pages.setCurrentPage(self.__suggestPage)
+        self.__selectFirstIndex()
+
+    def __selectFirstIndex(self):
+        view = self.__pages.currentPage().view()
+        model = view.model()
+
+        index = model.index(0, 0)
+        view.setCurrentIndex(index)
 
     def triggerSearch(self):
         """
