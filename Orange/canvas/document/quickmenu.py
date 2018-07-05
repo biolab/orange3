@@ -348,6 +348,8 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         return self.__sortingFunc
 
     def lessThan(self, left, right):
+        if self.__sortingFunc is None:
+            return QSortFilterProxyModel.lessThan(self, left, right)
         model = self.sourceModel()
         left_data = model.data(left)
         right_data = model.data(right)

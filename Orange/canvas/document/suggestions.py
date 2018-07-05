@@ -7,6 +7,9 @@ from .interactions import NewLinkAction
 
 
 class Suggestions:
+    """
+    Handles sorting of quick menu items when dragging a link from a widget onto empty canvas.
+    """
     def __init__(self):
         self.__frequencies_path = config.data_dir() + "/widget-use-frequency.p"
 
@@ -37,6 +40,7 @@ class Suggestions:
             self.increment_probability(link[0], link[1], link[2], count)
 
     def new_link(self, link):
+        # direction is none when a widget was not added+linked via quick menu
         if self.__direction is None:
             return
 
@@ -67,6 +71,9 @@ class Suggestions:
 
     def get_source_suggestions(self, sink_id):
         return self.sink_probability[sink_id]
+
+    def get_default_suggestions(self):
+        return self.source_probability
 
     def set_scheme(self, scheme):
         self.__scheme = scheme

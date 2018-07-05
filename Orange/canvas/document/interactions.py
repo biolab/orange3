@@ -787,6 +787,15 @@ class NewNodeAction(UserInteraction):
         menu = self.document.quickMenu()
         menu.setFilterFunc(None)
 
+        # compares probability of the user needing the widget as a source
+        def defaultSort(left, right):
+            default_suggestions = self.suggestions.get_default_suggestions()
+            left_frequency = sum(default_suggestions[left].values())
+            right_frequency = sum(default_suggestions[right].values())
+            return left_frequency > right_frequency
+
+        menu.setSortingFunc(defaultSort)
+
         action = menu.exec_(pos, search_text)
         if action:
             item = action.property("item")
