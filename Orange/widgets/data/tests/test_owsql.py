@@ -6,9 +6,10 @@ import unittest
 from Orange.data import Table
 from Orange.widgets.data.owsql import OWSql
 from Orange.widgets.tests.base import WidgetTest
-from Orange.tests.sql.base import create_iris, parse_uri
+from Orange.tests.sql.base import create_iris, parse_uri, sql_test
 
 
+@sql_test
 class TestOWSql(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWSql)
