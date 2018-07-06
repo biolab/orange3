@@ -250,6 +250,20 @@ class ComboBoxSearch(QComboBox):
                         index.flags() & (Qt.ItemIsEnabled | Qt.ItemIsSelectable):
                     self.__popup.setCurrentIndex(index)
 
+        if etype == QEvent.MouseButtonPress and self.__popup is obj:
+            # Popup border or out of window mouse button press/release.
+            # At least on windows this needs to be handled.
+            style = self.style()
+            opt = QStyleOptionComboBox()
+            self.initStyleOption(opt)
+            opt.subControls = QStyle.SC_All
+            opt.activeSubControls = QStyle.SC_ComboBoxArrow
+            pos = self.mapFromGlobal(event.globalPos())
+            sc = style.hitTestComplexControl(QStyle.CC_ComboBox, opt, pos, self)
+            if sc != QStyle.SC_None:
+                self.__popup.setAttribute(Qt.WA_NoMouseReplay)
+            self.hidePopup()
+
         return super().eventFilter(obj, event)
 
     def __activateProxyIndex(self, index):
