@@ -407,8 +407,11 @@ class OWBoxPlot(widget.OWWidget):
                 dataset, attr, self.group_var)
             if self.is_continuous:
                 self.stats = [BoxData(cont, attr, i, self.group_var)
-                              for i, cont in enumerate(self.conts)]
-            self.label_txts_all = self.group_var.values
+                              for i, cont in enumerate(self.conts)
+                              if np.sum(cont) > 0]
+            self.label_txts_all = \
+                [v for v, c in zip(self.group_var.values, self.conts)
+                 if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
             self.conts = []
@@ -528,14 +531,17 @@ class OWBoxPlot(widget.OWWidget):
             if self.group_var:
                 self.labels = [
                     QGraphicsTextItem("{}".format(int(sum(cont))))
-                    for cont in self.conts]
+                    for cont in self.conts if np.sum(cont) > 0]
             else:
                 self.labels = [
                     QGraphicsTextItem(str(int(sum(self.dist))))]
 
         self.draw_axis_disc()
         if self.group_var:
-            self.boxes = [self.strudel(cont, i) for i, cont in enumerate(self.conts)]
+            self.boxes = \
+                [self.strudel(cont, i) for i, cont in enumerate(self.conts)
+                 if np.sum(cont) > 0]
+            self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
         else:
             self.boxes = [self.strudel(self.dist)]
 
