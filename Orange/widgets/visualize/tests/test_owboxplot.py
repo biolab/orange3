@@ -162,6 +162,20 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         QTest.qWait(3000)
         self.widget.hide()
 
+    def test_empty_groups(self):
+        """Test if groups with zero elements are not shown"""
+        table = Table("cyber-security-breaches")
+        self.send_signal(self.widget.Inputs.data, table)
+        self.__select_variable("US State")
+        self.__select_group("US State")
+        self.assertEqual(52, len(self.widget.boxes))
+
+        # select rows with US State equal to TX or MO
+        use_indexes = np.array([0, 1, 25, 26, 27])
+        table.X = table.X[use_indexes]
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertEqual(2, len(self.widget.boxes))
+
     def _select_data(self):
         items = [item for item in self.widget.box_scene.items()
                  if isinstance(item, FilterGraphicsRectItem)]
