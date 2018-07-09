@@ -773,6 +773,8 @@ class OWBoxPlot(widget.OWWidget):
         Draw the horizontal axis and sets self.scale_x for discrete attributes
         """
         if self.stretched:
+            if not self.attr_labels:
+                return
             step = steps = 10
         else:
             if self.group_var:
