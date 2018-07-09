@@ -9,24 +9,32 @@ import Orange
 from Orange.data.sql.table import SqlTable
 
 
-def sql_test(f):
+def postgresql_test(f):
     try:
         import psycopg2
-        return unittest.skipIf(not sql_version, "Database is not running.")(f)
+        return unittest.skipIf(not postgressql_version, "Database is not running.")(f)
     except:
         return unittest.skip("Psycopg2 is required for sql tests.")(f)
 
 
+def mssql_test(f):
+    try:
+        import pymssql
+        return unittest.skipIf(not mssql_active, "Database is not running.")(f)
+    except:
+        return unittest.skip("pymssql is required for mssql tests.")(f)
+
+
 def connection_params():
-    return parse_uri(get_dburi())
+    return dict(parse_uri(uri) for uri in get_dburi())
 
 
 def get_dburi():
-    dburi = os.environ.get('ORANGE_TEST_DB_URI')
+    dburi = os.environ.get('ORANGE_TEST_DB_URI').split("|")
     if dburi:
         return dburi
     else:
-        return "postgres://localhost/test"
+        return ["postgres://localhost/test"]
 
 
 def parse_uri(uri):
@@ -51,20 +59,27 @@ def parse_uri(uri):
     ))
     if table:
         params['table'] = table
-    return params
+    return parsed_uri.scheme, params
 
 
 try:
     import psycopg2
-    with psycopg2.connect(**connection_params()) as conn:
-        sql_version = conn.server_version
+    with psycopg2.connect(**connection_params()['postgres']) as conn:
+        postgressql_version = conn.server_version
 except:
-    sql_version = 0
+    postgressql_version = 0
+
+try:
+    import pymssql
+    with pymssql.connect(**connection_params()['mssql']) as conn:
+        mssql_active = True
+except:
+    mssql_active = False
 
 
-def create_iris():
+def create_iris(db, param):
     iris = Orange.data.Table("iris")
-    with psycopg2.connect(**connection_params()) as conn:
+    with db.connect(**param) as conn:
         cur = conn.cursor()
         cur.execute("DROP TABLE IF EXISTS iris")
         cur.execute("""
@@ -85,15 +100,14 @@ def create_iris():
                     values.append(iris.domain.class_var.values[int(val)])
             cur.execute("""INSERT INTO iris VALUES
             (%s, %s, %s, %s, '%s')""" % tuple(values))
-        cur.execute("ANALYZE iris")
-    return get_dburi(), 'iris'
 
 
 class TestParseUri(unittest.TestCase):
     def test_parses_connection_uri(self):
-        parameters = parse_uri(
+        scheme, parameters = parse_uri(
             "sql://user:password@host:7678/database/table")
 
+        self.assertEqual("sql", scheme)
         self.assertDictContainsSubset(dict(
             host="host",
             user="user",
@@ -104,9 +118,10 @@ class TestParseUri(unittest.TestCase):
         ), parameters)
 
     def test_parse_minimal_connection_uri(self):
-        parameters = parse_uri(
+        scheme, parameters = parse_uri(
             "sql://host/database/table")
 
+        self.assertEqual("sql", scheme)
         self.assertDictContainsSubset(
             dict(host="host", database="database", table="table"),
             parameters
@@ -144,7 +159,7 @@ class TestParseUri(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
-@sql_test
+@postgresql_test
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -152,9 +167,12 @@ class PostgresTest(unittest.TestCase):
         from Orange.data.sql.backend.postgres import Psycopg2Backend
 
         Psycopg2Backend.connection_pool = \
-            ThreadedConnectionPool(1, 1, **connection_params())
-        cls.backend = Psycopg2Backend(connection_params())
-        cls.conn, cls.iris = create_iris()
+            ThreadedConnectionPool(1, 1, **connection_params()['postgres'])
+        cls.backend = Psycopg2Backend(connection_params()['postgres'])
+        create_iris(psycopg2, connection_params()['postgres'])
+        cls.iris = 'iris'
+        cls.conn = [uri for uri in get_dburi() if 'postgres' in uri][0]
+
 
     @classmethod
     def tearDownClass(cls):
@@ -164,7 +182,7 @@ class PostgresTest(unittest.TestCase):
 
     def create_sql_table(self, data, columns=None):
         table_name = self._create_sql_table(data, columns)
-        return connection_params(), table_name
+        return connection_params()['postgres'], table_name
 
     @contextlib.contextmanager
     def sql_table_from_data(self, data, guess_values=True):
@@ -172,7 +190,7 @@ class PostgresTest(unittest.TestCase):
         assert Psycopg2Backend.connection_pool is not None
 
         table_name = self._create_sql_table(data)
-        yield SqlTable(connection_params(), table_name,
+        yield SqlTable(connection_params()['postgres'], table_name,
                        inspect_values=guess_values)
         self.drop_sql_table(table_name)
 

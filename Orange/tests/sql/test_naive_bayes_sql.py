@@ -7,14 +7,14 @@ from Orange import preprocess
 from Orange.data.sql.table import SqlTable
 from Orange.data import Domain
 from Orange.data.variable import DiscreteVariable
-from Orange.tests.sql.base import sql_test, connection_params
+from Orange.tests.sql.base import postgresql_test, connection_params
 
 
 @unittest.skip("Fails on travis.")
-@sql_test
+@postgresql_test
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
-        table = SqlTable(connection_params(), 'iris',
+        table = SqlTable(connection_params()['postgres'], 'iris',
                          type_hints=Domain([], DiscreteVariable("iris",
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))

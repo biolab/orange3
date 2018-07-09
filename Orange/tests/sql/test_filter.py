@@ -5,10 +5,10 @@ import unittest
 from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
 
-from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+from Orange.tests.sql.base import PostgresTest, postgresql_test
 
 
-@sql_test
+@postgresql_test
 class TestIsDefinedSql(PostgresTest):
     def setUp(self):
         self.data = [
@@ -61,7 +61,7 @@ class TestIsDefinedSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
+@postgresql_test
 class TestHasClass(PostgresTest):
     def setUp(self):
         self.data = [
@@ -95,7 +95,7 @@ class TestHasClass(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
+@postgresql_test
 class TestSameValueSql(PostgresTest):
     def setUp(self):
         self.data = [
@@ -183,7 +183,7 @@ class TestSameValueSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
+@postgresql_test
 class TestValuesSql(PostgresTest):
     def setUp(self):
         self.data = [
@@ -317,7 +317,7 @@ class TestValuesSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
+@postgresql_test
 class TestFilterStringSql(PostgresTest):
     def setUp(self):
         self.data = [

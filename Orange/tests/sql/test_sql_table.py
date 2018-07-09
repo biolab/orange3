@@ -17,10 +17,11 @@ from Orange.preprocess.discretize import EqualWidth
 from Orange.statistics.basic_stats import BasicStats, DomainBasicStats
 from Orange.statistics.contingency import Continuous, Discrete, get_contingencies
 from Orange.statistics.distribution import get_distributions
-from Orange.tests.sql.base import PostgresTest, sql_version, sql_test
+from Orange.tests.sql.base import PostgresTest, postgressql_version, \
+    postgresql_test
 
 
-@sql_test
+@postgresql_test
 class TestSqlTable(PostgresTest):
     def test_constructs_correct_attributes(self):
         data = list(zip(self.float_variable(21),
@@ -485,7 +486,7 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @unittest.skipIf(sql_version < 90200,
+    @unittest.skipIf(postgressql_version < 90200,
                      "Type not supported on this server version.")
     def test_smallserial(self):
         table = np.arange(25).reshape((-1, 1))
@@ -497,7 +498,7 @@ class TestSqlTable(PostgresTest):
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, ContinuousVariable)
 
-    @unittest.skipIf(sql_version < 90200,
+    @unittest.skipIf(postgressql_version < 90200,
                      "Type not supported on this server version.")
     def test_bigserial(self):
         table = np.arange(25).reshape((-1, 1))
