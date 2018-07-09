@@ -3,6 +3,9 @@ language: python
 sudo: false
 dist: trusty
 
+services:
+  - docker
+
 matrix:
     include:
         - env: RUN_PYLINT=true
