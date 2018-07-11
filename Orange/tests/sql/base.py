@@ -159,8 +159,53 @@ class TestParseUri(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
-@postgresql_test
-class PostgresTest(unittest.TestCase):
+class DBTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        raise NotImplementedError
+
+    @classmethod
+    def tearDownClass(cls):
+        raise NotImplementedError
+
+    def create_sql_table(self, data, columns=None):
+        table_name = self._create_sql_table(data, columns)
+        return self.conn, table_name
+
+    @contextlib.contextmanager
+    def sql_table_from_data(self, data, guess_values=True):
+        table_name = self._create_sql_table(data)
+        yield SqlTable(self.conn, table_name,
+                       inspect_values=guess_values)
+        self.drop_sql_table(table_name)
+
+    def _create_sql_table(self, data, sql_column_types=None):
+        raise NotImplementedError
+
+    def _get_column_types(self, data):
+        if not data:
+            return [0] * 3
+        column_size = [0] * len(data[0])
+        for row in data:
+            for i, value in enumerate(row):
+                if isinstance(value, str):
+                    column_size[i] = max(len(value), column_size[i])
+        return column_size
+
+    def drop_sql_table(self, table_name):
+        raise NotImplementedError
+
+    def float_variable(self, size):
+        return [i * .1 for i in range(size)]
+
+    def discrete_variable(self, size):
+        return ["mf"[i % 2] for i in range(size)]
+
+    def string_variable(self, size):
+        return string.ascii_letters[:size]
+
+
+class PostgresTest(DBTest):
     @classmethod
     def setUpClass(cls):
         from psycopg2.pool import ThreadedConnectionPool
@@ -173,26 +218,11 @@ class PostgresTest(unittest.TestCase):
         cls.iris = 'iris'
         cls.conn = [uri for uri in get_dburi() if 'postgres' in uri][0]
 
-
     @classmethod
     def tearDownClass(cls):
         from Orange.data.sql.backend.postgres import Psycopg2Backend
         Psycopg2Backend.connection_pool.closeall()
         Psycopg2Backend.connection_pool = None
-
-    def create_sql_table(self, data, columns=None):
-        table_name = self._create_sql_table(data, columns)
-        return connection_params()['postgres'], table_name
-
-    @contextlib.contextmanager
-    def sql_table_from_data(self, data, guess_values=True):
-        from Orange.data.sql.backend.postgres import Psycopg2Backend
-        assert Psycopg2Backend.connection_pool is not None
-
-        table_name = self._create_sql_table(data)
-        yield SqlTable(connection_params()['postgres'], table_name,
-                       inspect_values=guess_values)
-        self.drop_sql_table(table_name)
 
     def _create_sql_table(self, data, sql_column_types=None):
         data = list(data)
@@ -234,24 +264,10 @@ class PostgresTest(unittest.TestCase):
             with self.backend.execute_sql_query(insert_sql): pass
         return str(table_name)
 
-    def _get_column_types(self, data):
-        if not data:
-            return [0] * 3
-        column_size = [0] * len(data[0])
-        for row in data:
-            for i, value in enumerate(row):
-                if isinstance(value, str):
-                    column_size[i] = max(len(value), column_size[i])
-        return column_size
-
     def drop_sql_table(self, table_name):
         with self.backend.execute_sql_query("""DROP TABLE "%s" """ % table_name): pass
 
-    def float_variable(self, size):
-        return [i*.1 for i in range(size)]
 
-    def discrete_variable(self, size):
-        return ["mf"[i % 2] for i in range(size)]
 
     def string_variable(self, size):
         return string.ascii_letters[:size]
