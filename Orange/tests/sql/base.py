@@ -4,6 +4,7 @@ import string
 import unittest
 from urllib import parse
 import uuid
+import random
 
 import Orange
 from Orange.data.sql.table import SqlTable
@@ -268,6 +269,49 @@ class PostgresTest(DBTest):
         with self.backend.execute_sql_query("""DROP TABLE "%s" """ % table_name): pass
 
 
+class MicrosoftSQLTest(DBTest):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = 'iris'
+        cls.conn = [uri for uri in get_dburi() if 'mssql' in uri][0]
 
-    def string_variable(self, size):
-        return string.ascii_letters[:size]
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    def _create_sql_table(self, data, sql_column_types=None):
+        data = list(data)
+        if sql_column_types is None:
+            column_size = self._get_column_types(data)
+            sql_column_types = [
+                'float' if size == 0 else 'varchar(%s)' % size
+                for size in column_size
+            ]
+        table_name = ''.join(random.choices(string.ascii_lowercase, k=16))
+        create_table_sql = 'CREATE TABLE %(table_name)s (%(columns)s)' % dict(
+            table_name=table_name,
+            columns=", ".join(
+                'col%d %s' % (i, t) for i, t in enumerate(sql_column_types)
+            )
+        )
+        insert_sql = 'INSERT INTO %(table_name)s VALUES (%(values)s)' % dict(
+            table_name=table_name,
+            values=', '.join(
+                "%d" if c == "float" else "%s" for c in sql_column_types
+            )
+        )
+        _, conn_params = parse_uri(self.conn)
+        with pymssql.connect(**conn_params) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(create_table_sql)
+                cursor.executemany(insert_sql, [tuple(d) for d in data])
+            conn.commit()
+
+        return str(table_name)
+
+    def drop_sql_table(self, table_name):
+        _, conn_params = parse_uri(self.conn)
+        with pymssql.connect(**conn_params) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP TABLE %s" % table_name)
+            conn.commit()
