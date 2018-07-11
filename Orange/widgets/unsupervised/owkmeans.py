@@ -19,6 +19,9 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
 
 
+RANDOM_STATE = 0
+
+
 class ClusterTableModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -253,14 +256,14 @@ class OWKMeans(widget.OWWidget):
         return len(self.data) >= k
 
     @staticmethod
-    def _compute_clustering(data, k, init, n_init, max_iter, silhouette):
+    def _compute_clustering(data, k, init, n_init, max_iter, silhouette, random_state):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
         if k > len(data):
             raise NotEnoughData()
 
         return KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
-            compute_silhouette_score=silhouette,
+            compute_silhouette_score=silhouette, random_state=random_state,
         )(data)
 
     @Slot(int, int)
@@ -322,6 +325,7 @@ class OWKMeans(widget.OWWidget):
             n_init=self.n_init,
             max_iter=self.max_iterations,
             silhouette=True,
+            random_state=RANDOM_STATE,
         ) for k in ks]
         watcher = FutureSetWatcher(futures)
         watcher.resultReadyAt.connect(self.__clustering_complete)
