@@ -213,7 +213,8 @@ class OWTestLearners(OWWidget):
         missing_data = \
             Msg("Instances with unknown target values were removed from{}data.")
         test_data_missing = Msg("Missing separate test data input.")
-        scores_not_computed = Msg("Some scores could not be computed.")
+        # as I know only AUC is exception in conditions for computation
+        scores_not_computed = Msg("AUC could not be computed.")
         test_data_unused = Msg("Test data is present but unused. "
                                "Select 'Test on test data' to use it.")
 
