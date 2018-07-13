@@ -11,7 +11,6 @@ Inputs
     Learner
         learning algorithm(s)
 
-
 Outputs
     Evaluation Results
         results of testing classification algorithms
@@ -101,3 +100,34 @@ want to know only the sex and status of the survived and omit the age.
 
 Another example of using this widget is presented in the documentation
 for the :doc:`Confusion Matrix <../evaluation/confusionmatrix>` widget.
+
+Errors, Warnings, Information
+-----------------------------
+
+Errors
+++++++
+
+*Train dataset is empty* - Your data input is present, but it does not contain any data instances. Check your data in a Data Table.
+*Test dataset is empty* - Your test data is present, but it does not contain any data instances. Check your test data in a Data Table.
+*Train data input requires a target variable* - Your data input is present, but the target variable isn't defined. Use :doc:`Select Columns <../data/selectcolumns>` to define the target variable.
+*Too many target variables* - Your data has more than one target variable. Orange currently doesn't support multilabel prediction. Use :doc:`Select Columns <../data/selectcolumns>` to select a single target variable.
+*Test data input requires a target variable* - Your test data input is present, but the target variable isn't defined. Use :doc:`Select Columns <../data/selectcolumns>` to define the target variable.
+*Number of folds exceeds the data size* - Your train data has less data instances than the number of folds specified. Please decrease the number of folds, or, better, select the *Leave one out* option.
+*Test and train datasets have different target variables* - Target variables from train and test data do not match. Use :doc:`Select Columns <../data/selectcolumns>` to define the same target variable for both data inputs.
+*Not enough memory* - Your computer's memory cannot handle the data of this size. Try sampling with :doc:`Data Sampler <../data/datasampler>` to decrease the size of your data.
+*Target variable has no values* - Target variable in the data has only missing values meaning the model can't be constructed. Use :doc:`Select Columns <../data/selectcolumns>` to select a different target variable.
+*Target variable has only one value* - Target variable in the data has a constant value meaning the model can't be constructed. Use :doc:`Select Columns <../data/selectcolumns>` to select a different target variable.
+
+Warnings
+++++++++
+
+"Instances with unknown target values were removed from data." - If a data instance has missing values, it was not considered in the computation. To change this, use :doc:`Impute <../data/impute>` to impute the the missing values.
+"Missing separate test data input." - To Test on test data, use Test Data input. Double-click on the connection between the data and Test & Score and rewire the connection to Test Data.
+"Some scores could not be computed." - The number of folds exceeds the number of instances in the smallest class. Decrease the number of folds to be the same or lower than the number of smallest class or use Leave one out option.
+"Test data is present but unused. Select 'Test on test data' to use it." - Separate Test Data is present, but is not used. To see the results of testing on test data, select the final option, Test on test data.
+
+Information
++++++++++++
+
+"Train data has been sampled" - Train data is too big, so it has been randomly sampled for performance.
+"Test data has been sampled" - Test data is too big, so it has been randomly sampled for performance.
