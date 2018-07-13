@@ -76,7 +76,7 @@ class OWSql(OWWidget):
         no_backends = Msg("Please install a backend to use this widget")
 
     class Warning(OWWidget.Warning):
-        missing_extension = Msg("Database is missing extension: {}")
+        missing_extension = Msg("Database is missing extensions: {}")
 
     def __init__(self):
         super().__init__()
@@ -240,9 +240,9 @@ class OWSql(OWWidget):
                 password=self.password
             ))
             self.Error.connection.clear()
-            if hasattr(self.backend, 'missing_extension') and \
-                    self.backend.missing_extension:
-                self.Warning.missing_extension(self.backend.missing_extension)
+            if getattr(self.backend, 'missing_extension', False):
+                self.Warning.missing_extension(
+                    ", ".join(self.backend.missing_extension))
                 self.download = True
                 self.downloadcb.setEnabled(False)
 

@@ -49,7 +49,7 @@ class TestOWSql(WidgetTest):
         """Test for correctly handled missing backend extension"""
         self.set_connection_params()
         self.widget.backends[0] = unittest.mock.Mock()
-        self.widget.backends[0]().missing_extension = "missing extension"
+        self.widget.backends[0]().missing_extension = ["missing extension"]
         self.widget.backends[0]().list_tables = lambda x: []
         self.widget.connect()
 
