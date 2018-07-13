@@ -181,6 +181,95 @@ class SvgFormat(ImgFormat):
         super().write_image(filename, scene)
 
 
+def matplotlib_output(scene):
+    # for now just showing a graph
+
+    from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
+    from itertools import chain
+
+    import matplotlib.pyplot as plt
+
+    plt.clf()
+
+    for item in scene.items:
+        if isinstance(item, ScatterPlotItem):
+            draw_scatterplot(plt, item)
+
+    # draw axes
+
+    # FIXME code does not work for graphs without axes and for multiple axes!
+    for position, set_ticks, set_label in [("bottom", plt.xticks, plt.xlabel), ("left", plt.yticks, plt.ylabel)]:
+        axis = scene.getAxis(position)
+        set_label(str(axis.labelText))
+
+        # textual tick labels
+        if axis._tickLevels is not None:
+            major_minor = list(chain(*axis._tickLevels))
+            locs = [a[0] for a in major_minor]
+            labels = [a[1] for a in major_minor]
+            set_ticks(locs, labels)
+
+    plt.show()
+
+
+def draw_scatterplot(plt, si):
+    x = si.data['x']
+    y = si.data['y']
+    size = si.data["size"]
+
+    def colortuple(color):
+        return color.redF(), color.greenF(), color.blueF(), color.alphaF()
+
+    import numpy as np
+
+    edgecolor = np.array([colortuple(a.color()) for a in si.data["pen"]])
+    facecolor = np.array([colortuple(a.color()) for a in si.data["brush"]])
+
+    # each marker requires one call to matplotlib's scatter!
+
+    def matplotlib_marker(m):
+        if m == "t":
+            return "^"
+        elif m == "t2":
+            return ">"
+        elif m == "t3":
+            return "<"
+        elif m == "star":
+            return "*"
+        elif m == "+":
+            return "P"
+        elif m == "x":
+            return "X"
+        return m
+
+    # possible_markers for scatterplot are in .graph.CurveSymbols
+
+    # labels are missing
+
+    markers = np.array([matplotlib_marker(m) for m in si.data["symbol"]])
+    for m in set(markers):
+        indices = np.where(markers == m)[0]
+        plt.scatter(x=x[indices], y=y[indices], s=size[indices]**2/4, marker=m,
+                    facecolors=facecolor[indices], edgecolors=edgecolor[indices])
+
+
+class MatplotlibCode(FileFormat):
+    EXTENSIONS = ('.py',)
+    DESCRIPTION = 'Python code'
+    PRIORITY = 100
+
+    @classmethod
+    def write_image(cls, filename, scene):
+        print(filename, scene)
+        matplotlib_output(scene)
+
+    @classmethod
+    def write(cls, filename, scene):
+        if type(scene) == dict:
+            scene = scene['scene']
+        cls.write_image(filename, scene)
+
+
 if hasattr(QtGui, "QPdfWriter"):
     class PdfFormat(ImgFormat):
         EXTENSIONS = ('.pdf', )
