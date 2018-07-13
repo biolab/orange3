@@ -252,7 +252,6 @@ class OWBoxPlot(widget.OWWidget):
 
         e = gui.hBox(self.mainArea, addSpace=False)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
-        self.mainArea.setMinimumWidth(600)
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
