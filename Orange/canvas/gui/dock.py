@@ -10,7 +10,7 @@ A dock widget that can be a collapsed/expanded.
 import logging
 
 from AnyQt.QtWidgets import QDockWidget, QAbstractButton, QSizePolicy, QStyle
-from AnyQt.QtGui import  QIcon, QTransform
+from AnyQt.QtGui import QIcon, QTransform
 from AnyQt.QtCore import Qt, QEvent
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
@@ -54,18 +54,19 @@ class CollapsibleDockWidget(QDockWidget):
 
         # Use the toolbar horizontal extension button icon as the default
         # for the expand/collapse button
-        pm = self.style().standardPixmap(
-            QStyle.SP_ToolBarHorizontalExtensionButton
-        )
+        icon = self.style().standardIcon(
+            QStyle.SP_ToolBarHorizontalExtensionButton)
 
-        # Rotate the icon
+        # Mirror the icon
         transform = QTransform()
-        transform.rotate(180)
+        transform = transform.scale(-1.0, 1.0)
+        icon_rev = QIcon()
+        for s in (8, 12, 14, 16, 18, 24, 32, 48, 64):
+            pm = icon.pixmap(s, s)
+            icon_rev.addPixmap(pm.transformed(transform))
 
-        pm_rev = pm.transformed(transform)
-
-        self.__iconRight = QIcon(pm)
-        self.__iconLeft = QIcon(pm_rev)
+        self.__iconRight = QIcon(icon)
+        self.__iconLeft = QIcon(icon_rev)
 
         close = self.findChild(QAbstractButton,
                                name="qt_dockwidget_closebutton")
