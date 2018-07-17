@@ -42,11 +42,16 @@ class TaskQueue(QObject):
     on_exception = Signal(Exception)
     on_complete = Signal()
     on_progress = Signal(float)
+    on_cancel = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.__tasks = deque()
         self.__progress = 0
+        self.__cancelled = False
+
+    def cancel(self):
+        self.__cancelled = True
 
     def push(self, task):
         self.__tasks.append(task)
@@ -61,6 +66,10 @@ class TaskQueue(QObject):
         num_tasks = len(self.__tasks)
 
         for idx, task_spec in enumerate(self.__tasks):
+
+            if self.__cancelled:
+                self.on_cancel.emit()
+                return
 
             def __task_progress(percentage):
                 current_progress = idx / num_tasks
@@ -81,7 +90,7 @@ class TaskQueue(QObject):
 
             except Exception as e:
                 self.on_exception.emit(e)
-                break
+                return
 
         self.on_complete.emit()
 
@@ -118,9 +127,6 @@ class OWLouvainClustering(widget.OWWidget):
         empty_dataset = Msg('No features in data')
         general_error = Msg('Error occured during clustering\n{}')
 
-    class State(Enum):
-        Pending, Running = range(2)
-
     def __init__(self):
         super().__init__()
 
@@ -131,7 +137,7 @@ class OWLouvainClustering(widget.OWWidget):
 
         self.__executor = ThreadExecutor(parent=self)
         self.__future = None  # type: Optional[Future]
-        self.__state = self.State.Pending
+        self.__queue = None  # type: Optional[TaskQueue]
 
         pca_box = gui.vBox(self.controlArea, 'PCA Preprocessing')
         self.apply_pca_cbx = gui.checkBox(
@@ -221,18 +227,17 @@ class OWLouvainClustering(widget.OWWidget):
 
     def cancel(self):
         """Cancel any running jobs."""
-        if self.__state == self.State.Running:
-            assert self.__future is not None
+        if self.__future is not None:
+            assert self.__queue is not None
+            self.__queue.cancel()
+            self.__queue = None
             self.__future.cancel()
             self.__future = None
-
-        self.__state = self.State.Pending
 
     def commit(self):
         self.Error.clear()
         # Kill any running jobs
         self.cancel()
-        assert self.__state == self.State.Pending
 
         if self.data is None:
             return
@@ -264,15 +269,17 @@ class OWLouvainClustering(widget.OWWidget):
         queue.on_complete.connect(self._processing_complete)
         queue.on_complete.connect(self._send_data)
         queue.on_exception.connect(self._handle_exceptions)
+        self.__queue = queue
 
         # Run the task queue
         self.progressBarInit()
         self.setBlocking(True)
         self.__future = self.__executor.submit(queue.start)
-        self.__state = self.State.Running
 
     def _send_data(self):
         domain = self.data.domain
+        if self.partition is None:
+            return
         # Compute the frequency of each cluster index
         counts = np.bincount(self.partition)
         indices = np.argsort(counts)[::-1]
