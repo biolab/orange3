@@ -140,9 +140,9 @@ class OWLouvainClustering(widget.OWWidget):
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
             pca_box, self, 'pca_components', label='Components: ', minValue=2,
-            maxValue=_MAX_PCA_COMPONENTS,
+            maxValue=_MAX_PCA_COMPONENTS, callback=self._update_pca_components,
+            tracking=False
         )  # type: QSlider
-        self.pca_components_slider.sliderReleased.connect(self._update_pca_components)
 
         graph_box = gui.vBox(self.controlArea, 'Graph parameters')
         self.metric_combo = gui.comboBox(
@@ -158,8 +158,8 @@ class OWLouvainClustering(widget.OWWidget):
         self.resolution_spin = gui.hSlider(
             graph_box, self, 'resolution', minValue=0, maxValue=5., step=1e-1,
             label='Resolution', intOnly=False, labelFormat='%.1f',
+            callback=self._update_resolution, tracking=False,
         )  # type: QSlider
-        self.resolution_spin.sliderReleased.connect(self._update_resolution)
         self.resolution_spin.parent().setToolTip(
             'The resolution parameter affects the number of clusters to find. '
             'Smaller values tend to produce more clusters and larger values '
