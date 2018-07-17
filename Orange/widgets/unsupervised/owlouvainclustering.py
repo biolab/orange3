@@ -12,7 +12,7 @@ from typing import Optional  # pylint: disable=unused-import
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
 from Orange.projection import PCA
-from Orange.widgets import widget, gui
+from Orange.widgets import widget, gui, report
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
 from Orange.widgets.utils.annotated_data import get_next_name, add_columns, \
@@ -350,6 +350,18 @@ class OWLouvainClustering(widget.OWWidget):
     def onDeleteWidget(self):
         self.cancel()
         super().onDeleteWidget()
+
+    def send_report(self):
+        pca = report.bool_str(self.apply_pca)
+        if self.apply_pca:
+            pca += report.plural(', {number} component{s}', self.pca_components)
+
+        self.report_items((
+            ('PCA preprocessing', pca),
+            ('Metric', METRICS[self.metric_idx][0]),
+            ('k neighbors', self.k_neighbors),
+            ('Resolution', self.resolution),
+        ))
 
 
 if __name__ == '__main__':
