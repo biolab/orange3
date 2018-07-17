@@ -136,50 +136,47 @@ class OWLouvainClustering(widget.OWWidget):
         pca_box = gui.vBox(self.controlArea, 'PCA Preprocessing')
         self.apply_pca_cbx = gui.checkBox(
             pca_box, self, 'apply_pca', label='Apply PCA preprocessing',
-            callback=self._update_apply_pca,
+            callback=self._update_graph,
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
             pca_box, self, 'pca_components', label='Components: ', minValue=2,
             maxValue=_MAX_PCA_COMPONENTS,
-            callback=self._update_pca_components,
         )  # type: QSlider
+        self.pca_components_slider.sliderReleased.connect(self._update_pca_components)
 
         graph_box = gui.vBox(self.controlArea, 'Graph parameters')
         self.metric_combo = gui.comboBox(
             graph_box, self, 'metric_idx', label='Distance metric',
-            items=[m[0] for m in METRICS], callback=self._update_metric,
+            items=[m[0] for m in METRICS], callback=self._update_graph,
             orientation=Qt.Horizontal,
         )  # type: gui.OrangeComboBox
         self.k_neighbors_spin = gui.spin(
             graph_box, self, 'k_neighbors', minv=1, maxv=_MAX_K_NEIGBOURS,
             label='k neighbors', controlWidth=80, alignment=Qt.AlignRight,
-            callback=self._update_k_neighbors,
+            callback=self._update_graph,
         )  # type: gui.SpinBoxWFocusOut
-        self.cls_epsilon_spin = gui.spin(
-            graph_box, self, 'resolution', 0, 5., 1e-2, spinType=float,
-            label='Resolution', controlWidth=80, alignment=Qt.AlignRight,
-            callback=self._update_resolution,
-        )  # type: gui.SpinBoxWFocusOut
+        self.resolution_spin = gui.hSlider(
+            graph_box, self, 'resolution', minValue=0, maxValue=5., step=1e-1,
+            label='Resolution', intOnly=False, labelFormat='%.1f',
+        )  # type: QSlider
+        self.resolution_spin.sliderReleased.connect(self._update_resolution)
+        self.resolution_spin.parent().setToolTip(
+            'The resolution parameter affects the number of clusters to find. '
+            'Smaller values tend to produce more clusters and larger values '
+            'retrieve less clusters.'
+        )
 
         self.apply_button = gui.auto_commit(
             self.controlArea, self, 'auto_commit', 'Apply', box=None,
             commit=self.commit,
         )  # type: QWidget
 
-    def _update_apply_pca(self):
+    def _update_graph(self):
         self._invalidate_graph()
         self.commit()
 
     def _update_pca_components(self):
         self._invalidate_pca_projection()
-        self.commit()
-
-    def _update_metric(self):
-        self._invalidate_graph()
-        self.commit()
-
-    def _update_k_neighbors(self):
-        self._invalidate_graph()
         self.commit()
 
     def _update_resolution(self):
