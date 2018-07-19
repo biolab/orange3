@@ -446,6 +446,13 @@ class TestOWKMeans(WidgetTest):
         self.widget.smart_init = 1
         assert_all_same([cluster() for _ in range(5)])
 
+    def test_error_no_attributes(self):
+        domain = Domain([])
+        table = Table.from_domain(domain, n_rows=10)
+        self.widget.auto_commit = True
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertTrue(self.widget.Error.no_attributes.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()
