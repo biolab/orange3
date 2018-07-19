@@ -69,4 +69,4 @@ class KMeansModel(Projection):
                 domain,
                 np.atleast_2d(self.proj.predict(data._x.reshape(1, -1))).astype(int))
         else:
-            return self.proj.predict(data).reshape((len(data), 1))
+            return self.proj.predict(data).reshape((data.shape[0], 1))
