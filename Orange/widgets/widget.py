@@ -479,6 +479,12 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     def storeControlAreaVisibility(self, visible):
         self.controlAreaVisible = visible
 
+        # Set minimum width to 1 (overrides minimumSizeHint) when control area
+        # is not visible to allow the main area to shrink further. Reset the minimum
+        # width with a 0 if control area is visible.
+        self.__splitter.widget(0).setMinimumWidth(int(not visible))
+        self.updateGeometry()
+
     def __restoreWidgetGeometry(self, geometry):
         # type: (bytes) -> bool
         def _fullscreen_to_maximized(geometry):
