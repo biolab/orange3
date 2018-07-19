@@ -1,5 +1,5 @@
 Louvain Clustering
-=======
+==================
 
 Groups items using the Louvain clustering algorithm.
 
@@ -19,7 +19,7 @@ The widget first converts the input data into a k-nearest neighbor graph. To pre
 
 .. figure:: images/Louvain-stamped.png
 
-1. PCA processing is typically be applied to the original data to remove noise.
+1. PCA processing is typically applied to the original data to remove noise.
 2. The distance metric is used for finding specified number of nearest
    neighbors.
 3. The number of nearest neighbors to use to form the KNN graph.
@@ -29,6 +29,13 @@ The widget first converts the input data into a k-nearest neighbor graph. To pre
    values recover clusters containing more data points.
 5. When *Apply Automatically* is ticked, the widget will automatically
    communicate all changes. Alternatively, click *Apply*.
+
+Example
+-------
+
+*Louvain Clustering* converts the dataset into a graph, where it finds highly interconected nodes. We can visualize the graph itself using the *Network Explorer* from the Network addon.
+
+.. figure:: images/Louvain-Example.png
 
 References
 ----------

@@ -112,6 +112,7 @@ Unsupervised
    widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
+   widgets/unsupervised/louvainclustering
    widgets/unsupervised/mds
    widgets/unsupervised/manifoldlearning
    
