@@ -5,6 +5,8 @@ import unittest
 
 import Orange
 from Orange.clustering.kmeans import KMeans
+from scipy.sparse import csc_matrix
+import numpy as np
 
 
 class TestKMeans(unittest.TestCase):
@@ -47,3 +49,10 @@ class TestKMeans(unittest.TestCase):
         X = self.iris.X[::20]
         p = c(X)
 
+    def test_silhouette_sparse(self):
+        """Test if silhouette gets calculated for sparse data"""
+        kmeans = KMeans(compute_silhouette_score=True)
+        sparse_iris = self.iris.copy()
+        sparse_iris.X = csc_matrix(sparse_iris.X)
+        c = kmeans(sparse_iris)
+        self.assertFalse(np.isnan(c.silhouette))
