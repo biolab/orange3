@@ -9,10 +9,11 @@ from operator import attrgetter
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction
+    QProgressBar, QAction, QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
-    Qt, QByteArray, QDataStream, QBuffer, QSettings, QUrl, pyqtSignal as Signal
+    Qt, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
+    QUrl, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
@@ -235,12 +236,13 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.controlArea.setFocus(Qt.ActiveWindowFocusReason)
 
         if self.__splitter is not None:
-            self.__splitter.controlAreaVisibilityChanged.connect(
-                self.storeControlAreaVisibility)
+            self.__splitter.handleClicked.connect(
+                self.__toggleControlArea
+            )
             sc = QShortcut(
                 QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_D),
                 self)
-            sc.activated.connect(self.__splitter.flip)
+            sc.activated.connect(self.__toggleControlArea)
         return self
 
     # pylint: disable=super-init-not-called
@@ -268,8 +270,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 else Qt.Dialog | Qt.MSWindowsFixedSizeDialogHint)
 
     class _Splitter(QSplitter):
-        controlAreaVisibilityChanged = Signal(int)
-
+        handleClicked = Signal()
         def _adjusted_size(self, size_method):
             size = size_method(super())()
             height = max((size_method(self.widget(i))().height()
@@ -289,26 +290,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             return self._Handle(
                 self.orientation(), self, cursor=Qt.PointingHandCursor)
 
-        def flip(self):
-            if self.count() == 1:  # Prevent hiding control area by shortcut
-                return
-            self.setControlAreaVisible(not self.controlAreaVisible())
-
-        def setControlAreaVisible(self, visible):
-            if self.controlAreaVisible() == visible:
-                return
-            self.setSizes([int(visible), 100000])
-            self.controlAreaVisibilityChanged.emit(visible)
-            self.updateGeometry()
-
-        def controlAreaVisible(self):
-            return bool(self.sizes()[0])
-
         class _Handle(QSplitterHandle):
             def mouseReleaseEvent(self, event):
                 """Resize on left button"""
                 if event.button() == Qt.LeftButton:
-                    self.splitter().flip()
+                    self.splitter().handleClicked.emit()
                 super().mouseReleaseEvent(event)
 
             def mouseMoveEvent(self, event):
@@ -458,6 +444,71 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             margins.setBottom(sb.sizeHint().height())
             self.setContentsMargins(margins)
 
+    def __toggleControlArea(self):
+        if self.__splitter is None or self.__splitter.count() < 2:
+            return
+        self.__setControlAreaVisible(not self.__splitter.sizes()[0])
+
+    def __setControlAreaVisible(self, visible):
+        # type: (bool) -> None
+        if self.__splitter is None or self.__splitter.count() < 2:
+            return
+        self.controlAreaVisible = visible
+        splitter = self.__splitter  # type: QSplitter
+        w = splitter.widget(0)
+        # Set minimum width to 1 (overrides minimumSizeHint) when control area
+        # is not visible to allow the main area to shrink further. Reset the
+        # minimum width with a 0 if control area is visible.
+        w.setMinimumWidth(int(not visible))
+
+        sizes = splitter.sizes()
+        current_size = sizes[0]
+        if bool(current_size) == visible:
+            return
+
+        current_width = w.width()
+        geom = self.geometry()
+        frame = self.frameGeometry()
+        framemargins = QMargins(
+            frame.left() - geom.left(),
+            frame.top() - geom.top(),
+            frame.right() - geom.right(),
+            frame.bottom() - geom.bottom()
+        )
+        splitter.setSizes([int(visible), QWIDGETSIZE_MAX])
+        if not self.isWindow() or \
+                self.windowState() not in [Qt.WindowNoState, Qt.WindowActive]:
+            # not a window or not in state where we can move move/resize
+            return
+
+        # force immediate resize recalculation
+        splitter.refresh()
+        self.layout().invalidate()
+        self.layout().activate()
+
+        if visible:
+            # move left and expand by the exposing widget's width
+            diffx = -w.width()
+            diffw = w.width()
+        else:
+            # move right and shrink by the collapsing width
+            diffx = current_width
+            diffw = -current_width
+        newgeom = QRect(
+            geom.x() + diffx, geom.y(), geom.width() + diffw, geom.height()
+        )
+        # bound/move by available geometry
+        bounds = QApplication.desktop().availableGeometry(self)
+        bounds = bounds.adjusted(
+            framemargins.left(), framemargins.top(),
+            -framemargins.right(), -framemargins.bottom()
+        )
+        newsize = newgeom.size().boundedTo(bounds.size())
+        newgeom = QRect(newgeom.topLeft(), newsize)
+        newgeom.moveLeft(max(newgeom.left(), bounds.left()))
+        newgeom.moveRight(min(newgeom.right(), bounds.right()))
+        self.setGeometry(newgeom)
+
     def save_graph(self):
         """Save the graph with the name given in class attribute `graph_name`.
 
@@ -475,15 +526,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             if graph_obj is None:
                 return
             ClipboardFormat.write_image(None, graph_obj)
-
-    def storeControlAreaVisibility(self, visible):
-        self.controlAreaVisible = visible
-
-        # Set minimum width to 1 (overrides minimumSizeHint) when control area
-        # is not visible to allow the main area to shrink further. Reset the minimum
-        # width with a 0 if control area is visible.
-        self.__splitter.widget(0).setMinimumWidth(int(not visible))
-        self.updateGeometry()
 
     def __restoreWidgetGeometry(self, geometry):
         # type: (bytes) -> bool
@@ -583,7 +625,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if self.save_position and not self.__was_restored:
             # Restore saved geometry on (first) show
             if self.__splitter is not None:
-                self.__splitter.setControlAreaVisible(self.controlAreaVisible)
+                self.__setControlAreaVisible(self.controlAreaVisible)
             if self.savedWidgetGeometry is not None:
                 self.__restoreWidgetGeometry(bytes(self.savedWidgetGeometry))
             self.__was_restored = True
@@ -830,7 +872,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         has_spliter = splitter_state & 0x2
         splitter_state = splitter_state & 0x1
         if has_spliter and self.__splitter is not None:
-            self.__splitter.setControlAreaVisible(bool(splitter_state))
+            self.__setControlAreaVisible(bool(splitter_state))
         geometry = QByteArray()
         stream >> geometry
         if stream.status() == QDataStream.Ok:
