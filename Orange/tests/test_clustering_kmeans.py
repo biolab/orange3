@@ -2,11 +2,11 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import numpy as np
 
 import Orange
 from Orange.clustering.kmeans import KMeans
 from scipy.sparse import csc_matrix
-import numpy as np
 
 
 class TestKMeans(unittest.TestCase):
