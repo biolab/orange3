@@ -1,9 +1,12 @@
 import os
 import pickle
 from collections import defaultdict
+import logging
 
 from Orange.canvas import config
 from .interactions import NewLinkAction
+
+log = logging.getLogger(__name__)
 
 
 class Suggestions:
@@ -12,7 +15,7 @@ class Suggestions:
     """
     class __Suggestions:
         def __init__(self):
-            self.__frequencies_path = config.data_dir() + "/widget-use-frequency.p"
+            self.__frequencies_path = os.path.join(config.data_dir(), "widget-use-frequency.p")
             self.__import_factor = 0.8  # upon starting Orange, imported frequencies are reduced
 
             self.__scheme = None
@@ -27,8 +30,14 @@ class Suggestions:
         def load_link_frequency(self):
             if not os.path.isfile(self.__frequencies_path):
                 return False
-            file = open(self.__frequencies_path, "rb")
-            imported_freq = pickle.load(file)
+
+            try:
+                with open(self.__frequencies_path, "rb") as f:
+                    imported_freq = pickle.load(f)
+            except OSError:
+                log.warning("Failed to open widget link frequencies.")
+                return False
+
             for k, v in imported_freq.items():
                 imported_freq[k] = self.__import_factor * v
 
@@ -69,7 +78,12 @@ class Suggestions:
                 self.sink_probability[sink_id][source_id] += factor
 
         def write_link_frequency(self):
-            pickle.dump(self.link_frequencies, open(self.__frequencies_path, "wb"))
+            try:
+                with open(self.__frequencies_path, "wb") as f:
+                    pickle.dump(self.link_frequencies, f)
+            except OSError:
+                log.warning("Failed to write widget link frequencies.")
+                return
 
         def set_direction(self, direction):
             """
