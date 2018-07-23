@@ -39,7 +39,15 @@ def scatterplot_code(scatterplot_item):
 
     pen_style = [a.style() for a in scatterplot_item.data["pen"]]
     no_pen = [s == Qt.NoPen for s in pen_style]
-    linewidths[np.nonzero(no_pen)[0]] = 0
+    edgecolors[:, 3][np.nonzero(no_pen)[0]] = 0  # set alpha channel to zero
+
+    brush_style = [a.style() for a in scatterplot_item.data["brush"]]
+    no_brush = [s == Qt.NoBrush for s in brush_style]
+    facecolors[:, 3][np.nonzero(no_brush)[0]] = 0  # set alpha channel to zero
+
+    # return early if the scatterplot is all transparent
+    if not any(edgecolors[:, 3] > 0) and not any(facecolors[:, 3] > 0):
+        return ""
 
     code.append("edgecolors = {}".format(numpy_repr(edgecolors)))
     code.append("facecolors = {}".format(numpy_repr(facecolors)))
