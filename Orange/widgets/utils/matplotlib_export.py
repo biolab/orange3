@@ -3,6 +3,7 @@ from itertools import chain
 import numpy as np
 
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
+from AnyQt.QtCore import Qt
 
 
 def numpy_repr(a):
@@ -34,9 +35,15 @@ def scatterplot_code(scatterplot_item):
 
     edgecolors = np.array([colortuple(a.color()) for a in scatterplot_item.data["pen"]])
     facecolors = np.array([colortuple(a.color()) for a in scatterplot_item.data["brush"]])
+    linewidths = np.array([a.widthF() for a in scatterplot_item.data["pen"]])
+
+    pen_style = [a.style() for a in scatterplot_item.data["pen"]]
+    no_pen = [s == Qt.NoPen for s in pen_style]
+    linewidths[np.nonzero(no_pen)[0]] = 0
 
     code.append("edgecolors = {}".format(numpy_repr(edgecolors)))
     code.append("facecolors = {}".format(numpy_repr(facecolors)))
+    code.append("linewidths = {}".format(numpy_repr(linewidths)))
 
     # possible_markers for scatterplot are in .graph.CurveSymbols
     def matplotlib_marker(m):
@@ -63,13 +70,15 @@ def scatterplot_code(scatterplot_item):
         if np.all(indices == np.arange(x.shape[0])):
             # indices are unused
             code.append("plt.scatter(x=x, y=y, s=sizes**2/4, marker={},".format(repr(m)))
-            code.append("            facecolors=facecolors, edgecolors=edgecolors)")
+            code.append("            facecolors=facecolors, edgecolors=edgecolors,")
+            code.append("            linewidths=linewidths)")
         else:
             code.append("indices = {}".format(numpy_repr(indices)))
             code.append("plt.scatter(x=x[indices], y=y[indices], s=sizes[indices]**2/4, "
                         "marker={},".format(repr(m)))
             code.append("            facecolors=facecolors[indices], "
-                        "edgecolors=edgecolors[indices])")
+                        "edgecolors=edgecolors[indices],")
+            code.append("            linewidths=linewidths[indices])")
 
     return "\n".join(code)
 
