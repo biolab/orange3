@@ -1,4 +1,8 @@
 import os.path
+import pathlib
+
+from AnyQt.QtWidgets import QFormLayout
+from AnyQt.QtCore import Qt
 
 from Orange.data.table import Table
 from Orange.widgets import gui, widget
@@ -6,6 +10,19 @@ from Orange.widgets.settings import Setting
 from Orange.data.io import FileFormat
 from Orange.widgets.utils import filedialogs
 from Orange.widgets.widget import Input
+
+FILE_TYPES_NAMES = ["Tab-delimited (.tab)", "Comma-seperated values (.csv)", "Pickle (.pkl)"]
+FILE_TYPES = {
+    "Tab-delimited (.tab)": ".tab",
+    "Comma-seperated values (.csv)": ".csv",
+    "Pickle (.pkl)": ".pkl",
+}
+COMPRESSIONS_NAMES = ["gzip (.gz)", "bbzip2 (.bz2)", "Izma (.xz)"]
+COMPRESSIONS = {
+    "gzip (.gz)": ".gz",
+    "bbzip2 (.bz2)": ".bz2",
+    "Izma (.xz)": ".xz",
+}
 
 
 class OWSave(widget.OWWidget):
@@ -22,8 +39,10 @@ class OWSave(widget.OWWidget):
     resizing_enabled = False
 
     last_dir = Setting("")
-    last_filter = Setting("")
     auto_save = Setting(False)
+    filetype = Setting(FILE_TYPES_NAMES[0])
+    compression = Setting(COMPRESSIONS_NAMES[0])
+    compress = Setting(False)
 
     @classmethod
     def get_writers(cls, sparse):
@@ -31,11 +50,48 @@ class OWSave(widget.OWWidget):
                 if getattr(f, 'write_file', None) and getattr(f, "EXTENSIONS", None)
                 and (not sparse or getattr(f, 'SUPPORT_SPARSE_DATA', False))]
 
+    @classmethod
+    def remove_extensions(cls, filename):
+        if not filename:
+            return
+        for ext in pathlib.PurePosixPath(filename).suffixes:
+            filename = filename.replace(ext, '')
+        return filename
+
     def __init__(self):
         super().__init__()
         self.data = None
         self.filename = ""
         self.writer = None
+
+        form = QFormLayout(
+            labelAlignment=Qt.AlignLeft,
+            formAlignment=Qt.AlignLeft,
+            rowWrapPolicy=QFormLayout.WrapLongRows,
+            verticalSpacing=10
+        )
+
+        box = gui.vBox(self.controlArea, "Format")
+
+        gui.comboBox(box, self, "filetype",
+                     callback=None,
+                     items=FILE_TYPES_NAMES,
+                     sendSelectedValue=True,
+                     )
+        form.addRow("File type", self.controls.filetype, )
+
+        gui.comboBox(box, self, "compression",
+                     callback=None,
+                     items=COMPRESSIONS_NAMES,
+                     sendSelectedValue=True,
+                     )
+        gui.checkBox(box, self, "compress", label="Use compression",
+                     # disables=self.controls.compression,
+                     )
+
+        form.addRow(self.controls.compress, self.controls.compression)
+
+        box.layout().addLayout(form)
 
         self.save = gui.auto_commit(
             self.controlArea, self, "auto_save", "Save", box=False,
@@ -62,18 +118,23 @@ class OWSave(widget.OWWidget):
             self.save_file()
 
     def save_file_as(self):
-        file_name = self.filename or \
-            os.path.join(self.last_dir or os.path.expanduser("~"),
-                         getattr(self.data, 'name', ''))
+        file_name = self.remove_extensions(self.filename) or \
+                    os.path.join(self.last_dir or os.path.expanduser("~"),
+                                 getattr(self.data, 'name', ''))
+
+        type = FILE_TYPES[self.filetype]
+        compression = COMPRESSIONS[self.compression] if self.compress else ''
+        writer = FileFormat.get_reader(type)
+        writer.EXTENSIONS = [writer.EXTENSIONS[writer.EXTENSIONS.index(type + compression)]]
         filename, writer, filter = filedialogs.open_filename_dialog_save(
-            file_name, self.last_filter, self.get_writers(self.data.is_sparse()))
+            file_name, '', [writer],
+        )
         if not filename:
             return
         self.filename = filename
         self.writer = writer
         self.unconditional_save_file()
         self.last_dir = os.path.split(self.filename)[0]
-        self.last_filter = filter
         self.adjust_label()
 
     def save_file(self):
@@ -93,6 +154,7 @@ class OWSave(widget.OWWidget):
 if __name__ == "__main__":
     import sys
     from AnyQt.QtWidgets import QApplication
+
     a = QApplication(sys.argv)
     table = Table("iris")
     ow = OWSave()
