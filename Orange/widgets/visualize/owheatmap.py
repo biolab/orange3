@@ -387,6 +387,7 @@ class OWHeatMap(widget.OWWidget):
     description = "Plot a heat map for a pair of attributes."
     icon = "icons/Heatmap.svg"
     priority = 260
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table)

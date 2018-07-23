@@ -13,7 +13,7 @@ class OWPurgeDomain(widget.OWWidget):
                   "Sort values."
     icon = "icons/PurgeDomain.svg"
     category = "Data"
-    keywords = ["data", "purge", "domain"]
+    keywords = ["remove", "delete", "unused"]
 
     class Inputs:
         data = Input("Data", Table)

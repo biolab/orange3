@@ -11,6 +11,7 @@ class OWDistanceTransformation(widget.OWWidget):
     name = "Distance Transformation"
     description = "Transform distances according to selected criteria."
     icon = "icons/DistancesTransformation.svg"
+    keywords = []
 
     class Inputs:
         distances = Input("Distances", DistMatrix)

@@ -323,7 +323,20 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         return self.__filterFunc
 
     def filterAcceptsRow(self, row, parent=QModelIndex()):
-        accepted = QSortFilterProxyModel.filterAcceptsRow(self, row, parent)
+        flat_model = self.sourceModel()
+        index = flat_model.index(row, self.filterKeyColumn(), parent)
+        description = flat_model.data(index, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+        name = description.name
+        keywords = description.keywords
+
+        # match name and keywords
+        accepted = False
+        for keyword in [name] + keywords:
+            if self.filterRegExp().indexIn(keyword) > -1:
+                accepted = True
+                break
+
+        # if matches query, apply filter function (compatibility with paired widget)
         if accepted and self.__filterFunc is not None:
             model = self.sourceModel()
             index = model.index(row, self.filterKeyColumn(), parent)

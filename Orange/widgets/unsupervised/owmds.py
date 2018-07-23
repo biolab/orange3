@@ -90,6 +90,7 @@ class OWMDS(OWWidget):
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
+    keywords = ["multidimensional scaling", "multi dimensional scaling"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True)

@@ -37,6 +37,7 @@ class OWCalibrationPlot(widget.OWWidget):
     description = "Calibration plot based on evaluation of classifiers."
     icon = "icons/CalibrationPlot.svg"
     priority = 1030
+    keywords = []
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)

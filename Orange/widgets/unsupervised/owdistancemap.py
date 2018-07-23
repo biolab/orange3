@@ -245,6 +245,7 @@ class OWDistanceMap(widget.OWWidget):
     description = "Visualize a distance matrix."
     icon = "icons/DistanceMap.svg"
     priority = 1200
+    keywords = []
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)

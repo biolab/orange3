@@ -98,6 +98,7 @@ class OWScatterPlot(OWWidget):
                   "intelligent data visualization enhancements."
     icon = "icons/ScatterPlot.svg"
     priority = 140
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table, default=True)

@@ -316,6 +316,7 @@ class OWFreeViz(widget.OWWidget):
     description = "Displays FreeViz projection"
     icon = "icons/Freeviz.svg"
     priority = 240
+    keywords = ["viz"]
 
     class Inputs:
         data = Input("Data", Table, default=True)

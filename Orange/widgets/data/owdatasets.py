@@ -130,6 +130,7 @@ class OWDataSets(widget.OWWidget):
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
+    keywords = ["online"]
 
     # The following constants can be overridden in a subclass
     # to reuse this widget for a different repository

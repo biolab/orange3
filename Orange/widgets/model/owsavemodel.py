@@ -19,6 +19,7 @@ class OWSaveModel(widget.OWWidget):
     icon = "icons/SaveModel.svg"
     replaces = ["Orange.widgets.classify.owsaveclassifier.OWSaveClassifier"]
     priority = 3000
+    keywords = []
 
     class Inputs:
         model = Input("Model", Model)
