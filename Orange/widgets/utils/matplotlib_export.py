@@ -16,6 +16,29 @@ def numpy_repr(a):
         np.set_printoptions(**opts)
 
 
+def compress_if_all_same(l):
+    s = set(l)
+    return s.pop() if len(s) == 1 else l
+
+
+def is_sequence_not_string(a):
+    if isinstance(a, str):
+        return False
+    try:
+        iter(a)
+        return True
+    except TypeError:
+        pass
+    return False
+
+
+def code_with_indices(data, data_name, indices, indices_name):
+    if is_sequence_not_string(data) and indices is not None:
+        return data_name + "[" + indices_name + "]"
+    else:
+        return data_name
+
+
 def scatterplot_code(scatterplot_item):
     x = scatterplot_item.data['x']
     y = scatterplot_item.data['y']
@@ -28,6 +51,7 @@ def scatterplot_code(scatterplot_item):
     code.append("y = {}".format(numpy_repr(y)))
 
     code.append("# style")
+    sizes = compress_if_all_same(sizes)
     code.append("sizes = {}".format(numpy_repr(sizes)))
 
     def colortuple(color):
@@ -51,6 +75,7 @@ def scatterplot_code(scatterplot_item):
 
     code.append("edgecolors = {}".format(numpy_repr(edgecolors)))
     code.append("facecolors = {}".format(numpy_repr(facecolors)))
+    linewidths = compress_if_all_same(linewidths)
     code.append("linewidths = {}".format(numpy_repr(linewidths)))
 
     # possible_markers for scatterplot are in .graph.CurveSymbols
@@ -76,17 +101,24 @@ def scatterplot_code(scatterplot_item):
     for m in set(markers):
         indices = np.where(markers == m)[0]
         if np.all(indices == np.arange(x.shape[0])):
-            # indices are unused
-            code.append("plt.scatter(x=x, y=y, s=sizes**2/4, marker={},".format(repr(m)))
-            code.append("            facecolors=facecolors, edgecolors=edgecolors,")
-            code.append("            linewidths=linewidths)")
-        else:
+            indices = None
+        if indices is not None:
             code.append("indices = {}".format(numpy_repr(indices)))
-            code.append("plt.scatter(x=x[indices], y=y[indices], s=sizes[indices]**2/4, "
-                        "marker={},".format(repr(m)))
-            code.append("            facecolors=facecolors[indices], "
-                        "edgecolors=edgecolors[indices],")
-            code.append("            linewidths=linewidths[indices])")
+
+        def indexed(data, data_name, indices=indices):
+            return code_with_indices(data, data_name, indices, "indices")
+
+        code.append("plt.scatter(x={}, y={}, s={}**2/4, marker={},\n"
+                    "            facecolors={}, edgecolors={},\n"
+                    "            linewidths={})"
+                    .format(indexed(x, "x"),
+                            indexed(y, "y"),
+                            indexed(sizes, "sizes"),
+                            repr(m),
+                            indexed(facecolors, "facecolors"),
+                            indexed(edgecolors, "edgecolors"),
+                            indexed(linewidths, "linewidths")
+                           ))
 
     return "\n".join(code)
 
@@ -121,5 +153,3 @@ def scene_code(scene):
             code.append("{}({}, {})".format(set_ticks, locs, repr(labels)))
 
     return "\n".join(code)
-
-
