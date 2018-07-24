@@ -29,6 +29,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
+from .usagestatistics import UsageStatistics
 from ..gui.framelesswindow import FramelessWindow
 from ..gui.lineedit import LineEdit
 from ..gui.tooltree import ToolTree, FlattenedTreeItemModel
@@ -269,6 +270,7 @@ class SuggestMenuPage(MenuPage):
         """
         proxy = self.view().model()
         proxy.setFilterFixedString(pattern)
+        # usage.set_last_search_query(str(pattern.pattern()))
         self.ensureCurrent()
 
     def setFilterRegExp(self, pattern):
@@ -279,6 +281,7 @@ class SuggestMenuPage(MenuPage):
         """
         filter_proxy = self.view().model()
         filter_proxy.setFilterRegExp(pattern)
+        UsageStatistics.set_last_search_query(str(pattern.pattern()))
 
         # re-sorts to make sure items that match by title are on top
         filter_proxy.invalidate()
@@ -292,6 +295,7 @@ class SuggestMenuPage(MenuPage):
         """
         filter_proxy = self.view().model()
         filter_proxy.setFilterWildCard(pattern)
+        # usage.set_last_search_query(str(pattern.pattern()))
         self.ensureCurrent()
 
     def setFilterFunc(self, func):

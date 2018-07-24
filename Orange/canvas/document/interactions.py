@@ -22,6 +22,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
+from .usagestatistics import UsageStatistics
 from ..registry.description import WidgetDescription
 from ..registry.qt import QtWidgetRegistry
 from .. import scheme
@@ -806,6 +807,7 @@ class NewNodeAction(UserInteraction):
 
             node = self.document.newNodeHelper(desc,
                                                position=(pos.x(), pos.y()))
+            self.document.usageStatistics().set_node_type(UsageStatistics.NodeAddMenu)
             self.document.addNode(node)
             return node
 
