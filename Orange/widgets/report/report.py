@@ -184,7 +184,7 @@ class Report:
         elif isinstance(plot, WebviewWidget):
             try:
                 svg = plot.svg()
-            except IndexError:
+            except (IndexError, ValueError):
                 svg = plot.html()
             self.report_html += svg
 
