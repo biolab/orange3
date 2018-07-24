@@ -554,7 +554,7 @@ elif HAVE_WEBENGINE:
         def _evalJS(self, code):
             wait(until=self._jsobject_channel.is_all_exposed)
             if sip.isdeleted(self):
-                return
+                return None
             result = self._results.create()
             self.runJavaScript(code, lambda x: self._results.store(result, x))
             wait(until=lambda: result in self._results)
