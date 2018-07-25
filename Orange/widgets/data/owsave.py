@@ -50,6 +50,13 @@ class OWSave(widget.OWWidget):
                 if getattr(f, 'write_file', None) and getattr(f, "EXTENSIONS", None)
                 and (not sparse or getattr(f, 'SUPPORT_SPARSE_DATA', False))]
 
+    def get_writer_selected(self):
+        type = FILE_TYPES[self.filetype]
+        compression = COMPRESSIONS[self.compression] if self.compress else ''
+        writer = FileFormat.get_reader(type)
+        writer.EXTENSIONS = [writer.EXTENSIONS[writer.EXTENSIONS.index(type + compression)]]
+        return writer
+
     @classmethod
     def remove_extensions(cls, filename):
         if not filename:
@@ -122,12 +129,8 @@ class OWSave(widget.OWWidget):
                     os.path.join(self.last_dir or os.path.expanduser("~"),
                                  getattr(self.data, 'name', ''))
 
-        type = FILE_TYPES[self.filetype]
-        compression = COMPRESSIONS[self.compression] if self.compress else ''
-        writer = FileFormat.get_reader(type)
-        writer.EXTENSIONS = [writer.EXTENSIONS[writer.EXTENSIONS.index(type + compression)]]
         filename, writer, filter = filedialogs.open_filename_dialog_save(
-            file_name, '', [writer],
+            file_name, '', [self.get_writer_selected()],
         )
         if not filename:
             return
