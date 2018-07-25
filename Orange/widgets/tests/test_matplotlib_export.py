@@ -9,6 +9,13 @@ from Orange.widgets.utils.matplotlib_export import scatterplot_code
 from Orange.widgets.visualize.owscatterplot import OWScatterPlot
 
 
+def add_intro(a):
+    r = "import matplotlib.pyplot as plt\n" + \
+        "from numpy import array\n" + \
+        "plt.clf()"
+    return r + a
+
+
 class TestScatterPlot(WidgetTest):
 
     def test_owscatterplot_ignore_empty(self):
@@ -24,3 +31,13 @@ class TestScatterPlot(WidgetTest):
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
         code = scatterplot_code(self.widget.graph.scatterplot_item_sel)
         self.assertIn("plt.scatter", code)
+        exec(add_intro(code), {})
+
+    def test_scatterplot_simple(self):
+        plotWidget = pg.PlotWidget(background="w")
+        scatterplot = pg.ScatterPlotItem()
+        scatterplot.setData(x=[1, 2, 3], y=[3, 2, 1])
+        plotWidget.addItem(scatterplot)
+        code = scatterplot_code(scatterplot)
+        self.assertIn("plt.scatter", code)
+        exec(add_intro(code), {})

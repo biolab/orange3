@@ -4,6 +4,7 @@ import numpy as np
 
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QPen, QBrush
 
 
 def numpy_repr(a):
@@ -52,26 +53,51 @@ def scatterplot_code(scatterplot_item):
 
     code.append("# style")
     sizes = compress_if_all_same(sizes)
+    if sizes == -1:
+        sizes = None
     code.append("sizes = {}".format(numpy_repr(sizes)))
 
-    def colortuple(color):
-        return color.redF(), color.greenF(), color.blueF(), color.alphaF()
+    def colortuple(pen):
+        if isinstance(pen, (QPen, QBrush)):
+            color = pen.color()
+            return color.redF(), color.greenF(), color.blueF(), color.alphaF()
+        return pen
 
-    edgecolors = np.array([colortuple(a.color()) for a in scatterplot_item.data["pen"]])
-    facecolors = np.array([colortuple(a.color()) for a in scatterplot_item.data["brush"]])
-    linewidths = np.array([a.widthF() for a in scatterplot_item.data["pen"]])
+    def width(pen):
+        if isinstance(pen, QPen):
+            return pen.widthF()
+        return pen
 
-    pen_style = [a.style() for a in scatterplot_item.data["pen"]]
-    no_pen = [s == Qt.NoPen for s in pen_style]
-    edgecolors[:, 3][np.nonzero(no_pen)[0]] = 0  # set alpha channel to zero
+    linewidths = np.array([width(a) for a in scatterplot_item.data["pen"]])
 
-    brush_style = [a.style() for a in scatterplot_item.data["brush"]]
-    no_brush = [s == Qt.NoBrush for s in brush_style]
-    facecolors[:, 3][np.nonzero(no_brush)[0]] = 0  # set alpha channel to zero
+    def shown(a):
+        if isinstance(a, (QPen, QBrush)):
+            s = a.style()
+            if s == Qt.NoPen or s == Qt.NoBrush or a.color().alpha() == 0:
+                return False
+        return True
+
+    shown_edge = [shown(a) for a in scatterplot_item.data["pen"]]
+    shown_brush = [shown(a) for a in scatterplot_item.data["brush"]]
 
     # return early if the scatterplot is all transparent
-    if not any(edgecolors[:, 3] > 0) and not any(facecolors[:, 3] > 0):
+    if not any(shown_edge) and not any(shown_brush):
         return ""
+
+    def do_colors(data_column, show):
+        colors = [colortuple(a) for a in data_column]
+        if all(a is None for a in colors):
+            colors = None
+        else:
+            # replace None values with blue colors
+            colors = np.array([((0, 0, 1, 1) if a is None else a)
+                               for a in colors])
+            # set alpha for hidden (Qt.NoPen, Qt.NoBrush) elements to zero
+            colors[:, 3][np.array(show) == 0] = 0
+        return colors
+
+    edgecolors = do_colors(scatterplot_item.data["pen"], shown_edge)
+    facecolors = do_colors(scatterplot_item.data["brush"], shown_brush)
 
     code.append("edgecolors = {}".format(numpy_repr(edgecolors)))
     code.append("facecolors = {}".format(numpy_repr(facecolors)))
@@ -108,12 +134,12 @@ def scatterplot_code(scatterplot_item):
         def indexed(data, data_name, indices=indices):
             return code_with_indices(data, data_name, indices, "indices")
 
-        code.append("plt.scatter(x={}, y={}, s={}**2/4, marker={},\n"
+        code.append("plt.scatter(x={}, y={}, s={}, marker={},\n"
                     "            facecolors={}, edgecolors={},\n"
                     "            linewidths={})"
                     .format(indexed(x, "x"),
                             indexed(y, "y"),
-                            indexed(sizes, "sizes"),
+                            (indexed(sizes, "sizes") + "**2/4") if sizes is not None else "sizes",
                             repr(m),
                             indexed(facecolors, "facecolors"),
                             indexed(edgecolors, "edgecolors"),
