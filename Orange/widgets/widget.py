@@ -241,7 +241,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             )
             sc = QShortcut(
                 QKeySequence(Qt.ControlModifier | Qt.ShiftModifier | Qt.Key_D),
-                self)
+                self, autoRepeat=False)
             sc.activated.connect(self.__toggleControlArea)
         return self
 
