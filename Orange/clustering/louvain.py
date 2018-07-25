@@ -6,8 +6,8 @@ https://sites.google.com/site/findcommunities/
 
 """
 
-import networkx as nx
 import numpy as np
+import networkx as nx
 from community import best_partition
 from sklearn.neighbors import NearestNeighbors
 

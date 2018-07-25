@@ -1,13 +1,12 @@
 from collections import deque
 from concurrent.futures import Future  # pylint: disable=unused-import
-from enum import Enum
-
-import networkx as nx  # pylint: disable=unused-import
-import numpy as np
-from AnyQt.QtCore import Qt, pyqtSignal as Signal, QObject
-from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget  # pylint: disable=unused-import
 from types import SimpleNamespace as namespace
 from typing import Optional  # pylint: disable=unused-import
+
+import numpy as np
+import networkx as nx  # pylint: disable=unused-import
+from AnyQt.QtCore import Qt, pyqtSignal as Signal, QObject
+from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget  # pylint: disable=unused-import
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
@@ -23,7 +22,7 @@ from Orange.widgets.widget import Msg
 
 try:
     from orangecontrib.network.network import Graph
-except:
+except ImportError:
     Graph = None
 
 
@@ -71,11 +70,11 @@ class TaskQueue(QObject):
                 self.on_cancel.emit()
                 return
 
-            def __task_progress(percentage):
-                current_progress = idx / num_tasks
+            def __task_progress(percentage, index=idx):
+                current_progress = index / num_tasks
                 # How much progress can each task contribute to the total
                 # work to be done
-                task_percentage = len(self.__tasks) ** -1
+                task_percentage = 1 / len(self.__tasks)
                 # Convert the progress done by the task into the total
                 # progress to the task
                 relative_progress = task_percentage * percentage
@@ -88,7 +87,7 @@ class TaskQueue(QObject):
                     task_spec.task()
                 self.__set_progress((idx + 1) / num_tasks)
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.on_exception.emit(e)
                 return
 
@@ -365,7 +364,7 @@ class OWLouvainClustering(widget.OWWidget):
 
 
 if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication
+    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
     import sys
 
     app = QApplication(sys.argv)
