@@ -227,7 +227,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         self.__help_action = QAction(
             "Help", self, objectName="action-help", toolTip="Show help",
-            enabled=False, visible=False, shortcut=QKeySequence(Qt.Key_F1)
+            enabled=False, shortcut=QKeySequence(Qt.Key_F1)
         )
         self.addAction(self.__help_action)
 
