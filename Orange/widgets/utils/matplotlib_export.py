@@ -11,11 +11,21 @@ from AnyQt.QtGui import QPen, QBrush
 def numpy_repr(a):
     """ A numpy repr without summarization """
     opts = np.get_printoptions()
+    # avoid numpy repr as it changes between versions
+    # TODO handle numpy repr differences
+    if isinstance(a, np.ndarray):
+        return "array(" + repr(list(a)) + ")"
     try:
         np.set_printoptions(threshold=10**10)
         return repr(a)
     finally:
         np.set_printoptions(**opts)
+
+
+def numpy_repr_int(a):
+    # avoid numpy repr as it changes between versions
+    # TODO handle numpy repr differences
+    return "array(" + repr(list(a)) + ", dtype='int')"
 
 
 def compress_if_all_same(l):
@@ -113,7 +123,7 @@ def scatterplot_code(scatterplot_item):
 
         code.append("{} = {}".format(name, repr(colors)))
         if index is not None:
-            code.append("{}_index = {}".format(name, repr(index)))
+            code.append("{}_index = {}".format(name, numpy_repr_int(index)))
 
         decompresssed_code = name
         if index is not None:
@@ -153,7 +163,7 @@ def scatterplot_code(scatterplot_item):
         if np.all(indices == np.arange(x.shape[0])):
             indices = None
         if indices is not None:
-            code.append("indices = {}".format(numpy_repr(indices)))
+            code.append("indices = {}".format(numpy_repr_int(indices)))
 
         def indexed(data, data_name, indices=indices):
             return code_with_indices(data, data_name, indices, "indices")
