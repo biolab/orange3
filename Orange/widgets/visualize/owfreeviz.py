@@ -224,7 +224,7 @@ class OWFreeVizGraph(OWScatterPlotGraph):
         for axis_loc in ["left", "bottom"]:
             self.plot_widget.hideAxis(axis_loc)
 
-    def update_data(self, attr_x, attr_y, reset_view=True):
+    def update_data(self, attr_x, attr_y, reset_view=False):
         super().update_data(attr_x, attr_y, reset_view=reset_view)
         for axis in ["left", "bottom"]:
             self.plot_widget.hideAxis(axis)
@@ -736,7 +736,7 @@ class OWFreeViz(widget.OWWidget):
         if reset_view:
             self.viewbox.setRange(RANGE)
             self.viewbox.setAspectLocked(True, 1)
-        self.plot(reset_view=reset_view)
+        self.plot()
 
     def randomize_indices(self):
         X = self._X
@@ -798,7 +798,7 @@ class OWFreeViz(widget.OWWidget):
     def reset_graph_data(self, *_):
         if self.data is not None:
             self.graph.rescale_data()
-            self._update_graph()
+            self._update_graph(reset_view=False)
 
     def _update_graph(self, reset_view=True, **_):
         self.graph.zoomStack = []
