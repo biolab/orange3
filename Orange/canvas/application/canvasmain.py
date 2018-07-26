@@ -27,6 +27,7 @@ from AnyQt.QtCore import (
     QObject, QFileInfo
 )
 
+from ...widgets.utils.overlay import MessageOverlayWidget
 from ..document.usagestatistics import UsageStatistics
 
 try:
@@ -373,6 +374,43 @@ class CanvasMainWindow(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.help_dock)
 
         self.setMinimumSize(600, 500)
+
+        # ask for anonymous data collection permission
+        def requestDataCollectionPermission():
+            permDialogButtons = MessageOverlayWidget.AcceptRole | MessageOverlayWidget.RejectRole
+            permDialog = MessageOverlayWidget(parent=w,
+                                              text="Do you wish to share anonymous usage "
+                                                   "statistics to help improve Orange?",
+                                              wordWrap=True,
+                                              standardButtons=permDialogButtons)
+            btnOK = permDialog.button(MessageOverlayWidget.AcceptRole)
+            btnOK.setText("Allow")
+
+            def respondToRequest():
+                settings["error-reporting/permission-requested"] = True
+
+            def shareData():
+                settings["error-reporting/send-statistics"] = True
+
+            permDialog.clicked.connect(respondToRequest)
+            permDialog.accepted.connect(shareData)
+
+            permDialog.setStyleSheet("""
+                        MessageOverlayWidget {
+                            background: qlineargradient(
+                                x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop:0 #666, stop:0.3 #6D6D6D, stop:1 #666)
+                        }
+                        MessageOverlayWidget QLabel#text-label {
+                            color: white;
+                        }""")
+
+            permDialog.setWidget(w)
+            permDialog.show()
+
+        settings = config.settings()
+        if not settings["error-reporting/permission-requested"]:
+            requestDataCollectionPermission()
 
     def setup_actions(self):
         """Initialize main window actions.
