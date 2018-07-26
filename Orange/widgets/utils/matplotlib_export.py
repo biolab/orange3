@@ -2,6 +2,7 @@ from itertools import chain
 
 import numpy as np
 
+from matplotlib.colors import to_hex
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QPen, QBrush
@@ -38,6 +39,18 @@ def code_with_indices(data, data_name, indices, indices_name):
         return data_name + "[" + indices_name + "]"
     else:
         return data_name
+
+
+def index_per_different(l):
+    different = []
+    different_ind = {}
+    index = []
+    for e in l:
+        if e not in different_ind:
+            different_ind[e] = len(different)
+            different.append(e)
+        index.append(different_ind[e])
+    return different, index
 
 
 def scatterplot_code(scatterplot_item):
@@ -84,23 +97,34 @@ def scatterplot_code(scatterplot_item):
     if not any(shown_edge) and not any(shown_brush):
         return ""
 
-    def do_colors(data_column, show):
+    def do_colors(code, data_column, show, name):
         colors = [colortuple(a) for a in data_column]
         if all(a is None for a in colors):
-            colors = None
+            colors, index = None, None
         else:
             # replace None values with blue colors
             colors = np.array([((0, 0, 1, 1) if a is None else a)
                                for a in colors])
             # set alpha for hidden (Qt.NoPen, Qt.NoBrush) elements to zero
             colors[:, 3][np.array(show) == 0] = 0
-        return colors
+            # shorter color names for printout
+            colors = [to_hex(c, keep_alpha=True) for c in colors]
+            colors, index = index_per_different(colors)
 
-    edgecolors = do_colors(scatterplot_item.data["pen"], shown_edge)
-    facecolors = do_colors(scatterplot_item.data["brush"], shown_brush)
+        code.append("{} = {}".format(name, repr(colors)))
+        if index is not None:
+            code.append("{}_index = {}".format(name, repr(index)))
 
-    code.append("edgecolors = {}".format(numpy_repr(edgecolors)))
-    code.append("facecolors = {}".format(numpy_repr(facecolors)))
+        decompresssed_code = name
+        if index is not None:
+            decompresssed_code = "array({})[{}_index]".format(name, name)
+            colors = np.array(colors)[index]
+
+        return colors, decompresssed_code
+
+    edgecolors, edgecolors_code = do_colors(code, scatterplot_item.data["pen"], shown_edge, "edgecolors")
+    facecolors, facecolors_code = do_colors(code, scatterplot_item.data["brush"], shown_brush, "facecolors")
+
     linewidths = compress_if_all_same(linewidths)
     code.append("linewidths = {}".format(numpy_repr(linewidths)))
 
@@ -141,8 +165,8 @@ def scatterplot_code(scatterplot_item):
                             indexed(y, "y"),
                             (indexed(sizes, "sizes") + "**2/4") if sizes is not None else "sizes",
                             repr(m),
-                            indexed(facecolors, "facecolors"),
-                            indexed(edgecolors, "edgecolors"),
+                            indexed(facecolors, facecolors_code),
+                            indexed(edgecolors, edgecolors_code),
                             indexed(linewidths, "linewidths")
                            ))
 
