@@ -182,7 +182,8 @@ class SvgFormat(ImgFormat):
         super().write_image(filename, scene)
 
 
-class MatplotlibFormat(FileFormat):
+class MatplotlibFormat:
+    # not registered as a FileFormat as it only works with scatter plot
     EXTENSIONS = ('.py',)
     DESCRIPTION = 'Python Code (with Matplotlib)'
     PRIORITY = 300
@@ -201,7 +202,7 @@ class MatplotlibFormat(FileFormat):
 
 
 class MatplotlibPDFFormat(MatplotlibFormat):
-    EXTENSIONS = ('.matplotlib.pdf',)  # file formats with same extension are not supported
+    EXTENSIONS = ('.pdf',)
     DESCRIPTION = 'Portable Document Format (from Matplotlib)'
     PRIORITY = 200
 
