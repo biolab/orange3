@@ -127,6 +127,12 @@ spec = \
      ("error-reporting/machine-id", str, '',
      "Report custom name instead of machine ID"),
 
+     ("error-reporting/send-statistics", bool, False,
+     "Share anonymous usage statistics to improve Orange"),
+
+     ("error-reporting/permission-requested", bool, False,
+     "Has the user already been asked to share statistics"),
+
      ("add-ons/allow-conda", bool, True,
       "Install add-ons with conda"),
 
