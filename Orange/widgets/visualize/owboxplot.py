@@ -407,12 +407,17 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = contingency.get_contingency(
                 dataset, attr, self.group_var)
             if self.is_continuous:
-                self.stats = [BoxData(cont, attr, i, self.group_var)
-                              for i, cont in enumerate(self.conts)
-                              if np.sum(cont) > 0]
-            self.label_txts_all = \
-                [v for v, c in zip(self.group_var.values, self.conts)
-                 if np.sum(c) > 0]
+                stats, label_texts = [], []
+                for i, cont in enumerate(self.conts):
+                    if np.sum(cont[1]):
+                        stats.append(BoxData(cont, attr, i, self.group_var))
+                        label_texts.append(self.group_var.values[i])
+                self.stats = stats
+                self.label_txts_all = label_texts
+            else:
+                self.label_txts_all = \
+                    [v for v, c in zip(self.group_var.values, self.conts)
+                     if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
             self.conts = []
@@ -524,6 +529,7 @@ class OWBoxPlot(widget.OWWidget):
         self.select_box_items()
 
     def display_changed_disc(self):
+        assert not self.is_continuous
         self.clear_scene()
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
@@ -588,6 +594,7 @@ class OWBoxPlot(widget.OWWidget):
         row: int
             row index
         """
+        assert not self.is_continuous
         label = self.labels[row]
         b = label.boundingRect()
         if self.group_var:
@@ -773,6 +780,7 @@ class OWBoxPlot(widget.OWWidget):
         """
         Draw the horizontal axis and sets self.scale_x for discrete attributes
         """
+        assert not self.is_continuous
         if self.stretched:
             if not self.attr_labels:
                 return
