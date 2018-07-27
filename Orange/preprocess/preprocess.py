@@ -190,8 +190,8 @@ class RemoveConstant(Preprocess):
         data : an input dataset
         """
 
-        oks = bn.nanmin(data.X, axis=0) != \
-              bn.nanmax(data.X, axis=0)
+        oks = np.logical_and(~bn.allnan(data.X, axis=0),
+                             bn.nanmin(data.X, axis=0) != bn.nanmax(data.X, axis=0))
         atts = [data.domain.attributes[i] for i, ok in enumerate(oks) if ok]
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
