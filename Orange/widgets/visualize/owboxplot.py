@@ -859,7 +859,7 @@ class OWBoxPlot(widget.OWWidget):
         if stat.median is not None:
             msc = stat.median * self.scale_x
             med_t = centered_text(stat.median, msc)
-            med_box_width2 = med_t.boundingRect().width()
+            med_box_width2 = med_t.boundingRect().width() / 2
             line(msc)
 
         if stat.q25 is not None:
