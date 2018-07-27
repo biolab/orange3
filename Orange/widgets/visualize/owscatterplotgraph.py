@@ -1,15 +1,15 @@
-from collections import Counter
+from collections import Counter, defaultdict
 import sys
 import itertools
 from xml.sax.saxutils import escape
-from math import log10, floor, ceil
+from math import log2, log10, floor, ceil
 
 import numpy as np
 from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence)
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence, QConicalGradient)
 from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
     QGraphicsTextItem, QGraphicsRectItem, QAction
 
@@ -691,13 +691,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.shown_x.name, self.shown_y.name)
             return
 
-        x_data, y_data = self.get_xy_data_positions(
+        self.x_data, self.y_data = self.get_xy_data_positions(
             attr_x, attr_y, self.valid_data)
-        self.n_points = len(x_data)
+        self.n_points = len(self.x_data)
 
         if reset_view:
-            min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
-            min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
+            min_x, max_x = np.nanmin(self.x_data), np.nanmax(self.x_data)
+            min_y, max_y = np.nanmin(self.y_data), np.nanmax(self.y_data)
             self.view_box.setRange(
                 QRectF(min_x, min_y, max_x - min_x, max_y - min_y),
                 padding=0.025)
@@ -712,6 +712,14 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             else:
                 self.set_labels(axis, None)
 
+        # compute overlaps of points for use in compute_colors and compute_sizes
+        self.overlaps = []
+        points = defaultdict(list)
+        for i, xy in enumerate(zip(self.x_data, self.y_data)):
+            points[xy].append(i)
+        self.overlaps = [len(points[xy]) for i, xy in enumerate(zip(self.x_data, self.y_data))]
+        self.overlap_factor = [1+log2(o) for o in self.overlaps]
+
         color_data, brush_data = self.compute_colors()
         color_data_sel, brush_data_sel = self.compute_colors_sel()
         size_data = self.compute_sizes()
@@ -721,7 +729,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             rgb_data = [pen.color().getRgb()[:3] for pen in color_data]
             self.density_img = classdensity.class_density_image(
                 min_x, max_x, min_y, max_y, self.resolution,
-                x_data, y_data, rgb_data)
+                self.x_data, self.y_data, rgb_data)
             self.plot_widget.addItem(self.density_img)
 
         self.data_indices = np.flatnonzero(self.valid_data)
@@ -730,11 +738,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 self.shown_x.name, self.shown_y.name)
 
         self.scatterplot_item = ScatterPlotItem(
-            x=x_data, y=y_data, data=self.data_indices,
+            x=self.x_data, y=self.y_data, data=self.data_indices,
             symbol=shape_data, size=size_data, pen=color_data, brush=brush_data
         )
         self.scatterplot_item_sel = ScatterPlotItem(
-            x=x_data, y=y_data, data=self.data_indices,
+            x=self.x_data, y=self.y_data, data=self.data_indices,
             symbol=shape_data, size=size_data + SELECTION_WIDTH,
             pen=color_data_sel, brush=brush_data_sel
         )
@@ -815,6 +823,10 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
         if np.any(nans):
             size_data[nans] = self.MinShapeSize - 2
             self.master.Information.missing_size(self.attr_size)
+
+        # scale sizes because of overlaps
+        size_data = np.multiply(size_data, self.overlap_factor)
+
         return size_data
 
     def update_sizes(self):
@@ -957,6 +969,15 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                      QBrush(QColor(col[0], col[1], col[2], alpha))]
                     for col in colors])
                 self.brush_colors = self.brush_colors[c_data]
+
+                # gray out overlapping points
+                for i, xy in enumerate(zip(self.x_data, self.y_data)):
+                    if self.overlaps[i] > 1:
+                        self.brush_colors[i] = [
+                            QBrush(QColor(0, 0, 0, 0)),
+                            QBrush(QColor(128, 128, 128, alpha))]
+                        self.pen_colors[i] = _make_pen(QColor(128, 128, 128).darker(self.DarkerValue), 1.5)
+
             if subset is not None:
                 brush = np.where(
                     subset,
