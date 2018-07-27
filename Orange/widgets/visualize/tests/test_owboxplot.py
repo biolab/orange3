@@ -3,7 +3,6 @@
 
 import numpy as np
 from AnyQt.QtCore import QItemSelectionModel
-from AnyQt.QtTest import QTest
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
 from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
@@ -158,9 +157,9 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.stretched = False
         self.__select_variable("chest pain")
         self.__select_group("gender")
-        self.widget.show()
-        QTest.qWait(3000)
-        self.widget.hide()
+        self.widget.adjustSize()
+        self.widget.layout().activate()
+        self.widget.grab()  # ensure that the painting code is run
 
     def test_empty_groups(self):
         """Test if groups with zero elements are not shown"""
