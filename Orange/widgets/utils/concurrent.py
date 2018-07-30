@@ -3,6 +3,7 @@ General helper functions and classes for PyQt concurrent programming
 """
 # TODO: Rename the module to something that does not conflict with stdlib
 # concurrent
+import os
 import threading
 import atexit
 import logging
@@ -192,15 +193,53 @@ class ThreadExecutor(QObject, concurrent.futures.Executor):
 
     threadPool :  Optional[QThreadPool]
         Thread pool to be used by the instance of the Executor. If `None`
-        then ``QThreadPool.globalInstance()`` will be used.
+        then a private global thread pool will be used.
 
+        .. versionchanged:: 3.15
+            Before 3.15 a `QThreadPool.globalPool()` was used as the default.
+
+        .. warning::
+            If you pass a custom `QThreadPool` make sure it creates threads
+            with sufficient stack size for the tasks submitted to the executor
+            (see `QThreadPool.setStackSize`).
     """
+    # A default thread pool. Replaced QThreadPool due to insufficient default
+    # stack size for created threads (QTBUG-2568). Not using even on
+    # Qt >= 5.10 just for consistency sake.
+    class __global:
+        __lock = threading.Lock()
+        __instance = None
+
+        @classmethod
+        def instance(cls):
+            # type: () -> concurrent.futures.ThreadPoolExecutor
+            with cls.__lock:
+                if cls.__instance is None:
+                    cls.__instance = concurrent.futures.ThreadPoolExecutor(
+                        max_workers=(os.cpu_count() or 1)
+                    )
+                return cls.__instance
 
     def __init__(self, parent=None, threadPool=None, **kwargs):
         super().__init__(parent, **kwargs)
+
         if threadPool is None:
-            threadPool = QThreadPool.globalInstance()
+            threadPool = self.__global.instance()
+
         self._threadPool = threadPool
+        if isinstance(threadPool, QThreadPool):
+            def start(runnable):
+                # type: (QRunnable) -> None
+                threadPool.start(runnable)
+        elif isinstance(threadPool, concurrent.futures.Executor):
+            # adapt to Executor interface
+            def start(runnable):
+                # type: (QRunnable) -> None
+                threadPool.submit(runnable.run)
+        else:
+            raise TypeError("Invalid `threadPool` type '{}'"
+                            .format(type(threadPool).__name__))
+        self.__start = start
         self._depot_thread = None
         self._futures = []
         self._shutdown = False
@@ -233,7 +272,7 @@ class ThreadExecutor(QObject, concurrent.futures.Executor):
 
             self._futures.append(f)
             f.add_done_callback(self._future_done)
-            self._threadPool.start(runnable)
+            self.__start(runnable)
             return f
 
     def submit_task(self, task):
@@ -249,7 +288,7 @@ class ThreadExecutor(QObject, concurrent.futures.Executor):
 
             self._futures.append(f)
             f.add_done_callback(self._future_done)
-            self._threadPool.start(runnable)
+            self.__start(runnable)
             return f
 
     def __make_task_runnable(self, task):
