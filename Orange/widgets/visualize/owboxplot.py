@@ -751,13 +751,13 @@ class OWBoxPlot(widget.OWWidget):
         self.scene_width = (gtop - gbottom) * scale_x
 
         val = first_val
+        decimals = max(3, 4 - int(math.log10(step)))
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
-
             t = self.box_scene.addSimpleText(
-                self.attribute.repr_val(val) if not misssing_stats else "?",
+                repr(round(val, decimals)) if not misssing_stats else "?",
                 self._axis_font)
             t.setFlags(
                 t.flags() | QGraphicsItem.ItemIgnoresTransformations)
@@ -859,7 +859,7 @@ class OWBoxPlot(widget.OWWidget):
         if stat.median is not None:
             msc = stat.median * self.scale_x
             med_t = centered_text(stat.median, msc)
-            med_box_width2 = med_t.boundingRect().width()
+            med_box_width2 = med_t.boundingRect().width() / 2
             line(msc)
 
         if stat.q25 is not None:
