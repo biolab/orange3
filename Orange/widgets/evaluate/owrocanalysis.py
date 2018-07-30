@@ -336,6 +336,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._plot_curves = {}
         self._rocch = None
         self._perf_line = None
+        self._tooltip_cache = None
 
         box = gui.vBox(self.controlArea, "Plot")
         tbox = gui.vBox(box, "Target Class")
@@ -445,6 +446,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._plot_curves = {}
         self._rocch = None
         self._perf_line = None
+        self._tooltip_cache = None
 
     def _initialize(self, results):
         names = getattr(results, "learner_names", None)
@@ -526,6 +528,7 @@ class OWROCAnalysis(widget.OWWidget):
                 graphics = curve.merge()
                 curve = graphics.curve
                 self.plot.addItem(graphics.curve_item)
+                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
                 if self.display_convex_curve:
                     self.plot.addItem(graphics.hull_item)
@@ -553,6 +556,7 @@ class OWROCAnalysis(widget.OWWidget):
 
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
+                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
             hull_curves = [curve.avg_vertical.hull for curve in selected]
 
@@ -561,6 +565,7 @@ class OWROCAnalysis(widget.OWWidget):
                 graphics = curve.avg_threshold()
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
+                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
             hull_curves = [curve.avg_threshold.hull for curve in selected]
 
@@ -600,6 +605,50 @@ class OWROCAnalysis(widget.OWWidget):
             else:
                 warning = "All ROC curves are undefined"
         self.warning(warning)
+
+    def _on_mouse_moved(self, pos):
+        curves = self.plot.curves
+        for i in self.selected_classifiers:
+            sp = curves[i].childItems()[0]
+            act_pos = sp.mapFromScene(pos)
+            pts = sp.pointsAt(act_pos)
+
+            curve_data = self.curve_data(self.target_index, i)
+
+            if self.roc_averaging == OWROCAnalysis.Merge:
+                curve_data = curve_data.merged
+            elif self.roc_averaging == OWROCAnalysis.Vertical:
+                curve_data = curve_data.avg_vertical
+            elif OWROCAnalysis.Threshold:
+                curve_data = curve_data.avg_threshold
+            elif OWROCAnalysis.NoAveraging:
+                # currently not implemented
+                return
+
+            if len(pts) > 0:
+                mouse_pt = pts[0].pos()
+
+                if self._tooltip_cache:
+                    if numpy.linalg.norm(mouse_pt - self._tooltip_cache.pos()) < 10e-6:
+                        return
+                    else:
+                        self.plot.removeItem(self._tooltip_cache)
+                        self._tooltip_cache = None
+
+                curve_pts = curve_data.points
+
+                # Find closest point on curve and display it
+                idx_closest = numpy.argmin([numpy.linalg.norm(mouse_pt - [curve_pts.fpr[idx], curve_pts.tpr[idx]])
+                                            for idx in range(len(curve_pts.thresholds))])
+
+                thresh = curve_pts.thresholds[idx_closest]
+                if not numpy.isnan(thresh):
+                    item = pg.TextItem(text="{:.3f}".format(thresh), color=(0, 0, 0))
+                    item.setPos(curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest])
+                    item.show()
+                    self.plot.addItem(item)
+                    self._tooltip_cache = item
+                return
 
     def _on_target_changed(self):
         self.plot.clear()
