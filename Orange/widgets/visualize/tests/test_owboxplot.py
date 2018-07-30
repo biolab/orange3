@@ -1,12 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
 
 import numpy as np
 from AnyQt.QtCore import QItemSelectionModel
 from AnyQt.QtTest import QTest
 
 from Orange.data import Table, ContinuousVariable, StringVariable, Domain
-from Orange.widgets.visualize.owboxplot import OWBoxPlot, FilterGraphicsRectItem
+from Orange.widgets.visualize.owboxplot import (
+    OWBoxPlot, FilterGraphicsRectItem, _quantiles
+)
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 
 
@@ -208,3 +211,40 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
             if m.data(idx) == value:
                 list.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
+
+
+class TestUtils(unittest.TestCase):
+    def test(self):
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 8 + 1), [1.] * 8, [0.0, 0.25, 0.5, 0.75, 1.0]),
+            [1., 2.5, 4.5, 6.5, 8.]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 8 + 1), [1.] * 8, [0.0, 0.25, 0.5, 0.75, 1.0]),
+            [1., 2.5, 4.5, 6.5, 8.]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 4 + 1), [1., 2., 1., 2],
+                       [0.0, 0.25, 0.5, 0.75, 1.0]),
+            [1.0, 2.0, 2.5, 4.0, 4.0]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 4 + 1), [2., 1., 1., 2.],
+                       [0.0, 0.25, 0.5, 0.75, 1.0]),
+            [1.0, 1.0, 2.5, 4.0, 4.0]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
+                       [0.0, 0.25, 0.5, 0.75, 1.0]),
+            [1.0, 1.5, 2.5, 3.5, 4.0]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
+                       [0.0, 0.25, 0.5, 0.75, 1.0], interpolation="higher"),
+            [1, 2, 3, 4, 4]
+        )
+        np.testing.assert_array_equal(
+            _quantiles(range(1, 4 + 1), [1., 1., 1., 1.],
+                       [0.0, 0.25, 0.5, 0.75, 1.0], interpolation="lower"),
+            [1, 1, 2, 3, 4]
+        )
