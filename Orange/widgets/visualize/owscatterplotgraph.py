@@ -9,7 +9,7 @@ from scipy.stats import linregress
 
 from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence, QConicalGradient)
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence)
 from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
     QGraphicsTextItem, QGraphicsRectItem, QAction
 
@@ -714,10 +714,11 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
         # compute overlaps of points for use in compute_colors and compute_sizes
         self.overlaps = []
-        points = defaultdict(list)
+        self.coord_to_id = defaultdict(list)
         for i, xy in enumerate(zip(self.x_data, self.y_data)):
-            points[xy].append(i)
-        self.overlaps = [len(points[xy]) for i, xy in enumerate(zip(self.x_data, self.y_data))]
+            self.coord_to_id[xy].append(i)
+        self.overlaps = [len(self.coord_to_id[xy])
+                         for i, xy in enumerate(zip(self.x_data, self.y_data))]
         self.overlap_factor = [1+log2(o) for o in self.overlaps]
 
         color_data, brush_data = self.compute_colors()
@@ -959,24 +960,23 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                 c_data = c_data.astype(int)
                 colors = np.r_[palette.getRGB(np.arange(n_colors)),
                                [[128, 128, 128]]]
-                pens = np.array(
+                pen_colors_palette = np.array(
                     [_make_pen(QColor(*col).darker(self.DarkerValue), 1.5)
                      for col in colors])
-                self.pen_colors = pens[c_data]
+                self.pen_colors = pen_colors_palette[c_data]
                 alpha = self.alpha_value if subset is None else 255
-                self.brush_colors = np.array([
+                brush_colors_palette = np.array([
                     [QBrush(QColor(0, 0, 0, 0)),
                      QBrush(QColor(col[0], col[1], col[2], alpha))]
                     for col in colors])
-                self.brush_colors = self.brush_colors[c_data]
+                self.brush_colors = brush_colors_palette[c_data]
 
-                # gray out overlapping points
+                # color overlapping points by most frequent color
                 for i, xy in enumerate(zip(self.x_data, self.y_data)):
                     if self.overlaps[i] > 1:
-                        self.brush_colors[i] = [
-                            QBrush(QColor(0, 0, 0, 0)),
-                            QBrush(QColor(128, 128, 128, alpha))]
-                        self.pen_colors[i] = _make_pen(QColor(128, 128, 128).darker(self.DarkerValue), 1.5)
+                        c = Counter(c_data[j] for j in self.coord_to_id[xy]).most_common(1)[0][0]
+                        self.brush_colors[i] = brush_colors_palette[c]
+                        self.pen_colors[i] = pen_colors_palette[c]
 
             if subset is not None:
                 brush = np.where(
