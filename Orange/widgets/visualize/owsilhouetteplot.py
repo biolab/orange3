@@ -75,7 +75,8 @@ class OWSilhouettePlot(widget.OWWidget):
     auto_commit = settings.Setting(True)
 
     Distances = [("Euclidean", Orange.distance.Euclidean),
-                 ("Manhattan", Orange.distance.Manhattan)]
+                 ("Manhattan", Orange.distance.Manhattan),
+                 ("Cosine", Orange.distance.Cosine)]
 
     graph_name = "scene"
     buttons_area_orientation = Qt.Vertical
