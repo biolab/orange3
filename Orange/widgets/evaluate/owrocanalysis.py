@@ -10,8 +10,8 @@ from collections import namedtuple, deque, OrderedDict
 import numpy
 import sklearn.metrics as skl_metrics
 
-from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont
+from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, QToolTip
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont, QCursor
 from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
@@ -396,6 +396,7 @@ class OWROCAnalysis(widget.OWWidget):
 
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
+        self.plotview.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
         self.plot = pg.PlotItem(enableMenu=False)
         self.plot.setMouseEnabled(False, False)
@@ -528,7 +529,6 @@ class OWROCAnalysis(widget.OWWidget):
                 graphics = curve.merge()
                 curve = graphics.curve
                 self.plot.addItem(graphics.curve_item)
-                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
                 if self.display_convex_curve:
                     self.plot.addItem(graphics.hull_item)
@@ -556,7 +556,6 @@ class OWROCAnalysis(widget.OWWidget):
 
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
-                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
             hull_curves = [curve.avg_vertical.hull for curve in selected]
 
@@ -565,7 +564,6 @@ class OWROCAnalysis(widget.OWWidget):
                 graphics = curve.avg_threshold()
                 self.plot.addItem(graphics.curve_item)
                 self.plot.addItem(graphics.confint_item)
-                graphics.curve_item.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
             hull_curves = [curve.avg_threshold.hull for curve in selected]
 
@@ -607,7 +605,7 @@ class OWROCAnalysis(widget.OWWidget):
         self.warning(warning)
 
     def _on_mouse_moved(self, pos):
-        curves = self.plot.curves
+        curves = [crv for crv in self.plot.curves if isinstance(crv, pg.PlotCurveItem)]
         for i in self.selected_classifiers:
             sp = curves[i].childItems()[0]
             act_pos = sp.mapFromScene(pos)
@@ -619,9 +617,9 @@ class OWROCAnalysis(widget.OWWidget):
                 curve_data = curve_data.merged
             elif self.roc_averaging == OWROCAnalysis.Vertical:
                 curve_data = curve_data.avg_vertical
-            elif OWROCAnalysis.Threshold:
+            elif self.roc_averaging == OWROCAnalysis.Threshold:
                 curve_data = curve_data.avg_threshold
-            elif OWROCAnalysis.NoAveraging:
+            elif self.roc_averaging == OWROCAnalysis.NoAveraging:
                 # currently not implemented
                 return
 
@@ -629,25 +627,28 @@ class OWROCAnalysis(widget.OWWidget):
                 mouse_pt = pts[0].pos()
 
                 if self._tooltip_cache:
-                    if numpy.linalg.norm(mouse_pt - self._tooltip_cache.pos()) < 10e-6:
+                    if numpy.linalg.norm(mouse_pt - self._tooltip_cache) < 10e-6:
+                        if not QToolTip.isVisible():
+                            tt_loc = QCursor.pos()
+                            QToolTip.showText(tt_loc, QToolTip.text())
+
                         return
                     else:
-                        self.plot.removeItem(self._tooltip_cache)
                         self._tooltip_cache = None
 
                 curve_pts = curve_data.points
 
                 # Find closest point on curve and display it
-                idx_closest = numpy.argmin([numpy.linalg.norm(mouse_pt - [curve_pts.fpr[idx], curve_pts.tpr[idx]])
-                                            for idx in range(len(curve_pts.thresholds))])
+                idx_closest = numpy.argmin(
+                    [numpy.linalg.norm(mouse_pt - [curve_pts.fpr[idx], curve_pts.tpr[idx]])
+                     for idx in range(len(curve_pts.thresholds))])
 
                 thresh = curve_pts.thresholds[idx_closest]
                 if not numpy.isnan(thresh):
-                    item = pg.TextItem(text="{:.3f}".format(thresh), color=(0, 0, 0))
-                    item.setPos(curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest])
-                    item.show()
-                    self.plot.addItem(item)
-                    self._tooltip_cache = item
+                    tt_loc = QCursor.pos()
+                    QToolTip.showText(tt_loc, "Threshold: {:.3f}".format(thresh))
+                    self._tooltip_cache = [curve_pts.fpr[idx_closest],
+                                           curve_pts.tpr[idx_closest]]
                 return
 
     def _on_target_changed(self):
