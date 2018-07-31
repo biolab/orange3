@@ -21,6 +21,10 @@ from Orange.widgets.widget import OWWidget, Output, Msg
 MAX_DL_LIMIT = 1000000
 
 
+def is_postgres(backend):
+    return getattr(backend, 'display_name', '') == "PostgreSQL"
+
+
 class TableModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
@@ -354,12 +358,14 @@ class OWSql(OWWidget):
                             "Do you want to auto discover attributes?")
             confirm.addButton("Yes", QMessageBox.YesRole)
             no_button = confirm.addButton("No", QMessageBox.NoRole)
-            sample_button = confirm.addButton("Yes, on a sample",
-                                              QMessageBox.YesRole)
+            if is_postgres(self.backend):
+                sample_button = confirm.addButton("Yes, on a sample",
+                                                  QMessageBox.YesRole)
             confirm.exec()
             if confirm.clickedButton() == no_button:
                 self.guess_values = False
-            elif confirm.clickedButton() == sample_button:
+            elif is_postgres(self.backend) and \
+                    confirm.clickedButton() == sample_button:
                 sample = True
 
         self.Information.clear()
@@ -376,22 +382,36 @@ class OWSql(OWWidget):
 
         if self.download:
             if table.approx_len() > AUTO_DL_LIMIT:
-                confirm = QMessageBox(self)
-                confirm.setIcon(QMessageBox.Warning)
-                confirm.setText("Data appears to be big. Do you really "
-                                "want to download it to local memory?")
+                if is_postgres(self.backend):
+                    confirm = QMessageBox(self)
+                    confirm.setIcon(QMessageBox.Warning)
+                    confirm.setText("Data appears to be big. Do you really "
+                                    "want to download it to local memory?")
 
-                if table.approx_len() <= MAX_DL_LIMIT:
-                    confirm.addButton("Yes", QMessageBox.YesRole)
-                no_button = confirm.addButton("No", QMessageBox.NoRole)
-                sample_button = confirm.addButton("Yes, a sample",
-                                                  QMessageBox.YesRole)
-                confirm.exec()
-                if confirm.clickedButton() == no_button:
-                    return
-                elif confirm.clickedButton() == sample_button:
-                    table = table.sample_percentage(
-                        AUTO_DL_LIMIT / table.approx_len() * 100)
+                    if table.approx_len() <= MAX_DL_LIMIT:
+                        confirm.addButton("Yes", QMessageBox.YesRole)
+                    no_button = confirm.addButton("No", QMessageBox.NoRole)
+                    sample_button = confirm.addButton("Yes, a sample",
+                                                      QMessageBox.YesRole)
+                    confirm.exec()
+                    if confirm.clickedButton() == no_button:
+                        return
+                    elif confirm.clickedButton() == sample_button:
+                        table = table.sample_percentage(
+                            AUTO_DL_LIMIT / table.approx_len() * 100)
+                else:
+                    if table.approx_len() > MAX_DL_LIMIT:
+                        QMessageBox.warning(
+                            self, 'Warning', "Data is too big to download.\n")
+                        return
+                    else:
+                        confirm = QMessageBox.question(
+                            self, 'Question',
+                            "Data appears to be big. Do you really "
+                            "want to download it to local memory?",
+                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                        if confirm == QMessageBox.No:
+                            return
 
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
