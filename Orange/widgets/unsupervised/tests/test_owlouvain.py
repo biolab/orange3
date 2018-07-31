@@ -15,10 +15,17 @@ class TestOWLouvain(WidgetTest):
         self.widget = self.create_widget(
             OWLouvainClustering, stored_settings={'auto_commit': False}
         )
+        self.iris = Table('iris')
 
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
+
+    def test_removing_data(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.commit_and_wait()
+        self.send_signal(self.widget.Inputs.data, None)
+        self.commit_and_wait()
 
     def test_clusters_ordered_by_size(self):
         """Cluster names should be sorted based on the number of instances."""
