@@ -375,20 +375,24 @@ class OWSql(OWWidget):
             table.domain = domain
 
         if self.download:
-            if table.approx_len() > MAX_DL_LIMIT:
-                QMessageBox.warning(
-                    self, 'Warning', "Data is too big to download.\n"
-                    "Consider using the Data Sampler widget to download "
-                    "a sample instead.")
-                self.download = False
-            elif table.approx_len() > AUTO_DL_LIMIT:
-                confirm = QMessageBox.question(
-                    self, 'Question', "Data appears to be big. Do you really "
-                                      "want to download it to local memory?",
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                if confirm == QMessageBox.No:
-                    self.download = False
-        if self.download:
+            if table.approx_len() > AUTO_DL_LIMIT:
+                confirm = QMessageBox(self)
+                confirm.setIcon(QMessageBox.Warning)
+                confirm.setText("Data appears to be big. Do you really "
+                                "want to download it to local memory?")
+
+                if table.approx_len() <= MAX_DL_LIMIT:
+                    confirm.addButton("Yes", QMessageBox.YesRole)
+                no_button = confirm.addButton("No", QMessageBox.NoRole)
+                sample_button = confirm.addButton("Yes, a sample",
+                                                  QMessageBox.YesRole)
+                confirm.exec()
+                if confirm.clickedButton() == no_button:
+                    return
+                elif confirm.clickedButton() == sample_button:
+                    table = table.sample_percentage(
+                        AUTO_DL_LIMIT / table.approx_len() * 100)
+
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
 
