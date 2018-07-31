@@ -81,6 +81,24 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         # the scores must match
         np.testing.assert_almost_equal(scores_1, scores[valid], decimal=12)
 
+    def test_nan_distances(self):
+        self.widget.controls.add_scores.setChecked(1)
+        self.widget.distance_idx = 2
+        self.assertEqual(self.widget.Distances[self.widget.distance_idx][0],
+                         'Cosine')
+        scorename = "Silhouette (iris)"
+        data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
+        data.X[::3] = 0
+        valid = np.any(data.X != 0, axis=1)
+        self.assertFalse(self.widget.Warning.nan_distances.is_shown())
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertTrue(np.isnan(self.widget._matrix).any())
+        self.assertTrue(self.widget.Warning.nan_distances.is_shown())
+        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        scores = output[:, scorename].metas.flatten()
+        self.assertTrue(np.all(np.isnan(scores[::3])))
+        self.assertTrue(np.all(np.isfinite(scores[valid])))
+
     def test_meta_object_dtype(self):
         # gh-1875: Test on mixed string/discrete metas
         data = self.data[::5]
