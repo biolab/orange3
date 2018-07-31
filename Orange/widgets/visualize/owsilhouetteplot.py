@@ -90,6 +90,7 @@ class OWSilhouettePlot(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
             "{} instance{s} omitted (missing cluster assignment)")
+        nan_distances = Msg("{} instance{s} omitted (undefined distances)")
 
     def __init__(self):
         super().__init__()
@@ -272,13 +273,15 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _clear_messages(self):
         self.Error.clear()
-        self.Warning.missing_cluster_assignment.clear()
+        self.Warning.clear()
 
     def _update_labels(self):
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
         labels = np.asarray(labels, dtype=float)
-        mask = np.isnan(labels)
+        cluster_mask = np.isnan(labels)
+        dist_mask = np.isnan(self._matrix).all(axis=0)
+        mask = cluster_mask | dist_mask
         labels = labels.astype(int)
         labels = labels[~mask]
 
@@ -297,11 +300,15 @@ class OWSilhouettePlot(widget.OWWidget):
         self._labels = labels
         self._silhouette = silhouette
 
-        if labels is not None:
-            count_missing = np.count_nonzero(mask)
+        if mask is not None:
+            count_missing = np.count_nonzero(cluster_mask)
             if count_missing:
                 self.Warning.missing_cluster_assignment(
                     count_missing, s="s" if count_missing > 1 else "")
+            count_nandist = np.count_nonzero(dist_mask)
+            if count_nandist:
+                self.Warning.nan_distances(
+                    count_nandist, s="s" if count_nandist > 1 else "")
 
     def _set_bar_height(self):
         visible = self.bar_size >= 5
