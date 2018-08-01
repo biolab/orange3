@@ -28,6 +28,8 @@ class LinkCurveItem(QGraphicsPathItem):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.__parent = parent
+
         self.setAcceptedMouseButtons(Qt.NoButton)
         self.setAcceptHoverEvents(True)
 
@@ -90,6 +92,9 @@ class LinkCurveItem(QGraphicsPathItem):
     def setPath(self, path):
         self.__shape = None
         super().setPath(path)
+
+    def parent(self):
+        return self.__parent
 
     def __update(self):
         shadow_enabled = self.__hover

@@ -879,6 +879,9 @@ class SchemeEditWidget(QWidget):
         self.__undoStack.push(command)
 
     def insertNode(self, link, new_node):
+        """
+        Insert a node in-between two linked nodes.
+        """
         command = commands.InsertNodeCommand(self.__scheme, link, new_node)
         self.__undoStack.push(command)
 
@@ -1044,6 +1047,17 @@ class SchemeEditWidget(QWidget):
 
         QWidget.changeEvent(self, event)
 
+    def tryInsertNode(self, link, new_node_desc, pos):
+        source_node = link.source_node
+        sink_node = link.sink_node
+
+        if nodes_are_compatible(source_node.description, new_node_desc) and \
+                nodes_are_compatible(new_node_desc, sink_node.description):
+            new_node = self.newNodeHelper(new_node_desc, position=(pos.x(), pos.y()))
+            self.insertNode(link, new_node)
+        else:
+            self.createNewNode(new_node_desc, position=(pos.x(), pos.y()))
+
     def eventFilter(self, obj, event):
         # Filter the scene's drag/drop events.
         if obj is self.scene():
@@ -1069,7 +1083,12 @@ class SchemeEditWidget(QWidget):
                     log.error("Unknown qualified name '%s'", qname)
                 else:
                     pos = event.scenePos()
-                    self.createNewNode(desc, position=(pos.x(), pos.y()))
+                    item = self.__scene.item_at(event.scenePos())
+                    if item and isinstance(item, items.LinkCurveItem):
+                        link = self.__scene.link_for_item(item.parent())
+                        self.tryInsertNode(link, desc, pos)
+                    else:
+                        self.createNewNode(desc, position=(pos.x(), pos.y()))
                 return True
 
             elif etype == QEvent.GraphicsSceneMousePress:
@@ -1620,16 +1639,11 @@ class SchemeEditWidget(QWidget):
         source_node = original_link.source_node
         sink_node = original_link.sink_node
 
-        def is_compatible(source, sink):
-            return any(scheme.compatible_channels(output, input) \
-                       for output in source.outputs \
-                       for input in sink.inputs)
-
         def filterFunc(index):
             new_node_desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
             if isinstance(new_node_desc, WidgetDescription):
-                return is_compatible(source_node.description, new_node_desc) and\
-                       is_compatible(new_node_desc, sink_node.description)
+                return nodes_are_compatible(source_node.description, new_node_desc) and \
+                       nodes_are_compatible(new_node_desc, sink_node.description)
             else:
                 return False
 
@@ -1995,6 +2009,12 @@ def is_printable(unichar):
 def node_properties(scheme):
     scheme.sync_node_properties()
     return [dict(node.properties) for node in scheme.nodes]
+
+
+def nodes_are_compatible(source, sink):
+    return any(scheme.compatible_channels(output, input) \
+               for output in source.outputs \
+               for input in sink.inputs)
 
 
 def uniquify(item, names, pattern="{item}-{_}", start=0):
