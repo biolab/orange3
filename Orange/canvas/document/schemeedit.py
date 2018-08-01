@@ -29,13 +29,14 @@ from AnyQt.QtGui import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication
-)
+    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication,
+    QPoint)
 
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
+from Orange.canvas.registry import WidgetDescription
 from .suggestions import Suggestions
-from ..registry.qt import whats_this_helper
+from ..registry.qt import whats_this_helper, QtWidgetRegistry
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
 from ..scheme import (
@@ -170,6 +171,8 @@ class SchemeEditWidget(QWidget):
 
         self.__linkMenu = QMenu(self.tr("Link"), self)
         self.__linkMenu.addAction(self.__linkEnableAction)
+        self.__linkMenu.addSeparator()
+        self.__linkMenu.addAction(self.__nodeInsertAction)
         self.__linkMenu.addSeparator()
         self.__linkMenu.addAction(self.__linkRemoveAction)
         self.__linkMenu.addAction(self.__linkResetAction)
@@ -328,6 +331,13 @@ class SchemeEditWidget(QWidget):
                     toolTip=self.tr("Remove link."),
                     )
 
+        self.__nodeInsertAction = \
+            QAction(self.tr("Insert Widget"), self,
+                    objectName="node-insert-action",
+                    triggered=self.__nodeInsert,
+                    toolTip=self.tr("Insert widget."),
+                    )
+
         self.__linkResetAction = \
             QAction(self.tr("Reset Signals"), self,
                     objectName="link-reset-action",
@@ -346,6 +356,7 @@ class SchemeEditWidget(QWidget):
                          self.__newArrowAnnotationAction,
                          self.__linkEnableAction,
                          self.__linkRemoveAction,
+                         self.__nodeInsertAction,
                          self.__linkResetAction,
                          self.__duplicateSelectedAction])
 
@@ -865,6 +876,10 @@ class SchemeEditWidget(QWidget):
         Remove a link (:class:`.SchemeLink`) from the scheme.
         """
         command = commands.RemoveLinkCommand(self.__scheme, link)
+        self.__undoStack.push(command)
+
+    def insertNode(self, link, new_node):
+        command = commands.InsertNodeCommand(self.__scheme, link, new_node)
         self.__undoStack.push(command)
 
     def onNewLink(self, func):
@@ -1593,6 +1608,52 @@ class SchemeEditWidget(QWidget):
                 self, link.source_node, link.sink_node
             )
             action.edit_links()
+
+    def __nodeInsert(self):
+        """
+        Node insert was requested from the context menu.
+        """
+        if not self.__contextMenuTarget:
+            return
+
+        original_link = self.__contextMenuTarget
+        source_node = original_link.source_node
+        sink_node = original_link.sink_node
+
+        def is_compatible(source, sink):
+            return any(scheme.compatible_channels(output, input) \
+                       for output in source.outputs \
+                       for input in sink.inputs)
+
+        def filterFunc(index):
+            new_node_desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+            if isinstance(new_node_desc, WidgetDescription):
+                return is_compatible(source_node.description, new_node_desc) and\
+                       is_compatible(new_node_desc, sink_node.description)
+            else:
+                return False
+
+        x = (source_node.position[0] + sink_node.position[0]) / 2
+        y = (source_node.position[1] + sink_node.position[1]) / 2
+
+        menu = self.quickMenu()
+        menu.setFilterFunc(filterFunc)
+        menu.setSortingFunc(None)
+
+        view = self.view()
+        try:
+            action = menu.exec_(view.mapToGlobal(view.mapFromScene(QPoint(x, y))))
+        finally:
+            menu.setFilterFunc(None)
+
+        if action:
+            item = action.property("item")
+            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+            new_node = self.newNodeHelper(desc, position=(x, y))
+        else:
+            return
+
+        self.insertNode(original_link, new_node)
 
     def __duplicateSelected(self):
         """

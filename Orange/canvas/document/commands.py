@@ -6,6 +6,8 @@ from typing import Callable
 
 from AnyQt.QtWidgets import QUndoCommand
 
+from Orange.canvas.scheme import SchemeLink
+
 
 class AddNodeCommand(QUndoCommand):
     def __init__(self, scheme, node, parent=None):
@@ -67,6 +69,38 @@ class RemoveLinkCommand(QUndoCommand):
 
     def undo(self):
         self.scheme.add_link(self.link)
+
+
+class InsertNodeCommand(QUndoCommand):
+    def __init__(self, scheme, link, new_node, parent=None):
+        QUndoCommand.__init__(self, "Remove link", parent)
+        self.scheme = scheme
+        self.original_link = link
+        self.inserted_widget = new_node
+
+        possible_links = (self.scheme.propose_links(link.source_node, new_node),
+                          self.scheme.propose_links(new_node, link.sink_node))
+
+        if not possible_links[0] or not possible_links[1]:
+            raise ValueError("Cannot insert widget: links not possible")
+
+        self.new_links = (
+            SchemeLink(link.source_node, link.source_channel,
+                       new_node, possible_links[0][0][1]),  # first link, first entry, output (1)
+            SchemeLink(new_node, possible_links[1][0][0],  # second link, first entry, input (0)
+                       link.sink_node, link.sink_channel))
+
+    def redo(self):
+        self.scheme.add_node(self.inserted_widget)
+        self.scheme.remove_link(self.original_link)
+        self.scheme.add_link(self.new_links[0])
+        self.scheme.add_link(self.new_links[1])
+
+    def undo(self):
+        self.scheme.remove_link(self.new_links[0])
+        self.scheme.remove_link(self.new_links[1])
+        self.scheme.add_link(self.original_link)
+        self.scheme.remove_node(self.inserted_widget)
 
 
 class AddAnnotationCommand(QUndoCommand):
