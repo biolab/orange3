@@ -606,12 +606,12 @@ class OWROCAnalysis(widget.OWWidget):
 
     def _on_mouse_moved(self, pos):
         curves = [crv for crv in self.plot.curves if isinstance(crv, pg.PlotCurveItem)]
-        for i in self.selected_classifiers:
+        for i in range(len(self.selected_classifiers)):
             sp = curves[i].childItems()[0]
             act_pos = sp.mapFromScene(pos)
             pts = sp.pointsAt(act_pos)
 
-            curve_data = self.curve_data(self.target_index, i)
+            curve_data = self.curve_data(self.target_index, self.selected_classifiers[i])
 
             if self.roc_averaging == OWROCAnalysis.Merge:
                 curve_data = curve_data.merged
@@ -625,7 +625,6 @@ class OWROCAnalysis(widget.OWWidget):
 
             if len(pts) > 0:
                 mouse_pt = pts[0].pos()
-
                 if self._tooltip_cache:
                     if numpy.linalg.norm(mouse_pt - self._tooltip_cache) < 10e-6:
                         if not QToolTip.isVisible():
