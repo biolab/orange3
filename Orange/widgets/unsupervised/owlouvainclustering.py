@@ -276,9 +276,9 @@ class OWLouvainClustering(widget.OWWidget):
         self.__future = self.__executor.submit(queue.start)
 
     def _send_data(self):
-        domain = self.data.domain
-        if self.partition is None:
+        if self.partition is None or self.data is None:
             return
+        domain = self.data.domain
         # Compute the frequency of each cluster index
         counts = np.bincount(self.partition)
         indices = np.argsort(counts)[::-1]

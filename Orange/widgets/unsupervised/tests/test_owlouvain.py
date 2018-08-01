@@ -41,7 +41,6 @@ class TestOWLouvain(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.k_neighbors = 4
-        self.widget.unconditional_commit()
         self.commit_and_wait()
         output = self.get_output(self.widget.Outputs.annotated_data)
 
@@ -57,7 +56,7 @@ class TestOWLouvain(WidgetTest):
         table.get_column_view(meta_var)[0][:] = meta
 
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.unconditional_commit()
+        self.commit_and_wait()
         self.assertTrue(self.widget.Error.empty_dataset.is_shown())
 
     def test_do_not_recluster_on_same_data(self):
