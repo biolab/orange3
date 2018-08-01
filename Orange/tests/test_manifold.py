@@ -149,3 +149,61 @@ class TestManifold(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             torgerson(dis, eigen_solver="madness")
+
+
+class TestTSNE(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = Table('iris')
+
+    def test_fit(self):
+        n_components = 2
+        tsne = TSNE(n_components=n_components)
+        model = tsne(self.iris)
+
+        # The embedding should have the correct number of dimensions
+        self.assertEqual(model.embedding.X.shape, (self.iris.X.shape[0], n_components))
+
+        # The embedding should not contain NaNs
+        self.assertFalse(np.any(np.isnan(model.embedding.X)))
+
+        # The embeddings in the table should match the embedding object
+        np.testing.assert_equal(model.embedding.X, model.embedding_)
+
+    def test_transform(self):
+        # Set perplexity to avoid warnings
+        tsne = TSNE(perplexity=10)
+        model = tsne(self.iris[::2])
+        new_embedding = model(self.iris[1::2])
+
+        # The new embedding should not contain NaNs
+        self.assertFalse(np.any(np.isnan(new_embedding.X)))
+
+    def test_continue_optimization(self):
+        tsne = TSNE(n_iter=100)
+        model = tsne(self.iris)
+        new_model = model.optimize(100, inplace=False)
+
+        # If we don't do things inplace, then the instances should be different
+        self.assertIsNot(model, new_model)
+        self.assertIsNot(model.embedding, new_model.embedding)
+        self.assertIsNot(model.embedding_, new_model.embedding_)
+
+        self.assertFalse(np.allclose(model.embedding.X, new_model.embedding.X),
+                         'Embedding should change after further optimization.')
+
+        # The embeddings in the table should match the embedding object
+        np.testing.assert_equal(new_model.embedding.X, new_model.embedding_)
+
+    def test_continue_optimization_inplace(self):
+        tsne = TSNE(n_iter=100)
+        model = tsne(self.iris)
+        new_model = model.optimize(100, inplace=True)
+
+        # If we don't do things inplace, then the instances should be the same
+        self.assertIs(model, new_model)
+        self.assertIs(model.embedding, new_model.embedding)
+        self.assertIs(model.embedding_, new_model.embedding_)
+
+        # The embeddings in the table should match the embedding object
+        np.testing.assert_equal(new_model.embedding.X, new_model.embedding_)
