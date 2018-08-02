@@ -37,6 +37,7 @@ Data
    widgets/data/createclass
    widgets/data/randomize
    widgets/data/concatenate
+   widgets/data/select-by-data-index
    widgets/data/paintdata
    widgets/data/pythonscript
    widgets/data/featureconstructor
