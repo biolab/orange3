@@ -605,37 +605,42 @@ class OWROCAnalysis(widget.OWWidget):
         self.warning(warning)
 
     def _on_mouse_moved(self, pos):
-        curves = [crv for crv in self.plot.curves if isinstance(crv, pg.PlotCurveItem)]
-        for i in range(len(self.selected_classifiers)):
-            sp = curves[i].childItems()[0]
+        target = self.target_index
+        selected = self.selected_classifiers
+        curves = [(clf_idx, self.plot_curves(target, clf_idx))
+                  for clf_idx in selected]  # type: List[Tuple[int, plot_curves]]
+
+        for clf_idx, crv in curves:
+            if self.roc_averaging == OWROCAnalysis.Merge:
+                curve = crv.merge()
+            elif self.roc_averaging == OWROCAnalysis.Vertical:
+                curve = crv.avg_vertical()
+            elif self.roc_averaging == OWROCAnalysis.Threshold:
+                curve = crv.avg_threshold()
+            else:
+                # currently not implemented for 'Show Individual Curves'
+                return
+
+            sp = curve.curve_item.childItems()[0]  # type: pg.ScatterPlotItem
             act_pos = sp.mapFromScene(pos)
             pts = sp.pointsAt(act_pos)
-
-            curve_data = self.curve_data(self.target_index, self.selected_classifiers[i])
-
-            if self.roc_averaging == OWROCAnalysis.Merge:
-                curve_data = curve_data.merged
-            elif self.roc_averaging == OWROCAnalysis.Vertical:
-                curve_data = curve_data.avg_vertical
-            elif self.roc_averaging == OWROCAnalysis.Threshold:
-                curve_data = curve_data.avg_threshold
-            elif self.roc_averaging == OWROCAnalysis.NoAveraging:
-                # currently not implemented
-                return
 
             if len(pts) > 0:
                 mouse_pt = pts[0].pos()
                 if self._tooltip_cache:
-                    if numpy.linalg.norm(mouse_pt - self._tooltip_cache) < 10e-6:
+                    cache_pt, cache_thresh, cache_clf, cache_ave = self._tooltip_cache
+                    if numpy.linalg.norm(mouse_pt - cache_pt) < 10e-6 and clf_idx == cache_clf \
+                            and cache_ave == self.roc_averaging:
                         if not QToolTip.isVisible():
-                            tt_loc = QCursor.pos()
-                            QToolTip.showText(tt_loc, QToolTip.text())
+                            QToolTip.showText(QCursor.pos(),
+                                              "Threshold: {:.3f}".format(cache_thresh))
 
                         return
                     else:
+                        QToolTip.showText(QCursor.pos(), "")
                         self._tooltip_cache = None
 
-                curve_pts = curve_data.points
+                curve_pts = curve.curve.points
 
                 # Find closest point on curve and display it
                 idx_closest = numpy.argmin(
@@ -646,8 +651,8 @@ class OWROCAnalysis(widget.OWWidget):
                 if not numpy.isnan(thresh):
                     tt_loc = QCursor.pos()
                     QToolTip.showText(tt_loc, "Threshold: {:.3f}".format(thresh))
-                    self._tooltip_cache = [curve_pts.fpr[idx_closest],
-                                           curve_pts.tpr[idx_closest]]
+                    self._tooltip_cache = ([curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest]],
+                                           thresh, clf_idx, self.roc_averaging)
                 return
 
     def _on_target_changed(self):
