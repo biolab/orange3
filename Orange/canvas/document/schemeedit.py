@@ -878,11 +878,11 @@ class SchemeEditWidget(QWidget):
         command = commands.RemoveLinkCommand(self.__scheme, link)
         self.__undoStack.push(command)
 
-    def insertNode(self, link, new_node):
+    def insertNode(self, new_node, old_link, new_links):
         """
         Insert a node in-between two linked nodes.
         """
-        command = commands.InsertNodeCommand(self.__scheme, link, new_node)
+        command = commands.InsertNodeCommand(self.__scheme, new_node, old_link, new_links)
         self.__undoStack.push(command)
 
     def onNewLink(self, func):
@@ -1054,7 +1054,20 @@ class SchemeEditWidget(QWidget):
         if nodes_are_compatible(source_node.description, new_node_desc) and \
                 nodes_are_compatible(new_node_desc, sink_node.description):
             new_node = self.newNodeHelper(new_node_desc, position=(pos.x(), pos.y()))
-            self.insertNode(link, new_node)
+
+            possible_links = (self.scheme().propose_links(source_node, new_node),
+                              self.scheme().propose_links(new_node, sink_node))
+
+            if not possible_links[0] or not possible_links[1]:
+                raise ValueError("Cannot insert widget: links not possible")
+
+            new_links = (
+                SchemeLink(source_node, link.source_channel,
+                           new_node, possible_links[0][0][1]),  # first link, first entry, output
+                SchemeLink(new_node, possible_links[1][0][0],  # second link, first entry, input
+                           sink_node, link.sink_channel))
+
+            self.insertNode(new_node, link, new_links)
         else:
             self.createNewNode(new_node_desc, position=(pos.x(), pos.y()))
 
@@ -1083,9 +1096,9 @@ class SchemeEditWidget(QWidget):
                     log.error("Unknown qualified name '%s'", qname)
                 else:
                     pos = event.scenePos()
-                    item = self.__scene.item_at(event.scenePos())
-                    if item and isinstance(item, items.LinkCurveItem):
-                        link = self.__scene.link_for_item(item.parent())
+                    item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                    if item:
+                        link = self.__scene.link_for_item(item)
                         self.tryInsertNode(link, desc, pos)
                     else:
                         self.createNewNode(desc, position=(pos.x(), pos.y()))
@@ -1667,7 +1680,19 @@ class SchemeEditWidget(QWidget):
         else:
             return
 
-        self.insertNode(original_link, new_node)
+        possible_links = (self.scheme().propose_links(source_node, new_node),
+                          self.scheme().propose_links(new_node, sink_node))
+
+        if not possible_links[0] or not possible_links[1]:
+            raise ValueError("Cannot insert widget: links not possible")
+
+        new_links = (
+            SchemeLink(source_node, original_link.source_channel,
+                       new_node, possible_links[0][0][1]),  # first link, first entry, output
+            SchemeLink(new_node, possible_links[1][0][0],  # second link, first entry, input
+                       sink_node, original_link.sink_channel))
+
+        self.insertNode(new_node, original_link, new_links)
 
     def __duplicateSelected(self):
         """
