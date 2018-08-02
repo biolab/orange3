@@ -878,10 +878,27 @@ class SchemeEditWidget(QWidget):
         command = commands.RemoveLinkCommand(self.__scheme, link)
         self.__undoStack.push(command)
 
-    def insertNode(self, new_node, old_link, new_links):
+    def insertNode(self, new_node, old_link):
         """
         Insert a node in-between two linked nodes.
         """
+        source_node = old_link.source_node
+        sink_node = old_link.sink_node
+
+        possible_links = (self.scheme().propose_links(source_node, new_node),
+                          self.scheme().propose_links(new_node, sink_node))
+
+        first_link_sink_channel = [l[1] for l in possible_links[0]
+                                   if l[0] == old_link.source_channel][0]
+        second_link_source_channel = [l[0] for l in possible_links[1]
+                                      if l[1] == old_link.sink_channel][0]
+
+        new_links = (
+            SchemeLink(source_node, old_link.source_channel,
+                       new_node, first_link_sink_channel),
+            SchemeLink(new_node, second_link_source_channel,
+                       sink_node, old_link.sink_channel))
+
         command = commands.InsertNodeCommand(self.__scheme, new_node, old_link, new_links)
         self.__undoStack.push(command)
 
@@ -1047,30 +1064,6 @@ class SchemeEditWidget(QWidget):
 
         QWidget.changeEvent(self, event)
 
-    def tryInsertNode(self, link, new_node_desc, pos):
-        source_node = link.source_node
-        sink_node = link.sink_node
-
-        if nodes_are_compatible(source_node.description, new_node_desc) and \
-                nodes_are_compatible(new_node_desc, sink_node.description):
-            new_node = self.newNodeHelper(new_node_desc, position=(pos.x(), pos.y()))
-
-            possible_links = (self.scheme().propose_links(source_node, new_node),
-                              self.scheme().propose_links(new_node, sink_node))
-
-            if not possible_links[0] or not possible_links[1]:
-                raise ValueError("Cannot insert widget: links not possible")
-
-            new_links = (
-                SchemeLink(source_node, link.source_channel,
-                           new_node, possible_links[0][0][1]),  # first link, first entry, output
-                SchemeLink(new_node, possible_links[1][0][0],  # second link, first entry, input
-                           sink_node, link.sink_channel))
-
-            self.insertNode(new_node, link, new_links)
-        else:
-            self.createNewNode(new_node_desc, position=(pos.x(), pos.y()))
-
     def eventFilter(self, obj, event):
         # Filter the scene's drag/drop events.
         if obj is self.scene():
@@ -1097,9 +1090,10 @@ class SchemeEditWidget(QWidget):
                 else:
                     pos = event.scenePos()
                     item = self.__scene.item_at(event.scenePos(), items.LinkItem)
-                    if item:
-                        link = self.__scene.link_for_item(item)
-                        self.tryInsertNode(link, desc, pos)
+                    link = self.scene().link_for_item(item) if item else None
+                    if link and can_insert_node(desc, link):
+                        node = self.newNodeHelper(desc, position=(pos.x(), pos.y()))
+                        self.insertNode(node, link)
                     else:
                         self.createNewNode(desc, position=(pos.x(), pos.y()))
                 return True
@@ -1653,10 +1647,9 @@ class SchemeEditWidget(QWidget):
         sink_node = original_link.sink_node
 
         def filterFunc(index):
-            new_node_desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
-            if isinstance(new_node_desc, WidgetDescription):
-                return nodes_are_compatible(source_node.description, new_node_desc) and \
-                       nodes_are_compatible(new_node_desc, sink_node.description)
+            desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+            if isinstance(desc, WidgetDescription):
+                return can_insert_node(desc, original_link)
             else:
                 return False
 
@@ -1676,23 +1669,15 @@ class SchemeEditWidget(QWidget):
         if action:
             item = action.property("item")
             desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
-            new_node = self.newNodeHelper(desc, position=(x, y))
         else:
             return
 
-        possible_links = (self.scheme().propose_links(source_node, new_node),
-                          self.scheme().propose_links(new_node, sink_node))
+        if can_insert_node(desc, original_link):
+            new_node = self.newNodeHelper(desc, position=(x, y))
+            self.insertNode(new_node, original_link)
+        else:
+            log.info("Cannot insert node: links not possible.")
 
-        if not possible_links[0] or not possible_links[1]:
-            raise ValueError("Cannot insert widget: links not possible")
-
-        new_links = (
-            SchemeLink(source_node, original_link.source_channel,
-                       new_node, possible_links[0][0][1]),  # first link, first entry, output
-            SchemeLink(new_node, possible_links[1][0][0],  # second link, first entry, input
-                       sink_node, original_link.sink_channel))
-
-        self.insertNode(new_node, original_link, new_links)
 
     def __duplicateSelected(self):
         """
@@ -2036,10 +2021,11 @@ def node_properties(scheme):
     return [dict(node.properties) for node in scheme.nodes]
 
 
-def nodes_are_compatible(source, sink):
-    return any(scheme.compatible_channels(output, input) \
-               for output in source.outputs \
-               for input in sink.inputs)
+def can_insert_node(new_node_desc, original_link):
+    return any(scheme.compatible_channels(original_link.source_channel, input)
+               for input in new_node_desc.inputs) and \
+           any(scheme.compatible_channels(output, original_link.sink_channel)
+               for output in new_node_desc.outputs)
 
 
 def uniquify(item, names, pattern="{item}-{_}", start=0):
