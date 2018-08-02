@@ -1,8 +1,15 @@
-import json
-import os
 from datetime import datetime
+import json
+import logging
+import os
 
 from Orange.canvas import config
+import requests
+
+log = logging.getLogger(__name__)
+
+statistics_path = os.path.join(config.data_dir(), "usage-statistics.json")
+server_url = os.getenv('ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/usage-statistics")
 
 
 class UsageStatistics:
@@ -14,7 +21,6 @@ class UsageStatistics:
     last_search_query = None
 
     def __init__(self):
-        self.__statistics_path = os.path.join(config.data_dir(), "usage-statistics.json")
         self.start_time = datetime.now()
 
         self.toolbox_clicks = []
@@ -60,17 +66,27 @@ class UsageStatistics:
             }
         }
 
-        if os.path.isfile(self.__statistics_path):
-            with open(self.__statistics_path) as f:
+        if os.path.isfile(statistics_path):
+            with open(statistics_path) as f:
                 data = json.load(f)
         else:
-            data = json.loads("[]")
+            data = []
 
         data.append(statistics)
 
-        with open(self.__statistics_path, 'w') as f:
+        with open(statistics_path, 'w') as f:
             json.dump(data, f)
+
+        send_usage_statistics()
 
     @staticmethod
     def set_last_search_query(query):
         UsageStatistics.last_search_query = query
+
+
+def send_usage_statistics():
+    try:
+        with open(statistics_path) as f:
+            requests.post(server_url, files={'file': f}, verify=False)
+    except ConnectionError:
+        log.warning("Connection error while attempting to send usage statistics.")

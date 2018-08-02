@@ -27,9 +27,6 @@ from AnyQt.QtCore import (
     QObject, QFileInfo
 )
 
-from ...widgets.utils.overlay import MessageOverlayWidget
-from ..document.usagestatistics import UsageStatistics
-
 try:
     from AnyQt.QtWebEngineWidgets import QWebEngineView
 except ImportError:
@@ -53,11 +50,15 @@ else:
         return QDesktopServices.storageLocation(
             QDesktopServices.DocumentsLocation)
 
+from ...widgets.utils.overlay import MessageOverlayWidget
+
 from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_critical, message_question, \
                         message_warning, message_information
+
+from ..document.usagestatistics import UsageStatistics
 
 from ..help import HelpManager
 
