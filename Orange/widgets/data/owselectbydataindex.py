@@ -84,6 +84,11 @@ class OWSelectByDataIndex(widget.OWWidget):
     def _invalidate(self):
         self.commit()
 
+    def send_report(self):
+        d_text = self.data_info_text(self.data).replace("\n", ", ")
+        ds_text = self.data_info_text(self.data_subset).replace("\n", ", ")
+        self.report_items("", [("Data", d_text), ("Data Subset", ds_text)])
+
 
 def main():
     app = QApplication([])
