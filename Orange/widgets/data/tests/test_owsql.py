@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest import mock
 
 from Orange.data import Table
 from Orange.widgets.data.owsql import OWSql
@@ -10,7 +11,7 @@ from Orange.tests.sql.base import create_iris, parse_uri, sql_test
 
 
 @sql_test
-class TestOWSql(WidgetTest):
+class TestOWSqlConnected(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWSql)
         params, _ = create_iris()
@@ -45,18 +46,6 @@ class TestOWSql(WidgetTest):
         output_domain = set(map(str, output.domain.attributes))
         self.assertTrue(output_domain.issuperset(iris_domain))
 
-    def test_missing_extension(self):
-        """Test for correctly handled missing backend extension"""
-        self.set_connection_params()
-        self.widget.backends[0] = unittest.mock.Mock()
-        self.widget.backends[0]().missing_extension = ["missing extension"]
-        self.widget.backends[0]().list_tables = lambda x: []
-        self.widget.connect()
-
-        self.assertTrue(self.widget.Warning.missing_extension.is_shown())
-        self.assertTrue(self.widget.download)
-        self.assertFalse(self.widget.downloadcb.isEnabled())
-
     def set_connection_params(self):
         """Set database connection parameters on widget"""
         port = ''
@@ -66,6 +55,38 @@ class TestOWSql(WidgetTest):
         self.widget.databasetext.setText(self.params['database'])
         self.widget.usernametext.setText(self.params['user'])
         self.widget.passwordtext.setText(self.params['password'])
+
+
+class TestOWSql(WidgetTest):
+
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_missing_extension(self, mock_backends):
+        """Test for correctly handled missing backend extension"""
+        backend = mock.Mock()
+        backend().display_name = "PostgreSQL"
+        backend().missing_extension = ["missing extension"]
+        backend().list_tables.return_value = []
+        mock_backends.available_backends.return_value = [backend]
+
+        widget = self.create_widget(OWSql)
+
+        self.assertTrue(widget.Warning.missing_extension.is_shown())
+        self.assertTrue(widget.download)
+        self.assertFalse(widget.downloadcb.isEnabled())
+
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_non_postgres(self, mock_backends):
+        """Test if download is enforced for non postgres backends"""
+        backend = mock.Mock()
+        backend().display_name = "database"
+        del backend().missing_extension
+        backend().list_tables.return_value = []
+        mock_backends.available_backends.return_value = [backend]
+
+        widget = self.create_widget(OWSql)
+
+        self.assertTrue(widget.download)
+        self.assertFalse(widget.downloadcb.isEnabled())
 
 
 if __name__ == "__main__":

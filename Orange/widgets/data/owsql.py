@@ -250,6 +250,10 @@ class OWSql(OWWidget):
                 self.download = True
                 self.downloadcb.setEnabled(False)
 
+            if not is_postgres(self.backend):
+                self.download = True
+                self.downloadcb.setEnabled(False)
+
             self._save_credentials()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
