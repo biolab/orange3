@@ -4,7 +4,7 @@
 from unittest import TestCase
 import numpy as np
 
-from AnyQt.QtCore import QModelIndex, Qt
+from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt
 
 from Orange.data import ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Table, Domain
@@ -236,6 +236,16 @@ class TestEditors(GuiTest):
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
         self.assertIs(w.get_data(), None)
+
+        # test selection/deselection in the view
+        w.set_data(v)
+        view = w.values_edit
+        model = view.model()
+        assert model.rowCount()
+        sel_model = view.selectionModel()
+        model = sel_model.model()
+        sel_model.select(model.index(0, 0), QItemSelectionModel.Select)
+        sel_model.select(model.index(0, 0), QItemSelectionModel.Deselect)
 
     def test_time_editor(self):
         w = TimeVariableEditor()
