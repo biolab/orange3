@@ -265,8 +265,7 @@ class OWLouvainClustering(widget.OWWidget):
 
         # Prepare callbacks
         queue.on_progress.connect(lambda val: self.progressBarSet(100 * val))
-        queue.on_complete.connect(self._processing_complete)
-        queue.on_complete.connect(self._send_data)
+        queue.on_complete.connect(self._on_complete)
         queue.on_exception.connect(self._handle_exceptions)
         self.__queue = queue
 
@@ -274,6 +273,10 @@ class OWLouvainClustering(widget.OWWidget):
         self.progressBarInit()
         self.setBlocking(True)
         self.__future = self.__executor.submit(queue.start)
+
+    def _on_complete(self):
+        self._processing_complete()
+        self._send_data()
 
     def _send_data(self):
         if self.partition is None or self.data is None:
