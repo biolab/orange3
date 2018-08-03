@@ -289,7 +289,7 @@ class Manhattan(FittedDistance):
 
 class Cosine(FittedDistance):
     supports_sparse = True  # via fallback
-    supports_discrete = True
+    supports_discrete = False
     fallback = SklDistance('cosine')
 
     @staticmethod
