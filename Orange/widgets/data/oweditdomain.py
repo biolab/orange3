@@ -422,9 +422,15 @@ class DiscreteVariableEditor(VariableEditor):
 
     @Slot()
     def on_value_selection_changed(self):
-        i = self.values_edit.selectionModel().selectedRows()[0].row()
-        self.move_value_up.setEnabled(i)
-        self.move_value_down.setEnabled(i != len(self.var.values)-1)
+        rows = self.values_edit.selectionModel().selectedRows()
+        if rows:
+            i = rows[0].row()
+            self.move_value_up.setEnabled(i)
+            self.move_value_down.setEnabled(i != len(self.var.values)-1)
+        else:
+            self.move_value_up.setEnabled(False)
+            self.move_value_down.setEnabled(False)
+
 
 class ContinuousVariableEditor(VariableEditor):
     # TODO: enable editing of number_of_decimals, scientific format ...
