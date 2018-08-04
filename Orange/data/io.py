@@ -15,7 +15,7 @@ from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
-# from pyexcel_ods import save_data as ods_write
+from pyexcel_ods import save_data as ods_write
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
@@ -1037,10 +1037,9 @@ class ExcelReader(FileFormat):
                     sheet.write(i+1, j, fmt(v))
                     j += 1
             workbook.save(filename)
-        # elif filename.endswith(".ods"):
-        #     ods_formatted_data = [[float(fmt(v)) for fmt, v in zip(formatters, flatten(row))] for row in zipped_list_data]
-        #     print(ods_formatted_data)
-        #     ods_write(filename, {"Sheet1": ods_formatted_data})
+        elif filename.endswith(".ods"):
+            ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))] for row in zipped_list_data]
+            ods_write(filename, {"Sheet1": [headers] + ods_formatted_data})
 
 
 class DotReader(FileFormat):
