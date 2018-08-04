@@ -1,5 +1,7 @@
 import contextlib
 import csv
+import xlrd
+import xlwt
 import locale
 import pickle
 import re
@@ -13,6 +15,7 @@ from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
+# from pyexcel_ods import save_data as ods_write
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
@@ -829,6 +832,7 @@ class FileFormat(metaclass=FileFormatMeta):
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                        data.metas):
+            print(row)
             write([fmt(v) for fmt, v in zip(formatters, flatten(row))])
 
     @classmethod
@@ -975,15 +979,13 @@ class BasketReader(FileFormat):
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
-    EXTENSIONS = ('.xls', '.xlsx')
+    EXTENSIONS = ('.xls', '.xlsx', '.ods')
     DESCRIPTION = 'Mircosoft Excel spreadsheet'
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
         super().__init__(filename)
-
-        from xlrd import open_workbook
-        self.workbook = open_workbook(self.filename)
+        self.workbook = xlrd.open_workbook(self.filename)
 
     @property
     @lru_cache(1)
@@ -991,7 +993,6 @@ class ExcelReader(FileFormat):
         return self.workbook.sheet_names()
 
     def read(self):
-        import xlrd
         wb = xlrd.open_workbook(self.filename, on_demand=True)
         if self.sheet:
             ss = wb.sheet_by_name(self.sheet)
@@ -1012,6 +1013,43 @@ class ExcelReader(FileFormat):
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
+
+    @classmethod
+    def write_file(cls, filename, data):
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+
+        def formatter(var):
+            # type: (Variable) -> Callable[[Variable], Any]
+            # Return a column 'formatter' function. The function must return
+            # something that `write` knows how to write
+            if var.is_time:
+                return var.repr_val
+            elif var.is_continuous:
+                return lambda value: "" if isnan(value) else value
+            elif var.is_discrete:
+                return lambda value: "" if isnan(value) else var.values[int(value)]
+            elif var.is_string:
+                return lambda value: value
+            else:
+                return var.repr_val
+
+        formatters = [formatter(v) for v in vars]
+        zipped_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                       data.X,
+                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                       data.metas)
+        workbook = xlwt.Workbook(encoding = "utf-8") 
+        sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
+        for c, d in enumerate(headers): sheet.write(0, c, d)
+        for i, row in enumerate(zipped_data):
+            j = 0
+            for fmt, v in zip(formatters, flatten(row)):
+                sheet.write(i+1, j, fmt(v))
+                j += 1
+        workbook.save(filename)
 
 
 class DotReader(FileFormat):
