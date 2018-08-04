@@ -803,6 +803,22 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_names(data))
         write(cls.header_types(data))
         write(cls.header_flags(data))
+    
+    @classmethod
+    def formatter(cls, var):
+        # type: (Variable) -> Callable[[Variable], Any]
+        # Return a column 'formatter' function. The function must return
+        # something that `write` knows how to write
+        if var.is_time:
+            return var.repr_val
+        elif var.is_continuous:
+            return lambda value: "" if isnan(value) else value
+        elif var.is_discrete:
+            return lambda value: "" if isnan(value) else var.values[int(value)]
+        elif var.is_string:
+            return lambda value: value
+        else:
+            return var.repr_val
 
     @classmethod
     def write_data(cls, write, data):
@@ -812,27 +828,11 @@ class FileFormat(metaclass=FileFormatMeta):
                           data.domain.class_vars,
                           data.domain.metas))
 
-        def formatter(var):
-            # type: (Variable) -> Callable[[Variable], Any]
-            # Return a column 'formatter' function. The function must return
-            # something that `write` knows how to write
-            if var.is_time:
-                return var.repr_val
-            elif var.is_continuous:
-                return lambda value: "" if isnan(value) else value
-            elif var.is_discrete:
-                return lambda value: "" if isnan(value) else var.values[int(value)]
-            elif var.is_string:
-                return lambda value: value
-            else:
-                return var.repr_val
-
-        formatters = [formatter(v) for v in vars]
+        formatters = [cls.formatter(v) for v in vars]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                        data.metas):
-            print(row)
             write([fmt(v) for fmt, v in zip(formatters, flatten(row))])
 
     @classmethod
@@ -1020,36 +1020,27 @@ class ExcelReader(FileFormat):
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))
-
-        def formatter(var):
-            # type: (Variable) -> Callable[[Variable], Any]
-            # Return a column 'formatter' function. The function must return
-            # something that `write` knows how to write
-            if var.is_time:
-                return var.repr_val
-            elif var.is_continuous:
-                return lambda value: "" if isnan(value) else value
-            elif var.is_discrete:
-                return lambda value: "" if isnan(value) else var.values[int(value)]
-            elif var.is_string:
-                return lambda value: value
-            else:
-                return var.repr_val
-
-        formatters = [formatter(v) for v in vars]
-        zipped_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                        data.metas)
-        workbook = xlwt.Workbook(encoding = "utf-8") 
-        sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
-        for c, d in enumerate(headers): sheet.write(0, c, d)
-        for i, row in enumerate(zipped_data):
-            j = 0
-            for fmt, v in zip(formatters, flatten(row)):
-                sheet.write(i+1, j, fmt(v))
-                j += 1
-        workbook.save(filename)
+        headers = cls.header_names(data)
+        if filename.endswith((".xls", ".xlsx")):
+            workbook = xlwt.Workbook(encoding = "utf-8") 
+            sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
+            for c, header in enumerate(headers): 
+                sheet.write(0, c, header)
+            for i, row in enumerate(zipped_list_data):
+                j = 0
+                for fmt, v in zip(formatters, flatten(row)):
+                    sheet.write(i+1, j, fmt(v))
+                    j += 1
+            workbook.save(filename)
+        # elif filename.endswith(".ods"):
+        #     ods_formatted_data = [[float(fmt(v)) for fmt, v in zip(formatters, flatten(row))] for row in zipped_list_data]
+        #     print(ods_formatted_data)
+        #     ods_write(filename, {"Sheet1": ods_formatted_data})
 
 
 class DotReader(FileFormat):
