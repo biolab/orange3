@@ -442,6 +442,7 @@ class OWBoxPlot(widget.OWWidget):
         self.closeContext()
         self.box_scene.clearSelection()
         self.box_scene.clear()
+        self.box_view.viewport().update()
         self.attr_labels = []
         self.labels = []
         self.boxes = []
