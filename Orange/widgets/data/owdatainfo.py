@@ -54,7 +54,7 @@ class OWDataInfo(widget.OWWidget):
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
-        self.targets = ""
+        self.targets = "None"
         self.data_attributes = ""
         self.data_desc = None
 
@@ -146,6 +146,8 @@ class OWDataInfo(widget.OWWidget):
             else:
                 self.targets = "<p>Multi-target data</p>\n" + pack_table(
                     (("Categorical", disc_class), ("Numeric", cont_class)))
+        else:
+            self.targets = "None"
 
         self.data_desc = dd = OrderedDict()
 
