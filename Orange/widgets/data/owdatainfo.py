@@ -34,10 +34,11 @@ class OWDataInfo(widget.OWWidget):
         super().__init__()
 
         self.data(None)
+        self.data_set_name = "N/A"
         self.data_set_size = self.features = self.meta_attributes = ""
         self.location = ""
-        for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
-                    "Location", "Data Attributes"):
+        for box in ("Data Set Name", "Data Set Size", "Features", "Targets",
+                    "Meta Attributes", "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
             bo = gui.vBox(self.controlArea, box,
                           addSpace=False and box != "Meta Attributes")
@@ -73,6 +74,7 @@ class OWDataInfo(widget.OWWidget):
             ) + "</table>\n"
 
         if data is None:
+            self.data_set_name = "N/A"
             self.data_set_size = "No data"
             self.features = self.targets = self.meta_attributes = "None"
             self.location = ""
@@ -98,6 +100,11 @@ class OWDataInfo(widget.OWWidget):
                 ("Columns", len(domain)+len(domain.metas)))) + sparseness
 
         threading.Thread(target=update_size).start()
+
+        if hasattr(data, "name"):
+            self.data_set_name = data.name
+        else:
+            self.data_set_name = "N/A"
 
         if not domain.attributes:
             self.features = "None"
