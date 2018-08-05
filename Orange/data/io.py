@@ -1,7 +1,5 @@
 import contextlib
 import csv
-import xlrd
-import xlwt
 import locale
 import pickle
 import re
@@ -15,7 +13,6 @@ from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
-from pyexcel_ods import save_data as ods_write
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
@@ -26,6 +23,10 @@ from glob import glob
 
 import numpy as np
 from chardet.universaldetector import UniversalDetector
+
+import xlrd
+import xlwt
+from pyexcel_ods import save_data as ods_write
 
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
@@ -800,7 +801,7 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_names(data))
         write(cls.header_types(data))
         write(cls.header_flags(data))
-    
+
     @classmethod
     def formatter(cls, var):
         # type: (Variable) -> Callable[[Variable], Any]
@@ -1019,14 +1020,14 @@ class ExcelReader(FileFormat):
                           data.domain.metas))
         formatters = [cls.formatter(v) for v in vars]
         zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                       data.X,
-                       data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                       data.metas)
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
         headers = cls.header_names(data)
         if filename.endswith((".xls", ".xlsx")):
-            workbook = xlwt.Workbook(encoding = "utf-8") 
+            workbook = xlwt.Workbook(encoding="utf-8")
             sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
-            for c, header in enumerate(headers): 
+            for c, header in enumerate(headers):
                 sheet.write(0, c, header)
             for i, row in enumerate(zipped_list_data):
                 j = 0
@@ -1035,7 +1036,8 @@ class ExcelReader(FileFormat):
                     j += 1
             workbook.save(filename)
         elif filename.endswith(".ods"):
-            ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))] for row in zipped_list_data]
+            ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))]
+                                  for row in zipped_list_data]
             ods_write(filename, {"Sheet1": [headers] + ods_formatted_data})
 
 
