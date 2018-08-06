@@ -4,11 +4,10 @@ from unittest.mock import patch
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import Compression, TabReader, PickleReader, FileFormat
+from Orange.data.io import Compression, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.filedialogs import \
-    format_filter, fix_extension, open_filename_dialog_save
+from Orange.widgets.utils.filedialogs import format_filter
 from Orange.widgets.data.owsave import OWSave
 
 FILE_TYPES = {
@@ -46,7 +45,7 @@ class TestOWSave(WidgetTest):
             self.widget.compression = c
             self.widget.compress = d
             self.widget.filetype = t
-            self.widget._update_extension()
+            self.widget.update_extension()
             self.assertEqual(len(self.widget.get_writer_selected().EXTENSIONS), 1)
 
     def test_ordinary_save(self):
@@ -54,7 +53,7 @@ class TestOWSave(WidgetTest):
 
         for ext, suffix in FILE_TYPES.items():
             self.widget.filetype = ext
-            self.widget._update_extension()
+            self.widget.update_extension()
             writer = self.widget.get_writer_selected()
             with named_file("", suffix=suffix) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
@@ -71,9 +70,10 @@ class TestOWSave(WidgetTest):
         for type, compression in itertools.product(FILE_TYPES.keys(), [x for x, _ in COMPRESSIONS]):
             self.widget.filetype = type
             self.widget.compression = compression
-            self.widget._update_extension()
+            self.widget.update_extension()
             writer = self.widget.get_writer_selected()
-            with named_file("", suffix=FILE_TYPES[type] + dict(COMPRESSIONS)[compression]) as filename:
+            with named_file("",
+                            suffix=FILE_TYPES[type] + dict(COMPRESSIONS)[compression]) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
                     return fn, format_filter(w)
 

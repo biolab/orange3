@@ -46,11 +46,12 @@ class OWSave(widget.OWWidget):
     def get_writer_selected(self):
         writer = FileFormat.get_reader(self.type_ext)
         try:
-            writer.EXTENSIONS = [writer.EXTENSIONS[writer.EXTENSIONS.index(self.type_ext + self.compression_ext)]]
+            writer.EXTENSIONS = [
+                writer.EXTENSIONS[writer.EXTENSIONS.index(self.type_ext + self.compress_ext)]]
             return writer
         except ValueError:
             self.Error.not_supported_extension()
-            return
+            return None
 
     @classmethod
     def remove_extensions(cls, filename):
@@ -69,7 +70,7 @@ class OWSave(widget.OWWidget):
         self.filename = ""
         self.basename = ""
         self.type_ext = ""
-        self.compression_ext = ""
+        self.compress_ext = ""
         self.writer = None
 
         form = QFormLayout(
@@ -118,9 +119,9 @@ class OWSave(widget.OWWidget):
 
     def adjust_label(self):
         if self.filename:
-            # filename = os.path.split(self.filename)[1]
             text = "Auto save as '{}'" if self.auto_save else "Save as '{}'"
-            self.save.button.setText(text.format(self.basename + self.type_ext + self.compression_ext))
+            self.save.button.setText(
+                text.format(self.basename + self.type_ext + self.compress_ext))
 
     @Inputs.data
     def dataset(self, data):
@@ -132,14 +133,16 @@ class OWSave(widget.OWWidget):
 
         self.controls.filetype.clear()
         if self.data.is_sparse():
-            self.controls.filetype.insertItems(0, [item for item, _, supports_sparse in FILE_TYPES if supports_sparse])
+            self.controls.filetype.insertItems(0, [item for item, _, supports_sparse in FILE_TYPES
+                                                   if supports_sparse])
         else:
             self.controls.filetype.insertItems(0, [item for item, _, _ in FILE_TYPES])
 
     def save_file_as(self):
-        file_name = self.remove_extensions(self.filename) or os.path.join(self.last_dir or os.path.expanduser("~"),
-                                                                          getattr(self.data, 'name', ''))
-        self._update_extension()
+        file_name = self.remove_extensions(self.filename) or os.path.join(
+            self.last_dir or os.path.expanduser("~"),
+            getattr(self.data, 'name', ''))
+        self.update_extension()
         writer = self.get_writer_selected()
         if not writer:
             return
@@ -164,19 +167,20 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         else:
             try:
-                self.writer.write(os.path.join(self.last_dir, self.basename + self.type_ext + self.compression_ext),
+                self.writer.write(os.path.join(self.last_dir,
+                                               self.basename + self.type_ext + self.compress_ext),
                                   self.data)
             except Exception as err_value:
                 self.error(str(err_value))
             else:
                 self.error()
 
-    def _update_extension(self):
+    def update_extension(self):
         self.type_ext = [ext for name, ext, _ in FILE_TYPES if name == self.filetype][0]
-        self.compression_ext = dict(COMPRESSIONS)[self.compression] if self.compress else ''
+        self.compress_ext = dict(COMPRESSIONS)[self.compression] if self.compress else ''
 
     def _update_text(self):
-        self._update_extension()
+        self.update_extension()
         self.adjust_label()
 
 
@@ -188,13 +192,6 @@ if __name__ == "__main__":
     table = Table("iris")
     ow = OWSave()
     ow.show()
-
-    """
-    from scipy import sparse
-    table.X = sparse.csr_matrix(table.X)
-    """
-
-    table.is_sparse()
     ow.dataset(table)
     a.exec()
     ow.saveSettings()
