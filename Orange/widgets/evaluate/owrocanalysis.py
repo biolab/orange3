@@ -642,15 +642,14 @@ class OWROCAnalysis(widget.OWWidget):
 
                 curve_pts = curve.curve.points
 
-                # Find closest point on curve and display it
-                idx_closest = numpy.argmin(
-                    [numpy.linalg.norm(mouse_pt - [curve_pts.fpr[idx], curve_pts.tpr[idx]])
-                     for idx in range(len(curve_pts.thresholds))])
+                roc_points = numpy.column_stack((curve_pts.fpr, curve_pts.tpr))
+                diff = numpy.subtract(roc_points, mouse_pt)
+                # Find closest point on curve and display the tooltip there
+                idx_closest = numpy.argmin(numpy.linalg.norm(diff, axis=1))
 
                 thresh = curve_pts.thresholds[idx_closest]
                 if not numpy.isnan(thresh):
-                    tt_loc = QCursor.pos()
-                    QToolTip.showText(tt_loc, "Threshold: {:.3f}".format(thresh))
+                    QToolTip.showText(QCursor.pos(), "Threshold: {:.3f}".format(thresh))
                     self._tooltip_cache = ([curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest]],
                                            thresh, clf_idx, self.roc_averaging)
                 return
