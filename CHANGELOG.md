@@ -6,6 +6,42 @@ Change Log
 * ...
 
 
+[3.15.0] - 2018-08-06
+--------------------
+##### Enhancements
+* Silhouette Plot: Add cosine distance ([#3176](../../pull/3176))
+* Add pandas_compat.table_to_frame(tab) ([#3180](../../pull/3180))
+* OWSelectByDataIndex: New widget (move from Prototypes) ([#3181](../../pull/3181))
+* Make filters available in Orange.data namespace. ([#3170](../../pull/3170))
+* Move Louvain clustering from prototypes to core ([#3111](../../pull/3111))
+* OWWidget: Collapse/expand the widget on control area toggle ([#3146](../../pull/3146))
+* Rank: SklScorer should use the faster SklImputer. ([#3164](../../pull/3164))
+* RecentFiles: Check for missing file in workflow dir ([#3064](../../pull/3064))
+* Smart widget suggestions ([#3112](../../pull/3112))
+* Match Keywords in Widget Search ([#3117](../../pull/3117))
+* io: Speedup write_data ([#3115](../../pull/3115))
+* OWEditDomain: Enable reordering of discrete variables ([#3119](../../pull/3119))
+
+##### Bugfixes
+* oweditdomain: Fix an IndexError when all rows are deselected ([#3183](../../pull/3183))
+* OWFreeViz: fix class density size ([#3158](../../pull/3158))
+* OWBoxPlot: Fix empty continuous contingency check ([#3165](../../pull/3165))
+* OWSql: enforce data download for non PostgreSQL databases ([#3178](../../pull/3178))
+* owlouvainclustering: Make the task completion handler a single slot ([#3182](../../pull/3182))
+* OWReport: disable save and print on empty report ([#3175](../../pull/3175))
+* RemoveConstant: remove constant NaN features. ([#3163](../../pull/3163))
+* utils/concurrent: Switch default thread pool ([#3138](../../pull/3138))
+* OWBoxPlot: Fix quartiles computation ([#3159](../../pull/3159))
+* OWBoxPlot: Plot axis labels and quartiles label layout ([#3162](../../pull/3162))
+* [RFC] OWHeatMap: remove empty clusters from visualization ([#3155](../../pull/3155))
+* report: Fix the number of hidden rows. ([#3150](../../pull/3150))
+* [RFC] KMeans upgrade sparse support ([#3140](../../pull/3140))
+* WebView fixes ([#3148](../../pull/3148))
+* ci/appveyor: Update test dependencies ([#3139](../../pull/3139))
+* Replace use of obsolete QStyle.standardPixmap ([#3127](../../pull/3127))
+* BoxPlot: Hide groups with no instances ([#3122](../../pull/3122))
+
+
 [3.14.0] - 2018-07-04
 --------------------
 ##### Enhancements
@@ -865,7 +901,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.14.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.15.0...HEAD
+[3.15.0]: https://github.com/biolab/orange3/compare/3.14.0...3.15.0
 [3.14.0]: https://github.com/biolab/orange3/compare/3.13.0...3.14.0
 [3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
 [3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0
