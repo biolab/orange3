@@ -13,7 +13,7 @@ from functools import lru_cache
 from importlib import import_module
 from itertools import chain, repeat
 from math import isnan
-from numbers import Number
+
 from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, unquote as urlunquote
@@ -805,15 +805,28 @@ class FileFormat(metaclass=FileFormatMeta):
                           data.domain.attributes,
                           data.domain.class_vars,
                           data.domain.metas))
+
+        def formatter(var):
+            # type: (Variable) -> Callable[[Variable], Any]
+            # Return a column 'formatter' function. The function must return
+            # something that `write` knows how to write
+            if var.is_time:
+                return var.repr_val
+            elif var.is_continuous:
+                return lambda value: "" if isnan(value) else value
+            elif var.is_discrete:
+                return lambda value: "" if isnan(value) else var.values[int(value)]
+            elif var.is_string:
+                return lambda value: value
+            else:
+                return var.repr_val
+
+        formatters = [formatter(v) for v in vars]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                        data.metas):
-            write(['' if isinstance(val, Number) and isnan(val) else
-                   var.values[int(val)] if var.is_discrete else
-                   var.repr_val(val) if isinstance(var, TimeVariable) else
-                   val
-                   for var, val in zip(vars, flatten(row))])
+            write([fmt(v) for fmt, v in zip(formatters, flatten(row))])
 
     @classmethod
     def qualified_name(cls):

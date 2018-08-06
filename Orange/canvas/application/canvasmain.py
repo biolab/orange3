@@ -1331,7 +1331,7 @@ class CanvasMainWindow(QMainWindow):
         try:
             with open(filename, "wb") as f:
                 f.write(buffer.getvalue())
-            scheme.set_runtime_env("basedir", os.path.dirname(dirname))
+            scheme.set_runtime_env("basedir", dirname)
             return True
         except (IOError, OSError) as ex:
             log.error("%s saving '%s'", type(ex).__name__, filename,

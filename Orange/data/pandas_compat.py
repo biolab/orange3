@@ -11,7 +11,7 @@ from Orange.data import (
     ContinuousVariable,
 )
 
-__all__ = ['table_from_frame']
+__all__ = ['table_from_frame', 'table_to_frame']
 
 
 def table_from_frame(df, *, force_nominal=False):
@@ -76,3 +76,52 @@ def table_from_frame(df, *, force_nominal=False):
                             np.column_stack(X) if X else np.empty((df.shape[0], 0)),
                             None,
                             np.column_stack(M) if M else None)
+
+
+def table_to_frame(tab):
+    """
+    Convert Orange.data.Table to pandas.DataFrame
+
+    Parameters
+    ----------
+    tab : Table
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    def _column_to_series(col, vals):
+        result = ()
+        if col.is_discrete:
+            codes = pd.Series(vals).fillna(-1).astype(int)
+            result = (col.name, pd.Categorical.from_codes(codes=codes, categories=col.values,
+                                                          ordered=col.ordered))
+        elif col.is_time:
+            result = (col.name, pd.to_datetime(vals, unit='s').to_series().reset_index()[0])
+        elif col.is_continuous:
+            dt = float
+            # np.nan are not compatible with int column
+            nan_values_in_column = [t for t in vals if np.isnan(t)]
+            if col.number_of_decimals == 0 and len(nan_values_in_column) == 0:
+                dt = int
+            result = (col.name, pd.Series(vals).astype(dt))
+        elif col.is_string:
+            result = (col.name, pd.Series(vals))
+        return result
+
+    def _columns_to_series(cols, vals):
+        return [_column_to_series(col, vals[:, i]) for i, col in enumerate(cols)]
+
+    x, y, metas = [], [], []
+    domain = tab.domain
+    if domain.attributes:
+        x = _columns_to_series(domain.attributes, tab.X)
+    if domain.class_vars:
+        y_values = tab.Y.reshape(tab.Y.shape[0], len(domain.class_vars))
+        y = _columns_to_series(domain.class_vars, y_values)
+    if domain.metas:
+        metas = _columns_to_series(domain.metas, tab.metas)
+    all_series = dict(x + y + metas)
+    original_column_order = [var.name for var in tab.domain.variables]
+    unsorted_columns_df = pd.DataFrame(all_series)
+    return unsorted_columns_df[original_column_order]

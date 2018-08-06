@@ -20,8 +20,9 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 
 1. Choose the distance metric. You can choose between:
 
-   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_ ("straight line", distance between two points)
+   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_ ("straight line" distance between two points)
    -  `Manhattan <https://en.wiktionary.org/wiki/Manhattan_distance>`_ (the sum of absolute differences for all attributes)
+   -  `Cosine <https://en.wiktionary.org/wiki/Cosine_similarity>`_ (1 - cosine of the angle between two vectors)
 
 2. Select the cluster label. You can decide whether to group the instances by cluster or not.
 3. Display options:

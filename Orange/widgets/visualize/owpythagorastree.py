@@ -41,6 +41,7 @@ class OWPythagorasTree(OWWidget):
     name = 'Pythagorean Tree'
     description = 'Pythagorean Tree visualization for tree like-structures.'
     icon = 'icons/PythagoreanTree.svg'
+    keywords = ["fractal"]
 
     priority = 1000
 

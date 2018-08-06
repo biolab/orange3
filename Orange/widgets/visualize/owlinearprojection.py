@@ -217,6 +217,7 @@ class OWLinearProjection(widget.OWWidget):
                   "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
     priority = 240
+    keywords = []
 
     selection_indices = settings.Setting(None, schema_only=True)
 

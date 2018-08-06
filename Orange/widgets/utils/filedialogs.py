@@ -243,14 +243,17 @@ class RecentPath:
     def resolve(self, searchpaths):
         if self.prefix is None and os.path.exists(self.abspath):
             return self
-        elif self.prefix is not None:
+        else:
             for prefix, base in searchpaths:
-                if self.prefix == prefix:
+                path = None
+                if self.prefix and self.prefix == prefix:
                     path = os.path.join(base, self.relpath)
-                    if os.path.exists(path):
-                        return RecentPath(
-                            os.path.normpath(path), self.prefix, self.relpath,
-                            file_format=self.file_format)
+                elif not self.prefix and prefix == "basedir":
+                    path = os.path.join(base, self.basename)
+                if path and os.path.exists(path):
+                    return RecentPath(
+                        os.path.normpath(path), self.prefix, self.relpath,
+                        file_format=self.file_format)
         return None
 
     @property

@@ -127,6 +127,7 @@ class OWDiscretize(widget.OWWidget):
     name = "Discretize"
     description = "Discretize the numeric data features."
     icon = "icons/Discretize.svg"
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table, doc="Input data table")

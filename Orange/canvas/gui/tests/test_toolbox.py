@@ -14,7 +14,7 @@ class TestToolBox(test.QAppTestCase):
     def test_tool_box(self):
         w = toolbox.ToolBox()
         style = self.app.style()
-        icon = QIcon(style.standardPixmap(style.SP_FileIcon))
+        icon = QIcon(style.standardIcon(style.SP_FileIcon))
         p1 = QLabel("A Label")
         p2 = QListView()
         p3 = QLabel("Another\nlabel")

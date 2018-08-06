@@ -202,6 +202,7 @@ class OWDistanceMatrix(widget.OWWidget):
     description = "View distance matrix."
     icon = "icons/DistanceMatrix.svg"
     priority = 200
+    keywords = []
 
     class Inputs:
         distances = Input("Distances", DistMatrix)

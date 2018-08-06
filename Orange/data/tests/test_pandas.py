@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable
+from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Table
 
 try:
     import pandas as pd
@@ -60,3 +60,39 @@ class TestPandasCompat(unittest.TestCase):
         types = [type(var) for var in table.domain.attributes]
         self.assertEqual(names, ['index', '1', '2'])
         self.assertEqual(types, [DiscreteVariable, ContinuousVariable, TimeVariable])
+
+    def test_table_to_frame(self):
+        from Orange.data.pandas_compat import table_to_frame
+        table = Table("iris")
+        df = table_to_frame(table)
+        table_column_names = [var.name for var in table.domain.variables]
+        frame_column_names = df.columns
+
+        self.assertEqual(sorted(table_column_names), sorted(frame_column_names))
+        self.assertEqual(type(df['iris'].dtype), pd.api.types.CategoricalDtype)
+        self.assertEqual(list(df['sepal length'])[0:4], [5.1, 4.9, 4.7, 4.6])
+        self.assertEqual(list(df['iris'])[0:2], ['Iris-setosa', 'Iris-setosa'])
+
+    @unittest.skip("Convert all Orange demo dataset. It takes about 5s which is way to slow")
+    def test_table_to_frame_on_all_orange_dataset(self):
+        from os import listdir
+        from Orange.data.pandas_compat import table_to_frame
+        import pandas as pd
+
+        dataset_directory = "Orange/datasets/"
+
+        def _filename_to_dataset_name(f):
+            return f.split('.')[0]
+
+        def _get_orange_demo_datasets():
+            x = [_filename_to_dataset_name(f) for f in listdir(dataset_directory) if '.tab' in f]
+            return x
+
+        for name in _get_orange_demo_datasets():
+            table = Table(name)
+            df = table_to_frame(table)
+            assert_message = "Failed to process Table('{}')".format(name)
+
+            self.assertEqual(type(df), pd.DataFrame, assert_message)
+            self.assertEqual(len(df), len(table), assert_message)
+            self.assertEqual(len(df.columns), len(table.domain), assert_message)

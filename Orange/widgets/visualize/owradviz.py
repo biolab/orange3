@@ -373,9 +373,9 @@ MAX_POINTS = 100
 class OWRadviz(widget.OWWidget):
     name = "Radviz"
     description = "Radviz"
-
     icon = "icons/Radviz.svg"
     priority = 240
+    keywords = ["viz"]
 
     class Inputs:
         data = Input("Data", Table, default=True)

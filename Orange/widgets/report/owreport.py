@@ -170,10 +170,10 @@ class OWReport(OWWidget):
         box = gui.hBox(self.controlArea)
         box.setContentsMargins(-6, 0, -6, 0)
         self.save_button = gui.button(
-            box, self, "Save", callback=self.save_report
+            box, self, "Save", callback=self.save_report, disabled=True
         )
         self.print_button = gui.button(
-            box, self, "Print", callback=self._print_report
+            box, self, "Print", callback=self._print_report, disabled=True
         )
 
         class PyBridge(QObject):
@@ -232,11 +232,13 @@ class OWReport(OWWidget):
 
     def _remove_item(self, row):
         self.table_model.removeRow(row)
+        self._empty_report()
         self.report_changed = True
         self._build_html()
 
     def clear(self):
         self.table_model.clear()
+        self._empty_report()
         self.report_changed = True
         self._build_html()
 
@@ -246,8 +248,14 @@ class OWReport(OWWidget):
         item = ReportItem(name, widget.report_html, self._get_scheme(),
                           widget.__module__, widget.icon)
         self.table_model.add_item(item)
+        self._empty_report()
         self.report_changed = True
         return item
+
+    def _empty_report(self):
+        # disable save and print if no reports
+        self.save_button.setEnabled(self.table_model.rowCount())
+        self.print_button.setEnabled(self.table_model.rowCount())
 
     def _build_html(self):
         html = self.report_html_template

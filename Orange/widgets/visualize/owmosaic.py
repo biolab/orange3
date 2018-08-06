@@ -256,6 +256,7 @@ class OWMosaicDisplay(OWWidget):
     description = "Display data in a mosaic plot."
     icon = "icons/MosaicDisplay.svg"
     priority = 220
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table, default=True)

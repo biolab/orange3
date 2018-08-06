@@ -427,6 +427,32 @@ class TestOWKMeans(WidgetTest):
             self.commit_and_wait()
             self.assertEqual(compute.call_args[1]['init'], "random")
 
+    def test_always_same_cluster(self):
+        """The same random state should always return the same clusters"""
+        self.send_signal(self.widget.Inputs.data, self.iris[::10], wait=5000)
+
+        def cluster():
+            self.widget.invalidate()  # reset caches
+            self.commit_and_wait()
+            return self.get_output(self.widget.Outputs.annotated_data).metas[:, 0]
+
+        def assert_all_same(l):
+            for a1, a2 in zip(l, l[1:]):
+                np.testing.assert_equal(a1, a2)
+
+        self.widget.smart_init = 0
+        assert_all_same([cluster() for _ in range(5)])
+
+        self.widget.smart_init = 1
+        assert_all_same([cluster() for _ in range(5)])
+
+    def test_error_no_attributes(self):
+        domain = Domain([])
+        table = Table.from_domain(domain, n_rows=10)
+        self.widget.auto_commit = True
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertTrue(self.widget.Error.no_attributes.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()

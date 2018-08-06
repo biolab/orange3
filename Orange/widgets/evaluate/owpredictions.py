@@ -46,6 +46,7 @@ class OWPredictions(OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display the predictions of models for an input dataset."
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

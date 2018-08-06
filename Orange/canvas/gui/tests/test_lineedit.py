@@ -18,9 +18,7 @@ class TestSearchWidget(QAppTestCase):
         line = LineEdit()
         line.show()
 
-        action1 = QAction(QIcon(line.style().standardPixmap(
-                                    QStyle.SP_ArrowBack)
-                                ),
+        action1 = QAction(line.style().standardIcon(QStyle.SP_ArrowBack),
                           "Search", line)
         menu = QMenu()
         menu.addAction("Regex")
@@ -40,8 +38,7 @@ class TestSearchWidget(QAppTestCase):
 
         line.setAction(action1, LineEdit.LeftPosition)
 
-        action2 = QAction(QIcon(line.style().standardPixmap(
-                                        QStyle.SP_TitleBarCloseButton)),
+        action2 = QAction(line.style().standardIcon(QStyle.SP_TitleBarCloseButton),
                           "Delete", line)
         line.setAction(action2, LineEdit.RightPosition)
 

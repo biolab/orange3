@@ -317,14 +317,55 @@ class DiscreteVariableEditor(VariableEditor):
         self._setup_gui_labels()
 
     def _setup_gui_values(self):
+        vlayout = QVBoxLayout()
+        vlayout.setContentsMargins(0, 0, 0, 0)
+        vlayout.setSpacing(1)
+
         self.values_edit = QListView()
         self.values_edit.setEditTriggers(QTreeView.CurrentChanged)
         self.values_model = itemmodels.PyListModel(flags=Qt.ItemIsSelectable | \
                                         Qt.ItemIsEnabled | Qt.ItemIsEditable)
         self.values_edit.setModel(self.values_model)
 
+        self.values_edit.selectionModel().selectionChanged.connect(
+            self.on_value_selection_changed)
+
         self.values_model.dataChanged.connect(self.on_values_changed)
-        self.main_form.addRow("Values:", self.values_edit)
+
+        vlayout.addWidget(self.values_edit)
+        hlayout = QHBoxLayout()
+        hlayout.setContentsMargins(0, 0, 0, 0)
+        hlayout.setSpacing(1)
+        self.move_value_up = QAction(
+            unicodedata.lookup("UPWARDS ARROW"), self,
+            toolTip="Move up.",
+            triggered=self.move_up,
+            enabled=False,
+            shortcut=QKeySequence(QKeySequence.New))
+
+        self.move_value_down = QAction(
+            unicodedata.lookup("DOWNWARDS ARROW"), self,
+            toolTip="Move down.",
+            triggered=self.move_down,
+            enabled=False,
+            shortcut=QKeySequence(QKeySequence.Delete))
+
+        button_size = gui.toolButtonSizeHint()
+        button_size = QSize(button_size, button_size)
+
+        button = QToolButton(self)
+        button.setFixedSize(button_size)
+        button.setDefaultAction(self.move_value_up)
+        hlayout.addWidget(button)
+
+        button = QToolButton(self)
+        button.setFixedSize(button_size)
+        button.setDefaultAction(self.move_value_down)
+        hlayout.addWidget(button)
+        hlayout.addStretch(10)
+        vlayout.addLayout(hlayout)
+
+        self.main_form.addRow("Values:", vlayout)
 
     def set_data(self, var):
         """Set the variable to edit
@@ -361,9 +402,34 @@ class DiscreteVariableEditor(VariableEditor):
         VariableEditor.clear(self)
         self.values_model.clear()
 
+    def move_rows(self, rows, offset):
+        i = rows[0].row()
+        self.values_model[i], self.values_model[i+offset] = \
+            self.values_model[i+offset], self.values_model[i]
+        self.maybe_commit()
+
+    def move_up(self):
+        rows = self.values_edit.selectionModel().selectedRows()
+        self.move_rows(rows, -1)
+
+    def move_down(self):
+        rows = self.values_edit.selectionModel().selectedRows()
+        self.move_rows(rows, 1)
+
     @Slot()
     def on_values_changed(self):
         self.maybe_commit()
+
+    @Slot()
+    def on_value_selection_changed(self):
+        rows = self.values_edit.selectionModel().selectedRows()
+        if rows:
+            i = rows[0].row()
+            self.move_value_up.setEnabled(i)
+            self.move_value_down.setEnabled(i != len(self.var.values)-1)
+        else:
+            self.move_value_up.setEnabled(False)
+            self.move_value_down.setEnabled(False)
 
 
 class ContinuousVariableEditor(VariableEditor):
@@ -401,6 +467,7 @@ class OWEditDomain(widget.OWWidget):
     description = "Rename features and their values."
     icon = "icons/EditDomain.svg"
     priority = 3125
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

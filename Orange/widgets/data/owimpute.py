@@ -129,6 +129,7 @@ class OWImpute(OWWidget):
     description = "Impute missing values in the data table."
     icon = "icons/Impute.svg"
     priority = 2130
+    keywords = ["substitute", "missing"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

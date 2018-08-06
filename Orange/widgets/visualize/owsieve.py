@@ -72,6 +72,7 @@ class OWSieveDiagram(OWWidget):
                   "for a combination of values."
     icon = "icons/SieveDiagram.svg"
     priority = 200
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table, default=True)

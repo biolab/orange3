@@ -27,6 +27,7 @@ class OWMergeData(widget.OWWidget):
     description = "Merge datasets based on the values of selected features."
     icon = "icons/MergeData.svg"
     priority = 1110
+    keywords = ["join"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True, replaces=["Data A"])

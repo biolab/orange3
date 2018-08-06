@@ -289,7 +289,7 @@ class Manhattan(FittedDistance):
 
 class Cosine(FittedDistance):
     supports_sparse = True  # via fallback
-    supports_discrete = True
+    supports_discrete = False
     fallback = SklDistance('cosine')
 
     @staticmethod
@@ -348,7 +348,8 @@ class Cosine(FittedDistance):
             dist = safe_sparse_dot(data1, data2.T)
             np.clip(dist, 0, 1, out=dist)
             if x2 is None:
-                dist.flat[::dist.shape[0] + 1] = 1.0
+                diag = np.diag_indices_from(dist)
+                dist[diag] = np.where(np.isnan(dist[diag]), np.nan, 1.0)
             return 1 - dist
 
 

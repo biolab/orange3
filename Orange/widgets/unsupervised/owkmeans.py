@@ -19,6 +19,9 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
 
 
+RANDOM_STATE = 0
+
+
 class ClusterTableModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -90,6 +93,7 @@ class OWKMeans(widget.OWWidget):
                   "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
+    keywords = ["kmeans", "clustering"]
 
     class Inputs:
         data = Input("Data", Table)
@@ -106,6 +110,7 @@ class OWKMeans(widget.OWWidget):
         not_enough_data = widget.Msg(
             "Too few ({}) unique data instances for {} clusters"
         )
+        no_attributes = widget.Msg("Data is missing features.")
 
     class Warning(widget.OWWidget.Warning):
         no_silhouettes = widget.Msg(
@@ -252,15 +257,19 @@ class OWKMeans(widget.OWWidget):
         """k cannot be larger than the number of data instances."""
         return len(self.data) >= k
 
+    @property
+    def has_attributes(self):
+        return len(self.data.domain.attributes)
+
     @staticmethod
-    def _compute_clustering(data, k, init, n_init, max_iter, silhouette):
+    def _compute_clustering(data, k, init, n_init, max_iter, silhouette, random_state):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
         if k > len(data):
             raise NotEnoughData()
 
         return KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
-            compute_silhouette_score=silhouette,
+            compute_silhouette_score=silhouette, random_state=random_state,
         )(data)
 
     @Slot(int, int)
@@ -322,6 +331,7 @@ class OWKMeans(widget.OWWidget):
             n_init=self.n_init,
             max_iter=self.max_iterations,
             silhouette=True,
+            random_state=RANDOM_STATE,
         ) for k in ks]
         watcher = FutureSetWatcher(futures)
         watcher.resultReadyAt.connect(self.__clustering_complete)
@@ -387,9 +397,15 @@ class OWKMeans(widget.OWWidget):
         # cause flickering when the clusters are computed quickly, so this is
         # the better alternative
         self.table_model.clear_scores()
-        self.mainArea.setVisible(self.optimize_k and self.data is not None)
+        self.mainArea.setVisible(self.optimize_k and self.data is not None and
+                                 self.has_attributes)
 
         if self.data is None:
+            self.send_data()
+            return
+
+        if not self.has_attributes:
+            self.Error.no_attributes()
             self.send_data()
             return
 
