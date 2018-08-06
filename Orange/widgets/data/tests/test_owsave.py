@@ -4,7 +4,7 @@ from unittest.mock import patch
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import TabReader, PickleReader, FileFormat
+from Orange.data.io import Compression, TabReader, PickleReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import \
@@ -17,11 +17,11 @@ FILE_TYPES = {
     "Pickle (.pkl)": ".pkl",
 }
 
-COMPRESSIONS = {
-    "gzip (.gz)": ".gz",
-    "bbzip2 (.bz2)": ".bz2",
-    "Izma (.xz)": ".xz",
-}
+COMPRESSIONS = [
+    ("gzip ({})".format(Compression.GZIP), Compression.GZIP),
+    ("bzip2 ({})".format(Compression.BZIP2), Compression.BZIP2),
+    ("lzma ({})".format(Compression.XZ), Compression.XZ),
+]
 
 
 class AddedFormat(FileFormat):
@@ -46,6 +46,7 @@ class TestOWSave(WidgetTest):
             self.widget.compression = c
             self.widget.compress = d
             self.widget.filetype = t
+            self.widget._update_extension()
             self.assertEqual(len(self.widget.get_writer_selected().EXTENSIONS), 1)
 
     def test_ordinary_save(self):
@@ -53,6 +54,7 @@ class TestOWSave(WidgetTest):
 
         for ext, suffix in FILE_TYPES.items():
             self.widget.filetype = ext
+            self.widget._update_extension()
             writer = self.widget.get_writer_selected()
             with named_file("", suffix=suffix) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
@@ -66,39 +68,15 @@ class TestOWSave(WidgetTest):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
 
         self.widget.compress = True
-        for type, compression in itertools.product(FILE_TYPES.keys(), COMPRESSIONS.keys()):
+        for type, compression in itertools.product(FILE_TYPES.keys(), [x for x, _ in COMPRESSIONS]):
             self.widget.filetype = type
             self.widget.compression = compression
+            self.widget._update_extension()
             writer = self.widget.get_writer_selected()
-            with named_file("", suffix=FILE_TYPES[type] + COMPRESSIONS[compression]) as filename:
+            with named_file("", suffix=FILE_TYPES[type] + dict(COMPRESSIONS)[compression]) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
                     return fn, format_filter(w)
 
                 with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", choose_file):
                     self.widget.save_file_as()
                 self.assertEqual(len(Table(filename)), 150)
-
-    def test_filename_with_fix_extension(self):
-
-        def mock_fix_choice(ret):
-            f = lambda *x: ret
-            f.__dict__.update(fix_extension.__dict__)
-            return f
-
-        change_filter = iter([PickleReader, TabReader])
-
-        for file_choice, fix in [
-            [lambda *x: ("o.pickle", format_filter(TabReader)),
-             mock_fix_choice(fix_extension.CHANGE_EXT)],
-            [lambda *x: ("o.tab", format_filter(PickleReader)),
-             mock_fix_choice(fix_extension.CHANGE_FORMAT)],
-            [lambda *x: ("o.tab", format_filter(next(change_filter))),
-             mock_fix_choice(fix_extension.CANCEL)]
-        ]:
-            with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", file_choice), \
-                 patch("Orange.widgets.utils.filedialogs.fix_extension", fix):
-                saved_filename, format, filter = \
-                    open_filename_dialog_save(".", None, OWSave.get_writers(False))
-                self.assertEqual(saved_filename, "o.tab")
-                self.assertEqual(format, TabReader)
-                self.assertEqual(filter, format_filter(TabReader))
