@@ -1,12 +1,18 @@
 from datetime import datetime
+import platform
 import json
 import logging
 import os
+try:
+    from Orange.canvas import config
+    from Orange.version import full_version as VERSION_STR
+except ImportError:
+    VERSION_STR = '???'
 
-from Orange.canvas import config
 import requests
 
 log = logging.getLogger(__name__)
+
 
 statistics_path = os.path.join(config.data_dir(), "usage-statistics.json")
 server_url = os.getenv('ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/usage-statistics")
@@ -59,6 +65,8 @@ class UsageStatistics:
     def write_statistics(self):
         statistics = {
             "Date": str(datetime.now().date()),
+            "Orange Version": VERSION_STR,
+            "Operating System": platform.system() + " " + platform.release(),
             "Session": {
                 "Quick Menu Search": self.quick_menu_actions,
                 "Toolbox Click": self.toolbox_clicks,
