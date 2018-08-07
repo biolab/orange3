@@ -3,6 +3,12 @@ import unittest
 import tempfile
 from contextlib import contextmanager
 
+try:
+    from numpy.testing import assert_array_compare
+except ImportError:
+    # numpy < 1.14
+    from numpy.testing.utils import assert_array_compare
+
 import numpy as np
 import Orange
 
@@ -42,7 +48,7 @@ def assert_array_nanequal(a, b, *args, **kwargs):
     a : array-like
     b : array-like
     """
-    return np.testing.utils.assert_array_compare(naneq, a, b, *args, **kwargs)
+    return assert_array_compare(naneq, a, b, *args, **kwargs)
 
 
 def test_dirname():

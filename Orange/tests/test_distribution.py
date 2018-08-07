@@ -13,6 +13,14 @@ from Orange import data
 from Orange.tests import test_filename
 
 
+def assert_dist_equal(dist, expected):
+    np.testing.assert_array_equal(np.asarray(dist), expected)
+
+
+def assert_dist_almost_equal(dist, expected):
+    np.testing.assert_almost_equal(np.asarray(dist), expected)
+
+
 class TestDiscreteDistribution(unittest.TestCase):
     def setUp(self):
         self.freqs = [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0]
@@ -39,7 +47,7 @@ class TestDiscreteDistribution(unittest.TestCase):
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
         self.assertEqual(disc.unknowns, 0)
-        np.testing.assert_array_equal(disc, self.freqs)
+        assert_dist_equal(disc, self.freqs)
 
         disc2 = distribution.Discrete(d, d.domain.class_var)
         self.assertIsInstance(disc2, np.ndarray)
@@ -75,8 +83,7 @@ class TestDiscreteDistribution(unittest.TestCase):
         self.assertIsInstance(disc1, np.ndarray)
         self.assertIs(disc1.variable, d.domain.class_var)
         self.assertEqual(disc.unknowns, 0)
-        np.testing.assert_array_equal(disc1,
-                                      [0]*len(d.domain.class_var.values))
+        assert_dist_equal(disc1, [0]*len(d.domain.class_var.values))
 
     def test_fallback(self):
         d = data.Table("zoo")
@@ -85,7 +92,8 @@ class TestDiscreteDistribution(unittest.TestCase):
         d._compute_distributions = Mock(side_effect=NotImplementedError)
         fallback = distribution.Discrete(d, "type")
 
-        np.testing.assert_almost_equal(fallback, default)
+        np.testing.assert_almost_equal(
+            np.asarray(fallback), np.asarray(default))
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
     def test_fallback_with_weights_and_nan(self):
@@ -97,7 +105,8 @@ class TestDiscreteDistribution(unittest.TestCase):
         d._compute_distributions = Mock(side_effect=NotImplementedError)
         fallback = distribution.Discrete(d, "type")
 
-        np.testing.assert_almost_equal(fallback, default)
+        np.testing.assert_almost_equal(
+            np.asarray(fallback), np.asarray(default))
         np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
 
     def test_equality(self):
@@ -172,7 +181,7 @@ class TestDiscreteDistribution(unittest.TestCase):
         disc1 = distribution.Discrete(None, d.domain.class_var)
         disc1.normalize()
         v = len(d.domain.class_var.values)
-        np.testing.assert_almost_equal(disc1, [1/v]*v)
+        assert_dist_almost_equal(disc1, [1/v]*v)
 
     def test_modus(self):
         d = data.Table("zoo")
@@ -231,7 +240,7 @@ class TestContinuousDistribution(unittest.TestCase):
             self.assertIsInstance(disc, np.ndarray)
             self.assertIs(disc.variable, petal_length)
             self.assertEqual(disc.unknowns, 0)
-            np.testing.assert_almost_equal(disc, self.freqs)
+            assert_dist_almost_equal(disc, self.freqs)
 
     def test_construction(self):
         d = self.iris
@@ -255,14 +264,14 @@ class TestContinuousDistribution(unittest.TestCase):
         self.assertIsInstance(disc1, np.ndarray)
         self.assertIs(disc7.variable, petal_length)
         self.assertEqual(disc7.unknowns, 0)
-        np.testing.assert_array_equal(disc1, np.zeros((2, 10)))
+        assert_dist_equal(disc1, np.zeros((2, 10)))
 
         dd = [list(range(5)), [1, 1, 2, 5, 1]]
         disc2 = distribution.Continuous(dd)
         self.assertIsInstance(disc2, np.ndarray)
         self.assertIsNone(disc2.variable)
         self.assertEqual(disc2.unknowns, 0)
-        np.testing.assert_array_equal(disc2, dd)
+        assert_dist_equal(disc2, dd)
 
     def test_hash(self):
         d = self.iris
@@ -287,16 +296,16 @@ class TestContinuousDistribution(unittest.TestCase):
 
         disc = distribution.Continuous(d, "petal length")
 
-        np.testing.assert_almost_equal(disc, self.freqs)
+        assert_dist_equal(disc, self.freqs)
         disc.normalize()
         self.freqs[1, :] /= 150
-        np.testing.assert_almost_equal(disc, self.freqs)
+        assert_dist_equal(disc, self.freqs)
 
         disc1 = distribution.Continuous(10, petal_length)
         disc1.normalize()
         f = np.zeros((2, 10))
         f[1, :] = 0.1
-        np.testing.assert_almost_equal(disc1, f)
+        assert_dist_equal(disc1, f)
 
     def test_modus(self):
         disc = distribution.Continuous([list(range(5)), [1, 1, 2, 5, 1]])
@@ -327,8 +336,7 @@ class TestClassDistribution(unittest.TestCase):
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, d.domain["type"])
         self.assertEqual(disc.unknowns, 0)
-        np.testing.assert_array_equal(disc,
-                                      [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
+        assert_dist_equal(disc, [4.0, 20.0, 13.0, 8.0, 10.0, 41.0, 5.0])
 
     def test_multiple_target_variables(self):
         d = data.Table.from_numpy(
@@ -360,7 +368,7 @@ class TestGetDistribution(unittest.TestCase):
         self.assertIsInstance(disc, np.ndarray)
         self.assertIs(disc.variable, cls)
         self.assertEqual(disc.unknowns, 0)
-        np.testing.assert_array_equal(disc, [50, 50, 50])
+        assert_dist_equal(disc, [50, 50, 50])
 
         petal_length = d.columns.petal_length
         freqs = np.array([(1.0, 1), (1.1, 1), (1.2, 2), (1.3, 7), (1.4, 12),
@@ -373,7 +381,7 @@ class TestGetDistribution(unittest.TestCase):
                           (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
                           (6.6, 1), (6.7, 2), (6.9, 1)]).T
         disc = distribution.get_distribution(d, petal_length)
-        np.testing.assert_almost_equal(disc, freqs)
+        assert_dist_equal(disc, freqs)
 
 
 class TestDomainDistribution(unittest.TestCase):
@@ -395,8 +403,8 @@ class TestDomainDistribution(unittest.TestCase):
                           (5.4, 2), (5.5, 3), (5.6, 6), (5.7, 3), (5.8, 3),
                           (5.9, 2), (6.0, 2), (6.1, 3), (6.3, 1), (6.4, 1),
                           (6.6, 1), (6.7, 2), (6.9, 1)]).T
-        np.testing.assert_almost_equal(ddist[2], freqs)
-        np.testing.assert_almost_equal(ddist[-1], [50, 50, 50])
+        assert_dist_equal(ddist[2], freqs)
+        assert_dist_equal(ddist[-1], [50, 50, 50])
 
     def test_sparse_get_distributions(self):
         def assert_dist_and_unknowns(computed, goal_dist):
@@ -405,7 +413,7 @@ class TestDomainDistribution(unittest.TestCase):
             sum_dist = np.sum(goal_dist[1, :] if goal_dist.ndim == 2 else goal_dist)
             n_all = np.sum(d.W) if d.has_weights() else len(d)
 
-            np.testing.assert_almost_equal(computed, goal_dist)
+            assert_dist_almost_equal(computed, goal_dist)
             self.assertEqual(computed.unknowns, n_all - sum_dist)
 
         domain = data.Domain(
@@ -483,13 +491,13 @@ class TestDomainDistribution(unittest.TestCase):
         d = data.Table(test_filename("test9.tab"))
         variable = d.domain[-2]
         dist, _ = d._compute_distributions([variable])[0]
-        np.testing.assert_almost_equal(dist, [3, 3, 2])
+        assert_dist_equal(dist, [3, 3, 2])
         # repeat with nan values
         assert d.metas.dtype.kind == "O"
         assert d.metas[0, 1] == 0
         d.metas[0, 1] = np.nan
         dist, nanc = d._compute_distributions([variable])[0]
-        np.testing.assert_almost_equal(dist, [2, 3, 2])
+        assert_dist_equal(dist, [2, 3, 2])
         self.assertEqual(nanc, 1)
 
 
