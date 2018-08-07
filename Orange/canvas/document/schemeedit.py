@@ -132,6 +132,7 @@ class SchemeEditWidget(QWidget):
         self.__possibleMouseItemsMove = False
         self.__itemsMoving = {}
         self.__contextMenuTarget = None
+        self.__dropTarget = None
         self.__quickMenu = None
         self.__quickTip = ""
 
@@ -1066,23 +1067,43 @@ class SchemeEditWidget(QWidget):
 
     def eventFilter(self, obj, event):
         # Filter the scene's drag/drop events.
+        MIME_TYPE = "application/vnv.orange-canvas.registry.qualified-name"
         if obj is self.scene():
             etype = event.type()
             if etype == QEvent.GraphicsSceneDragEnter or \
                     etype == QEvent.GraphicsSceneDragMove:
                 mime_data = event.mimeData()
-                if mime_data.hasFormat(
-                        "application/vnv.orange-canvas.registry.qualified-name"
-                        ):
+                drop_target = None
+                if mime_data.hasFormat(MIME_TYPE):
+                    qname = bytes(mime_data.data(MIME_TYPE)).decode("ascii")
+                    try:
+                        desc = self.__registry.widget(qname)
+                    except KeyError:
+                        pass
+                    else:
+                        item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                        link = self.scene().link_for_item(item) if item else None
+                        if link is not None and can_insert_node(desc, link):
+                            drop_target = item
+                            drop_target.setHoverState(True)
                     event.acceptProposedAction()
                 else:
                     event.ignore()
+
+                if self.__dropTarget is not None and \
+                        self.__dropTarget is not drop_target:
+                    self.__dropTarget.setHoverState(False)
+                    # self.__dropTarget = None
+
+                self.__dropTarget = drop_target
                 return True
+            elif etype == QEvent.GraphicsSceneDragLeave:
+                if self.__dropTarget is not None:
+                    self.__dropTarget.setHoverState(False)
+                    self.__dropTarget = None
             elif etype == QEvent.GraphicsSceneDrop:
                 data = event.mimeData()
-                qname = data.data(
-                    "application/vnv.orange-canvas.registry.qualified-name"
-                )
+                qname = data.data(MIME_TYPE)
                 try:
                     desc = self.__registry.widget(bytes(qname).decode())
                 except KeyError:
