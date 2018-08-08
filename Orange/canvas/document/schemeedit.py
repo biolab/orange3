@@ -29,13 +29,14 @@ from AnyQt.QtGui import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication
-)
+    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication,
+    QPoint)
 
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
+from Orange.canvas.registry import WidgetDescription
 from .suggestions import Suggestions
-from ..registry.qt import whats_this_helper
+from ..registry.qt import whats_this_helper, QtWidgetRegistry
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
 from ..scheme import (
@@ -131,6 +132,7 @@ class SchemeEditWidget(QWidget):
         self.__possibleMouseItemsMove = False
         self.__itemsMoving = {}
         self.__contextMenuTarget = None
+        self.__dropTarget = None
         self.__quickMenu = None
         self.__quickTip = ""
 
@@ -170,6 +172,8 @@ class SchemeEditWidget(QWidget):
 
         self.__linkMenu = QMenu(self.tr("Link"), self)
         self.__linkMenu.addAction(self.__linkEnableAction)
+        self.__linkMenu.addSeparator()
+        self.__linkMenu.addAction(self.__nodeInsertAction)
         self.__linkMenu.addSeparator()
         self.__linkMenu.addAction(self.__linkRemoveAction)
         self.__linkMenu.addAction(self.__linkResetAction)
@@ -328,6 +332,13 @@ class SchemeEditWidget(QWidget):
                     toolTip=self.tr("Remove link."),
                     )
 
+        self.__nodeInsertAction = \
+            QAction(self.tr("Insert Widget"), self,
+                    objectName="node-insert-action",
+                    triggered=self.__nodeInsert,
+                    toolTip=self.tr("Insert widget."),
+                    )
+
         self.__linkResetAction = \
             QAction(self.tr("Reset Signals"), self,
                     objectName="link-reset-action",
@@ -346,6 +357,7 @@ class SchemeEditWidget(QWidget):
                          self.__newArrowAnnotationAction,
                          self.__linkEnableAction,
                          self.__linkRemoveAction,
+                         self.__nodeInsertAction,
                          self.__linkResetAction,
                          self.__duplicateSelectedAction])
 
@@ -867,6 +879,30 @@ class SchemeEditWidget(QWidget):
         command = commands.RemoveLinkCommand(self.__scheme, link)
         self.__undoStack.push(command)
 
+    def insertNode(self, new_node, old_link):
+        """
+        Insert a node in-between two linked nodes.
+        """
+        source_node = old_link.source_node
+        sink_node = old_link.sink_node
+
+        possible_links = (self.scheme().propose_links(source_node, new_node),
+                          self.scheme().propose_links(new_node, sink_node))
+
+        first_link_sink_channel = [l[1] for l in possible_links[0]
+                                   if l[0] == old_link.source_channel][0]
+        second_link_source_channel = [l[0] for l in possible_links[1]
+                                      if l[1] == old_link.sink_channel][0]
+
+        new_links = (
+            SchemeLink(source_node, old_link.source_channel,
+                       new_node, first_link_sink_channel),
+            SchemeLink(new_node, second_link_source_channel,
+                       sink_node, old_link.sink_channel))
+
+        command = commands.InsertNodeCommand(self.__scheme, new_node, old_link, new_links)
+        self.__undoStack.push(command)
+
     def onNewLink(self, func):
         """
         Runs function when new link is added to current scheme.
@@ -1031,30 +1067,56 @@ class SchemeEditWidget(QWidget):
 
     def eventFilter(self, obj, event):
         # Filter the scene's drag/drop events.
+        MIME_TYPE = "application/vnv.orange-canvas.registry.qualified-name"
         if obj is self.scene():
             etype = event.type()
             if etype == QEvent.GraphicsSceneDragEnter or \
                     etype == QEvent.GraphicsSceneDragMove:
                 mime_data = event.mimeData()
-                if mime_data.hasFormat(
-                        "application/vnv.orange-canvas.registry.qualified-name"
-                        ):
+                drop_target = None
+                if mime_data.hasFormat(MIME_TYPE):
+                    qname = bytes(mime_data.data(MIME_TYPE)).decode("ascii")
+                    try:
+                        desc = self.__registry.widget(qname)
+                    except KeyError:
+                        pass
+                    else:
+                        item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                        link = self.scene().link_for_item(item) if item else None
+                        if link is not None and can_insert_node(desc, link):
+                            drop_target = item
+                            drop_target.setHoverState(True)
                     event.acceptProposedAction()
                 else:
                     event.ignore()
+
+                if self.__dropTarget is not None and \
+                        self.__dropTarget is not drop_target:
+                    self.__dropTarget.setHoverState(False)
+                    # self.__dropTarget = None
+
+                self.__dropTarget = drop_target
                 return True
+            elif etype == QEvent.GraphicsSceneDragLeave:
+                if self.__dropTarget is not None:
+                    self.__dropTarget.setHoverState(False)
+                    self.__dropTarget = None
             elif etype == QEvent.GraphicsSceneDrop:
                 data = event.mimeData()
-                qname = data.data(
-                    "application/vnv.orange-canvas.registry.qualified-name"
-                )
+                qname = data.data(MIME_TYPE)
                 try:
                     desc = self.__registry.widget(bytes(qname).decode())
                 except KeyError:
                     log.error("Unknown qualified name '%s'", qname)
                 else:
                     pos = event.scenePos()
-                    self.createNewNode(desc, position=(pos.x(), pos.y()))
+                    item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                    link = self.scene().link_for_item(item) if item else None
+                    if link and can_insert_node(desc, link):
+                        node = self.newNodeHelper(desc, position=(pos.x(), pos.y()))
+                        self.insertNode(node, link)
+                    else:
+                        self.createNewNode(desc, position=(pos.x(), pos.y()))
                 return True
 
             elif etype == QEvent.GraphicsSceneMousePress:
@@ -1594,6 +1656,50 @@ class SchemeEditWidget(QWidget):
             )
             action.edit_links()
 
+    def __nodeInsert(self):
+        """
+        Node insert was requested from the context menu.
+        """
+        if not self.__contextMenuTarget:
+            return
+
+        original_link = self.__contextMenuTarget
+        source_node = original_link.source_node
+        sink_node = original_link.sink_node
+
+        def filterFunc(index):
+            desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+            if isinstance(desc, WidgetDescription):
+                return can_insert_node(desc, original_link)
+            else:
+                return False
+
+        x = (source_node.position[0] + sink_node.position[0]) / 2
+        y = (source_node.position[1] + sink_node.position[1]) / 2
+
+        menu = self.quickMenu()
+        menu.setFilterFunc(filterFunc)
+        menu.setSortingFunc(None)
+
+        view = self.view()
+        try:
+            action = menu.exec_(view.mapToGlobal(view.mapFromScene(QPoint(x, y))))
+        finally:
+            menu.setFilterFunc(None)
+
+        if action:
+            item = action.property("item")
+            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+        else:
+            return
+
+        if can_insert_node(desc, original_link):
+            new_node = self.newNodeHelper(desc, position=(x, y))
+            self.insertNode(new_node, original_link)
+        else:
+            log.info("Cannot insert node: links not possible.")
+
+
     def __duplicateSelected(self):
         """
         Duplicate currently selected nodes.
@@ -1934,6 +2040,13 @@ def is_printable(unichar):
 def node_properties(scheme):
     scheme.sync_node_properties()
     return [dict(node.properties) for node in scheme.nodes]
+
+
+def can_insert_node(new_node_desc, original_link):
+    return any(scheme.compatible_channels(original_link.source_channel, input)
+               for input in new_node_desc.inputs) and \
+           any(scheme.compatible_channels(output, original_link.sink_channel)
+               for output in new_node_desc.outputs)
 
 
 def uniquify(item, names, pattern="{item}-{_}", start=0):
