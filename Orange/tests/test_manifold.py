@@ -2,13 +2,14 @@
 # pylint: disable=missing-docstring
 
 import unittest
+
 import numpy as np
 
+from Orange.data import Table
+from Orange.distance import Euclidean
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import torgerson
-from Orange.distance import Euclidean
-from Orange.data import Table
 
 
 class TestManifold(unittest.TestCase):
@@ -116,25 +117,6 @@ class TestManifold(unittest.TestCase):
         se = SpectralEmbedding(n_components=n_com, n_neighbors=5)
         se = se(data)
         self.assertEqual((data.X.shape[0], n_com), se.embedding_.shape)
-
-    def test_tsne(self):
-        data = self.ionosphere[:50]
-        for i in range(1, 4):
-            self.__tsne_test_helper(data, n_com=i)
-
-    def __tsne_test_helper(self, data, n_com):
-        tsne_def = TSNE(n_components=n_com, metric='euclidean')
-        tsne_def = tsne_def(data)
-
-        tsne_euc = TSNE(n_components=n_com, metric=Euclidean)
-        tsne_euc = tsne_euc(data)
-
-        tsne_pre = TSNE(n_components=n_com, metric='precomputed')
-        tsne_pre = tsne_pre(Euclidean(data))
-
-        self.assertEqual((data.X.shape[0], n_com), tsne_def.embedding_.shape)
-        self.assertEqual((data.X.shape[0], n_com), tsne_euc.embedding_.shape)
-        self.assertEqual((data.X.shape[0], n_com), tsne_pre.embedding_.shape)
 
     def test_torgerson(self):
         data = self.ionosphere[::5]
