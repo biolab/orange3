@@ -19,7 +19,8 @@ class _ComboBoxListDelegate(QStyledItemDelegate):
         super().paint(painter, option, index)
         if index.data(Qt.AccessibleDescriptionRole) == "separator":
             palette = option.palette  # type: QPalette
-            painter.setPen(QPen(palette.dark(), 1.0))
+            brush = palette.brush(QPalette.Disabled, QPalette.Foreground)
+            painter.setPen(QPen(brush, 1.0))
             rect = option.rect  # type: QRect
             y = rect.center().y()
             painter.drawLine(rect.left(), y, rect.left() + rect.width(), y)
