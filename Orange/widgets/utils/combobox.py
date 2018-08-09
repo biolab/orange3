@@ -3,7 +3,7 @@ from typing import Optional
 
 from AnyQt.QtCore import (
     Qt, QEvent, QObject, QAbstractItemModel, QSortFilterProxyModel,
-    QModelIndex, QSize, QRect, QPoint, QMargins, QCoreApplication, QElapsedTimer
+    QModelIndex, QSize, QRect, QPoint, QMargins, QElapsedTimer
 )
 from AnyQt.QtGui import QMouseEvent, QKeyEvent, QPainter, QPalette, QPen
 from AnyQt.QtWidgets import (
@@ -207,8 +207,8 @@ class ComboBoxSearch(QComboBox):
             self.hidePopup()
             return False
 
-        if etype == QEvent.KeyPress or etype == QEvent.KeyRelease \
-                and obj is self.__popup:
+        if etype == QEvent.KeyPress or etype == QEvent.KeyRelease or \
+                etype == QEvent.ShortcutOverride and obj is self.__popup:
             event = event  # type: QKeyEvent
             key, modifiers = event.key(), event.modifiers()
             if key in (Qt.Key_Enter, Qt.Key_Return, Qt.Key_Select):
@@ -217,20 +217,19 @@ class ComboBoxSearch(QComboBox):
                     self.__activateProxyIndex(current)
             elif key in (Qt.Key_Up, Qt.Key_Down,
                          Qt.Key_PageUp, Qt.Key_PageDown):
-                return False
-            elif key in (Qt.Key_End, Qt.Key_Home) \
-                    and not modifiers & Qt.ControlModifier:
-                return False
+                return False  #
             elif key in (Qt.Key_Tab, Qt.Key_Backtab):
                 pass
             elif key == Qt.Key_Escape or \
                     (key == Qt.Key_F4 and modifiers & Qt.AltModifier):
                 self.__popup.hide()
-            else:
-                # pass the input events to the filter edit line
-                QCoreApplication.sendEvent(self.__searchline, event)
                 return True
-
+            else:
+                # pass the input events to the filter edit line (no propagation
+                # up the parent chain).
+                self.__searchline.event(event)
+                if event.isAccepted():
+                    return True
         if etype == QEvent.MouseButtonRelease and self.__popup is not None \
                 and obj is self.__popup.viewport() \
                 and self.__popupTimer.elapsed() >= \
