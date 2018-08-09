@@ -160,6 +160,8 @@ class ComboBoxSearch(QComboBox):
             popup.setFocusProxy(None)
             popup.hide()
             popup.deleteLater()
+            popup.removeEventFilter(self)
+            popup.viewport().removeEventFilter(self)
 
         # need to call base hidePopup even though the base showPopup was not
         # called (update internal state wrt. 'pressed' arrow, ...)
