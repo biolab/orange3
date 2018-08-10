@@ -12,6 +12,14 @@ from Orange import data
 from Orange.tests import test_filename
 
 
+def assert_dist_equal(dist, expected):
+    np.testing.assert_array_equal(np.asarray(dist), expected)
+
+
+def assert_dist_almost_equal(dist, expected):
+    np.testing.assert_array_almost_equal(np.asarray(dist), expected)
+
+
 class TestDiscrete(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -19,22 +27,19 @@ class TestDiscrete(unittest.TestCase):
 
     def test_discrete(self):
         cont = contingency.Discrete(self.zoo, 0)
-        np.testing.assert_almost_equal(cont["amphibian"], [4, 0])
-        np.testing.assert_almost_equal(cont,
-                                       [[4, 0], [20, 0], [13, 0],
-                                        [4, 4], [10, 0], [2, 39], [5, 0]])
+        assert_dist_equal(cont["amphibian"], [4, 0])
+        assert_dist_equal(cont, [[4, 0], [20, 0], [13, 0],
+                                 [4, 4], [10, 0], [2, 39], [5, 0]])
 
         cont = contingency.Discrete(self.zoo, "predator")
-        np.testing.assert_almost_equal(cont["fish"], [4, 9])
-        np.testing.assert_almost_equal(cont,
-                                       [[1, 3], [11, 9], [4, 9],
-                                        [7, 1], [2, 8], [19, 22], [1, 4]])
+        assert_dist_equal(cont["fish"], [4, 9])
+        assert_dist_equal(cont, [[1, 3], [11, 9], [4, 9], [7, 1],
+                                 [2, 8], [19, 22], [1, 4]])
 
         cont = contingency.Discrete(self.zoo, self.zoo.domain["predator"])
-        np.testing.assert_almost_equal(cont["fish"], [4, 9])
-        np.testing.assert_almost_equal(cont,
-                                       [[1, 3], [11, 9], [4, 9],
-                                        [7, 1], [2, 8], [19, 22], [1, 4]])
+        assert_dist_equal(cont["fish"], [4, 9])
+        assert_dist_equal(cont, [[1, 3], [11, 9], [4, 9], [7, 1],
+                                 [2, 8], [19, 22], [1, 4]])
         self.assertEqual(cont.unknown_rows, 0)
 
     def test_discrete_missing(self):
@@ -42,9 +47,9 @@ class TestDiscrete(unittest.TestCase):
         d.Y[25] = float("nan")
         d[0][0] = float("nan")
         cont = contingency.Discrete(d, 0)
-        np.testing.assert_almost_equal(cont["amphibian"], [3, 0])
-        np.testing.assert_almost_equal(cont,
-                                       [[3, 0], [20, 0], [13, 0], [4, 4], [10, 0], [2, 38], [5, 0]])
+        assert_dist_equal(cont["amphibian"], [3, 0])
+        assert_dist_equal(cont, [[3, 0], [20, 0], [13, 0], [4, 4],
+                                 [10, 0], [2, 38], [5, 0]])
         np.testing.assert_almost_equal(cont.unknowns,
                                        [0, 0, 0, 0, 0, 1, 0])
         self.assertEqual(cont.unknown_rows, 1)
@@ -53,9 +58,9 @@ class TestDiscrete(unittest.TestCase):
         d.Y[2] = float("nan")
         d[2]["predator"] = float("nan")
         cont = contingency.Discrete(d, "predator")
-        np.testing.assert_almost_equal(cont["fish"], [4, 8])
-        np.testing.assert_almost_equal(cont,
-                                       [[1, 3], [11, 9], [4, 8], [7, 1], [2, 8], [19, 22], [1, 4]])
+        assert_dist_equal(cont["fish"], [4, 8])
+        assert_dist_equal(cont, [[1, 3], [11, 9], [4, 8], [7, 1],
+                                 [2, 8], [19, 22], [1, 4]])
         self.assertEqual(cont.unknown_rows, 1)
         np.testing.assert_almost_equal(cont.unknowns, [0, 0, 0, 0, 0, 0, 0])
 
@@ -67,9 +72,9 @@ class TestDiscrete(unittest.TestCase):
         d._compute_contingency = Mock(side_effect=NotImplementedError)
         fallback = contingency.Discrete(d, 0)
 
-        np.testing.assert_almost_equal(fallback, default)
-        np.testing.assert_almost_equal(fallback.unknowns, default.unknowns)
-        np.testing.assert_almost_equal(fallback.unknown_rows, default.unknown_rows)
+        np.testing.assert_array_equal(np.asarray(fallback), np.asarray(default))
+        np.testing.assert_array_equal(fallback.unknowns, default.unknowns)
+        np.testing.assert_array_equal(fallback.unknown_rows, default.unknown_rows)
 
     def test_continuous(self):
         d = data.Table("iris")
@@ -120,15 +125,13 @@ class TestDiscrete(unittest.TestCase):
                                  zoo.domain.metas + zoo.domain.attributes[:2])
         t = Orange.data.Table(dom, zoo)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
-        np.testing.assert_almost_equal(cont["1"], [38, 5])
-        np.testing.assert_almost_equal(cont, [[4, 54],
-                                              [38, 5]])
+        assert_dist_equal(cont["1"], [38, 5])
+        assert_dist_equal(cont, [[4, 54], [38, 5]])
         zoo[25][t.domain.metas[1]] = float("nan")
         zoo[0][2] = float("nan")
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
-        np.testing.assert_almost_equal(cont["1"], [37, 5])
-        np.testing.assert_almost_equal(cont, [[4, 53],
-                                              [37, 5]])
+        assert_dist_equal(cont["1"], [37, 5])
+        assert_dist_equal(cont, [[4, 53], [37, 5]])
         np.testing.assert_almost_equal(cont.unknowns, [0, 1])
         self.assertEqual(cont.unknown_rows, 1)
 
@@ -165,52 +168,52 @@ class TestDiscrete(unittest.TestCase):
     def test_sparse(self):
         d = self._construct_sparse()
         cont = contingency.Discrete(d, 5)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
-        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+        assert_dist_equal(cont[0], [2, 0, 0])
+        assert_dist_equal(cont["b"], [0, 1, 1])
+        assert_dist_equal(cont[2], [1, 0, 0])
 
         cont = contingency.Continuous(d, 14)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[2], [1]])
 
         cont = contingency.Continuous(d, "c3")
-        np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[], []])
+        assert_dist_equal(cont[0], [[1.1], [1]])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[], []])
 
         d[4].set_class(1)
         cont = contingency.Continuous(d, 13)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1, 1.1], [1, 1]])
-        np.testing.assert_almost_equal(cont[2], [[], []])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[1, 1.1], [1, 1]])
+        assert_dist_equal(cont[2], [[], []])
 
         cont = contingency.Continuous(d, 12)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[], []])
-        np.testing.assert_almost_equal(cont[2], [[], []])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[], []])
+        assert_dist_equal(cont[2], [[], []])
 
 
     def test_get_contingency(self):
         d = self._construct_sparse()
         cont = contingency.get_contingency(d, 5)
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
-        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+        assert_dist_equal(cont[0], [2, 0, 0])
+        assert_dist_equal(cont["b"], [0, 1, 1])
+        assert_dist_equal(cont[2], [1, 0, 0])
 
         cont = contingency.get_contingency(d, "c4")
         self.assertIsInstance(cont, contingency.Continuous)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[2], [1]])
 
         cont = contingency.get_contingency(d, d.domain[13])
         self.assertIsInstance(cont, contingency.Continuous)
-        np.testing.assert_almost_equal(cont[0], [[1.1], [1]])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[], []])
-        np.testing.assert_almost_equal(cont[2], [[], []])
+        assert_dist_equal(cont[0], [[1.1], [1]])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[], []])
+        assert_dist_equal(cont[2], [[], []])
 
     def test_get_contingencies(self):
         d = self._construct_sparse()
@@ -220,38 +223,38 @@ class TestDiscrete(unittest.TestCase):
 
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
-        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+        assert_dist_equal(cont[0], [2, 0, 0])
+        assert_dist_equal(cont["b"], [0, 1, 1])
+        assert_dist_equal(cont[2], [1, 0, 0])
 
         cont = conts[14]
         self.assertIsInstance(cont, contingency.Continuous)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[2], [1]])
 
         conts = contingency.get_contingencies(d, skip_discrete=True)
         self.assertEqual(len(conts), 10)
         cont = conts[4]
         self.assertIsInstance(cont, contingency.Continuous)
-        np.testing.assert_almost_equal(cont[0], [[], []])
-        np.testing.assert_almost_equal(cont["b"], [[1], [1]])
-        np.testing.assert_almost_equal(cont[2], [[2], [1]])
+        assert_dist_equal(cont[0], [[], []])
+        assert_dist_equal(cont["b"], [[1], [1]])
+        assert_dist_equal(cont[2], [[2], [1]])
 
         conts = contingency.get_contingencies(d, skip_continuous=True)
         self.assertEqual(len(conts), 10)
         cont = conts[5]
         self.assertIsInstance(cont, contingency.Discrete)
-        np.testing.assert_almost_equal(cont[0], [2, 0, 0])
-        np.testing.assert_almost_equal(cont["b"], [0, 1, 1])
-        np.testing.assert_almost_equal(cont[2], [1, 0, 0])
+        assert_dist_equal(cont[0], [2, 0, 0])
+        assert_dist_equal(cont["b"], [0, 1, 1])
+        assert_dist_equal(cont[2], [1, 0, 0])
 
     def test_compute_contingency_metas(self):
         d = data.Table(test_filename("test9.tab"))
         var1, var2 = d.domain[-2], d.domain[-4]
         cont, _ = d._compute_contingency([var1], var2)[0][0]
-        np.testing.assert_almost_equal(cont, [[3, 0, 0], [0, 2, 0],
-                                              [0, 0, 2], [0, 1, 0]])
+        assert_dist_equal(cont, [[3, 0, 0], [0, 2, 0],
+                                 [0, 0, 2], [0, 1, 0]])
 
     def test_compute_contingency_invalid(self):
         rstate = np.random.RandomState(0xFFFF)
