@@ -844,7 +844,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         stream = QDataStream(data, QBuffer.WriteOnly)
         stream.writeUInt32(version)
         stream.writeUInt16((have_spliter << 1) | splitter_state)
-        stream << self.saveGeometry()
+        stream <<= self.saveGeometry()
         return data
 
     def restoreGeometryAndLayoutState(self, state):
@@ -874,9 +874,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if has_spliter and self.__splitter is not None:
             self.__setControlAreaVisible(bool(splitter_state))
         geometry = QByteArray()
-        stream >> geometry
+        stream >>= geometry
         if stream.status() == QDataStream.Ok:
-            return self.__restoreWidgetGeometry(bytes(geometry))
+            state = self.__restoreWidgetGeometry(bytes(geometry))
+            self.__was_restored = self.__was_restored or state
+            return state
         else:
             return False  # pragma: no cover
 
