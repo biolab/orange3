@@ -286,7 +286,7 @@ class LinkItem(QGraphicsWidget):
     """
 
     #: Z value of the item
-    Z_VALUE = 0
+    Z_VALUE = 200  # the red dot should appear on top of the node
 
     #: Runtime link state value
     #: These are pulled from SchemeLink.State for ease of binding to it's
