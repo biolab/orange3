@@ -345,7 +345,7 @@ class InteractiveViewBox(ViewBox):
         self.grabGesture(Qt.PinchGesture)
 
     def _dragtip_pos(self):
-        return 10, self.height()
+        return 10, 10
 
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
@@ -467,6 +467,7 @@ def _define_symbols():
     tr.rotate(180)
     symbols['t'] = tr.map(symbols['t'])
 
+
 _define_symbols()
 
 
@@ -475,41 +476,9 @@ def _make_pen(color, width):
     p.setCosmetic(True)
     return p
 
-# TODO: Add this into pull request:
-# This widget handled sparse data in an interesting manner: it stored the
-# original data into an attribute `_data`. Then upon each change of color,
-# size, shape or label, it called its own self.setData with densified
-# data that contained only the needed attributes. I think that widget should
-# not call its own signal handler, in particular not to transform its data
-
-
-# For each property (size, color, shape, label) there is a method that returns
-# a column (from a table or elsewhere) called get_size_data, get_color_data...
-# Another method calls the above method and returns actual sizes, colors or
-# labels; these are called get_sizes, get_colors, get_shapes, get_labels.
-# Override one or another, whichever is more convenient.
-# The former methods are called only from the latter. The latter are called
-# from two places: when the graph is first set up with the new data, and when
-# it is updated (in which case only one method is called, e.g. as a result
-# of the user changing the color attribute).
-
-# update_density called update_graph, which update the entire graph ... and,
-# oh, yes, reset the zoom stack for no reason
-
-# Basically, there were a zillion update_this, reset_this, update_that routines
-# that reset this and that and called each other, passing arguments like
-# "new=True", "keep_foo=False" to prevent resetting some parts of the graph.
-
-# When unifying all projections, the common scatterpotgraph called a method
-# update_regression_line (or sth like that) ... which then had to be implemented
-# in all derived widgets, including, say, MDS. Same for "update_colors".
-
-# MDS tooltip shows mds-x, mds-y in tooltips, because all data had to be sent
-# as attributes...
 
 class OWScatterPlotBase(gui.OWComponent):
     label_only_selected = Setting(False)
-
     point_width = Setting(10)
     alpha_value = Setting(128)
     show_grid = Setting(False)
@@ -524,7 +493,7 @@ class OWScatterPlotBase(gui.OWComponent):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
-    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
+    def __init__(self, scatter_widget, parent=None, view_box=InteractiveViewBox):
         super().__init__(scatter_widget)
 
         self.subset_is_shown = False
@@ -658,18 +627,15 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def update_coordinates(self):
         x, y = self.get_coordinates()
-        if x is None:
+        if x is None or not len(x):
             return
         if self.scatterplot_item is None:
-            data_indices = np.arange(self.n_points)
-            self.scatterplot_item = ScatterPlotItem(x=x, y=y, data=data_indices)
-            self.plot_widget.addItem(self.scatterplot_item)
+            kwargs = {"x": x, "y": y, "data": np.arange(self.n_points)}
+            self.scatterplot_item = ScatterPlotItem(**kwargs)
             self.scatterplot_item.sigClicked.connect(self.select_by_click)
-
-            self.scatterplot_item_sel = ScatterPlotItem(
-                x=x, y=y, data=data_indices)
+            self.scatterplot_item_sel = ScatterPlotItem(**kwargs)
             self.plot_widget.addItem(self.scatterplot_item_sel)
-
+            self.plot_widget.addItem(self.scatterplot_item)
             self.update_point_props()
         else:
             self._update_plot_coordinates(self.scatterplot_item, x, y)
@@ -687,8 +653,8 @@ class OWScatterPlotBase(gui.OWComponent):
     # Sizes
     def get_sizes(self):
         size_column = self.master.get_size_data()
-        if size_column is None or self.attr_size == OWPlotGUI.SizeByOverlap:
-            return self.point_width
+        if size_column is None:
+            return np.ones(self.n_points) * self.point_width
         size_column = size_column.copy()
         size_column -= np.min(size_column)
         mx = np.max(size_column)
@@ -721,13 +687,14 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def _get_same_colors(self, subset):
         color = self.plot_widget.palette().color(OWPalette.Data)
-        pen = _make_pen(color, 1.5)
+        pen = [_make_pen(color, 1.5) for _ in range(self.n_points)]
         if subset is not None:
             brush = [(QBrush(QColor(128, 128, 128, 0)),
                       QBrush(QColor(128, 128, 128, 255)))[s]
                      for s in subset]
         else:
-            brush = QBrush(QColor(128, 128, 128, self.alpha_value))
+            color = QColor(128, 128, 128, self.alpha_value)
+            brush = [QBrush(color) for _ in range(self.n_points)]
         return pen, brush
 
     def _get_continuous_colors(self, c_data, subset):
@@ -773,7 +740,7 @@ class OWScatterPlotBase(gui.OWComponent):
         if subset is not None:
             brush = np.where(subset, brush[:, 1], brush[:, 0])
         else:
-            brush = self.brush[:, 1]
+            brush = brush[:, 1]
         return pen, brush
 
     def update_colors(self):
@@ -813,7 +780,7 @@ class OWScatterPlotBase(gui.OWComponent):
     def get_colors_sel(self):
         nopen = QPen(Qt.NoPen)
         if self.selection is None:
-            pen = nopen
+            pen = [nopen] * self.n_points
         else:
             sels = np.max(self.selection)
             if sels == 1:
@@ -827,8 +794,7 @@ class OWScatterPlotBase(gui.OWComponent):
                     self.selection,
                     [nopen] + [_make_pen(palette[i], SELECTION_WIDTH + 1)
                                for i in range(sels)])
-        brush = QBrush(QColor(255, 255, 255, 0))
-        return pen, brush
+        return pen, [QBrush(QColor(255, 255, 255, 0))] * self.n_points
 
     # Labels
     def get_labels(self):
@@ -855,6 +821,8 @@ class OWScatterPlotBase(gui.OWComponent):
                 label.setText(text, black)
 
     def _create_labels(self):
+        if not self.scatterplot_item:
+            return
         for x, y in zip(*self.scatterplot_item.getData()):
             ti = TextItem()
             self.plot_widget.addItem(ti)
@@ -863,7 +831,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def update_label_coords(self, x, y):
         if self.label_only_selected:
-            if self.selection:
+            if self.selection is not None:
                 for label, selected, xp, yp in zip(
                         self.labels, self.selection, x, y):
                     if selected:
@@ -878,6 +846,8 @@ class OWScatterPlotBase(gui.OWComponent):
         shape_data = self.master.impute_shapes(shape_data, len(self.CurveSymbols) - 1)
         if isinstance(shape_data, np.ndarray):
             shape_data = shape_data.astype(int)
+        else:
+            shape_data = np.zeros(self.n_points, dtype=int)
         return self.CurveSymbols[shape_data]
 
     def update_shapes(self):
@@ -973,7 +943,7 @@ class OWScatterPlotBase(gui.OWComponent):
             self.plot_widget.getViewBox().RectMode)
 
     def reset_button_clicked(self):
-        self.reset_graph()
+        self.plot_widget.getViewBox().autoRange()
 
     def select_by_click(self, _, points):
         if self.scatterplot_item is not None:
@@ -988,6 +958,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def unselect_all(self):
         self.selection = None
+        self.select([])
         self.update_selection_colors()
         if self.label_only_selected:
             self.update_labels()
@@ -1055,33 +1026,6 @@ class OWScatterPlotBase(gui.OWComponent):
         buttons[g.ZoomReset].clicked.connect(self.reset_button_clicked)
         return box_zoom_select
 
-    def zoom_actions(self, parent):
-        def zoom(s):
-            """
-            Zoom in/out by factor `s`.
-            scaleBy scales the view's bounds (the axis range)
-            """
-            self.view_box.scaleBy((1 / s, 1 / s))
-
-        def fit_to_view():
-            self.viewbox.autoRange()
-
-        zoom_in = QAction(
-            "Zoom in", parent, triggered=lambda: zoom(1.25)
-        )
-        zoom_in.setShortcuts([QKeySequence(QKeySequence.ZoomIn),
-                              QKeySequence(parent.tr("Ctrl+="))])
-        zoom_out = QAction(
-            "Zoom out", parent, shortcut=QKeySequence.ZoomOut,
-            triggered=lambda: zoom(1 / 1.25)
-        )
-        zoom_fit = QAction(
-            "Fit in view", parent,
-            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_0),
-            triggered=fit_to_view
-        )
-        parent.addActions([zoom_in, zoom_out, zoom_fit])
-
 
 class HelpEventDelegate(QObject): #also used by owdistributions
     def __init__(self, delegate, parent=None):
@@ -1133,6 +1077,8 @@ class OWProjectionWidget(OWWidget):
         all_data = self.data.get_column_view(attr)[0]
         if sp.issparse(all_data):
             all_data = all_data.toDense()  # TODO -- just guessing; fix this!
+        elif all_data.dtype == object and attr.is_primitive():
+            all_data = all_data.astype(float)
         if filter_valid and self.valid_data is not None:
             all_data = all_data[self.valid_data]
         if not merge_infrequent or attr.is_continuous \
@@ -1140,12 +1086,18 @@ class OWProjectionWidget(OWWidget):
             return attr.values if return_labels else all_data
         dist = bincount(all_data, max_val=len(attr.values) - 1)
         infrequent = np.zeros(len(attr.values), dtype=bool)
-        infrequent[np.argsort(dist)[:-MAX]] = True
+        infrequent[np.argsort(dist[0])[:-(MAX-1)]] = True
+        # If discrete variable has more than maximium allowed values,
+        # less used values are joined as "Other"
         if return_labels:
             return [value for value, infreq in zip(attr.values, infrequent)
                     if not infreq] + ["Other"]
         else:
-            return np.choose(infrequent, (all_data, MAX))
+            result = all_data.copy()
+            freq_vals = [i for i, f in enumerate(infrequent) if not f]
+            for i, f in enumerate(infrequent):
+                result[all_data == i] = MAX - 1 if f else freq_vals.index(i)
+            return result
 
     # Sizes
     def get_size_data(self):
@@ -1219,9 +1171,6 @@ class OWProjectionWidget(OWWidget):
             self.Information.missing_shape.clear()
         return shape_data
 
-    # Todo: Bug: color, shape and size do not update when changed from something
-    # to 'Same'
-
     # Tooltip
     def _point_tooltip(self, point_id, skip_attrs=()):
         def show_part(point_data, singular, plural, max_shown, vars):
@@ -1254,6 +1203,17 @@ class OWProjectionWidget(OWWidget):
             text = "{} instances<hr/>{}<hr/>...".format(len(point_ids), text)
         return text
 
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
+    def keyReleaseEvent(self, event):
+        super().keyReleaseEvent(event)
+        self.graph.update_tooltip(event.modifiers())
+
     # Legend
     def combined_legend(self):
         return self.attr_shape == self.attr_color
+
+    def sizeHint(self):
+        return QSize(933, 700)
