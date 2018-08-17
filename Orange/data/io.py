@@ -176,13 +176,13 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
     if name is None or existing_var is not None or new_var_name is not None:
         name = existing_var.strip() if existing_var else new_var_name
         raise DeprecationWarning("Arguments 'existing_var' and 'new_var_name' are "\
-                                 "deprecated since 3.14; use 'name' instead")
+                                 "deprecated since 3.16; use 'name' instead")
 
     if domain_vars is not None:
-        raise DeprecationWarning("Argument 'domain_vars' is deprecated since 3.14")
+        raise DeprecationWarning("Argument 'domain_vars' is deprecated since 3.16")
 
     if data is not None:
-        raise DeprecationWarning("Argument 'data' is deprecated since 3.14")
+        raise DeprecationWarning("Argument 'data' is deprecated since 3.16")
 
     def get_number_of_decimals(values):
         len_ = len
