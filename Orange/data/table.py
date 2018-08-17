@@ -1365,18 +1365,16 @@ class Table(MutableSequence, Storage):
             if len(rr):
                 stats = np.vstack(tuple(rr))
         else:
-            columns = [self.domain.index(c) for c in columns]
             nattrs = len(self.domain.attributes)
-            Xs = any(0 <= c < nattrs for c in columns) and fast_stats(self.X, W)
-            Ys = any(c >= nattrs for c in columns) and fast_stats(self._Y, W)
-            ms = any(c < 0 for c in columns) and fast_stats(self.metas, W)
             for column in columns:
-                if 0 <= column < nattrs:
-                    stats.append(Xs[column, :])
-                elif column >= nattrs:
-                    stats.append(Ys[column - nattrs, :])
+                c = self.domain.index(column)
+                if 0 <= c < nattrs:
+                    S = fast_stats(self.X[:, [c]], W and W[:, [c]])
+                elif c >= nattrs:
+                    S = fast_stats(self._Y[:, [c-nattrs]], W and W[:, [c-nattrs]])
                 else:
-                    stats.append(ms[-1 - column])
+                    S = fast_stats(self.metas[:, [-1-c]], W and W[:, [-1-c]])
+                stats.append(S[0])
         return stats
 
     def _compute_distributions(self, columns=None):
