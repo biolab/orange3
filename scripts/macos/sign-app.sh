@@ -15,7 +15,6 @@ OPTIONS
 
     --help -h
         Print this help.
-
 '
 }
 
@@ -39,9 +38,6 @@ if [ ! "${APPPATH}" ]; then
     echo "No path supplied; using default ${APPPATH}"
 fi
 
-# sign .app bundle
-codesign -s "${IDENTITY}" --deep --verbose "${APPPATH}"
-
 VERSION=$(
     "${APPPATH}"/Contents/MacOS/python -c '
 import pkg_resources
@@ -51,8 +47,6 @@ print(pkg_resources.get_distribution("Orange3").version)
 
 # Create disk image
 "${SCRIPTS}"/create-dmg-installer.sh --app "${APPPATH}" \
+    --sign "${IDENTITY}" \
     "${DIST}/Orange3-${VERSION}.dmg"
-
-# Sign disk image
-codesign -s "${IDENTITY}" "${DIST}/Orange3-${VERSION}.dmg"
 
