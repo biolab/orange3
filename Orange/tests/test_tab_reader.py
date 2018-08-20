@@ -143,6 +143,17 @@ class TestTabReader(unittest.TestCase):
         self.assertTrue(table.domain[0].is_continuous)
         self.assertEqual(table.domain[0].name, 'Feature 1')
 
+    def test_read_data_no_header_feature_reuse(self):
+        samplefile = """\
+        0.1\t0.2\t0.3
+        1.1\t1.2\t1.5
+        """
+        file = io.StringIO(samplefile)
+        t1 = read_tab_file(file)
+        file = io.StringIO(samplefile)
+        t2 = read_tab_file(file)
+        self.assertEqual(t1.domain[0], t2.domain[0])
+
     def test_reuse_variables(self):
         file1 = io.StringIO("\n".join("xd dbac"))
         t1 = read_tab_file(file1)

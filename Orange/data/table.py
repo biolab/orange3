@@ -1627,8 +1627,7 @@ class Table(MutableSequence, Storage):
             orig_vals = M[:, i]
             val_map, vals, var_type = Orange.data.io.guess_data_type(orig_vals)
             values, variable = Orange.data.io.sanitize_variable(
-                val_map, vals, orig_vals, var_type,
-                {}, _metas, None, var_name)
+                val_map, vals, orig_vals, var_type, {}, name=var_name)
             M[:, i] = values
             return variable
 
