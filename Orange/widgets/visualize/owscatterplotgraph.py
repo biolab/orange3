@@ -484,7 +484,7 @@ class OWScatterPlotBase(gui.OWComponent):
     show_grid = Setting(False)
     show_legend = Setting(True)
     class_density = Setting(False)
-    jitter_size = Setting(10)
+    jitter_size = Setting(0)
 
     resolution = 256
 

@@ -101,6 +101,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
+    jitter_size = Setting(10)
     jitter_continuous = Setting(False)
 
     def __init__(self, scatter_widget, parent):

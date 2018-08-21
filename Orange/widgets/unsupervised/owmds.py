@@ -40,8 +40,6 @@ MAX_N_PAIRS = 10000
 
 
 class OWMDSGraph(OWScatterPlotBase):
-    jitter_size = settings.Setting(0)
-
     #: Percentage of all pairs displayed (ranges from 0 to 20)
     connected_pairs = settings.Setting(5)
 
