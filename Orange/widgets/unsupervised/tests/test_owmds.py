@@ -13,11 +13,12 @@ from Orange.misc import DistMatrix
 from Orange.distance import Euclidean
 from Orange.widgets.settings import Context
 from Orange.widgets.unsupervised.owmds import OWMDS
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
+from Orange.widgets.tests.base import (WidgetTest, WidgetOutputsTestMixin,
+                                       datasets, ProjectionWidgetTestMixin)
 from Orange.widgets.tests.utils import simulate
 
 
-class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
+class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -117,21 +118,11 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         signal_data.row_items = None
         self.send_signal("Distances", signal_data)
 
-    def test_send_report(self):
-        self.send_signal(self.widget.Inputs.data, None)
-        self.widget.send_report()
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.send_report()
-
     def test_small_data(self):
         data = self.data[:1]
         self.assertFalse(self.widget.Error.not_enough_rows.is_shown())
         self.send_signal(self.widget.Inputs.data, data)
         # self.assertTrue(self.widget.Error.not_enough_rows.is_shown())
-
-    def test_subset_data(self):
-        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
-        self.send_signal(self.widget.Inputs.data, self.data)
 
     def test_run(self):
         self.send_signal(self.widget.Inputs.data, self.data)

@@ -8,16 +8,19 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.widgets.utils.plot import OWPlotGUI
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
+)
+from Orange.widgets.tests.utils import simulate
+from Orange.widgets.visualize.owscatterplot import (
+    OWScatterPlot, ScatterPlotVizRank
+)
 from Orange.widgets.visualize.owscatterplotgraph import MAX
 from Orange.widgets.widget import AttributeList
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
-from Orange.widgets.visualize.owscatterplot import \
-    OWScatterPlot, ScatterPlotVizRank
-from Orange.widgets.tests.utils import simulate
 
 
-class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
+class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin,
+                        ProjectionWidgetTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -176,13 +179,6 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(controls.attr_color.currentText(),
                          self.data.domain.class_var.name)
 
-    def test_overlap(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-        self.assertEqual(len(set(self.widget.graph.compute_sizes())), 1)
-        simulate.combobox_activate_item(self.widget.controls.graph.attr_size,
-                                        OWPlotGUI.SizeByOverlap)
-        self.assertGreater(len(set(self.widget.graph.compute_sizes())), 1)
-
     def test_group_selections(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         graph = self.widget.graph
@@ -260,13 +256,6 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         np.testing.assert_equal(selected_groups(), np.array([0] * 8 + [1] * 10))
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
-
-    def test_none_data(self):
-        """
-        Prevent crash due to missing data.
-        GH-2122
-        """
-        self.send_signal(self.widget.Inputs.data, Table("iris")[:0])
 
     def test_saving_selection(self):
         self.send_signal(self.widget.Inputs.data, self.data)  # iris
@@ -375,16 +364,6 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
         features = self.get_output(self.widget.Outputs.features)
         self.assertEqual(features, [data.domain[0], data.domain[3]])
-
-    def test_send_report(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.report_button.click()
-
-    def test_update_density(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.cb_class_density.click()
 
     def test_vizrank(self):
         data = Table("iris")
