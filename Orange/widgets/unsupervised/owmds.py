@@ -3,29 +3,27 @@ import sys
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtWidgets import QFormLayout, QApplication
-from AnyQt.QtGui import QPainter
+from AnyQt.QtWidgets import QApplication
 from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 
-import Orange.data
-from Orange.data import Domain, Table, ContinuousVariable
-from Orange.data.util import hstack
-import Orange.projection
-from Orange.projection.manifold import torgerson
-import Orange.distance
-import Orange.misc
-from Orange.widgets import gui, settings
+from Orange.data import ContinuousVariable, Domain, Table, Variable
+from Orange.distance import Euclidean
+from Orange.misc import DistMatrix
+from Orange.projection.manifold import torgerson, MDS
+
+from Orange.widgets import gui, settings, report
 from Orange.widgets.settings import SettingProvider
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets import report
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
-    InteractiveViewBox, OWProjectionWidget
+from Orange.widgets.visualize.owscatterplotgraph import (
+    OWScatterPlotBase, OWProjectionWidget
+)
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table, create_groups_table,
-    get_unique_names)
+    get_unique_names
+)
 
 
 def stress(X, distD):
@@ -37,13 +35,9 @@ def stress(X, distD):
     return delta_sq.sum(axis=0) / 2
 
 
-class MDSInteractiveViewBox(InteractiveViewBox):
-    def _dragtip_pos(self):
-        return 10, 10
-
-
 #: Maximum number of displayed closest pairs.
 MAX_N_PAIRS = 10000
+
 
 class OWMDSGraph(OWScatterPlotBase):
     jitter_size = settings.Setting(0)
@@ -51,8 +45,8 @@ class OWMDSGraph(OWScatterPlotBase):
     #: Percentage of all pairs displayed (ranges from 0 to 20)
     connected_pairs = settings.Setting(5)
 
-    def __init__(self, scatter_widget, parent=None, name="None", view_box=None):
-        super().__init__(scatter_widget, parent=parent, _=name, view_box=view_box)
+    def __init__(self, scatter_widget, parent):
+        super().__init__(scatter_widget, parent)
         self.pairs_curve = None
         self.draw_pairs = True
         self._similar_pairs = None
@@ -76,7 +70,8 @@ class OWMDSGraph(OWScatterPlotBase):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)
         if not self.draw_pairs or self.connected_pairs == 0 \
-                or self.effective_matrix is None:
+                or self.effective_matrix is None \
+                or self.scatterplot_item is None:
             return
         emb_x, emb_y = self.scatterplot_item.getData()
         if self._similar_pairs is None or reconnect:
@@ -125,15 +120,15 @@ class OWMDS(OWProjectionWidget):
     keywords = ["multidimensional scaling", "multi dimensional scaling"]
 
     class Inputs:
-        data = Input("Data", Orange.data.Table, default=True)
-        distances = Input("Distances", Orange.misc.DistMatrix)
-        data_subset = Input("Data Subset", Orange.data.Table)
+        data = Input("Data", Table, default=True)
+        distances = Input("Distances", DistMatrix)
+        data_subset = Input("Data Subset", Table)
 
     class Outputs:
-        selected_data = Output("Selected Data", Orange.data.Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    settings_version = 2
+    settings_version = 3
 
     #: Initialization type
     PCA, Random, Jitter = 0, 1, 2
@@ -157,14 +152,7 @@ class OWMDS(OWProjectionWidget):
     initialization = settings.Setting(PCA)
     refresh_rate = settings.Setting(3)
 
-    # output embedding role.
-    NoRole, AttrRole, AddAttrRole, MetaRole = 0, 1, 2, 3
-
     auto_commit = settings.Setting(True)
-
-    selection_indices = settings.Setting(None, schema_only=True)
-
-    legend_anchor = settings.Setting(((1, 0), (1, 0)))
 
     graph = SettingProvider(OWMDSGraph)
     graph_name = "graph.plot_widget.plotItem"
@@ -181,11 +169,11 @@ class OWMDS(OWProjectionWidget):
     def __init__(self):
         super().__init__()
         #: Input dissimilarity matrix
-        self.matrix = None  # type: Optional[Orange.misc.DistMatrix]
+        self.matrix = None  # type: Optional[DistMatrix]
         #: Input subset data table
-        self.subset_data = None  # type: Optional[Orange.data.Table]
+        self.subset_data = None  # type: Optional[Table]
         #: Data table from the `self.matrix.row_items` (if present)
-        self.matrix_data = None  # type: Optional[Orange.data.Table]
+        self.matrix_data = None  # type: Optional[Table]
         #: Input data table
         self.signal_data = None
 
@@ -201,7 +189,7 @@ class OWMDS(OWProjectionWidget):
         self.__in_next_step = False
 
         box = gui.vBox(self.mainArea, True, margin=0)
-        self.graph = OWMDSGraph(self, box, "MDSGraph", view_box=MDSInteractiveViewBox)
+        self.graph = OWMDSGraph(self, box)
         self.graph.pause_drawing_pairs()
         box.layout().addWidget(self.graph.plot_widget)
         self.plot = self.graph.plot_widget
@@ -218,34 +206,25 @@ class OWMDS(OWProjectionWidget):
         gui.button(hbox, self, "PCA", callback=self.do_PCA)
         gui.button(hbox, self, "Randomize", callback=self.do_random)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter)
-        gui.hSlider(box, self.graph, "connected_pairs", label="Show similar pairs:", minValue=0,
-                    maxValue=20, createLabel=False, callback=self._on_connected_changed)
+        gui.hSlider(
+            box, self.graph, "connected_pairs", label="Show similar pairs:",
+            minValue=0, maxValue=20, createLabel=False,
+            callback=self._on_connected_changed
+        )
         g.add_widgets(ids=[g.JitterSizeSlider], widget=box)
 
         box = g.point_properties_boxes(self.controlArea)
         gui.separator(box)
         g.add_widgets([g.ShowLegend], box)
-        self.models = g.points_models
-        self.size_model = self.models[2]
-        self.label_model = self.models[3]
-        self.size_model.order = \
-            self.size_model.order[:1] + ("Stress", ) + self.models[2].order[1:]
-
-        self.controlArea.layout().addStretch(100)
-        self.icons = gui.attributeIconDict
-
-        gui.rubber(self.controlArea)
+        self.size_model = g.points_models[2]
+        self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
+                                g.points_models[2].order[1:]
 
         self.graph.box_zoom_select(self.controlArea)
+        self.controlArea.layout().addStretch(100)
+        gui.auto_commit(self.controlArea, self, "auto_commit",
+                        "Send Selection", "Send Automatically")
 
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selected",
-                        auto_label="Send selected automatically",
-                        box=None)
-
-        self.plot.getPlotItem().hideButtons()
-        self.plot.setRenderHint(QPainter.Antialiasing)
-
-        self.graph.jitter_continuous = True
         self._initialize()
 
     def selection_changed(self):
@@ -258,7 +237,7 @@ class OWMDS(OWProjectionWidget):
 
         Parameters
         ----------
-        data : Optional[Orange.data.Table]
+        data : Optional[Table]
         """
         if data is not None and len(data) < 2:
             self.Error.not_enough_rows()
@@ -268,7 +247,8 @@ class OWMDS(OWProjectionWidget):
 
         self.signal_data = data
 
-        if self.matrix is not None and data is not None and len(self.matrix) == len(data):
+        if self.matrix is not None and data is not None and \
+                len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
             self.openContext(data)
@@ -300,7 +280,7 @@ class OWMDS(OWProjectionWidget):
 
         Parameters
         ----------
-        subset_data: Optional[Orange.data.Table]
+        subset_data: Optional[Table]
         """
         self.subset_data = subset_data
         # invalidate the pen/brush when the subset is changed
@@ -321,7 +301,9 @@ class OWMDS(OWProjectionWidget):
         self.embedding = None
 
         # if no data nor matrix is present reset plot
-        if self.signal_data is None and self.matrix is None:
+        if self.signal_data is None and self.matrix_data is None:
+            self.data = None
+            self.init_attr_values()
             return
 
         if self.signal_data is not None and self.matrix is not None and \
@@ -340,14 +322,15 @@ class OWMDS(OWProjectionWidget):
             if self.matrix.axis == 0 and self.data is self.matrix_data:
                 self.data = None
         elif self.data.domain.attributes:
-            preprocessed_data = Orange.projection.MDS().preprocess(self.data)
-            self.effective_matrix = Orange.distance.Euclidean(preprocessed_data)
+            preprocessed_data = MDS().preprocess(self.data)
+            self.effective_matrix = Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
             return
 
         self.init_attr_values()
         self.openContext(self.data)
+        self.graph.set_effective_matrix(self.effective_matrix)
 
     def _toggle_run(self):
         if self.__state == OWMDS.Running:
@@ -392,10 +375,11 @@ class OWMDS(OWProjectionWidget):
 
             while not done:
                 step_iter = min(max_iter - iterations_done, step)
-                mds = Orange.projection.MDS(
+                mds = MDS(
                     dissimilarity="precomputed", n_components=2,
                     n_init=1, max_iter=step_iter,
-                    init_type=init_type, init_data=init)
+                    init_type=init_type, init_data=init
+                )
 
                 mdsfit = mds(X)
                 iterations_done += step_iter
@@ -576,18 +560,16 @@ class OWMDS(OWProjectionWidget):
         if self.embedding is not None:
             names = get_unique_names([v.name for v in self.data.domain.variables],
                                      ["mds-x", "mds-y"])
-            output = embedding = Orange.data.Table.from_numpy(
-                Orange.data.Domain([ContinuousVariable(names[0]), ContinuousVariable(names[1])]),
-                self.embedding
-            )
+            domain = Domain([ContinuousVariable(names[0]),
+                             ContinuousVariable(names[1])])
+            output = embedding = Table.from_numpy(domain, self.embedding)
         else:
             output = embedding = None
 
         if self.embedding is not None and self.data is not None:
             domain = self.data.domain
-            domain = Orange.data.Domain(domain.attributes,
-                                        domain.class_vars,
-                                        domain.metas + embedding.domain.attributes)
+            domain = Domain(domain.attributes, domain.class_vars,
+                            domain.metas + embedding.domain.attributes)
             output = self.data.transform(domain)
             output.metas[:, -2:] = embedding.X
 
@@ -613,14 +595,15 @@ class OWMDS(OWProjectionWidget):
             return
 
         def name(var):
-            return var and var.name
+            return var.name if isinstance(var, Variable) else var
 
         caption = report.render_items_vert((
             ("Color", name(self.attr_color)),
             ("Label", name(self.attr_label)),
             ("Shape", name(self.attr_shape)),
             ("Size", name(self.attr_size)),
-            ("Jittering", self.graph.jitter_size != 0 and "{} %".format(self.graph.jitter_size))))
+            ("Jittering", self.graph.jitter_size != 0 and "{} %".format(
+                self.graph.jitter_size))))
         self.report_plot()
         if caption:
             self.report_caption(caption)
@@ -637,6 +620,10 @@ class OWMDS(OWProjectionWidget):
             settings_["graph"] = settings_graph
             settings_["auto_commit"] = settings_["autocommit"]
 
+        if version < 3:
+            if "connected_pairs" in settings_:
+                connected_pairs = settings_["connected_pairs"]
+                settings_["graph"]["connected_pairs"] = connected_pairs
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -644,19 +631,26 @@ class OWMDS(OWProjectionWidget):
             domain = context.ordered_domain
             n_domain = [t for t in context.ordered_domain if t[1] == 2]
             c_domain = [t for t in context.ordered_domain if t[1] == 1]
-            context_values_graph = {}
+            context_values = {}
             for _, old_val, new_val in ((domain, "color_value", "attr_color"),
                                         (c_domain, "shape_value", "attr_shape"),
                                         (n_domain, "size_value", "attr_size"),
                                         (domain, "label_value", "attr_label")):
                 tmp = context.values[old_val]
                 if tmp[1] >= 0:
-                    context_values_graph[new_val] = (tmp[0], tmp[1] + 100)
+                    context_values[new_val] = (tmp[0], tmp[1] + 100)
                 elif tmp[0] != "Stress":
-                    context_values_graph[new_val] = None
+                    context_values[new_val] = None
                 else:
-                    context_values_graph[new_val] = tmp
-            context.values["graph"] = context_values_graph
+                    context_values[new_val] = tmp
+            context.values = context_values
+
+        if version < 3 and "graph" in context.values:
+            values = context.values
+            values["attr_color"] = values["graph"]["attr_color"]
+            values["attr_size"] = values["graph"]["attr_size"]
+            values["attr_shape"] = values["graph"]["attr_shape"]
+            values["attr_label"] = values["graph"]["attr_label"]
 
 
 def main(argv=None):
@@ -670,7 +664,7 @@ def main(argv=None):
     else:
         filename = "iris"
 
-    data = Orange.data.Table(filename)
+    data = Table(filename)
     w = OWMDS()
     w.set_data(data)
     w.set_subset_data(data[np.random.choice(len(data), 10)])

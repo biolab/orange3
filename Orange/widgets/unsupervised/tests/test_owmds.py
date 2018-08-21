@@ -42,7 +42,6 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         self.towns = DistMatrix.from_file(
             os.path.join(self.datasets_dir, "slovenian-towns.dst"))
 
-
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
@@ -64,7 +63,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
     def test_nan_plot(self):
         def combobox_run_through_all():
-            cb = self.widget.graph.controls
+            cb = self.widget.controls
             simulate.combobox_run_through_all(cb.attr_color)
             # simulate.combobox_run_through_all(cb.attr_shape)
             simulate.combobox_run_through_all(cb.attr_size)
@@ -173,18 +172,18 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
             'savedWidgetGeometry': None
         }
         w = self.create_widget(OWMDS, stored_settings=settings)
-        data = self.data
-        self.send_signal(w.Inputs.data, data, widget=w)
+        domain = self.data.domain
+        self.send_signal(w.Inputs.data, self.data, widget=w)
         g = w.graph
-        for a, value in ((g.attr_color, "iris"),
-                         (g.attr_shape, "iris"),
-                         (g.attr_size, "Stress"),
-                         (g.attr_label, "sepal length"),
+        for a, value in ((w.attr_color, domain["iris"]),
+                         (w.attr_shape, domain["iris"]),
+                         (w.attr_size, "Stress"),
+                         (w.attr_label, domain["sepal length"]),
                          (g.label_only_selected, True),
                          (g.alpha_value, 230),
                          (g.point_width, 8),
                          (g.jitter_size, 0.5)):
-            self.assertTrue(a, value)
+            self.assertEqual(a, value)
         self.assertFalse(w.auto_commit)
 
     def test_attr_label_from_dist_matrix_from_file(self):
@@ -196,26 +195,26 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
 
         # Distance matrix with labels
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIn(row_items.domain["label"], w.label_model)
+        self.assertIn(row_items.domain["label"], w.controls.attr_label.model())
 
         # Distances matrix without labels
         self.towns.row_items = None
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertEqual(list(w.label_model), [None])
+        self.assertEqual(list(w.controls.attr_label.model()), [None])
 
         # No data
         self.send_signal(w.Inputs.distances, None)
-        self.assertEqual(list(w.label_model), [None])
+        self.assertEqual(list(w.controls.attr_label.model()), [None])
 
         # Distances matrix with labels again
         self.towns.row_items = row_items
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertIn(row_items.domain["label"], w.label_model)
+        self.assertIn(row_items.domain["label"], w.controls.attr_label.model())
 
         # Followed by no data
         self.towns.row_items = None
         self.send_signal(w.Inputs.distances, self.towns)
-        self.assertEqual(list(w.label_model), [None])
+        self.assertEqual(list(w.controls.attr_label.model()), [None])
 
     def test_attr_label_from_dist_matrix_from_data(self):
         w = self.widget
@@ -228,7 +227,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, dist)
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
+                        < set(w.controls.attr_label.model()))
 
     def test_attr_label_from_data(self):
         w = self.widget
@@ -240,7 +239,7 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         dist = Euclidean(data)
         self.send_signal(w.Inputs.distances, dist)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
+                        < set(w.controls.attr_label.model()))
 
     def test_attr_label_matrix_and_data(self):
         w = self.widget
@@ -254,22 +253,21 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.distances, dist)
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
+                        < set(w.controls.attr_label.model()))
 
         # Has data, but receives a signal without data: has to keep the label
-        dist.row_items = None
-        self.send_signal(w.Inputs.distances, dist)
+        self.send_signal(w.Inputs.distances, None)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
+                        < set(w.controls.attr_label.model()))
 
         # Has matrix without data, and loses the data: remove the label
         self.send_signal(w.Inputs.data, None)
-        self.assertEqual(list(w.label_model), [None])
+        self.assertEqual(list(w.controls.attr_label.model()), [None])
 
         # Has matrix without data, receives data: add attrs to combo, select
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
-                        < set(w.label_model))
+                        < set(w.controls.attr_label.model()))
 
 
 if __name__ == "__main__":
