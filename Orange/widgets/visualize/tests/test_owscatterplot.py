@@ -154,13 +154,24 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_points_combo_boxes(self):
         """Check Point box combo models and values"""
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertEqual(len(self.widget.controls.graph.attr_color.model()), 8)
-        self.assertEqual(len(self.widget.controls.graph.attr_shape.model()), 3)
-        self.assertEqual(len(self.widget.controls.graph.attr_size.model()), 6)
-        self.assertEqual(len(self.widget.controls.graph.attr_label.model()), 8)
+        graph = self.widget.controls.graph
+
+        # color and label should contain all variables
+        # size should contain only continuous variables
+        # shape should contain only discrete variables
+        for var in self.data.domain.variables + self.data.domain.metas:
+            self.assertIn(var, graph.attr_color.model())
+            self.assertIn(var, graph.attr_label.model())
+            if var.is_continuous:
+                self.assertIn(var, graph.attr_size.model())
+                self.assertNotIn(var, graph.attr_shape.model())
+            if var.is_discrete:
+                self.assertNotIn(var, graph.attr_size.model())
+                self.assertIn(var, graph.attr_shape.model())
+
         other_widget = self.create_widget(OWScatterPlot)
         self.send_signal(self.widget.Inputs.data, self.data, widget=other_widget)
-        self.assertEqual(self.widget.graph.controls.attr_color.currentText(),
+        self.assertEqual(graph.attr_color.currentText(),
                          self.data.domain.class_var.name)
 
     def test_group_selections(self):
