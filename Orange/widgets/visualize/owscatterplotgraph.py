@@ -812,7 +812,7 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
 
     def compute_sizes(self):
         self.master.Information.missing_size.clear()
-        if self.attr_size is None:
+        if self.attr_size in [None, OWPlotGUI.SizeByOverlap]:
             size_data = np.full((self.n_points,), self.point_width,
                                 dtype=float)
         else:
@@ -826,7 +826,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
             self.master.Information.missing_size(self.attr_size)
 
         # scale sizes because of overlaps
-        size_data = np.multiply(size_data, self.overlap_factor)
+        if self.attr_size == OWPlotGUI.SizeByOverlap:
+            size_data = np.multiply(size_data, self.overlap_factor)
 
         return size_data
 
@@ -971,12 +972,13 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     for col in colors])
                 self.brush_colors = brush_colors_palette[c_data]
 
-                # color overlapping points by most frequent color
-                for i, xy in enumerate(zip(self.x_data, self.y_data)):
-                    if self.overlaps[i] > 1:
-                        c = Counter(c_data[j] for j in self.coord_to_id[xy]).most_common(1)[0][0]
-                        self.brush_colors[i] = brush_colors_palette[c]
-                        self.pen_colors[i] = pen_colors_palette[c]
+                if self.attr_size == OWPlotGUI.SizeByOverlap:
+                    # color overlapping points by most frequent color
+                    for i, xy in enumerate(zip(self.x_data, self.y_data)):
+                        if self.overlaps[i] > 1:
+                            c = Counter(c_data[j] for j in self.coord_to_id[xy]).most_common(1)[0][0]
+                            self.brush_colors[i] = brush_colors_palette[c]
+                            self.pen_colors[i] = pen_colors_palette[c]
 
             if subset is not None:
                 brush = np.where(
