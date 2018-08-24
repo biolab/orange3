@@ -161,6 +161,7 @@ class OWBoxPlot(widget.OWWidget):
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
     show_labels = Setting(True)
+    sort_freqs = Setting(False)
     auto_commit = Setting(True)
 
     _sorting_criteria_attrs = {
@@ -254,6 +255,9 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.display_changed)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
+            callback=self.display_changed)
+        self.sort_cb = gui.checkBox(
+            box, self, 'sort_freqs', "Sort by subgroup frequencies",
             callback=self.display_changed)
         gui.rubber(box)
 
@@ -457,11 +461,13 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.stretching_box.show()
             self.display_box.hide()
+            self.sort_cb.setEnabled(self.group_var is not None)
 
     def clear_scene(self):
         self.closeContext()
         self.box_scene.clearSelection()
         self.box_scene.clear()
+        self.box_view.viewport().update()
         self.attr_labels = []
         self.labels = []
         self.boxes = []
@@ -563,22 +569,28 @@ class OWBoxPlot(widget.OWWidget):
                 self.labels = [
                     QGraphicsTextItem(str(int(sum(self.dist))))]
 
+        self.order = list(range(len(self.attr_labels)))
+
         self.draw_axis_disc()
         if self.group_var:
             self.boxes = \
                 [self.strudel(cont, i) for i, cont in enumerate(self.conts)
                  if np.sum(cont) > 0]
             self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
+
+            if self.sort_freqs:
+                self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
         else:
             self.boxes = [self.strudel(self.dist)]
 
-        for row, box in enumerate(self.boxes):
+        for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
+            box = self.boxes[box_index]
             bars, labels = box[::2], box[1::2]
 
-            self.__draw_group_labels(y, row)
+            self.__draw_group_labels(y, box_index)
             if not self.stretched:
-                self.__draw_row_counts(y, row)
+                self.__draw_row_counts(y, box_index)
             if self.show_labels and self.attribute is not self.group_var:
                 self.__draw_bar_labels(y, bars, labels)
             self.__draw_bars(y, bars)
