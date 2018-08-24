@@ -976,7 +976,8 @@ class OWScatterPlotGraph(gui.OWComponent, ScaleScatterPlotData):
                     # color overlapping points by most frequent color
                     for i, xy in enumerate(zip(self.x_data, self.y_data)):
                         if self.overlaps[i] > 1:
-                            c = Counter(c_data[j] for j in self.coord_to_id[xy]).most_common(1)[0][0]
+                            cnt = Counter(c_data[j] for j in self.coord_to_id[xy])
+                            c = cnt.most_common(1)[0][0]
                             self.brush_colors[i] = brush_colors_palette[c]
                             self.pen_colors[i] = pen_colors_palette[c]
 
