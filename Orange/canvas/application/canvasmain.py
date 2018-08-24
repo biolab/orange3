@@ -1325,6 +1325,7 @@ class CanvasMainWindow(QMainWindow):
         # existing scheme file if `scheme.save_to` raises an error.
         buffer = BytesIO()
         try:
+            scheme.set_runtime_env("basedir", dirname)
             scheme.save_to(buffer, pretty=True, pickle_fallback=True)
         except Exception:
             log.error("Error saving %r to %r", scheme, filename, exc_info=True)
@@ -1340,7 +1341,6 @@ class CanvasMainWindow(QMainWindow):
         try:
             with open(filename, "wb") as f:
                 f.write(buffer.getvalue())
-            scheme.set_runtime_env("basedir", dirname)
             return True
         except (IOError, OSError) as ex:
             log.error("%s saving '%s'", type(ex).__name__, filename,
