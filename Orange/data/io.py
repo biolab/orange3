@@ -931,7 +931,7 @@ class TabReader(CSVReader):
 class PickleReader(FileFormat):
     """Reader for pickled Table objects"""
     EXTENSIONS = ('.pkl', '.pickle')
-    DESCRIPTION = 'Pickled Python object file'
+    DESCRIPTION = 'Pickled Orange data'
     SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = True
 
