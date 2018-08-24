@@ -5,16 +5,17 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from Orange.data.table import Table
-from Orange.data.io import Compression, FileFormat
+from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import filedialogs
 from Orange.widgets.widget import Input
 
 FILE_TYPES = [
-    ("Tab-delimited (.tab)", ".tab", False),
-    ("Comma-seperated values (.csv)", ".csv", False),
-    ("Pickle (.pkl)", ".pkl", True),
+    ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
+     w.EXTENSIONS[0],
+     w.SUPPORT_SPARSE_DATA)
+    for w in (TabReader, CSVReader, PickleReader)
 ]
 
 COMPRESSIONS = [
@@ -45,13 +46,13 @@ class OWSave(widget.OWWidget):
 
     def get_writer_selected(self):
         writer = FileFormat.get_reader(self.type_ext)
-        try:
-            writer.EXTENSIONS = [
-                writer.EXTENSIONS[writer.EXTENSIONS.index(self.type_ext + self.compress_ext)]]
-            return writer
-        except ValueError:
-            self.Error.not_supported_extension()
+
+        ext = self.type_ext + self.compress_ext
+        if ext not in writer.EXTENSIONS:
+            self.Error.unsupported_extension()
             return None
+        writer.EXTENSIONS = [ext]
+        return writer
 
     @classmethod
     def remove_extensions(cls, filename):
@@ -62,7 +63,7 @@ class OWSave(widget.OWWidget):
         return filename
 
     class Error(widget.OWWidget.Error):
-        not_supported_extension = widget.Msg("Selected extension is not supported.")
+        unsupported_extension = widget.Msg("Selected extension is not supported.")
 
     def __init__(self):
         super().__init__()
@@ -190,6 +191,7 @@ if __name__ == "__main__":
 
     a = QApplication(sys.argv)
     table = Table("iris")
+
     ow = OWSave()
     ow.show()
     ow.dataset(table)
