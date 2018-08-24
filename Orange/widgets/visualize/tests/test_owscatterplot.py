@@ -8,6 +8,7 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.visualize.owscatterplotgraph import MAX
 from Orange.widgets.widget import AttributeList
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
@@ -173,6 +174,13 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.data, widget=other_widget)
         self.assertEqual(graph.attr_color.currentText(),
                          self.data.domain.class_var.name)
+
+    def test_overlap(self):
+        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        self.assertEqual(len(set(self.widget.graph.compute_sizes())), 1)
+        simulate.combobox_activate_item(self.widget.controls.graph.attr_size,
+                                        OWPlotGUI.SizeByOverlap)
+        self.assertGreater(len(set(self.widget.graph.compute_sizes())), 1)
 
     def test_group_selections(self):
         self.send_signal(self.widget.Inputs.data, self.data)
