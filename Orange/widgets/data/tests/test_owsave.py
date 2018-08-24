@@ -4,17 +4,18 @@ from unittest.mock import patch
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import Compression, FileFormat
+from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter
 from Orange.widgets.data.owsave import OWSave
 
-FILE_TYPES = {
-    "Tab-delimited (.tab)": ".tab",
-    "Comma-seperated values (.csv)": ".csv",
-    "Pickle (.pkl)": ".pkl",
-}
+FILE_TYPES = [
+    ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
+     w.EXTENSIONS[0],
+     w.SUPPORT_SPARSE_DATA)
+    for w in (TabReader, CSVReader, PickleReader)
+]
 
 COMPRESSIONS = [
     ("gzip ({})".format(Compression.GZIP), Compression.GZIP),
@@ -51,7 +52,7 @@ class TestOWSave(WidgetTest):
     def test_ordinary_save(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
 
-        for ext, suffix in FILE_TYPES.items():
+        for ext, suffix, _ in FILE_TYPES:
             self.widget.filetype = ext
             self.widget.update_extension()
             writer = self.widget.get_writer_selected()
@@ -67,13 +68,14 @@ class TestOWSave(WidgetTest):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
 
         self.widget.compress = True
-        for type, compression in itertools.product(FILE_TYPES.keys(), [x for x, _ in COMPRESSIONS]):
-            self.widget.filetype = type
-            self.widget.compression = compression
+        for type, compression in itertools.product([[x, ext] for x, ext, _ in FILE_TYPES],
+                                                   COMPRESSIONS):
+            self.widget.filetype = type[0]
+            self.widget.compression = compression[0]
             self.widget.update_extension()
             writer = self.widget.get_writer_selected()
             with named_file("",
-                            suffix=FILE_TYPES[type] + dict(COMPRESSIONS)[compression]) as filename:
+                            suffix=type[1] + compression[1]) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
                     return fn, format_filter(w)
 

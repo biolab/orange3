@@ -35,6 +35,9 @@ class OWSave(widget.OWWidget):
     class Inputs:
         data = Input("Data", Table)
 
+    class Error(widget.OWWidget.Error):
+        unsupported_extension = widget.Msg("Selected extension is not supported.")
+
     want_main_area = False
     resizing_enabled = False
 
@@ -43,27 +46,6 @@ class OWSave(widget.OWWidget):
     filetype = Setting(FILE_TYPES[0][0])
     compression = Setting(COMPRESSIONS[0][0])
     compress = Setting(False)
-
-    def get_writer_selected(self):
-        writer = FileFormat.get_reader(self.type_ext)
-
-        ext = self.type_ext + self.compress_ext
-        if ext not in writer.EXTENSIONS:
-            self.Error.unsupported_extension()
-            return None
-        writer.EXTENSIONS = [ext]
-        return writer
-
-    @classmethod
-    def remove_extensions(cls, filename):
-        if not filename:
-            return None
-        for ext in pathlib.PurePosixPath(filename).suffixes:
-            filename = filename.replace(ext, '')
-        return filename
-
-    class Error(widget.OWWidget.Error):
-        unsupported_extension = widget.Msg("Selected extension is not supported.")
 
     def __init__(self):
         super().__init__()
@@ -117,6 +99,24 @@ class OWSave(widget.OWWidget):
         )
         self.save_as.setMinimumWidth(220)
         self.adjustSize()
+
+    def get_writer_selected(self):
+        writer = FileFormat.get_reader(self.type_ext)
+
+        ext = self.type_ext + self.compress_ext
+        if ext not in writer.EXTENSIONS:
+            self.Error.unsupported_extension()
+            return None
+        writer.EXTENSIONS = [ext]
+        return writer
+
+    @classmethod
+    def remove_extensions(cls, filename):
+        if not filename:
+            return None
+        for ext in pathlib.PurePosixPath(filename).suffixes:
+            filename = filename.replace(ext, '')
+        return filename
 
     def adjust_label(self):
         if self.filename:
