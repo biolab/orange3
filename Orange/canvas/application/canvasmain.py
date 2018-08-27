@@ -1922,16 +1922,22 @@ class CanvasMainWindow(QMainWindow):
             if url.scheme() == "help" and url.authority() == "search":
                 try:
                     url = self.help.search(url)
+                    self.show_help(url)
                 except KeyError:
-                    url = None
                     log.info("No help topic found for %r", url)
-
-            if url:
-                self.show_help(url)
-            else:
-                message_information(
-                    self.tr("There is no documentation for this widget yet."),
-                    parent=self)
+                    message_information(
+                        self.tr("There is no documentation for this widget yet."),
+                        parent=self)
+            elif url.scheme() == "orange":
+                target = url.host()
+                if target == "examples":
+                    self.tutorial_scheme()
+                elif target == "tutorials":
+                    self.tutorials()
+                elif target == "welcome":
+                    self.welcome_dialog()
+                else:
+                    log.error("No target found for %r", url)
 
             return True
 
