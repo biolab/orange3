@@ -540,8 +540,6 @@ class PyListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return str(section)
 
-
-    # noinspection PyMethodOverriding
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._list)
 
@@ -572,7 +570,8 @@ class PyListModel(QAbstractListModel):
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
             if self._is_index_valid(index):
-                self[index.row()] = value  # Will emit proper dataChanged signal
+                self._list[index.row()] = value
+                self.dataChanged.emit(index, index)
                 return True
         elif self._is_index_valid(index):
             self._other_data[index.row()][role] = value
@@ -589,7 +588,7 @@ class PyListModel(QAbstractListModel):
             for role, value in data.items():
                 if role == Qt.EditRole and \
                         self._is_index_valid(index):
-                    self[index.row()] = value
+                    self._list[index.row()] = value
                 elif self._is_index_valid(index):
                     self._other_data[index.row()][role] = value
 
@@ -602,8 +601,6 @@ class PyListModel(QAbstractListModel):
         else:
             return self._flags | Qt.ItemIsDropEnabled
 
-
-    # noinspection PyMethodOverriding
     def insertRows(self, row, count, parent=QModelIndex()):
         """ Insert ``count`` rows at ``row``, the list fill be filled
         with ``None``
@@ -614,8 +611,6 @@ class PyListModel(QAbstractListModel):
         else:
             return False
 
-
-    # noinspection PyMethodOverriding
     def removeRows(self, row, count, parent=QModelIndex()):
         """Remove ``count`` rows starting at ``row``
         """
