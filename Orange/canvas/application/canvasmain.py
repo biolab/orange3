@@ -466,7 +466,7 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.tutorials_action = \
-            QAction(self.tr("Tutorials"), self,
+            QAction(self.tr("YouTube Tutorials"), self,
                     objectName="tutorials-action",
                     toolTip=self.tr("View YouTube tutorials."),
                     triggered=self.tutorials,
@@ -474,7 +474,7 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         self.examples_action = \
-            QAction(self.tr("Examples"), self,
+            QAction(self.tr("Workflow Examples"), self,
                     objectName="tutorial-action",
                     toolTip=self.tr("Browse example workflows."),
                     triggered=self.tutorial_scheme,
@@ -1537,12 +1537,13 @@ class CanvasMainWindow(QMainWindow):
                     )
 
         examples_action = \
-            QAction(self.examples_action.text(), dialog,
-                    icon=self.examples_action.icon(),
-                    toolTip=self.examples_action.toolTip(),
-                    whatsThis=self.examples_action.whatsThis(),
-                    triggered=open_examples,
+            QAction(self.tr("Examples"), self,
+                    icon=canvas_icons("Examples.svg"),
+                    toolTip=self.tr("Browse example workflows."),
+                    objectName="tutorial-action",
+                    triggered=open_examples
                     )
+
         tutorials_action = \
             QAction(self.tr("Tutorials"), self,
                     objectName="tutorials-action",
