@@ -620,6 +620,28 @@ class PyListModel(QAbstractListModel):
         else:
             return False
 
+    def moveRows(self, sourceParent, sourceRow, count,
+                 destinationParent, destinationChild):
+        # type: (QModelIndex, int, int, QModelIndex, int) -> bool
+        """
+        Move `count` rows starting at `sourceRow` to `destinationChild`.
+
+        Reimplemented from QAbstractItemModel.moveRows
+        """
+        if not self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1,
+                                  destinationParent, destinationChild):
+            return False
+        take_slice = slice(sourceRow, sourceRow + count)
+        insert_at = destinationChild
+        if insert_at > sourceRow:
+            insert_at -= count
+        items, other = self._list[take_slice], self._other_data[take_slice]
+        del self._list[take_slice], self._other_data[take_slice]
+        self._list[insert_at:insert_at] = items
+        self._other_data[insert_at: insert_at] = other
+        self.endMoveRows()
+        return True
+
     def extend(self, iterable):
         list_ = list(iterable)
         self.beginInsertRows(QModelIndex(),

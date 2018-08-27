@@ -470,6 +470,39 @@ class TestPyListModel(unittest.TestCase):
         self.assertSequenceEqual(model, [1, 2, 3, 4])
         self.assertSequenceEqual(model._other_data, "bdac")
 
+    def test_moveRows(self):
+        model = PyListModel([1, 2, 3, 4])
+        for i in range(model.rowCount()):
+            model.setData(model.index(i), str(i + 1), Qt.UserRole)
+
+        def modeldata(role):
+            return [model.index(i).data(role)
+                    for i in range(model.rowCount())]
+
+        def userdata():
+            return modeldata(Qt.UserRole)
+
+        def editdata():
+            return modeldata(Qt.EditRole)
+
+        r = model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [2, 1, 3, 4])
+        self.assertSequenceEqual(userdata(), ["2", "1", "3", "4"])
+        r = model.moveRows(QModelIndex(), 1, 2, QModelIndex(), 4)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [2, 4, 1, 3])
+        self.assertSequenceEqual(userdata(), ["2", "4", "1", "3"])
+        r = model.moveRows(QModelIndex(), 3, 1, QModelIndex(), 0)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [3, 2, 4, 1])
+        self.assertSequenceEqual(userdata(), ["3", "2", "4", "1"])
+        r = model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 2)
+        self.assertIs(r, False)
+        model = PyListModel([])
+        r = model.moveRows(QModelIndex(), 0, 0, QModelIndex(), 0)
+        self.assertIs(r, False)
+
 
 class TestVariableListModel(unittest.TestCase):
     @classmethod
