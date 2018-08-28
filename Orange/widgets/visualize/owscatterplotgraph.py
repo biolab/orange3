@@ -956,6 +956,12 @@ class OWScatterPlotBase(gui.OWComponent):
                       if value_rect.contains(QPointF(point.pos()))]
             self.select(points)
 
+    def select_by_index(self, indices):
+        if self.scatterplot_item is not None:
+            points = [point for point in self.scatterplot_item.points()
+                      if point.data() in indices]
+            self.select(points)
+
     def unselect_all(self):
         self.selection = None
         self.select([])
