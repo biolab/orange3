@@ -2,6 +2,7 @@
 AnyQt>=0.0.8
 
 pyqtgraph>=0.10.0
+matplotlib>=2.0.0
 
 # For add-ons' descriptions
 docutils
