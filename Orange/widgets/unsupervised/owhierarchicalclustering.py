@@ -432,11 +432,11 @@ class DendrogramWidget(QGraphicsWidget):
 
         """
         if state is False and item not in self._selection or \
-                state == True and item in self._selection:
+                state is True and item in self._selection:
             return  # State unchanged
 
         if item in self._selection:
-            if state == False:
+            if state is False:
                 self._remove_selection(item)
                 self._re_enumerate_selections()
                 self.selectionChanged.emit()
