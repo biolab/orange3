@@ -33,7 +33,7 @@ The widget first converts the input data into a k-nearest neighbor graph. To pre
 Example
 -------
 
-*Louvain Clustering* converts the dataset into a graph, where it finds highly interconected nodes. We can visualize the graph itself using the *Network Explorer* from the Network addon.
+*Louvain Clustering* converts the dataset into a graph, where it finds highly interconnected nodes. We can visualize the graph itself using the *Network Explorer* from the Network addon.
 
 .. figure:: images/Louvain-Example.png
 
