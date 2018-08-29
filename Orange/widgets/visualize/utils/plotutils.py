@@ -1,7 +1,7 @@
 import numpy as np
 
-from AnyQt.QtWidgets import QGraphicsLineItem
-from AnyQt.QtCore import QRectF, QLineF
+from AnyQt.QtWidgets import QGraphicsLineItem, QGraphicsSceneMouseEvent
+from AnyQt.QtCore import QRectF, QLineF, QObject, QEvent
 from AnyQt.QtGui import QTransform
 
 import pyqtgraph as pg
@@ -98,3 +98,26 @@ class AnchorItem(pg.GraphicsObject):
 
         self._arrow.setPos(self._spine.line().p2())
         self._arrow.setRotation(180 - angle)
+
+
+class HelpEventDelegate(QObject):
+    def __init__(self, delegate, parent=None):
+        super().__init__(parent)
+        self.delegate = delegate
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.GraphicsSceneHelp:
+            return self.delegate(event)
+        else:
+            return False
+
+
+class MouseEventDelegate(HelpEventDelegate):
+    def __init__(self, delegate, delegate2, parent=None):
+        self.delegate2 = delegate2
+        super().__init__(delegate, parent=parent)
+
+    def eventFilter(self, obj, ev):
+        if isinstance(ev, QGraphicsSceneMouseEvent):
+            self.delegate2(ev)
+        return super().eventFilter(obj, ev)

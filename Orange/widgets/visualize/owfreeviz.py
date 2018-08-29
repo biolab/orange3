@@ -9,9 +9,7 @@ from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtSlot as Slot
 )
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import (
-    QApplication, QGraphicsEllipseItem, QGraphicsSceneMouseEvent
-)
+from AnyQt.QtWidgets import QApplication, QGraphicsEllipseItem
 
 import pyqtgraph as pg
 
@@ -22,9 +20,11 @@ from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
 )
 from Orange.widgets.visualize.owscatterplotgraph import (
-    OWScatterPlotBase, OWProjectionWidget, HelpEventDelegate,
-    InteractiveViewBox)
-from Orange.widgets.visualize.utils.plotutils import AnchorItem
+    OWScatterPlotBase, OWProjectionWidget, InteractiveViewBox
+)
+from Orange.widgets.visualize.utils.plotutils import (
+    AnchorItem, MouseEventDelegate
+)
 from Orange.widgets.widget import Input, Output
 
 
@@ -191,24 +191,13 @@ class FreeVizInteractiveViewBox(InteractiveViewBox):
             self.graph.show_indicator(self.point_i)
 
 
-class EventDelegate(HelpEventDelegate):
-    def __init__(self, delegate, delegate2, parent=None):
-        self.delegate2 = delegate2
-        super().__init__(delegate, parent=parent)
-
-    def eventFilter(self, obj, ev):
-        if isinstance(ev, QGraphicsSceneMouseEvent):
-            self.delegate2(ev)
-        return super().eventFilter(obj, ev)
-
-
 class OWFreeVizGraph(OWScatterPlotBase):
     radius = settings.Setting(0)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent, FreeVizInteractiveViewBox)
-        self._tooltip_delegate = EventDelegate(self.help_event,
-                                               self._show_indicator_event)
+        self._tooltip_delegate = MouseEventDelegate(self.help_event,
+                                                    self._show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
 
         self._points = []

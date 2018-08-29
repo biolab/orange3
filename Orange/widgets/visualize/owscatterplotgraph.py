@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 import sys
 import itertools
+import warnings
 from xml.sax.saxutils import escape
 from math import log2, log10, floor, ceil
 
@@ -22,12 +23,16 @@ from pyqtgraph.graphicsItems.TextItem import TextItem
 from pyqtgraph.Point import Point
 
 from Orange.statistics.util import bincount
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
 from Orange.widgets.utils import classdensity
 from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
                                                ContinuousPaletteGenerator, DefaultRGBColors)
 from Orange.widgets.utils.plot import \
     OWPalette, OWPlotGUI, SELECT, PANNING, ZOOMING
+from Orange.widgets.visualize.utils.plotutils import (
+    HelpEventDelegate as EventDelegate
+)
 from Orange.widgets.settings import Setting, ContextSetting
 
 
@@ -536,7 +541,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
         self.update_grid()
 
-        self._tooltip_delegate = HelpEventDelegate(self.help_event)
+        self._tooltip_delegate = EventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
 
     def _create_drag_tooltip(self, scene):
@@ -1033,16 +1038,12 @@ class OWScatterPlotBase(gui.OWComponent):
         return box_zoom_select
 
 
-class HelpEventDelegate(QObject): #also used by owdistributions
+class HelpEventDelegate(EventDelegate):
     def __init__(self, delegate, parent=None):
-        super().__init__(parent)
-        self.delegate = delegate
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.GraphicsSceneHelp:
-            return self.delegate(event)
-        else:
-            return False
+        super().__init__(delegate, parent)
+        warnings.warn("HelpEventDelegate class has been deprecated since 3.17."
+                      " Use Orange.widgets.visualize.utils.plotutils."
+                      "HelpEventDelegate instead.", OrangeDeprecationWarning)
 
 
 class OWProjectionWidget(OWWidget):
