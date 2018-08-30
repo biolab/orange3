@@ -37,7 +37,7 @@ Examples
 
 In the schema below, the most common use of the widget is presented.
 First, the data is read and a CN2 rule classifier is trained. We are using
-*titanic* dataset for the rule constrution. The rules
+*titanic* dataset for the rule construction. The rules
 are then viewed using the :doc:`Rule Viewer <../visualize/cn2ruleviewer>`. To explore different CN2
 algorithms and understand how adjusting parameters influences the
 learning process, **Rule Viewer** should be kept open and in sight, while

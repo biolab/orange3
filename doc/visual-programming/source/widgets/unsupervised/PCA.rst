@@ -50,7 +50,7 @@ much clearer distinction between classes than the default settings.
 The widget provides two outputs: transformed data and principal
 components. Transformed data are weights for individual instances in the
 new coordinate system, while components are the system descriptors
-(weights for princial components). When fed into the :doc:`Data Table <../data/datatable>`, we
+(weights for principal components). When fed into the :doc:`Data Table <../data/datatable>`, we
 can see both outputs in numerical form. We used two data tables in order to provide a more clean visualization of the workflow, 
 but you can also choose to edit the links in such a way that you display the data in just one data table. 
 You only need to create two links and connect the *Transformed data* and *Components* inputs to the *Data* output. 

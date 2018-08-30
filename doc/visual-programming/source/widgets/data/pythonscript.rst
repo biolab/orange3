@@ -103,7 +103,7 @@ we used wine.tab and rounded all the values to whole numbers.
 .. figure:: images/PythonScript-round.png
 
 
-The third example introduces some gaussian noise to the data. Again we make a copy of the input data, then walk through all the values with a double for loop and add random noise.
+The third example introduces some Gaussian noise to the data. Again we make a copy of the input data, then walk through all the values with a double for loop and add random noise.
 
 ::
 

@@ -46,7 +46,7 @@ Preprocessors
    - One feature per value creates columns for each value, place 1 where an instance has that value and 0 where it doesn't. Essentially `One Hot Encoding <http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html>`_.
    - Remove non-binary features retains only categorical features that have values of either 0 or 1 and transforms them into continuous.
    - Remove categorical features removes categorical features altogether.
-   - Treat as ordinal takes discrete values and treats them as numbers. If discrete values are categories, each category will be asssigned a number as they appear in the data.
+   - Treat as ordinal takes discrete values and treats them as numbers. If discrete values are categories, each category will be assigned a number as they appear in the data.
    - Divide by number of values is similar to treat as ordinal, but the final values will be divided by the total number of values and hence the range of the new continuous variable will be [0, 1].
 
 - Impute missing values:
