@@ -210,7 +210,7 @@ class Value(float):
         if self._value is None:
             return super().__hash__()
         else:
-            return hash((super().__hash__(), self._value))
+            return hash(self._value)
 
     @property
     def value(self):
