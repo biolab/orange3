@@ -35,6 +35,9 @@ class UsageStatistics:
         self.__node_addition_type = None
 
     def log_node_added(self, widget_name):
+        if not config.settings()["error-reporting/send-statistics"]:
+            return
+
         time = str(datetime.now() - self.start_time)
 
         if self.__node_addition_type == UsageStatistics.NodeAddMenu:
@@ -63,6 +66,9 @@ class UsageStatistics:
         self.__node_addition_type = addition_type
 
     def write_statistics(self):
+        if not config.settings()["error-reporting/send-statistics"]:
+            return
+
         statistics = {
             "Date": str(datetime.now().date()),
             "Orange Version": VERSION_STR,
@@ -82,19 +88,25 @@ class UsageStatistics:
 
         data.append(statistics)
 
-        with open(statistics_path, 'w') as f:
-            json.dump(data, f)
+        def store_data(d):
+            with open(statistics_path, 'w') as f:
+                json.dump(d, f)
 
-        send_usage_statistics()
+        try:
+            r = requests.post(server_url, files={'file': json.dumps(data)})
+            if r.status_code != 200:
+                log.warning("Error communicating with server while attempting to send "
+                            "usage statistics")
+                store_data(data)
+                return
+            # wipe statistics file
+            with open(statistics_path, 'w') as f:
+                json.dump([], f)
+        except (ConnectionError, requests.exceptions.RequestException):
+            log.warning("Connection error while attempting to send usage statistics.")
+            store_data(data)
+
 
     @staticmethod
     def set_last_search_query(query):
         UsageStatistics.last_search_query = query
-
-
-def send_usage_statistics():
-    try:
-        with open(statistics_path) as f:
-            requests.post(server_url, files={'file': f}, verify=False)
-    except ConnectionError:
-        log.warning("Connection error while attempting to send usage statistics.")
