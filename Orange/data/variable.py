@@ -207,6 +207,11 @@ class Value(float):
         raise TypeError("invalid operation on Value()")
 
     def __hash__(self):
+        if self.variable.is_discrete:
+            # It is not possible to hash the id and the domain value to the same number as required by __eq__.
+            # hash(1) == hash(Value(DiscreteVariable("var", ["red", "green", "blue"]), 1)) == hash("green")
+            # User should hash directly ids or domain values instead.
+            raise TypeError("unhashable type - cannot hash values of discrete variables!")
         if self._value is None:
             return super().__hash__()
         else:
