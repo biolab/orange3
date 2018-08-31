@@ -44,6 +44,38 @@ def compute_scale(min_, max_):
     return first_val, step
 
 
+def _quantiles(a, freq, q, interpolation="midpoint"):
+    """
+    Somewhat like np.quantiles, but with explicit sample frequencies.
+
+    * Only 'higher', 'lower' and 'midpoint' interpolation.
+    * `a` MUST be sorted.
+    """
+    a = np.asarray(a)
+    freq = np.asarray(freq)
+    assert a.size > 0 and a.size == freq.size
+    cumdist = np.cumsum(freq)
+    cumdist /= cumdist[-1]
+
+    if interpolation == "midpoint":  # R quantile(..., type=2)
+        left = np.searchsorted(cumdist, q, side="left")
+        right = np.searchsorted(cumdist, q, side="right")
+        # no mid point for the right most position
+        np.clip(right, 0, a.size - 1, out=right)
+        # right and left will be different only on the `q` boundaries
+        # (excluding the right most sample)
+        return (a[left] + a[right]) / 2
+    elif interpolation == "higher":  # R quantile(... type=1)
+        right = np.searchsorted(cumdist, q, side="right")
+        np.clip(right, 0, a.size - 1, out=right)
+        return a[right]
+    elif interpolation == "lower":
+        left = np.searchsorted(cumdist, q, side="left")
+        return a[left]
+    else:  # pragma: no cover
+        raise ValueError("invalid interpolation: '{}'".format(interpolation))
+
+
 class BoxData:
     def __init__(self, dist, attr, group_val_index=None, group_var=None):
         self.dist = dist
@@ -55,24 +87,12 @@ class BoxData:
         self.mean = float(np.sum(dist[0] * dist[1]) / n)
         self.var = float(np.sum(dist[1] * (dist[0] - self.mean) ** 2) / n)
         self.dev = math.sqrt(self.var)
-        s = 0
-        thresholds = [n / 4, n / 2, n / 4 * 3]
-        thresh_i = 0
-        q = []
-        for i, e in enumerate(dist[1]):
-            s += e
-            if s >= thresholds[thresh_i]:
-                if s == thresholds[thresh_i] and i + 1 < dist.shape[1]:
-                    q.append(float((dist[0, i] + dist[0, i + 1]) / 2))
-                else:
-                    q.append(float(dist[0, i]))
-                thresh_i += 1
-                if thresh_i == 3:
-                    self.q25, self.median, self.q75 = q
-                    break
-        else:
-            self.q25 = self.q75 = None
-            self.median = q[1] if len(q) == 2 else None
+        a, freq = np.asarray(dist)
+        q25, median, q75 = _quantiles(a, freq, [0.25, 0.5, 0.75])
+        self.median = median
+        # The code below omits the q25 or q75 in the plot when they are None
+        self.q25 = None if q25 == median else q25
+        self.q75 = None if q75 == median else q75
         self.conditions = [FilterContinuous(attr, FilterContinuous.Between,
                                             self.q25, self.q75)]
         if group_val_index is not None:
@@ -141,6 +161,7 @@ class OWBoxPlot(widget.OWWidget):
     sig_threshold = Setting(0.05)
     stretched = Setting(True)
     show_labels = Setting(True)
+    sort_freqs = Setting(False)
     auto_commit = Setting(True)
 
     _sorting_criteria_attrs = {
@@ -234,6 +255,9 @@ class OWBoxPlot(widget.OWWidget):
             callback=self.display_changed)
         gui.checkBox(
             box, self, 'show_labels', "Show box labels",
+            callback=self.display_changed)
+        self.sort_cb = gui.checkBox(
+            box, self, 'sort_freqs', "Sort by subgroup frequencies",
             callback=self.display_changed)
         gui.rubber(box)
 
@@ -407,12 +431,17 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = contingency.get_contingency(
                 dataset, attr, self.group_var)
             if self.is_continuous:
-                self.stats = [BoxData(cont, attr, i, self.group_var)
-                              for i, cont in enumerate(self.conts)
-                              if np.sum(cont) > 0]
-            self.label_txts_all = \
-                [v for v, c in zip(self.group_var.values, self.conts)
-                 if np.sum(c) > 0]
+                stats, label_texts = [], []
+                for i, cont in enumerate(self.conts):
+                    if np.sum(cont[1]):
+                        stats.append(BoxData(cont, attr, i, self.group_var))
+                        label_texts.append(self.group_var.values[i])
+                self.stats = stats
+                self.label_txts_all = label_texts
+            else:
+                self.label_txts_all = \
+                    [v for v, c in zip(self.group_var.values, self.conts)
+                     if np.sum(c) > 0]
         else:
             self.dist = distribution.get_distribution(dataset, attr)
             self.conts = []
@@ -432,11 +461,13 @@ class OWBoxPlot(widget.OWWidget):
         else:
             self.stretching_box.show()
             self.display_box.hide()
+            self.sort_cb.setEnabled(self.group_var is not None)
 
     def clear_scene(self):
         self.closeContext()
         self.box_scene.clearSelection()
         self.box_scene.clear()
+        self.box_view.viewport().update()
         self.attr_labels = []
         self.labels = []
         self.boxes = []
@@ -524,6 +555,7 @@ class OWBoxPlot(widget.OWWidget):
         self.select_box_items()
 
     def display_changed_disc(self):
+        assert not self.is_continuous
         self.clear_scene()
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
@@ -537,22 +569,28 @@ class OWBoxPlot(widget.OWWidget):
                 self.labels = [
                     QGraphicsTextItem(str(int(sum(self.dist))))]
 
+        self.order = list(range(len(self.attr_labels)))
+
         self.draw_axis_disc()
         if self.group_var:
             self.boxes = \
                 [self.strudel(cont, i) for i, cont in enumerate(self.conts)
                  if np.sum(cont) > 0]
             self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
+
+            if self.sort_freqs:
+                self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
         else:
             self.boxes = [self.strudel(self.dist)]
 
-        for row, box in enumerate(self.boxes):
+        for row, box_index in enumerate(self.order):
             y = (-len(self.boxes) + row) * 40 + 10
+            box = self.boxes[box_index]
             bars, labels = box[::2], box[1::2]
 
-            self.__draw_group_labels(y, row)
+            self.__draw_group_labels(y, box_index)
             if not self.stretched:
-                self.__draw_row_counts(y, row)
+                self.__draw_row_counts(y, box_index)
             if self.show_labels and self.attribute is not self.group_var:
                 self.__draw_bar_labels(y, bars, labels)
             self.__draw_bars(y, bars)
@@ -588,6 +626,7 @@ class OWBoxPlot(widget.OWWidget):
         row: int
             row index
         """
+        assert not self.is_continuous
         label = self.labels[row]
         b = label.boundingRect()
         if self.group_var:
@@ -751,13 +790,13 @@ class OWBoxPlot(widget.OWWidget):
         self.scene_width = (gtop - gbottom) * scale_x
 
         val = first_val
+        decimals = max(3, 4 - int(math.log10(step)))
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
-
             t = self.box_scene.addSimpleText(
-                self.attribute.repr_val(val) if not misssing_stats else "?",
+                repr(round(val, decimals)) if not misssing_stats else "?",
                 self._axis_font)
             t.setFlags(
                 t.flags() | QGraphicsItem.ItemIgnoresTransformations)
@@ -773,6 +812,7 @@ class OWBoxPlot(widget.OWWidget):
         """
         Draw the horizontal axis and sets self.scale_x for discrete attributes
         """
+        assert not self.is_continuous
         if self.stretched:
             if not self.attr_labels:
                 return
@@ -859,7 +899,7 @@ class OWBoxPlot(widget.OWWidget):
         if stat.median is not None:
             msc = stat.median * self.scale_x
             med_t = centered_text(stat.median, msc)
-            med_box_width2 = med_t.boundingRect().width()
+            med_box_width2 = med_t.boundingRect().width() / 2
             line(msc)
 
         if stat.q25 is not None:

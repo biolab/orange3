@@ -22,14 +22,6 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
     def setUp(self):
         self.widget = self.create_widget(OWRadviz)
 
-    def test_points_combo_boxes(self):
-        self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        graph = self.widget.controls.graph
-        self.assertEqual(len(graph.attr_color.model()), 17)
-        self.assertEqual(len(graph.attr_shape.model()), 11)
-        self.assertEqual(len(graph.attr_size.model()), 8)
-        self.assertEqual(len(graph.attr_label.model()), 17)
-
     def test_ugly_datasets(self):
         self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
         self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_reg")))

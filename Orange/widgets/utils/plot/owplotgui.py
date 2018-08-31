@@ -465,10 +465,13 @@ class OWPlotGUI:
         self.shape_model = DomainModel(placeholder="(Same shape)",
                                        valid_types=DiscreteVariable)
         self.size_model = DomainModel(placeholder="(Same size)",
+                                      order=(self.SizeByOverlap,) + DomainModel.SEPARATED,
                                       valid_types=ContinuousVariable)
         self.label_model = DomainModel(placeholder="(No labels)")
         self.points_models = [self.color_model, self.shape_model,
                               self.size_model, self.label_model]
+
+    SizeByOverlap = "Overlap"
 
     Spacing = 0
 

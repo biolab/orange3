@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.preprocess import Continuize
 from Orange.widgets.visualize.owheatmap import OWHeatMap
@@ -126,3 +128,15 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
         self.widget.col_clustering = True
         self.widget.set_dataset(iris)
+
+    def test_empty_clusters(self):
+        """Test if empty clusters are not displayed and warning is shown"""
+        data = np.array([1, 1, 1, 2, 2, 2, 3, 3, 3])
+
+        table = Table.from_numpy(Domain([ContinuousVariable()]),
+                                 data.reshape((9, 1)))
+        self.widget.controls.merge_kmeans.setChecked(True)
+        self.send_signal(self.widget.Inputs.data, table)
+
+        self.assertTrue(self.widget.Warning.empty_clusters.is_shown())
+        self.assertEqual(len(self.widget.merge_indices), 3)

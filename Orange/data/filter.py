@@ -12,6 +12,11 @@ from Orange.data import Instance, Storage, Variable
 from Orange.util import Enum
 
 
+__all__ = ["IsDefined", "HasClass", "Random", "SameValue", "Values",
+           "FilterDiscrete", "FilterContinuous", "FilterString",
+           "FilterStringList", "FilterRegex"]
+
+
 class Filter(Reprable):
     """
     The base class for filters.

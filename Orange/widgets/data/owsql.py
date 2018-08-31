@@ -21,6 +21,10 @@ from Orange.widgets.widget import OWWidget, Output, Msg
 MAX_DL_LIMIT = 1000000
 
 
+def is_postgres(backend):
+    return getattr(backend, 'display_name', '') == "PostgreSQL"
+
+
 class TableModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
@@ -74,7 +78,9 @@ class OWSql(OWWidget):
     class Error(OWWidget.Error):
         connection = Msg("{}")
         no_backends = Msg("Please install a backend to use this widget")
-        missing_extension = Msg("Database is missing extension{}: {}")
+
+    class Warning(OWWidget.Warning):
+        missing_extension = Msg("Database is missing extensions: {}")
 
     def __init__(self):
         super().__init__()
@@ -135,7 +141,6 @@ class OWSql(OWWidget):
         self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
-        self.connect()
 
         index = self.tablecombo.findText(str(self.table))
         if index != -1:
@@ -170,11 +175,13 @@ class OWSql(OWWidget):
                      "Auto-discover categorical variables",
                      callback=self.open_table)
 
-        gui.checkBox(box, self, "download",
-                     "Download data to local memory",
-                     callback=self.open_table)
+        self.downloadcb = gui.checkBox(box, self, "download",
+                                       "Download data to local memory",
+                                       callback=self.open_table)
 
         gui.rubber(self.buttonsArea)
+
+        self.connect()
 
         QTimer.singleShot(0, self.select_table)
 
@@ -223,6 +230,8 @@ class OWSql(OWWidget):
         self.database, _, self.schema = self.databasetext.text().partition('/')
         self.username = self.usernametext.text() or None
         self.password = self.passwordtext.text() or None
+        self.Warning.missing_extension.clear()
+        self.downloadcb.setEnabled(True)
         try:
             if self.backendcombo.currentIndex() < 0:
                 return
@@ -235,6 +244,16 @@ class OWSql(OWWidget):
                 password=self.password
             ))
             self.Error.connection.clear()
+            if getattr(self.backend, 'missing_extension', False):
+                self.Warning.missing_extension(
+                    ", ".join(self.backend.missing_extension))
+                self.download = True
+                self.downloadcb.setEnabled(False)
+
+            if not is_postgres(self.backend):
+                self.download = True
+                self.downloadcb.setEnabled(False)
+
             self._save_credentials()
             self.database_desc = OrderedDict((
                 ("Host", self.host), ("Port", self.port),
@@ -249,7 +268,6 @@ class OWSql(OWWidget):
 
     def refresh_tables(self):
         self.tables.clear()
-        self.Error.missing_extension.clear()
         if self.backend is None:
             self.data_desc_table = None
             return
@@ -344,12 +362,14 @@ class OWSql(OWWidget):
                             "Do you want to auto discover attributes?")
             confirm.addButton("Yes", QMessageBox.YesRole)
             no_button = confirm.addButton("No", QMessageBox.NoRole)
-            sample_button = confirm.addButton("Yes, on a sample",
-                                              QMessageBox.YesRole)
+            if is_postgres(self.backend):
+                sample_button = confirm.addButton("Yes, on a sample",
+                                                  QMessageBox.YesRole)
             confirm.exec()
             if confirm.clickedButton() == no_button:
                 self.guess_values = False
-            elif confirm.clickedButton() == sample_button:
+            elif is_postgres(self.backend) and \
+                    confirm.clickedButton() == sample_button:
                 sample = True
 
         self.Information.clear()
@@ -365,20 +385,38 @@ class OWSql(OWWidget):
             table.domain = domain
 
         if self.download:
-            if table.approx_len() > MAX_DL_LIMIT:
-                QMessageBox.warning(
-                    self, 'Warning', "Data is too big to download.\n"
-                    "Consider using the Data Sampler widget to download "
-                    "a sample instead.")
-                self.download = False
-            elif table.approx_len() > AUTO_DL_LIMIT:
-                confirm = QMessageBox.question(
-                    self, 'Question', "Data appears to be big. Do you really "
-                                      "want to download it to local memory?",
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                if confirm == QMessageBox.No:
-                    self.download = False
-        if self.download:
+            if table.approx_len() > AUTO_DL_LIMIT:
+                if is_postgres(self.backend):
+                    confirm = QMessageBox(self)
+                    confirm.setIcon(QMessageBox.Warning)
+                    confirm.setText("Data appears to be big. Do you really "
+                                    "want to download it to local memory?")
+
+                    if table.approx_len() <= MAX_DL_LIMIT:
+                        confirm.addButton("Yes", QMessageBox.YesRole)
+                    no_button = confirm.addButton("No", QMessageBox.NoRole)
+                    sample_button = confirm.addButton("Yes, a sample",
+                                                      QMessageBox.YesRole)
+                    confirm.exec()
+                    if confirm.clickedButton() == no_button:
+                        return
+                    elif confirm.clickedButton() == sample_button:
+                        table = table.sample_percentage(
+                            AUTO_DL_LIMIT / table.approx_len() * 100)
+                else:
+                    if table.approx_len() > MAX_DL_LIMIT:
+                        QMessageBox.warning(
+                            self, 'Warning', "Data is too big to download.\n")
+                        return
+                    else:
+                        confirm = QMessageBox.question(
+                            self, 'Question',
+                            "Data appears to be big. Do you really "
+                            "want to download it to local memory?",
+                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                        if confirm == QMessageBox.No:
+                            return
+
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
 

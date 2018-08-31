@@ -6,8 +6,11 @@ import os
 import tempfile
 import shutil
 
-from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
+from Orange.data import ContinuousVariable
+from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader, \
+    sanitize_variable
 from Orange.data.table import get_sample_datasets_dir
+from Orange.version import version
 
 
 class WildcardReader(FileFormat):
@@ -100,3 +103,12 @@ class TestReader(unittest.TestCase):
         reader = PickleReader("")
         with unittest.mock.patch("pickle.load", return_value=None):
             self.assertRaises(TypeError, reader.read, "foo")
+
+
+class TestIo(unittest.TestCase):
+    def test_sanitize_variable_deprecated_params(self):
+        """In version 3.18 deprecation warnings in function 'sanitize_variable'
+        should be removed along with unused parameters."""
+        if version > "3.18":
+            _, _ = sanitize_variable(None, None, None, ContinuousVariable,
+                                     {}, name="name", data="data")

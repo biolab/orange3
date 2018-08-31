@@ -15,7 +15,7 @@ class Suggestions:
     """
     class __Suggestions:
         def __init__(self):
-            self.__frequencies_path = os.path.join(config.data_dir(), "widget-use-frequency.p")
+            self.__frequencies_path = os.path.join(config.data_dir(), "widget-use-frequency.pickle")
             self.__import_factor = 0.8  # upon starting Orange, imported frequencies are reduced
 
             self.__scheme = None

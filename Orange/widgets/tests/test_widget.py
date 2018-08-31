@@ -194,8 +194,7 @@ class WidgetMsgTestCase(WidgetTest):
             want_control_area = True
 
         w = Widget()
-        splitter = w._OWWidget__splitter  # type: OWWidget._Splitter
-        splitter.setControlAreaVisible(False)
+        w._OWWidget__setControlAreaVisible(False)
         w.setGeometry(QRect(51, 52, 53, 54))
         state = w.saveGeometryAndLayoutState()
         w1 = Widget()

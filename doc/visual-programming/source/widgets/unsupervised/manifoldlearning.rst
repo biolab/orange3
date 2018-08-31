@@ -37,7 +37,7 @@ visualized with :doc:`Scatter Plot <../visualize/scatterplot>` or other visualiz
       - *Mahalanobis*
       - *Cosine*
    - MDS (iterations and initialization):
-      - *max interations*: maximum number of optimization interations
+      - *max iterations*: maximum number of optimization interactions
       - *initialization*: method for initialization of the algorithm (PCA or random)
    - Isomap:
       - number of *neighbors*

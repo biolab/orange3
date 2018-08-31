@@ -51,7 +51,7 @@ Below, is a simple classification schema, where we have read the data, construct
 
 Clicking on any node will output the related data instances. This is explored in the schema below that shows the subset in the data table and in the :doc:`Scatterplot <../visualize/scatterplot>`. Make sure that the tree data is passed as a data subset; this can be done by connecting the **Scatterplot** to the :doc:`File <../data/file>` widget first, and connecting it to the **Tree Viewer** widget next. Selected data will be displayed as bold dots.
 
-**Tree Viewer** can also export labelled data. Connect :doc:`Data Table <../data/datatable>` to **Tree Viewer** and set the link between widgets to *Data* instead of *Selected Data*. This will send the entire data to **Data Table** with an additional meta column labelling selected data instances (*Yes* for selected and *No* for the remaining).
+**Tree Viewer** can also export labeled data. Connect :doc:`Data Table <../data/datatable>` to **Tree Viewer** and set the link between widgets to *Data* instead of *Selected Data*. This will send the entire data to **Data Table** with an additional meta column labeling selected data instances (*Yes* for selected and *No* for the remaining).
 
 .. figure:: images/TreeViewer-selection.png
 

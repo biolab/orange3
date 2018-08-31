@@ -69,6 +69,27 @@ class RemoveLinkCommand(QUndoCommand):
         self.scheme.add_link(self.link)
 
 
+class InsertNodeCommand(QUndoCommand):
+    def __init__(self, scheme, new_node, old_link, new_links, parent=None):
+        QUndoCommand.__init__(self, "Insert widget into link", parent)
+        self.scheme = scheme
+        self.inserted_widget = new_node
+        self.original_link = old_link
+        self.new_links = new_links
+
+    def redo(self):
+        self.scheme.add_node(self.inserted_widget)
+        self.scheme.remove_link(self.original_link)
+        self.scheme.add_link(self.new_links[0])
+        self.scheme.add_link(self.new_links[1])
+
+    def undo(self):
+        self.scheme.remove_link(self.new_links[0])
+        self.scheme.remove_link(self.new_links[1])
+        self.scheme.add_link(self.original_link)
+        self.scheme.remove_node(self.inserted_widget)
+
+
 class AddAnnotationCommand(QUndoCommand):
     def __init__(self, scheme, annotation, parent=None):
         QUndoCommand.__init__(self, "Add annotation", parent)

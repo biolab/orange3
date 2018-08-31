@@ -20,6 +20,7 @@ from Orange.widgets.widget import OWWidget
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
 from Orange.widgets.data.owfile import OWFile
+from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
@@ -239,6 +240,23 @@ class TestReportWidgets(WidgetTest):
                   self.unsu_widgets + self.dist_widgets + self.visu_widgets + \
                   self.spec_widgets
         self._create_report(widgets, rep, None)
+
+    def test_disable_saving_empty(self):
+        """Test if save and print buttons are disabled on empty report"""
+        rep = OWReport.get_instance()
+        self.assertFalse(rep.save_button.isEnabled())
+        self.assertFalse(rep.print_button.isEnabled())
+
+        table = OWDataTable()
+        table.set_dataset(Table("iris"))
+        table.create_report_html()
+        rep.make_report(table)
+        self.assertTrue(rep.save_button.isEnabled())
+        self.assertTrue(rep.print_button.isEnabled())
+
+        rep.clear()
+        self.assertFalse(rep.save_button.isEnabled())
+        self.assertFalse(rep.print_button.isEnabled())
 
 
 if __name__ == "__main__":

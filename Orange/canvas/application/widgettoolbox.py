@@ -419,7 +419,7 @@ class WidgetToolBox(ToolBox):
         Items have been inserted in the model.
         """
         # Only the top level items (categories) are handled here.
-        if not parent is not None:
+        if parent is None:
             root = self.__model.invisibleRootItem()
             for i in range(start, end + 1):
                 item = root.child(i)
@@ -430,6 +430,6 @@ class WidgetToolBox(ToolBox):
         Rows have been removed from the model.
         """
         # Only the top level items (categories) are handled here.
-        if not parent is not None:
+        if parent is None:
             for i in range(end, start - 1, -1):
                 self.removeItem(i)

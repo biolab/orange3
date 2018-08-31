@@ -208,7 +208,7 @@ patch-ssl() {
     # lib/python relative to prefix
     local pylibdir=$(
         cd "${prefix}";
-        shopt -s nullglob;
+        shopt -s failglob;
         local path=( lib/python?.? )
         echo "${path:?}"
     )
@@ -258,3 +258,10 @@ python-framework-extract-pkg \
     ~/.cache/pkgs/python-${VERSION}-macosx10.6.pkg
 
 python-framework-relocate "${1:?}"/Python.framework
+
+# Update the Versions/Current symlink
+(
+    cd "${1:?}"/Python.framework/Versions
+    shopt -s failglob
+    ln -sf ?.? ./Current  # assuming single version framework
+)

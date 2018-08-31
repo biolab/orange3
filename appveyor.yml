@@ -24,16 +24,6 @@ environment:
     TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy~=1.14.0 scipy~=1.0.0 scikit-learn pandas==0.21.1
 
   matrix:
-    - PYTHON: C:\Python34
-      BUILD_GLOBAL_OPTIONS: build
-      # override test env for Py34; test with PyQt4 and legacy scipy
-      # from the 'super' installer.
-      TEST_ENV: numpy==1.12.1 scipy==0.16.1 scikit-learn==0.19.1 PyQt4==4.11.4
-
-    - PYTHON: C:\Python34-x64
-      BUILD_GLOBAL_OPTIONS: build
-      TEST_ENV: numpy==1.12.1 scipy==1.0.0b1 scikit-learn==0.19.1 PyQt5==5.5.1
-
     - PYTHON: C:\Python35
 
     - PYTHON: C:\Python35-x64
@@ -41,6 +31,15 @@ environment:
     - PYTHON: C:\Python36
 
     - PYTHON: C:\Python36-x64
+
+    - PYTHON: C:\Python37
+      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0
+      # PyQt5 >= 5.11 32-bit no longer contains QtWebEngine
+      TEST_ENV: PyQt5~=5.10.0 numpy~=1.14.0 scipy~=1.1.0 scikit-learn pandas
+
+    - PYTHON: C:\Python37-x64
+      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0
+      TEST_ENV: PyQt5~=5.11.1 numpy~=1.14.0 scipy~=1.1.0 scikit-learn pandas
 
 cache:
   - '%LOCALAPPDATA%\pip\cache -> appveyor.yml'
@@ -52,7 +51,7 @@ install:
   - echo [install]> pip.ini
   - echo find-links =>> pip.ini
   - echo     https://orange.biolab.si/download/files/wheelhouse/>> pip.ini
-  - echo only-binary = numpy,scipy,bottleneck,scikit-learn>> pip.ini
+  - echo only-binary = numpy,scipy,scikit-learn>> pip.ini
   - set "PIP_CONFIG_FILE=%CD%\pip.ini"
   - type %PIP_CONFIG_FILE%
 
