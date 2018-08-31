@@ -1180,7 +1180,7 @@ class SchemeEditWidget(QWidget):
             # just yet (instead wait for the mouse move event).
             handler = interactions.RectangleSelectionAction(self)
             rval = handler.mousePressEvent(event)
-            if rval == True:
+            if rval is True:
                 self.__possibleSelectionHandler = handler
             return rval
 
