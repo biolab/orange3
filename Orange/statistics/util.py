@@ -560,3 +560,8 @@ def var(x, axis=None):
     result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
     result = np.squeeze(np.asarray(result))
     return result
+
+
+def std(x, axis=None):
+    """ Equivalent of np.std that supports sparse and dense matrices. """
+    return np.sqrt(var(x, axis=axis))
