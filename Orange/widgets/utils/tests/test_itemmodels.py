@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QModelIndex
 
 from Orange.data import \
     Domain, \
@@ -715,15 +715,17 @@ class TestDomainModel(unittest.TestCase):
         with self.assertRaises(TypeError):
             del model[0]
 
-        self.assertRaises(TypeError, model.setData, index, domain[0])
+        self.assertFalse(model.setData(index, domain[0], Qt.EditRole))
         self.assertTrue(model.setData(index, "foo", Qt.ToolTipRole))
 
-        self.assertRaises(TypeError, model.setItemData, index,
-                          {Qt.EditRole: domain[0], Qt.ToolTipRole: "foo"})
+        self.assertFalse(model.setItemData(index, {Qt.EditRole: domain[0],
+                                                   Qt.ToolTipRole: "foo"}))
         self.assertTrue(model.setItemData(index, {Qt.ToolTipRole: "foo"}))
 
-        self.assertRaises(TypeError, model.insertRows, 0, 0)
-        self.assertRaises(TypeError, model.removeRows, 0, 0)
+        self.assertFalse(model.insertRows(0, 1))
+        self.assertSequenceEqual(model, domain)
+        self.assertFalse(model.removeRows(0, 1))
+        self.assertSequenceEqual(model, domain)
 
 
 if __name__ == "__main__":

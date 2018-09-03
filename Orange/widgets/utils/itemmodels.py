@@ -1034,6 +1034,27 @@ class DomainModel(VariableListModel):
     def sort(self, *args, **kwargs):
         return super().sort(*args, **kwargs)
 
+    def setData(self, index, value, role=Qt.EditRole):
+        # reimplemented
+        if role == Qt.EditRole:
+            return False
+        else:
+            return super().setData(index, value, role)
+
+    def setItemData(self, index, data):
+        # reimplemented
+        if Qt.EditRole in data:
+            return False
+        else:
+            return super().setItemData(index, data)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        # reimplemented
+        return False
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        # reimplemented
+        return False
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
 
