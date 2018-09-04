@@ -8,36 +8,34 @@ from math import log2, log10, floor, ceil
 import numpy as np
 from scipy import sparse as sp
 
-from AnyQt.QtCore import Qt, QObject, QEvent, QRectF, QPointF, QSize
+from AnyQt.QtCore import Qt, QRectF, QPointF, QSize
 from AnyQt.QtGui import (
-    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter, QKeySequence)
-from AnyQt.QtWidgets import QApplication, QToolTip, QPinchGesture, \
-    QGraphicsTextItem, QGraphicsRectItem, QAction
+    QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
+)
+from AnyQt.QtWidgets import (
+    QApplication, QToolTip, QGraphicsTextItem, QGraphicsRectItem
+)
 
 import pyqtgraph as pg
-from pyqtgraph.graphicsItems.ViewBox import ViewBox
 import pyqtgraph.graphicsItems.ScatterPlotItem
 from pyqtgraph.graphicsItems.LegendItem import LegendItem, ItemSample
-from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
-from pyqtgraph.Point import Point
 
 from Orange.statistics.util import bincount
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets import gui
 from Orange.widgets.utils import classdensity
-from Orange.widgets.utils.colorpalette import (ColorPaletteGenerator,
-                                               ContinuousPaletteGenerator, DefaultRGBColors)
-from Orange.widgets.utils.plot import \
-    OWPalette, OWPlotGUI, SELECT, PANNING, ZOOMING
+from Orange.widgets.utils.colorpalette import (
+    ColorPaletteGenerator, ContinuousPaletteGenerator, DefaultRGBColors
+)
+from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
 from Orange.widgets.visualize.utils.plotutils import (
-    HelpEventDelegate as EventDelegate
+    HelpEventDelegate as EventDelegate,
+    InteractiveViewBox as ViewBox
 )
 from Orange.widgets.settings import Setting, ContextSetting
-
-
-# TODO Move utility classes to another module, so they can be used elsewhere
 from Orange.widgets.widget import OWWidget, Msg
+
 
 SELECTION_WIDTH = 5
 MAX = 11  # maximum number of colors or shapes (including Other)
@@ -343,109 +341,10 @@ class DiscretizedScale:
 
 class InteractiveViewBox(ViewBox):
     def __init__(self, graph, enable_menu=False):
-        self.init_history()
-        ViewBox.__init__(self, enableMenu=enable_menu)
-        self.graph = graph
-        self.setMouseMode(self.PanMode)
-        self.grabGesture(Qt.PinchGesture)
-
-    def _dragtip_pos(self):
-        return 10, 10
-
-    def safe_update_scale_box(self, buttonDownPos, currentPos):
-        x, y = currentPos
-        if buttonDownPos[0] == x:
-            x += 1
-        if buttonDownPos[1] == y:
-            y += 1
-        self.updateScaleBox(buttonDownPos, Point(x, y))
-
-    # noinspection PyPep8Naming,PyMethodOverriding
-    def mouseDragEvent(self, ev, axis=None):
-        if self.graph.state == SELECT and axis is None:
-            ev.accept()
-            pos = ev.pos()
-            if ev.button() == Qt.LeftButton:
-                self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
-                scene = self.scene()
-                dragtip = scene.drag_tooltip
-                if ev.isFinish():
-                    dragtip.hide()
-                    self.rbScaleBox.hide()
-                    pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
-                    value_rect = self.childGroup.mapRectFromParent(pixel_rect)
-                    self.graph.select_by_rectangle(value_rect)
-                else:
-                    dragtip.setPos(*self._dragtip_pos())
-                    dragtip.show()  # although possibly already shown
-                    self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
-        elif self.graph.state == ZOOMING or self.graph.state == PANNING:
-            ev.ignore()
-            super().mouseDragEvent(ev, axis=axis)
-        else:
-            ev.ignore()
-
-    def updateAutoRange(self):
-        # indirectly called by the autorange button on the graph
-        super().updateAutoRange()
-        self.tag_history()
-
-    def tag_history(self):
-        #add current view to history if it differs from the last view
-        if self.axHistory:
-            currentview = self.viewRect()
-            lastview = self.axHistory[self.axHistoryPointer]
-            inters = currentview & lastview
-            united = currentview.united(lastview)
-            if inters.width()*inters.height()/(united.width()*united.height()) > 0.95:
-                return
-        self.axHistoryPointer += 1
-        self.axHistory = self.axHistory[:self.axHistoryPointer] + \
-                         [self.viewRect()]
-
-    def init_history(self):
-        self.axHistory = []
-        self.axHistoryPointer = -1
-
-    def autoRange(self, padding=None, items=None, item=None):
-        super().autoRange(padding=padding, items=items, item=item)
-        self.tag_history()
-
-    def suggestPadding(self, axis): #no padding so that undo works correcty
-        return 0.
-
-    def scaleHistory(self, d):
-        self.tag_history()
-        super().scaleHistory(d)
-
-    def mouseClickEvent(self, ev):
-        if ev.button() == Qt.RightButton:  # undo zoom
-            self.scaleHistory(-1)
-        else:
-            ev.accept()
-            self.graph.unselect_all()
-
-    def sceneEvent(self, event):
-        if event.type() == QEvent.Gesture:
-            return self.gestureEvent(event)
-        return super().sceneEvent(event)
-
-    def gestureEvent(self, event):
-        gesture = event.gesture(Qt.PinchGesture)
-        if gesture.state() == Qt.GestureStarted:
-            event.accept(gesture)
-        elif gesture.changeFlags() & QPinchGesture.ScaleFactorChanged:
-            center = self.mapSceneToView(gesture.centerPoint())
-            scale_prev = gesture.lastScaleFactor()
-            scale = gesture.scaleFactor()
-            if scale_prev != 0:
-                scale = scale / scale_prev
-            if scale > 0:
-                self.scaleBy((1 / scale, 1 / scale), center)
-        elif gesture.state() == Qt.GestureFinished:
-            self.tag_history()
-
-        return True
+        super().__init__(graph, enable_menu)
+        warnings.warn("InteractiveViewBox class has been deprecated since "
+                      "3.17. Use Orange.widgets.visualize.utils.plotutils."
+                      "InteractiveViewBox instead.", OrangeDeprecationWarning)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -498,7 +397,7 @@ class OWScatterPlotBase(gui.OWComponent):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
-    def __init__(self, scatter_widget, parent=None, view_box=InteractiveViewBox):
+    def __init__(self, scatter_widget, parent=None, view_box=ViewBox):
         super().__init__(scatter_widget)
 
         self.subset_is_shown = False

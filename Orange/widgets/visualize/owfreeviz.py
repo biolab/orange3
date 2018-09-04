@@ -20,10 +20,10 @@ from Orange.widgets.utils.annotated_data import (
     create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
 )
 from Orange.widgets.visualize.owscatterplotgraph import (
-    OWScatterPlotBase, OWProjectionWidget, InteractiveViewBox
+    OWScatterPlotBase, OWProjectionWidget
 )
 from Orange.widgets.visualize.utils.plotutils import (
-    AnchorItem, MouseEventDelegate
+    AnchorItem, MouseEventDelegate, VizInteractiveViewBox
 )
 from Orange.widgets.widget import Input, Output
 
@@ -146,56 +146,11 @@ class AsyncUpdateLoop(QObject):
             super().customEvent(event)
 
 
-class FreeVizInteractiveViewBox(InteractiveViewBox):
-    started = Signal()
-    moved = Signal()
-    finished = Signal()
-
-    def __init__(self, graph, enable_menu=False):
-        self.mouse_state = 0
-        self.point_i = None
-        super().__init__(graph, enable_menu)
-
-    def mousePressEvent(self, ev):
-        super().mousePressEvent(ev)
-        pos = self.childGroup.mapFromParent(ev.pos())
-        if self.graph.can_show_indicator(pos)[0]:
-            self.setCursor(Qt.ClosedHandCursor)
-
-    def mouseDragEvent(self, ev, axis=None):
-        pos = self.childGroup.mapFromParent(ev.pos())
-        can_show, point_i = self.graph.can_show_indicator(pos)
-        if ev.button() != Qt.LeftButton or (ev.start and not can_show):
-            self.mouse_state = 2  # finished
-        if self.mouse_state == 2:
-            if ev.finish:
-                self.mouse_state = 0  # ready for new task
-            super().mouseDragEvent(ev, axis)
-            return
-
-        ev.accept()
-        if ev.start:
-            self.setCursor(Qt.ClosedHandCursor)
-            self.mouse_state = 1  # working
-            self.point_i = point_i
-            self.started.emit()
-
-        if self.mouse_state == 1:
-            self.graph.set_point(self.point_i, pos.x(), pos.y())
-            if ev.finish:
-                self.setCursor(Qt.OpenHandCursor)
-                self.mouse_state = 0
-                self.finished.emit()
-            else:
-                self.moved.emit()
-            self.graph.show_indicator(self.point_i)
-
-
 class OWFreeVizGraph(OWScatterPlotBase):
     radius = settings.Setting(0)
 
     def __init__(self, scatter_widget, parent):
-        super().__init__(scatter_widget, parent, FreeVizInteractiveViewBox)
+        super().__init__(scatter_widget, parent, VizInteractiveViewBox)
         self._tooltip_delegate = MouseEventDelegate(self.help_event,
                                                     self._show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
