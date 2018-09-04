@@ -6,8 +6,8 @@ A widget for manual editing of a domain's attributes.
 
 """
 import sys
-
-from itertools import chain, zip_longest
+from xml.sax.saxutils import escape
+from itertools import zip_longest
 from contextlib import contextmanager
 from collections import namedtuple
 from functools import singledispatch
@@ -1123,10 +1123,24 @@ class OWEditDomain(widget.OWWidget):
         return sh.expandedTo(QSize(660, 550))
 
     def send_report(self):
+
         if self.data is not None:
-            self.report_raw("", EditDomainReport(
-                old_domain=chain(self.data.domain.variables, self.data.domain.metas),
-                new_domain=self.variables_model).to_html())
+            model = self.variables_model
+            state = ((model.data(midx, Qt.EditRole),
+                      model.data(midx, TransformRole))
+                     for i in range(model.rowCount())
+                     for midx in [model.index(i)])
+            parts = []
+            for var, trs in state:
+                if trs:
+                    parts.append(report_transform(var, trs))
+            if parts:
+                html = ("<ul>" +
+                        "".join(map("<li>{}</li>".format, parts)) +
+                        "</ul>")
+            else:
+                html = "No changes"
+            self.report_raw("", html)
         else:
             self.report_data(None)
 
@@ -1174,98 +1188,89 @@ class OWEditDomain(widget.OWWidget):
             context.values["_domain_change_store"] = (dict(store), -2)
 
 
-
-class EditDomainReport:
-    """Report creator for changes made in the OWEditDomain widget.
+def report_transform(var, trs):
+    # type: (Variable, List[Transform]) -> str
+    """
+    Return a html fragment summarizing the changes applied by `trs` list.
 
     Parameters
     ----------
-    old_domain : list of Variable
-        input variables
-    new_domain : list of Variable
-        variables with applied changes
+    var : Variable
+        A variable descriptor no which trs operates
+    trs : List[Transform]
+        A non empty list of `Transform` instances.
+
+    Returns
+    -------
+    report : str
     """
+    def strike(text):
+        return "<s>{}</s>".format(escape(text))
 
-    VARIABLE_HTML = "<li style='font-weight: bold; padding-top:{};'>{}</li>".format
-    INDENTED_ITEM = "<div style='padding-left: 1em'>{}</div>".format
+    def i(text):
+        return "<i>{}</i>".format(escape(text))
 
-    def __init__(self, model):
-        self.model = model
+    def text(text):
+        return "<span>{}</span>".format(escape(text))
+    assert trs
+    rename = annotate = catmap = None
 
-        # self.old_domain = old_domain
-        # self.new_domain = new_domain
+    for tr in trs:
+        if isinstance(tr, Rename):
+            rename = tr
+        elif isinstance(tr, Annotate):
+            annotate = tr
+        elif isinstance(tr, CategoriesMapping):
+            catmap = tr
+    if rename is not None:
+        header = "{} → {}".format(var.name, rename.name)
+    else:
+        header = var.name
+    values_section = None
+    if catmap is not None:
+        values_section = ("Values", [])
+        lines = values_section[1]
+        for ci, cj in catmap.mapping:
+            if ci is None:
+                item = cj + ("&nbsp;" * 3) + "(added)"
+            elif cj is None:
+                item = strike(ci)
+            else:
+                item = ci + " → " + cj
+            lines.append(item)
 
-    def to_html(self):
-        """Collect changes to variable names, values and labels
-        and render them to html.
-        """
-        model = self.model
-        index = model.index
-        data = model.data
-        for var, tr in ((data(i, Qt.EditRole), data(i, TransformRole))
-                        for i in range(model.rowCount()) for i in (index(i),)):
-            changes = []
-            rename = annotate = catmap = None
-            for tr_ in tr:
-                if isinstance(tr_, Rename):
-                    rename = tr_
-                elif isinstance(tr_, Annotate):
-                    annotate = tr_
-                elif isinstance(tr_, CategoriesMapping):
-                    catmap = tr_
-            if rename is not None:
-                changes.append("{} → {}".format(var.name, rename.name))
+    annotate_section = None
+    if annotate is not None:
+        annotate_section = ("Labels", [])
+        lines = annotate_section[1]
+        old = dict(var.annotations)
+        new = dict(annotate.annotations)
+        for name in sorted(set(old) - set(new)):
+            lines.append(
+                "<s>" + i(name) + " : " + text(old[name]) + "</s>"
+            )
+        for name in sorted(set(new) - set(old)):
+            lines.append(
+                i(name) + " : " + text(new[name]) + "&nbsp;" * 3 + i("(new)")
+            )
 
-        all_changes = []
-        for old_var, new_var in zip(self.old_domain, self.new_domain):
-            changes = list(chain.from_iterable([
-                self._section("Values", self._value_changes(old_var, new_var)),
-                self._section("Labels", self._label_changes(old_var, new_var))
-            ]))
+        for name in sorted(set(new) & set(old)):
+            if new[name] != old[name]:
+                lines.append(
+                    i(name) + " : " + text(old[name]) + " → " + text(new[name])
+                )
 
-            padding_top = ".5em" if all_changes else "0"
-            if old_var.name != new_var.name:
-                all_changes.append(self.VARIABLE_HTML(
-                    padding_top, "{} → {}".format(old_var.name, new_var.name)))
-            elif changes:
-                all_changes.append(self.VARIABLE_HTML(padding_top, old_var.name))
-            all_changes.extend(changes)
-        return "<ul>{}</ul>".format("".join(all_changes)) if all_changes else "No changes"
-
-    def _section(self, name, changes):
-        """Generator that adds section name if there were any changes made."""
-        changes = list(changes)
-        if changes:
-            yield "<div>{}:</div>".format(name)
-            yield from changes
-
-    def _value_changes(self, old_variable, new_variable):
-        """Generator of all renamed values"""
-        if not old_variable.is_discrete:
-            return
-        for old_value, new_value in zip(old_variable.values, new_variable.values):
-            if old_value != new_value:
-                yield self.INDENTED_ITEM("{} → {}".format(old_value, new_value))
-
-    def _label_changes(self, old_variable, new_variable):
-        """Generator of all added, removed and modified labels"""
-        old_labels = old_variable.attributes
-        new_labels = new_variable.attributes
-
-        for name, value in new_labels.items():
-            if name not in old_labels:
-                yield self.INDENTED_ITEM("<i>{}</i>: {}&nbsp;&nbsp;&nbsp;<i>(new)</i>"
-                                         .format(name, value))
-
-        for name, value in old_labels.items():
-            if name not in new_labels:
-                yield self.INDENTED_ITEM("<strike><i>{}</i>: {}</strike>"
-                                         .format(name, value))
-
-        for name in old_labels:
-            if name in new_labels and new_labels[name] != old_labels[name]:
-                yield self.INDENTED_ITEM("<i>{}</i>: {} → {}"
-                                         .format(name, old_labels[name], new_labels[name]))
+    html = ["<div style='font-weight: bold;'>{}</div>".format(header)]
+    for title, contents in filter(None, [values_section, annotate_section]):
+        section_header = "<div>{}:</div>".format(title)
+        section_contents = "<br/>\n".join(contents)
+        html.append(section_header)
+        html.append(
+            "<div style='padding-left: 1em;'>" +
+            section_contents +
+            "</div>"
+        )
+    return "\n".join(html)
 
 
 def abstract(var):
@@ -1308,14 +1313,13 @@ def _parse_attributes(mapping):
     ]).attributes
 
 
-
 @singledispatch
 def apply_transform(var, trs):
     # type: (Orange.data.Variable, List[Transform]) -> Orange.data.Variable
     """
     Apply a list of `Transform` instances on an `Orange.data.Variable`.
     """
-    raise NotImplementedError
+    raise NotImplementedError  # pragma: no cover
 
 
 @apply_transform.register(Orange.data.DiscreteVariable)
@@ -1416,7 +1420,7 @@ def apply_transform_string(var, trs):
     return variable
 
 
-def main(argv=None):
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     app = QApplication(argv or [])
     argv = app.arguments()
@@ -1436,5 +1440,5 @@ def main(argv=None):
     return rval
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main(sys.argv))

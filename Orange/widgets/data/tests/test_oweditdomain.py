@@ -5,78 +5,49 @@ from unittest import TestCase
 import numpy as np
 
 from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt
+from AnyQt.QtWidgets import QAction
 from AnyQt.QtTest import QTest
+
 from Orange.data import ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Table, Domain
-from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
-    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor, \
-    TimeVariableEditor, Categorical, Real, Time, String
+from Orange.widgets.data.oweditdomain import (
+    OWEditDomain,
+    ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
+    TimeVariableEditor, Categorical, Real, Time, String,
+    Rename, Annotate, CategoriesMapping, report_transform
+)
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 
-SECTION_NAME = "NAME"
 
+class TestReport(TestCase):
+    def test_rename(self):
+        var = Real("X", (-1, ""), ())
+        tr = Rename("Y")
+        val = report_transform(var, [tr])
+        self.assertIn("X", val)
+        self.assertIn("Y", val)
 
-class TestEditDomainReport(TestCase):
-    # This tests test private methods
-    # pylint: disable=protected-access
+    def test_annotate(self):
+        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")))
+        tr = Annotate((("a", "2"), ("j", "z")))
+        r = report_transform(var, [tr])
+        self.assertIn("a", r)
+        self.assertIn("b", r)
 
-    def setUp(self):
-        self.report = EditDomainReport([], [])
-
-    def test_section_yields_nothing_for_no_changes(self):
-        result = self.report._section(SECTION_NAME, [])
-        self.assertEmpty(result)
-
-    def test_section_yields_header_for_changes(self):
-        result = self.report._section(SECTION_NAME, ["a"])
-        self.assertTrue(any(SECTION_NAME in item for item in result))
-
-    def test_value_changes_yields_nothing_for_no_change(self):
-        a = DiscreteVariable("a", values="abc")
-        self.assertEmpty(self.report._value_changes(a, a))
-
-    def test_value_changes_yields_nothing_for_continuous_variables(self):
-        v1, v2 = ContinuousVariable("a"), ContinuousVariable("b")
-        self.assertEmpty(self.report._value_changes(v1, v2))
-
-    def test_value_changes_yields_changed_values(self):
-        v1, v2 = DiscreteVariable("a", "ab"), DiscreteVariable("b", "ac")
-        self.assertNotEmpty(self.report._value_changes(v1, v2))
-
-    def test_label_changes_yields_nothing_for_no_change(self):
-        v1 = ContinuousVariable("a")
-        v1.attributes["a"] = "b"
-        self.assertEmpty(self.report._value_changes(v1, v1))
-
-    def test_label_changes_yields_added_labels(self):
-        v1 = ContinuousVariable("a")
-        v2 = v1.copy(None)
-        v2.attributes["a"] = "b"
-        self.assertNotEmpty(self.report._label_changes(v1, v2))
-
-    def test_label_changes_yields_removed_labels(self):
-        v1 = ContinuousVariable("a")
-        v1.attributes["a"] = "b"
-        v2 = v1.copy(None)
-        del v2.attributes["a"]
-        self.assertNotEmpty(self.report._label_changes(v1, v2))
-
-    def test_label_changes_yields_modified_labels(self):
-        v1 = ContinuousVariable("a")
-        v1.attributes["a"] = "b"
-        v2 = v1.copy(None)
-        v2.attributes["a"] = "c"
-        self.assertNotEmpty(self.report._label_changes(v1, v2))
-
-    def assertEmpty(self, iterable):
-        self.assertRaises(StopIteration, lambda: next(iter(iterable)))
-
-    def assertNotEmpty(self, iterable):
-        try:
-            next(iter(iterable))
-        except StopIteration:
-            self.fail("Iterator did not produce any lines")
+    def test_categories_mapping(self):
+        var = Categorical("C", ("a", "b", "c"), None, ())
+        tr = CategoriesMapping(
+            (("a", "aa"),
+             ("b", None),
+             ("c", "cc"),
+             (None, "ee")),
+        )
+        r = report_transform(var, [tr])
+        self.assertIn("a", r)
+        self.assertIn("aa", r)
+        self.assertIn("b", r)
+        self.assertIn("<s>", r)
 
 
 class TestOWEditDomain(WidgetTest):
