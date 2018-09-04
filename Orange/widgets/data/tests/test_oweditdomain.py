@@ -5,12 +5,12 @@ from unittest import TestCase
 import numpy as np
 
 from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt
-
+from AnyQt.QtTest import QTest
 from Orange.data import ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Table, Domain
 from Orange.widgets.data.oweditdomain import EditDomainReport, OWEditDomain, \
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor, \
-    TimeVariableEditor
+    TimeVariableEditor, Categorical, Real, Time, String
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 
@@ -137,7 +137,7 @@ class TestOWEditDomain(WidgetTest):
         idx = editor.labels_model.index(0, 1)
         editor.labels_model.setData(idx, "[1, 2, 4]", Qt.EditRole)
 
-        self.widget.unconditional_commit()
+        self.widget.commit()
         t2 = self.get_output(self.widget.Outputs.data)
         self.assertEqual(t2.domain["a"].attributes["list"], [1, 2, 4])
 
@@ -156,15 +156,20 @@ class TestOWEditDomain(WidgetTest):
         self.widget.domain_view.setCurrentIndex(idx)
         editor = self.widget.editor_stack.findChild(ContinuousVariableEditor)
 
-        editor.name_edit.setText("iris")
-        editor.commit()
+        def enter_text(widget, text):
+            # type: (QLineEdit, str) -> None
+            widget.selectAll()
+            QTest.keyClick(widget, Qt.Key_Delete)
+            QTest.keyClicks(widget, text)
+            QTest.keyClick(widget, Qt.Key_Return)
+
+        enter_text(editor.name_edit, "iris")
         self.widget.commit()
         self.assertTrue(self.widget.Error.duplicate_var_name.is_shown())
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsNone(output)
 
-        editor.name_edit.setText("sepal height")
-        editor.commit()
+        enter_text(editor.name_edit, "sepal height")
         self.widget.commit()
         self.assertFalse(self.widget.Error.duplicate_var_name.is_shown())
         output = self.get_output(self.widget.Outputs.data)
@@ -176,10 +181,12 @@ class TestOWEditDomain(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+        view = self.widget.variables_view
+        view.setCurrentIndex(view.model().index(4))
 
         editor = self.widget.editor_stack.findChild(TimeVariableEditor)
         editor.name_edit.setText("Date")
-        editor.commit()
+        editor.variable_changed.emit()
         self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
@@ -188,54 +195,68 @@ class TestOWEditDomain(WidgetTest):
 class TestEditors(GuiTest):
     def test_variable_editor(self):
         w = VariableEditor()
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
 
-        v = StringVariable(name="S")
-        v.attributes.update({"A": 1, "B": "b"},)
-        w.set_data(v)
+        v = String("S", (("A", "1"), ("B", "b")))
+        w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertEqual(w.labels_model.get_dict(), v.attributes)
-        self.assertTrue(w.is_same())
+        self.assertEqual(w.labels_model.get_dict(),
+                         {"A": "1", "B": "b"})
+        self.assertEqual(w.get_data(), (v, []))
 
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
+
+        w.set_data(v, [Rename("T"), Annotate((("a", "1"), ("b", "2")))])
+        self.assertEqual(w.name_edit.text(), "T")
+        self.assertEqual(w.labels_model.rowCount(), 2)
+        add = w.findChild(QAction, "action-add-label")
+        add.trigger()
+        remove = w.findChild(QAction, "action-delete-label")
+        remove.trigger()
 
     def test_continuous_editor(self):
         w = ContinuousVariableEditor()
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
 
-        v = ContinuousVariable("X", number_of_decimals=5)
-        v.attributes.update({"A": 1, "B": "b"})
-        w.set_data(v)
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
+        w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertEqual(w.labels_model.get_dict(), v.attributes)
-        self.assertTrue(w.is_same())
+        self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
 
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
 
     def test_discrete_editor(self):
         w = DiscreteVariableEditor()
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
 
-        v = DiscreteVariable("C", values=["a", "b", "c"])
-        v.attributes.update({"A": 1, "B": "b"})
+        v = Categorical("C", ("a", "b", "c"), None,
+                        (("A", "1"), ("B", "b")))
         w.set_data(v)
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertEqual(w.labels_model.get_dict(), v.attributes)
-        self.assertTrue(w.is_same())
-
+        self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
+        self.assertEqual(w.get_data(), (v, []))
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
+        mapping = [
+            ("c", "C"),
+            ("a", "A"),
+            ("b", None),
+            (None, "b")
+        ]
+        w.set_data(v, [CategoriesMapping(mapping)])
+        w.grab()  # run delegate paint method
+        self.assertEqual(w.get_data(), (v, [CategoriesMapping(mapping)]))
 
         # test selection/deselection in the view
         w.set_data(v)
@@ -249,21 +270,15 @@ class TestEditors(GuiTest):
 
     def test_time_editor(self):
         w = TimeVariableEditor()
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
 
-        v = TimeVariable("T", have_date=1)
-        v.attributes.update({"A": 1, "B": "b"})
-        w.set_data(v)
+        v = Time("T", (("A", "1"), ("B", "b")))
+        w.set_data(v,)
 
         self.assertEqual(w.name_edit.text(), v.name)
-        self.assertEqual(w.labels_model.get_dict(), v.attributes)
-        self.assertTrue(w.is_same())
-
-        var = w.get_data()
-        self.assertTrue(var.have_date)
-        self.assertFalse(var.have_time)
+        self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
 
         w.set_data(None)
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
-        self.assertIs(w.get_data(), None)
+        self.assertEqual(w.get_data(), (None, []))
