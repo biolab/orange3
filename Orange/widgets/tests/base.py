@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import os
+import pickle
 import time
 import unittest
 from unittest.mock import Mock
@@ -619,6 +620,14 @@ class WidgetLearnerTestMixin:
         self.widget.apply_button.button.click()
         self.wait_until_stop_blocking()
         self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
+
+    def test_output_model_picklable(self):
+        """Check if model can be pickled"""
+        self.send_signal("Data", self.data)
+        self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
+        model = self.get_output(self.widget.Outputs.model)
+        pickle.dumps(model)
 
     def _get_param_value(self, learner, param):
         if isinstance(learner, Fitter):
