@@ -6,6 +6,7 @@ from AnyQt.QtCore import Qt
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
+from Orange.projection.manifold import TSNEModel
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets import gui
@@ -87,7 +88,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
 
 
 class TSNEParametersEditor(ManifoldParametersEditor):
-    _metrics = ("manhattan", "chebyshev", "jaccard", "mahalanobis", "cosine")
+    _metrics = ("manhattan", "chebyshev")
     metric_index = Setting(0)
     metric_values = [(x, x.capitalize()) for x in _metrics]
     # rename l2 to Euclidean
@@ -98,8 +99,8 @@ class TSNEParametersEditor(ManifoldParametersEditor):
     learning_rate = Setting(200)
     n_iter = Setting(1000)
 
-    init_index = Setting(0)
-    init_values = [("pca", "PCA"), ("random", "Random")]
+    initialization_index = Setting(0)
+    initialization_values = [("pca", "PCA"), ("random", "Random")]
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -115,7 +116,7 @@ class TSNEParametersEditor(ManifoldParametersEditor):
         self.n_iter_spin = self._create_spin_parameter(
             "n_iter", 250, 1e5, "Max iterations:")
         self.init_radio = self._create_radio_parameter(
-            "init", "Initialization:")
+            "initialization", "Initialization:")
 
 
 class MDSParametersEditor(ManifoldParametersEditor):
@@ -276,8 +277,12 @@ class OWManifoldLearning(OWWidget):
                             data.domain.metas)
             try:
                 projector = method(**self.get_method_parameters(data, method))
-                X = projector(data).embedding_
-                out = Table(domain, X, data.Y, data.metas)
+                model = projector(data)
+                if isinstance(model, TSNEModel):
+                    out = model.embedding
+                else:
+                    X = model.embedding_
+                    out = Table(domain, X, data.Y, data.metas)
             except TypeError as e:
                 if 'sparse' in e.args[0] and 'distance' in e.args[0]:
                     self.Error.sparse_tsne_distance()
