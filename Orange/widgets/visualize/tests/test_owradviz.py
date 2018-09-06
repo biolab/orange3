@@ -3,12 +3,14 @@
 from AnyQt.QtCore import QRectF, QPointF
 
 from Orange.data import Table, Domain
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, \
-    datasets
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
+)
 from Orange.widgets.visualize.owradviz import OWRadviz
 
 
-class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
+class TestOWRadviz(WidgetTest, WidgetOutputsTestMixin,
+                   ProjectionWidgetTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -21,10 +23,6 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
 
     def setUp(self):
         self.widget = self.create_widget(OWRadviz)
-
-    def test_ugly_datasets(self):
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_reg")))
 
     def test_btn_vizrank(self):
         # TODO: fix this
@@ -41,17 +39,10 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
         self.widget.graph.select_by_rectangle(QRectF(QPointF(-20, -20), QPointF(20, 20)))
         return self.widget.graph.get_selection()
 
-    def test_subset_data(self):
-        w = self.widget
-        data = Table("iris")
-        self.send_signal(w.Inputs.data, data)
-        self.send_signal(w.Inputs.data_subset, data[::30])
-
     def test_no_features(self):
         w = self.widget
-        data = Table("iris")
-        domain = Domain(attributes=data.domain.attributes[:1], class_vars=data.domain.class_vars)
-        data2 = data.transform(domain)
+        data2 = self.data.transform(Domain(self.data.domain.attributes[:1],
+                                           self.data.domain.class_vars))
         self.assertFalse(w.Error.no_features.is_shown())
         self.send_signal(w.Inputs.data, data2)
         self.assertTrue(w.Error.no_features.is_shown())
@@ -60,9 +51,8 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
 
     def test_not_enough_instances(self):
         w = self.widget
-        data = Table("iris")
         self.assertFalse(w.Error.no_instances.is_shown())
-        self.send_signal(w.Inputs.data, data[:1])
+        self.send_signal(w.Inputs.data, self.data[:1])
         self.assertTrue(w.Error.no_instances.is_shown())
-        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.data, self.data)
         self.assertFalse(w.Error.no_instances.is_shown())

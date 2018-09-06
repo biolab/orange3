@@ -520,7 +520,6 @@ class OWFreeViz(OWProjectionWidget):
         points = self.graph.get_points()
         ex = np.dot(self._X, points)
         self._embedding_coords = (ex / np.max(np.linalg.norm(ex, axis=1)))
->>>>>>> OWFreeViz: Refactor using OWProjectionWidget and OWScatterPlotBase
 
     def selection_changed(self):
         self.commit()

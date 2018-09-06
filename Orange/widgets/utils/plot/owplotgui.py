@@ -136,7 +136,7 @@ class AddVariablesDialog(QDialog):
 
 
 class VariablesSelection:
-    def __call__(self, master, model_selected, model_other):
+    def __call__(self, master, model_selected, model_other, widget=None):
         self.master = master
 
         params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
@@ -146,8 +146,10 @@ class VariablesSelection:
                        "dragDropOverwriteMode": False,
                        "dragDropMode": QListView.DragDrop}
 
-        self.view_selected = view = gui.listView(widget=master.controlArea, master=master,
-                                                 box="Displayed Axes", **params_view)
+        self.view_selected = view = gui.listView(
+            widget or master.controlArea, master,
+            box="Displayed Axes", **params_view
+        )
         view.box.setMinimumHeight(120)
         view.viewport().setAcceptDrops(True)
 
