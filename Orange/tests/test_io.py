@@ -5,6 +5,7 @@ import unittest
 import os
 import tempfile
 import shutil
+import io
 
 from Orange.data import ContinuousVariable
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader, \
@@ -103,6 +104,17 @@ class TestReader(unittest.TestCase):
         reader = PickleReader("")
         with unittest.mock.patch("pickle.load", return_value=None):
             self.assertRaises(TypeError, reader.read, "foo")
+
+    def test_empty_columns(self):
+        """Can't read files with more columns then headers. GH-1417"""
+        samplefile = """\
+        a, b
+        1, 0,
+        1, 2,
+        """
+        c = io.StringIO(samplefile)
+        table = CSVReader(c).read()
+        self.assertEqual(len(table.domain.attributes), 2)
 
 
 class TestIo(unittest.TestCase):
