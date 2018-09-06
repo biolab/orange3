@@ -4,7 +4,6 @@ from collections import OrderedDict
 from xml.sax.saxutils import escape
 
 import docutils.core
-import CommonMark
 
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsPathItem, QGraphicsWidget, QGraphicsTextItem,
@@ -175,22 +174,6 @@ def render_html(content):
     return content
 
 
-def render_markdown(content):
-    """
-    Return a html fragment from markdown text content
-
-    Parameters
-    ----------
-    content : str
-        A markdown formatted text
-
-    Returns
-    -------
-    html : str
-    """
-    return CommonMark.commonmark(content)
-
-
 def render_rst(content):
     """
     Return a html fragment from a RST text content
@@ -236,7 +219,6 @@ class TextAnnotation(Annotation):
     ContentRenderer = OrderedDict([
         ("text/plain", render_plain),
         ("text/rst", render_rst),
-        ("text/markdown", render_markdown),
         ("text/html", render_html),
     ])  # type: Dict[str, Callable[[str], [str]]]
 
