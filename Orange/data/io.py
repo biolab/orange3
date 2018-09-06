@@ -619,7 +619,10 @@ class FileFormat(metaclass=FileFormatMeta):
         rowlen = max(map(len, (names, types, flags)))
 
         def _equal_length(lst):
-            lst.extend(['']*(rowlen - len(lst)))
+            if len(lst) > rowlen > 0:
+                lst = lst[:rowlen]
+            elif len(lst) < rowlen:
+                lst.extend(['']*(rowlen - len(lst)))
             return lst
 
         # Ensure all data is of equal width in a column-contiguous array
