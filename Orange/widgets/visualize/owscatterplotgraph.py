@@ -33,6 +33,9 @@ from Orange.widgets.visualize.utils.plotutils import (
     HelpEventDelegate as EventDelegate,
     InteractiveViewBox as ViewBox
 )
+from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
+    OWScatterPlotGraph as OWScatterPlotGraphObs
+)
 from Orange.widgets.settings import Setting, ContextSetting
 from Orange.widgets.widget import OWWidget, Msg
 
@@ -345,6 +348,14 @@ class InteractiveViewBox(ViewBox):
         warnings.warn("InteractiveViewBox class has been deprecated since "
                       "3.17. Use Orange.widgets.visualize.utils.plotutils."
                       "InteractiveViewBox instead.", OrangeDeprecationWarning)
+
+
+class OWScatterPlotGraph(OWScatterPlotGraphObs):
+    def __init__(self, scatter_widget, parent=None, _="None", view_box=InteractiveViewBox):
+        super().__init__(scatter_widget, parent=parent, _=_, view_box=view_box)
+        warnings.warn("OWScatterPlotGraph class has been deprecated since "
+                      "3.17. Use OWScatterPlotBase instead.",
+                      OrangeDeprecationWarning)
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):

@@ -199,7 +199,7 @@ class OWLinProjGraph(OWScatterPlotGraph):
         self.view_box.setRange(QRectF(min_x, min_y, max_x - min_x, max_y - min_y), padding=0.025)
         self.view_box.setAspectLocked(True, 1)
 
-        super().create_plot_items(attr_x, attr_y, reset_view=False)
+        super().update_data(attr_x, attr_y, reset_view=False)
         self.hide_axes()
 
     def update_labels(self):
