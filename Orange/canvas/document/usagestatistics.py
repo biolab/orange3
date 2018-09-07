@@ -23,6 +23,8 @@ class UsageStatistics:
     NodeAddClick = 0
     NodeAddDrag = 1
     NodeAddMenu = 2
+    NodeAddExtendFromSink = 3
+    NodeAddExtendFromSource = 4
 
     last_search_query = None
 
@@ -32,9 +34,10 @@ class UsageStatistics:
         self.toolbox_clicks = []
         self.toolbox_drags = []
         self.quick_menu_actions = []
+        self.widget_extensions = []
         self.__node_addition_type = None
 
-    def log_node_added(self, widget_name):
+    def log_node_added(self, widget_name, extended_widget=None):
         if not config.settings()["error-reporting/send-statistics"]:
             return
 
@@ -55,12 +58,36 @@ class UsageStatistics:
                 "Time": time
             })
 
-        else:  # NodeAddDrag
+        elif self.__node_addition_type == UsageStatistics.NodeAddDrag:
 
             self.toolbox_drags.append({
                 "Widget Name": widget_name,
                 "Time": time
             })
+
+        elif self.__node_addition_type == UsageStatistics.NodeAddExtendFromSink:
+
+            self.widget_extensions.append({
+                "Widget Name": widget_name,
+                "Extended Widget": extended_widget,
+                "Direction": "FROM_SINK",
+                "Query": UsageStatistics.last_search_query,
+                "Time": time
+            })
+
+        elif self.__node_addition_type == UsageStatistics.NodeAddExtendFromSource:
+
+            self.widget_extensions.append({
+                "Widget Name": widget_name,
+                "Extended Widget": extended_widget,
+                "Direction": "FROM_SOURCE",
+                "Query": UsageStatistics.last_search_query,
+                "Time": time
+            })
+
+        else:
+            log.warning("Invalid usage statistics state; "
+                        "attempted to log node before setting node type.")
 
     def set_node_type(self, addition_type):
         self.__node_addition_type = addition_type
@@ -76,7 +103,8 @@ class UsageStatistics:
             "Session": {
                 "Quick Menu Search": self.quick_menu_actions,
                 "Toolbox Click": self.toolbox_clicks,
-                "Toolbox Drag": self.toolbox_drags
+                "Toolbox Drag": self.toolbox_drags,
+                "Widget Extension": self.widget_extensions
             }
         }
 

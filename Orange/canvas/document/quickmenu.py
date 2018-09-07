@@ -281,7 +281,6 @@ class SuggestMenuPage(MenuPage):
         """
         filter_proxy = self.view().model()
         filter_proxy.setFilterRegExp(pattern)
-        UsageStatistics.set_last_search_query(str(pattern.pattern()))
 
         # re-sorts to make sure items that match by title are on top
         filter_proxy.invalidate()
@@ -1106,6 +1105,8 @@ class QuickMenu(FramelessWindow):
         patt.setCaseSensitivity(False)
         self.__suggestPage.setFilterRegExp(patt)
 
+        UsageStatistics.set_last_search_query(searchText)
+
         self.ensurePolished()
 
         if self.testAttribute(Qt.WA_Resized) and self.sizeGripEnabled():
@@ -1212,6 +1213,7 @@ class QuickMenu(FramelessWindow):
         self.__suggestPage.setFilterRegExp(patt)
         self.__pages.setCurrentPage(self.__suggestPage)
         self.__selectFirstIndex()
+        UsageStatistics.set_last_search_query(text)
 
     def __selectFirstIndex(self):
         view = self.__pages.currentPage().view()
