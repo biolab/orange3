@@ -350,16 +350,6 @@ class RecentPathsWidgetMixin:
         # in some model (untested!)
         self.recent_paths[:] = rec
 
-    def workflowEnvChanged(self, key, value, oldvalue):
-        """
-        Handle changes of the working directory
-
-        The function is triggered by a signal from the canvas when the user
-        saves the schema.
-        """
-        if key == "basedir":
-            self._relocate_recent_files()
-
     def add_path(self, filename):
         """Add (or move) a file name to the top of recent paths"""
         self._check_init()
@@ -420,7 +410,7 @@ class RecentPathsWComboMixin(RecentPathsWidgetMixin):
                     self.file_combo.setItemData(i, QBrush(Qt.red),
                                                 Qt.TextColorRole)
 
-    def workflowEnvChanged(self, key, value, oldvalue):
-        super().workflowEnvChanged(key, value, oldvalue)
+    def update_file_list(self, key, value, oldvalue):
         if key == "basedir":
+            self._relocate_recent_files()
             self.set_file_list()
