@@ -834,13 +834,15 @@ class OWEditDomain(widget.OWWidget):
     settings_version = 2
 
     _domain_change_store = settings.ContextSetting({})
-    selected_item = settings.ContextSetting(None)  # type: Optional[str]
-    selected_index = -1
+    _selected_item = settings.ContextSetting(None)  # type: Optional[str]
+
     want_control_area = False
 
     def __init__(self):
         super().__init__()
         self.data = None  # type: Optional[Orange.data.Table]
+        #: The current selected variable index
+        self.selected_index = -1
         self._invalidated = False
 
         mainlayout = self.mainArea.layout()
@@ -926,6 +928,10 @@ class OWEditDomain(widget.OWWidget):
         """Clear the widget state."""
         self.data = None
         self.variables_model.clear()
+        assert self.selected_index == -1
+        self.selected_index = -1
+
+        self._selected_item = None
         self._domain_change_store = {}
 
     def reset_selected(self):
@@ -985,14 +991,24 @@ class OWEditDomain(widget.OWWidget):
             if tr:
                 model.setData(midx, tr, TransformRole)
 
-        # Restore the variable selection if possible
-        index = self.selected_index
-        if 0 <= index < model.rowCount():
-            if index >= 0:
-                itemmodels.select_row(self.variables_view, index)
+        # Restore the current variable selection
+        i = -1
+        if self._selected_item is not None:
+            for i, var in enumerate(model):
+                if var.name == self._selected_item:
+                    break
+        if i == -1 and model.rowCount():
+            i = 0
+
+        if i != -1:
+            itemmodels.select_row(self.variables_view, i)
 
     def _on_selection_changed(self):
         self.selected_index = self.selected_var_index()
+        if self.selected_index != -1:
+            self._selected_item = self.variables_model[self.selected_index].name
+        else:
+            self._selected_item = None
         self.open_editor(self.selected_index)
 
     def open_editor(self, index):
