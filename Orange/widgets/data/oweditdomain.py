@@ -13,7 +13,7 @@ from collections import namedtuple
 from functools import singledispatch
 
 from typing import (
-    Tuple, List, Any, Optional, Union, Dict, Iterable, NamedTuple,
+    Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
 )
 
 from AnyQt.QtWidgets import (
@@ -24,12 +24,11 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from AnyQt.QtCore import Qt, QEvent, QSize, QModelIndex, QAbstractListModel
+from AnyQt.QtCore import Qt, QEvent, QSize, QModelIndex
 
 import numpy as np
 
 import Orange.data
-import Orange.preprocess.transformation
 
 from Orange.preprocess.transformation import Identity, Lookup
 from Orange.widgets import widget, gui, settings
@@ -48,7 +47,7 @@ class Categorical(
         ("categories", Tuple[str, ...]),
         ("base", Optional[str]),
         ("annotations", AnnotationsType),
-    ])): ...
+    ])): pass
 
 
 class Real(
@@ -57,21 +56,21 @@ class Real(
         # a precision (int, and a format specifier('f', 'g', or '')
         ("format", Tuple[int, str]),
         ("annotations", AnnotationsType),
-    ])): ...
+    ])): pass
 
 
 class String(
     NamedTuple("String", [
         ("name", str),
         ("annotations", AnnotationsType),
-    ])): ...
+    ])): pass
 
 
 class Time(
     NamedTuple("Time", [
         ("name", str),
         ("annotations", AnnotationsType),
-    ])): ...
+    ])): pass
 
 
 Variable = Union[Categorical, Real, Time, String]
@@ -178,11 +177,12 @@ class DictItemsModel(QStandardItemModel):
     """
     # Implement a proper model with in-place editing.
     # (Maybe it should be a TableModel with 2 columns)
-    def __init__(self, parent=None, dict={}):
+    def __init__(self, parent=None, dict=None):
         super().__init__(parent)
         self._dict = {}
         self.setHorizontalHeaderLabels(["Key", "Value"])
-        self.set_dict(dict)
+        if dict is not None:
+            self.set_dict(dict)
 
     def set_dict(self, dict):
         # type: (Dict[str, str]) -> None
@@ -341,8 +341,8 @@ class VariableEditor(QWidget):
         vlayout.addLayout(hlayout)
         form.addRow("Labels:", vlayout)
 
-    def set_data(self, var, transform=[]):
-        # type: (Optional[Variable], List[Transform]) -> None
+    def set_data(self, var, transform=()):
+        # type: (Optional[Variable], Sequence[Transform]) -> None
         """
         Set the variable to edit.
         """
@@ -519,51 +519,8 @@ class DiscreteVariableEditor(VariableEditor):
             shortcutContext=Qt.WidgetShortcut,
         )
 
-        model = self.values_model
-        view = self.values_edit
-
-        @self.add_new_item.triggered.connect
-        def _add_item():
-            with disconnected(model.dataChanged, self.on_values_changed,
-                              Qt.UniqueConnection):
-                row = model.rowCount()
-                if not model.insertRow(model.rowCount()):
-                    return
-                index = model.index(row, 0)
-                model.setItemData(
-                    index, {
-                        Qt.EditRole: "",
-                        SourcePosRole: None,
-                        EditStateRole: ItemEditState.Added
-                    }
-                )
-                view.setCurrentIndex(index)
-                view.edit(index)
-            self.on_values_changed()
-
-        @self.remove_item.triggered.connect
-        def _remove_item():
-            view = self.values_edit
-            rows = view.selectionModel().selectedRows(0)
-            if not rows:
-                return
-            index = rows[0]  # type: QModelIndex
-            model = index.model()
-            state = index.data(EditStateRole)
-            pos = index.data(Qt.UserRole)
-            if pos is not None and pos >= 0:
-                # existing level -> only mark/toggle its dropped state
-                model.setData(
-                    index,
-                    ItemEditState.Dropped if state != ItemEditState.Dropped
-                    else ItemEditState.NoState,
-                    EditStateRole)
-            elif state == ItemEditState.Added:
-                # new level -> remove it
-                model.removeRow(index.row())
-            else:
-                assert False, "invalid state '{}' for {}" \
-                    .format(state, index.row())
+        self.add_new_item.triggered.connect(self._add_category)
+        self.remove_item.triggered.connect(self._remove_category)
 
         button1 = FixedSizeButton(
             self, defaultAction=self.move_value_up,
@@ -600,8 +557,8 @@ class DiscreteVariableEditor(VariableEditor):
         QWidget.setTabOrder(button2, button3)
         QWidget.setTabOrder(button3, button4)
 
-    def set_data(self, var, transform=[]):
-        # type: (Optional[Categorical], List[Transform]) -> None
+    def set_data(self, var, transform=()):
+        # type: (Optional[Categorical], Sequence[Transform]) -> None
         """
         Set the variable to edit.
         """
@@ -736,6 +693,61 @@ class DiscreteVariableEditor(VariableEditor):
         else:
             self.move_value_up.setEnabled(False)
             self.move_value_down.setEnabled(False)
+
+    def _remove_category(self):
+        """
+        Remove the current selected category.
+
+        If the item is an existing category present in the source variable it
+        is marked as removed in the view. But if it was added in the set
+        transformation it is removed entirely from the model and view.
+        """
+        view = self.values_edit
+        rows = view.selectionModel().selectedRows(0)
+        if not rows:
+            return
+        assert len(rows) == 1
+        index = rows[0]  # type: QModelIndex
+        model = index.model()
+        state = index.data(EditStateRole)
+        pos = index.data(Qt.UserRole)
+        if pos is not None and pos >= 0:
+            # existing level -> only mark/toggle its dropped state
+            model.setData(
+                index,
+                ItemEditState.Dropped if state != ItemEditState.Dropped
+                else ItemEditState.NoState,
+                EditStateRole)
+        elif state == ItemEditState.Added:
+            # new level -> remove it
+            model.removeRow(index.row())
+        else:
+            assert False, "invalid state '{}' for {}" \
+                .format(state, index.row())
+
+    def _add_category(self):
+        """
+        Add a new category
+        """
+        view = self.values_edit
+        model = view.model()
+
+        with disconnected(model.dataChanged, self.on_values_changed,
+                          Qt.UniqueConnection):
+            row = model.rowCount()
+            if not model.insertRow(model.rowCount()):
+                return
+            index = model.index(row, 0)
+            model.setItemData(
+                index, {
+                    Qt.EditRole: "",
+                    SourcePosRole: None,
+                    EditStateRole: ItemEditState.Added
+                }
+            )
+            view.setCurrentIndex(index)
+            view.edit(index)
+        self.on_values_changed()
 
 
 class ContinuousVariableEditor(VariableEditor):
@@ -965,7 +977,7 @@ class OWEditDomain(widget.OWWidget):
             self._invalidate()
 
     def selected_var_index(self):
-        """Return the selected row in 'Domain Features' view."""
+        """Return the current selected variable index."""
         rows = self.variables_view.selectedIndexes()
         assert len(rows) <= 1
         return rows[0].row() if rows else -1
@@ -974,10 +986,6 @@ class OWEditDomain(widget.OWWidget):
         # type: (Orange.data.Domain) -> None
         self.variables_model[:] = [abstract(v)
                                    for v in domain.variables + domain.metas]
-
-    def set_variables(self, variables):
-        # type: (Iterable[Variable]) -> None
-        self.variables_model[:] = variables
 
     def _restore(self, ):
         """
@@ -1060,8 +1068,6 @@ class OWEditDomain(widget.OWWidget):
 
     def _store_transform(self, var, transform):
         # type: (Variable, List[Transform]) -> None
-        # print("store:", deconstruct(var))
-        # print("      ", [deconstruct(t) for t in transform])
         self._domain_change_store[deconstruct(var)] = [deconstruct(t) for t in transform]
 
     def _restore_transform(self, var):
@@ -1162,6 +1168,7 @@ class OWEditDomain(widget.OWWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        # pylint: disable=bad-continuation
         if version is None or version <= 1:
             hints_ = context.values.get("domain_change_hints", ({}, -2))[0]
             store = []
@@ -1175,10 +1182,10 @@ class OWEditDomain(widget.OWWidget):
                         ("Time", (name, ())),
                 "ContinuousVariable":
                     lambda name, _, attrs:
-                    ("Real", (name, (3, "f"), ())),
+                        ("Real", (name, (3, "f"), ())),
                 "StringVariable":
                     lambda name, _, attrs:
-                    ("String", (name, ())),
+                        ("String", (name, ())),
             }
             for (module, class_name, *rest), target in hints_.items():
                 if module != ns:
@@ -1220,6 +1227,7 @@ def report_transform(var, trs):
     -------
     report : str
     """
+    # pylint: disable=too-many-branches
     def strike(text):
         return "<s>{}</s>".format(escape(text))
 

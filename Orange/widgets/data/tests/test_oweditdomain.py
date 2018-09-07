@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=all
 
 from unittest import TestCase
 import numpy as np
