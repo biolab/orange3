@@ -921,6 +921,7 @@ class OWEditDomain(widget.OWWidget):
         bbox.addButton(breset_all, QDialogButtonBox.ResetRole)
 
         mainlayout.addWidget(bbox)
+        self.variables_view.setFocus(Qt.NoFocusReason)  # initial focus
 
     @Inputs.data
     def set_data(self, data):
