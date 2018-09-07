@@ -3,11 +3,12 @@ import platform
 import json
 import logging
 import os
+from Orange.canvas import config
 try:
-    from Orange.canvas import config
-    from Orange.version import full_version as VERSION_STR
+    from Orange.version import full_version, release
 except ImportError:
-    VERSION_STR = '???'
+    full_version = '???'
+    release = True
 
 import requests
 
@@ -93,12 +94,12 @@ class UsageStatistics:
         self.__node_addition_type = addition_type
 
     def write_statistics(self):
-        if not config.settings()["error-reporting/send-statistics"]:
+        if not release or not config.settings()["error-reporting/send-statistics"]:
             return
 
         statistics = {
             "Date": str(datetime.now().date()),
-            "Orange Version": VERSION_STR,
+            "Orange Version": full_version,
             "Operating System": platform.system() + " " + platform.release(),
             "Session": {
                 "Quick Menu Search": self.quick_menu_actions,
@@ -133,7 +134,6 @@ class UsageStatistics:
         except (ConnectionError, requests.exceptions.RequestException):
             log.warning("Connection error while attempting to send usage statistics.")
             store_data(data)
-
 
     @staticmethod
     def set_last_search_query(query):
