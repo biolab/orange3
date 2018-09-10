@@ -1,20 +1,24 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=all
-
 from unittest import TestCase
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt
 from AnyQt.QtWidgets import QAction
 from AnyQt.QtTest import QTest
 
-from Orange.data import ContinuousVariable, DiscreteVariable, \
-    StringVariable, TimeVariable, Table, Domain
+from Orange.data import (
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
+    Table, Domain
+)
+from Orange.preprocess.transformation import Identity, Lookup
 from Orange.widgets.data.oweditdomain import (
     OWEditDomain,
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
-    Rename, Annotate, CategoriesMapping, report_transform
+    Rename, Annotate, CategoriesMapping, report_transform,
+    apply_transform
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -253,3 +257,67 @@ class TestEditors(GuiTest):
         self.assertEqual(w.name_edit.text(), "")
         self.assertEqual(w.labels_model.get_dict(), {})
         self.assertEqual(w.get_data(), (None, []))
+
+
+class TestTransforms(TestCase):
+    def _test_common(self, var):
+        tr = [Rename(var.name + "_copy"), Annotate((("A", "1"),))]
+        XX = apply_transform(var, tr)
+        self.assertEqual(XX.name, var.name + "_copy")
+        self.assertEqual(XX.attributes, {"A": 1})
+        self.assertIsInstance(XX.compute_value, Identity)
+        self.assertIs(XX.compute_value.variable, var)
+
+    def test_continous(self):
+        X = ContinuousVariable("X")
+        self._test_common(X)
+
+    def test_string(self):
+        X = StringVariable("S")
+        self._test_common(X)
+
+    def test_time(self):
+        X = TimeVariable("X")
+        self._test_common(X)
+
+    def test_discrete(self):
+        D = DiscreteVariable("D", values=("a", "b"))
+        self._test_common(D)
+
+    def test_discrete_rename(self):
+        D = DiscreteVariable("D", values=("a", "b"))
+        DD = apply_transform(D, [CategoriesMapping((("a", "A"), ("b", "B")))])
+        self.assertSequenceEqual(DD.values, ["A", "B"])
+        self.assertIs(DD.compute_value.variable, D)
+
+    def test_discrete_reorder(self):
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"))
+        DD = apply_transform(D, [CategoriesMapping((("0", "0"), ("1", "1"),
+                                                    ("2", "2"), ("3", "3")))])
+        self.assertSequenceEqual(DD.values, ["0", "1", "2", "3"])
+        self._assertLookupEquals(
+            DD.compute_value, Lookup(D, np.array([2, 3, 1, 0]))
+        )
+
+    def test_discrete_add_drop(self):
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"), base_value=1)
+        mapping = (
+            ("0", None),
+            ("1", "1"),
+            ("2", "2"),
+            ("3", None),
+            (None, "A"),
+        )
+        tr = [CategoriesMapping(mapping)]
+        DD = apply_transform(D, tr)
+        self.assertSequenceEqual(DD.values, ["1", "2", "A"])
+        self._assertLookupEquals(
+            DD.compute_value, Lookup(D, np.array([1, np.nan, 0, np.nan]))
+        )
+        self.assertEqual(DD.base_value, -1)
+
+    def _assertLookupEquals(self, first, second):
+        self.assertIsInstance(first, Lookup)
+        self.assertIsInstance(second, Lookup)
+        self.assertIs(first.variable, second.variable)
+        assert_array_equal(first.lookup_table, second.lookup_table)
