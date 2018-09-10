@@ -6,6 +6,7 @@ A widget for manual editing of a domain's attributes.
 
 """
 import sys
+import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest
 from contextlib import contextmanager
@@ -166,7 +167,10 @@ def reconstruct(tname, args):
     -------
     rval: Tuple[Any, ...]
     """
-    constructor = globals().get(tname)
+    try:
+        constructor = globals()[tname]
+    except KeyError:
+        raise NameError(tname)
     return constructor(*args)
 
 
@@ -1077,7 +1081,13 @@ class OWEditDomain(widget.OWWidget):
         tr = []
 
         for t in tr_:
-            tr.append(reconstruct(*t))
+            try:
+                tr.append(reconstruct(*t))
+            except (NameError, TypeError) as err:
+                warnings.warn(
+                    "Failed to restore transform: {}, {!r}".format(t, err),
+                    UserWarning, stacklevel=2
+                )
         return tr
 
     def _invalidate(self):
