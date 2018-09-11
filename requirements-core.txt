@@ -16,4 +16,4 @@ serverfiles		# for Data Sets synchronization
 networkx
 python-louvain
 requests
-fastTSNE
+fastTSNE>=0.2.0
