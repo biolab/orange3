@@ -707,9 +707,11 @@ class DiscreteVariable(Variable):
     def __reduce__(self):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
+        __dict__ = dict(self.__dict__)
+        __dict__.pop("master")
         return make_variable, (self.__class__, self._compute_value, self.name,
                                self.values, self.ordered, self.base_value), \
-            self.__dict__
+            __dict__
 
     @classmethod
     def make(cls, name, values=(), ordered=False, base_value=-1):
@@ -742,7 +744,7 @@ class DiscreteVariable(Variable):
         var = cls._find_compatible(
             name, values, ordered, base_value)
         if var:
-            return var
+            return var.make_proxy()
         if not ordered:
             base_value_rep = base_value != -1 and values[base_value]
             values = cls.ordered_values(values)
