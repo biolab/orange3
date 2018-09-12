@@ -113,8 +113,11 @@ class TestReader(unittest.TestCase):
         1, 2,
         """
         c = io.StringIO(samplefile)
-        table = CSVReader(c).read()
+        with self.assertWarns(UserWarning) as cm:
+            table = CSVReader(c).read()
         self.assertEqual(len(table.domain.attributes), 2)
+        self.assertEqual(cm.warning.args[0],
+                         "Columns with no headers were removed.")
 
 
 class TestIo(unittest.TestCase):
