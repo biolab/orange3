@@ -6,9 +6,9 @@ from unittest.mock import patch, Mock
 import numpy as np
 from scipy import sparse
 
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
+from Orange.data import Table
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 
 
 class TestOWManifoldLearning(WidgetTest):
