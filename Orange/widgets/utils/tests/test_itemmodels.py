@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QModelIndex
 
 from Orange.data import \
     Domain, \
@@ -470,6 +470,39 @@ class TestPyListModel(unittest.TestCase):
         self.assertSequenceEqual(model, [1, 2, 3, 4])
         self.assertSequenceEqual(model._other_data, "bdac")
 
+    def test_moveRows(self):
+        model = PyListModel([1, 2, 3, 4])
+        for i in range(model.rowCount()):
+            model.setData(model.index(i), str(i + 1), Qt.UserRole)
+
+        def modeldata(role):
+            return [model.index(i).data(role)
+                    for i in range(model.rowCount())]
+
+        def userdata():
+            return modeldata(Qt.UserRole)
+
+        def editdata():
+            return modeldata(Qt.EditRole)
+
+        r = model.moveRows(QModelIndex(), 1, 1, QModelIndex(), 0)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [2, 1, 3, 4])
+        self.assertSequenceEqual(userdata(), ["2", "1", "3", "4"])
+        r = model.moveRows(QModelIndex(), 1, 2, QModelIndex(), 4)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [2, 4, 1, 3])
+        self.assertSequenceEqual(userdata(), ["2", "4", "1", "3"])
+        r = model.moveRows(QModelIndex(), 3, 1, QModelIndex(), 0)
+        self.assertIs(r, True)
+        self.assertSequenceEqual(editdata(), [3, 2, 4, 1])
+        self.assertSequenceEqual(userdata(), ["3", "2", "4", "1"])
+        r = model.moveRows(QModelIndex(), 2, 1, QModelIndex(), 2)
+        self.assertIs(r, False)
+        model = PyListModel([])
+        r = model.moveRows(QModelIndex(), 0, 0, QModelIndex(), 0)
+        self.assertIs(r, False)
+
 
 class TestVariableListModel(unittest.TestCase):
     @classmethod
@@ -682,15 +715,17 @@ class TestDomainModel(unittest.TestCase):
         with self.assertRaises(TypeError):
             del model[0]
 
-        self.assertRaises(TypeError, model.setData, index, domain[0])
+        self.assertFalse(model.setData(index, domain[0], Qt.EditRole))
         self.assertTrue(model.setData(index, "foo", Qt.ToolTipRole))
 
-        self.assertRaises(TypeError, model.setItemData, index,
-                          {Qt.EditRole: domain[0], Qt.ToolTipRole: "foo"})
+        self.assertFalse(model.setItemData(index, {Qt.EditRole: domain[0],
+                                                   Qt.ToolTipRole: "foo"}))
         self.assertTrue(model.setItemData(index, {Qt.ToolTipRole: "foo"}))
 
-        self.assertRaises(TypeError, model.insertRows, 0, 0)
-        self.assertRaises(TypeError, model.removeRows, 0, 0)
+        self.assertFalse(model.insertRows(0, 1))
+        self.assertSequenceEqual(model, domain)
+        self.assertFalse(model.removeRows(0, 1))
+        self.assertSequenceEqual(model, domain)
 
 
 if __name__ == "__main__":
