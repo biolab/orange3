@@ -64,3 +64,13 @@ with filled circles, while the original dataset is represented with
 empty circles.
 
 .. figure:: images/DataSampler-Example.png
+
+**Data Sampler** can also be used to oversample a minority class in data. To do this, first separate the minority
+class using a **Select Rows** widget. Connect Matching rows into a Data Samples widget, select Fixed sample size,
+Sample with replacement and specify the number of instances you want to have in the resulting dataset.
+
+.. figure:: images/DataSampler-Oversample1.png
+
+Finally, concatenate the oversampled instances with the Unmatching Data output of the Select Rows widget.
+
+.. figure:: images/DataSampler-Oversample2.png
