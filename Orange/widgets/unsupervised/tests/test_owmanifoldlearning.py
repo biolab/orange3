@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest import skip
 from unittest.mock import patch, Mock
 
 import numpy as np
@@ -89,10 +90,16 @@ class TestOWManifoldLearning(WidgetTest):
         self.widget.apply_button.button.click()
         self.assertTrue(self.widget.Error.sparse_tsne_distance.is_shown())
 
+    @skip
     def test_singular_matrices(self):
         """
         Handle singular matrices.
         GH-2228
+
+        TODO: This test makes sense with the ``Mahalanobis`` distance metric
+        which is currently not supported by tSNE. In case it is ever
+        re-introduced, this test is very much required.
+
         """
         table = Table(
             Domain(

@@ -178,6 +178,7 @@ class OWManifoldLearning(OWWidget):
     icon = "icons/Manifold.svg"
     priority = 2200
     keywords = []
+    settings_version = 2
 
     class Inputs:
         data = Input("Data", Table)
@@ -209,6 +210,21 @@ class OWManifoldLearning(OWWidget):
         sparse_tsne_distance = Msg('Chebyshev, Jaccard, and Mahalanobis '
                                    'distances not supported with sparse data.')
         out_of_memory = Msg("Out of memory")
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            tsne_settings = settings.get('tsne_editor', {})
+            # Fixup initialization index
+            if 'init_index' in tsne_settings:
+                idx = tsne_settings.pop('init_index')
+                idx = min(idx, len(TSNEParametersEditor.initialization_values))
+                tsne_settings['initialization_index'] = idx
+            # We removed several metrics here
+            if 'metric_index' in tsne_settings:
+                idx = tsne_settings['metric_index']
+                idx = min(idx, len(TSNEParametersEditor.metric_values))
+                tsne_settings['metric_index'] = idx
 
     def __init__(self):
         self.data = None
@@ -289,9 +305,11 @@ class OWManifoldLearning(OWWidget):
                 else:
                     raise
             except ValueError as e:
-                if e.args[0] == "for method='hessian', n_neighbors " \
-                                "must be greater than [n_components" \
-                                " * (n_components + 3) / 2]":
+                if 'sparse' in e.args[0] and 'metric' in e.args[0]:
+                    self.Error.sparse_tsne_distance()
+                elif e.args[0] == "for method='hessian', n_neighbors " \
+                                  "must be greater than [n_components" \
+                                  " * (n_components + 3) / 2]":
                     n = self.n_components * (self.n_components + 3) / 2
                     self.Error.n_neighbors_too_small("{}".format(n))
                 else:
@@ -307,7 +325,7 @@ class OWManifoldLearning(OWWidget):
         parameters = dict(n_components=self.n_components)
         parameters.update(self.params_widget.parameters)
         if data is not None and data.is_sparse() and method == TSNE:
-            parameters.update(method='exact', init='random')
+            parameters.update(initialization='random')
         return parameters
 
     def send_report(self):
