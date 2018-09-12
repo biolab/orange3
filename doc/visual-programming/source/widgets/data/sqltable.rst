@@ -21,7 +21,7 @@ To handle large databases, Orange attempts to execute a part of the computation 
 4. Username.
 5. Password.
 6. Press the blue button to connect to the database. Then select the table in the dropdown.
-7. *Auto-discover categorical variables* will cast INT and CHAR columns with less than 20 distinct values as categorical variables. When not selected, INT will be treated as numeric and CHAR as text, which can be slow on large tables. *Download to local memory* downloads the selected table to your local machine.
+7. *Auto-discover categorical variables* will cast INT and CHAR columns with less than 20 distinct values as categorical variables (finding all distinct values can be slow on large tables). When not selected, INT will be treated as numeric and CHAR as text. *Download to local memory* downloads the selected table to your local machine.
 
 Installation Instructions
 -------------------------
