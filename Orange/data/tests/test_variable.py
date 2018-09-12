@@ -491,9 +491,9 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc1p, abc)
 
         abcp, abc1p, abc2p = pickle.loads(pickle.dumps((abc, abc1, abc2)))
-        self.assertIs(abcp.master, abcp)
-        self.assertIs(abc1p.master, abcp)
-        self.assertIs(abc2p.master, abcp)
+        self.assertIs(abcp.master, abcp.master)
+        self.assertIs(abc1p.master, abcp.master)
+        self.assertIs(abc2p.master, abcp.master)
         self.assertEqual(abcp, abc1p)
         self.assertEqual(abcp, abc2p)
         self.assertEqual(abc1p, abc2p)
