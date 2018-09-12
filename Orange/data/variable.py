@@ -27,7 +27,19 @@ DISCRETE_MAX_VALUES = 3  # == 2 + nan
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
-    return cls.make(*args)
+    if issubclass(cls, DiscreteVariable):
+        name, values = args[:2]
+        var = cls.make(*args)
+        # The `var.values` are in general a superset of `values` with different
+        # order. Only use it if it is a structural subtype of the requested
+        # descriptor so any indices/codes retain their proper interpretation on
+        # deserialization.
+        if var.values[:len(values)] == values:
+            return var
+        else:
+            return cls(*args)
+    else:
+        return cls.make(*args)
 
 
 def is_discrete_values(values):
@@ -707,9 +719,12 @@ class DiscreteVariable(Variable):
     def __reduce__(self):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
+        __dict__ = dict(self.__dict__)
+        __dict__.pop("master")
+        __dict__.pop("values")
         return make_variable, (self.__class__, self._compute_value, self.name,
                                self.values, self.ordered, self.base_value), \
-            self.__dict__
+            __dict__
 
     @classmethod
     def make(cls, name, values=(), ordered=False, base_value=-1):
@@ -742,7 +757,7 @@ class DiscreteVariable(Variable):
         var = cls._find_compatible(
             name, values, ordered, base_value)
         if var:
-            return var
+            return var.make_proxy()
         if not ordered:
             base_value_rep = base_value != -1 and values[base_value]
             values = cls.ordered_values(values)
