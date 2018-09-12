@@ -618,14 +618,24 @@ class FileFormat(metaclass=FileFormatMeta):
         # Determine maximum row length
         rowlen = max(map(len, (names, types, flags)))
 
+        strip = False
+
         def _equal_length(lst):
-            lst.extend(['']*(rowlen - len(lst)))
+            nonlocal strip
+            if len(lst) > rowlen > 0:
+                lst = lst[:rowlen]
+                strip = True
+            elif len(lst) < rowlen:
+                lst.extend(['']*(rowlen - len(lst)))
             return lst
 
         # Ensure all data is of equal width in a column-contiguous array
         data = [_equal_length([s.strip() for s in row])
                 for row in data if any(row)]
         data = np.array(data, dtype=object, order='F')
+
+        if strip:
+            warnings.warn("Columns with no headers were removed.")
 
         # Data may actually be longer than headers were
         try:
