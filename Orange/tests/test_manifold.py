@@ -4,12 +4,17 @@
 import unittest
 
 import numpy as np
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
 
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import torgerson
+
+
+np.random.seed(42)
 
 
 class TestManifold(unittest.TestCase):
@@ -189,3 +194,45 @@ class TestTSNE(unittest.TestCase):
 
         # The embeddings in the table should match the embedding object
         np.testing.assert_equal(new_model.embedding.X, new_model.embedding_)
+
+    def test_bh_correctness(self):
+        knn = KNeighborsClassifier(n_neighbors=5)
+
+        # Set iterations to 0 so we check that the initialization is fairly random
+        tsne = TSNE(early_exaggeration_iter=0, n_iter=0, perplexity=30,
+                    negative_gradient_method='bh', initialization='random')
+        model = tsne(self.iris)
+
+        # Evaluate KNN on the random initialization
+        knn.fit(model.embedding_, self.iris.Y)
+        predicted = knn.predict(model.embedding_)
+        self.assertTrue(accuracy_score(predicted, self.iris.Y) < 0.6)
+
+        # 100 iterations should be enough for iris
+        model.optimize(n_iter=100, inplace=True)
+
+        # Evaluate KNN on the tSNE embedding
+        knn.fit(model.embedding_, self.iris.Y)
+        predicted = knn.predict(model.embedding_)
+        self.assertTrue(accuracy_score(predicted, self.iris.Y) > 0.95)
+
+    def test_fft_correctness(self):
+        knn = KNeighborsClassifier(n_neighbors=5)
+
+        # Set iterations to 0 so we check that the initialization is fairly random
+        tsne = TSNE(early_exaggeration_iter=0, n_iter=0, perplexity=30,
+                    negative_gradient_method='fft', initialization='random')
+        model = tsne(self.iris)
+
+        # Evaluate KNN on the random initialization
+        knn.fit(model.embedding_, self.iris.Y)
+        predicted = knn.predict(model.embedding_)
+        self.assertTrue(accuracy_score(predicted, self.iris.Y) < 0.6)
+
+        # 100 iterations should be enough for iris
+        model.optimize(n_iter=100, inplace=True)
+
+        # Evaluate KNN on the tSNE embedding
+        knn.fit(model.embedding_, self.iris.Y)
+        predicted = knn.predict(model.embedding_)
+        self.assertTrue(accuracy_score(predicted, self.iris.Y) > 0.95)
