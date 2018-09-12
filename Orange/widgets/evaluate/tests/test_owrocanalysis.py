@@ -4,6 +4,8 @@ import unittest
 import copy
 import numpy as np
 
+from AnyQt.QtWidgets import QToolTip
+
 import Orange.data
 import Orange.evaluation
 import Orange.classification
@@ -12,6 +14,7 @@ from Orange.widgets.evaluate import owrocanalysis
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import mouseMove
 
 
 class TestROC(unittest.TestCase):
@@ -156,3 +159,60 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         self.assertTrue(self.widget.Error.invalid_results.is_shown())
         self.send_signal(self.widget.Inputs.evaluation_results, None)
         self.assertFalse(self.widget.Error.invalid_results.is_shown())
+
+    def test_tooltips(self):
+        data_in = Orange.data.Table("titanic")
+        res = Orange.evaluation.TestOnTrainingData(
+            data=data_in,
+            learners=[Orange.classification.KNNLearner(),
+                      Orange.classification.LogisticRegressionLearner()],
+            store_data=True
+        )
+
+        self.send_signal(self.widget.Inputs.evaluation_results, res)
+        self.widget.roc_averaging = OWROCAnalysis.Merge
+        self.widget.target_index = 0
+        self.widget.selected_classifiers = [0, 1]
+        vb = self.widget.plot.getViewBox()
+        vb.childTransform()  # Force pyqtgraph to update transforms
+
+        curve = self.widget.plot_curves(self.widget.target_index, 0)
+        curve_merge = curve.merge()
+        view = self.widget.plotview
+        item = curve_merge.curve_item  # type: pg.PlotCurveItem
+
+        # no tooltips to be shown
+        pos = item.mapToScene(0.0, 1.0)
+        pos = view.mapFromScene(pos)
+        mouseMove(view.viewport(), pos)
+        self.assertIs(self.widget._tooltip_cache, None)
+
+        # test single point
+        pos = item.mapToScene(0.22504, 0.45400)
+        pos = view.mapFromScene(pos)
+        mouseMove(view.viewport(), pos)
+        shown_thresh = self.widget._tooltip_cache[1]
+        self.assertTrue(QToolTip.isVisible())
+        np.testing.assert_almost_equal(shown_thresh, [0.40000], decimal=5)
+
+        pos = item.mapToScene(0.0, 0.0)
+        pos = view.mapFromScene(pos)
+        # test overlapping points
+        mouseMove(view.viewport(), pos)
+        shown_thresh = self.widget._tooltip_cache[1]
+        self.assertTrue(QToolTip.isVisible())
+        np.testing.assert_almost_equal(shown_thresh, [1.8, 1.89336], decimal=5)
+
+        # test that cache is invalidated when changing averaging mode
+        self.widget.roc_averaging = OWROCAnalysis.Threshold
+        self.widget._replot()
+        mouseMove(view.viewport(), pos)
+        shown_thresh = self.widget._tooltip_cache[1]
+        self.assertTrue(QToolTip.isVisible())
+        np.testing.assert_almost_equal(shown_thresh, [1, 1])
+
+        # test nan thresholds
+        self.widget.roc_averaging = OWROCAnalysis.Vertical
+        self.widget._replot()
+        mouseMove(view.viewport(), pos)
+        self.assertIs(self.widget._tooltip_cache, None)

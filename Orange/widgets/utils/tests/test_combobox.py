@@ -2,11 +2,11 @@
 
 import unittest
 
-from AnyQt.QtCore import Qt, QPoint, QRect
-from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtCore import Qt, QRect
 from AnyQt.QtWidgets import QListView, QApplication
 from AnyQt.QtTest import QTest, QSignalSpy
 from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.tests.utils import mouseMove
 
 from Orange.widgets.utils import combobox
 
@@ -133,15 +133,3 @@ class TestComboBoxSearch(GuiTest):
             geom, QRect(0, 500, 100, 20), screen
         )
         self.assertEqual(g4, QRect(0, 500 - 400, 100, 400))
-
-
-def mouseMove(widget, pos=QPoint(), delay=-1):  # pragma: no-cover
-    # Like QTest.mouseMove, but functional without QCursor.setPos
-    if pos.isNull():
-        pos = widget.rect().center()
-    me = QMouseEvent(QMouseEvent.MouseMove, pos, widget.mapToGlobal(pos),
-                     Qt.NoButton, Qt.MouseButtons(0), Qt.NoModifier)
-    if delay > 0:
-        QTest.qWait(delay)
-
-    QApplication.sendEvent(widget, me)
