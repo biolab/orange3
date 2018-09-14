@@ -2,7 +2,7 @@ from itertools import chain
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt, QTimer, QSize
 from AnyQt.QtGui import QPen, QPalette
 from AnyQt.QtWidgets import QApplication
 
@@ -15,6 +15,7 @@ from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui
 from Orange.widgets import report
+from Orange.widgets.io import MatplotlibFormat, MatplotlibPDFFormat
 from Orange.widgets.settings import \
     DomainContextHandler, Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -210,6 +211,16 @@ class OWScatterPlot(OWWidget):
                         "Send Selection", "Send Automatically")
 
         self.graph.zoom_actions(self)
+
+        # manually register Matplotlib file writers
+        self.graph_writers = self.graph_writers.copy()
+        for w in [MatplotlibFormat, MatplotlibPDFFormat]:
+            for ext in w.EXTENSIONS:
+                self.graph_writers[ext] = w
+
+
+    def sizeHint(self):
+        return QSize(1132, 708)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)

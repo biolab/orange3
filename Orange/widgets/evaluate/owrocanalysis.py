@@ -10,8 +10,8 @@ from collections import namedtuple, deque, OrderedDict
 import numpy
 import sklearn.metrics as skl_metrics
 
-from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont
+from AnyQt.QtWidgets import QListView, QLabel, QGridLayout, QFrame, QAction, QToolTip
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QFont, QCursor
 from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
@@ -336,6 +336,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._plot_curves = {}
         self._rocch = None
         self._perf_line = None
+        self._tooltip_cache = None
 
         box = gui.vBox(self.controlArea, "Plot")
         tbox = gui.vBox(box, "Target Class")
@@ -395,6 +396,7 @@ class OWROCAnalysis(widget.OWWidget):
 
         self.plotview = pg.GraphicsView(background="w")
         self.plotview.setFrameStyle(QFrame.StyledPanel)
+        self.plotview.scene().sigMouseMoved.connect(self._on_mouse_moved)
 
         self.plot = pg.PlotItem(enableMenu=False)
         self.plot.setMouseEnabled(False, False)
@@ -445,6 +447,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._plot_curves = {}
         self._rocch = None
         self._perf_line = None
+        self._tooltip_cache = None
 
     def _initialize(self, results):
         names = getattr(results, "learner_names", None)
@@ -600,6 +603,68 @@ class OWROCAnalysis(widget.OWWidget):
             else:
                 warning = "All ROC curves are undefined"
         self.warning(warning)
+
+    def _on_mouse_moved(self, pos):
+        target = self.target_index
+        selected = self.selected_classifiers
+        curves = [(clf_idx, self.plot_curves(target, clf_idx))
+                  for clf_idx in selected]  # type: List[Tuple[int, plot_curves]]
+        valid_thresh, valid_clf = [], []
+        pt, ave_mode = None, self.roc_averaging
+
+        for clf_idx, crv in curves:
+            if self.roc_averaging == OWROCAnalysis.Merge:
+                curve = crv.merge()
+            elif self.roc_averaging == OWROCAnalysis.Vertical:
+                curve = crv.avg_vertical()
+            elif self.roc_averaging == OWROCAnalysis.Threshold:
+                curve = crv.avg_threshold()
+            else:
+                # currently not implemented for 'Show Individual Curves'
+                return
+
+            sp = curve.curve_item.childItems()[0]  # type: pg.ScatterPlotItem
+            act_pos = sp.mapFromScene(pos)
+            pts = sp.pointsAt(act_pos)
+
+            if len(pts) > 0:
+                mouse_pt = pts[0].pos()
+                if self._tooltip_cache:
+                    cache_pt, cache_thresh, cache_clf, cache_ave = self._tooltip_cache
+                    curr_thresh, curr_clf = [], []
+                    if numpy.linalg.norm(mouse_pt - cache_pt) < 10e-6 \
+                            and cache_ave == self.roc_averaging:
+                        mask = numpy.equal(cache_clf, clf_idx)
+                        curr_thresh = numpy.compress(mask, cache_thresh).tolist()
+                        curr_clf = numpy.compress(mask, cache_clf).tolist()
+                    else:
+                        QToolTip.showText(QCursor.pos(), "")
+                        self._tooltip_cache = None
+
+                    if curr_thresh:
+                        valid_thresh.append(*curr_thresh)
+                        valid_clf.append(*curr_clf)
+                        pt = cache_pt
+                        continue
+
+                curve_pts = curve.curve.points
+                roc_points = numpy.column_stack((curve_pts.fpr, curve_pts.tpr))
+                diff = numpy.subtract(roc_points, mouse_pt)
+                # Find closest point on curve and save the corresponding threshold
+                idx_closest = numpy.argmin(numpy.linalg.norm(diff, axis=1))
+
+                thresh = curve_pts.thresholds[idx_closest]
+                if not numpy.isnan(thresh):
+                    valid_thresh.append(thresh)
+                    valid_clf.append(clf_idx)
+                    pt = [curve_pts.fpr[idx_closest], curve_pts.tpr[idx_closest]]
+
+        if valid_thresh:
+            clf_names = self.classifier_names
+            msg = "Thresholds:\n" + "\n".join(["({:s}) {:.3f}".format(clf_names[i], thresh)
+                                               for i, thresh in zip(valid_clf, valid_thresh)])
+            QToolTip.showText(QCursor.pos(), msg)
+            self._tooltip_cache = (pt, valid_thresh, valid_clf, ave_mode)
 
     def _on_target_changed(self):
         self.plot.clear()

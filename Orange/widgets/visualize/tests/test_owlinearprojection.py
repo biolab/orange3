@@ -65,14 +65,6 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
         with excepthook_catch():
             simulate.combobox_activate_item(cb.attr_size, "X1")
 
-    def test_points_combo_boxes(self):
-        self.send_signal("Data", self.data)
-        graph = self.widget.controls.graph
-        self.assertEqual(len(graph.attr_color.model()), 8)
-        self.assertEqual(len(graph.attr_shape.model()), 3)
-        self.assertEqual(len(graph.attr_size.model()), 6)
-        self.assertEqual(len(graph.attr_label.model()), 8)
-
     def test_buttons(self):
         for btn in self.widget.radio_placement.buttons[:3]:
             self.send_signal(self.widget.Inputs.data, self.data)

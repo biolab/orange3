@@ -61,6 +61,15 @@ class BaseInventoryProvider(HelpProvider):
             manager.setCache(cache)
             req = QNetworkRequest(url)
 
+            # Follow redirects (for example http -> https)
+            # If redirects were not followed, the documentation would not be found
+            try:
+                req.setAttribute(QNetworkRequest.FollowRedirectsAttribute, 1)  # from Qt 5.6
+                req.setAttribute(QNetworkRequest.RedirectPolicyAttribute,  # from Qt 5.9
+                                 QNetworkRequest.NoLessSafeRedirectPolicy)
+            except AttributeError:  # if ran with earlier Qt
+                pass
+
             self._reply = manager.get(req)
             manager.finished.connect(self._on_finished)
         else:

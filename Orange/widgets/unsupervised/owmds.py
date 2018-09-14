@@ -56,6 +56,12 @@ class OWMDSGraph(OWScatterPlotGraph):
         self.plot_widget.setAspectLocked(True, 1)
 
     def compute_sizes(self):
+        """Handle 'Stress' size option.
+        Everything else is passed to Scatterplot's compute_sizes"""
+
+        if self.attr_size != "Stress":
+            return super().compute_sizes()
+
         def scale(a):
             dmin, dmax = np.nanmin(a), np.nanmax(a)
             if dmax - dmin > 0:
@@ -64,17 +70,8 @@ class OWMDSGraph(OWScatterPlotGraph):
                 return np.zeros_like(a)
 
         self.master.Information.missing_size.clear()
-        if self.attr_size is None:
-            size_data = np.full((self.n_points,), self.point_width,
-                                dtype=float)
-        elif self.attr_size == "Stress":
-            size_data = scale(stress(self.master.embedding, self.master.effective_matrix))
-            size_data = self.MinShapeSize + size_data * self.point_width
-        else:
-            size_data = \
-                self.MinShapeSize + \
-                self.scaled_data.get_column_view(self.attr_size)[0][self.valid_data] * \
-                self.point_width
+        size_data = scale(stress(self.master.embedding, self.master.effective_matrix))
+        size_data = self.MinShapeSize + size_data * self.point_width
         nans = np.isnan(size_data)
         if np.any(nans):
             size_data[nans] = self.MinShapeSize - 2

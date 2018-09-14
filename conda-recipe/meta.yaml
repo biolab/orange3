@@ -50,6 +50,7 @@ requirements:
     - python.app    # [osx]
     - commonmark
     - serverfiles
+    - matplotlib    >=2.0.0
 
 test:
   # Python imports

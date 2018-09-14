@@ -5,8 +5,9 @@ from functools import partial, wraps
 import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
 
-from Orange.statistics.util import bincount, countnans, contingency, stats, \
-    nanmin, nanmax, unique, nanunique, mean, nanmean, digitize, var, nansum, nanmedian
+from Orange.statistics.util import bincount, countnans, contingency, digitize, \
+    mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
+    unique, var
 
 
 def dense_sparse(test_case):
@@ -189,6 +190,15 @@ class TestUtil(unittest.TestCase):
                 np.testing.assert_array_almost_equal(
                     var(csr_matrix(data), axis=axis),
                     np.var(data, axis=axis)
+                )
+
+    def test_std(self):
+        for data in self.data:
+            for axis in chain((None,), range(len(data.shape))):
+                # Can't use array_equal here due to differences on 1e-16 level
+                np.testing.assert_array_almost_equal(
+                    std(csr_matrix(data), axis=axis),
+                    np.std(data, axis=axis)
                 )
 
 
