@@ -6,6 +6,30 @@ Change Log
 * ...
 
 
+[3.16.0] - 2018-09-14
+--------------------
+##### Enhancements
+* ROC analysis: show thresholds ([#3172](../../pull/3172))
+* Edit Domain: Record transformations ([#3231](../../pull/3231))
+* Data Table: Enable deselection ([#3189](../../pull/3189))
+* Empty helper pane message ([#3210](../../pull/3210))
+* Matplotlib output for Scatter plot ([#3134](../../pull/3134))
+* Scatterplot: indicate overlap of points. ([#3177](../../pull/3177))
+* Selection of format and compression in save data widget ([#3147](../../pull/3147))
+* OWBoxPlot: add option to sort discrete distributions by size ([#3156](../../pull/3156))
+* Table: speed-up computation of basic stats of given columns. ([#3166](../../pull/3166))
+* Canvas: 'Window Groups' continued ([#3085](../../pull/3085))
+* Combo Box Search Filter ([#3014](../../pull/3014))
+* Widget Insertion ([#3179](../../pull/3179))
+
+##### Bugfixes
+* Documentation fetching with redirects ([#3248](../../pull/3248))
+* DiscreteVariable reconstruction ([#3242](../../pull/3242))
+* io: Handle mismatched number of header/data values ([#3237](../../pull/3237))
+* OWNeuralNetwork model pickling ([#3230](../../pull/3230))
+* Variable: Prevent hashing of Values of DiscreteVariable. ([#3217](../../pull/3217))
+
+
 [3.15.0] - 2018-08-06
 --------------------
 ##### Enhancements
@@ -901,7 +925,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.15.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.16.0...HEAD
+[3.16.0]: https://github.com/biolab/orange3/compare/3.15.0...3.16.0
 [3.15.0]: https://github.com/biolab/orange3/compare/3.14.0...3.15.0
 [3.14.0]: https://github.com/biolab/orange3/compare/3.13.0...3.14.0
 [3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
