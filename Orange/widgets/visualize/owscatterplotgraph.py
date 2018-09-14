@@ -984,8 +984,15 @@ class OWProjectionWidget(OWWidget):
         if domain is not None:
             self.attr_color = domain.class_var
 
-    def get_xy_data(self):
+    def get_coordinates_data(self):
         return None, None
+
+    @staticmethod
+    def __get_overlap_groups(x, y):
+        coord_to_id = defaultdict(list)
+        for i, xy in enumerate(zip(x, y)):
+            coord_to_id[xy].append(i)
+        return coord_to_id
 
     def get_column(self, attr, filter_valid=True,
                    merge_infrequent=False, return_labels=False):
@@ -1018,6 +1025,11 @@ class OWProjectionWidget(OWWidget):
 
     # Sizes
     def get_size_data(self):
+        if self.attr_size == OWPlotGUI.SizeByOverlap:
+            x, y = self.get_coordinates_data()
+            coord_to_id = self.__get_overlap_groups(x, y)
+            overlaps = [len(coord_to_id[xy]) for xy in zip(x, y)]
+            return [1 + log2(o) for o in overlaps]
         return self.get_column(self.attr_size)
 
     def impute_sizes(self, size_data):
@@ -1027,15 +1039,25 @@ class OWProjectionWidget(OWWidget):
             self.Information.missing_size(self.attr_size)
         else:
             self.Information.missing_size.clear()
-
-        # scale sizes because of overlaps
-        if self.attr_size == OWPlotGUI.SizeByOverlap:
-            size_data = np.multiply(size_data, self.overlap_factor)
         return size_data
+
+    def sizes_changed(self):
+        self.graph.update_sizes()
+        self.graph.update_colors()
 
     # Colors
     def get_color_data(self):
-        return self.get_column(self.attr_color, merge_infrequent=True)
+        colors = self.get_column(self.attr_color, merge_infrequent=True)
+        if self.attr_size == OWPlotGUI.SizeByOverlap:
+            # color overlapping points by most frequent color
+            x, y = self.get_coordinates_data()
+            coord_to_id = self.__get_overlap_groups(x, y)
+            majority_colors = np.empty(len(x))
+            for i, xy in enumerate(zip(x, y)):
+                cnt = Counter(colors[j] for j in coord_to_id[xy])
+                majority_colors[i] = cnt.most_common(1)[0][0]
+            return majority_colors
+        return colors
 
     def get_color_labels(self):
         return self.get_column(self.attr_color, merge_infrequent=True,
@@ -1063,11 +1085,17 @@ class OWProjectionWidget(OWWidget):
                len(self.data) > 1 and \
                self.attr_color is not None
 
+    def colors_changed(self):
+        self.graph.update_colors()
+
     # Labels
     def get_label_data(self, formatter=None):
         if self.attr_label:
             label_data = self.get_column(self.attr_label)
             return map(formatter or self.attr_label.str_val, label_data)
+
+    def labels_changed(self):
+        self.graph.update_labels()
 
     # Shapes
     def get_shape_data(self):
@@ -1087,6 +1115,9 @@ class OWProjectionWidget(OWWidget):
         else:
             self.Information.missing_shape.clear()
         return shape_data
+
+    def shapes_changed(self):
+        self.graph.update_shapes()
 
     # Tooltip
     def _point_tooltip(self, point_id, skip_attrs=()):

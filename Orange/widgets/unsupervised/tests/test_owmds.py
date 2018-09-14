@@ -7,15 +7,17 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 from AnyQt.QtCore import QRectF, QPointF
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.data import Table
 from Orange.misc import DistMatrix
 from Orange.distance import Euclidean
 from Orange.widgets.settings import Context
-from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.tests.base import (WidgetTest, WidgetOutputsTestMixin,
                                        datasets, ProjectionWidgetTestMixin)
 from Orange.widgets.tests.utils import simulate
+from Orange.widgets.unsupervised.owmds import OWMDS
+from Orange.widgets.utils.plot import OWPlotGUI
 
 
 class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
@@ -259,6 +261,16 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.controls.attr_label.model()))
+
+    def test_overlap(self):
+        self.send_signal(self.signal_name, self.signal_data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(5000))
+        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
+        simulate.combobox_activate_item(self.widget.controls.attr_size,
+                                        OWPlotGUI.SizeByOverlap)
+        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
 
 
 if __name__ == "__main__":

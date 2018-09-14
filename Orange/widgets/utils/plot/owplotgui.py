@@ -572,9 +572,9 @@ class OWPlotGUI:
         .. seealso:: :meth:`.tool_button`
     '''
 
-    def _get_callback(self, name):
+    def _get_callback(self, name, master=None):
         if type(name) == str:
-            return getattr(self._plot, name, self._plot.replot)
+            return getattr(master or self._plot, name)
         else:
             return name
 
@@ -679,7 +679,8 @@ class OWPlotGUI:
 
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
         args = dict(master=self._plot.master, value=value, items=items,
-                    model=model, callback=self._get_callback(cb_name),
+                    model=model,
+                    callback=self._get_callback(cb_name, self._plot.master),
                     orientation=Qt.Horizontal, valueType=str,
                     sendSelectedValue=True, contentsLength=12,
                     labelWidth=50)
@@ -695,22 +696,22 @@ class OWPlotGUI:
     def color_value_combo(self, widget, label="Color: "):
         """Creates a combo box that controls point color"""
 
-        self._combo(widget, "attr_color", label, "update_colors",
+        self._combo(widget, "attr_color", label, "colors_changed",
                     model=self.color_model)
 
     def shape_value_combo(self, widget, label="Shape: "):
         """Creates a combo box that controls point shape"""
-        self._combo(widget, "attr_shape", label, "update_shapes",
+        self._combo(widget, "attr_shape", label, "shapes_changed",
                     model=self.shape_model)
 
     def size_value_combo(self, widget, label="Size: "):
         """Creates a combo box that controls point size"""
-        self._combo(widget, "attr_size", label, "update_sizes",
+        self._combo(widget, "attr_size", label, "sizes_changed",
                     model=self.size_model)
 
     def label_value_combo(self, widget, label="Label: "):
         """Creates a combo box that controls point label"""
-        self._combo(widget, "attr_label", label, "update_labels",
+        self._combo(widget, "attr_label", label, "labels_changed",
                     model=self.label_model)
 
     def box_spacing(self, widget):
