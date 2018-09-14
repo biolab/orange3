@@ -339,7 +339,7 @@ EOF
              -DBASEDIR="${basedir}" \
              -DPYINSTALLER=${pyinstaller} \
              -DINSTALL_REGISTRY_KEY=OrangeCanvas \
-             -DINSTALLERICON=scripts/windows/OrangeInstall.ico \
+             -DINSTALLERICON=scripts/windows/Orange.ico \
              -DLICENSE_FILE="${BASEDIR}"/license.txt \
              -NOCD \
              -V4 -WX \
