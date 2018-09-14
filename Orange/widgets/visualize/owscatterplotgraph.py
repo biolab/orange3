@@ -393,6 +393,88 @@ def _make_pen(color, width):
 
 
 class OWScatterPlotBase(gui.OWComponent):
+    """
+    Provide a graph component for widgets that show any kind of point plot
+
+    The component plots a set of points with given coordinates, shapes,
+    sizes and colors. Its function is similar to that of a *view*, whereas
+    the widget represents a *model* and a *controler*.
+    
+    The model (widget) needs to provide methods:
+
+    - `get_coordinates_data`, `get_size_data`, `get_color_data`,
+      `get_shape_data`, `get_label_data`, which return a 1d array (or two
+      arrays, for `get_coordinates_data`) of `dtype` `float64`, except for
+      `get_label_data`, which returns formatted labels;
+    - `get_color_labels`, `get_shape_labels`, which are return lists of
+       strings used for the color and shape legend;
+    - `get_tooltip`, which gives a tooltip for a single data point
+    - (optional) `impute_sizes`, `impute_shapes` get final coordinates and
+      shapes, and replace nans;
+    - `get_subset_mask` returns a bool array indicating whether a
+      data point is in the subset or not (e.g. in the 'Data Subset' signal
+      in the Scatter plot and similar widgets);
+    - `set_palette` sets the plot's palette appropriate for visualizing the
+      current color data;
+    - `is_continuous_color` decides the type of the color legend;
+    - `combined_legend` tells whether the color and shape legend should be
+      combined into one (usually because they represent the same data).
+
+    The widget (in a role of controller) must also provide methods
+    - `selection_changed`
+
+    If `get_coordinates_data` returns `(None, None)`, the plot is cleared. If
+    `get_size_data`, `get_color_data` or `get_shape_data` return `None`,
+    all points will have the same size, color or shape, respectively.
+    If `get_label_data` returns `None`, there are no labels.
+
+    The view (this compomnent) provides methods `update_coordinates`,
+    `update_sizes`, `update_colors`, `update_shapes` and `update_labels`
+    that the widget (in a role of a controler) should call when any of
+    these properties are changed. If the widget calls, for instance, the
+    plot's `update_colors`, the plot will react by calling the widget's
+    `get_color_data` as well as the widget's methods needed to contruct the
+    legend.
+
+    The view also provides a method `reset`, which should be called only
+    when
+    - the widget gets entirely new data
+    - the number of points may have changed, for instance when selecting
+    a different attribute for x or y in the scatter plot, where the points
+    with missing x or y coordinates are hidden.
+
+    Every `update_something` calls the plot's `get_something`, which
+    calls the model's `get_something_data`, then it transforms this data
+    into whatever is needed (colors, shapes, scaled sizes) and changes the
+    plot. For the simplest example, here is `update_shapes`:
+
+    ```
+        def update_shapes(self):
+            if self.scatterplot_item:
+                shape_data = self.get_shapes()
+                self.scatterplot_item.setSymbol(shape_data)
+            self.make_legend()
+
+        def get_shapes(self):
+            shape_data = self.master.get_shape_data()
+            shape_data = self.master.impute_shapes(
+                shape_data, len(self.CurveSymbols) - 1)
+            return self.CurveSymbols[shape_data]
+    ```
+
+    On the widget's side, `get_something_data` is essentially just:
+
+    ```
+        def get_size_data(self):
+            return self.get_column(self.attr_size)
+    ```
+
+    where `get_column` retrieves a column while also filtering out the
+    points with missing x and y and so forth. (Here we present the simplest
+    two cases, "shapes" for the view and "sizes" for the model. The colors
+    for the view are more complicated since they deal with discrete and
+    continuous palettes, and the shapes for the view merge infrequent shapes.)
+    """
     label_only_selected = Setting(False)
     point_width = Setting(10)
     alpha_value = Setting(128)
@@ -488,6 +570,23 @@ class OWScatterPlotBase(gui.OWComponent):
         self.tip_textitem.setHtml(text)
 
     def clear(self):
+        """
+        Remove all graphical elements from the plot
+
+        Calls the pyqtgraph's plot widget's clear, removes the legend(s) and
+        resets the(ir) anchors, sets all handles to `None`, removes labels and
+        selections.
+
+        This method should generally not be called by the widget. If the data
+        is gone (*e.g.* upon receiving `None` as an input data signal), this
+        should be handler by calling `reset_graph`, which will in turn call
+        `clear`.
+
+        Derived classes should override this method if they add more graphical
+        elements. For instance, the regression line in the scatterplot adds
+        `self.reg_line_item = None` (the line in the plot is already removed
+        in this method).
+        """
         self.remove_legend()
         self.plot_widget.clear()
 
@@ -498,11 +597,29 @@ class OWScatterPlotBase(gui.OWComponent):
         self.selection = None
 
     def reset_graph(self):
+        """
+        Reset the graph to new data (or no data)
+
+        The method must be called when the plot receives new data, in
+        particular when the number of points change. If only their properties
+        - like coordinates or shapes - change, an update method
+        (`update_coordinates`, `update_shapes`...) should be called instead.
+
+        The method must also be called when the data is gone.
+
+        The method calls `clear`, followed by calls of all update methods.
+        """
         self.clear()
         self.update_coordinates()
         self.update_point_props()
 
     def update_point_props(self):
+        """
+        Update the sizes, colors, shapes and labels
+
+        The method calls the appropriate update methods for individual
+        properties.
+        """
         self.update_sizes()
         self.update_colors()
         self.update_selection_colors()
@@ -511,6 +628,13 @@ class OWScatterPlotBase(gui.OWComponent):
 
     # Coordinates
     def _reset_view(self, x_data, y_data):
+        """
+        Set the range of the view box
+
+        Args:
+            x_data (np.ndarray): x coordinates
+            y_data (np.ndarray) y coordinates
+        """
         min_x, max_x = np.nanmin(x_data), np.nanmax(x_data)
         min_y, max_y = np.nanmin(y_data), np.nanmax(y_data)
         self.view_box.setRange(
@@ -520,6 +644,18 @@ class OWScatterPlotBase(gui.OWComponent):
         self.view_box.tag_history()
 
     def get_coordinates(self):
+        """
+        Prepare coordinates of the points in the plot
+
+        The method is called by `update_coordinates`. It gets the coordinates
+        from the widget, jitters them and return them.
+
+        The method also stores the number of points.
+
+        Returns:
+            (tuple): a pair of numpy arrays containing coordinates,
+                or `(None, None)`.
+        """
         x, y = self.master.get_coordinates_data()
         if x is None:
             self.n_points = 0
@@ -535,12 +671,32 @@ class OWScatterPlotBase(gui.OWComponent):
 
     @classmethod
     def _update_plot_coordinates(cls, plot, x, y):
+        """
+        Change the coordinates of points while keeping other properites
+
+        Note. Pyqtgraph does not offer a method for this: setting coordinates
+        invalidates other data. We therefore retrieve the data to set it
+        together with the coordinates. Pyqtgraph also does not offer a
+        (documented) method for retrieving the data, yet using
+        `plot.data[prop]` looks reasonably safe. The alternative, calling
+        update for every property would essentially reset the graph, which
+        can be time consuming.
+        """
         data = dict(x=x, y=y)
         for prop in ('pen', 'brush', 'size', 'symbol', 'data'):
             data[prop] = plot.data[prop]
         plot.setData(**data)
 
     def update_coordinates(self):
+        """
+        Trigger the update of coordinates while keeping other features intact.
+
+        The method gets the coordinates by calling `self.get_coordinates`,
+        which in turn calls the widget's `get_coordinate_data`. The number of
+        coordinate pairs returned by the latter must match the current number
+        of points. If this is not the case, the widget should trigger
+        the complete update by calling `reset_graph` instead of this method.
+        """
         x, y = self.get_coordinates()
         if x is None or not len(x):
             return
@@ -567,6 +723,15 @@ class OWScatterPlotBase(gui.OWComponent):
 
     # Sizes
     def get_sizes(self):
+        """
+        Prepare data for sizes of points in the plot
+
+        The method is called by `update_sizes`. It gets the sizes
+        from the widget and performs the necessary scaling and sizing.
+
+        Returns:
+            (np.ndarray): sizes
+        """
         size_column = self.master.get_size_data()
         if size_column is None:
             return np.ones(self.n_points) * self.point_width
@@ -578,9 +743,16 @@ class OWScatterPlotBase(gui.OWComponent):
         return self.MinShapeSize + self.point_width * size_column
 
     def update_sizes(self):
+        """
+        Trigger an update of point sizes
+
+        The method calls `self.get_sizes`, which in turn calls the widget's
+        `get_size_data`. The result are properly scaled and then passed
+        back to widget for imputing (`master.impute_sizes`).
+        """
         if self.scatterplot_item:
             size_data = self.get_sizes()
-            size_data = self.master.impute_sizes(size_data)
+            self.master.impute_sizes(size_data)
             self.scatterplot_item.setSize(size_data)
             self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
@@ -589,6 +761,26 @@ class OWScatterPlotBase(gui.OWComponent):
 
     # Colors
     def get_colors(self):
+        """
+        Prepare data for colors of the points in the plot
+
+        The method is called by `update_colors`. It gets the colors and the
+        indices of the data subset from the widget (`get_color_data`,
+        `get_subset_mask`), and constructs lists of pens and brushes for
+        each data point.
+
+        The method uses different palettes for discrete and continuous data,
+        as determined by calling the widget's method `is_continuous_color`.
+
+        If also marks the points that are in the subset as defined by, for
+        instance the 'Data Subset' signal in the Scatter plot and similar
+        widgets. (Do not confuse this with *selected points*, which are
+        marked by circles around the points, which are colored by groups
+        and thus independent of this method.)
+
+        Returns:
+            (tuple): a list of pens and list of brushes
+        """
         self.master.set_palette()
         c_data = self.master.get_color_data()
         subset = self.master.get_subset_mask()
@@ -601,6 +793,18 @@ class OWScatterPlotBase(gui.OWComponent):
             return self._get_discrete_colors(c_data, subset)
 
     def _get_same_colors(self, subset):
+        """
+        Return the same pen for all points while the brush color depends
+        upon whether the point is in the subset or not
+
+        Args:
+            subset (np.ndarray): a bool array indicating whether a data point
+                is in the subset or not (e.g. in the 'Data Subset' signal
+                in the Scatter plot and similar widgets);
+
+        Returns:
+            (tuple): a list of pens and list of brushes
+        """
         color = self.plot_widget.palette().color(OWPalette.Data)
         pen = [_make_pen(color, 1.5) for _ in range(self.n_points)]
         if subset is not None:
@@ -613,6 +817,12 @@ class OWScatterPlotBase(gui.OWComponent):
         return pen, brush
 
     def _get_continuous_colors(self, c_data, subset):
+        """
+        Return the pens and colors whose color represent an index into
+        a continuous palette. The same color is used for pen and brush,
+        except the former is darker. If the data has a subset, the brush
+        is transparent for points that are not in the subset.
+        """
         self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
         c_data -= self.scale.offset
         c_data /= self.scale.width
@@ -629,12 +839,16 @@ class OWScatterPlotBase(gui.OWComponent):
         if subset is not None:
             brush[:, 3] = 0
             brush[subset, 3] = 255
-        else:
-            brush[:, 3] = self.alpha_value
         brush = np.array([QBrush(QColor(*col)) for col in brush.tolist()])
         return pen, brush
 
     def _get_discrete_colors(self, c_data, subset):
+        """
+        Return the pens and colors whose color represent an index into
+        a discrete palette. The same color is used for pen and brush,
+        except the former is darker. If the data has a subset, the brush
+        is transparent for points that are not in the subset.
+        """
         n_colors = self.palette.number_of_colors
         c_data = c_data.copy()
         c_data[np.isnan(c_data)] = n_colors
@@ -659,6 +873,15 @@ class OWScatterPlotBase(gui.OWComponent):
         return pen, brush
 
     def update_colors(self):
+        """
+        Trigger an update of point sizes
+
+        The method calls `self.get_colors`, which in turn calls the widget's
+        `get_color_data` to get the indices in the pallette. `get_colors`
+        returns a list of pens and brushes to which this method uses to
+        update the colors. Finally, the method triggets the update of the
+        legend and the density plot.
+        """
         if self.scatterplot_item is None:
             return
         pen_data, brush_data = self.get_colors()
@@ -670,6 +893,15 @@ class OWScatterPlotBase(gui.OWComponent):
     update_alpha_value = update_colors
 
     def update_selection_colors(self):
+        """
+        Trigger an update of selection markers
+
+        This update method is usually not called by the widget but by the
+        plot, since it is the plot that handles the selections.
+
+        Like other update methods, it calls the corresponding get method
+        (`get_colors_sel`) which returns a list of pens and brushes.
+        """
         if self.scatterplot_item_sel is None:
             return
         pen, brush = self.get_colors_sel()
@@ -677,6 +909,13 @@ class OWScatterPlotBase(gui.OWComponent):
         self.scatterplot_item_sel.setBrush(brush, mask=None)
 
     def update_density(self):
+        """
+        Remove the existing density plot (if there is one) and replace it
+        with a new one (if enabled).
+
+        The method gets the colors from the pens of the currently plotted
+        points.
+        """
         if self.density_img:
             self.plot_widget.removeItem(self.density_img)
         if self.scatterplot_item is not None \
@@ -693,6 +932,16 @@ class OWScatterPlotBase(gui.OWComponent):
             self.density_img = None
 
     def get_colors_sel(self):
+        """
+        Return pens and brushes for selection markers.
+
+        A pen can is set to `Qt.NoPen` if a point is not selected.
+
+        All brushes are completely transparent whites.
+
+        Returns:
+            (tuple): a list of pens and a list of brushes
+        """
         nopen = QPen(Qt.NoPen)
         if self.selection is None:
             pen = [nopen] * self.n_points
@@ -713,9 +962,24 @@ class OWScatterPlotBase(gui.OWComponent):
 
     # Labels
     def get_labels(self):
+        """
+        Prepare data for labels for points
+
+        The method returns the results of the widget's `get_label_data`
+
+        Returns:
+            (labels): a sequence of labels
+        """
         return self.master.get_label_data()
 
     def update_labels(self):
+        """
+        Trigger an updaet of labels
+
+        The method calls `get_labels` which in turn calls the widget's
+        `get_label_data`. The obtained labels are shown if the corresponding
+        points are selected or if `label_only_selected` is `false`.
+        """
         if self.label_only_selected and self.selection is None:
             label_data = None
         else:
@@ -736,6 +1000,9 @@ class OWScatterPlotBase(gui.OWComponent):
                 label.setText(text, black)
 
     def _create_labels(self):
+        """
+        Create a `TextItem` for each point and store them in `self.labels`
+        """
         if not self.scatterplot_item:
             return
         for x, y in zip(*self.scatterplot_item.getData()):
@@ -745,6 +1012,15 @@ class OWScatterPlotBase(gui.OWComponent):
             self.labels.append(ti)
 
     def update_label_coords(self, x, y):
+        """
+        Update the coordinates of labels
+
+        The method is currently called exclusively be `update_coordinates`
+
+        Args:
+            x (np.ndarray): x coordinates
+            y (np.ndarray): y coordinates
+        """
         if self.label_only_selected:
             if self.selection is not None:
                 for label, selected, xp, yp in zip(
@@ -757,8 +1033,22 @@ class OWScatterPlotBase(gui.OWComponent):
 
     # Shapes
     def get_shapes(self):
+        """
+        Prepare data for shapes of points in the plot
+
+        The method is called by `update_shapes`. It gets the data from
+        the widget's `get_shape_data`, and then calls its `impute_shapes`
+        to impute the missing shape (usually with some default shape).
+
+        Returns:
+            (np.ndarray): an array of symbols (e.g. o, x, + ...)
+        """
         shape_data = self.master.get_shape_data()
-        shape_data = self.master.impute_shapes(shape_data, len(self.CurveSymbols) - 1)
+        # Data has to be copied so the imputation can change it in-place
+        # TODO: Try avoiding this when we move imputation to the widget
+        if shape_data is not None:
+            shape_data = np.copy(shape_data)
+        self.master.impute_shapes(shape_data, len(self.CurveSymbols) - 1)
         if isinstance(shape_data, np.ndarray):
             shape_data = shape_data.astype(int)
         else:
@@ -766,24 +1056,36 @@ class OWScatterPlotBase(gui.OWComponent):
         return self.CurveSymbols[shape_data]
 
     def update_shapes(self):
+        """
+        Trigger an update of point symbols
+
+        The method calls `get_shapes` to obtain an array with a symbol
+        for each point and uses it to update the symbols.
+
+        Finally, the method updates the legend.
+        """
         if self.scatterplot_item:
             shape_data = self.get_shapes()
             self.scatterplot_item.setSymbol(shape_data)
         self.make_legend()
 
     def update_grid(self):
+        """Show or hide the grid"""
         self.plot_widget.showGrid(x=self.show_grid, y=self.show_grid)
 
     def update_legend(self):
+        """Show or hide the legend"""
         if self.legend:
             self.legend.setVisible(self.show_legend)
 
     def create_legend(self):
+        """Create a legend"""
         self.legend = LegendItem()
         self.legend.setParentItem(self.plot_widget.getViewBox())
         self.legend.restoreAnchor(self.__legend_anchor)
 
     def remove_legend(self):
+        """Remove the legend and reset its position"""
         if self.legend:
             anchor = legend_anchor_pos(self.legend)
             if anchor is not None:
@@ -798,6 +1100,7 @@ class OWScatterPlotBase(gui.OWComponent):
             self.color_legend = None
 
     def make_legend(self):
+        """Create the color and shape legends"""
         self.remove_legend()
         if not self.legend:
             self.create_legend()
@@ -806,6 +1109,17 @@ class OWScatterPlotBase(gui.OWComponent):
         self.update_legend()
 
     def _make_color_legend(self):
+        """
+        Adds items representing the colors to the legend
+
+        - If the legend is continuous (which is checked by calling the
+          widget's `is_continuous_color`), the legend is a colored strip.
+        - Otherwise, if the same attribute is used for shape and color
+          (which is checked by the widget's method `combined_legend`),
+          this method returns a legend with different shapes in shown
+          in the corresponding color.
+        - Otherwise, a normal legend for colors is created.
+        """
         if self.master.is_continuous_color():
             if not self.scale:
                 return
@@ -833,6 +1147,12 @@ class OWScatterPlotBase(gui.OWComponent):
                     escape(value))
 
     def _make_shape_legend(self):
+        """
+        Adds items representing the shapes to the legend
+
+        If the color and shape legends are combined (checked by the widget's
+        method `combined_legends`), this method does nothing.
+        """
         if self.master.combined_legend():
             return
         labels = self.master.get_shape_labels()
@@ -917,10 +1237,10 @@ class OWScatterPlotBase(gui.OWComponent):
         else:
             return np.flatnonzero(self.selection)
 
-    def save_to_file(self, size):
-        pass
-
     def help_event(self, event):
+        """
+        Create a `QToolTip` for the point hovered by the mouse
+        """
         if self.scatterplot_item is None:
             return False
         act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
@@ -957,6 +1277,20 @@ class HelpEventDelegate(EventDelegate):
 
 
 class OWProjectionWidget(OWWidget):
+    """
+    Base widget for widgets that use attribute data to set the colors, labels,
+    shapes and sizes of points.
+
+    The widgets defines settings `attr_color`, `attr_label`, `attr_shape`
+    and `attr_size`, but leaves defining the gui to the derived widgets.
+    These are expected to have controls that manipulate these settings,
+    and the controls are expected to use attribute models.
+
+    The widgets also defines attributes `data` and `valid_data` and expects
+    the derived widgets to use them to store an instances of `data.Table`
+    and a bool `np.ndarray` with indicators of valid (that is, shown)
+    data points.
+    """
     attr_color = ContextSetting(None, required=ContextSetting.OPTIONAL)
     attr_label = ContextSetting(None, required=ContextSetting.OPTIONAL)
     attr_shape = ContextSetting(None, required=ContextSetting.OPTIONAL)
@@ -976,6 +1310,11 @@ class OWProjectionWidget(OWWidget):
         self.set_palette()
 
     def init_attr_values(self):
+        """
+        Set the models for `attr_color`, `attr_shape`, `attr_size` and
+        `attr_label`. All values are set to `None`, except `attr_color`
+        which is set to the class variable if it exists.
+        """
         data = self.data
         domain = data.domain if data and len(data) else None
         for attr in ("attr_color", "attr_shape", "attr_size", "attr_label"):
@@ -985,7 +1324,25 @@ class OWProjectionWidget(OWWidget):
             self.attr_color = domain.class_var
 
     def get_coordinates_data(self):
+        """A get coordinated method that returns no coordinates.
+
+        Derived classes must override this method.
+        """
         return None, None
+
+    def get_subset_mask(self):
+        """
+        Return the bool array indicating the points in the subset
+
+        The base method does nothing and would usually be overridden by
+        a method that returns indicators from the subset signal.
+
+        Do not confuse the subset with selection.
+
+        Returns:
+            (np.ndarray or `None`): a bool array of indicators
+        """
+        return None
 
     @staticmethod
     def __get_overlap_groups(x, y):
@@ -996,6 +1353,33 @@ class OWProjectionWidget(OWWidget):
 
     def get_column(self, attr, filter_valid=True,
                    merge_infrequent=False, return_labels=False):
+        """
+        Retrieve the data from the given column in the data table
+
+        The method:
+        - densifies sparse data,
+        - converts arrays with dtype object to floats if the attribute is
+          actually primitive,
+        - filters out invalid data (if `filter_valid` is `True`),
+        - merges infrequent (discrete) values into a single value
+          (if `merge_infrequent` is `True`).
+
+        Tha latter feature is used for shapes and labels, where only a
+        set number (`MAX`) of different values is shown, and others are
+        merged into category 'Other'. In this case, the method may return
+        either the data (e.g. color indices, shape indices) or the list
+        of retained values, followed by `['Other']`.
+
+        Args:
+            attr (:obj:~Orange.data.Variable): the column to extract
+            filter_valid (bool): filter out invalid data (default: `True`)
+            merge_infrequent (bool): merge infrequent values (default: `False`)
+            return_labels (bool): return a list of labels instead of data
+                (default: `False`)
+
+        Returns:
+            (np.ndarray): (valid) data from the column, or a list of labels
+        """
         if attr is None:
             return None
         all_data = self.data.get_column_view(attr)[0]
@@ -1025,6 +1409,7 @@ class OWProjectionWidget(OWWidget):
 
     # Sizes
     def get_size_data(self):
+        """Return the column corresponding to `attr_size`"""
         if self.attr_size == OWPlotGUI.SizeByOverlap:
             x, y = self.get_coordinates_data()
             coord_to_id = self.__get_overlap_groups(x, y)
@@ -1033,13 +1418,21 @@ class OWProjectionWidget(OWWidget):
         return self.get_column(self.attr_size)
 
     def impute_sizes(self, size_data):
+        """
+        Default imputation for size data
+
+        Missing values are replaced by `MinShapeSize - 2`. Imputation is
+        done in place.
+
+        Args:
+            size_data (np.ndarray): scaled points sizes
+        """
         nans = np.isnan(size_data)
         if np.any(nans):
             size_data[nans] = self.graph.MinShapeSize - 2
             self.Information.missing_size(self.attr_size)
         else:
             self.Information.missing_size.clear()
-        return size_data
 
     def sizes_changed(self):
         self.graph.update_sizes()
@@ -1047,6 +1440,7 @@ class OWProjectionWidget(OWWidget):
 
     # Colors
     def get_color_data(self):
+        """Return the column corresponding to color data"""
         colors = self.get_column(self.attr_color, merge_infrequent=True)
         if self.attr_size == OWPlotGUI.SizeByOverlap:
             # color overlapping points by most frequent color
@@ -1060,13 +1454,32 @@ class OWProjectionWidget(OWWidget):
         return colors
 
     def get_color_labels(self):
+        """
+        Return labels for the color legend
+
+        Returns:
+            (list of str): labels
+        """
         return self.get_column(self.attr_color, merge_infrequent=True,
                                return_labels=True)
 
+
     def is_continuous_color(self):
+        """
+        Tells whether the color is continuous
+
+        Returns:
+            (bool):
+        """
         return self.attr_color is not None and self.attr_color.is_continuous
 
     def set_palette(self):
+        """
+        Set the graph palette suitable for the current `attr_color`
+
+        This method is invoked by the plot's `get_data` and must be overridden
+        if the widget offers coloring that is not based on attribute values.
+        """
         if self.attr_color is None:
             self.graph.palette = None
             return
@@ -1080,6 +1493,13 @@ class OWProjectionWidget(OWWidget):
             self.graph.palette = ContinuousPaletteGenerator(*colors)
 
     def can_draw_density(self):
+        """
+        Tells whether the current data and settings are suitable for drawing
+        densities
+
+        Returns:
+            (bool):
+        """
         return self.data is not None and \
                self.data.domain is not None and \
                len(self.data) > 1 and \
@@ -1090,6 +1510,7 @@ class OWProjectionWidget(OWWidget):
 
     # Labels
     def get_label_data(self, formatter=None):
+        """Return the column corresponding to label data"""
         if self.attr_label:
             label_data = self.get_column(self.attr_label)
             return map(formatter or self.attr_label.str_val, label_data)
@@ -1099,6 +1520,12 @@ class OWProjectionWidget(OWWidget):
 
     # Shapes
     def get_shape_data(self):
+        """
+        Return labels for the shape legend
+
+        Returns:
+            (list of str): labels
+        """
         return self.get_column(self.attr_shape, merge_infrequent=True)
 
     def get_shape_labels(self):
@@ -1106,6 +1533,16 @@ class OWProjectionWidget(OWWidget):
                                return_labels=True)
 
     def impute_shapes(self, shape_data, default_symbol):
+        """
+        Default imputation for shape data
+
+        Missing values are replaced by `default_symbol`. Imputation is
+        done in place.
+
+        Args:
+            shape_data (np.ndarray): scaled points sizes
+            default_symbol (str): a string representing the symbol
+        """
         if shape_data is None:
             return 0
         nans = np.isnan(shape_data)
@@ -1145,6 +1582,17 @@ class OWProjectionWidget(OWWidget):
                             for columns in parts)
 
     def get_tooltip(self, point_ids):
+        """
+        Return the tooltip string for the given points
+
+        The method is called by the plot on mouse hover
+
+        Args:
+            point_ids (list): indices into `data`
+
+        Returns:
+            (str):
+        """
         text = "<hr/>".join(self._point_tooltip(point_id)
                             for point_id in point_ids[:MAX_POINTS_IN_TOOLTIP])
         if len(point_ids) > MAX_POINTS_IN_TOOLTIP:
@@ -1152,16 +1600,19 @@ class OWProjectionWidget(OWWidget):
         return text
 
     def keyPressEvent(self, event):
+        """Update the tip about using the modifier keys when selecting"""
         super().keyPressEvent(event)
         self.graph.update_tooltip(event.modifiers())
 
     def keyReleaseEvent(self, event):
+        """Update the tip about using the modifier keys when selecting"""
         super().keyReleaseEvent(event)
         self.graph.update_tooltip(event.modifiers())
 
     # Legend
     def combined_legend(self):
+        """Tells whether the shape and color legends are combined into one"""
         return self.attr_shape == self.attr_color
 
     def sizeHint(self):
-        return QSize(933, 700)
+        return QSize(1132, 708)

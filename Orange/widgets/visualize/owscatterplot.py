@@ -108,6 +108,10 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         super().__init__(scatter_widget, parent)
         self.reg_line_item = None
 
+    def clear(self):
+        super().clear()
+        self.reg_line_item = None
+
     def set_axis_labels(self, axis, labels):
         axis = self.plot_widget.getAxis(axis)
         if labels:
