@@ -271,10 +271,19 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
     class _Splitter(QSplitter):
         handleClicked = Signal()
+
         def _adjusted_size(self, size_method):
             size = size_method(super())()
+            parent = self.parentWidget()
+            if isinstance(parent, OWWidget) \
+                    and not parent.controlAreaVisible \
+                    and self.count() > 1:
+                indices = range(1, self.count())
+            else:
+                indices = range(0, self.count())
+
             height = max((size_method(self.widget(i))().height()
-                          for i in range(self.count()) if self.sizes()[i]),
+                          for i in indices),
                          default=0)
             size.setHeight(height)
             return size
