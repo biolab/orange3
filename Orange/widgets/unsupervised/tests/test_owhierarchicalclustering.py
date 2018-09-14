@@ -123,3 +123,11 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.not_finite_distances.is_shown())
         self.send_signal(self.widget.Inputs.distances, self.distances)
         self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
+
+    def test_retain_selection(self):
+        """Hierarchical Clustering didn't retain selection. GH-1563"""
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self._select_data()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
