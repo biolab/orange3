@@ -147,3 +147,12 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
     def _mouse_button_press_event(self):
         return QMouseEvent(QEvent.MouseButtonPress, QPoint(100, 10),
                            Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+
+    def test_retain_selection(self):
+        """Hierarchical Clustering didn't retain selection. GH-1563"""
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self._select_data()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
+
