@@ -20,6 +20,23 @@ server_url = os.getenv('ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/us
 
 
 class UsageStatistics:
+    """
+    Tracks and sends upon close usage statistics when error-reporting/send-statistics is true.
+    This option can be changed in the preferences menu.
+
+    Data is anonymously collected by the Bioinformatics Laboratory, University of Ljubljana,
+    Faculty of Computer and Information Science.
+
+    Data tracked per canvas session:
+        date,
+        Orange version,
+        operating system,
+        node additions by type:
+            quick menu,
+            toolbox click,
+            toolbox drag,
+            other widget extension.
+    """
 
     NodeAddClick = 0
     NodeAddDrag = 1
