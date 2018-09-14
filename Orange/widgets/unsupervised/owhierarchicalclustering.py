@@ -788,6 +788,8 @@ class OWHierarchicalClustering(widget.OWWidget):
     cut_ratio = settings.Setting(75.0)
     #: Number of top clusters to select
     top_n = settings.Setting(3)
+    #: Selected trees
+    selected_trees = settings.ContextSetting([])
 
     #: Dendrogram zoom factor
     zoom_factor = settings.Setting(0)
@@ -817,6 +819,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.root = None
         self._displayed_root = None
         self.cutoff_height = 0.0
+        self._open_context = False
 
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
@@ -1060,6 +1063,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             else:
                 self.annotation = "Enumeration"
             self.openContext(items.domain)
+            self._open_context = True
             self.label_cb.setCurrentIndex(model.indexOf(self.annotation))
         else:
             name_option = bool(
@@ -1142,9 +1146,20 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.labels.set_labels(labels)
         self.labels.setMinimumWidth(1 if labels else -1)
 
+    def _restore_selection(self):
+        if self.selection_method == 0 and self.matrix is not None \
+                and isinstance(self.matrix.row_items, Orange.data.Table):
+            if not self._open_context:
+                self.openContext(self.matrix.row_items.domain)
+            select_items = [self.dendrogram.item(t)
+                            for t in self.dendrogram._items
+                            if hash(t) in self.selected_trees]
+            self.dendrogram.set_selected_items(select_items)
+
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
+        self._restore_selection()
         self._invalidate_output()
 
     def _invalidate_output(self):
@@ -1174,6 +1189,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             return
 
         selection = self.dendrogram.selected_nodes()
+        self.selected_trees = list(map(hash, selection))
         selection = sorted(selection, key=lambda c: c.value.first)
 
         indices = [leaf.value.index for leaf in leaves(self.root)]
