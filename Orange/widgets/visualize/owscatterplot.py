@@ -255,28 +255,26 @@ class OWScatterPlot(OWProjectionWidget):
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
             vizrank_box, self, "Find Informative Projections", self.set_attr)
 
-        gui.separator(box)
-
         g = self.graph.gui
-        g.add_widgets([g.JitterSizeSlider,
-                       g.JitterNumericValues], box)
 
         self.sampling = gui.auto_commit(
             self.controlArea, self, "auto_sample", "Sample", box="Sampling",
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
-        g.point_properties_boxes(self.controlArea)
-        self.controls.attr_color.activated[int].connect(self.update_colors)
+        g.point_properties_box(self.controlArea)
 
-        box_plot_prop = gui.vBox(self.controlArea, "Plot Properties")
-        g.add_widgets([g.ShowLegend,
-                       g.ShowGridLines,
-                       g.ToolTipShowsAll,
-                       g.RegressionLine], box_plot_prop)
+        box = g.effects_box(self.controlArea)
+        g.add_widget(g.JitterNumericValues, box)
 
-        self.graph.box_zoom_select(self.controlArea)
+        box_plot_prop = g.plot_properties_box(self.controlArea)
+        g.add_widgets([
+            g.ShowGridLines,
+            g.ToolTipShowsAll,
+            g.RegressionLine], box_plot_prop)
+
         self.controlArea.layout().addStretch(100)
+        self.graph.box_zoom_select(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_send_selection",
                         "Send Selection", "Send Automatically")
 

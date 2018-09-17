@@ -148,7 +148,7 @@ class VariablesSelection:
 
         self.view_selected = view = gui.listView(
             widget or master.controlArea, master,
-            box="Displayed Axes", **params_view
+            box=True, **params_view
         )
         view.box.setMinimumHeight(120)
         view.viewport().setAcceptDrops(True)
@@ -585,7 +585,9 @@ class OWPlotGUI:
             the checkbox' check state, and the callback ``cb_name`` is called.
         '''
         args = dict(master=self._plot, value=value, label=label,
-                    callback=self._get_callback(cb_name))
+                    callback=self._get_callback(cb_name, self._plot))
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
         if isinstance(widget, QGridLayout):
             checkbox = gui.checkBox(None, **args)
             widget.addWidget(checkbox, widget.rowCount(), 1)
@@ -600,17 +602,17 @@ class OWPlotGUI:
         self._check_box(widget, 'use_antialiasing', 'Use antialiasing', 'update_antialiasing')
 
     def jitter_size_slider(self, widget):
-        values = getattr(self._plot, "jitter_sizes", self.JITTER_SIZES)
-        gui.valueSlider(
-            widget=widget, master=self._plot, value='jitter_size', label="Jittering: ",
-            values=values, callback=self._plot.update_coordinates,
-            labelFormat=lambda x: "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
+        return self.add_control(
+            widget, gui.valueSlider, "Jittering",
+            master=self._plot, value='jitter_size',
+            values=getattr(self._plot, "jitter_sizes", self.JITTER_SIZES),
+            callback=self._plot.update_coordinates)
 
     def jitter_numeric_check_box(self, widget):
-        gui.checkBox(
-            widget=gui.indentedBox(widget=widget), master=self._plot,
+        self._check_box(
+            widget=widget,
             value="jitter_continuous", label="Jitter numeric values",
-            callback=self._plot.update_coordinates)
+            cb_name="update_coordinates")
 
     def show_legend_check_box(self, widget):
         '''
@@ -653,49 +655,49 @@ class OWPlotGUI:
         '''
         self._check_box(widget, 'use_animations', 'Use animations', 'update_animations')
 
+    def add_control(self, widget, control, label, **args):
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
+        if isinstance(widget, QGridLayout):
+            row = widget.rowCount()
+            element = control(None, **args)
+            widget.addWidget(QLabel(label), row, 0)
+            widget.addWidget(element, row, 1)
+            return element
+        else:
+            return control(widget,  label=label, **args)
+
     def _slider(self, widget, value, label, min_value, max_value, step, cb_name,
                 show_number=False):
-        args = dict(
-            master=self._plot, value=value, label=label, minValue=min_value,
+        return self.add_control(
+            widget, gui.hSlider, label,
+            master=self._plot, value=value, minValue=min_value,
             maxValue=max_value, step=step, createLabel=show_number,
-            callback=self._get_callback(cb_name))
-        if isinstance(widget, QGridLayout):
-            slider = gui.hSlider(None, **args)
-            widget.addWidget(slider.box, widget.rowCount(), 1)
-        else:
-            gui.hSlider(widget, **args)
+            callback=self._get_callback(cb_name, self._plot.master))
 
     def point_size_slider(self, widget, label="Symbol size:   "):
         '''
             Creates a slider that controls point size
         '''
-        return self._slider(widget, 'point_width', label, 1, 20, 1, 'update_size')
+        return self._slider(widget, 'point_width', label, 1, 20, 1, 'sizes_changed')
 
     def alpha_value_slider(self, widget, label="Opacity: "):
         '''
             Creates a slider that controls point transparency
         '''
-        return self._slider(widget, 'alpha_value', label, 0, 255, 10, 'update_alpha_value')
+        return self._slider(widget, 'alpha_value', label, 0, 255, 10, 'colors_changed')
 
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
-        args = dict(master=self._plot.master, value=value, items=items,
-                    model=model,
-                    callback=self._get_callback(cb_name, self._plot.master),
-                    orientation=Qt.Horizontal, valueType=str,
-                    sendSelectedValue=True, contentsLength=12,
-                    labelWidth=50)
-        if isinstance(widget, QGridLayout):
-            row = widget.rowCount()
-            combo = gui.comboBox(None, **args)
-            widget.addWidget(QLabel(label), row, 0)
-            widget.addWidget(combo, row, 1)
-            return combo
-        else:
-            return gui.comboBox(widget, label=label, **args)
+        return self.add_control(
+            widget, gui.comboBox, label,
+            master=self._plot.master, value=value, items=items, model=model,
+            callback=self._get_callback(cb_name, self._plot.master),
+            orientation=Qt.Horizontal, valueType=str,
+            sendSelectedValue=True, contentsLength=12,
+            labelWidth=50)
 
     def color_value_combo(self, widget, label="Color: "):
         """Creates a combo box that controls point color"""
-
         self._combo(widget, "attr_color", label, "colors_changed",
                     model=self.color_model)
 
@@ -715,6 +717,8 @@ class OWPlotGUI:
                     model=self.label_model)
 
     def box_spacing(self, widget):
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
         if isinstance(widget, QGridLayout):
             space = QWidget()
             space.setFixedSize(12, 12)
@@ -722,56 +726,29 @@ class OWPlotGUI:
         else:
             gui.separator(widget)
 
-    def _grid(self, widget):
-        grid = QGridLayout()
-        grid.setColumnMinimumWidth(0, 50)
-        grid.setColumnStretch(1, 1)
-        gui.widgetBox(widget, orientation=grid)
-        return grid
-
-    def color_box(self, widget):
-        grid = self._grid(widget)
-        self.color_value_combo(grid)
-        self.alpha_value_slider(grid)
-        self.class_density_check_box(grid)
-
-    def shape_box(self, widget):
-        grid = self._grid(widget)
-        self.shape_value_combo(grid)
-
-    def size_box(self, widget):
-        grid = self._grid(widget)
-        self.size_value_combo(grid)
-        self.point_size_slider(grid, "Default: ")
-
-    def label_box(self, widget):
-        grid = self._grid(widget)
-        self.label_value_combo(grid)
-        self.label_only_selected_check_box(grid)
-
-    def point_properties_box(self, widget, box=None):
+    def point_properties_box(self, widget, box=True):
         '''
             Creates a box with controls for common point properties.
             Currently, these properties are point size and transparency.
         '''
-        return self.create_box([
+        box = self.create_gridbox(widget, box)
+        self.add_widgets([
             self.Color,
             self.Shape,
             self.Size,
             self.Label,
-            self.PointSize,
-            self.AlphaValue
-            ], widget, box, "Points")
+            self.LabelOnlySelected], box)
+        return box
 
-    def point_properties_boxes(self, widget):
-        box = gui.vBox(widget, True)
-        self.color_box(box)
-        gui.separator(box)
-        self.shape_box(box)
-        gui.separator(box)
-        self.size_box(box)
-        gui.separator(box)
-        self.label_box(box)
+    def effects_box(self, widget, box=True):
+        """
+        Create a box with controls for common plot settings
+        """
+        box = self.create_gridbox(widget, box)
+        self.add_widgets([
+            self.PointSize,
+            self.AlphaValue,
+            self.JitterSizeSlider], box)
         return box
 
     def plot_properties_box(self, widget, box=None):
@@ -779,11 +756,8 @@ class OWPlotGUI:
         Create a box with controls for common plot settings
         """
         return self.create_box([
-            self.ToolTipShowsAll,
-            self.ShowGridLines,
-            self.ShowLegend,
-            self.RegressionLine,
-            ], widget, box, "Plot Properties")
+            self.ClassDensity,
+            self.ShowLegend], widget, box, True)
 
     _functions = {
         ShowFilledSymbols: filled_symbols_check_box,
@@ -823,6 +797,15 @@ class OWPlotGUI:
         if box is None:
             box = gui.vBox(widget, name)
         self.add_widgets(ids, box)
+        return box
+
+    def create_gridbox(self, widget, box=True):
+        grid = QGridLayout()
+        grid.setColumnMinimumWidth(0, 50)
+        grid.setColumnStretch(1, 1)
+        box = gui.widgetBox(widget, box=box, orientation=grid)
+        # This must come after calling widgetBox, since widgetBox overrides it
+        grid.setVerticalSpacing(8)
         return box
 
     def _expand_id(self, id):
@@ -916,17 +899,6 @@ class OWPlotGUI:
         t = self.toolbar(widget, text, orientation, buttons, nomargin)
         t.buttons[self.SimpleSelect].click()
         return t
-
-    def effects_box(self, widget, box=None):
-        b = self.create_box([
-            self.AnimatePlot,
-            self.AnimatePoints,
-            self.AntialiasPlot,
-            # self.AntialiasPoints,
-            # self.AntialiasLines,
-            self.AutoAdjustPerformance,
-            self.DisableAnimationsThreshold], widget, box, "Visual effects")
-        return b
 
     def theme_combo_box(self, widget):
         c = gui.comboBox(widget, self._plot, "theme_name", "Theme",

@@ -358,23 +358,20 @@ class OWRadviz(OWProjectionWidget):
         self.graph = OWRadvizGraph(self, box)
         box.layout().addWidget(self.graph.plot_widget)
 
-        box = gui.vBox(self.controlArea, box=True)
         self.variables_selection = VariablesSelection()
         self.model_selected = selected = VariableListModel(enable_dnd=True)
         self.model_other = other = VariableListModel(enable_dnd=True)
-        self.variables_selection(self, selected, other, box)
+        self.variables_selection(self, selected, other, self.controlArea)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            self.controlArea, self, "Suggest features", self.vizrank_set_attrs)
+            None, self, "Suggest features", self.vizrank_set_attrs)
+        # Todo: this button introduces some margin at the bottom?!
         self.variables_selection.add_remove.layout().addWidget(self.btn_vizrank)
 
         g = self.graph.gui
-        g.add_widgets(ids=[g.JitterSizeSlider], widget=box)
-
-        box = g.point_properties_boxes(self.controlArea)
-        self.controls.attr_color.activated[int].connect(self.update_colors)
-
-        g.add_widgets([g.ShowLegend], box)
+        g.point_properties_box(self.controlArea)
+        g.effects_box(self.controlArea)
+        g.plot_properties_box(self.controlArea)
 
         self.graph.box_zoom_select(self.controlArea)
 

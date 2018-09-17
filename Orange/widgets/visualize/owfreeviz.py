@@ -283,18 +283,19 @@ class OWFreeViz(OWProjectionWidget):
                      labelWidth=90, callback=self.__init_combo_changed)
         self.btn_start = gui.button(box, self, "Optimize", self.__toggle_start,
                                     enabled=False)
-        gui.hSlider(box, self.graph, "radius", minValue=0, maxValue=100,
-                    step=10, label="Radius:", createLabel=False, ticks=10,
-                    callback=self.__radius_slider_changed)
 
         g = self.graph.gui
-        g.add_widgets(ids=[g.JitterSizeSlider], widget=box)
+        g.point_properties_box(self.controlArea)
+        box = g.effects_box(self.controlArea)
+        g.add_control(box, gui.hSlider, "Hide radius:",
+            master=self.graph, value="radius",
+            minValue=0, maxValue=100,
+            step=10, createLabel=False,
+            callback=self.__radius_slider_changed)
+        g.plot_properties_box(self.controlArea)
 
-        box = g.point_properties_boxes(self.controlArea)
-        g.add_widgets([g.ShowLegend], box)
-
-        self.graph.box_zoom_select(self.controlArea)
         self.controlArea.layout().addStretch(100)
+        self.graph.box_zoom_select(self.controlArea)
 
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")

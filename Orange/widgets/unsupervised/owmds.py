@@ -204,22 +204,22 @@ class OWMDS(OWProjectionWidget):
         gui.button(hbox, self, "PCA", callback=self.do_PCA)
         gui.button(hbox, self, "Randomize", callback=self.do_random)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter)
-        gui.hSlider(
-            box, self.graph, "connected_pairs", label="Show similar pairs:",
+
+        g.point_properties_box(self.controlArea)
+        box = g.effects_box(self.controlArea)
+        g.add_control(box, gui.hSlider, "Show similar pairs:",
+            master=self.graph, value="connected_pairs",
             minValue=0, maxValue=20, createLabel=False,
             callback=self._on_connected_changed
         )
-        g.add_widgets(ids=[g.JitterSizeSlider], widget=box)
+        g.plot_properties_box(self.controlArea)
 
-        box = g.point_properties_boxes(self.controlArea)
-        gui.separator(box)
-        g.add_widgets([g.ShowLegend], box)
         self.size_model = g.points_models[2]
         self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
                                 g.points_models[2].order[1:]
 
-        self.graph.box_zoom_select(self.controlArea)
         self.controlArea.layout().addStretch(100)
+        self.graph.box_zoom_select(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
 
