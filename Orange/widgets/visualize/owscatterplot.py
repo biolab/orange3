@@ -127,22 +127,20 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_regression_line()
 
     def jitter_coordinates(self, x, y):
-        def _jitter_attr(col, is_discrete, seed):
-            if is_discrete:
-                random = np.random.RandomState(seed=seed)
-                # Assuming the maximal jitter size is 10, this will jitter by
-                # -0.4 to 0.4, so there will be no overlap
-                off = 0.04 * self.jitter_size
-                return col + random.uniform(-off, off, len(col))
+        def get_span(attr):
+            if attr.is_discrete:
+                # Assuming the maximal jitter size is 10, a span of 4 will
+                # jitter by 4 * 10 / 100 = 0.4, so there will be no overlap
+                return 4
             elif self.jitter_continuous:
-                return self._jitter_data(col, 0)
+                return None  # Let _jitter_data determine the span
             else:
-                return col
-
-        if self.jitter_size > 0:
-            x = _jitter_attr(x, self.master.attr_x.is_discrete, 0)
-            y = _jitter_attr(y, self.master.attr_y.is_discrete, 1)
-        return x, y
+                return 0  # No jittering
+        span_x = get_span(self.master.attr_x)
+        span_y = get_span(self.master.attr_y)
+        if self.jitter_size == 0 or (span_x == 0 and span_y == 0):
+            return x, y
+        return self._jitter_data(x, y, span_x, span_y)
 
     def update_regression_line(self):
         if self.reg_line_item is not None:

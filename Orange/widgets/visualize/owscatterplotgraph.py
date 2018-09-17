@@ -399,7 +399,7 @@ class OWScatterPlotBase(gui.OWComponent):
     The component plots a set of points with given coordinates, shapes,
     sizes and colors. Its function is similar to that of a *view*, whereas
     the widget represents a *model* and a *controler*.
-    
+
     The model (widget) needs to provide methods:
 
     - `get_coordinates_data`, `get_size_data`, `get_color_data`,
@@ -667,7 +667,19 @@ class OWScatterPlotBase(gui.OWComponent):
     def jitter_coordinates(self, x, y):
         if self.jitter_size == 0:
             return x, y
-        return self._jitter_data(x, 0), self._jitter_data(y, 1)
+        return self._jitter_data(x, y)
+
+    def _jitter_data(self, x, y, span_x=None, span_y=None):
+        if span_x is None:
+            span_x = np.max(x) - np.min(x)
+        if span_y is None:
+            span_y = np.max(y) - np.min(y)
+        random = np.random.RandomState(seed=0)
+        rs = random.uniform(0, 1, len(x))
+        phis = random.uniform(0, 2 * np.pi, len(x))
+        magnitude = self.jitter_size / 100
+        return (x + magnitude * span_x * rs * np.cos(phis),
+                y + magnitude * span_y * rs * np.sin(phis))
 
     @classmethod
     def _update_plot_coordinates(cls, plot, x, y):
@@ -715,11 +727,6 @@ class OWScatterPlotBase(gui.OWComponent):
         self.update_label_coords(x, y)
         self.update_density()  # Todo: doesn't work: try MDS with density on
         self._reset_view(x, y)
-
-    def _jitter_data(self, x, seed=0):
-        random = np.random.RandomState(seed=seed)
-        off = self.jitter_size * (np.max(x) - np.min(x)) / 25
-        return x + random.uniform(-off, off, len(x))
 
     # Sizes
     def get_sizes(self):
