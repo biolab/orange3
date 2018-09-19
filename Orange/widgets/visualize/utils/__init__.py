@@ -8,7 +8,7 @@ from operator import attrgetter
 
 from AnyQt.QtCore import (
     Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel, QThread, QObject,
-    pyqtSlot as Slot, QCoreApplication, QTimer
+    pyqtSlot as Slot, QTimer
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
@@ -640,5 +640,3 @@ class ViewWithPress(QGraphicsView):
         super().mousePressEvent(event)
         if not event.isAccepted():
             self.handler()
-
-

@@ -1,12 +1,13 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import time
-
+import warnings
 import numpy as np
 
 from AnyQt.QtCore import QRectF, QPointF
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import Context
 from Orange.widgets.visualize.owlinearprojection import OWLinearProjection
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
@@ -26,7 +27,22 @@ class TestOWLinearProjection(WidgetTest, WidgetOutputsTestMixin):
         cls.projection_table = cls._get_projection_table()
 
     def setUp(self):
+        self._warnings = warnings.catch_warnings()
+        self._warnings.__enter__()
+        warnings.simplefilter("ignore", OrangeDeprecationWarning)
         self.widget = self.create_widget(OWLinearProjection)  # type: OWLinearProjection
+
+    def tearDown(self):
+        super().tearDown()
+        self._warnings.__exit__()
+
+    def test_deprecated_graph(self):
+        # Remove this test and lines 30 - 32 and 35 - 38, since the widget
+        # is not using deprecate class any more
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", OrangeDeprecationWarning)
+            self.assertRaises(OrangeDeprecationWarning,
+                              lambda: self.create_widget(OWLinearProjection))
 
     def _select_data(self):
         self.widget.graph.select_by_rectangle(QRectF(QPointF(-20, -20), QPointF(20, 20)))
@@ -223,8 +239,23 @@ class LinProjVizRankTests(WidgetTest):
         # cls.iris_no_class = Table(dom, cls.iris)
 
     def setUp(self):
+        self._warnings = warnings.catch_warnings()
+        self._warnings.__enter__()
+        warnings.simplefilter("ignore", OrangeDeprecationWarning)
         self.widget = self.create_widget(OWLinearProjection)
         self.vizrank = self.widget.vizrank
+
+    def tearDown(self):
+        super().tearDown()
+        self._warnings.__exit__()
+
+    def test_deprecated_graph(self):
+        # Remove this test and lines 242 - 244 and 248 - 251, since the widget
+        # is not using deprecate class any more
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", OrangeDeprecationWarning)
+            self.assertRaises(OrangeDeprecationWarning,
+                              lambda: self.create_widget(OWLinearProjection))
 
     def test_discrete_class(self):
         self.send_signal(self.widget.Inputs.data, self.data)

@@ -8,16 +8,19 @@ from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.widgets.utils.plot import OWPlotGUI
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
+)
+from Orange.widgets.tests.utils import simulate
+from Orange.widgets.visualize.owscatterplot import (
+    OWScatterPlot, ScatterPlotVizRank
+)
 from Orange.widgets.visualize.owscatterplotgraph import MAX
 from Orange.widgets.widget import AttributeList
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, datasets
-from Orange.widgets.visualize.owscatterplot import \
-    OWScatterPlot, ScatterPlotVizRank
-from Orange.widgets.tests.utils import simulate
 
 
-class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
+class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin,
+                        ProjectionWidgetTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -44,7 +47,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(self.widget.attr_y, self.data.domain[1])
 
         # Class var should be selected as color
-        self.assertIs(self.widget.graph.attr_color, self.data.domain.class_var)
+        self.assertIs(self.widget.attr_color, self.data.domain.class_var)
 
         # Change which attributes are displayed
         self.widget.attr_x = self.data.domain[2]
@@ -54,12 +57,12 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
 
         # removing data should have cleared attributes
-        self.assertEqual(self.widget.attr_x, None)
-        self.assertEqual(self.widget.attr_y, None)
-        self.assertEqual(self.widget.graph.attr_color, None)
+        self.assertIsNone(self.widget.attr_x)
+        self.assertIsNone(self.widget.attr_y)
+        self.assertIsNone(self.widget.attr_color)
 
         # and remove the legend
-        self.assertEqual(self.widget.graph.legend, None)
+        self.assertIsNone(self.widget.graph.color_legend)
 
         # Connect iris again
         # same attributes that were used last time should be selected
@@ -122,12 +125,13 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         """
         table = datasets.data_one_column_nans()
         self.send_signal(self.widget.Inputs.data, table)
-        cb_attr_color = self.widget.controls.graph.attr_color
+        cb_attr_color = self.widget.controls.attr_color
         simulate.combobox_activate_item(cb_attr_color, "b")
         simulate.combobox_activate_item(self.widget.cb_attr_x, "a")
         simulate.combobox_activate_item(self.widget.cb_attr_y, "a")
 
-        self.widget.update_graph()
+        #self.widget.update_graph()
+        self.widget.graph.reset_graph()
 
     def test_data_column_infs(self):
         """
@@ -155,32 +159,25 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
     def test_points_combo_boxes(self):
         """Check Point box combo models and values"""
         self.send_signal(self.widget.Inputs.data, self.data)
-        graph = self.widget.controls.graph
+        controls = self.widget.controls
 
         # color and label should contain all variables
         # size should contain only continuous variables
         # shape should contain only discrete variables
         for var in self.data.domain.variables + self.data.domain.metas:
-            self.assertIn(var, graph.attr_color.model())
-            self.assertIn(var, graph.attr_label.model())
+            self.assertIn(var, controls.attr_color.model())
+            self.assertIn(var, controls.attr_label.model())
             if var.is_continuous:
-                self.assertIn(var, graph.attr_size.model())
-                self.assertNotIn(var, graph.attr_shape.model())
+                self.assertIn(var, controls.attr_size.model())
+                self.assertNotIn(var, controls.attr_shape.model())
             if var.is_discrete:
-                self.assertNotIn(var, graph.attr_size.model())
-                self.assertIn(var, graph.attr_shape.model())
+                self.assertNotIn(var, controls.attr_size.model())
+                self.assertIn(var, controls.attr_shape.model())
 
-        other_widget = self.create_widget(OWScatterPlot)
-        self.send_signal(self.widget.Inputs.data, self.data, widget=other_widget)
-        self.assertEqual(graph.attr_color.currentText(),
+        widget = self.create_widget(OWScatterPlot)
+        self.send_signal(self.widget.Inputs.data, self.data, widget=widget)
+        self.assertEqual(controls.attr_color.currentText(),
                          self.data.domain.class_var.name)
-
-    def test_overlap(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-        self.assertEqual(len(set(self.widget.graph.compute_sizes())), 1)
-        simulate.combobox_activate_item(self.widget.controls.graph.attr_size,
-                                        OWPlotGUI.SizeByOverlap)
-        self.assertGreater(len(set(self.widget.graph.compute_sizes())), 1)
 
     def test_group_selections(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -260,23 +257,6 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         np.testing.assert_equal(annotated(), sel_column)
         self.assertEqual(len(annotations()), 3)
 
-    def test_none_data(self):
-        """
-        Prevent crash due to missing data.
-        GH-2122
-        """
-        table = Table(
-            Domain(
-                [ContinuousVariable("a"),
-                 DiscreteVariable("b", values=["y", "n"])]
-            ),
-            list(zip(
-                [],
-                ""))
-        )
-        self.send_signal(self.widget.Inputs.data, table)
-        self.widget.reset_graph_data()
-
     def test_saving_selection(self):
         self.send_signal(self.widget.Inputs.data, self.data)  # iris
         self.widget.graph.select_by_rectangle(QRectF(4, 3, 3, 1))
@@ -324,17 +304,17 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         """
         self.send_signal(self.widget.Inputs.data, self.data)
         settings = self.widget.settingsHandler.pack_data(self.widget)
-        graph_settings = settings["context_settings"][0].values["graph"]
-        graph_settings["attr_label"] = ("sepal length", -2)
-        graph_settings["attr_color"] = ("sepal width", -2)
-        graph_settings["attr_shape"] = ("iris", -2)
-        graph_settings["attr_size"] = ("petal width", -2)
+        plot_settings = settings["context_settings"][0].values
+        plot_settings["attr_label"] = ("sepal length", -2)
+        plot_settings["attr_color"] = ("sepal width", -2)
+        plot_settings["attr_shape"] = ("iris", -2)
+        plot_settings["attr_size"] = ("petal width", -2)
         w = self.create_widget(OWScatterPlot, stored_settings=settings)
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
-        self.assertEqual(w.graph.attr_label.name, "sepal length")
-        self.assertEqual(w.graph.attr_color.name, "sepal width")
-        self.assertEqual(w.graph.attr_shape.name, "iris")
-        self.assertEqual(w.graph.attr_size.name, "petal width")
+        self.assertEqual(w.attr_label.name, "sepal length")
+        self.assertEqual(w.attr_color.name, "sepal width")
+        self.assertEqual(w.attr_shape.name, "iris")
+        self.assertEqual(w.attr_size.name, "petal width")
 
     def test_sparse(self):
         """
@@ -380,20 +360,10 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         # combo_y.setCurrentIndex(combo_y.model().indexOf(data.domain[3]))
         # This is a workaround
         self.widget.attr_y = data.domain[3]
-        self.widget.update_attr()
+        self.widget.attr_changed()
 
         features = self.get_output(self.widget.Outputs.features)
         self.assertEqual(features, [data.domain[0], data.domain[3]])
-
-    def test_send_report(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.report_button.click()
-
-    def test_update_density(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.cb_class_density.click()
 
     def test_vizrank(self):
         data = Table("iris")
@@ -461,7 +431,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
             zoo.domain[0], zoo.domain[1], zoo.domain.class_var
         attr_x = self.widget.controls.attr_x
         attr_y = self.widget.controls.attr_y
-        attr_color = self.widget.controls.graph.attr_color
+        attr_color = self.widget.controls.attr_color
 
         # Send dataset, ensure defaults are what we expect them to be
         self.send_signal(self.widget.Inputs.data, zoo)
@@ -522,8 +492,8 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         data.metas = data.metas.astype(object)
         self.send_signal(w.Inputs.data, data)
         simulate.combobox_activate_item(w.cb_attr_x, data.domain.metas[1].name)
-        simulate.combobox_activate_item(w.controls.graph.attr_color, data.domain.metas[0].name)
-        w.update_graph()
+        simulate.combobox_activate_item(w.controls.attr_color, data.domain.metas[0].name)
+        w.graph.reset_graph()
 
     def test_subset_data(self):
         """
@@ -534,7 +504,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         w = self.widget
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.data_subset, data[::30])
-        self.assertEqual(len(w.graph.subset_indices), 5)
+        self.assertEqual(len(w.subset_indices), 5)
 
     def test_sparse_subset_data(self):
         """
@@ -546,7 +516,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
         data.X = sp.csr_matrix(data.X)
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.data_subset, data[::30])
-        self.assertEqual(len(w.graph.subset_indices), 5)
+        self.assertEqual(len(w.subset_indices), 5)
 
     def test_metas_zero_column(self):
         """
@@ -583,7 +553,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
             with patch.object(scatterplot_item, "pointsAt",
                               return_value=[all_points[42]]):
                 # Show just x and y attribute
-                graph.tooltip_shows_all = False
+                widget.tooltip_shows_all = False
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
                 self.assertIn("age = {}".format(data[42, "age"]), text)
@@ -592,7 +562,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
                 self.assertNotIn("others", text)
 
                 # Show all attributes
-                graph.tooltip_shows_all = True
+                widget.tooltip_shows_all = True
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
                 self.assertIn("age = {}".format(data[42, "age"]), text)
@@ -633,7 +603,7 @@ class TestOWScatterPlot(WidgetTest, WidgetOutputsTestMixin):
 
         def assert_equal(data, max):
             self.send_signal(self.widget.Inputs.data, data)
-            pen_data, brush_data = self.widget.graph.compute_colors()
+            pen_data, brush_data = self.widget.graph.get_colors()
             self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
 
         assert_equal(prepare_data(), MAX)
