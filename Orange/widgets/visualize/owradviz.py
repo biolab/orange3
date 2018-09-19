@@ -8,40 +8,30 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor
-from AnyQt.QtCore import (
-    Qt, QEvent, QRectF, QPoint, pyqtSignal as Signal
-)
-from AnyQt.QtWidgets import (
-    qApp, QApplication, QToolTip, QGraphicsEllipseItem
-)
+from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
+from AnyQt.QtWidgets import qApp, QApplication
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 
-from Orange.data import Table, Domain, ContinuousVariable, StringVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data import Table, Domain, StringVariable
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import radviz
-from Orange.widgets import widget, gui, settings, report
+from Orange.widgets import widget, gui
 from Orange.widgets.gui import OWComponent
-from Orange.widgets.settings import Setting
-from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
-)
+from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
-from Orange.widgets.visualize.owscatterplotgraph import OWProjectionWidget
 from Orange.widgets.visualize.utils import VizRankDialog
-from Orange.widgets.visualize.utils.component import OWVizGraph
-from Orange.widgets.visualize.utils.plotutils import (
-    TextItem, VizInteractiveViewBox
-)
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
+from Orange.widgets.visualize.utils.plotutils import TextItem
+from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
 
 
 class RadvizVizRank(VizRankDialog, OWComponent):
     captionTitle = "Score Plots"
-    n_attrs = settings.Setting(3)
+    n_attrs = Setting(3)
     minK = 10
 
     attrsSelected = Signal([])
@@ -208,444 +198,237 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_attrs_spin.setDisabled(False)
 
 
-class RadvizInteractiveViewBox(VizInteractiveViewBox):
-    def mouseDragEvent(self, ev, axis=None):
-        super().mouseDragEvent(ev, axis)
-        if ev.finish:
-            self.setCursor(Qt.ArrowCursor)
-            self.graph.show_indicator(None)
-
-    def _show_tooltip(self, ev):
-        pos = self.childGroup.mapFromParent(ev.pos())
-        angle = np.arctan2(pos.y(), pos.x())
-        point = QPoint(ev.screenPos().x(), ev.screenPos().y())
-        QToolTip.showText(point, "{:.2f}".format(np.rad2deg(angle)))
-
-
-class OWRadvizGraph(OWVizGraph):
+class OWRadvizGraph(OWGraphWithAnchors):
     def __init__(self, scatter_widget, parent):
-        super().__init__(scatter_widget, parent, RadvizInteractiveViewBox)
-        self._text_items = []
+        super().__init__(scatter_widget, parent)
+        self.anchors_scatter_item = None
 
-    def set_point(self, i, x, y):
-        angle = np.arctan2(y, x)
-        super().set_point(i, np.cos(angle), np.sin(angle))
+    def clear(self):
+        super().clear()
+        self.anchors_scatter_item = None
 
     def set_view_box_range(self):
-        self.view_box.setRange(RANGE, padding=0.025)
+        self.view_box.setRange(QRectF(-1.2, -1.05, 2.4, 2.1), padding=0.025)
 
-    def can_show_indicator(self, pos):
-        if self._points is None:
-            return False, None
-
+    def closest_draggable_item(self, pos):
+        points, _ = self.master.get_anchors()
+        if points is None:
+            return None
         np_pos = np.array([[pos.x(), pos.y()]])
-        distances = distance.cdist(np_pos, self._points[:, :2])[0]
+        distances = distance.cdist(np_pos, points[:, :2])[0]
         if len(distances) and np.min(distances) < self.DISTANCE_DIFF:
-            return True, np.argmin(distances)
-        return False, None
+            return np.argmin(distances)
+        return None
 
-    def update_items(self):
-        super().update_items()
-        self._update_text_items()
-
-    def _update_text_items(self):
-        self._remove_text_items()
-        self._add_text_items()
-
-    def _remove_text_items(self):
-        for item in self._text_items:
-            self.plot_widget.removeItem(item)
-        self._text_items = []
-
-    def _add_text_items(self):
-        if self._points is None:
+    def update_anchors(self):
+        points, labels = self.master.get_anchors()
+        if points is None:
             return
-        for point in self._points:
-            ti = TextItem()
-            ti.setText(point[2].name)
-            ti.setColor(QColor(0, 0, 0))
-            ti.setPos(point[0], point[1])
-            self._text_items.append(ti)
-            self.plot_widget.addItem(ti)
+        if self.anchor_items is None:
+            self.anchor_items = []
+            for point, label in zip(points, labels):
+                anchor = TextItem()
+                anchor.setText(label)
+                anchor.setColor(QColor(0, 0, 0))
+                anchor.setPos(*point)
+                self.plot_widget.addItem(anchor)
+                self.anchor_items.append(anchor)
+        else:
+            for anchor, point in zip(self.anchor_items, points):
+                anchor.setPos(*point)
+        self._update_anchors_scatter_item(points)
 
-    def _add_point_items(self):
-        if self._points is None:
-            return
-        x, y = self._points[:, 0], self._points[:, 1]
-        self._point_items = ScatterPlotItem(x=x, y=y)
-        self.plot_widget.addItem(self._point_items)
+    def _update_anchors_scatter_item(self, points):
+        if self.anchors_scatter_item is not None:
+            self.plot_widget.removeItem(self.anchors_scatter_item)
+            self.anchors_scatter_item = None
+        self.anchors_scatter_item = ScatterPlotItem(x=points[:, 0],
+                                                    y=points[:, 1])
+        self.plot_widget.addItem(self.anchors_scatter_item)
 
-    def _add_circle_item(self):
-        if self._points is None:
+    def _add_indicator_item(self, anchor_idx):
+        if anchor_idx is None:
             return
-        self._circle_item = QGraphicsEllipseItem()
-        self._circle_item.setRect(QRectF(-1., -1., 2., 2.))
-        self._circle_item.setPen(pg.mkPen(QColor(0, 0, 0), width=2))
-        self.plot_widget.addItem(self._circle_item)
-
-    def _add_indicator_item(self, point_i):
-        if point_i is None:
-            return
-        x, y = self._points[point_i][:2]
+        x, y = self.anchor_items[anchor_idx].get_xy()
         col = self.view_box.mouse_state
         dx = (self.view_box.childGroup.mapToDevice(QPoint(1, 0)) -
               self.view_box.childGroup.mapToDevice(QPoint(-1, 0))).x()
-        self._indicator_item = MoveIndicator(np.arctan2(y, x), col, 6000 / dx)
-        self.plot_widget.addItem(self._indicator_item)
+        self.indicator_item = MoveIndicator(np.arctan2(y, x), col, 6000 / dx)
+        self.plot_widget.addItem(self.indicator_item)
 
 
-RANGE = QRectF(-1.2, -1.05, 2.4, 2.1)
-MAX_POINTS = 100
-
-
-class OWRadviz(OWProjectionWidget):
+class OWRadviz(OWAnchorProjectionWidget):
     name = "Radviz"
     description = "Display Radviz projection"
     icon = "icons/Radviz.svg"
     priority = 241
     keywords = ["viz"]
 
-    class Inputs:
-        data = Input("Data", Table, default=True)
-        data_subset = Input("Data Subset", Table)
-
-    class Outputs:
-        selected_data = Output("Selected Data", Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        components = Output("Components", Table)
-
     settings_version = 2
-    settingsHandler = settings.DomainContextHandler()
 
-    variable_state = settings.ContextSetting({})
-    auto_commit = settings.Setting(True)
+    selected_vars = ContextSetting([])
+    vizrank = SettingProvider(RadvizVizRank)
+    GRAPH_CLASS = OWRadvizGraph
+    graph = SettingProvider(OWRadvizGraph)
+    embedding_variables_names = ("radviz-x", "radviz-y")
 
-    vizrank = settings.SettingProvider(RadvizVizRank)
-    graph = settings.SettingProvider(OWRadvizGraph)
-    graph_name = "graph.plot_widget.plotItem"
-
-    ReplotRequest = QEvent.registerEventType()
-
-    class Information(OWProjectionWidget.Information):
-        sql_sampled_data = widget.Msg("Data has been sampled")
-
-    class Warning(OWProjectionWidget.Warning):
-        no_features = widget.Msg("At least 2 features have to be chosen")
+    class Warning(OWAnchorProjectionWidget.Warning):
+        no_features = widget.Msg("Radviz requires at least two features.")
         invalid_embedding = widget.Msg("No projection for selected features")
 
-    class Error(OWProjectionWidget.Error):
-        sparse_data = widget.Msg("Sparse data is not supported")
+    class Error(OWAnchorProjectionWidget.Error):
         no_features = widget.Msg(
-            "At least 3 numeric or categorical variables are required"
+            "At least three numeric or categorical variables are required"
         )
-        no_instances = widget.Msg("At least 2 data instances are required")
+        no_instances = widget.Msg("At least two data instances are required")
 
     def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.subset_data = None
-        self.subset_indices = None
-        self._embedding_coords = None
-        self._rand_indices = None
-
-        self.__replot_requested = False
-
-        self.variable_x = ContinuousVariable("radviz-x")
-        self.variable_y = ContinuousVariable("radviz-y")
-
-        box = gui.vBox(self.mainArea, True, margin=0)
-        self.graph = OWRadvizGraph(self, box)
-        box.layout().addWidget(self.graph.plot_widget)
-
-        self.variables_selection = VariablesSelection()
-        self.model_selected = selected = VariableListModel(enable_dnd=True)
-        self.model_other = other = VariableListModel(enable_dnd=True)
-        self.variables_selection(self, selected, other, self.controlArea)
+        self.model_selected = VariableListModel(enable_dnd=True)
+        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
+        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
+        self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.vizrank_set_attrs)
-        # Todo: this button introduces some margin at the bottom?!
-        self.variables_selection.add_remove.layout().addWidget(self.btn_vizrank)
+            None, self, "Suggest features", self.__vizrank_set_attrs
+        )
+        super().__init__()
 
-        g = self.graph.gui
-        g.point_properties_box(self.controlArea)
-        g.effects_box(self.controlArea)
-        g.plot_properties_box(self.controlArea)
+    def _add_controls(self):
+        self.variables_selection = VariablesSelection(
+            self, self.model_selected, self.model_other, self.controlArea
+        )
+        self.variables_selection.add_remove.layout().addWidget(
+            self.btn_vizrank
+        )
+        super()._add_controls()
+        self.controlArea.layout().removeWidget(self.control_area_stretch)
+        self.control_area_stretch.setParent(None)
 
-        self.graph.box_zoom_select(self.controlArea)
+    @property
+    def primitive_variables(self):
+        if self.data is None or self.data.domain is None:
+            return []
+        dom = self.data.domain
+        return [v for v in chain(dom.variables, dom.metas) if v.is_primitive()]
 
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
-
-        self.graph.view_box.started.connect(self._randomize_indices)
-        self.graph.view_box.moved.connect(self._manual_move)
-        self.graph.view_box.finished.connect(self._finish_manual_move)
-
-    def vizrank_set_attrs(self, attrs):
+    def __vizrank_set_attrs(self, attrs):
         if not attrs:
             return
-        self.variables_selection.display_none()
         self.model_selected[:] = attrs[:]
-        self.model_other[:] = [v for v in self.model_other if v not in attrs]
+        self.model_other[:] = [var for var in self.primitive_variables
+                               if var not in attrs]
 
-    def update_colors(self):
-        self._vizrank_color_change()
-        self.cb_class_density.setEnabled(self.can_draw_density())
+    def __model_selected_changed(self):
+        self.selected_vars = [(var.name, vartype(var)) for var
+                              in self.model_selected]
+        self.projection = None
+        self.setup_plot()
+        self.commit()
 
-    def invalidate_plot(self):
-        """
-        Schedule a delayed replot.
-        """
-        if not self.__replot_requested:
-            self.__replot_requested = True
-            QApplication.postEvent(self, QEvent(self.ReplotRequest), Qt.LowEventPriority - 10)
+    def colors_changed(self):
+        super().colors_changed()
+        self._init_vizrank()
 
-    def _vizrank_color_change(self):
-        is_enabled = self.data is not None and not self.data.is_sparse() and \
-            len(self.model_other) + len(self.model_selected) > 3 and \
+    def set_data(self, data):
+        super().set_data(data)
+        if self.data is not None and len(self.selected_vars):
+            d, selected = self.data.domain, [v[0] for v in self.selected_vars]
+            self.model_selected[:] = [d[name] for name in selected]
+            self.model_other[:] = [d[attr.name] for attr in
+                                   self.primitive_variables
+                                   if attr.name not in selected]
+        elif self.data is not None:
+            d, variables = self.data.domain, self.primitive_variables
+            class_var = [variables.pop(variables.index(d.class_var))] \
+                if d.class_var in variables else []
+            self.model_selected[:] = variables[:5]
+            self.model_other[:] = variables[5:] + class_var
+
+        self._init_vizrank()
+
+    def _init_vizrank(self):
+        is_enabled = self.data is not None and \
+            len(self.primitive_variables) > 3 and \
+            self.attr_color is not None and \
+            not np.isnan(self.data.get_column_view(
+                self.attr_color)[0].astype(float)).all() and \
             len(self.data[self.valid_data]) > 1 and \
             np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
-        self.btn_vizrank.setEnabled(
-            is_enabled and self.attr_color is not None
-            and not np.isnan(self.data.get_column_view(
-                self.attr_color)[0].astype(float)).all())
-        self.vizrank.initialize()
+        self.btn_vizrank.setEnabled(is_enabled)
+        if is_enabled:
+            self.vizrank.initialize()
 
-    def clear(self):
-        self.data = None
+    def check_data(self):
+        def error(err):
+            err()
+            self.data = None
+
+        super().check_data()
+        if self.data is not None:
+            if len(self.data) < 2:
+                error(self.Error.no_instances)
+            elif len(self.primitive_variables) < 3:
+                error(self.Error.no_features)
+
+    def init_attr_values(self):
+        super().init_attr_values()
+        self.selected_vars = []
+
+    def get_embedding(self):
         self.valid_data = None
-        self._embedding_coords = None
-        self._rand_indices = None
-        self.model_selected.clear()
-        self.model_other.clear()
-
-        self.graph.set_attributes(())
-        self.graph.set_points(None)
-        self.graph.update_coordinates()
-        self.graph.clear()
-
-    @Inputs.data
-    def set_data(self, data):
-        self.clear_messages()
-        self.btn_vizrank.setEnabled(False)
-        self.closeContext()
-        self.clear()
-        self.data = data
-        self._check_data()
-        self.init_attr_values()
-        self.openContext(self.data)
-        if self.data is not None:
-            self.model_selected[:], self.model_other[:] = self._load_settings()
-
-    def _check_data(self):
-        if self.data is not None:
-            domain = self.data.domain
-            if self.data.is_sparse():
-                self.Error.sparse_data()
-                self.data = None
-            elif isinstance(self.data, SqlTable):
-                if self.data.approx_len() < 4000:
-                    self.data = Table(self.data)
-                else:
-                    self.Information.sql_sampled_data()
-                    data_sample = self.data.sample_time(1, no_cache=True)
-                    data_sample.download_data(2000, partial=True)
-                    self.data = Table(data_sample)
-            elif len(self.data) < 2:
-                self.Error.no_instances()
-                self.data = None
-            elif len([v for v in domain.variables +
-                     domain.metas if v.is_primitive()]) < 3:
-                self.Error.no_features()
-                self.data = None
-
-    def _load_settings(self):
-        domain = self.data.domain
-        variables = [v for v in domain.attributes + domain.metas
-                     if v.is_primitive()]
-        self.model_selected[:] = variables[:5]
-        self.model_other[:] = variables[5:] + list(domain.class_vars)
-
-        state = VariablesSelection.encode_var_state(
-            [list(self.model_selected), list(self.model_other)]
-        )
-        state = {key: (ind, np.inf) for key, (ind, _) in state.items()}
-        state.update(self.variable_state)
-        return VariablesSelection.decode_var_state(
-            state, [list(self.model_selected), list(self.model_other)])
-
-    @Inputs.data_subset
-    def set_subset_data(self, subset):
-        self.subset_data = subset
-        self.subset_indices = {e.id for e in subset} \
-            if subset is not None else {}
-        self.controls.graph.alpha_value.setEnabled(subset is None)
-
-    def handleNewSignals(self):
-        self.setup_plot()
-        self._vizrank_color_change()
-        self.commit()
-
-    def get_coordinates_data(self):
-        ec = self._embedding_coords
-        if ec is None or np.any(np.isnan(ec)):
-            return None, None
-        return ec[:, 0], ec[:, 1]
-
-    def get_subset_mask(self):
-        if self.subset_indices:
-            return np.array([ex.id in self.subset_indices
-                             for ex in self.data[self.valid_data]])
-
-    def customEvent(self, event):
-        if event.type() == OWRadviz.ReplotRequest:
-            self.__replot_requested = False
-            self.setup_plot()
-        else:
-            super().customEvent(event)
-
-    def closeContext(self):
-        self.variable_state = VariablesSelection.encode_var_state(
-            [list(self.model_selected), list(self.model_other)]
-        )
-        super().closeContext()
-
-    def setup_plot(self):
         if self.data is None:
-            return
-        self.__replot_requested = False
+            return None
 
-        self.clear_messages()
+        self.Warning.no_features.clear()
         if len(self.model_selected) < 2:
             self.Warning.no_features()
-            self.graph.clear()
-            return
+            return None
 
-        r = radviz(self.data, self.model_selected)
-        self._embedding_coords = r[0]
-        self.graph.set_points(r[1])
-        self.valid_data = r[2]
-        if self._embedding_coords is None or \
-                np.any(np.isnan(self._embedding_coords)):
+        ec, proj, msk = radviz(self.data, self.model_selected, self.projection)
+        angle = np.arctan2(*proj.T[::-1])
+        self.projection = np.vstack((np.cos(angle), np.sin(angle))).T
+        self.valid_data = msk
+
+        self.Warning.invalid_embedding.clear()
+        if ec is None or np.any(np.isnan(ec)):
             self.Warning.invalid_embedding()
-        self.graph.reset_graph()
+            return None
 
-    def _randomize_indices(self):
-        n = len(self._embedding_coords)
-        if n > MAX_POINTS:
-            self._rand_indices = np.random.choice(n, MAX_POINTS, replace=False)
-            self._rand_indices = sorted(self._rand_indices)
+        embedding = np.zeros((len(self.data), 2), dtype=np.float)
+        embedding[self.valid_data] = ec
+        return embedding
 
-    def _manual_move(self):
-        self.__replot_requested = False
+    def get_anchors(self):
+        if self.projection is None:
+            return None, None
+        return self.projection, [a.name for a in self.model_selected]
 
-        res = radviz(self.data, self.model_selected, self.graph.get_points())
-        self._embedding_coords = res[0]
-        if self._rand_indices is not None:
-            # save widget state
-            selection = self.graph.selection
-            valid_data = self.valid_data.copy()
-            data = self.data.copy()
-            ec = self._embedding_coords.copy()
+    def _manual_move(self, anchor_idx, x, y):
+        angle = np.arctan2(y, x)
+        super()._manual_move(anchor_idx, np.cos(angle), np.sin(angle))
 
-            # plot subset
-            self.__plot_random_subset(selection)
-
-            # restore widget state
-            self.graph.selection = selection
-            self.valid_data = valid_data
-            self.data = data
-            self._embedding_coords = ec
-        else:
-            self.graph.update_coordinates()
-
-    def __plot_random_subset(self, selection):
-        self._embedding_coords = self._embedding_coords[self._rand_indices]
-        self.data = self.data[self._rand_indices]
-        self.valid_data = self.valid_data[self._rand_indices]
-        self.graph.reset_graph()
-        if selection is not None:
-            self.graph.selection = selection[self._rand_indices]
-            self.graph.update_selection_colors()
-
-    def _finish_manual_move(self):
-        if self._rand_indices is not None:
-            selection = self.graph.selection
-            self.graph.reset_graph()
-            if selection is not None:
-                self.graph.selection = selection
-                self.graph.select_by_index(self.graph.get_selection())
-
-    def selection_changed(self):
-        self.commit()
-
-    def commit(self):
-        selected = annotated = components = None
-        if self.data is not None and np.sum(self.valid_data):
-            name = self.data.name
-            domain = self.data.domain
-            metas = domain.metas + (self.variable_x, self.variable_y)
-            domain = Domain(domain.attributes, domain.class_vars, metas)
-            embedding_coords = np.zeros((len(self.data), 2), dtype=np.float)
-            embedding_coords[self.valid_data] = self._embedding_coords
-
-            data = self.data.transform(domain)
-            data[:, self.variable_x] = embedding_coords[:, 0][:, None]
-            data[:, self.variable_y] = embedding_coords[:, 1][:, None]
-
-            selection = self.graph.get_selection()
-            if len(selection):
-                selected = data[selection]
-                selected.name = name + ": selected"
-                selected.attributes = self.data.attributes
-            if self.graph.selection is not None and \
-                    np.max(self.graph.selection) > 1:
-                annotated = create_groups_table(data, self.graph.selection)
-            else:
-                annotated = create_annotated_table(data, selection)
-            annotated.attributes = self.data.attributes
-            annotated.name = name + ": annotated"
-
-            points = self.graph.get_points()
-            comp_domain = Domain(
-                points[:, 2],
-                metas=[StringVariable(name='component')])
-
-            metas = np.array([["RX"], ["RY"], ["angle"]])
-            angle = np.arctan2(np.array(points[:, 1].T, dtype=float),
-                               np.array(points[:, 0].T, dtype=float))
-            components = Table.from_numpy(
-                comp_domain,
-                X=np.row_stack((points[:, :2].T, angle)),
-                metas=metas)
-            components.name = name + ": components"
-
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
+    def send_components(self):
+        components = None
+        if self.data is not None and self.valid_data is not None and \
+                self.projection is not None:
+            angle = np.arctan2(*self.projection.T[::-1])
+            meta_attrs = [StringVariable(name='component')]
+            components = Table(Domain(self.model_selected, metas=meta_attrs),
+                               np.row_stack((self.projection.T, angle)),
+                               metas=np.array([["RX"], ["RY"], ["angle"]]))
+            components.name = self.data.name
         self.Outputs.components.send(components)
 
-    def send_report(self):
-        if self.data is None:
-            return
-
-        def name(var):
-            return var and var.name
-
-        caption = report.render_items_vert((
-            ("Color", name(self.attr_color)),
-            ("Label", name(self.attr_label)),
-            ("Shape", name(self.attr_shape)),
-            ("Size", name(self.attr_size)),
-            ("Jittering", self.graph.jitter_size != 0 and
-             "{} %".format(self.graph.jitter_size))))
-        self.report_plot()
-        if caption:
-            self.report_caption(caption)
+    def clear(self):
+        if self.model_selected:
+            self.model_selected.clear()
+        if self.model_other:
+            self.model_other.clear()
+        super().clear()
 
     @classmethod
     def migrate_context(cls, context, version):
-        if version < 3:
+        if version < 2:
             values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
@@ -690,7 +473,6 @@ class MoveIndicator(pg.GraphicsObject):
 
 def main(argv=None):
     import sys
-    import sip
 
     argv = sys.argv[1:] if argv is None else argv
     if argv:
@@ -706,13 +488,8 @@ def main(argv=None):
     w.set_subset_data(data[::10])
     w.handleNewSignals()
     w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
+    app.exec()
     w.saveSettings()
-    sip.delete(w)
-    del w
-    return r
 
 
 if __name__ == "__main__":

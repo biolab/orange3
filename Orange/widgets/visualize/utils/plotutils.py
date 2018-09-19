@@ -21,6 +21,10 @@ class TextItem(pg.TextItem):
             self.anchor = pg.Point(anchor)
             self.updateText()
 
+    def get_xy(self):
+        point = self.pos()
+        return point.x(), point.y()
+
 
 class AnchorItem(pg.GraphicsObject):
     def __init__(self, parent=None, line=QLineF(), text="", **kwargs):
@@ -38,10 +42,14 @@ class AnchorItem(pg.GraphicsObject):
 
         self._label = TextItem(text=text, color=(10, 10, 10))
         self._label.setParentItem(self)
-        self._label.setPos(self._spine.line().p2())
+        self._label.setPos(*self.get_xy())
 
         if parent is not None:
             self.setParentItem(parent)
+
+    def get_xy(self):
+        point = self._spine.line().p2()
+        return point.x(), point.y()
 
     def setText(self, text):
         if text != self._text:
@@ -236,26 +244,41 @@ class InteractiveViewBox(pg.ViewBox):
         return True
 
 
-class VizInteractiveViewBox(InteractiveViewBox):
-    started = Signal()
-    moved = Signal()
-    finished = Signal()
+class DraggableItemsViewBox(InteractiveViewBox):
+    """
+    A viewbox with draggable items
+
+    Graph that uses it must provide two methods:
+    - `closest_draggable_item(pos)` returns an int representing the id of the
+      draggable item that is closest (and close enough) to `QPoint` pos, or
+      `None`;
+    - `show_indicator(item_id)` shows or updates an indicator for moving
+      the item with the given `item_id`.
+
+    Viewbox emits three signals:
+    - `started = Signal(item_id)`
+    - `moved = Signal(item_id, x, y)`
+    - `finished = Signal(item_id, x, y)`
+    """
+    started = Signal(int)
+    moved = Signal(int, float, float)
+    finished = Signal(int, float, float)
 
     def __init__(self, graph, enable_menu=False):
         self.mouse_state = 0
-        self.point_i = None
+        self.item_id = None
         super().__init__(graph, enable_menu)
 
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
         pos = self.childGroup.mapFromParent(ev.pos())
-        if self.graph.can_show_indicator(pos)[0]:
+        if self.graph.closest_draggable_item(pos) is not None:
             self.setCursor(Qt.ClosedHandCursor)
 
     def mouseDragEvent(self, ev, axis=None):
         pos = self.childGroup.mapFromParent(ev.pos())
-        can_show, point_i = self.graph.can_show_indicator(pos)
-        if ev.button() != Qt.LeftButton or (ev.start and not can_show):
+        item_id = self.graph.closest_draggable_item(pos)
+        if ev.button() != Qt.LeftButton or (ev.start and item_id is None):
             self.mouse_state = 2
         if self.mouse_state == 2:
             if ev.finish:
@@ -267,19 +290,18 @@ class VizInteractiveViewBox(InteractiveViewBox):
         if ev.start:
             self.setCursor(Qt.ClosedHandCursor)
             self.mouse_state = 1
-            self.point_i = point_i
-            self.started.emit()
+            self.item_id = item_id
+            self.started.emit(self.item_id)
 
         if self.mouse_state == 1:
-            self.graph.set_point(self.point_i, pos.x(), pos.y())
             if ev.finish:
-                self.setCursor(Qt.OpenHandCursor)
                 self.mouse_state = 0
-                self.finished.emit()
+                self.finished.emit(self.item_id, pos.x(), pos.y())
+                if self.graph.closest_draggable_item(pos) is not None:
+                    self.setCursor(Qt.OpenHandCursor)
+                else:
+                    self.setCursor(Qt.ArrowCursor)
+                    self.item_id = None
             else:
-                self._show_tooltip(ev)
-                self.moved.emit()
-            self.graph.show_indicator(self.point_i)
-
-    def _show_tooltip(self, ev):
-        pass
+                self.moved.emit(self.item_id, pos.x(), pos.y())
+            self.graph.show_indicator(self.item_id)

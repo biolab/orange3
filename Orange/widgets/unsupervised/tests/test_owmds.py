@@ -6,21 +6,23 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
-from AnyQt.QtCore import QRectF, QPointF
+
 from AnyQt.QtTest import QSignalSpy
 
 from Orange.data import Table
-from Orange.misc import DistMatrix
 from Orange.distance import Euclidean
+from Orange.misc import DistMatrix
 from Orange.widgets.settings import Context
-from Orange.widgets.tests.base import (WidgetTest, WidgetOutputsTestMixin,
-                                       datasets, ProjectionWidgetTestMixin)
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
+)
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.utils.plot import OWPlotGUI
 
 
-class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
+class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
+                WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -48,10 +50,6 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
     def tearDown(self):
         self.widget.onDeleteWidget()
         super().tearDown()
-
-    def _select_data(self):
-        self.widget.graph.select_by_rectangle(QRectF(QPointF(-20, -20), QPointF(20, 20)))
-        return self.widget.graph.get_selection()
 
     def test_pca_init(self):
         self.send_signal(self.signal_name, self.signal_data)
@@ -261,6 +259,21 @@ class TestOWMDS(WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin):
         self.send_signal(w.Inputs.data, data)
         self.assertTrue(set(chain(data.domain.variables, data.domain.metas))
                         < set(w.controls.attr_label.model()))
+
+    def test_saved_matrix_and_data(self):
+        towns_data = self.towns.row_items
+        attr_label = self.widget.controls.attr_label
+        self.widget.start = Mock()
+        self.towns.row_items = None
+
+        # Matrix without data
+        self.send_signal(self.widget.Inputs.distances, self.towns)
+        self.assertIsNotNone(self.widget.graph.scatterplot_item)
+        self.assertEqual(list(attr_label.model()), [None])
+
+        # Data
+        self.send_signal(self.widget.Inputs.data, towns_data)
+        self.assertIn(towns_data.domain["label"], attr_label.model())
 
     def test_overlap(self):
         self.send_signal(self.signal_name, self.signal_data)
