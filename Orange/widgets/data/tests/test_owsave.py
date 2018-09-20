@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 from Orange.data import Table
-from Orange.data.io import TabReader, PickleReader, FileFormat
+from Orange.data.io import TabReader, PickleReader, ExcelReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter, fix_extension, open_filename_dialog_save
