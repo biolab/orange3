@@ -26,7 +26,7 @@ class TestOWSave(WidgetTest):
     def test_ordinary_save(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
 
-        for ext, writer in [('.tab', TabReader), ('.pickle', PickleReader)]:
+        for ext, writer in [('.tab', TabReader), ('.pickle', PickleReader), ('.xls', ExcelReader), ('.xlsx', ExcelReader), ('.ods', ExcelReader)]:
             with named_file("", suffix=ext) as filename:
                 def choose_file(a, b, c, d, e, fn=filename, w=writer):
                     return fn, format_filter(w)
