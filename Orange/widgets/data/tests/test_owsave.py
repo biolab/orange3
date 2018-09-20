@@ -4,7 +4,7 @@ from unittest.mock import patch, Mock
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader
+from Orange.data.io import Compression, CSVReader, TabReader, PickleReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter
