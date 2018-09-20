@@ -1029,11 +1029,9 @@ class ExcelReader(FileFormat):
             sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
             for c, header in enumerate(headers):
                 sheet.write(0, c, header)
-            for i, row in enumerate(zipped_list_data):
-                j = 0
-                for fmt, v in zip(formatters, flatten(row)):
-                    sheet.write(i+1, j, fmt(v))
-                    j += 1
+            for i, row in enumerate(zipped_list_data, 1):
+                for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                    sheet.write(i, j, fmt(v))
             workbook.save(filename)
         elif filename.endswith(".ods"):
             ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))]
