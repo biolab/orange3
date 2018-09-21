@@ -6,6 +6,66 @@ Change Log
 * ...
 
 
+[3.16.0] - 2018-09-14
+--------------------
+##### Enhancements
+* ROC analysis: show thresholds ([#3172](../../pull/3172))
+* Edit Domain: Record transformations ([#3231](../../pull/3231))
+* Data Table: Enable deselection ([#3189](../../pull/3189))
+* Empty helper pane message ([#3210](../../pull/3210))
+* Matplotlib output for Scatter plot ([#3134](../../pull/3134))
+* Scatterplot: indicate overlap of points. ([#3177](../../pull/3177))
+* Selection of format and compression in save data widget ([#3147](../../pull/3147))
+* OWBoxPlot: add option to sort discrete distributions by size ([#3156](../../pull/3156))
+* Table: speed-up computation of basic stats of given columns. ([#3166](../../pull/3166))
+* Canvas: 'Window Groups' continued ([#3085](../../pull/3085))
+* Combo Box Search Filter ([#3014](../../pull/3014))
+* Widget Insertion ([#3179](../../pull/3179))
+
+##### Bugfixes
+* Documentation fetching with redirects ([#3248](../../pull/3248))
+* DiscreteVariable reconstruction ([#3242](../../pull/3242))
+* io: Handle mismatched number of header/data values ([#3237](../../pull/3237))
+* OWNeuralNetwork model pickling ([#3230](../../pull/3230))
+* Variable: Prevent hashing of Values of DiscreteVariable. ([#3217](../../pull/3217))
+
+
+[3.15.0] - 2018-08-06
+--------------------
+##### Enhancements
+* Silhouette Plot: Add cosine distance ([#3176](../../pull/3176))
+* Add pandas_compat.table_to_frame(tab) ([#3180](../../pull/3180))
+* OWSelectByDataIndex: New widget (move from Prototypes) ([#3181](../../pull/3181))
+* Make filters available in Orange.data namespace. ([#3170](../../pull/3170))
+* Move Louvain clustering from prototypes to core ([#3111](../../pull/3111))
+* OWWidget: Collapse/expand the widget on control area toggle ([#3146](../../pull/3146))
+* Rank: SklScorer should use the faster SklImputer. ([#3164](../../pull/3164))
+* RecentFiles: Check for missing file in workflow dir ([#3064](../../pull/3064))
+* Smart widget suggestions ([#3112](../../pull/3112))
+* Match Keywords in Widget Search ([#3117](../../pull/3117))
+* io: Speedup write_data ([#3115](../../pull/3115))
+* OWEditDomain: Enable reordering of discrete variables ([#3119](../../pull/3119))
+
+##### Bugfixes
+* oweditdomain: Fix an IndexError when all rows are deselected ([#3183](../../pull/3183))
+* OWFreeViz: fix class density size ([#3158](../../pull/3158))
+* OWBoxPlot: Fix empty continuous contingency check ([#3165](../../pull/3165))
+* OWSql: enforce data download for non PostgreSQL databases ([#3178](../../pull/3178))
+* owlouvainclustering: Make the task completion handler a single slot ([#3182](../../pull/3182))
+* OWReport: disable save and print on empty report ([#3175](../../pull/3175))
+* RemoveConstant: remove constant NaN features. ([#3163](../../pull/3163))
+* utils/concurrent: Switch default thread pool ([#3138](../../pull/3138))
+* OWBoxPlot: Fix quartiles computation ([#3159](../../pull/3159))
+* OWBoxPlot: Plot axis labels and quartiles label layout ([#3162](../../pull/3162))
+* [RFC] OWHeatMap: remove empty clusters from visualization ([#3155](../../pull/3155))
+* report: Fix the number of hidden rows. ([#3150](../../pull/3150))
+* [RFC] KMeans upgrade sparse support ([#3140](../../pull/3140))
+* WebView fixes ([#3148](../../pull/3148))
+* ci/appveyor: Update test dependencies ([#3139](../../pull/3139))
+* Replace use of obsolete QStyle.standardPixmap ([#3127](../../pull/3127))
+* BoxPlot: Hide groups with no instances ([#3122](../../pull/3122))
+
+
 [3.14.0] - 2018-07-04
 --------------------
 ##### Enhancements
@@ -865,7 +925,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.14.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.16.0...HEAD
+[3.16.0]: https://github.com/biolab/orange3/compare/3.15.0...3.16.0
+[3.15.0]: https://github.com/biolab/orange3/compare/3.14.0...3.15.0
 [3.14.0]: https://github.com/biolab/orange3/compare/3.13.0...3.14.0
 [3.13.0]: https://github.com/biolab/orange3/compare/3.12.0...3.13.0
 [3.12.0]: https://github.com/biolab/orange3/compare/3.11.0...3.12.0

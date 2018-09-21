@@ -174,8 +174,19 @@ def guess_data_type(orig_values, namask=None):
 
 
 def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
-                      domain_vars, existing_var, new_var_name, data=None):
+                      domain_vars=None, existing_var=None, new_var_name=None, data=None, name=None):
     assert issubclass(coltype, Variable)
+
+    if name is None or existing_var is not None or new_var_name is not None:
+        name = existing_var.strip() if existing_var else new_var_name
+        raise DeprecationWarning("Arguments 'existing_var' and 'new_var_name' are "\
+                                 "deprecated since 3.16; use 'name' instead")
+
+    if domain_vars is not None:
+        raise DeprecationWarning("Argument 'domain_vars' is deprecated since 3.16")
+
+    if data is not None:
+        raise DeprecationWarning("Argument 'data' is deprecated since 3.16")
 
     def get_number_of_decimals(values):
         len_ = len
@@ -187,12 +198,7 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
     if issubclass(coltype, DiscreteVariable) and valuemap is not None:
         coltype_kwargs.update(values=valuemap)
 
-    if existing_var:
-        # Use existing variable if available
-        var = coltype.make(existing_var.strip(), **coltype_kwargs)
-    else:
-        # Never use existing for un-named variables
-        var = coltype(new_var_name, **coltype_kwargs)
+    var = coltype.make(name, **coltype_kwargs)
 
     if isinstance(var, DiscreteVariable):
         # Map discrete data to 'ints' (or at least what passes as int around
@@ -616,14 +622,24 @@ class FileFormat(metaclass=FileFormatMeta):
         # Determine maximum row length
         rowlen = max(map(len, (names, types, flags)))
 
+        strip = False
+
         def _equal_length(lst):
-            lst.extend(['']*(rowlen - len(lst)))
+            nonlocal strip
+            if len(lst) > rowlen > 0:
+                lst = lst[:rowlen]
+                strip = True
+            elif len(lst) < rowlen:
+                lst.extend(['']*(rowlen - len(lst)))
             return lst
 
         # Ensure all data is of equal width in a column-contiguous array
         data = [_equal_length([s.strip() for s in row])
                 for row in data if any(row)]
         data = np.array(data, dtype=object, order='F')
+
+        if strip:
+            warnings.warn("Columns with no headers were removed.")
 
         # Data may actually be longer than headers were
         try:
@@ -718,16 +734,14 @@ class FileFormat(metaclass=FileFormatMeta):
 
             cols, domain_vars = append_to
 
-            existing_var, new_var_name = None, None
             if domain_vars is not None:
-                existing_var = names and names[col]
-                if not existing_var:
-                    new_var_name = next(NAMEGEN)
+                var_name = names and names[col]
+                if not var_name:
+                    var_name = next(NAMEGEN)
 
-            if domain_vars is not None:
                 values, var = sanitize_variable(
                     valuemap, values, orig_values, coltype, coltype_kwargs,
-                    domain_vars, existing_var, new_var_name, data)
+                    name=var_name)
             else:
                 var = None
             if domain_vars is not None:
@@ -932,7 +946,7 @@ class TabReader(CSVReader):
 class PickleReader(FileFormat):
     """Reader for pickled Table objects"""
     EXTENSIONS = ('.pkl', '.pickle')
-    DESCRIPTION = 'Pickled Python object file'
+    DESCRIPTION = 'Pickled Orange data'
     SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = True
 

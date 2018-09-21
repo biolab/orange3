@@ -2,8 +2,10 @@ import sys
 import warnings
 import contextlib
 
-from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer, QLocale
+from AnyQt.QtCore import Qt, QObject, QEventLoop, QTimer, QLocale, QPoint
 from AnyQt.QtTest import QTest
+from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtWidgets import QApplication
 
 
 class EventSpy(QObject):
@@ -303,3 +305,15 @@ def override_locale(language):
             return result
         return wrap
     return wrapper
+
+
+def mouseMove(widget, pos=QPoint(), delay=-1):  # pragma: no-cover
+    # Like QTest.mouseMove, but functional without QCursor.setPos
+    if pos.isNull():
+        pos = widget.rect().center()
+    me = QMouseEvent(QMouseEvent.MouseMove, pos, widget.mapToGlobal(pos),
+                     Qt.NoButton, Qt.MouseButtons(0), Qt.NoModifier)
+    if delay > 0:
+        QTest.qWait(delay)
+
+    QApplication.sendEvent(widget, me)

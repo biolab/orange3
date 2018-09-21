@@ -483,6 +483,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.source = self.LOCAL_FILE
             self.load_data()
 
+    def workflowEnvChanged(self, key, value, oldvalue):
+        """
+        Function called when environment changes (e.g. while saving the scheme)
+        It make sure that all environment connected values are modified
+        (e.g. relative file paths are changed)
+        """
+        self.update_file_list(key, value, oldvalue)
+
+
 if __name__ == "__main__":
     import sys
     from AnyQt.QtWidgets import QApplication

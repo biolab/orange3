@@ -347,8 +347,6 @@ class OWLinearProjection(widget.OWWidget):
 
         self.icons = gui.attributeIconDict
 
-        p = self.graph.plot_widget.palette()
-        self.graph.set_palette(p)
         gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
                         auto_label="Send Automatically")
         self.graph.zoom_actions(self)

@@ -266,6 +266,23 @@ class TestDiscreteVariable(VariableTest):
         a = DiscreteVariable("foo", values=["a", "b", "c"])
         self.assertRaises(TypeError, a.add_value, 42)
 
+    def test_unpickle(self):
+        d1 = DiscreteVariable("A", values=["two", "one"])
+        s = pickle.dumps(d1)
+        d2 = DiscreteVariable.make("A", values=["one", "two", "three"])
+        d2_values = tuple(d2.values)
+        d1c = pickle.loads(s)
+        # See: gh-3238
+        # The unpickle reconstruction picks an existing variable (d2), on which
+        # __setstate__ or __dict__.update is called
+        self.assertSequenceEqual(d2.values, d2_values)
+        self.assertSequenceEqual(d1c.values, d1.values)
+        s = pickle.dumps(d2)
+        DiscreteVariable._clear_all_caches()  # [comment redacted]
+        d1 = DiscreteVariable("A", values=["one", "two"])
+        d2 = pickle.loads(s)
+        self.assertSequenceEqual(d2.values, ["two", "one", "three"])
+
 
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):
@@ -474,9 +491,9 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(abc1p, abc)
 
         abcp, abc1p, abc2p = pickle.loads(pickle.dumps((abc, abc1, abc2)))
-        self.assertIs(abcp.master, abcp)
-        self.assertIs(abc1p.master, abcp)
-        self.assertIs(abc2p.master, abcp)
+        self.assertIs(abcp.master, abcp.master)
+        self.assertIs(abc1p.master, abcp.master)
+        self.assertIs(abc2p.master, abcp.master)
         self.assertEqual(abcp, abc1p)
         self.assertEqual(abcp, abc2p)
         self.assertEqual(abc1p, abc2p)

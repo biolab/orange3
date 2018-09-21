@@ -619,7 +619,11 @@ class OWDataTable(widget.OWWidget):
                             return True     # eat event
                         return False
                 table.efc = efc()
+                # disconnect default handler for clicks and connect a new one, which supports
+                # both selection and deselection of all data
+                btn.clicked.disconnect()
                 btn.installEventFilter(table.efc)
+                btn.clicked.connect(self._on_select_all)
                 table.btn = btn
 
                 if sys.platform == "darwin":
@@ -642,6 +646,14 @@ class OWDataTable(widget.OWWidget):
                     table.verticalHeader().setMinimumWidth(s.width())
             except Exception:
                 pass
+
+    def _on_select_all(self, _):
+        data_info = self.tabs.currentWidget()._input_slot.summary
+        if len(self.selected_rows) == data_info.len \
+                and len(self.selected_cols) == len(data_info.domain):
+            self.tabs.currentWidget().clearSelection()
+        else:
+            self.tabs.currentWidget().selectAll()
 
     def _on_current_tab_changed(self, index):
         """Update the info box on current tab change"""

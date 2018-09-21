@@ -37,8 +37,8 @@ from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.listfilter import variables_filter
 from Orange.widgets.utils.itemmodels import DomainModel
 
-from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QMenu, QAction,\
-    QDialog, QSizePolicy, QPushButton, QListView
+from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction,\
+    QDialog, QSizePolicy, QPushButton, QListView, QLabel
 from AnyQt.QtGui import QIcon, QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
 
@@ -136,7 +136,7 @@ class AddVariablesDialog(QDialog):
 
 
 class VariablesSelection:
-    def __call__(self, master, model_selected, model_other):
+    def __call__(self, master, model_selected, model_other, widget=None):
         self.master = master
 
         params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
@@ -146,8 +146,10 @@ class VariablesSelection:
                        "dragDropOverwriteMode": False,
                        "dragDropMode": QListView.DragDrop}
 
-        self.view_selected = view = gui.listView(widget=master.controlArea, master=master,
-                                                 box="Displayed Axes", **params_view)
+        self.view_selected = view = gui.listView(
+            widget or master.controlArea, master,
+            box=True, **params_view
+        )
         view.box.setMinimumHeight(120)
         view.viewport().setAcceptDrops(True)
 
@@ -465,10 +467,13 @@ class OWPlotGUI:
         self.shape_model = DomainModel(placeholder="(Same shape)",
                                        valid_types=DiscreteVariable)
         self.size_model = DomainModel(placeholder="(Same size)",
+                                      order=(self.SizeByOverlap,) + DomainModel.SEPARATED,
                                       valid_types=ContinuousVariable)
         self.label_model = DomainModel(placeholder="(No labels)")
         self.points_models = [self.color_model, self.shape_model,
                               self.size_model, self.label_model]
+
+    SizeByOverlap = "Overlap"
 
     Spacing = 0
 
@@ -567,9 +572,9 @@ class OWPlotGUI:
         .. seealso:: :meth:`.tool_button`
     '''
 
-    def _get_callback(self, name):
+    def _get_callback(self, name, master=None):
         if type(name) == str:
-            return getattr(self._plot, name, self._plot.replot)
+            return getattr(master or self._plot, name)
         else:
             return name
 
@@ -579,7 +584,16 @@ class OWPlotGUI:
             When the checkbox is toggled, the attribute ``value`` of the plot object is set to
             the checkbox' check state, and the callback ``cb_name`` is called.
         '''
-        return gui.checkBox(widget, self._plot, value, label, callback=self._get_callback(cb_name))
+        args = dict(master=self._plot, value=value, label=label,
+                    callback=self._get_callback(cb_name, self._plot))
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
+        if isinstance(widget, QGridLayout):
+            checkbox = gui.checkBox(None, **args)
+            widget.addWidget(checkbox, widget.rowCount(), 1)
+            return checkbox
+        else:
+            return gui.checkBox(widget, **args)
 
     def antialiasing_check_box(self, widget):
         '''
@@ -588,16 +602,17 @@ class OWPlotGUI:
         self._check_box(widget, 'use_antialiasing', 'Use antialiasing', 'update_antialiasing')
 
     def jitter_size_slider(self, widget):
-        values = getattr(self._plot.master, "jitter_sizes", self.JITTER_SIZES)
-        gui.valueSlider(
-            widget=widget, master=self._plot, value='jitter_size', label="Jittering: ",
-            values=values, callback=self._plot.master.reset_graph_data,
-            labelFormat=lambda x: "None" if x == 0 else ("%.1f %%" if x < 1 else "%d %%") % x)
+        return self.add_control(
+            widget, gui.valueSlider, "Jittering",
+            master=self._plot, value='jitter_size',
+            values=getattr(self._plot, "jitter_sizes", self.JITTER_SIZES),
+            callback=self._plot.update_coordinates)
 
     def jitter_numeric_check_box(self, widget):
-        gui.checkBox(
-            widget=gui.indentedBox(widget=widget), master=self._plot, value="jitter_continuous",
-            label="Jitter numeric values", callback=self._plot.master.reset_graph_data)
+        self._check_box(
+            widget=widget,
+            value="jitter_continuous", label="Jitter numeric values",
+            cb_name="update_coordinates")
 
     def show_legend_check_box(self, widget):
         '''
@@ -606,24 +621,26 @@ class OWPlotGUI:
         self._check_box(widget, 'show_legend', 'Show legend', 'update_legend')
 
     def tooltip_shows_all_check_box(self, widget):
-        self._check_box(widget=widget, value="tooltip_shows_all",
-                        label='Show all data on mouse hover', cb_name="cb_tooltip_shows_all")
+        gui.checkBox(
+            widget=widget, master=self._plot.master, value="tooltip_shows_all",
+            label='Show all data on mouse hover')
 
     def class_density_check_box(self, widget):
         self._plot.master.cb_class_density = \
-            self._check_box(widget=widget, value="class_density", label="Show class density",
-                            cb_name=self._plot.master.update_density)
+            self._check_box(widget=widget, value="class_density",
+                            label="Show color regions",
+                            cb_name=self._plot.update_density)
 
     def regression_line_check_box(self, widget):
         self._plot.master.cb_reg_line = \
             self._check_box(widget=widget, value="show_reg_line",
                             label="Show regression line",
-                            cb_name=self._plot.master.update_regression_line)
+                            cb_name=self._plot.update_regression_line)
 
     def label_only_selected_check_box(self, widget):
         self._check_box(widget=widget, value="label_only_selected",
                         label="Label only selected points",
-                        cb_name=self._plot.master.graph.update_labels)
+                        cb_name=self._plot.update_labels)
 
     def filled_symbols_check_box(self, widget):
         self._check_box(widget, 'show_filled_symbols', 'Show filled symbols',
@@ -638,76 +655,109 @@ class OWPlotGUI:
         '''
         self._check_box(widget, 'use_animations', 'Use animations', 'update_animations')
 
+    def add_control(self, widget, control, label, **args):
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
+        if isinstance(widget, QGridLayout):
+            row = widget.rowCount()
+            element = control(None, **args)
+            widget.addWidget(QLabel(label), row, 0)
+            widget.addWidget(element, row, 1)
+            return element
+        else:
+            return control(widget,  label=label, **args)
+
     def _slider(self, widget, value, label, min_value, max_value, step, cb_name,
                 show_number=False):
-        gui.hSlider(widget, self._plot, value, label=label, minValue=min_value,
-                    maxValue=max_value, step=step, createLabel=show_number,
-                    callback=self._get_callback(cb_name))
+        return self.add_control(
+            widget, gui.hSlider, label,
+            master=self._plot, value=value, minValue=min_value,
+            maxValue=max_value, step=step, createLabel=show_number,
+            callback=self._get_callback(cb_name, self._plot.master))
 
-    def point_size_slider(self, widget):
+    def point_size_slider(self, widget, label="Symbol size:   "):
         '''
             Creates a slider that controls point size
         '''
-        self._slider(widget, 'point_width', "Symbol size:   ", 1, 20, 1, 'update_point_size')
+        return self._slider(widget, 'point_width', label, 1, 20, 1, 'sizes_changed')
 
-    def alpha_value_slider(self, widget):
+    def alpha_value_slider(self, widget, label="Opacity: "):
         '''
             Creates a slider that controls point transparency
         '''
-        self._slider(widget, 'alpha_value', "Opacity: ", 0, 255, 10, 'update_alpha_value')
+        return self._slider(widget, 'alpha_value', label, 0, 255, 10, 'colors_changed')
 
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
-        gui.comboBox(widget, self._plot, value, label=label, items=items,
-                     model=model, callback=self._get_callback(cb_name),
-                     labelWidth=50, orientation=Qt.Horizontal, valueType=str,
-                     sendSelectedValue=True, contentsLength=12)
+        return self.add_control(
+            widget, gui.comboBox, label,
+            master=self._plot.master, value=value, items=items, model=model,
+            callback=self._get_callback(cb_name, self._plot.master),
+            orientation=Qt.Horizontal, valueType=str,
+            sendSelectedValue=True, contentsLength=12,
+            labelWidth=50)
 
-    def color_value_combo(self, widget):
+    def color_value_combo(self, widget, label="Color: "):
         """Creates a combo box that controls point color"""
-        self._combo(widget, "attr_color", "Color: ", "update_colors",
+        self._combo(widget, "attr_color", label, "colors_changed",
                     model=self.color_model)
 
-    def shape_value_combo(self, widget):
+    def shape_value_combo(self, widget, label="Shape: "):
         """Creates a combo box that controls point shape"""
-        self._combo(widget, "attr_shape", "Shape: ", "update_shapes",
+        self._combo(widget, "attr_shape", label, "shapes_changed",
                     model=self.shape_model)
 
-    def size_value_combo(self, widget):
+    def size_value_combo(self, widget, label="Size: "):
         """Creates a combo box that controls point size"""
-        self._combo(widget, "attr_size", "Size: ", "update_sizes",
+        self._combo(widget, "attr_size", label, "sizes_changed",
                     model=self.size_model)
 
-    def label_value_combo(self, widget):
+    def label_value_combo(self, widget, label="Label: "):
         """Creates a combo box that controls point label"""
-        self._combo(widget, "attr_label", "Label: ", "update_labels",
+        self._combo(widget, "attr_label", label, "labels_changed",
                     model=self.label_model)
 
-    def point_properties_box(self, widget, box=None):
+    def box_spacing(self, widget):
+        if isinstance(widget.layout(), QGridLayout):
+            widget = widget.layout()
+        if isinstance(widget, QGridLayout):
+            space = QWidget()
+            space.setFixedSize(12, 12)
+            widget.addWidget(space, widget.rowCount(), 0)
+        else:
+            gui.separator(widget)
+
+    def point_properties_box(self, widget, box=True):
         '''
             Creates a box with controls for common point properties.
             Currently, these properties are point size and transparency.
         '''
-        return self.create_box([
+        box = self.create_gridbox(widget, box)
+        self.add_widgets([
             self.Color,
             self.Shape,
             self.Size,
             self.Label,
+            self.LabelOnlySelected], box)
+        return box
+
+    def effects_box(self, widget, box=True):
+        """
+        Create a box with controls for common plot settings
+        """
+        box = self.create_gridbox(widget, box)
+        self.add_widgets([
             self.PointSize,
-            self.AlphaValue
-            ], widget, box, "Points")
+            self.AlphaValue,
+            self.JitterSizeSlider], box)
+        return box
 
     def plot_properties_box(self, widget, box=None):
         """
         Create a box with controls for common plot settings
         """
         return self.create_box([
-            self.ToolTipShowsAll,
-            self.ShowGridLines,
-            self.ShowLegend,
             self.ClassDensity,
-            self.RegressionLine,
-            self.LabelOnlySelected
-            ], widget, box, "Plot Properties")
+            self.ShowLegend], widget, box, True)
 
     _functions = {
         ShowFilledSymbols: filled_symbols_check_box,
@@ -725,6 +775,7 @@ class OWPlotGUI:
         Shape: shape_value_combo,
         Size: size_value_combo,
         Label: label_value_combo,
+        Spacing: box_spacing
         }
 
     def add_widget(self, id, widget):
@@ -746,6 +797,15 @@ class OWPlotGUI:
         if box is None:
             box = gui.vBox(widget, name)
         self.add_widgets(ids, box)
+        return box
+
+    def create_gridbox(self, widget, box=True):
+        grid = QGridLayout()
+        grid.setColumnMinimumWidth(0, 50)
+        grid.setColumnStretch(1, 1)
+        box = gui.widgetBox(widget, box=box, orientation=grid)
+        # This must come after calling widgetBox, since widgetBox overrides it
+        grid.setVerticalSpacing(8)
         return box
 
     def _expand_id(self, id):
@@ -839,17 +899,6 @@ class OWPlotGUI:
         t = self.toolbar(widget, text, orientation, buttons, nomargin)
         t.buttons[self.SimpleSelect].click()
         return t
-
-    def effects_box(self, widget, box=None):
-        b = self.create_box([
-            self.AnimatePlot,
-            self.AnimatePoints,
-            self.AntialiasPlot,
-            # self.AntialiasPoints,
-            # self.AntialiasLines,
-            self.AutoAdjustPerformance,
-            self.DisableAnimationsThreshold], widget, box, "Visual effects")
-        return b
 
     def theme_combo_box(self, widget):
         c = gui.comboBox(widget, self._plot, "theme_name", "Theme",

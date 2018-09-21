@@ -53,7 +53,7 @@ corresponds to the sum of forces acting on it.
       the animation more visually appealing, but can be slow if the
       number of points is high.
 
-2. Defines how the points are visualized. These options are available only when visalizing distances between rows (selected in the :doc:`Distances<../unsupervised/distances>` widget).
+2. Defines how the points are visualized. These options are available only when visualizing distances between rows (selected in the :doc:`Distances<../unsupervised/distances>` widget).
 
    -  **Color**: Color of points by attribute (gray for continuous,
       colored for discrete).

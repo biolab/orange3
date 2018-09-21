@@ -41,7 +41,8 @@ the left side of the widget. A snapshot below shows the scatterplot of the
 2. Set the color of the displayed points (you will get colors for discrete
    values and grey-scale points for continuous). Set label, shape and
    size to differentiate between points. Set symbol size and opacity for
-   all data points. Set the desired colors scale.
+   all data points. Set the desired colors scale. To visualize the number
+   of overlapping points use *Overlap* for size.
 3. Adjust *plot properties*:
 
    -  *Show legend* displays a legend on the right. Click and drag the legend to move it.

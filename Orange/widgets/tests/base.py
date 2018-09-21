@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import os
+import pickle
 import time
 import unittest
 from unittest.mock import Mock
@@ -35,8 +36,10 @@ from Orange.regression.base_regression import (
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.plot import OWPlotGUI
+from Orange.widgets.widget import OWWidget
 
 sip.setdestroyonexit(False)
 
@@ -620,6 +623,14 @@ class WidgetLearnerTestMixin:
         self.wait_until_stop_blocking()
         self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
+    def test_output_model_picklable(self):
+        """Check if model can be pickled"""
+        self.send_signal("Data", self.data)
+        self.widget.apply_button.button.click()
+        self.wait_until_stop_blocking()
+        model = self.get_output(self.widget.Outputs.model)
+        pickle.dumps(model)
+
     def _get_param_value(self, learner, param):
         if isinstance(learner, Fitter):
             # Both is just a was to indicate to the tests, fitters don't
@@ -791,6 +802,134 @@ class WidgetOutputsTestMixin:
         selected_vars = selected.domain.variables + selected.domain.metas
         annotated_vars = annotated.domain.variables + annotated.domain.metas
         self.assertLess(set(selected_vars), set(annotated_vars))
+
+
+class ProjectionWidgetTestMixin:
+    """Class for projection widget testing.
+
+    It init method to set up testing parameters and some test methods
+    """
+
+    def init(self):
+        Variable._clear_all_caches()
+        self.data = Table("iris")
+
+    def test_default_attrs(self, timeout=DEFAULT_TIMEOUT):
+        """Check default values for 'Color', 'Shape', 'Size' and 'Label'"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIs(self.widget.attr_color, self.data.domain.class_var)
+        self.assertIsNone(self.widget.attr_label)
+        self.assertIsNone(self.widget.attr_shape)
+        self.assertIsNone(self.widget.attr_size)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertIsNone(self.widget.attr_color)
+
+    def test_attr_models(self):
+        """Check possible values for 'Color', 'Shape', 'Size' and 'Label'"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        controls = self.widget.controls
+        self.assertEqual(len(controls.attr_color.model()), 8)
+        self.assertEqual(len(controls.attr_shape.model()), 3)
+        self.assertTrue(7 < len(controls.attr_size.model()) < 10)
+        self.assertEqual(len(controls.attr_label.model()), 8)
+
+        # color and label should contain all variables
+        # size should contain only continuous variables
+        # shape should contain only discrete variables
+        for var in self.data.domain.variables + self.data.domain.metas:
+            self.assertIn(var, controls.attr_color.model())
+            self.assertIn(var, controls.attr_label.model())
+            if var.is_continuous:
+                self.assertIn(var, controls.attr_size.model())
+                self.assertNotIn(var, controls.attr_shape.model())
+            if var.is_discrete:
+                self.assertNotIn(var, controls.attr_size.model())
+                self.assertIn(var, controls.attr_shape.model())
+
+    def test_overlap(self):
+        """Test option 'Overlap' in 'Size' combo box"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
+        simulate.combobox_activate_item(self.widget.controls.attr_size,
+                                        OWPlotGUI.SizeByOverlap)
+        self.assertGreater(len(set(self.widget.graph.get_sizes())), 1)
+
+    def test_attr_label_metas(self, timeout=DEFAULT_TIMEOUT):
+        """Set 'Label' from string meta attribute"""
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        simulate.combobox_activate_item(self.widget.controls.attr_label,
+                                        data.domain[-1].name)
+
+    def test_handle_primitive_metas(self):
+        """Set 'Color' from continuous meta attribute"""
+        d, attrs = self.data.domain, self.data.domain.attributes
+        data = self.data.transform(Domain(attrs[:2], d.class_vars, attrs[2:]))
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(self.widget.controls.attr_color,
+                                        data.domain.metas[0].name)
+
+    def test_datasets(self, timeout=DEFAULT_TIMEOUT):
+        """Test widget for datasets with missing values and constant features"""
+        for ds in self.__datasets():
+            self.send_signal(self.widget.Inputs.data, ds)
+            if self.widget.isBlocking():
+                spy = QSignalSpy(self.widget.blockingStateChanged)
+                self.assertTrue(spy.wait(timeout))
+
+    @staticmethod
+    def __datasets():
+        ds_cls = Table(datasets.path("testing_dataset_cls"))
+        ds_reg = Table(datasets.path("testing_dataset_reg"))
+        for ds in (ds_cls, ds_reg):
+            d, a = ds.domain, ds.domain.attributes
+            for i in range(0, len(a), 2):
+                yield ds.transform(Domain(a[i: i + 2], d.class_vars, d.metas))
+        yield datasets.missing_data_1()
+        yield datasets.missing_data_2()
+        yield datasets.missing_data_3()
+        yield datasets.data_one_column_nans()
+        yield datasets.data_one_column_infs()
+        yield ds_cls
+        yield ds_reg
+
+    def test_none_data(self):
+        """Test widget for empty dataset"""
+        self.send_signal(self.widget.Inputs.data, self.data[:0])
+
+    def test_subset_data(self, timeout=DEFAULT_TIMEOUT):
+        """Test widget for subset data"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+
+    def test_class_density(self, timeout=DEFAULT_TIMEOUT):
+        """Check class density update"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.cb_class_density.click()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.cb_class_density.click()
+
+    def test_send_report(self, timeout=DEFAULT_TIMEOUT):
+        """Test report """
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.report_button.click()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.report_button.click()
 
 
 class datasets:

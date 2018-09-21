@@ -10,6 +10,8 @@ import types
 from operator import itemgetter
 from collections import deque
 
+from typing import List, Tuple
+
 import logging
 
 from AnyQt.QtCore import QObject
@@ -25,8 +27,6 @@ from .errors import (
     SchemeCycleError, IncompatibleChannelTypeError, SinkChannelError,
     DuplicatedLinkError
 )
-
-from . import readwrite
 
 from ..registry import WidgetDescription, InputSignal, OutputSignal
 
@@ -676,3 +676,27 @@ class Scheme(QObject):
     def dump_settings(self, node: SchemeNode):
         """Dump current settings of the `node` to the standard output"""
         print(node.properties)
+
+    class WindowGroup(types.SimpleNamespace):
+        name = ...     # type: str
+        default = ...  # type: bool
+        state = ...    # type: List[Tuple[SchemeNode, bytes]]
+
+        def __init__(self, name="", default=False, state=[]):
+            super().__init__(name=name, default=default, state=state)
+
+    def window_group_presets(self):
+        # type: () -> List[Scheme.WindowGroup]
+        """
+        Return a collection of preset window groups and their encoded states.
+
+        The base implementation returns an empty list.
+        """
+        return self.property("_presets") or []
+
+    def set_window_group_presets(self, groups):
+        # type: (List[Scheme.WindowGroup]) -> None
+        self.setProperty("_presets", groups)
+
+
+from . import readwrite

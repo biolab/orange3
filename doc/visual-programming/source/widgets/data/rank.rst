@@ -34,7 +34,7 @@ Scoring methods
 2. `Gain Ratio <https://en.wikipedia.org/wiki/Information_gain_ratio>`_: a ratio of the information gain and the attribute's intrinsic information, which reduces the bias towards multivalued features that occurs in information gain
 3. `Gini <https://en.wikipedia.org/wiki/Gini_coefficient>`_: the inequality among values of a frequency distribution
 4. `ANOVA <https://en.wikipedia.org/wiki/One-way_analysis_of_variance>`_: the difference between average vaules of the feature in different classes
-5. `Chi2 <https://en.wikipedia.org/wiki/Chi-squared_distribution>`_: dependence between the feature and the class as measure by the chi-square statistice
+5. `Chi2 <https://en.wikipedia.org/wiki/Chi-squared_distribution>`_: dependence between the feature and the class as measure by the chi-square statistic
 6. `ReliefF <https://en.wikipedia.org/wiki/Relief_(feature_selection)>`_: the ability of an attribute to distinguish between classes on similar data instances
 7. `FCBF (Fast Correlation Based Filter) <https://www.aaai.org/Papers/ICML/2003/ICML03-111.pdf>`_: entropy-based measure, which also identifies redundancy due to pairwise correlations between features
 

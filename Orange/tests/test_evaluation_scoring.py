@@ -1,10 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import sys
-import contextlib
 import unittest
-from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
@@ -337,23 +334,9 @@ class TestComputeCD(unittest.TestCase):
         cd = scoring.compute_CD(avranks, 30, test="bonferroni-dunn")
         np.testing.assert_almost_equal(cd, 0.798)
 
-        @contextlib.contextmanager
-        def mock_module(name):
-            if not name in sys.modules:
-                try:
-                    sys.modules[name] = Mock()
-                    yield
-                finally:
-                    del sys.modules[name]
-            else:
-                yield
-
         # Do what you will, just don't crash
-        with mock_module("matplotlib"), \
-                mock_module("matplotlib.pyplot"), \
-                mock_module("matplotlib.backends.backend_agg"):
-            scoring.graph_ranks(avranks, "abcd", cd)
-            scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
+        scoring.graph_ranks(avranks, "abcd", cd)
+        scoring.graph_ranks(avranks, "abcd", cd, cdmethod=0)
 
 
 class TestLogLoss(unittest.TestCase):

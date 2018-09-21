@@ -222,6 +222,7 @@ class OWNNLearner(OWBaseLearner):
         else:
             self.model.name = self.learner_name
             self.model.instances = self.data
+            self.model.skl_model.orange_callback = None  # remove unpicklable callback
             self.Outputs.model.send(self.model)
 
     def cancel(self):

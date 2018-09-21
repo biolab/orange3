@@ -178,6 +178,20 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.assertEqual(2, len(self.widget.boxes))
 
+    def test_sorting_disc_group_var(self):
+        """Test if subgroups are sorted by their size"""
+        table = Table("adult_sample")
+        self.send_signal(self.widget.Inputs.data, table)
+        self.__select_variable("education")
+        self.__select_group("workclass")
+
+        # checkbox not checked - preserve original order of selected grouping attribute
+        self.assertListEqual(self.widget.order, [0, 1, 2, 3, 4, 5, 6])
+
+        # checkbox checked - sort by frequencies
+        self.widget.controls.sort_freqs.setChecked(True)
+        self.assertListEqual(self.widget.order, [0, 1, 4, 5, 3, 2, 6])
+
     def _select_data(self):
         items = [item for item in self.widget.box_scene.items()
                  if isinstance(item, FilterGraphicsRectItem)]
