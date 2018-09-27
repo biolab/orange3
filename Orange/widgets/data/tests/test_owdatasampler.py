@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from Orange.data import Table
 from Orange.widgets.data.owdatasampler import OWDataSampler
 from Orange.widgets.tests.base import WidgetTest
@@ -116,3 +118,31 @@ class TestOWDataSampler(WidgetTest):
     def assertNoIntersection(self, sample, other):
         for inst in sample:
             self.assertNotIn(inst, other)
+
+    def test_invalid_target_smote(self):
+        """Check if error is displayed when target is undefined or continuous"""
+        self.widget.oversampling_method = self.widget.MethodSMOTE
+        self.select_sampling_type(self.widget.Oversample)
+
+        # continuous targets (i.e. regression tasks) not supported
+        self.send_signal("Data", Table("housing"))
+        self.assertTrue(self.widget.Error.invalid_target.is_shown())
+
+        # no target variable, therefore unable to perform oversampling
+        self.send_signal("Data", Table("cyber-security-breaches"))
+        self.assertTrue(self.widget.Error.invalid_target.is_shown())
+
+    def test_smote(self):
+        in_data = Table("anneal")
+
+        self.widget.oversampling_method = self.widget.MethodSMOTE
+        self.widget.oversampling_factor = 3
+        self.widget.min_class = 0
+        self.select_sampling_type(self.widget.Oversample)
+        self.send_signal("Data", in_data)
+
+        # originally 8 examples of 'minority class', SMOTE will generate 8 * 3 new examples
+        out = self.get_output(self.widget.Outputs.data_sample)
+        self.assertEqual(len(out), 922)
+        class_counts = np.unique(out.Y, return_counts=True)[1]
+        np.testing.assert_array_equal([32, 99, 684, 67, 40], class_counts)
