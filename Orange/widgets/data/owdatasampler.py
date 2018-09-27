@@ -37,8 +37,9 @@ class OWDataSampler(OWWidget):
     resizing_enabled = False
 
     RandomSeed = 42
-    FixedProportion, FixedSize, CrossValidation, Bootstrap = range(4)
+    FixedProportion, FixedSize, CrossValidation, Bootstrap, Oversample = range(5)
     SqlTime, SqlProportion = range(2)
+    MethodSMOTE = 0
 
     use_seed = Setting(False)
     replacement = Setting(False)
@@ -51,6 +52,10 @@ class OWDataSampler(OWWidget):
     sampleSizeSqlPercentage = Setting(0.1)
     number_of_folds = Setting(10)
     selectedFold = Setting(1)
+    oversampling_factor = Setting(1)
+    oversampling_method = Setting(MethodSMOTE)
+    oversampling_k = Setting(5)
+    min_class = Setting(0)
 
     class Warning(OWWidget.Warning):
         could_not_stratify = Msg("Stratification failed\n{}")
@@ -61,6 +66,9 @@ class OWDataSampler(OWWidget):
         sample_larger_than_data = Msg("Sample must be smaller than data")
         not_enough_to_stratify = Msg("Data is too small to stratify")
         no_data = Msg("Dataset is empty")
+        too_many_neighbors = Msg("Number of neighbors considered must be lower than " 
+                                 "number of all examples")
+        invalid_target = Msg("Target variable is either undefined or non-categorical")
 
     def __init__(self):
         super().__init__()
@@ -119,6 +127,34 @@ class OWDataSampler(OWWidget):
         form.addRow("Selected fold:", self.selected_fold_spin)
 
         gui.appendRadioButton(sampling, "Bootstrap")
+
+        gui.appendRadioButton(sampling, "Oversample")
+        form = QFormLayout(
+            formAlignment=Qt.AlignLeft | Qt.AlignTop,
+            labelAlignment=Qt.AlignLeft,
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow)
+        ibox = gui.indentedBox(sampling, orientation=form)
+        form.addRow("Method:",
+                    gui.comboBox(ibox, self, "oversampling_method",
+                                 items=["SMOTE"],
+                                 addToLayout=False,
+                                 callback=set_sampling_type(self.Oversample)))
+        self.min_class_combo = gui.comboBox(ibox, self, "min_class",
+                                            addToLayout=False,
+                                            callback=set_sampling_type(self.Oversample))
+        form.addRow("Minority class:", self.min_class_combo)
+        form.addRow("Oversampling factor:",
+                    gui.spin(
+                        ibox, self, "oversampling_factor",
+                        minv=1, maxv=100, step=1,
+                        addToLayout=False,
+                        callback=set_sampling_type(self.Oversample)))
+        form.addRow("Nearest neighbors:",
+                    gui.spin(
+                        ibox, self, "oversampling_k",
+                        minv=1, maxv=10, step=1,
+                        addToLayout=False,
+                        callback=set_sampling_type(self.Oversample)))
 
         self.sql_box = gui.vBox(self.controlArea, "Sampling Type")
         sampling = gui.radioButtons(self.sql_box, self, "sampling_type",
@@ -183,11 +219,16 @@ class OWDataSampler(OWWidget):
                     ('~', dataset.approx_len()) if sql else
                     ('', len(dataset)))))
             if not sql:
+                self.min_class_combo.clear()
+                if self.data.domain.has_discrete_class:
+                    self.min_class_combo.addItems(self.data.domain.class_var.values)
+                self.min_class = 0
                 self._update_sample_max_size()
                 self.updateindices()
         else:
             self.dataInfoLabel.setText('No data on input.')
             self.outputInfoLabel.setText('')
+            self.min_class_combo.clear()
             self.indices = None
             self.clear_messages()
         self.commit()
@@ -233,10 +274,27 @@ class OWDataSampler(OWWidget):
                     'Outputting fold %d, %d instance%s.' %
                     (self.selectedFold, len(sample), "s" * (len(sample) != 1))
                 )
-            sample = self.data[sample]
-            other = self.data[remaining]
-            self.sampled_instances = len(sample)
-            self.remaining_instances = len(other)
+            elif self.sampling_type == self.Oversample:
+                self.outputInfoLabel.setText(
+                    'Outputting %d instance%s (%d new)' %
+                    (len(self.indices), "s" * (len(self.indices) != 1),
+                     len(self.indices) - len(self.data))
+                )
+
+            # Oversampling produces new examples, while other types of sampling
+            # return indices to use with existing examples
+            if self.sampling_type == self.Oversample:
+                sample = self.indices
+                other = None
+
+                self.sampled_instances = len(sample)
+                self.remaining_instances = 0
+            else:
+                sample = self.data[sample]
+                other = self.data[remaining]
+                self.sampled_instances = len(sample)
+                self.remaining_instances = len(other)
+
         self.Outputs.data_sample.send(sample)
         self.Outputs.remaining_data.send(other)
 
@@ -260,6 +318,11 @@ class OWDataSampler(OWWidget):
         elif self.sampling_type == self.CrossValidation:
             if data_length < self.number_of_folds:
                 self.Error.too_many_folds()
+        elif self.sampling_type == self.Oversample:
+            if not self.data.domain.has_discrete_class:
+                self.Error.invalid_target()
+            elif data_length <= self.oversampling_k:
+                self.Error.too_many_neighbors()
         else:
             assert self.sampling_type == self.Bootstrap
 
@@ -299,6 +362,12 @@ class OWDataSampler(OWWidget):
                 random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
             self.indice_gen = SampleBootstrap(data_length, random_state=rnd)
+        elif self.sampling_type == self.Oversample:
+            if self.oversampling_method == self.MethodSMOTE:
+                self.indice_gen = OversampleSMOTE(self.min_class, self.oversampling_factor,
+                                                  self.oversampling_k, random_state=rnd)
+            else:
+                return None  # should not come here at all
         else:
             self.indice_gen = SampleFoldIndices(
                 self.number_of_folds, stratified=stratified, random_state=rnd)
@@ -319,6 +388,13 @@ class OWDataSampler(OWWidget):
         elif self.sampling_type == self.CrossValidation:
             tpe = "Fold {} of {}-fold cross-validation".format(
                 self.selectedFold, self.number_of_folds)
+        elif self.sampling_type == self.Oversample:
+            if self.data.domain.has_discrete_class:
+                tpe = "Data set with class '{}' oversampled at {}%".format(
+                    self.data.domain.class_var.values[self.min_class],
+                    int(self.oversampling_factor * 100))
+            else:
+                tpe = "N/A (unsuccessful)"
         else:
             tpe = "Undefined"  # should not come here at all
         if self.stratify:
@@ -431,6 +507,93 @@ class SampleBootstrap(Reprable):
         insample[sample] = False
         remaining = np.flatnonzero(insample)
         return remaining, sample
+
+
+class OversampleSMOTE(Reprable):
+    def __init__(self, min_class, over_factor, k, random_state=None):
+        """ Oversamples the minority class by a factor, determined by `over_factor`, using
+        SMOTE (synthetic minority oversampling technique).
+
+        Args:
+            min_class (float): Minority class
+            over_factor (float): Oversampling factor
+            k (int): number of neighbors taken into account when generating new examples
+            random_state (Random): An initial state for replicable random behaviour
+        """
+        self.min_class = min_class
+        self.over_factor = int(over_factor)
+        self.k = k
+        self.random_state = random_state
+
+    def gen_disc(self, column):
+        vals, counts = np.unique(column, return_counts=True)
+        most_freq = vals[np.argmax(counts)]
+        return np.repeat(most_freq, repeats=self.over_factor)
+
+    def __call__(self, table):
+        cont_attrs = np.array([True if attr.is_continuous else False
+                               for attr in table.domain.attributes])
+        othr_attrs = np.logical_not(cont_attrs)
+        min_examples = table[table.Y == self.min_class]
+        n_metas = len(table.domain.metas)
+        n_examples = len(table)
+
+        if n_examples <= self.k:
+            raise ValueError("Number of neighbors considered must be lower than "
+                             "number of all examples")
+
+        # note: these do not contain target variable(s)
+        min_examples_cont = min_examples.X[:, cont_attrs]
+        min_examples_othr = min_examples.X[:, othr_attrs]
+
+        reps = np.histogram(np.arange(self.over_factor), bins=self.k)[0]
+        sq_med_sd = np.square(np.median(np.std(min_examples_cont, axis=0)))
+        rgen = np.random.RandomState(self.random_state)
+        new_table = table.copy()
+
+        for idx_example in range(len(min_examples)):
+            dists = np.sqrt(np.sum(np.square(
+                min_examples_cont[idx_example, :] - table.X[:, cont_attrs]), axis=1))
+
+            n_diffs = np.sum(min_examples_othr[idx_example, :] != table.X[:, othr_attrs],
+                             axis=1)
+            dists += n_diffs * sq_med_sd
+
+            # closest example to current example will always be the example itself
+            # (or an identical example)
+            nneigh = np.argsort(dists)[1: self.k + 1]
+            rgen.shuffle(nneigh)
+
+            # if self.over_factor > self.k, some neighbors will be taken multiple times
+            nneigh_repeated = np.repeat(nneigh, repeats=reps, axis=0)
+
+            new_data = []
+            new_metas = [self.gen_disc(table.metas[nneigh, idx_meta])
+                         for idx_meta in range(n_metas)]
+            new_labels = np.repeat(self.min_class, repeats=self.over_factor)
+
+            for idx_attr in range(len(table.domain.attributes)):
+                if cont_attrs[idx_attr]:
+                    # new attr = orig. attr + rand(0, 1) * diff
+                    diff = table.X[nneigh_repeated, idx_attr] - \
+                           min_examples.X[idx_example, idx_attr]
+
+                    new_attr = (min_examples.X[idx_example, idx_attr] +
+                                rgen.rand(self.over_factor) * diff)
+                else:
+                    # new attr = most frequent value among neighbors
+                    new_attr = self.gen_disc(table.X[nneigh, idx_attr])
+
+                new_data.append(new_attr)
+
+            new_data = np.column_stack(new_data)
+            new_table.extend(np.column_stack((new_data, new_labels)))
+
+            if n_metas > 0:
+                new_metas = np.column_stack(new_metas)
+                new_table.metas[-self.over_factor:] = new_metas
+
+        return new_table
 
 
 def test_main():
