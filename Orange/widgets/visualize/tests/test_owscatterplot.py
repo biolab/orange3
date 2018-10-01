@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,too-many-public-methods,protected-access
 from unittest.mock import MagicMock, patch, Mock
 import numpy as np
 
@@ -702,6 +702,38 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signals(signals)
         self.widget.setup_plot.assert_called_once()
         self.assertListEqual(self.widget.effective_variables, list(features))
+
+    @patch('Orange.widgets.visualize.owscatterplot.ScatterPlotVizRank.'
+           'on_manual_change')
+    def test_vizrank_receives_manual_change(self, on_manual_change):
+        # Recreate the widget so the patch kicks in
+        self.widget = self.create_widget(OWScatterPlot)
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        model = self.widget.controls.attr_x.model()
+        self.widget.attr_x = model[0]
+        self.widget.attr_y = model[1]
+        simulate.combobox_activate_index(self.widget.controls.attr_x, 2)
+        self.assertIs(self.widget.attr_x, model[2])
+        on_manual_change.assert_called_with(model[2], model[1])
+
+    def test_on_manual_change(self):
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = self.widget.vizrank
+        vizrank.toggle()
+        self.process_events(until=lambda: not vizrank.keep_running)
+
+        model = vizrank.rank_model
+        attrs = model.data(model.index(3, 0), vizrank._AttrRole)
+        vizrank.on_manual_change(*attrs)
+        selection = vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 1)
+        self.assertEqual(selection[0].row(), 3)
+
+        vizrank.on_manual_change(*attrs[::-1])
+        selection = vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 0)
 
 
 if __name__ == "__main__":

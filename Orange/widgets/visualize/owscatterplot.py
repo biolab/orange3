@@ -6,7 +6,7 @@ from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtCore import Qt, QTimer, QPointF
+from AnyQt.QtCore import Qt, QTimer, QPointF, Signal
 from AnyQt.QtGui import QColor
 
 import pyqtgraph as pg
@@ -173,6 +173,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
 
+    xy_changed_manually = Signal(Variable, Variable)
+
     class Warning(OWDataProjectionWidget.Warning):
         missing_coords = Msg(
             "Plot cannot be displayed because '{}' or '{}' "
@@ -216,10 +218,12 @@ class OWScatterPlot(OWDataProjectionWidget):
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
-            box, self, "attr_x", label="Axis x:", callback=self.attr_changed,
+            box, self, "attr_x", label="Axis x:",
+            callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
         self.cb_attr_y = gui.comboBox(
-            box, self, "attr_y", label="Axis y:", callback=self.attr_changed,
+            box, self, "attr_y", label="Axis y:",
+            callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
         vizrank_box = gui.hBox(box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
@@ -394,6 +398,10 @@ class OWScatterPlot(OWDataProjectionWidget):
         if attr_x != self.attr_x or attr_y != self.attr_y:
             self.attr_x, self.attr_y = attr_x, attr_y
             self.attr_changed()
+
+    def set_attr_from_combo(self):
+        self.attr_changed()
+        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
 
     def attr_changed(self):
         self.setup_plot()
