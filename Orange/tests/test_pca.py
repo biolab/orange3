@@ -82,7 +82,7 @@ class TestPCA(unittest.TestCase):
         self.assertAlmostEqual(np.linalg.norm(pc1_pca), 1)
         self.assertNotAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 2)
         pc1_ipca = pca_model.partial_fit(data[1::2]).components_[0]
-        self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 4)
+        self.assertAlmostEqual(abs(pc1_ipca.dot(pc1_pca)), 1, 2)
 
     def test_truncated_svd(self):
         data = self.ionosphere

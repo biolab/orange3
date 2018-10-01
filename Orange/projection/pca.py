@@ -114,6 +114,19 @@ class IncrementalPCA(SklProjector):
 
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
+
+        # Fix for https://github.com/scikit-learn/scikit-learn/issues/12234
+        n_components = self.params.get("n_components")
+        if n_components is not None:
+            n_samples, n_features = X.shape
+            batch_size = self.params.get("batch_size")
+            if batch_size is None:
+                batch_size = n_features * 5
+            if n_samples % batch_size < n_components:
+                n_add = batch_size - n_samples % batch_size
+                X = np.vstack((X, X[:n_add]))
+                Y = None  # Ignored by fit anyway
+
         proj = proj.fit(X, Y)
         return IncrementalPCAModel(proj, self.domain)
 
