@@ -156,3 +156,14 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.distances, self.distances)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
 
+    def test_restore_state(self):
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self._select_data()
+        ids_1 = self.get_output(self.widget.Outputs.selected_data).ids
+        state = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(
+            OWHierarchicalClustering, stored_settings=state
+        )
+        self.send_signal(w.Inputs.distances, self.distances, widget=w)
+        ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
+        self.assertSequenceEqual(list(ids_1), list(ids_2))
