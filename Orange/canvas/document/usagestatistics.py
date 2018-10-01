@@ -111,7 +111,12 @@ class UsageStatistics:
         self.__node_addition_type = addition_type
 
     def write_statistics(self):
-        if not release or not config.settings()["error-reporting/send-statistics"]:
+        if not release:
+            log.info("Not sending usage statistics (non-release version of Orange detected).")
+            return
+
+        if not config.settings()["error-reporting/send-statistics"]:
+            log.info("Not sending usage statistics (preferences setting).")
             return
 
         statistics = {
@@ -142,10 +147,11 @@ class UsageStatistics:
             r = requests.post(server_url, files={'file': json.dumps(data)})
             if r.status_code != 200:
                 log.warning("Error communicating with server while attempting to send "
-                            "usage statistics")
+                            "usage statistics.")
                 store_data(data)
                 return
-            # wipe statistics file
+            # success - wipe statistics file
+            log.info("Usage statistics sent.")
             with open(statistics_path, 'w') as f:
                 json.dump([], f)
         except (ConnectionError, requests.exceptions.RequestException):
