@@ -1,4 +1,3 @@
-requests
 -r requirements-core.txt
 # For ReadTheDocs
 -r requirements-doc.txt
