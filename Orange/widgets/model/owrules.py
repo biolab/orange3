@@ -212,6 +212,7 @@ class OWRuleLearner(OWBaseLearner):
         "Orange.widgets.classify.owrules.OWRuleLearner",
     ]
     priority = 19
+    keywords = []
 
     want_main_area = False
     resizing_enabled = False

@@ -27,7 +27,7 @@ class KMeans(SklProjector):
         proj.silhouette = np.nan
         try:
             if self._compute_silhouette and 2 <= proj.n_clusters < X.shape[0]:
-                if len(X) <= SILHOUETTE_MAX_SAMPLES:
+                if X.shape[0] <= SILHOUETTE_MAX_SAMPLES:
                     proj.silhouette_samples = \
                         silhouette_samples(X, proj.labels_)
                     proj.silhouette = np.mean(proj.silhouette_samples)
@@ -69,4 +69,4 @@ class KMeansModel(Projection):
                 domain,
                 np.atleast_2d(self.proj.predict(data._x.reshape(1, -1))).astype(int))
         else:
-            return self.proj.predict(data).reshape((len(data), 1))
+            return self.proj.predict(data).reshape((data.shape[0], 1))

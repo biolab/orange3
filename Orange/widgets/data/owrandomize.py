@@ -15,6 +15,7 @@ class OWRandomize(OWWidget):
     description = "Randomize features, class and/or metas in data table."
     icon = "icons/Random.svg"
     priority = 2100
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table)

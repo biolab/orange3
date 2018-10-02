@@ -243,14 +243,17 @@ class RecentPath:
     def resolve(self, searchpaths):
         if self.prefix is None and os.path.exists(self.abspath):
             return self
-        elif self.prefix is not None:
+        else:
             for prefix, base in searchpaths:
-                if self.prefix == prefix:
+                path = None
+                if self.prefix and self.prefix == prefix:
                     path = os.path.join(base, self.relpath)
-                    if os.path.exists(path):
-                        return RecentPath(
-                            os.path.normpath(path), self.prefix, self.relpath,
-                            file_format=self.file_format)
+                elif not self.prefix and prefix == "basedir":
+                    path = os.path.join(base, self.basename)
+                if path and os.path.exists(path):
+                    return RecentPath(
+                        os.path.normpath(path), self.prefix, self.relpath,
+                        file_format=self.file_format)
         return None
 
     @property
@@ -347,16 +350,6 @@ class RecentPathsWidgetMixin:
         # in some model (untested!)
         self.recent_paths[:] = rec
 
-    def workflowEnvChanged(self, key, value, oldvalue):
-        """
-        Handle changes of the working directory
-
-        The function is triggered by a signal from the canvas when the user
-        saves the schema.
-        """
-        if key == "basedir":
-            self._relocate_recent_files()
-
     def add_path(self, filename):
         """Add (or move) a file name to the top of recent paths"""
         self._check_init()
@@ -417,7 +410,7 @@ class RecentPathsWComboMixin(RecentPathsWidgetMixin):
                     self.file_combo.setItemData(i, QBrush(Qt.red),
                                                 Qt.TextColorRole)
 
-    def workflowEnvChanged(self, key, value, oldvalue):
-        super().workflowEnvChanged(key, value, oldvalue)
+    def update_file_list(self, key, value, oldvalue):
         if key == "basedir":
+            self._relocate_recent_files()
             self.set_file_list()

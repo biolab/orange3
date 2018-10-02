@@ -23,6 +23,7 @@ class OWSGD(OWBaseLearner):
         "Orange.widgets.regression.owsgdregression.OWSGDRegression",
     ]
     priority = 90
+    keywords = ["sgd"]
 
     settings_version = 2
 

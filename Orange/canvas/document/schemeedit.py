@@ -6,7 +6,6 @@ Scheme Editor Widget
 
 """
 
-import sys
 import logging
 import itertools
 import unicodedata
@@ -21,7 +20,7 @@ from AnyQt.QtWidgets import (
     QWidget, QVBoxLayout, QInputDialog, QMenu, QAction, QActionGroup,
     QUndoStack, QUndoCommand, QGraphicsItem, QGraphicsObject,
     QGraphicsTextItem, QFormLayout, QComboBox, QDialog, QDialogButtonBox,
-    QMessageBox
+    QMessageBox, QCheckBox
 )
 from AnyQt.QtGui import (
     QKeySequence, QCursor, QFont, QPainter, QPixmap, QColor, QIcon,
@@ -29,16 +28,18 @@ from AnyQt.QtGui import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication
-)
+    Qt, QObject, QEvent, QSignalMapper, QRectF, QCoreApplication,
+    QPoint)
 
 from AnyQt.QtCore import pyqtProperty as Property, pyqtSignal as Signal
 
-from ..registry.qt import whats_this_helper
+from Orange.canvas.registry import WidgetDescription
+from .suggestions import Suggestions
+from ..registry.qt import whats_this_helper, QtWidgetRegistry
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_information, disabled
 from ..scheme import (
-    scheme, signalmanager, SchemeNode, SchemeLink, BaseSchemeAnnotation
+    scheme, signalmanager, Scheme, SchemeNode, SchemeLink, BaseSchemeAnnotation
 )
 from ..scheme import widgetsscheme
 from ..canvas.scene import CanvasScene
@@ -130,6 +131,7 @@ class SchemeEditWidget(QWidget):
         self.__possibleMouseItemsMove = False
         self.__itemsMoving = {}
         self.__contextMenuTarget = None
+        self.__dropTarget = None
         self.__quickMenu = None
         self.__quickTip = ""
 
@@ -170,8 +172,12 @@ class SchemeEditWidget(QWidget):
         self.__linkMenu = QMenu(self.tr("Link"), self)
         self.__linkMenu.addAction(self.__linkEnableAction)
         self.__linkMenu.addSeparator()
+        self.__linkMenu.addAction(self.__nodeInsertAction)
+        self.__linkMenu.addSeparator()
         self.__linkMenu.addAction(self.__linkRemoveAction)
         self.__linkMenu.addAction(self.__linkResetAction)
+
+        self.__suggestions = Suggestions()
 
     def __setupActions(self):
         self.__cleanUpAction = \
@@ -325,6 +331,13 @@ class SchemeEditWidget(QWidget):
                     toolTip=self.tr("Remove link."),
                     )
 
+        self.__nodeInsertAction = \
+            QAction(self.tr("Insert Widget"), self,
+                    objectName="node-insert-action",
+                    triggered=self.__nodeInsert,
+                    toolTip=self.tr("Insert widget."),
+                    )
+
         self.__linkResetAction = \
             QAction(self.tr("Reset Signals"), self,
                     objectName="link-reset-action",
@@ -343,6 +356,7 @@ class SchemeEditWidget(QWidget):
                          self.__newArrowAnnotationAction,
                          self.__linkEnableAction,
                          self.__linkRemoveAction,
+                         self.__nodeInsertAction,
                          self.__linkResetAction,
                          self.__duplicateSelectedAction])
 
@@ -387,6 +401,17 @@ class SchemeEditWidget(QWidget):
         groups_menu.addSeparator()
         groups_menu.addAction(self.__clearWindowGroupsAction)
         self.__windowGroupsAction.setMenu(groups_menu)
+
+        # the counterpart to Control + Key_Up to raise the containing workflow
+        # view (maybe move that shortcut here)
+        self.__raiseWidgetsAction = QAction(
+            self.tr("Bring Widgets to Front"), self,
+            objectName="bring-widgets-to-front-action",
+            shortcut=QKeySequence(Qt.ControlModifier + Qt.Key_Down),
+            shortcutContext=Qt.WindowShortcut,
+        )
+        self.__raiseWidgetsAction.triggered.connect(self.__raiseToFont)
+        self.addAction(self.__raiseWidgetsAction)
 
     def __setupUi(self):
         layout = QVBoxLayout()
@@ -640,6 +665,7 @@ class SchemeEditWidget(QWidget):
                         self.__signalManagerStateChanged)
 
             self.__scheme = scheme
+            self.__suggestions.set_scheme(self)
 
             self.setPath("")
 
@@ -680,16 +706,15 @@ class SchemeEditWidget(QWidget):
             a.deleteLater()
 
         if scheme:
-            presets = scheme.property("_presets") or []
+            presets = scheme.window_group_presets()
             sep = menu.findChild(QAction, "groups-separator")
-            assert isinstance(sep, QAction)
-            for name, state in presets:
-                a = QAction(name, menu)
+            for g in presets:
+                a = QAction(g.name, menu)
                 a.setShortcut(
                     QKeySequence("Meta+P, Ctrl+{}"
                                  .format(len(group.actions()) + 1))
                 )
-                a.setData(state)
+                a.setData(g)
                 group.addAction(a)
                 menu.insertAction(sep, a)
 
@@ -727,6 +752,12 @@ class SchemeEditWidget(QWidget):
 
         """
         return self.__view
+
+    def suggestions(self):
+        """
+        Return the widget suggestion prediction class.
+        """
+        return self.__suggestions
 
     def setRegistry(self, registry):
         # Is this method necessary?
@@ -856,6 +887,36 @@ class SchemeEditWidget(QWidget):
         """
         command = commands.RemoveLinkCommand(self.__scheme, link)
         self.__undoStack.push(command)
+
+    def insertNode(self, new_node, old_link):
+        """
+        Insert a node in-between two linked nodes.
+        """
+        source_node = old_link.source_node
+        sink_node = old_link.sink_node
+
+        possible_links = (self.scheme().propose_links(source_node, new_node),
+                          self.scheme().propose_links(new_node, sink_node))
+
+        first_link_sink_channel = [l[1] for l in possible_links[0]
+                                   if l[0] == old_link.source_channel][0]
+        second_link_source_channel = [l[0] for l in possible_links[1]
+                                      if l[1] == old_link.sink_channel][0]
+
+        new_links = (
+            SchemeLink(source_node, old_link.source_channel,
+                       new_node, first_link_sink_channel),
+            SchemeLink(new_node, second_link_source_channel,
+                       sink_node, old_link.sink_channel))
+
+        command = commands.InsertNodeCommand(self.__scheme, new_node, old_link, new_links)
+        self.__undoStack.push(command)
+
+    def onNewLink(self, func):
+        """
+        Runs function when new link is added to current scheme.
+        """
+        self.__scheme.link_added.connect(func)
 
     def addAnnotation(self, annotation):
         """
@@ -1015,30 +1076,56 @@ class SchemeEditWidget(QWidget):
 
     def eventFilter(self, obj, event):
         # Filter the scene's drag/drop events.
+        MIME_TYPE = "application/vnv.orange-canvas.registry.qualified-name"
         if obj is self.scene():
             etype = event.type()
             if etype == QEvent.GraphicsSceneDragEnter or \
                     etype == QEvent.GraphicsSceneDragMove:
                 mime_data = event.mimeData()
-                if mime_data.hasFormat(
-                        "application/vnv.orange-canvas.registry.qualified-name"
-                        ):
+                drop_target = None
+                if mime_data.hasFormat(MIME_TYPE):
+                    qname = bytes(mime_data.data(MIME_TYPE)).decode("ascii")
+                    try:
+                        desc = self.__registry.widget(qname)
+                    except KeyError:
+                        pass
+                    else:
+                        item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                        link = self.scene().link_for_item(item) if item else None
+                        if link is not None and can_insert_node(desc, link):
+                            drop_target = item
+                            drop_target.setHoverState(True)
                     event.acceptProposedAction()
                 else:
                     event.ignore()
+
+                if self.__dropTarget is not None and \
+                        self.__dropTarget is not drop_target:
+                    self.__dropTarget.setHoverState(False)
+                    # self.__dropTarget = None
+
+                self.__dropTarget = drop_target
                 return True
+            elif etype == QEvent.GraphicsSceneDragLeave:
+                if self.__dropTarget is not None:
+                    self.__dropTarget.setHoverState(False)
+                    self.__dropTarget = None
             elif etype == QEvent.GraphicsSceneDrop:
                 data = event.mimeData()
-                qname = data.data(
-                    "application/vnv.orange-canvas.registry.qualified-name"
-                )
+                qname = data.data(MIME_TYPE)
                 try:
                     desc = self.__registry.widget(bytes(qname).decode())
                 except KeyError:
                     log.error("Unknown qualified name '%s'", qname)
                 else:
                     pos = event.scenePos()
-                    self.createNewNode(desc, position=(pos.x(), pos.y()))
+                    item = self.__scene.item_at(event.scenePos(), items.LinkItem)
+                    link = self.scene().link_for_item(item) if item else None
+                    if link and can_insert_node(desc, link):
+                        node = self.newNodeHelper(desc, position=(pos.x(), pos.y()))
+                        self.insertNode(node, link)
+                    else:
+                        self.createNewNode(desc, position=(pos.x(), pos.y()))
                 return True
 
             elif etype == QEvent.GraphicsSceneMousePress:
@@ -1093,7 +1180,7 @@ class SchemeEditWidget(QWidget):
             # just yet (instead wait for the mouse move event).
             handler = interactions.RectangleSelectionAction(self)
             rval = handler.mousePressEvent(event)
-            if rval == True:
+            if rval is True:
                 self.__possibleSelectionHandler = handler
             return rval
 
@@ -1578,6 +1665,50 @@ class SchemeEditWidget(QWidget):
             )
             action.edit_links()
 
+    def __nodeInsert(self):
+        """
+        Node insert was requested from the context menu.
+        """
+        if not self.__contextMenuTarget:
+            return
+
+        original_link = self.__contextMenuTarget
+        source_node = original_link.source_node
+        sink_node = original_link.sink_node
+
+        def filterFunc(index):
+            desc = index.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+            if isinstance(desc, WidgetDescription):
+                return can_insert_node(desc, original_link)
+            else:
+                return False
+
+        x = (source_node.position[0] + sink_node.position[0]) / 2
+        y = (source_node.position[1] + sink_node.position[1]) / 2
+
+        menu = self.quickMenu()
+        menu.setFilterFunc(filterFunc)
+        menu.setSortingFunc(None)
+
+        view = self.view()
+        try:
+            action = menu.exec_(view.mapToGlobal(view.mapFromScene(QPoint(x, y))))
+        finally:
+            menu.setFilterFunc(None)
+
+        if action:
+            item = action.property("item")
+            desc = item.data(QtWidgetRegistry.WIDGET_DESC_ROLE)
+        else:
+            return
+
+        if can_insert_node(desc, original_link):
+            new_node = self.newNodeHelper(desc, position=(x, y))
+            self.insertNode(new_node, original_link)
+        else:
+            log.info("Cannot insert node: links not possible.")
+
+
     def __duplicateSelected(self):
         """
         Duplicate currently selected nodes.
@@ -1695,59 +1826,62 @@ class SchemeEditWidget(QWidget):
     def __saveWindowGroup(self):
         # Run a 'Save Window Group' dialog
         workflow = self.__scheme  # type: widgetsscheme.WidgetsScheme
-        state = []
-        for node in workflow.nodes:  # type: SchemeNode
-            w = workflow.widget_for_node(node)
-            if w.isVisible():
-                data = workflow.save_widget_geometry_for_node(node)
-                state.append((node, data))
-
-        presets = workflow.property("_presets") or []
-        items = [name for name, _ in presets]
-
+        state = workflow.widget_manager.save_window_state()
+        presets = workflow.window_group_presets()
+        items = [g.name for g in presets]
+        default = [i for i, g in enumerate(presets) if g.default]
         dlg = SaveWindowGroup(
             self, windowTitle="Save Group as...")
         dlg.setWindowModality(Qt.ApplicationModal)
         dlg.setItems(items)
+        if default:
+            dlg.setDefaultIndex(default[0])
 
         menu = self.__windowGroupsAction.menu()  # type: QMenu
         group = self.__windowGroupsActionGroup
 
         def store_group():
             text = dlg.selectedText()
+            default = dlg.isDefaultChecked()
             actions = group.actions()  # type: List[QAction]
             try:
                 idx = items.index(text)
             except ValueError:
                 idx = -1
-            newpresets = list(presets)
+            newpresets = [copy.copy(g) for g in presets]  # shallow copy
+            newpreset = Scheme.WindowGroup(text, default, state)
             if idx == -1:
                 # new group slot
-                newpresets.append((text, state))
+                newpresets.append(newpreset)
                 action = QAction(text, menu)
                 action.setShortcut(
                     QKeySequence("Meta+P, Ctrl+{}".format(len(newpresets)))
                 )
-                oldstate = None
+                oldpreset = None
             else:
-                newpresets[idx] = (text, state)
+                newpresets[idx] = newpreset
+
                 action = actions[idx]
                 # store old state for undo
-                _, oldstate = presets[idx]
+                oldpreset = presets[idx]
 
+            if newpreset.default:
+                idx_ = idx if idx >= 0 else len(newpresets) - 1
+                for g in newpresets[:idx_] + newpresets[idx_ + 1:]:
+                    g.default = False
             sep = menu.findChild(QAction, "groups-separator")
             assert isinstance(sep, QAction) and sep.isSeparator()
 
             def redo():
-                action.setData(state)
-                workflow.setProperty("_presets", newpresets)
+                action.setData(newpreset)
+                workflow.set_window_group_presets(newpresets)
                 if idx == -1:
                     group.addAction(action)
                     menu.insertAction(sep, action)
 
             def undo():
-                action.setData(oldstate)
-                workflow.setProperty("_presets", presets)
+                action.setData(oldpreset)
+                workflow.set_window_group_presets(presets)
                 if idx == -1:
                     group.removeAction(action)
                     menu.removeAction(action)
@@ -1764,34 +1898,27 @@ class SchemeEditWidget(QWidget):
 
     def __activateWindowGroup(self, action):
         # type: (QAction) -> None
-        state = action.data()
+        data = action.data()  # type: Scheme.WindowGroup
         workflow = self.__scheme
         if not isinstance(workflow, widgetsscheme.WidgetsScheme):
             return
-
-        state = {node: geom for node, geom in state}
-        for node in workflow.nodes:
-            w = workflow.widget_for_node(node)  # type: QWidget
-            w.setVisible(node in state)
-            if node in state:
-                workflow.restore_widget_geometry_for_node(node, state[node])
-                w.raise_()
+        workflow.widget_manager.activate_window_group(data)
 
     def __clearWindowGroups(self):
-        workflow = self.__scheme
-        presets = workflow.property("_presets") or []
+        workflow = self.__scheme  # type: Scheme
+        presets = workflow.window_group_presets()
         menu = self.__windowGroupsAction.menu()  # type: QMenu
         group = self.__windowGroupsActionGroup
         actions = group.actions()
 
         def redo():
-            workflow.setProperty("_presets", [])
+            workflow.set_window_group_presets([])
             for action in reversed(actions):
                 group.removeAction(action)
                 menu.removeAction(action)
 
         def undo():
-            workflow.setProperty("_presets", presets)
+            workflow.set_window_group_presets(presets)
             sep = menu.findChild(QAction, "groups-separator")
             for action in actions:
                 group.addAction(action)
@@ -1800,6 +1927,27 @@ class SchemeEditWidget(QWidget):
         self.__undoStack.push(
             commands.SimpleUndoCommand(redo, undo, "Delete All Window Groups")
         )
+
+    def __raiseToFont(self):
+        # Raise current visible widgets to front
+        wf = self.__scheme
+        if wf is not None:
+            wf.widget_manager.raise_widgets_to_front()
+
+    def activateDefaultWindowGroup(self):
+        # type: () -> bool
+        """
+        Activate the default window group if one exists.
+
+        Return `True` if a default group exists and was activated; `False` if
+        not.
+        """
+        for action in self.__windowGroupsActionGroup.actions():
+            g = action.data()
+            if g.default:
+                action.trigger()
+                return True
+        return False
 
 
 class SaveWindowGroup(QDialog):
@@ -1820,10 +1968,16 @@ class SaveWindowGroup(QDialog):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLength,
             insertPolicy=QComboBox.NoInsert,
         )
+        cb.currentIndexChanged.connect(self.__currentIndexChanged)
         # default text if no items are present
         cb.setEditText(self.tr("Window Group 1"))
         cb.lineEdit().selectAll()
         form.addRow(self.tr("Save As:"), cb)
+        self._checkbox = check = QCheckBox(
+            self.tr("Use as default"),
+            toolTip="Automatically use this preset when opening the workflow."
+        )
+        form.setWidget(1, QFormLayout.FieldRole, check)
         bb = QDialogButtonBox(
             standardButtons=QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.accepted.connect(self.__accept_check)
@@ -1836,6 +1990,12 @@ class SaveWindowGroup(QDialog):
             "workflow view presets."
         )
         cb.setFocus(Qt.NoFocusReason)
+
+    def __currentIndexChanged(self, idx):
+        state = self._combobox.itemData(idx, Qt.UserRole + 1)
+        if not isinstance(state, bool):
+            state = False
+        self._checkbox.setChecked(state)
 
     def __accept_check(self):
         cb = self._combobox
@@ -1869,10 +2029,20 @@ class SaveWindowGroup(QDialog):
         if items:
             self._combobox.setCurrentIndex(len(items) - 1)
 
+    def setDefaultIndex(self, idx):
+        # type: (int) -> None
+        self._combobox.setItemData(idx, True, Qt.UserRole + 1)
+        self._checkbox.setChecked(self._combobox.currentIndex() == idx)
+
     def selectedText(self):
         # type: () -> str
         """Return the current entered text."""
         return self._combobox.currentText()
+
+    def isDefaultChecked(self):
+        # type: () -> bool
+        """Return the state of the 'Use as default' check box."""
+        return self._checkbox.isChecked()
 
 
 def geometry_from_annotation_item(item):
@@ -1918,6 +2088,13 @@ def is_printable(unichar):
 def node_properties(scheme):
     scheme.sync_node_properties()
     return [dict(node.properties) for node in scheme.nodes]
+
+
+def can_insert_node(new_node_desc, original_link):
+    return any(scheme.compatible_channels(original_link.source_channel, input)
+               for input in new_node_desc.inputs) and \
+           any(scheme.compatible_channels(output, original_link.sink_channel)
+               for output in new_node_desc.outputs)
 
 
 def uniquify(item, names, pattern="{item}-{_}", start=0):

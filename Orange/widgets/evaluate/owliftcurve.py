@@ -58,6 +58,7 @@ class OWLiftCurve(widget.OWWidget):
                   "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
+    keywords = []
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)

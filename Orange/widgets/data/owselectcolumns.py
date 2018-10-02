@@ -103,6 +103,7 @@ class OWSelectAttributes(widget.OWWidget):
                   "data features, classes or meta variables."
     icon = "icons/SelectColumns.svg"
     priority = 100
+    keywords = ["filter"]
 
     class Inputs:
         data = Input("Data", Table)

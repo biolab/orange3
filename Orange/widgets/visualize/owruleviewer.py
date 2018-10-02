@@ -21,6 +21,7 @@ class OWRuleViewer(widget.OWWidget):
     description = "Review rules induced from data."
     icon = "icons/CN2RuleViewer.svg"
     priority = 1140
+    keywords = []
 
     class Inputs:
         data = Input("Data", Table)

@@ -169,6 +169,7 @@ class OWRank(OWWidget):
     description = "Rank and filter data features by their relevance."
     icon = "icons/Rank.svg"
     priority = 1102
+    keywords = []
 
     buttons_area_orientation = Qt.Vertical
 

@@ -11,8 +11,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
-    QGraphicsSimpleTextItem,
-    QGraphicsLayoutItem, QAction,
+    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox
 )
 from AnyQt.QtGui import (
     QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
@@ -32,7 +31,7 @@ from Orange.clustering.hierarchical import \
     leaves, prune, top_clusters
 
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import colorpalette, itemmodels
+from Orange.widgets.utils import colorpalette, itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.widget import Input, Output, Msg
@@ -433,11 +432,11 @@ class DendrogramWidget(QGraphicsWidget):
 
         """
         if state is False and item not in self._selection or \
-                state == True and item in self._selection:
+                state is True and item in self._selection:
             return  # State unchanged
 
         if item in self._selection:
-            if state == False:
+            if state is False:
                 self._remove_selection(item)
                 self._re_enumerate_selections()
                 self.selectionChanged.emit()
@@ -759,6 +758,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                   "constructed from the input distance matrix."
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
+    keywords = []
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)
@@ -824,9 +824,18 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         model = itemmodels.VariableListModel()
         model[:] = self.basic_annotations
-        self.label_cb = gui.comboBox(
-            self.controlArea, self, "annotation", box="Annotation",
-            model=model, callback=self._update_labels, contentsLength=12)
+
+        box = gui.widgetBox(self.controlArea, "Annotations")
+        self.label_cb = combobox.ComboBoxSearch(
+            minimumContentsLength=14,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
+        )
+        box.layout().addWidget(self.label_cb)
+        self.label_cb.activated[int].connect(
+            lambda idx: setattr(self, "annotation", model[idx])
+        )
+        self.label_cb.activated.connect(self._update_labels)
+        self.label_cb.setModel(model)
 
         box = gui.radioButtons(
             self.controlArea, self, "pruning", box="Pruning",
@@ -1051,6 +1060,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             else:
                 self.annotation = "Enumeration"
             self.openContext(items.domain)
+            self.label_cb.setCurrentIndex(model.indexOf(self.annotation))
         else:
             name_option = bool(
                 items is not None and (
@@ -1710,7 +1720,7 @@ def clusters_at_height(root, height):
     return cluster_list
 
 
-def main(argv=None):
+def main(argv=None):  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     import sip
     import Orange.distance as distance
@@ -1736,12 +1746,13 @@ def main(argv=None):
     rval = app.exec_()
     w.set_distances(None)
     w.handleNewSignals()
-
+    w.saveSettings()
     w.onDeleteWidget()
     sip.delete(w)
     del w
     app.processEvents()
     return rval
 
-if __name__ == "__main__":
+
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

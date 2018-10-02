@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.data.io import FileFormat
+from Orange.widgets.utils.matplotlib_export import scene_code
 
 # Importing WebviewWidget can fail if neither QWebKit (old, deprecated) nor
 # QWebEngine (bleeding-edge, hard to install) are available
@@ -179,6 +180,36 @@ class SvgFormat(ImgFormat):
                 pass
 
         super().write_image(filename, scene)
+
+
+class MatplotlibFormat:
+    # not registered as a FileFormat as it only works with scatter plot
+    EXTENSIONS = ('.py',)
+    DESCRIPTION = 'Python Code (with Matplotlib)'
+    PRIORITY = 300
+
+    @classmethod
+    def write_image(cls, filename, scene):
+        code = scene_code(scene) + "\n\nplt.show()"
+        with open(filename, "wt") as f:
+            f.write(code)
+
+    @classmethod
+    def write(cls, filename, scene):
+        if type(scene) == dict:
+            scene = scene['scene']
+        cls.write_image(filename, scene)
+
+
+class MatplotlibPDFFormat(MatplotlibFormat):
+    EXTENSIONS = ('.pdf',)
+    DESCRIPTION = 'Portable Document Format (from Matplotlib)'
+    PRIORITY = 200
+
+    @classmethod
+    def write_image(cls, filename, scene):
+        code = scene_code(scene) + "\n\nplt.savefig({})".format(repr(filename))
+        exec(code, {})  # will generate a pdf
 
 
 if hasattr(QtGui, "QPdfWriter"):

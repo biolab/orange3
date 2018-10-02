@@ -540,8 +540,6 @@ class PyListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return str(section)
 
-
-    # noinspection PyMethodOverriding
     def rowCount(self, parent=QModelIndex()):
         return 0 if parent.isValid() else len(self._list)
 
@@ -572,7 +570,8 @@ class PyListModel(QAbstractListModel):
     def setData(self, index, value, role=Qt.EditRole):
         if role == Qt.EditRole:
             if self._is_index_valid(index):
-                self[index.row()] = value  # Will emit proper dataChanged signal
+                self._list[index.row()] = value
+                self.dataChanged.emit(index, index)
                 return True
         elif self._is_index_valid(index):
             self._other_data[index.row()][role] = value
@@ -589,7 +588,7 @@ class PyListModel(QAbstractListModel):
             for role, value in data.items():
                 if role == Qt.EditRole and \
                         self._is_index_valid(index):
-                    self[index.row()] = value
+                    self._list[index.row()] = value
                 elif self._is_index_valid(index):
                     self._other_data[index.row()][role] = value
 
@@ -602,8 +601,6 @@ class PyListModel(QAbstractListModel):
         else:
             return self._flags | Qt.ItemIsDropEnabled
 
-
-    # noinspection PyMethodOverriding
     def insertRows(self, row, count, parent=QModelIndex()):
         """ Insert ``count`` rows at ``row``, the list fill be filled
         with ``None``
@@ -614,8 +611,6 @@ class PyListModel(QAbstractListModel):
         else:
             return False
 
-
-    # noinspection PyMethodOverriding
     def removeRows(self, row, count, parent=QModelIndex()):
         """Remove ``count`` rows starting at ``row``
         """
@@ -624,6 +619,28 @@ class PyListModel(QAbstractListModel):
             return True
         else:
             return False
+
+    def moveRows(self, sourceParent, sourceRow, count,
+                 destinationParent, destinationChild):
+        # type: (QModelIndex, int, int, QModelIndex, int) -> bool
+        """
+        Move `count` rows starting at `sourceRow` to `destinationChild`.
+
+        Reimplemented from QAbstractItemModel.moveRows
+        """
+        if not self.beginMoveRows(sourceParent, sourceRow, sourceRow + count - 1,
+                                  destinationParent, destinationChild):
+            return False
+        take_slice = slice(sourceRow, sourceRow + count)
+        insert_at = destinationChild
+        if insert_at > sourceRow:
+            insert_at -= count
+        items, other = self._list[take_slice], self._other_data[take_slice]
+        del self._list[take_slice], self._other_data[take_slice]
+        self._list[insert_at:insert_at] = items
+        self._other_data[insert_at: insert_at] = other
+        self.endMoveRows()
+        return True
 
     def extend(self, iterable):
         list_ = list(iterable)
@@ -1017,6 +1034,27 @@ class DomainModel(VariableListModel):
     def sort(self, *args, **kwargs):
         return super().sort(*args, **kwargs)
 
+    def setData(self, index, value, role=Qt.EditRole):
+        # reimplemented
+        if role == Qt.EditRole:
+            return False
+        else:
+            return super().setData(index, value, role)
+
+    def setItemData(self, index, data):
+        # reimplemented
+        if Qt.EditRole in data:
+            return False
+        else:
+            return super().setItemData(index, data)
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        # reimplemented
+        return False
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        # reimplemented
+        return False
 
 _html_replace = [("<", "&lt;"), (">", "&gt;")]
 

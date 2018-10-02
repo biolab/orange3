@@ -2,6 +2,10 @@
 # pylint: disable=missing-docstring
 from unittest import TestCase
 
+import time
+
+import numpy as np
+
 from Orange.data import Table
 from Orange.statistics.basic_stats import DomainBasicStats, BasicStats
 
@@ -23,6 +27,15 @@ class TestDomainBasicStats(TestCase):
         domain_stats = DomainBasicStats(self.zoo, include_metas=True)
         self.assertStatsEqual(domain_stats.stats,
                               attr_stats + class_var_stats + meta_stats)
+
+    def test_speed(self):
+        n, m = 10, 10000
+        data = Table.from_numpy(None, np.random.rand(n, m))
+        start = time.time()
+        for i in range(m):
+            BasicStats(data, i)
+        elapsed = time.time() - start
+        self.assertLess(elapsed, 10.0)
 
     def assertStatsEqual(self, stats1, stats2):
         self.assertEqual(len(stats1), len(stats2))

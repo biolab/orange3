@@ -20,9 +20,10 @@ import sys
 import logging
 import traceback
 import enum
+import itertools
 from collections import namedtuple, deque
 from urllib.parse import urlencode
-
+from typing import List, Tuple, Union
 import sip
 
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
@@ -195,6 +196,20 @@ class WidgetsScheme(Scheme):
         QCoreApplication.sendEvent(self, QEvent(QEvent.Close))
 
 
+class ActivationMonitor(QObject):
+    """
+    An event filter for monitoring QWidgets for `WindowActivation` events.
+    """
+    #: Signal emitted with the `QWidget` instance that was activated.
+    activated = Signal(QWidget)
+
+    def eventFilter(self, obj, event):
+        # type: (QObject, QEvent) -> bool
+        if event.type() == QEvent.WindowActivate:
+            self.activated.emit(obj)
+        return False
+
+
 class WidgetManager(QObject):
     """
     OWWidget instance manager class.
@@ -283,6 +298,10 @@ class WidgetManager(QObject):
 
         # Widgets float above other windows
         self.__float_widgets_on_top = False
+
+        self.__activation_monitor = ActivationMonitor(self)
+        self.__activation_counter = itertools.count()
+        self.__activation_monitor.activated.connect(self.__mark_activated)
 
     def set_scheme(self, scheme):
         """
@@ -432,6 +451,7 @@ class WidgetManager(QObject):
 
         state = WidgetManager.Materialized(node, widget)
         self.__initstate_for_node[node] = state
+        widget.installEventFilter(self.__activation_monitor)
         self.widget_for_node_added.emit(node, widget)
 
         return state
@@ -455,6 +475,7 @@ class WidgetManager(QObject):
             del self.__node_for_widget[state.widget]
             node.title_changed.disconnect(state.widget.setCaption)
             state.widget.progressBarValueChanged.disconnect(node.set_progress)
+            state.widget.removeEventFilter(self.__activation_monitor)
             del state.widget._Report__report_view
             self.widget_for_node_removed.emit(node, state.widget)
             self._delete_widget(state.widget)
@@ -663,6 +684,89 @@ class WidgetManager(QObject):
         self.__float_widgets_on_top = float_on_top
         for widget in self.__widget_for_node.values():
             self.__set_float_on_top_flag(widget)
+
+    def save_window_state(self):
+        # type: () -> List[Tuple[SchemeNode, bytes]]
+        """
+        Save current open window arrangement.
+        """
+        workflow = self.__scheme  # type: WidgetsScheme
+        state = []
+        for node in workflow.nodes:  # type: SchemeNode
+            w = self.__widget_for_node.get(node, None)
+            if w is None:
+                continue
+            stackorder = w.property("__activation_order") or -1
+            if w.isVisible():
+                data = workflow.save_widget_geometry_for_node(node)
+                state.append((stackorder, node, data))
+
+        state = [(node, data)
+                 for _, node, data in sorted(state, key=lambda t: t[0])]
+        return state
+
+    def restore_window_state(self, state):
+        # type: (List[Tuple[SchemeNode, bytes]]) -> None
+        """
+        Restore the window state.
+        """
+        workflow = self.__scheme  # type: WidgetsScheme
+        visible = {node for node, _ in state}
+        # first hide all other widgets
+        for node in workflow.nodes:
+            if node not in visible:
+                # avoid creating widgets if not needed
+                w = self.__widget_for_node.get(node, None)
+                if w is not None:
+                    w.hide()
+        allnodes = set(workflow.nodes)
+        # restore state for visible group; windows are stacked as they appear
+        # in the state list.
+        w = None
+        for node, state in filter(lambda t: t[0] in allnodes, state):
+            w = self.widget_for_node(node)  # also create it if needed
+            w.show()
+            w.restoreGeometryAndLayoutState(QByteArray(state))
+            w.raise_()
+            self.__mark_activated(w)
+
+        # activate (give focus to) the last window
+        if w is not None:
+            w.activateWindow()
+
+    def activate_window_group(self, group):
+        # type: (Scheme.WindowGroup) -> None
+        self.restore_window_state(group.state)
+
+    def raise_widgets_to_front(self):
+        """
+        Raise all current visible widgets to the front.
+
+        The widgets will be stacked by activation order.
+        """
+        workflow = self.__scheme  # type: WidgetsScheme
+        if workflow is None:
+            return
+
+        widgets = filter(
+            lambda w: w.isVisible() if w is not None else False,
+            map(self.__widget_for_node.get, workflow.nodes))
+        widgets = sorted(
+            widgets, key=lambda _: _.property("__activation_order") or 0,
+        )
+        widgets = list(widgets)
+        w = None
+        for w in widgets:
+            w.raise_()
+        if w is not None:
+            # give focus to the top window
+            w.activateWindow()
+
+    def __mark_activated(self, widget):
+        # type: (QWidget) ->  None
+        # Update tracked stacking order for `widget`
+        widget.setProperty("__activation_order",
+                           next(self.__activation_counter))
 
     def __create_delayed(self):
         if self.__init_queue:

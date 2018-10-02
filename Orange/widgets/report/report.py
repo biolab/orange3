@@ -184,7 +184,7 @@ class Report:
         elif isinstance(plot, WebviewWidget):
             try:
                 svg = plot.svg()
-            except IndexError:
+            except (IndexError, ValueError):
                 svg = plot.html()
             self.report_html += svg
 
@@ -323,7 +323,7 @@ class Report:
         elif isinstance(table, Iterable):
             body = report_list(table, header_rows, header_columns)
             table = list(table)
-            n_hidden_rows = len(table)
+            n_hidden_rows = len(table) - row_limit
             if len(table) and isinstance(table[0], Iterable):
                 n_cols = len(table[0])
         else:

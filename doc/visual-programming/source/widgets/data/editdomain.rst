@@ -16,30 +16,16 @@ This widget can be used to edit/change a dataset's domain.
 
 .. figure:: images/EditDomain-stamped.png
 
-1. All features (including meta attributes) from the input dataset are
-   listed in the *Domain Features* list in the box on the left.
-   Selecting one feature displays an editor on the right.
-2. The name of the feature can be changed in the *Name* line edit. For
-   *Discrete* features, value names can also be changed in the *Values*
-   list box. Additonal feature annotations can be added/removed/edited
-   in the *Labels* box. To add a new label, click the "+" button and add
-   the *Key* and *Value* columns for the new entry. Selecting an
-   existing label and pressing "-" will remove the annotation.
-3. To revert the changes made to the feature, press the *Reset Selected*
-   button in the *Reset* box while the feature is selected in the
-   *Domain Features* list. Pressing *Reset All* will reset all features
-   in the domain at the same time.
-4. Pressing the *Apply* button will send the changed domain dataset to the
-   output channel.
+1. All features (including meta attributes) from the input dataset are listed in the *Variables* list. Selecting one feature displays an editor on the right.
+2. Change the name of the feature.
+3. Change the value names for discrete features in the *Values* list box. Double-click to edit the name. To reorder the values (for example to display them in :doc:`Distributions <../visualize/distributions>`), use the up and down keys at the bottom of the box. To add or remove a value, use + and - buttons.
+4. Additional feature annotations can be added, removed or edited in the *Labels* box. Add a new label with the + button and add the *Key* and *Value* for the new entry. Key will be displayed in the top left corner of the :doc:`Data Table <../data/datatable>`, while values will appear below the specified column. Remove an existing label with the - button.
+5. To revert the changes made to the selected feature, press the *Reset Selected* button while the feature is selected in the *Variables* list. Pressing *Reset All* will remove all the changes to the domain.
+6. Press *Apply* to send the new domain to the output.
 
 Example
 -------
 
-Below, we demonstrate how to simply edit an existing domain. We selected the
-*lenses.tab* dataset and edited the *perscription* attribute. Where in
-the original we had the values *myope* and *hypermetrope*, we changed it
-into *nearsightedness* and *farsightedness* instead. For an easier
-comparison, we fed both the original and edited data into the :doc:`Data
-Table <../data/datatable>` widget.
+Below, we demonstrate how to simply edit an existing domain. We selected the *heart_disease.tab* dataset and edited the *gender* attribute. Where in the original we had the values *female* and *male*, we changed it into *F* for female and *M* for male. Then we used the down key to switch the order of the variables. Finally, we added a label to mark that the attribute is binary. We can observe the edited data in the :doc:`Data Table <../data/datatable>` widget.
 
 .. figure:: images/EditDomain-Example.png
