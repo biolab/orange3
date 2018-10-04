@@ -134,7 +134,6 @@ class MosaicVizRankTests(WidgetTest):
             self.send_signal(self.widget.Inputs.data, data)
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
-            self.assertTrue(widget.interior_coloring == widget.PEARSON)
             vizrank.max_attrs = 2
             self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
             vizrank.max_attrs = 3
@@ -143,7 +142,6 @@ class MosaicVizRankTests(WidgetTest):
             self.assertEqual(vizrank.state_count(), 25)  # above + 5x4x3x2 / 2x3x4
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 2, 0)
-            self.assertTrue(widget.interior_coloring == widget.CLASS_DISTRIBUTION)
             vizrank.max_attrs = 2
             self.assertEqual(vizrank.state_count(), 10)  # 4 + 4x3 / 2
             vizrank.max_attrs = 3
@@ -167,7 +165,6 @@ class MosaicVizRankTests(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         vizrank.compute_attr_order()
 
-        widget.interior_coloring = widget.CLASS_DISTRIBUTION
         vizrank.max_attrs = 4
         self.assertEqual([state.copy()
                           for state in vizrank.iterate_states(None)],
@@ -190,7 +187,7 @@ class MosaicVizRankTests(WidgetTest):
                           for state in vizrank.iterate_states([0, 3])],
                          [[0, 3], [1, 3], [2, 3]])
 
-        widget.interior_coloring = widget.PEARSON
+        widget.variable_color = None
         vizrank.max_attrs = 4
         self.assertEqual([state.copy()
                           for state in vizrank.iterate_states(None)],
@@ -303,10 +300,8 @@ class MosaicVizRankTests(WidgetTest):
             discrete_data = self.widget.discrete_data
 
             if color == "(Pearson residuals)":
-                self.widget.interior_coloring = self.widget.PEARSON
                 self.assertIsNone(discrete_data.domain.class_var)
             else:
-                self.widget.interior_coloring = self.widget.CLASS_DISTRIBUTION
                 self.assertEqual(color, str(discrete_data.domain.class_var))
 
             output = self.get_output("Data")

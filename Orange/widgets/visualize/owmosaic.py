@@ -137,7 +137,7 @@ class MosaicVizRank(VizRankDialog, OWComponent):
                 self.attr_ordering = [a for _, a in attrs]
 
     def _compute_class_dists(self):
-        return self.master.interior_coloring == self.master.CLASS_DISTRIBUTION
+        return self.master.variable_color is not None
 
     def state_count(self):
         """
@@ -266,12 +266,9 @@ class OWMosaicDisplay(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    PEARSON, CLASS_DISTRIBUTION = 0, 1
-
     settingsHandler = DomainContextHandler()
     settings_version = 1
     use_boxes = Setting(True)
-    interior_coloring = Setting(CLASS_DISTRIBUTION)  # TODO: This is not setting
     variable1 = ContextSetting(None)
     variable2 = ContextSetting(None)
     variable3 = ContextSetting(None)
@@ -344,20 +341,11 @@ class OWMosaicDisplay(OWWidget):
             callback=self.set_color_data, model=self.color_model)
         self.bar_button = gui.checkBox(
             box2, self, 'use_boxes', label='Compare with total',
-            callback=self._compare_with_total)
+            callback=self.update_graph)
         gui.rubber(self.controlArea)
 
     def sizeHint(self):
         return QSize(720, 530)
-
-    def _compare_with_total(self):
-        if self.data is not None and \
-                self.data.domain.class_var is not None and \
-                self.interior_coloring != self.CLASS_DISTRIBUTION:
-            self.interior_coloring = self.CLASS_DISTRIBUTION
-            self.coloring_changed()  # This also calls self.update_graph
-        else:
-            self.update_graph()
 
     def _get_discrete_data(self, data):
         """
@@ -473,12 +461,7 @@ class OWMosaicDisplay(OWWidget):
     def set_color_data(self):
         if self.data is None or len(self.data) < 2:
             return
-        if self.variable_color is None:
-            self.interior_coloring = self.PEARSON
-            self.bar_button.setEnabled(False)
-        else:
-            self.interior_coloring = self.CLASS_DISTRIBUTION
-            self.bar_button.setEnabled(True)
+        self.bar_button.setEnabled(self.variable_color is not None)
         attrs = [v for v in self.model_1 if v and v is not self.variable_color]
         domain = Domain(attrs, self.variable_color, None)
         self.color_data = color_data = self.data.from_table(domain, self.data)
@@ -754,7 +737,7 @@ class OWMosaicDisplay(OWWidget):
             if not conditionaldict[attr_vals]:
                 return
 
-            if self.interior_coloring == self.PEARSON:
+            if self.variable_color is None:
                 s = sum(apriori_dists[0])
                 expected = s * reduce(
                     mul,
@@ -844,7 +827,7 @@ class OWMosaicDisplay(OWWidget):
         def draw_legend(x0_x1, y0_y1):
             x0, x1 = x0_x1
             _, y1 = y0_y1
-            if self.interior_coloring == self.PEARSON:
+            if self.variable_color is None:
                 names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
                          "Residuals:"]
                 colors = self.RED_COLORS[::-1] + self.BLUE_COLORS[1:]
@@ -869,7 +852,7 @@ class OWMosaicDisplay(OWWidget):
             size = 8
 
             for i in range(len(names) - 1):
-                if self.interior_coloring == self.PEARSON:
+                if self.variable_color is None:
                     edgecolor = Qt.black
                 else:
                     edgecolor = colors[i]
@@ -912,7 +895,7 @@ class OWMosaicDisplay(OWWidget):
                        (self.canvas_view.width() - 120) / 2,
                        self.canvas_view.height() / 2)
             return
-        if self.interior_coloring == self.PEARSON:
+        if self.variable_color is None:
             apriori_dists = [get_distribution(data, attr) for attr in attr_list]
         else:
             apriori_dists = []
