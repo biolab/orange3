@@ -17,7 +17,7 @@ from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
 from Orange.preprocess.score import ReliefF
 from Orange.statistics.distribution import get_distribution, get_distributions
-from Orange.widgets import gui
+from Orange.widgets import gui, settings
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import (
     Setting, DomainContextHandler, ContextSetting, SettingProvider)
@@ -269,13 +269,14 @@ class OWMosaicDisplay(OWWidget):
     PEARSON, CLASS_DISTRIBUTION = 0, 1
 
     settingsHandler = DomainContextHandler()
+    settings_version = 1
     use_boxes = Setting(True)
-    interior_coloring = Setting(CLASS_DISTRIBUTION)
-    variable1 = ContextSetting("")
-    variable2 = ContextSetting("")
-    variable3 = ContextSetting("")
-    variable4 = ContextSetting("")
-    variable_color = ContextSetting("")
+    interior_coloring = Setting(CLASS_DISTRIBUTION)  # TODO: This is not setting
+    variable1 = ContextSetting(None)
+    variable2 = ContextSetting(None)
+    variable3 = ContextSetting(None)
+    variable4 = ContextSetting(None)
+    variable_color = ContextSetting(None)
     selection = ContextSetting(set())
 
     BAR_WIDTH = 5
@@ -318,26 +319,29 @@ class OWMosaicDisplay(OWWidget):
         self.canvas_view.setRenderHint(QPainter.Antialiasing)
 
         box = gui.vBox(self.controlArea, box=True)
+        self.model_1 = DomainModel(
+            order=DomainModel.MIXED, valid_types=DomainModel.PRIMITIVE)
+        self.model_234 = DomainModel(
+            order=DomainModel.MIXED, valid_types=DomainModel.PRIMITIVE,
+            placeholder="(None)")
         self.attr_combos = [
             gui.comboBox(
                 box, self, value="variable{}".format(i),
                 orientation=Qt.Horizontal, contentsLength=12,
                 callback=self.reset_graph,
-                sendSelectedValue=True, valueType=str, emptyString="(None)")
+                model=self.model_1 if i == 1 else self.model_234)
             for i in range(1, 5)]
         self.vizrank, self.vizrank_button = MosaicVizRank.add_vizrank(
             box, self, "Find Informative Mosaics", self.set_attr)
 
         box2 = gui.vBox(self.controlArea, box="Interior Coloring")
-        dmod = DomainModel
-        self.color_model = DomainModel(order=dmod.MIXED,
-                                       valid_types=dmod.PRIMITIVE,
-                                       placeholder="(Pearson residuals)")
+        self.color_model = DomainModel(
+            order=DomainModel.MIXED, valid_types=DomainModel.PRIMITIVE,
+            placeholder="(Pearson residuals)")
         self.cb_attr_color = gui.comboBox(
             box2, self, value="variable_color",
             orientation=Qt.Horizontal, contentsLength=12, labelWidth=50,
-            callback=self.set_color_data,
-            sendSelectedValue=True, model=self.color_model, valueType=str)
+            callback=self.set_color_data, model=self.color_model)
         self.bar_button = gui.checkBox(
             box2, self, 'use_boxes', label='Compare with total',
             callback=self._compare_with_total)
@@ -363,7 +367,8 @@ class OWMosaicDisplay(OWWidget):
         if (data is None or
                 not len(data) or
                 not any(attr.is_discrete or attr.is_continuous
-                        for attr in chain(data.domain.variables, data.domain.metas))):
+                        for attr in chain(data.domain.variables,
+                                          data.domain.metas))):
             return None
         elif any(attr.is_continuous for attr in data.domain.variables):
             return Discretize(
@@ -373,43 +378,33 @@ class OWMosaicDisplay(OWWidget):
             return data
 
     def init_combos(self, data):
-        for combo in self.attr_combos:
-            combo.clear()
+        def set_combos(value):
+            self.model_1.set_domain(value)
+            self.model_234.set_domain(value)
+            self.color_model.set_domain(value)
+
         if data is None:
-            self.color_model.set_domain(None)
+            set_combos(None)
+            self.variable1 = self.variable2 = self.variable3 \
+                = self.variable4 = self.variable_color = None
             return
-        self.color_model.set_domain(self.data.domain)
-        for combo in self.attr_combos[1:]:
-            combo.addItem("(None)")
+        set_combos(self.data.domain)
 
-        icons = gui.attributeIconDict
-        for attr in chain(data.domain.variables, data.domain.metas):
-            if attr.is_primitive():
-                for combo in self.attr_combos:
-                    combo.addItem(icons[attr], attr.name)
+        if len(self.model_1) > 0:
+            self.variable1 = self.model_1[0]
+            self.variable2 = self.model_1[min(1, len(self.model_1) - 1)]
+        self.variable3 = self.variable4 = None
+        self.variable_color = self.data.domain.class_var  # None is OK, too
 
-        if self.attr_combos[0].count() > 0:
-            self.variable1 = self.attr_combos[0].itemText(0)
-            self.variable2 = self.attr_combos[1].itemText(
-                2 * (self.attr_combos[1].count() > 2))
-        self.variable3 = self.attr_combos[2].itemText(0)
-        self.variable4 = self.attr_combos[3].itemText(0)
-        if self.data.domain.class_var:
-            self.variable_color = self.data.domain.class_var.name
-            idx = self.cb_attr_color.findText(self.variable_color)
-        else:
-            idx = 0
-        self.cb_attr_color.setCurrentIndex(idx)
-
-    def get_attr_list(self):
-        return [
-            a for a in [self.variable1, self.variable2,
-                        self.variable3, self.variable4]
-            if a and a != "(None)"]
+    def get_disc_attr_list(self):
+        return [self.discrete_data.domain[var.name]
+                for var in (self.variable1, self.variable2,
+                            self.variable3, self.variable4)
+                if var]
 
     def set_attr(self, *attrs):
-        self.variable1, self.variable2, self.variable3, self.variable4 = \
-            [a.name if a else "" for a in attrs]
+        self.variable1, self.variable2, self.variable3, self.variable4 = [
+            attr and self.data.domain[attr.name] for attr in attrs]
         self.reset_graph()
 
     def resizeEvent(self, e):
@@ -476,19 +471,16 @@ class OWMosaicDisplay(OWWidget):
         self.update_graph()
 
     def set_color_data(self):
-        if self.data is None or len(self.data) < 2 or len(self.data.domain.attributes) < 1:
+        if self.data is None or len(self.data) < 2:
             return
-        if self.cb_attr_color.currentIndex() <= 0:
-            color_var = None
+        if self.variable_color is None:
             self.interior_coloring = self.PEARSON
             self.bar_button.setEnabled(False)
         else:
-            color_var = self.data.domain[self.cb_attr_color.currentText()]
             self.interior_coloring = self.CLASS_DISTRIBUTION
             self.bar_button.setEnabled(True)
-        attributes = [v for v in self.data.domain.attributes + self.data.domain.class_vars
-                      + self.data.domain.metas if v != color_var and v.is_primitive()]
-        domain = Domain(attributes, color_var, None)
+        attrs = [v for v in self.model_1 if v and v is not self.variable_color]
+        domain = Domain(attrs, self.variable_color, None)
         self.color_data = color_data = self.data.from_table(domain, self.data)
         self.discrete_data = self._get_discrete_data(color_data)
         self.vizrank.stop_and_reset()
@@ -576,7 +568,7 @@ class OWMosaicDisplay(OWWidget):
             attr = attr_list[0]
             # how much smaller rectangles do we draw
             edge = len(attr_list) * spacing
-            values = get_variable_values_sorted(data.domain[attr])
+            values = get_variable_values_sorted(attr)
             if side % 2:
                 values = values[::-1]  # reverse names if necessary
 
@@ -600,8 +592,7 @@ class OWMosaicDisplay(OWWidget):
             # position the labels
             valrange = list(range(len(values)))
             if len(attr_list + used_attrs) == 4 and len(used_attrs) == 2:
-                attr1values = get_variable_values_sorted(
-                    data.domain[used_attrs[0]])
+                attr1values = get_variable_values_sorted(used_attrs[0])
                 if used_vals[0] == attr1values[-1]:
                     valrange = valrange[::-1]
 
@@ -615,8 +606,8 @@ class OWMosaicDisplay(OWWidget):
                 else:
                     newattrvals = val
 
-                tooltip = condition + 4 * "&nbsp;" + attr + \
-                    ": <b>" + htmlval + "</b><br>"
+                tooltip = "{}&nbsp;&nbsp;&nbsp;&nbsp;{}: <b>{}</b><br/>".format(
+                    condition, attr.name, htmlval)
                 attrs = used_attrs + [attr]
                 vals = used_vals + [val]
                 common_args = attrs, vals, newattrvals
@@ -651,7 +642,7 @@ class OWMosaicDisplay(OWWidget):
             # visualization of the last value of the first attribute
             if side == 3:
                 attr1values = \
-                    get_variable_values_sorted(data.domain[used_attrs[0]])
+                    get_variable_values_sorted(used_attrs[0])
                 if used_vals[0] != attr1values[-1]:
                     return
 
@@ -666,7 +657,7 @@ class OWMosaicDisplay(OWWidget):
 
             drawn_sides.add(side)
 
-            values = get_variable_values_sorted(data.domain[attr])
+            values = get_variable_values_sorted(attr)
             if side % 2:
                 values = values[::-1]
 
@@ -709,30 +700,17 @@ class OWMosaicDisplay(OWWidget):
                 else:
                     currpos += perc * height + spacing * (total_attrs - side)
 
-            if side == 0:
-                CanvasText(
-                    self.canvas, attr,
-                    x0 + (x1 - x0) / 2,
-                    y1 + self.ATTR_VAL_OFFSET + self.ATTR_NAME_OFFSET,
-                    align, bold=1)
-            elif side == 1:
-                CanvasText(
-                    self.canvas, attr,
-                    x0 - max_ylabel_w1 - self.ATTR_VAL_OFFSET,
-                    y0 + (y1 - y0) / 2,
-                    align, bold=1, vertical=True)
-            elif side == 2:
-                CanvasText(
-                    self.canvas, attr,
-                    x0 + (x1 - x0) / 2,
-                    y0 - self.ATTR_VAL_OFFSET - self.ATTR_NAME_OFFSET,
-                    align, bold=1)
-            else:
-                CanvasText(
-                    self.canvas, attr,
-                    x1 + max_ylabel_w2 + self.ATTR_VAL_OFFSET,
-                    y0 + (y1 - y0) / 2,
-                    align, bold=1, vertical=True)
+            xs = [x0 + (x1 - x0) / 2,
+                  x0 - max_ylabel_w1 - self.ATTR_VAL_OFFSET,
+                  x0 + (x1 - x0) / 2,
+                  x1 + max_ylabel_w2 + self.ATTR_VAL_OFFSET]
+            ys = [y1 + self.ATTR_VAL_OFFSET + self.ATTR_NAME_OFFSET,
+                  y0 + (y1 - y0) / 2,
+                  y0 - self.ATTR_VAL_OFFSET - self.ATTR_NAME_OFFSET,
+                  y0 + (y1 - y0) / 2]
+            CanvasText(
+                self.canvas, attr.name, xs[side], ys[side], align, bold=True,
+                vertical=side % 2)
 
         def add_rect(x0, x1, y0, y1, condition,
                      used_attrs, used_vals, attr_vals=""):
@@ -907,7 +885,7 @@ class OWMosaicDisplay(OWWidget):
         data = self.discrete_data
         if data is None:
             return
-        attr_list = self.get_attr_list()
+        attr_list = self.get_disc_attr_list()
         class_var = data.domain.class_var
         if class_var:
             sql = type(data) == SqlTable
@@ -927,7 +905,7 @@ class OWMosaicDisplay(OWWidget):
         else:
             self.Warning.no_valid_data.clear()
 
-        attrs = [attr for attr in attr_list if not data.domain[attr].values]
+        attrs = [attr for attr in attr_list if not attr.values]
         if attrs:
             CanvasText(self.canvas,
                        "Feature {} has no values".format(attrs[0]),
@@ -940,7 +918,7 @@ class OWMosaicDisplay(OWWidget):
             apriori_dists = []
 
         def get_max_label_width(attr):
-            values = get_variable_values_sorted(data.domain[attr])
+            values = get_variable_values_sorted(attr)
             maxw = 0
             for val in values:
                 t = CanvasText(self.canvas, val, 0, 0, bold=0, show=False)
@@ -950,14 +928,15 @@ class OWMosaicDisplay(OWWidget):
         # get the maximum width of rectangle
         xoff = 20
         width = 20
+        max_ylabel_w1 = max_ylabel_w2 = 0
         if len(attr_list) > 1:
-            text = CanvasText(self.canvas, attr_list[1], bold=1, show=0)
+            text = CanvasText(self.canvas, attr_list[1].name, bold=1, show=0)
             max_ylabel_w1 = min(get_max_label_width(attr_list[1]), 150)
             width = 5 + text.boundingRect().height() + \
                 self.ATTR_VAL_OFFSET + max_ylabel_w1
             xoff = width
             if len(attr_list) == 4:
-                text = CanvasText(self.canvas, attr_list[3], bold=1, show=0)
+                text = CanvasText(self.canvas, attr_list[3].name, bold=1, show=0)
                 max_ylabel_w2 = min(get_max_label_width(attr_list[3]), 150)
                 width += text.boundingRect().height() + \
                     self.ATTR_VAL_OFFSET + max_ylabel_w2 - 10
@@ -990,12 +969,16 @@ class OWMosaicDisplay(OWWidget):
         draw_legend((xoff, xoff + square_size), (yoff, yoff + square_size))
         self.update_selection_rects()
 
+    @classmethod
+    def migrate_context(cls, context, version):
+        if not version:
+            settings.migrate_str_to_variable(context)
 
 def get_conditional_distribution(data, attrs):
     cond_dist = defaultdict(int)
     dist = defaultdict(int)
     cond_dist[""] = dist[""] = len(data)
-    all_attrs = [data.domain[a] for a in attrs]
+    all_attrs = attrs[:]
     if data.domain.class_var is not None:
         all_attrs.append(data.domain.class_var)
 
