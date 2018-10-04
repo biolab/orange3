@@ -56,6 +56,8 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.marginal = {}
         self.last_run_max_attr = None
 
+        self.master.attrs_changed_manually.connect(self.on_manual_change)
+
     def sizeHint(self):
         return QSize(400, 512)
 
@@ -237,8 +239,18 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         return 1 if score == 0 else -log(score, 10) / 50
 
     def on_selection_changed(self, selected, deselected):
-        attrs = selected.indexes()[0].data(self._AttrRole)
-        self.selectionChanged.emit(attrs + (None, ) * (4 - len(attrs)))
+        if not selected.isEmpty():
+            attrs = selected.indexes()[0].data(self._AttrRole)
+            self.selectionChanged.emit(attrs + (None, ) * (4 - len(attrs)))
+
+    def on_manual_change(self, attrs):
+        model = self.rank_model
+        self.rank_table.selectionModel().clear()
+        for row in range(model.rowCount()):
+            row_attrs = model.data(model.index(row, 0), self._AttrRole)
+            if row_attrs == tuple(attrs):
+                self.rank_table.selectRow(row)
+                return
 
     def row_for_state(self, score, state):
         """The row consists of attributes sorted by name; class is at the
@@ -288,6 +300,8 @@ class OWMosaicDisplay(OWWidget):
                   QColor(255, 100, 100), QColor(255, 0, 0)]
     graph_name = "canvas"
 
+    attrs_changed_manually = Signal(list)
+
     class Warning(OWWidget.Warning):
         incompatible_subset = Msg("Data subset is incompatible with Data")
         no_valid_data = Msg("No valid data")
@@ -324,7 +338,7 @@ class OWMosaicDisplay(OWWidget):
             gui.comboBox(
                 box, self, value="variable{}".format(i),
                 orientation=Qt.Horizontal, contentsLength=12,
-                callback=self.reset_graph,
+                callback=self.attr_changed,
                 model=self.model_1 if i == 1 else self.model_234)
             for i in range(1, 5)]
         self.vizrank, self.vizrank_button = MosaicVizRank.add_vizrank(
@@ -392,6 +406,10 @@ class OWMosaicDisplay(OWWidget):
     def set_attr(self, *attrs):
         self.variable1, self.variable2, self.variable3, self.variable4 = [
             attr and self.data.domain[attr.name] for attr in attrs]
+        self.reset_graph()
+
+    def attr_changed(self):
+        self.attrs_changed_manually.emit(self.get_disc_attr_list())
         self.reset_graph()
 
     def resizeEvent(self, e):
