@@ -1,13 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
-import unittest
 import pickle
-import numpy as np
+import unittest
 
+import numpy as np
+from sklearn import __version__ as sklearn_version
+
+from Orange.data import Table
 from Orange.preprocess import Continuize, Normalize
 from Orange.projection import PCA, SparsePCA, IncrementalPCA, TruncatedSVD
-from Orange.data import Table
 
 
 class TestPCA(unittest.TestCase):
@@ -62,6 +64,8 @@ class TestPCA(unittest.TestCase):
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
 
+    @unittest.skipIf(sklearn_version.startswith('0.20'),
+                     "https://github.com/scikit-learn/scikit-learn/issues/12234")
     def test_incremental_pca(self):
         data = self.ionosphere
         self.__ipca_test_helper(data, n_com=3, min_xpl_var=0.49)
