@@ -416,6 +416,7 @@ class TestOWTestLearners(WidgetTest):
         """
         Test more than two classes and cross-validation
         """
+        self.widget.cb_seed.setChecked(True)
         self.assertTupleEqual(self._test_scores(
             Table("iris")[::15], None, LogisticRegressionLearner(),
             OWTestLearners.KFold, 0),

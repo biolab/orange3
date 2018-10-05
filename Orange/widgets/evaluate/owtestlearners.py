@@ -187,6 +187,9 @@ class OWTestLearners(OWWidget):
     fold_feature = settings.ContextSetting(None)
     fold_feature_selected = settings.ContextSetting(False)
 
+    RandomSeed = 42
+    use_seed = settings.Setting(False)
+
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
 
@@ -289,6 +292,12 @@ class OWTestLearners(OWWidget):
             sendSelectedValue=True, valueType=str,
             callback=self._on_target_class_changed,
             contentsLength=8)
+
+        self.options_box = gui.vBox(self.controlArea, "Options")
+        self.cb_seed = gui.checkBox(
+            self.options_box, self, "use_seed",
+            "Replicable (deterministic) sampling",
+            callback=self.settings_changed)
 
         gui.rubber(self.controlArea)
 
@@ -717,6 +726,8 @@ class OWTestLearners(OWWidget):
             items = []
         if self.data.domain.has_discrete_class:
             items += [("Target class", self.class_selection.strip("()"))]
+        if self.use_seed:
+            items += ", deterministic"
         if items:
             self.report_items("Settings", items)
         self.report_table("Scores", self.view)
@@ -782,7 +793,7 @@ class OWTestLearners(OWWidget):
         elif self.test_data is not None:
             self.Warning.test_data_unused()
 
-        rstate = 42
+        rstate = self.RandomSeed if self.use_seed else None
         common_args = dict(
             store_data=True,
             preprocessor=self.preprocessor,
