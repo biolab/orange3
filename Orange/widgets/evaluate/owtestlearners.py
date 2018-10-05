@@ -500,6 +500,9 @@ class OWTestLearners(OWWidget):
         if self.__needupdate:
             self.__update()
 
+    def settings_changed(self):
+        self._param_changed()
+
     def kfold_changed(self):
         self.resampling = OWTestLearners.KFold
         self._param_changed()
