@@ -1168,34 +1168,52 @@ class OWScatterPlotBase(gui.OWComponent):
             return
         indices = [p.data() for p in points]
         self.select_by_indices(indices)
-        self._update_after_selection()
 
     def select_by_indices(self, indices):
         if self.selection is None:
             self.selection = np.zeros(self.n_valid, dtype=np.uint8)
         keys = QApplication.keyboardModifiers()
-        # Remove from selection
         if keys & Qt.AltModifier:
-            self.selection[indices] = 0
-        # Append to the last group
+            self.selection_remove(indices)
         elif keys & Qt.ShiftModifier and keys & Qt.ControlModifier:
-            self.selection[indices] = np.max(self.selection)
-        # Create a new group
+            self.selection_append(indices)
         elif keys & Qt.ShiftModifier:
-            self.selection[indices] = np.max(self.selection) + 1
-        # No modifiers: new selection
+            self.selection_new_group(indices)
         else:
-            self.selection = np.zeros(self.n_valid, dtype=np.uint8)
-            self.selection[indices] = 1
-        if np.allclose(self.selection, 0):
-            self.selection = None
+            self.selection_select(indices)
+
+    def selection_select(self, indices):
+        self.selection = np.zeros(self.n_valid, dtype=np.uint8)
+        self.selection[indices] = 1
+        self._update_after_selection()
+
+    def selection_append(self, indices):
+        self.selection[indices] = np.max(self.selection)
+        self._update_after_selection()
+
+    def selection_new_group(self, indices):
+        self.selection[indices] = np.max(self.selection) + 1
+        self._update_after_selection()
+
+    def selection_remove(self, indices):
+        self.selection[indices] = 0
         self._update_after_selection()
 
     def _update_after_selection(self):
+        self._compress_indices()
         self.update_selection_colors()
         if self.label_only_selected:
             self.update_labels()
         self.master.selection_changed()
+
+    def _compress_indices(self):
+        indices = sorted(set(self.selection) | {0})
+        if len(indices) == max(indices) + 1:
+            return
+        mapping = np.zeros((max(indices) + 1,), dtype=int)
+        for i, ind in enumerate(indices):
+            mapping[ind] = i
+        self.selection = mapping[self.selection]
 
     def get_selection(self):
         if self.selection is None:
