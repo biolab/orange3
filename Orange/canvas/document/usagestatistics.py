@@ -32,10 +32,14 @@ class UsageStatistics:
         Orange version,
         operating system,
         node additions by type:
-            quick menu,
-            toolbox click,
-            toolbox drag,
-            other widget extension.
+            time since application start
+            widget name
+            type of addition:
+                quick menu
+                toolbox click
+                toolbox drag
+                drag from other widget
+            (if dragged from other widget, other widget name)
     """
 
     NodeAddClick = 0
