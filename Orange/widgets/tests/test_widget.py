@@ -1,10 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import gc
+import weakref
+
 from unittest.mock import patch, MagicMock
-from AnyQt.QtCore import QRect, QByteArray
+
+from AnyQt.QtCore import QRect, QByteArray, QObject
 from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
@@ -209,3 +214,39 @@ class WidgetMsgTestCase(WidgetTest):
 
         self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
         self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
+
+    def test_garbage_collect(self):
+        widget = MyWidget()
+        ref = weakref.ref(widget)
+        # insert an object in widget's __dict__ that will be deleted when its
+        # __dict__ is cleared.
+        widget._finalizer = QObject()
+        spyw = QSignalSpy(widget.destroyed)
+        spyf = QSignalSpy(widget._finalizer.destroyed)
+        widget.deleteLater()
+        del widget
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        gc.collect()
+        self.assertIsNone(ref())
+
+    def test_garbage_collect_from_scheme(self):
+        from Orange.canvas.scheme.widgetsscheme import WidgetsScheme
+        from Orange.canvas.registry.description import WidgetDescription
+        new_scheme = WidgetsScheme()
+        w_desc = WidgetDescription.from_module("Orange.widgets.tests.test_widget")
+        node = new_scheme.new_node(w_desc)
+        widget = new_scheme.widget_for_node(node)
+        widget._finalizer = QObject()
+        spyw = QSignalSpy(widget.destroyed)
+        spyf = QSignalSpy(widget._finalizer.destroyed)
+        ref = weakref.ref(widget)
+        del widget
+        new_scheme.remove_node(node)
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        self.assertIsNone(ref())
