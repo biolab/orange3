@@ -511,6 +511,13 @@ class WidgetManager(QObject):
             self.__delay_delete.add(widget)
         else:
             widget.deleteLater()
+            name = "{} '{}'".format(type(widget).__name__, widget.captionTitle)
+            if log.isEnabledFor(logging.DEBUG):
+                widget.destroyed.connect(
+                    lambda: log.debug("Destroyed: %s", name))
+                widget.__marker = QObject()
+                widget.__marker.destroyed.connect(
+                    lambda: log.debug("Destroyed namespace: %s", name))
             del self.__widget_processing_state[widget]
 
     def create_widget_instance(self, node):
