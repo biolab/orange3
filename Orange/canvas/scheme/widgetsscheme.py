@@ -953,7 +953,7 @@ class WidgetManager(QObject):
 def user_message_from_state(message_group):
     return UserMessage(
         severity=message_group.severity,
-        message_id=message_group,
+        message_id="{0.__name__}.{0.__qualname__}".format(type(message_group)),
         contents="<br/>".join(msg.formatted
                               for msg in message_group.active) or None,
         data={"content-type": "text/html"})
