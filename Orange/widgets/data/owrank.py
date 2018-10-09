@@ -33,7 +33,7 @@ from Orange.widgets.settings import (DomainContextHandler, Setting,
                                      ContextSetting)
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, Msg, Input, Output
+from Orange.widgets.widget import OWWidget, Msg, Input, Output, AttributeList
 
 
 log = logging.getLogger(__name__)
@@ -180,6 +180,7 @@ class OWRank(OWWidget):
     class Outputs:
         reduced_data = Output("Reduced Data", Table, default=True)
         scores = Output("Scores", Table)
+        features = Output("Features", AttributeList, dynamic=False)
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
@@ -526,12 +527,14 @@ class OWRank(OWWidget):
                               for i in self.selected_rows]
         if not selected_attrs:
             self.Outputs.reduced_data.send(None)
+            self.Outputs.features.send(None)
             self.out_domain_desc = None
         else:
             reduced_domain = Domain(
                 selected_attrs, self.data.domain.class_var, self.data.domain.metas)
             data = self.data.transform(reduced_domain)
             self.Outputs.reduced_data.send(data)
+            self.Outputs.features.send(AttributeList(selected_attrs))
             self.out_domain_desc = report.describe_domain(data.domain)
 
     def create_scores_table(self, labels):
