@@ -353,6 +353,10 @@ class OWScatterPlotBase(gui.OWComponent):
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
 
+    COLOR_NOT_SUBSET = (128, 128, 128, 0)
+    COLOR_SUBSET = (128, 128, 128, 255)
+    COLOR_DEFAULT = (128, 128, 128, 0)
+
     def __init__(self, scatter_widget, parent=None, view_box=ViewBox):
         super().__init__(scatter_widget)
 
@@ -788,11 +792,13 @@ class OWScatterPlotBase(gui.OWComponent):
         color = self.plot_widget.palette().color(OWPalette.Data)
         pen = [_make_pen(color, 1.5) for _ in range(self.n_shown)]
         if subset is not None:
-            brush = [(QBrush(QColor(128, 128, 128, 0)),
-                      QBrush(QColor(128, 128, 128, 255)))[s]
-                     for s in subset]
+            brush = np.where(
+                subset,
+                *(QBrush(QColor(*col))
+                  for col in (self.COLOR_SUBSET, self.COLOR_NOT_SUBSET)))
         else:
-            color = QColor(128, 128, 128, self.alpha_value)
+            color = QColor(*self.COLOR_DEFAULT)
+            color.setAlpha(self.alpha_value)
             brush = [QBrush(color) for _ in range(self.n_shown)]
         return pen, brush
 
