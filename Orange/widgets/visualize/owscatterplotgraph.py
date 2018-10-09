@@ -1107,10 +1107,11 @@ class OWScatterPlotBase(gui.OWComponent):
     def _update_combined_legend(self, labels):
         # update_colored_legend will already clear the shape legend
         # so we remove colors here
+        use_legend = \
+            self.shape_legend if self.shape_legend.items else self.color_legend
         self.color_legend.clear()
         self.shape_legend.clear()
-        self._update_colored_legend(
-            self.shape_legend, labels, self.CurveSymbols)
+        self._update_colored_legend(use_legend, labels, self.CurveSymbols)
 
     def _update_colored_legend(self, legend, labels, symbols):
         if self.scatterplot_item is None or not self.palette:
