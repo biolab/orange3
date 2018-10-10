@@ -174,7 +174,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     contextOpened = Signal()
     contextClosed = Signal()
 
-    # pylint: disable=protected-access
+    # pylint: disable=protected-access, access-member-before-definition
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
@@ -207,6 +207,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         # flag indicating if the widget's position was already restored
         self.__was_restored = False
+        # flag indicating the widget is still expecting the first show event.
+        self.__was_shown = False
 
         self.__statusMessage = ""
 
@@ -573,16 +575,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 y = max(0, space.height() / 2 - height / 2)
 
                 self.move(x, y)
-
-        # Mark as explicitly moved/resized if not already. QDialog would
-        # otherwise adjust position/size on subsequent hide/show
-        # (move/resize events coming from the window manager do not set
-        # these flags).
-        if not self.testAttribute(Qt.WA_Moved):
-            self.setAttribute(Qt.WA_Moved)
-        if not self.testAttribute(Qt.WA_Resized):
-            self.setAttribute(Qt.WA_Resized)
-
         return restored
 
     def __updateSavedGeometry(self):
@@ -654,6 +646,15 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             if self.savedWidgetGeometry is not None:
                 self.__restoreWidgetGeometry(bytes(self.savedWidgetGeometry))
             self.__was_restored = True
+
+        if not self.__was_shown:
+            # Mark as explicitly moved/resized if not already. QDialog would
+            # otherwise adjust position/size on subsequent hide/show
+            # (move/resize events coming from the window manager do not set
+            # these flags).
+            self.setAttribute(Qt.WA_Moved, True)
+            self.setAttribute(Qt.WA_Resized, True)
+            self.__was_shown = True
         self.__quicktipOnce()
 
     def wheelEvent(self, event):
