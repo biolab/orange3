@@ -16,7 +16,7 @@ Outputs
 
 **Select by Data Index** enables matching the data by indices. Each row in a data set has an index and given a subset, this widget can match these indices to indices from the reference data. Most often it is used to retrieve the original data from the transformed data (say, from PCA space).
 
-.. figure:: images/Select-by-data-index-stamped.png
+.. figure:: images/Select-by-Data-Index-stamped.png
    :scale: 50%
 
 1. Information on the reference data set. This data is used as index reference.

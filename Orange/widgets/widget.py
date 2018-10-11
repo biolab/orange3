@@ -271,10 +271,19 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
     class _Splitter(QSplitter):
         handleClicked = Signal()
+
         def _adjusted_size(self, size_method):
             size = size_method(super())()
+            parent = self.parentWidget()
+            if isinstance(parent, OWWidget) \
+                    and not parent.controlAreaVisible \
+                    and self.count() > 1:
+                indices = range(1, self.count())
+            else:
+                indices = range(0, self.count())
+
             height = max((size_method(self.widget(i))().height()
-                          for i in range(self.count()) if self.sizes()[i]),
+                          for i in indices),
                          default=0)
             size.setHeight(height)
             return size
@@ -617,6 +626,22 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
         QDialog.closeEvent(self, event)
+
+    def setVisible(self, visible):
+        # type: (bool) -> None
+        """Reimplemented from `QDialog.setVisible`."""
+        if visible:
+            # Force cached size hint invalidation ... The size hints are
+            # sometimes not properly invalidated via the splitter's layout and
+            # nested left_part -> controlArea layouts. This causes bad initial
+            # size when the widget is first shown.
+            if self.controlArea is not None:
+                self.controlArea.updateGeometry()
+            if self.buttonsArea is not None:
+                self.buttonsArea.updateGeometry()
+            if self.mainArea is not None:
+                self.mainArea.updateGeometry()
+        super().setVisible(visible)
 
     def showEvent(self, event):
         """Overloaded to restore the geometry when the widget is shown
