@@ -385,19 +385,36 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             descs[0] = "<b>{}</b>".format(descs[0])
         if descs:
             text += "<p>{}</p>".format("<br/>".join(descs))
-
-        text += "<p>{} instance(s), {} feature(s), {} meta attribute(s)".\
-            format(len(table), len(domain.attributes), len(domain.metas))
+        text += "<p>{} instance(s)".format(len(table))
+        if not table.has_missing():
+            text += " (no missing values)"
+        text += "<br/>{} feature(s)".format(len(domain.attributes))
+        if table.has_missing_attribute():
+            miss = "%.1f" % table.get_nan_percentile_attribute()
+            text += " ({}% missing values)".format(miss)
+        else:
+            text += " (no missing values)"
         if domain.has_continuous_class:
-            text += "<br/>Regression; numerical class."
+            text += "<br/>Regression; numerical class"
+            if table.has_missing_class():
+                miss = "%.1f" % table.get_nan_percentile_class()
+                text += " ({}% missing values)".format(miss)
+            else:
+                text += " (no missing values)"
         elif domain.has_discrete_class:
-            text += "<br/>Classification; categorical class with {} values.".\
+            text += "<br/>Classification; categorical class with {} values".\
                 format(len(domain.class_var.values))
+            if table.has_missing_class():
+                miss = "%.1f" % table.get_nan_percentile_class()
+                text += " ({}% missing values)".format(miss)
+            else:
+                text += " (no missing values)"
         elif table.domain.class_vars:
             text += "<br/>Multi-target; {} target variables.".format(
                 len(table.domain.class_vars))
         else:
             text += "<br/>Data has no target variable."
+        text += "<br/>{} meta attribute(s)".format(len(domain.metas))
         text += "</p>"
 
         if 'Timestamp' in table.domain:

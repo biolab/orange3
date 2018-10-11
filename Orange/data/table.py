@@ -1065,9 +1065,19 @@ class Table(MutableSequence, Storage):
         missing_x = not sp.issparse(self.X) and bn.anynan(self.X)   # do not check for sparse X
         return missing_x or bn.anynan(self._Y)
 
+    def has_missing_attribute(self):
+        """Return `True` if there are any missing attribute values."""
+        return not sp.issparse(self.X) and bn.anynan(self.X)    # do not check for sparse X
+
     def has_missing_class(self):
         """Return `True` if there are any missing class values."""
         return bn.anynan(self._Y)
+
+    def get_nan_percentile_attribute(self):
+        return np.isnan(self.X).sum() / self.X.size * 100
+
+    def get_nan_percentile_class(self):
+        return np.isnan(self._Y).sum() / self._Y.size * 100
 
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
