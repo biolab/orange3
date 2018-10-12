@@ -122,7 +122,8 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
             selectionMode=QTableView.SingleSelection,
-            showGrid=False)
+            showGrid=False,
+            editTriggers=gui.TableView.NoEditTriggers)
         if self._has_bars:
             view.setItemDelegate(TableBarItem())
         else:
