@@ -390,13 +390,18 @@ class OWDataTable(widget.OWWidget):
     color_by_class = Setting(True)
     settingsHandler = DomainContextHandler(
         match_values=DomainContextHandler.MATCH_VALUES_ALL)
-    selected_rows = ContextSetting([])
-    selected_cols = ContextSetting([])
+    selected_rows = Setting([], schema_only=True)
+    selected_cols = Setting([], schema_only=True)
 
     def __init__(self):
         super().__init__()
 
         self._inputs = OrderedDict()
+
+        self.__pending_selected_rows = self.selected_rows
+        self.selected_rows = None
+        self.__pending_selected_cols = self.selected_cols
+        self.selected_cols = None
 
         self.dist_color = QColor(*self.dist_color_RGB)
 
@@ -514,9 +519,20 @@ class OWDataTable(widget.OWWidget):
                 self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
-        self.selected_rows = []
-        self.selected_cols = []
         self.openContext(data)
+
+        if self.__pending_selected_rows is not None:
+            self.selected_rows = self.__pending_selected_rows
+            self.__pending_selected_rows = None
+        else:
+            self.selected_rows = []
+
+        if self.__pending_selected_cols is not None:
+            self.selected_cols = self.__pending_selected_cols
+            self.__pending_selected_cols = None
+        else:
+            self.selected_cols = []
+
         self.set_selection()
         self.commit()
 
