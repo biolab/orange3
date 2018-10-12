@@ -439,7 +439,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
             self.processingStateChanged.connect(self.__processingStateChanged)
             self.blockingStateChanged.connect(self.__processingStateChanged)
-            self.progressBarValueChanged.connect(pb.setValue)
+            self.progressBarValueChanged.connect(lambda v: pb.setValue(int(v)))
 
             # Reserve the bottom margins for the status bar
             margins = self.layout().contentsMargins()
