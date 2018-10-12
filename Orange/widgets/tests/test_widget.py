@@ -1,12 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=all
 
 import gc
 import weakref
 
 from unittest.mock import patch, MagicMock
 
-from AnyQt.QtCore import QRect, QByteArray, QObject
+from AnyQt.QtCore import QRect, QByteArray, QObject, pyqtSignal
 from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
 from AnyQt.QtTest import QSignalSpy
@@ -221,8 +221,8 @@ class WidgetMsgTestCase(WidgetTest):
         # insert an object in widget's __dict__ that will be deleted when its
         # __dict__ is cleared.
         widget._finalizer = QObject()
-        spyw = QSignalSpy(widget.destroyed)
-        spyf = QSignalSpy(widget._finalizer.destroyed)
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
         widget.deleteLater()
         del widget
         gc.collect()
@@ -240,8 +240,8 @@ class WidgetMsgTestCase(WidgetTest):
         node = new_scheme.new_node(w_desc)
         widget = new_scheme.widget_for_node(node)
         widget._finalizer = QObject()
-        spyw = QSignalSpy(widget.destroyed)
-        spyf = QSignalSpy(widget._finalizer.destroyed)
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
         ref = weakref.ref(widget)
         del widget
         new_scheme.remove_node(node)
@@ -250,3 +250,22 @@ class WidgetMsgTestCase(WidgetTest):
         gc.collect()
         self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
         self.assertIsNone(ref())
+
+
+class DestroyedSignalSpy(QSignalSpy):
+    """
+    A signal spy for watching QObject.destroyed signal
+
+    NOTE: This class specifically does not capture the QObject pointer emitted
+    from the destroyed signal (i.e. it connects to the no arg overload).
+    """
+    class Mapper(QObject):
+        destroyed_ = pyqtSignal()
+
+    def __init__(self, obj):
+        # type: (QObject) -> None
+        # Route the signal via a no argument signal to drop the obj pointer.
+        # After the destroyed signal is emitted the pointer is invalid
+        self.__mapper = DestroyedSignalSpy.Mapper()
+        obj.destroyed.connect(self.__mapper.destroyed_)
+        super().__init__(self.__mapper.destroyed_)
