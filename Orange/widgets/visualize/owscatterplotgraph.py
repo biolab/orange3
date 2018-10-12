@@ -412,6 +412,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
         self._tooltip_delegate = EventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
+        self.view_box.sigTransformChanged.connect(self.update_density)
 
     def _create_legend(self, anchor):
         legend = LegendItem()

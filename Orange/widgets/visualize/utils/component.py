@@ -25,7 +25,6 @@ class OWGraphWithAnchors(OWScatterPlotBase):
         self._tooltip_delegate = MouseEventDelegate(self.help_event,
                                                     self.show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
-        self.view_box.sigResized.connect(self.update_density)
 
     def clear(self):
         super().clear()
