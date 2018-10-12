@@ -92,6 +92,64 @@ class WidgetTestCase(WidgetTest):
         w = TestWidget2()
         w.showEvent(QShowEvent())
 
+    def test_store_restore_layout_geom(self):
+        class Widget(OWWidget):
+            name = "Who"
+            want_control_area = True
+
+        w = Widget()
+        w._OWWidget__setControlAreaVisible(False)
+        w.setGeometry(QRect(51, 52, 53, 54))
+        state = w.saveGeometryAndLayoutState()
+        w1 = Widget()
+        self.assertTrue(w1.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+        self.assertFalse(w1.controlAreaVisible)
+
+        Widget.want_control_area = False
+        w2 = Widget()
+        self.assertTrue(w2.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+
+        self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
+        self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
+
+    def test_garbage_collect(self):
+        widget = MyWidget()
+        ref = weakref.ref(widget)
+        # insert an object in widget's __dict__ that will be deleted when its
+        # __dict__ is cleared.
+        widget._finalizer = QObject()
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
+        widget.deleteLater()
+        del widget
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        gc.collect()
+        self.assertIsNone(ref())
+
+    def test_garbage_collect_from_scheme(self):
+        from Orange.canvas.scheme.widgetsscheme import WidgetsScheme
+        from Orange.canvas.registry.description import WidgetDescription
+        new_scheme = WidgetsScheme()
+        w_desc = WidgetDescription.from_module("Orange.widgets.tests.test_widget")
+        node = new_scheme.new_node(w_desc)
+        widget = new_scheme.widget_for_node(node)
+        widget._finalizer = QObject()
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
+        ref = weakref.ref(widget)
+        del widget
+        new_scheme.remove_node(node)
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        self.assertIsNone(ref())
+
 
 class WidgetMsgTestCase(WidgetTest):
 
@@ -192,64 +250,6 @@ class WidgetMsgTestCase(WidgetTest):
 
         w.Error.clear()
         self.assertEqual(len(messages), 0)
-
-    def test_store_restore_layout_geom(self):
-        class Widget(OWWidget):
-            name = "Who"
-            want_control_area = True
-
-        w = Widget()
-        w._OWWidget__setControlAreaVisible(False)
-        w.setGeometry(QRect(51, 52, 53, 54))
-        state = w.saveGeometryAndLayoutState()
-        w1 = Widget()
-        self.assertTrue(w1.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
-        self.assertFalse(w1.controlAreaVisible)
-
-        Widget.want_control_area = False
-        w2 = Widget()
-        self.assertTrue(w2.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
-
-        self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
-        self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
-
-    def test_garbage_collect(self):
-        widget = MyWidget()
-        ref = weakref.ref(widget)
-        # insert an object in widget's __dict__ that will be deleted when its
-        # __dict__ is cleared.
-        widget._finalizer = QObject()
-        spyw = DestroyedSignalSpy(widget)
-        spyf = DestroyedSignalSpy(widget._finalizer)
-        widget.deleteLater()
-        del widget
-        gc.collect()
-        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
-        gc.collect()
-        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
-        gc.collect()
-        self.assertIsNone(ref())
-
-    def test_garbage_collect_from_scheme(self):
-        from Orange.canvas.scheme.widgetsscheme import WidgetsScheme
-        from Orange.canvas.registry.description import WidgetDescription
-        new_scheme = WidgetsScheme()
-        w_desc = WidgetDescription.from_module("Orange.widgets.tests.test_widget")
-        node = new_scheme.new_node(w_desc)
-        widget = new_scheme.widget_for_node(node)
-        widget._finalizer = QObject()
-        spyw = DestroyedSignalSpy(widget)
-        spyf = DestroyedSignalSpy(widget._finalizer)
-        ref = weakref.ref(widget)
-        del widget
-        new_scheme.remove_node(node)
-        gc.collect()
-        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
-        gc.collect()
-        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
-        self.assertIsNone(ref())
 
 
 class DestroyedSignalSpy(QSignalSpy):
