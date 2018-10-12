@@ -126,18 +126,26 @@ class OWSave(widget.OWWidget):
 
     @Inputs.data
     def dataset(self, data):
-        self.data = data
         self.save.setDisabled(data is None)
         self.save_as.setDisabled(data is None)
-        if data is not None:
-            self.save_file()
+        if data is None:
+            return
 
-        self.controls.filetype.clear()
-        if self.data.is_sparse():
-            self.controls.filetype.insertItems(0, [item for item, _, supports_sparse in FILE_TYPES
-                                                   if supports_sparse])
-        else:
+        if (self.data is None and data.is_sparse()) or (
+                self.data is not None and not self.data.is_sparse() and data.is_sparse()):
+            self.controls.filetype.clear()
+            allowed = [item for item, _, supports_sparse in FILE_TYPES
+                       if supports_sparse]
+            self.controls.filetype.insertItems(0, allowed)
+            self.filetype = allowed[0]
+            self.update_extension()
+        elif self.data is not None and self.data.is_sparse() and not data.is_sparse():
+            self.controls.filetype.clear()
             self.controls.filetype.insertItems(0, [item for item, _, _ in FILE_TYPES])
+            self.filetype = FILE_TYPES[0][0]
+            self.update_extension()
+        self.data = data
+        self.save_file()
 
     def save_file_as(self):
         file_name = self.remove_extensions(self.filename) or os.path.join(
