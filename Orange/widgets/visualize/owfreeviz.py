@@ -2,27 +2,22 @@ from enum import IntEnum
 import sys
 
 import numpy as np
-from scipy.spatial import distance
 
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRectF, QLineF, QTimer, QPoint,
     pyqtSignal as Signal, pyqtSlot as Slot
 )
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QApplication, QGraphicsEllipseItem
+from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable
+from Orange.data import Table, Domain, StringVariable
 from Orange.projection.freeviz import FreeViz
-from Orange.widgets import widget, gui, settings, report
-from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table
-)
-from Orange.widgets.visualize.owscatterplotgraph import OWProjectionWidget
-from Orange.widgets.visualize.utils.component import OWVizGraph
+from Orange.widgets import widget, gui, settings
+from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
 
 
 class AsyncUpdateLoop(QObject):
@@ -143,75 +138,64 @@ class AsyncUpdateLoop(QObject):
             super().customEvent(event)
 
 
-class OWFreeVizGraph(OWVizGraph):
-    radius = settings.Setting(0)
+class OWFreeVizGraph(OWGraphWithAnchors):
+    hide_radius = settings.Setting(0)
 
-    def __init__(self, scatter_widget, parent):
-        super().__init__(scatter_widget, parent)
-        self._points = []
-        self._point_items = []
+    @property
+    def scaled_radius(self):
+        return self.hide_radius / 100 + 1e-5
 
     def update_radius(self):
-        if self._circle_item is None:
-            return
-
-        r = self.radius / 100 + 1e-5
-        for point, axitem in zip(self._points, self._point_items):
-            axitem.setVisible(np.linalg.norm(point) > r)
-        self._circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
+        self.update_circle()
+        self.update_anchors()
 
     def set_view_box_range(self):
-        self.view_box.setRange(RANGE)
+        self.view_box.setRange(QRectF(-1.05, -1.05, 2.1, 2.1))
 
-    def can_show_indicator(self, pos):
-        if not len(self._points):
-            return False, None
+    def closest_draggable_item(self, pos):
+        points, *_ = self.master.get_anchors()
+        if points is None or not len(points):
+            return None
+        mask = np.linalg.norm(points, axis=1) > self.scaled_radius
+        xi, yi = points[mask].T
+        distances = (xi - pos.x()) ** 2 + (yi - pos.y()) ** 2
+        if len(distances) and np.min(distances) < self.DISTANCE_DIFF ** 2:
+            return np.flatnonzero(mask)[np.argmin(distances)]
+        return None
 
-        r = self.radius / 100 + 1e-5
-        mask = np.zeros((len(self._points)), dtype=bool)
-        mask[np.linalg.norm(self._points, axis=1) > r] = True
-        distances = distance.cdist([[pos.x(), pos.y()]], self._points)[0]
-        distances = distances[mask]
-        if len(distances) and np.min(distances) < self.DISTANCE_DIFF:
-            return True, np.flatnonzero(mask)[np.argmin(distances)]
-        return False, None
-
-    def _remove_point_items(self):
-        for item in self._point_items:
-            self.plot_widget.removeItem(item)
-        self._point_items = []
-
-    def _add_point_items(self):
-        r = self.radius / 100 + 1e-5
-        for point, var in zip(self._points, self._attributes):
-            axitem = AnchorItem(line=QLineF(0, 0, *point), text=var.name)
-            axitem.setVisible(np.linalg.norm(point) > r)
-            axitem.setPen(pg.mkPen((100, 100, 100)))
-            self.plot_widget.addItem(axitem)
-            self._point_items.append(axitem)
-
-    def _add_circle_item(self):
-        if not len(self._points):
+    def update_anchors(self):
+        points, labels = self.master.get_anchors()
+        if points is None:
             return
-        r = self.radius / 100 + 1e-5
-        pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
-        self._circle_item = QGraphicsEllipseItem()
-        self._circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
-        self._circle_item.setPen(pen)
-        self.plot_widget.addItem(self._circle_item)
+        r = self.scaled_radius
+        if self.anchor_items is None:
+            self.anchor_items = []
+            for point, label in zip(points, labels):
+                anchor = AnchorItem(line=QLineF(0, 0, *point), text=label)
+                anchor.setVisible(np.linalg.norm(point) > r)
+                anchor.setPen(pg.mkPen((100, 100, 100)))
+                self.plot_widget.addItem(anchor)
+                self.anchor_items.append(anchor)
+        else:
+            for anchor, point, label in zip(self.anchor_items, points, labels):
+                anchor.setLine(QLineF(0, 0, *point))
+                anchor.setText(label)
+                anchor.setVisible(np.linalg.norm(point) > r)
 
-    def _add_indicator_item(self, point_i):
-        x, y = self._points[point_i]
+    def update_circle(self):
+        super().update_circle()
+        if self.circle_item is not None:
+            r = self.scaled_radius
+            self.circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
+            pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
+            self.circle_item.setPen(pen)
+
+    def _add_indicator_item(self, anchor_idx):
+        x, y = self.anchor_items[anchor_idx].get_xy()
         dx = (self.view_box.childGroup.mapToDevice(QPoint(1, 0)) -
               self.view_box.childGroup.mapToDevice(QPoint(-1, 0))).x()
-        self._indicator_item = MoveIndicator(x, y, 600 / dx)
-        self.plot_widget.addItem(self._indicator_item)
-
-
-MAX_ITERATIONS = 1000
-MAX_POINTS = 300
-MAX_INSTANCES = 10000
-RANGE = QRectF(-1.05, -1.05, 2.1, 2.1)
+        self.indicator_item = MoveIndicator(x, y, 600 / dx)
+        self.plot_widget.addItem(self.indicator_item)
 
 
 class InitType(IntEnum):
@@ -222,83 +206,34 @@ class InitType(IntEnum):
         return ["Circular", "Random"]
 
 
-class OWFreeViz(OWProjectionWidget):
+class OWFreeViz(OWAnchorProjectionWidget):
+    MAX_ITERATIONS = 1000
+    MAX_INSTANCES = 10000
+
     name = "FreeViz"
     description = "Displays FreeViz projection"
     icon = "icons/Freeviz.svg"
     priority = 240
     keywords = ["viz"]
 
-    class Inputs:
-        data = Input("Data", Table, default=True)
-        data_subset = Input("Data Subset", Table)
-
-    class Outputs:
-        selected_data = Output("Selected Data", Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        components = Output("Components", Table)
-
     settings_version = 3
-    settingsHandler = settings.DomainContextHandler()
-
     initialization = settings.Setting(InitType.Circular)
-    auto_commit = settings.Setting(True)
-
+    GRAPH_CLASS = OWFreeVizGraph
     graph = settings.SettingProvider(OWFreeVizGraph)
-    graph_name = "graph.plot_widget.plotItem"
+    embedding_variables_names = ("freeviz-x", "freeviz-y")
 
-    class Error(OWProjectionWidget.Error):
-        sparse_data = widget.Msg("Sparse data is not supported")
-        no_class_var = widget.Msg("Need a class variable")
+    class Error(OWAnchorProjectionWidget.Error):
+        no_class_var = widget.Msg("Data has no target variable")
         not_enough_class_vars = widget.Msg(
-            "Needs discrete class variable with at lest 2 values"
-        )
+            "Target variable is not at least binary")
         features_exceeds_instances = widget.Msg(
-            "Algorithm should not be used when number of features "
-            "exceeds the number of instances."
-        )
-        too_many_data_instances = widget.Msg("Cannot handle so large data.")
-        no_valid_data = widget.Msg("No valid data.")
+            "Number of features exceeds the number of instances.")
+        too_many_data_instances = widget.Msg("Data is too large.")
 
     def __init__(self):
         super().__init__()
-
-        self.data = None
-        self.subset_data = None
-        self.subset_indices = None
-        self._embedding_coords = None
         self._X = None
         self._Y = None
-        self._rand_indices = None
-        self.variable_x = ContinuousVariable("freeviz-x")
-        self.variable_y = ContinuousVariable("freeviz-y")
-
-        box = gui.vBox(self.mainArea, True, margin=0)
-        self.graph = OWFreeVizGraph(self, box)
-        box.layout().addWidget(self.graph.plot_widget)
-
-        box = gui.vBox(self.controlArea, box=True)
-        gui.comboBox(box, self, "initialization", label="Initialization:",
-                     items=InitType.items(), orientation=Qt.Horizontal,
-                     labelWidth=90, callback=self.__init_combo_changed)
-        self.btn_start = gui.button(box, self, "Optimize", self.__toggle_start,
-                                    enabled=False)
-
-        g = self.graph.gui
-        g.point_properties_box(self.controlArea)
-        box = g.effects_box(self.controlArea)
-        g.add_control(box, gui.hSlider, "Hide radius:",
-            master=self.graph, value="radius",
-            minValue=0, maxValue=100,
-            step=10, createLabel=False,
-            callback=self.__radius_slider_changed)
-        g.plot_properties_box(self.controlArea)
-
-        self.controlArea.layout().addStretch(100)
-        self.graph.box_zoom_select(self.controlArea)
-
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
 
         # FreeViz
         self._loop = AsyncUpdateLoop(parent=self)
@@ -306,9 +241,23 @@ class OWFreeViz(OWProjectionWidget):
         self._loop.finished.connect(self.__freeviz_finished)
         self._loop.raised.connect(self.__on_error)
 
-        self.graph.view_box.started.connect(self._randomize_indices)
-        self.graph.view_box.moved.connect(self._manual_move)
-        self.graph.view_box.finished.connect(self._finish_manual_move)
+    def _add_controls(self):
+        self.__add_controls_start_box()
+        super()._add_controls()
+        self.graph.gui.add_control(
+            self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
+            value="hide_radius", minValue=0, maxValue=100, step=10,
+            createLabel=False, callback=self.__radius_slider_changed
+        )
+
+    def __add_controls_start_box(self):
+        box = gui.vBox(self.controlArea, box=True)
+        gui.comboBox(
+            box, self, "initialization", label="Initialization:",
+            items=InitType.items(), orientation=Qt.Horizontal,
+            labelWidth=90, callback=self.__init_combo_changed)
+        self.btn_start = gui.button(
+            box, self, "Optimize", self.__toggle_start, enabled=False)
 
     def __radius_slider_changed(self):
         self.graph.update_radius()
@@ -322,30 +271,29 @@ class OWFreeViz(OWProjectionWidget):
             self._start()
 
     def __init_combo_changed(self):
+        if self.data is None:
+            return
         running = self._loop.isRunning()
         if running:
             self._loop.cancel()
-        if self.data is not None:
-            self.setup_plot()
+        self.init_embedding_coords()
+        self.graph.update_coordinates()
         if running:
             self._start()
 
     def _start(self):
-        """
-        Start the projection optimization.
-        """
         def update_freeviz(anchors):
             while True:
-                projection = FreeViz.freeviz(
+                _, projection, *_ = FreeViz.freeviz(
                     self._X, self._Y, scale=False, center=False,
-                    initial=anchors, maxiter=10
-                )
-                yield projection[0], projection[1]
-                if np.allclose(anchors, projection[1], rtol=1e-5, atol=1e-4):
+                    initial=anchors, maxiter=10)
+                yield projection
+                if np.allclose(anchors, projection, rtol=1e-5, atol=1e-4):
                     return
-                anchors = projection[1]
+                anchors = projection
 
-        self._loop.setCoroutine(update_freeviz(self.graph.get_points()))
+        self.graph.set_sample_size(self.SAMPLE_SIZE)
+        self._loop.setCoroutine(update_freeviz(self.projection))
         self.btn_start.setText("Stop")
         self.progressBarInit()
         self.setBlocking(True)
@@ -353,13 +301,12 @@ class OWFreeViz(OWProjectionWidget):
 
     def __set_projection(self, projection):
         # Set/update the projection matrix and coordinate embeddings
-        self.progressBarAdvance(100. / MAX_ITERATIONS)
-        self._embedding_coords = projection[0]
-        self.graph.set_points(projection[1])
-        self._update_xy()
+        self.progressBarAdvance(100. / self.MAX_ITERATIONS)
+        self.projection = projection
+        self.graph.update_coordinates()
 
     def __freeviz_finished(self):
-        # Projection optimization has finished
+        self.graph.set_sample_size(None)
         self.btn_start.setText("Optimize")
         self.setStatusMessage("")
         self.setBlocking(False)
@@ -369,228 +316,91 @@ class OWFreeViz(OWProjectionWidget):
     def __on_error(self, err):
         sys.excepthook(type(err), err, getattr(err, "__traceback__"))
 
-    def _update_xy(self):
-        coords = self._embedding_coords
-        self._embedding_coords /= np.max(np.linalg.norm(coords, axis=1))
-        self.graph.update_coordinates()
+    def check_data(self):
+        def error(err):
+            err()
+            self.data = None
 
-    def clear(self):
-        self._loop.cancel()
-        self.data = None
-        self.valid_data = None
-        self._embedding_coords = None
-        self._X = None
-        self._Y = None
-        self._rand_indices = None
-
-        self.graph.set_attributes(())
-        self.graph.set_points([])
-        self.graph.update_coordinates()
-        self.graph.clear()
-
-    @Inputs.data
-    def set_data(self, data):
-        self.clear_messages()
-        self.closeContext()
-        self.clear()
-        self.data = data
-        self._check_data()
-        self.init_attr_values()
-        self.openContext(data)
-        self.btn_start.setEnabled(self.data is not None)
-        self.cb_class_density.setEnabled(self.can_draw_density())
-
-    def _check_data(self):
+        super().check_data()
         if self.data is not None:
-            if self.data.is_sparse():
-                self.Error.sparse_data()
-                self.data = None
-            elif self.data.domain.class_var is None:
-                self.Error.no_class_var()
-                self.data = None
-            elif self.data.domain.class_var.is_discrete and \
-                    len(self.data.domain.class_var.values) < 2:
-                self.Error.not_enough_class_vars()
-                self.data = None
+            class_var = self.data.domain.class_var
+            if class_var is None:
+                error(self.Error.no_class_var)
+            elif class_var.is_discrete and len(np.unique(self.data.Y)) < 2:
+                error(self.Error.not_enough_class_vars)
+            elif len(self.data.domain.attributes) < 2:
+                error(self.Error.not_enough_features)
             elif len(self.data.domain.attributes) > self.data.X.shape[0]:
-                self.Error.features_exceeds_instances()
-                self.data = None
+                error(self.Error.features_exceeds_instances)
             else:
-                self._prepare_freeviz_data()
-                if self._X is not None:
-                    if len(self._X) > MAX_INSTANCES:
-                        self.Error.too_many_data_instances()
-                        self.data = None
-                    elif np.allclose(np.nan_to_num(self._X - self._X[0]), 0) \
-                            or not len(self._X):
-                        self.Error.no_valid_data()
-                        self.data = None
-                else:
-                    self.Error.no_valid_data()
-                    self.data = None
+                self.valid_data = np.all(np.isfinite(self.data.X), axis=1) & \
+                                  np.isfinite(self.data.Y)
+                n_valid = np.sum(self.valid_data)
+                if n_valid > self.MAX_INSTANCES:
+                    error(self.Error.too_many_data_instances)
+                elif n_valid == 0:
+                    error(self.Error.no_valid_data)
+        self.btn_start.setEnabled(self.data is not None)
 
-    def _prepare_freeviz_data(self):
-        valid_mask = np.all(np.isfinite(self.data.X), axis=1) & \
-                     np.isfinite(self.data.Y)
-        X, Y = self.data.X[valid_mask], self.data.Y[valid_mask]
-        if not len(X):
-            self.valid_data = None
+    def set_data(self, data):
+        super().set_data(data)
+        if self.data is not None:
+            self.prepare_projection_data()
+            self.init_embedding_coords()
+
+    def prepare_projection_data(self):
+        if not np.any(self.valid_data):
+            self._X = self._Y = self.valid_data = None
             return
 
+        self._X = self.data.X.copy()
+        self._X -= np.nanmean(self._X, axis=0)
+        span = np.ptp(self._X[self.valid_data], axis=0)
+        self._X[:, span > 0] /= span[span > 0].reshape(1, -1)
+
+        self._Y = self.data.Y
         if self.data.domain.class_var.is_discrete:
-            Y = Y.astype(int)
-        X = (X - np.mean(X, axis=0))
-        span = np.ptp(X, axis=0)
-        X[:, span > 0] /= span[span > 0].reshape(1, -1)
-        self._X, self._Y, self.valid_data = X, Y, valid_mask
+            self._Y = self._Y.astype(int)
 
-    @Inputs.data_subset
-    def set_subset_data(self, subset):
-        self.subset_data = subset
-        self.subset_indices = {e.id for e in subset} \
-            if subset is not None else {}
-        self.controls.graph.alpha_value.setEnabled(subset is None)
-
-    def handleNewSignals(self):
-        if self.data is not None and self.valid_data is not None:
-            self.setup_plot()
-        self.commit()
-
-    def get_coordinates_data(self):
-        return (self._embedding_coords[:, 0], self._embedding_coords[:, 1]) \
-            if self._embedding_coords is not None else (None, None)
-
-    def get_subset_mask(self):
-        if self.subset_indices:
-            return np.array([ex.id in self.subset_indices
-                             for ex in self.data[self.valid_data]])
-
-    def setup_plot(self):
-        points = FreeViz.init_radial(self._X.shape[1]) \
+    def init_embedding_coords(self):
+        self.projection = FreeViz.init_radial(self._X.shape[1]) \
             if self.initialization == InitType.Circular \
             else FreeViz.init_random(self._X.shape[1], 2)
-        self.graph.set_points(points)
-        self.__set_embedding_coords()
-        self.graph.set_attributes(self.data.domain.attributes)
-        self.graph.reset_graph()
 
-    def _randomize_indices(self):
-        n = len(self._X)
-        if n > MAX_POINTS:
-            self._rand_indices = np.random.choice(n, MAX_POINTS, replace=False)
-            self._rand_indices = sorted(self._rand_indices)
+    def get_embedding(self):
+        if self.data is None:
+            return None
+        embedding = np.dot(self._X, self.projection)
+        embedding /= \
+            np.max(np.linalg.norm(embedding[self.valid_data], axis=1)) or 1
+        return embedding
 
-    def _manual_move(self):
-        self.__set_embedding_coords()
-        if self._rand_indices is not None:
-            # save widget state
-            selection = self.graph.selection
-            valid_data = self.valid_data.copy()
-            data = self.data.copy()
-            ec = self._embedding_coords.copy()
+    def get_anchors(self):
+        if self.projection is None:
+            return None, None
+        return self.projection, [a.name for a in self.data.domain.attributes]
 
-            # plot subset
-            self.__plot_random_subset(selection)
-
-            # restore widget state
-            self.graph.selection = selection
-            self.valid_data = valid_data
-            self.data = data
-            self._embedding_coords = ec
-        else:
-            self.graph.update_coordinates()
-
-    def __plot_random_subset(self, selection):
-        self._embedding_coords = self._embedding_coords[self._rand_indices]
-        self.data = self.data[self._rand_indices]
-        self.valid_data = self.valid_data[self._rand_indices]
-        self.graph.reset_graph()
-        if selection is not None:
-            self.graph.selection = selection[self._rand_indices]
-            self.graph.update_selection_colors()
-
-    def _finish_manual_move(self):
-        if self._rand_indices is not None:
-            selection = self.graph.selection
-            self.graph.reset_graph()
-            if selection is not None:
-                self.graph.selection = selection
-                self.graph.select_by_index(self.graph.get_selection())
-
-    def __set_embedding_coords(self):
-        points = self.graph.get_points()
-        ex = np.dot(self._X, points)
-        self._embedding_coords = (ex / np.max(np.linalg.norm(ex, axis=1)))
-
-    def selection_changed(self):
-        self.commit()
-
-    def commit(self):
-        selected = annotated = components = None
+    def send_components(self):
+        components = None
         if self.data is not None and self.valid_data is not None:
-            name = self.data.name
-            domain = self.data.domain
-            metas = domain.metas + (self.variable_x, self.variable_y)
-            domain = Domain(domain.attributes, domain.class_vars, metas)
-            embedding_coords = np.zeros((len(self.data), 2), dtype=np.float)
-            embedding_coords[self.valid_data] = self._embedding_coords
-
-            data = self.data.transform(domain)
-            data[:, self.variable_x] = embedding_coords[:, 0][:, None]
-            data[:, self.variable_y] = embedding_coords[:, 1][:, None]
-
-            selection = self.graph.get_selection()
-            if len(selection):
-                selected = data[selection]
-                selected.name = name + ": selected"
-                selected.attributes = self.data.attributes
-            if self.graph.selection is not None and \
-                    np.max(self.graph.selection) > 1:
-                annotated = create_groups_table(data, self.graph.selection)
-            else:
-                annotated = create_annotated_table(data, selection)
-            annotated.attributes = self.data.attributes
-            annotated.name = name + ": annotated"
-
-            comp_domain = Domain(
-                self.data.domain.attributes,
-                metas=[StringVariable(name='component')])
-
+            meta_attrs = [StringVariable(name='component')]
+            domain = Domain(self.data.domain.attributes, metas=meta_attrs)
             metas = np.array([["FreeViz 1"], ["FreeViz 2"]])
-            components = Table.from_numpy(
-                comp_domain,
-                X=self.graph.get_points().T,
-                metas=metas)
-
-            components.name = name + ": components"
-
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
+            components = Table(domain, self.projection.T, metas=metas)
+            components.name = self.data.name
         self.Outputs.components.send(components)
 
-    def send_report(self):
-        if self.data is None:
-            return
-
-        def name(var):
-            return var and var.name
-
-        caption = report.render_items_vert((
-            ("Color", name(self.attr_color)),
-            ("Label", name(self.attr_label)),
-            ("Shape", name(self.attr_shape)),
-            ("Size", name(self.attr_size)),
-            ("Jittering", self.graph.jitter_size != 0 and
-             "{} %".format(self.graph.jitter_size))))
-        self.report_plot()
-        if caption:
-            self.report_caption(caption)
+    def clear(self):
+        super().clear()
+        self._loop.cancel()
+        self._X = None
+        self._Y = None
 
     @classmethod
     def migrate_settings(cls, _settings, version):
         if version < 3:
             if "radius" in _settings:
-                _settings["graph"]["radius"] = _settings["radius"]
+                _settings["graph"]["hide_radius"] = _settings["radius"]
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -621,8 +431,6 @@ class MoveIndicator(pg.GraphicsObject):
 
 
 def main(argv=None):
-    import sip
-
     argv = sys.argv[1:] if argv is None else argv
     if argv:
         filename = argv[0]
@@ -641,7 +449,7 @@ def main(argv=None):
     r = app.exec()
     w.set_data(None)
     w.saveSettings()
-    sip.delete(w)
+
     del w
     return r
 

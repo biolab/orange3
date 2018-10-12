@@ -136,8 +136,10 @@ class AddVariablesDialog(QDialog):
 
 
 class VariablesSelection:
-    def __call__(self, master, model_selected, model_other, widget=None):
+    def __init__(self, master, model_selected, model_other, widget=None):
         self.master = master
+        self.model_selected = model_selected
+        self.model_other = model_other
 
         params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
                        "selectionMode": QListView.ExtendedSelection,
@@ -159,14 +161,7 @@ class VariablesSelection:
             triggered=self.__deactivate_selection
         )
         view.addAction(delete)
-
-        self.model_selected = model = model_selected
-
-        model.rowsInserted.connect(master.invalidate_plot)
-        model.rowsRemoved.connect(master.invalidate_plot)
-        model.rowsMoved.connect(master.invalidate_plot)
-
-        view.setModel(model)
+        view.setModel(self.model_selected)
 
         addClassLabel = QAction("+", master,
                                 toolTip="Add new class label",
@@ -175,7 +170,8 @@ class VariablesSelection:
                                    toolTip="Remove selected class label",
                                    triggered=self.__deactivate_selection)
 
-        add_remove = itemmodels.ModelActionsWidget([addClassLabel, removeClassLabel], master)
+        add_remove = itemmodels.ModelActionsWidget(
+            [addClassLabel, removeClassLabel], master)
         add_remove.layout().addStretch(10)
         add_remove.layout().setSpacing(1)
         add_remove.setSizePolicy(*SIZE_POLICY_FIXED)
@@ -184,20 +180,10 @@ class VariablesSelection:
         self.add_remove = add_remove
         self.box = add_remove.buttons[1]
 
-        self.model_other = model_other
-
     def set_enabled(self, is_enabled):
         self.view_selected.setEnabled(is_enabled)
         for btn in self.add_remove.buttons:
             btn.setEnabled(is_enabled)
-
-    def display_all(self):
-        self.model_selected[:] += self.model_other[:]
-        self.model_other[:] = []
-
-    def display_none(self):
-        self.model_other[:] += self.model_selected[:]
-        self.model_selected[:] = []
 
     def __deactivate_selection(self):
         view = self.view_selected
@@ -213,24 +199,6 @@ class VariablesSelection:
 
     def _action_add(self):
         self.add_variables_dialog = AddVariablesDialog(self, self.model_other)
-
-    @staticmethod
-    def encode_var_state(lists):
-        return {(type(var), var.name): (source_ind, pos)
-                for source_ind, var_list in enumerate(lists)
-                for pos, var in enumerate(var_list)
-                if isinstance(var, Variable)}
-
-    @staticmethod
-    def decode_var_state(state, lists):
-        all_vars = reduce(list.__iadd__, lists, [])
-
-        newlists = [[] for _ in lists]
-        for var in all_vars:
-            source, pos = state[(type(var), var.name)]
-            newlists[source].append((pos, var))
-        return [[var for _, var in sorted(newlist, key=itemgetter(0))]
-                for newlist in newlists]
 
 
 class OrientedWidget(QWidget):
@@ -606,19 +574,20 @@ class OWPlotGUI:
             widget, gui.valueSlider, "Jittering",
             master=self._plot, value='jitter_size',
             values=getattr(self._plot, "jitter_sizes", self.JITTER_SIZES),
-            callback=self._plot.update_coordinates)
+            callback=self._plot.update_jittering)
 
     def jitter_numeric_check_box(self, widget):
         self._check_box(
             widget=widget,
             value="jitter_continuous", label="Jitter numeric values",
-            cb_name="update_coordinates")
+            cb_name="update_jittering")
 
     def show_legend_check_box(self, widget):
         '''
             Creates a check box that shows and hides the plot legend
         '''
-        self._check_box(widget, 'show_legend', 'Show legend', 'update_legend')
+        self._check_box(widget, 'show_legend', 'Show legend',
+                        'update_legend_visibility')
 
     def tooltip_shows_all_check_box(self, widget):
         gui.checkBox(
@@ -647,7 +616,8 @@ class OWPlotGUI:
                         'update_filled_symbols')
 
     def grid_lines_check_box(self, widget):
-        self._check_box(widget, 'show_grid', 'Show gridlines', 'update_grid')
+        self._check_box(widget, 'show_grid', 'Show gridlines',
+                        'update_grid_visibility')
 
     def animations_check_box(self, widget):
         '''
