@@ -122,9 +122,6 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_regression_line()
         self.update_tooltip()
 
-    def update_jittering(self):
-        self.update_coordinates()
-
     def _get_jittering_tooltip(self):
         def is_discrete(attr):
             return attr and attr.is_discrete

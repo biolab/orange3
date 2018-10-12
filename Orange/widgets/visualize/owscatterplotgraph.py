@@ -465,7 +465,12 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def update_jittering(self):
         self.update_tooltip()
-        self.update_coordinates()
+        x, y = self.get_coordinates()
+        if x is None or not len(x) or self.scatterplot_item is None:
+            return
+        self._update_plot_coordinates(self.scatterplot_item, x, y)
+        self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
+        self._update_label_coords(x, y)
 
     # TODO: Rename to remove_plot_items
     def clear(self):
