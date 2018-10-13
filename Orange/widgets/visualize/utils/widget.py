@@ -407,14 +407,16 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         box.layout().addWidget(self.graph.plot_widget)
 
     def _add_controls(self):
-        self._point_box = self.graph.gui.point_properties_box(self.controlArea)
-        self._effects_box = self.graph.gui.effects_box(self.controlArea)
-        self._plot_box = self.graph.gui.plot_properties_box(self.controlArea)
-        self.control_area_stretch = gui.widgetBox(self.controlArea)
+        self.gui = OWPlotGUI(self, self.graph)
+        area = self.controlArea
+        self._point_box = self.gui.point_properties_box(area)
+        self._effects_box = self.gui.effects_box(area)
+        self._plot_box = self.gui.plot_properties_box(area)
+        self.control_area_stretch = gui.widgetBox(area)
         self.control_area_stretch.layout().addStretch(100)
-        self.graph.box_zoom_select(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
+        self.gui.box_zoom_select(area)
+        gui.auto_commit(
+            area, self, "auto_commit", "Send Selection", "Send Automatically")
 
     # Input
     @Inputs.data
