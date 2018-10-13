@@ -28,10 +28,8 @@ This module contains functions and classes for creating GUI elements commonly us
 import os
 
 import unicodedata
-from functools import reduce
-from operator import itemgetter
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Variable
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.listfilter import variables_filter
@@ -430,18 +428,15 @@ class OWPlotGUI:
 
     def __init__(self, plot):
         self._plot = plot
-        self.color_model = DomainModel(placeholder="(Same color)",
-                                       valid_types=DomainModel.PRIMITIVE)
-        self.shape_model = DomainModel(placeholder="(Same shape)",
-                                       valid_types=DiscreteVariable)
-        self.size_model = DomainModel(placeholder="(Same size)",
-                                      order=(self.SizeByOverlap,) + DomainModel.SEPARATED,
-                                      valid_types=ContinuousVariable)
+        self.color_model = DomainModel(
+            placeholder="(Same color)", valid_types=DomainModel.PRIMITIVE)
+        self.shape_model = DomainModel(
+            placeholder="(Same shape)", valid_types=DiscreteVariable)
+        self.size_model = DomainModel(
+            placeholder="(Same size)", valid_types=ContinuousVariable)
         self.label_model = DomainModel(placeholder="(No labels)")
         self.points_models = [self.color_model, self.shape_model,
                               self.size_model, self.label_model]
-
-    SizeByOverlap = "Overlap"
 
     Spacing = 0
 
