@@ -169,16 +169,17 @@ class OWMDS(OWDataProjectionWidget):
 
         self.graph.pause_drawing_pairs()
 
-        g = self.graph.gui
-        self.size_model = g.points_models[2]
-        self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
-                                g.points_models[2].order[1:]
+        self.size_model = self.gui.points_models[2]
+        self.size_model.order = \
+            self.gui.points_models[2].order[:1] \
+            + ("Stress", ) + \
+            self.gui.points_models[2].order[1:]
         # self._initialize()
 
     def _add_controls(self):
         self._add_controls_optimization()
         super()._add_controls()
-        self.graph.gui.add_control(
+        self.gui.add_control(
             self._effects_box, gui.hSlider, "Show similar pairs:",
             master=self.graph, value="connected_pairs", minValue=0,
             maxValue=20, createLabel=False, callback=self._on_connected_changed
