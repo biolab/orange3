@@ -24,6 +24,10 @@ from glob import glob
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
+import xlrd
+import xlwt
+from pyexcel_ods import save_data as ods_write
+
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
@@ -813,6 +817,22 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_flags(data))
 
     @classmethod
+    def formatter(cls, var):
+        # type: (Variable) -> Callable[[Variable], Any]
+        # Return a column 'formatter' function. The function must return
+        # something that `write` knows how to write
+        if var.is_time:
+            return var.repr_val
+        elif var.is_continuous:
+            return lambda value: "" if isnan(value) else value
+        elif var.is_discrete:
+            return lambda value: "" if isnan(value) else var.values[int(value)]
+        elif var.is_string:
+            return lambda value: value
+        else:
+            return var.repr_val
+
+    @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
@@ -820,22 +840,7 @@ class FileFormat(metaclass=FileFormatMeta):
                           data.domain.class_vars,
                           data.domain.metas))
 
-        def formatter(var):
-            # type: (Variable) -> Callable[[Variable], Any]
-            # Return a column 'formatter' function. The function must return
-            # something that `write` knows how to write
-            if var.is_time:
-                return var.repr_val
-            elif var.is_continuous:
-                return lambda value: "" if isnan(value) else value
-            elif var.is_discrete:
-                return lambda value: "" if isnan(value) else var.values[int(value)]
-            elif var.is_string:
-                return lambda value: value
-            else:
-                return var.repr_val
-
-        formatters = [formatter(v) for v in vars]
+        formatters = [cls.formatter(v) for v in vars]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
@@ -986,15 +991,13 @@ class BasketReader(FileFormat):
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
-    EXTENSIONS = ('.xls', '.xlsx')
+    EXTENSIONS = ('.xls', '.xlsx', '.ods')
     DESCRIPTION = 'Mircosoft Excel spreadsheet'
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
         super().__init__(filename)
-
-        from xlrd import open_workbook
-        self.workbook = open_workbook(self.filename)
+        self.workbook = xlrd.open_workbook(self.filename)
 
     @property
     @lru_cache(1)
@@ -1002,7 +1005,6 @@ class ExcelReader(FileFormat):
         return self.workbook.sheet_names()
 
     def read(self):
-        import xlrd
         wb = xlrd.open_workbook(self.filename, on_demand=True)
         if self.sheet:
             ss = wb.sheet_by_name(self.sheet)
@@ -1023,6 +1025,32 @@ class ExcelReader(FileFormat):
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
+
+    @classmethod
+    def write_file(cls, filename, data):
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
+        headers = cls.header_names(data)
+        if filename.endswith((".xls", ".xlsx")):
+            workbook = xlwt.Workbook(encoding="utf-8")
+            sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
+            for c, header in enumerate(headers):
+                sheet.write(0, c, header)
+            for i, row in enumerate(zipped_list_data, 1):
+                for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                    sheet.write(i, j, fmt(v))
+            workbook.save(filename)
+        elif filename.endswith(".ods"):
+            ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))]
+                                  for row in zipped_list_data]
+            ods_write(filename, {"Sheet1": [headers] + ods_formatted_data})
 
 
 class DotReader(FileFormat):
