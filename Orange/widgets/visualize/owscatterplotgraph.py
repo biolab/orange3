@@ -1,7 +1,6 @@
 import sys
 import itertools
 import warnings
-import threading
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
@@ -219,18 +218,10 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
-    def __init__(self, *args, **kwargs):
-        self.lock = threading.Lock()
-        super().__init__(*args, **kwargs)
-
     def paint(self, painter, option, widget=None):
-        with self.lock:
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-            super().paint(painter, option, widget)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        super().paint(painter, option, widget)
 
-    def setData(self, *args, **kwargs):
-        with self.lock:
-            super().setData(*args ,**kwargs)
 
 def _define_symbols():
     """
