@@ -21,11 +21,16 @@ class TestOWLouvain(WidgetTest):
         self.widget.onDeleteWidget()
         super().tearDown()
 
+    def commit_and_wait(self, widget=None):
+        widget = self.widget if widget is None else widget
+        widget.commit()
+        self.wait_until_stop_blocking(widget)
+
     def test_removing_data(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.commit_and_wait()
+        self.commit_and_wait(self.widget)
         self.send_signal(self.widget.Inputs.data, None)
-        self.commit_and_wait()
+        self.commit_and_wait(self.widget)
 
     def test_clusters_ordered_by_size(self):
         """Cluster names should be sorted based on the number of instances."""
@@ -80,7 +85,7 @@ class TestOWLouvain(WidgetTest):
         table3 = table1.copy()
         table3.X[:, 0] = 1
 
-        with patch.object(self.widget, 'commit') as commit:
+        with patch.object(self.widget, '_invalidate_output') as commit:
             self.send_signal(self.widget.Inputs.data, table1)
             self.commit_and_wait()
             call_count = commit.call_count
