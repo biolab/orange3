@@ -1,46 +1,54 @@
 """Common gui.OWComponent components."""
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QRectF
+from AnyQt.QtGui import QColor
+from AnyQt.QtWidgets import QGraphicsEllipseItem
 
+import pyqtgraph as pg
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.plotutils import (
-    MouseEventDelegate, VizInteractiveViewBox
+    MouseEventDelegate, DraggableItemsViewBox
 )
 
 
-class OWVizGraph(OWScatterPlotBase):
-    """Class is used as a graph base class for OWFreeViz and OWRadviz."""
+class OWGraphWithAnchors(OWScatterPlotBase):
+    """
+    Graph for projections in which dimensions can be manually moved
+
+    Class is used as a graph base class for OWFreeViz and OWRadviz."""
     DISTANCE_DIFF = 0.08
 
-    def __init__(self, scatter_widget, parent, view_box=VizInteractiveViewBox):
+    def __init__(self, scatter_widget, parent, view_box=DraggableItemsViewBox):
         super().__init__(scatter_widget, parent, view_box)
-        self._attributes = ()
-        self._points = None
-        self._point_items = None
-        self._circle_item = None
-        self._indicator_item = None
+        self.anchor_items = None
+        self.circle_item = None
+        self.indicator_item = None
         self._tooltip_delegate = MouseEventDelegate(self.help_event,
                                                     self.show_indicator_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
-        self.view_box.sigResized.connect(self.update_density)
 
-    def set_attributes(self, attributes):
-        self._attributes = attributes
-
-    def set_point(self, i, x, y):
-        self._points[i][0] = x
-        self._points[i][1] = y
-
-    def set_points(self, points):
-        self._points = points
-
-    def get_points(self):
-        return self._points
+    def clear(self):
+        super().clear()
+        self.anchor_items = None
+        self.circle_item = None
+        self.indicator_item = None
 
     def update_coordinates(self):
         super().update_coordinates()
-        self.update_items()
-        self.set_view_box_range()
-        self.view_box.setAspectLocked(True, 1)
+        if self.scatterplot_item is not None:
+            self.update_anchors()
+            self.update_circle()
+            self.set_view_box_range()
+            self.view_box.setAspectLocked(True, 1)
+
+    def update_anchors(self):
+        raise NotImplementedError
+
+    def update_circle(self):
+        if self.scatterplot_item is not None and not self.circle_item:
+            self.circle_item = QGraphicsEllipseItem()
+            self.circle_item.setRect(QRectF(-1, -1, 2, 2))
+            self.circle_item.setPen(pg.mkPen(QColor(0, 0, 0), width=2))
+            self.plot_widget.addItem(self.circle_item)
 
     def reset_button_clicked(self):
         self.set_view_box_range()
@@ -48,11 +56,11 @@ class OWVizGraph(OWScatterPlotBase):
     def set_view_box_range(self):
         raise NotImplementedError
 
-    def can_show_indicator(self, pos):
-        raise NotImplementedError
+    def closest_draggable_item(self, pos):
+        return None
 
-    def show_indicator(self, point_i):
-        self._update_indicator_item(point_i)
+    def show_indicator(self, anchor_idx):
+        self._update_indicator_item(anchor_idx)
 
     def show_indicator_event(self, ev):
         scene = self.plot_widget.scene()
@@ -62,54 +70,22 @@ class OWVizGraph(OWScatterPlotBase):
             return True
 
         pos = self.scatterplot_item.mapFromScene(ev.scenePos())
-        can_show, point_i = self.can_show_indicator(pos)
-        if can_show:
-            self._update_indicator_item(point_i)
+        anchor_idx = self.closest_draggable_item(pos)
+        if anchor_idx is not None:
+            self._update_indicator_item(anchor_idx)
             if self.view_box.mouse_state == 0:
                 self.view_box.setCursor(Qt.OpenHandCursor)
         else:
-            if self._indicator_item is not None:
-                self.plot_widget.removeItem(self._indicator_item)
-                self._indicator_item = None
+            if self.indicator_item is not None:
+                self.plot_widget.removeItem(self.indicator_item)
+                self.indicator_item = None
             self.view_box.setCursor(Qt.ArrowCursor)
         return True
 
-    def update_items(self):
-        self._update_point_items()
-        self._update_circle_item()
+    def _update_indicator_item(self, anchor_idx):
+        if self.indicator_item is not None:
+            self.plot_widget.removeItem(self.indicator_item)
+        self._add_indicator_item(anchor_idx)
 
-    def _update_point_items(self):
-        self._remove_point_items()
-        self._add_point_items()
-
-    def _update_circle_item(self):
-        self._remove_circle_item()
-        self._add_circle_item()
-
-    def _update_indicator_item(self, point_i):
-        self._remove_indicator_item()
-        self._add_indicator_item(point_i)
-
-    def _remove_point_items(self):
-        if self._point_items is not None:
-            self.plot_widget.removeItem(self._point_items)
-            self._point_items = None
-
-    def _remove_circle_item(self):
-        if self._circle_item is not None:
-            self.plot_widget.removeItem(self._circle_item)
-            self._circle_item = None
-
-    def _remove_indicator_item(self):
-        if self._indicator_item is not None:
-            self.plot_widget.removeItem(self._indicator_item)
-            self._indicator_item = None
-
-    def _add_point_items(self):
-        raise NotImplementedError
-
-    def _add_circle_item(self):
-        raise NotImplementedError
-
-    def _add_indicator_item(self, point_i):
-        raise NotImplementedError
+    def _add_indicator_item(self, anchor_idx):
+        pass
