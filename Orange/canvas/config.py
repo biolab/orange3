@@ -271,9 +271,6 @@ def widgets_entry_points():
              ]
     return itertools.chain(*chain)
 
-#: Parameters for searching add-on packages in PyPi using xmlrpc api.
-ADDON_KEYWORD = 'orange3 add-on'
-ADDON_PYPI_SEARCH_SPEC = {"keywords": ADDON_KEYWORD}
 #: Entry points by which add-ons register with pkg_resources.
 ADDON_ENTRY = "orange3.addon"
 
