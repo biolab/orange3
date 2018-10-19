@@ -5,7 +5,7 @@ from unittest import TestCase
 from unittest.mock import Mock, patch, call
 from Orange.widgets.settings import (
     ContextHandler, ContextSetting, Context, Setting, SettingsPrinter,
-    VERSION_KEY
+    VERSION_KEY, IncompatibleContext
 )
 
 __author__ = 'anze'
@@ -110,6 +110,26 @@ class TestContextHandler(TestCase):
         with patch.object(SimpleWidget, "migrate_context", migrate_context):
             handler.initialize(widget, dict(context_settings=deepcopy(contexts)))
         migrate_context.assert_has_calls([call(c, c.values[VERSION_KEY]) for c in contexts])
+
+    def test_migrates_settings_removes_incompatible(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+
+        widget = SimpleWidget()
+
+        contexts = [Context(foo=i) for i in (13, 13, 0, 1, 13, 2, 13)]
+
+        def migrate_context(context, _):
+            if context.foo == 13:
+                raise IncompatibleContext()
+
+        with patch.object(SimpleWidget, "migrate_context", migrate_context):
+            handler.initialize(widget, dict(context_settings=contexts))
+            contexts = widget.context_settings
+            self.assertEqual(len(contexts), 3)
+            self.assertTrue(
+                all(context.foo == i
+                    for i, context in enumerate(contexts)))
 
     def test_fast_save(self):
         handler = ContextHandler()
