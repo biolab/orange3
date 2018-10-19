@@ -221,6 +221,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
+        self.__progressBar = None
         self.__splitter = None
         if self.want_basic_layout:
             self.set_basic_layout()
@@ -426,7 +427,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.message_bar = MessagesWidget(self)
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
-            pb = QProgressBar(maximumWidth=120, minimum=0, maximum=100)
+            self.__progressBar = pb = QProgressBar(
+                maximumWidth=120, minimum=0, maximum=100
+            )
             pb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored)
             pb.setAttribute(Qt.WA_LayoutUsesWidgetRect)
             pb.setAttribute(Qt.WA_MacMiniSize)
@@ -434,24 +437,25 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             sb.addPermanentWidget(pb)
             sb.addPermanentWidget(self.message_bar)
 
-            def statechanged():
-                pb.setVisible(bool(self.processingState) or self.isBlocking())
-                if self.isBlocking() and not self.processingState:
-                    pb.setRange(0, 0)  # indeterminate pb
-                elif self.processingState:
-                    pb.setRange(0, 100)  # determinate pb
-
-            self.processingStateChanged.connect(statechanged)
-            self.blockingStateChanged.connect(statechanged)
-
-            @self.progressBarValueChanged.connect
-            def _(val):
-                pb.setValue(int(val))
+            self.processingStateChanged.connect(self.__processingStateChanged)
+            self.blockingStateChanged.connect(self.__processingStateChanged)
+            self.progressBarValueChanged.connect(lambda v: pb.setValue(int(v)))
 
             # Reserve the bottom margins for the status bar
             margins = self.layout().contentsMargins()
             margins.setBottom(sb.sizeHint().height())
             self.setContentsMargins(margins)
+
+    def __processingStateChanged(self):
+        # Update the progress bar in the widget's status bar
+        pb = self.__progressBar
+        if pb is None:
+            return
+        pb.setVisible(bool(self.processingState) or self.isBlocking())
+        if self.isBlocking() and not self.processingState:
+            pb.setRange(0, 0)  # indeterminate pb
+        elif self.processingState:
+            pb.setRange(0, 100)  # determinate pb
 
     def __toggleControlArea(self):
         if self.__splitter is None or self.__splitter.count() < 2:
