@@ -158,7 +158,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     class Outputs(OWDataProjectionWidget.Outputs):
         features = Output("Features", AttributeList, dynamic=False)
 
-    settings_version = 3
+    settings_version = 4
     auto_sample = Setting(True)
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
@@ -427,12 +427,15 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        values = context.values
         if version < 3:
-            values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
+        if version < 4:
+            if values["attr_x"][1] % 100 == 1 or values["attr_y"][1] % 100 == 1:
+                raise IncompatibleContext()
 
 
 if __name__ == "__main__":  # pragma: no cover
