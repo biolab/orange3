@@ -20,7 +20,7 @@ from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
     QHeaderView, QStyle
 
 import Orange.statistics.util as ut
-from Orange.canvas.report import plural
+from Orange.widgets.report import plural
 from Orange.data import Table, StringVariable, DiscreteVariable, \
     ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
