@@ -12,7 +12,8 @@ from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, DiscreteVariable, Variable
+from Orange.data import Table, Domain, DiscreteVariable, Variable, \
+    ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess.score import ReliefF, RReliefF
 
@@ -97,7 +98,6 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
-    jitter_continuous = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -121,31 +121,6 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         super().update_coordinates()
         self.update_regression_line()
         self.update_tooltip()
-
-    def _get_jittering_tooltip(self):
-        def is_discrete(attr):
-            return attr and attr.is_discrete
-
-        if self.jitter_continuous or is_discrete(self.master.attr_x) or \
-                is_discrete(self.master.attr_y):
-            return super()._get_jittering_tooltip()
-        return ""
-
-    def jitter_coordinates(self, x, y):
-        def get_span(attr):
-            if attr.is_discrete:
-                # Assuming the maximal jitter size is 10, a span of 4 will
-                # jitter by 4 * 10 / 100 = 0.4, so there will be no overlap
-                return 4
-            elif self.jitter_continuous:
-                return None  # Let _jitter_data determine the span
-            else:
-                return 0  # No jittering
-        span_x = get_span(self.master.attr_x)
-        span_y = get_span(self.master.attr_y)
-        if self.jitter_size == 0 or (span_x == 0 and span_y == 0):
-            return x, y
-        return self._jitter_data(x, y, span_x, span_y)
 
     def update_regression_line(self):
         if self.reg_line_item is not None:
@@ -231,7 +206,6 @@ class OWScatterPlot(OWDataProjectionWidget):
         self._add_controls_axis()
         self._add_controls_sampling()
         super()._add_controls()
-        self.gui.add_widget(self.gui.JitterNumericValues, self._effects_box)
         self.gui.add_widgets(
             [self.gui.ShowGridLines,
              self.gui.ToolTipShowsAll,
@@ -245,7 +219,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         )
         box = gui.vBox(self.controlArea, True)
         dmod = DomainModel
-        self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)
+        self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
             box, self, "attr_x", label="Axis x:", callback=self.attr_changed,
             model=self.xy_model, **common_options)
@@ -459,10 +433,8 @@ class OWScatterPlot(OWDataProjectionWidget):
             ("Label", self._get_caption_var_name(self.attr_label)),
             ("Shape", self._get_caption_var_name(self.attr_shape)),
             ("Size", self._get_caption_var_name(self.attr_size)),
-            ("Jittering", (self.attr_x.is_discrete or
-                           self.attr_y.is_discrete or
-                           self.graph.jitter_continuous) and
-             self.graph.jitter_size)))
+            ("Jittering", (self.graph.jitter_size > 0
+             and "{} %".format(self.graph.jitter_size))))
 
     @classmethod
     def migrate_settings(cls, settings, version):
