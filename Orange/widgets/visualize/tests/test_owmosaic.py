@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 import time
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -95,6 +96,22 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         assertCount(6, [5, 6, 6, 6], 16)
         self.send_signal(self.widget.Inputs.data, None)
         assertCount(1, [0, 1, 1, 1], 0)
+
+    @patch('Orange.widgets.visualize.owmosaic.CanvasRectangle')
+    def test_different_number_of_attributes(self, canvas_rectangle):
+        domain = Domain([DiscreteVariable(c, values="01") for c in "abcd"])
+        data = Table.from_list(
+            domain,
+            [list("{:04b}".format(i)[-4:]) for i in range(16)])
+        self.send_signal(self.widget.Inputs.data, data)
+        widget = self.widget
+        widget.variable2 = widget.variable3 = widget.variable4 = None
+        for i, attr in enumerate(data.domain[:4], start=1):
+            canvas_rectangle.reset_mock()
+            setattr(self.widget, "variable" + str(i), attr)
+            self.widget.update_graph()
+            self.assertEqual(canvas_rectangle.call_count, 7 + 2 ** (i + 1))
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
@@ -361,3 +378,7 @@ class MosaicVizRankTests(WidgetTest):
         self.assertTrue(self.widget.Warning.incompatible_subset.is_shown())
         self.send_signal(self.widget.Inputs.data_subset, self.iris)
         self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()
