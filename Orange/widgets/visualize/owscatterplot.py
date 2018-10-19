@@ -20,8 +20,8 @@ from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.widgets import gui, report
 from Orange.widgets.io import MatplotlibFormat, MatplotlibPDFFormat
 from Orange.widgets.settings import (
-    Setting, ContextSetting, SettingProvider
-)
+    Setting, ContextSetting, SettingProvider,
+    IncompatibleContext)
 from Orange.widgets.utils import get_variable_values_sorted
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
@@ -169,7 +169,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     class Outputs(OWDataProjectionWidget.Outputs):
         features = Output("Features", AttributeList, dynamic=False)
 
-    settings_version = 3
+    settings_version = 4
     auto_sample = Setting(True)
     attr_x = ContextSetting(None)
     attr_y = ContextSetting(None)
@@ -448,12 +448,15 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        values = context.values
         if version < 3:
-            values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
+        if version < 4:
+            if values["attr_x"].is_discrete or values["attr_y"].is_discrete:
+                raise IncompatibleContext()
 
 
 def main(argv=None):
