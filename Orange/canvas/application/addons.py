@@ -48,6 +48,8 @@ from ..help.manager import get_dist_meta, trim, parse_meta
 
 
 PYPI_API_JSON = "https://pypi.org/pypi/{name}/json"
+
+# generated from biolab/orange3-addons repository
 OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
 
 
