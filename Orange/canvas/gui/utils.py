@@ -7,6 +7,7 @@ import sys
 import traceback
 
 from contextlib import contextmanager
+from functools import wraps
 
 from AnyQt.QtWidgets import (
     QWidget, QMessageBox, QStyleOption, QStyle
@@ -21,16 +22,45 @@ import sip
 QWIDGETSIZE_MAX = ((1 << 24) - 1)
 
 
-@contextmanager
-def updates_disabled(widget):
-    """Disable QWidget updates (using QWidget.setUpdatesEnabled)
+# Serves as a decorator and context manager, hence a function-like name
+class updates_disabled:  # pylint: disable=invalid-name
     """
-    old_state = widget.updatesEnabled()
-    widget.setUpdatesEnabled(False)
-    try:
-        yield
-    finally:
-        widget.setUpdatesEnabled(old_state)
+    Disable QWidget updates (using QWidget.setUpdatesEnabled).
+
+    `updates_disabled` can be used either as a context manager or a decorator
+    for a method of a class derived from `QWidget`.
+
+    When used as context manager, the argument is an instance of QWidget.
+
+        with updates_disabled(self.plot_widget):
+            do_something()
+
+    When used as decorator, the argument is the name of the widget's
+    attribute containing the child widget whose updates.
+
+        @updated_disabled('plot_widget'):
+        def method(self):
+            do_something()
+
+    In both cases, updates are enabled when the context or the function exits,
+    and the widget's content is scheduled to be updated.
+    """
+    def __init__(self, widget):
+        self.widget = widget
+
+    def __enter__(self):
+        self.old_state = self.widget.updatesEnabled()
+        self.widget.setUpdatesEnabled(False)
+
+    def __exit__(self, *exc):
+        self.widget.setUpdatesEnabled(self.old_state)
+
+    def __call__(self, method):
+        @wraps(method)
+        def func(widget, *args, **kwargs):
+            with updates_disabled(getattr(widget, self.widget)):
+                method(widget, *args, **kwargs)
+        return func
 
 
 @contextmanager
