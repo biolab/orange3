@@ -330,8 +330,8 @@ class TestFeatureStatisticsOutputs(WidgetTest):
         )
 
         output = self.get_output(self.widget.Outputs.reduced_data)
-        np.testing.assert_equal(output.X, self.data[:, selected_vars].X)
-        np.testing.assert_equal(output.Y, self.data[:, selected_vars].Y)
+        np.testing.assert_equal(output.X, self.data[:, selected_vars.variables].X)
+        np.testing.assert_equal(output.Y, self.data[:, selected_vars.variables].Y)
 
     def test_clearing_selection_sends_none_to_output(self):
         """Clearing all the selected rows should send `None` to output."""
