@@ -210,7 +210,7 @@ class OWLouvainClustering(widget.OWWidget):
             louvain = Louvain()
             self.preprocessed_data = louvain.preprocess(self.data)
 
-        state = TaskState()
+        state = TaskState(self)
 
         # Prepare/assemble the task(s) to run; reuse partial results
         if self.apply_pca:
@@ -269,6 +269,8 @@ class OWLouvainClustering(widget.OWWidget):
         assert self.__task is not None
         assert self.__task.future is future
         assert self.__task.watcher.future() is future
+        self.__task.deleteLater()
+        self.__task.setParent(None)
         self.__task = None
         self.__set_state_ready()
         try:
@@ -303,6 +305,7 @@ class OWLouvainClustering(widget.OWWidget):
         state.partial_result_ready.connect(self.__set_partial_results)
         state.watcher.done.connect(self.__on_done)
         state.start(self.__executor, task)
+        state.setParent(self)
         self.__task = state
 
     def __cancel_task(self, wait=True):
@@ -314,11 +317,12 @@ class OWLouvainClustering(widget.OWWidget):
             state.status_changed.disconnect(self.setStatusMessage)
             state.progress_changed.disconnect(self.progressBarSet)
             state.watcher.done.disconnect(self.__on_done)
-            if state.parent() is self:
-                state.setParent(None)
-
-            if wait and state.future is not None:
+            if wait:
                 futures.wait([state.future])
+                state.deleteLater()
+            else:
+                w = FutureWatcher(state.future, parent=state)
+                w.done.connect(state.deleteLater)
 
     def __set_results(self, results):
         # type: ('Results') -> None
