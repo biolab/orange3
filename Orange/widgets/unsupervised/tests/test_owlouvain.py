@@ -15,7 +15,7 @@ class TestOWLouvain(WidgetTest):
         self.widget = self.create_widget(
             OWLouvainClustering, stored_settings={'auto_commit': False}
         )
-        self.iris = Table('iris')
+        self.iris = Table('iris')[::5]
 
     def tearDown(self):
         self.widget.onDeleteWidget()
@@ -99,3 +99,33 @@ class TestOWLouvain(WidgetTest):
             self.send_signal(self.widget.Inputs.data, table3)
             self.commit_and_wait()
             self.assertEqual(call_count + 1, commit.call_count)
+
+    def test_invalidate(self):
+        # pylint: disable=protected-access
+        data = self.iris
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.commit()
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsNotNone(out)
+        # invalidate the partitioning
+        p = self.widget.partition
+        g = self.widget.graph
+        self.widget._invalidate_partition()
+        # not in auto commit mode.
+        self.assertTrue(self.widget.Information.modified.is_shown())
+        self.widget.commit()
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsNotNone(out)
+        self.assertIs(self.widget.graph, g)
+        self.assertIsNot(self.widget.partition, p)
+
+        self.assertFalse(self.widget.Information.modified.is_shown())
+        self.widget._invalidate_graph()
+        self.assertIsNone(self.widget.graph)
+        self.assertIsNotNone(self.widget.pca_projection)
+        self.assertTrue(self.widget.Information.modified.is_shown())
+        self.widget._invalidate_pca_projection()
+        self.assertIsNone(self.widget.pca_projection)
+        self.widget.commit()
+        self.get_output(self.widget.Outputs.annotated_data)
+        self.assertFalse(self.widget.Information.modified.is_shown())
