@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import sparse as sp
 from AnyQt.QtCore import Qt, QRectF, QSizeF, QPointF, QLineF
 from AnyQt.QtGui import QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
@@ -6,8 +7,8 @@ from AnyQt.QtWidgets import (
     QGraphicsRectItem,
     QGraphicsLinearLayout,
     QSizePolicy,
-    QGraphicsLineItem)
-from scipy import sparse as sp
+    QGraphicsLineItem,
+)
 
 import Orange.statistics.util as ut
 from Orange.data.util import one_hot
@@ -213,18 +214,18 @@ class Histogram(QGraphicsWidget):
 
     def _get_histogram_edges(self):
         """Get the edges in the histogram based on the attribute type.
-        
+
         In case of a continuous variable, we split the variable range into
         n bins. In case of a discrete variable, bins don't make sense, so we
         just return the attribute values.
-        
+
         This will return the staring and ending edge, not just the edges in
         between (in the case of a continuous variable).
 
         Returns
         -------
         np.ndarray
-        
+
         """
         if self.attribute.is_discrete:
             return np.array([self.attribute.to_val(v) for v in self.attribute.values])
@@ -338,7 +339,7 @@ class Histogram(QGraphicsWidget):
             bar_layout.addStretch()
             self.__layout.addItem(bar_layout)
 
-            bar = ProportionalBarItem(
+            bar = ProportionalBarItem(  # pylint: disable=blacklisted-name
                 distribution=distr, colors=bin_colors, height=bar_height,
                 bar_size=bar_size,
             )
@@ -384,8 +385,9 @@ class Histogram(QGraphicsWidget):
 if __name__ == '__main__':
     import sys
     from Orange.data.table import Table
-    from AnyQt.QtWidgets import QGraphicsView, QGraphicsScene, QApplication, \
-        QWidget
+    from AnyQt.QtWidgets import (  # pylint: disable=ungrouped-imports
+        QGraphicsView, QGraphicsScene, QApplication, QWidget
+    )
 
     app = QApplication(sys.argv)
     widget = QWidget()

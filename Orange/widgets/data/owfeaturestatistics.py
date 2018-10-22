@@ -15,19 +15,18 @@ import scipy.stats as ss
 from AnyQt.QtCore import Qt, QSize, QRectF, QVariant, QModelIndex, pyqtSlot, \
     QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
-from AnyQt.QtWidgets import QStyleOptionViewItem
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
-    QHeaderView, QStyle
+    QHeaderView, QStyle, QStyleOptionViewItem  # pylint: disable=unused-import
 
 import Orange.statistics.util as ut
-from Orange.widgets.report import plural
 from Orange.data import Table, StringVariable, DiscreteVariable, \
-    ContinuousVariable, TimeVariable, Domain, Variable
+    ContinuousVariable, TimeVariable, Domain, Variable  # pylint: disable=unused-import
 from Orange.widgets import widget, gui
+from Orange.widgets.data.utils.histogram import Histogram
+from Orange.widgets.report import plural
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
-from Orange.widgets.data.utils.histogram import Histogram
 
 
 def _categorical_entropy(x):
@@ -529,7 +528,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         # Consistently format the text inside the table cells
         # The easiest way to check for NaN is to compare with itself
-        if output != output:
+        if output != output:  # pylint: disable=comparison-with-itself
             output = ''
         # Format ∞ properly
         elif output in (np.inf, -np.inf):
@@ -808,10 +807,10 @@ class OWFeatureStatistics(widget.OWWidget):
     def _format_variables_string(self, variables):
         agg = []
         for var_type_name, var_type in [
-            ('categorical', DiscreteVariable),
-            ('numeric', ContinuousVariable),
-            ('time', TimeVariable),
-            ('string', StringVariable)
+                ('categorical', DiscreteVariable),
+                ('numeric', ContinuousVariable),
+                ('time', TimeVariable),
+                ('string', StringVariable)
         ]:
             var_type_list = [v for v in variables if type(v) is var_type]
             if var_type_list:
@@ -889,7 +888,7 @@ class OWFeatureStatistics(widget.OWWidget):
 
 
 if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication
+    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
     import sys
 
     app = QApplication(sys.argv)

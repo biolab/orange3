@@ -1,7 +1,7 @@
 from collections import namedtuple
 from functools import wraps, partial
 from itertools import chain
-from typing import Callable, List
+from typing import Callable, List  # pylint: disable=unused-import
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
@@ -370,4 +370,3 @@ class TestFeatureStatisticsUI(WidgetTest):
         # Sending back the old data restores the selection
         self.send_signal(self.widget.Inputs.data, self.data1)
         self.assertEqual(len(self.widget.selected_rows), 2)
-
