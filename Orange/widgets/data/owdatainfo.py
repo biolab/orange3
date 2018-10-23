@@ -101,10 +101,7 @@ class OWDataInfo(widget.OWWidget):
 
         threading.Thread(target=update_size).start()
 
-        if hasattr(data, "name"):
-            self.data_set_name = data.name
-        else:
-            self.data_set_name = "N/A"
+        self.data_set_name = getattr(data, "name", "N/A")
 
         if not domain.attributes:
             self.features = "None"
