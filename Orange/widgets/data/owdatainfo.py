@@ -45,7 +45,7 @@ class OWDataInfo(widget.OWWidget):
             gui.label(bo, self, "%%(%s)s" % name)
 
         # ensure the widget has some decent minimum width.
-        self.targets = "Discrete outcome with 123 values"
+        self.targets = "Categorical outcome with 123 values"
         self.layout().activate()
         # NOTE: The minimum width is set on the 'contained' widget and
         # not `self`. The layout will set a fixed size to `self` taking
@@ -112,7 +112,7 @@ class OWDataInfo(widget.OWWidget):
             disc_features = count(domain.attributes, DiscreteVariable)
             cont_features = count(domain.attributes, ContinuousVariable)
             self.features = pack_table((
-                ("Discrete", n_or_none(disc_features)),
+                ("Categorical", n_or_none(disc_features)),
                 ("Numeric", n_or_none(cont_features))
             ))
 
@@ -123,7 +123,7 @@ class OWDataInfo(widget.OWWidget):
             cont_metas = count(domain.metas, ContinuousVariable)
             str_metas = count(domain.metas, StringVariable)
             self.meta_attributes = pack_table((
-                ("Discrete", n_or_none(disc_metas)),
+                ("Categorical", n_or_none(disc_metas)),
                 ("Numeric", n_or_none(cont_metas)),
                 ("Textual", n_or_none(str_metas))))
 
@@ -132,7 +132,7 @@ class OWDataInfo(widget.OWWidget):
             if class_var.is_continuous:
                 self.targets = "Numeric target variable"
             else:
-                self.targets = "Discrete outcome with %i values" % \
+                self.targets = "Categorical outcome with %i values" % \
                                len(class_var.values)
         elif domain.class_vars:
             disc_class = count(domain.class_vars, DiscreteVariable)
