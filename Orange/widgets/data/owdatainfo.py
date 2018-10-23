@@ -76,12 +76,14 @@ class OWDataInfo(widget.OWWidget):
 
     def _set_fields(self, data):
         def n_or_none(n):
-            return n or "none"
+            return n or "-"
 
         def pack_table(info):
             return '<table>\n' + "\n".join(
-                '<tr><td align="right" width="90">%s:</td>\n'
-                '<td width="40">%s</td></tr>\n' % (d, textwrap.shorten(str(v), width=30, placeholder="..."))
+                '<tr><td align="right" width="90">{}:</td>\n'
+                '<td width="40">{}</td></tr>\n'.format(
+                    d,
+                    textwrap.shorten(str(v), width=30, placeholder="..."))
                 for d, v in info
             ) + "</table>\n"
 
@@ -103,7 +105,8 @@ class OWDataInfo(widget.OWWidget):
                                      ("meta attributes", data.metas_density),
                                      ("targets", data.Y_density)) if m() > 1]
         if sparseness:
-            sparseness = "<p>Sparse representation: %s</p>" % ", ".join(sparseness)
+            sparseness = "<p>Sparse representation: {}</p>"\
+                         .format(", ".join(sparseness))
         else:
             sparseness = ""
         self.data_set_size = pack_table((
@@ -125,17 +128,17 @@ class OWDataInfo(widget.OWWidget):
             if class_var.is_continuous:
                 self.targets = "Numeric target variable"
             else:
-                self.targets = "Categorical outcome with %i values" % \
-                               len(class_var.values)
+                self.targets = "Categorical outcome with {} values"\
+                               .format(len(class_var.values))
         elif domain.class_vars:
             disc_class = self._count(domain.class_vars, DiscreteVariable)
             cont_class = self._count(domain.class_vars, ContinuousVariable)
             if not cont_class:
-                self.targets = "Multi-target data,\n%i categorical targets" % \
-                               n_or_none(disc_class)
+                self.targets = "Multi-target data,\n{} categorical targets"\
+                               .format(n_or_none(disc_class))
             elif not disc_class:
-                self.targets = "Multi-target data,\n%i numeric targets" % \
-                               n_or_none(cont_class)
+                self.targets = "Multi-target data,\n{} numeric targets"\
+                               .format(n_or_none(cont_class))
             else:
                 self.targets = "<p>Multi-target data</p>\n" + \
                                pack_counts(domain.class_vars)
@@ -156,11 +159,11 @@ class OWDataInfo(widget.OWWidget):
 
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
-                '%s=%s' % (key, value)
+                '{}={}'.format(key, value)
                 for key, value in data.connection_params.items()
                 if value is not None and key != 'password')
-            self.location = "Table '%s', using connection:\n%s" % (
-                data.table_name, connection_string)
+            self.location = "Table '{}', using connection:\n{}"\
+                            .format(data.table_name, connection_string)
             dd["Rows"] = data.approx_len()
         else:
             self.location = "Data is stored in memory"
