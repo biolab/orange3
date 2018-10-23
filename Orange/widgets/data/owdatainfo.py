@@ -33,10 +33,8 @@ class OWDataInfo(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.data(None)
-        self.data_set_name = "N/A"
-        self.data_set_size = self.features = self.meta_attributes = ""
-        self.location = ""
+        self.clear_fields()
+
         for box in ("Data Set Name", "Data Set Size", "Features", "Targets",
                     "Meta Attributes", "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
@@ -54,9 +52,14 @@ class OWDataInfo(widget.OWWidget):
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
-        self.targets = "None"
-        self.data_attributes = ""
+
+    def clear_fields(self):
+        self.data_set_name = ""
+        self.data_set_size = ""
+        self.features = self.targets = self.meta_attributes = ""
+        self.location = ""
         self.data_desc = None
+        self.data_attributes = ""
 
     @Inputs.data
     def data(self, data):
@@ -74,12 +77,7 @@ class OWDataInfo(widget.OWWidget):
             ) + "</table>\n"
 
         if data is None:
-            self.data_set_name = "N/A"
-            self.data_set_size = "No data"
-            self.features = self.targets = self.meta_attributes = "None"
-            self.location = ""
-            self.data_desc = None
-            self.data_attributes = ""
+            self.clear_fields()
             return
 
         sparseness = [s for s, m in (("features", data.X_density),
