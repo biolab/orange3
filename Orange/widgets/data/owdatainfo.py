@@ -147,6 +147,7 @@ class OWDataInfo(widget.OWWidget):
             self.targets = "None"
 
         self.data_desc = dd = OrderedDict()
+        dd["Name"] = self.data_set_name
 
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
