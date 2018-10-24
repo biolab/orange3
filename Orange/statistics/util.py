@@ -441,6 +441,11 @@ def nanvar(x, axis=None):
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
 
+def nanstd(x, axis=None):
+    """ Equivalent of np.nanstd that supports sparse and dense matrices. """
+    return np.sqrt(nanvar(x, axis=axis))
+
+
 def nanmedian(x, axis=None):
     """ Equivalent of np.nanmedian that supports sparse or dense matrices. """
     def nanmedian_sparse(x):
