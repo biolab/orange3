@@ -133,8 +133,9 @@ class OWSave(widget.OWWidget):
             return
 
         items = [item for item, _, supports_sparse in FILE_TYPES
-                                                   if supports_sparse or not data.is_sparse()]
-        if items != [self.controls.filetype.itemText(i) for i in range(self.controls.filetype.count())]:
+                 if supports_sparse or not data.is_sparse()]
+        if items != [self.controls.filetype.itemText(i) for i in
+                     range(self.controls.filetype.count())]:
             self.controls.filetype.clear()
             self.controls.filetype.insertItems(0, items)
             self.update_extension()
