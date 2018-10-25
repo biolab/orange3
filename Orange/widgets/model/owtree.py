@@ -23,6 +23,7 @@ class OWTreeLearner(OWBaseLearner):
         "Orange.widgets.regression.owregressiontree.OWTreeLearner",
     ]
     priority = 30
+    keywords = []
 
     LEARNER = TreeLearner
 

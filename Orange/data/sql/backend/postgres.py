@@ -4,7 +4,7 @@ import warnings
 from contextlib import contextmanager
 from time import time
 
-from psycopg2 import Error, OperationalError
+from psycopg2 import Error
 from psycopg2.pool import ThreadedConnectionPool
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
@@ -29,6 +29,7 @@ class Psycopg2Backend(Backend):
         if self.connection_pool is None:
             self._create_connection_pool()
 
+        self.missing_extension = []
         if self.auto_create_extensions:
             self._create_extensions()
 
@@ -45,8 +46,9 @@ class Psycopg2Backend(Backend):
                 query = "CREATE EXTENSION IF NOT EXISTS {}".format(ext)
                 with self.execute_sql_query(query):
                     pass
-            except OperationalError:
+            except BackendError:
                 warnings.warn("Database is missing extension {}".format(ext))
+                self.missing_extension.append(ext)
 
     def create_sql_query(self, table_name, fields, filters=(),
                          group_by=None, order_by=None,

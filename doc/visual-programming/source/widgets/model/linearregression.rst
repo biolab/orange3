@@ -20,7 +20,7 @@ Outputs
 
 The **Linear Regression** widget constructs a learner/predictor that learns a `linear function <https://en.wikipedia.org/wiki/Linear_regression>`_ from its input data. The model can identify the relationship between a predictor xi and the response variable y. Additionally, `Lasso <https://en.wikipedia.org/wiki/Least_squares#Lasso_method>`_ and `Ridge <https://en.wikipedia.org/wiki/Least_squares#Lasso_method>`_ regularization parameters can be specified. Lasso regression minimizes a penalized version of the least squares loss function with L1-norm penalty and Ridge regularization with L2-norm penalty.
 
-Linear regreesion works only on regression tasks.
+Linear regression works only on regression tasks.
 
 .. figure:: images/LinearRegression-stamped.png
    :scale: 50 %

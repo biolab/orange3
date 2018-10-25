@@ -93,6 +93,7 @@ class OWKMeans(widget.OWWidget):
                   "quality estimation."
     icon = "icons/KMeans.svg"
     priority = 2100
+    keywords = ["kmeans", "clustering"]
 
     class Inputs:
         data = Input("Data", Table)
@@ -109,6 +110,7 @@ class OWKMeans(widget.OWWidget):
         not_enough_data = widget.Msg(
             "Too few ({}) unique data instances for {} clusters"
         )
+        no_attributes = widget.Msg("Data is missing features.")
 
     class Warning(widget.OWWidget.Warning):
         no_silhouettes = widget.Msg(
@@ -255,6 +257,10 @@ class OWKMeans(widget.OWWidget):
         """k cannot be larger than the number of data instances."""
         return len(self.data) >= k
 
+    @property
+    def has_attributes(self):
+        return len(self.data.domain.attributes)
+
     @staticmethod
     def _compute_clustering(data, k, init, n_init, max_iter, silhouette, random_state):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
@@ -391,9 +397,15 @@ class OWKMeans(widget.OWWidget):
         # cause flickering when the clusters are computed quickly, so this is
         # the better alternative
         self.table_model.clear_scores()
-        self.mainArea.setVisible(self.optimize_k and self.data is not None)
+        self.mainArea.setVisible(self.optimize_k and self.data is not None and
+                                 self.has_attributes)
 
         if self.data is None:
+            self.send_data()
+            return
+
+        if not self.has_attributes:
+            self.Error.no_attributes()
             self.send_data()
             return
 

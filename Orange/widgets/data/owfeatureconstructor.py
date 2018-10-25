@@ -333,6 +333,7 @@ class OWFeatureConstructor(OWWidget):
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input dataset."
     icon = "icons/FeatureConstructor.svg"
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

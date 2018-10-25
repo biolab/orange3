@@ -22,7 +22,7 @@ class OWDataSampler(OWWidget):
     icon = "icons/DataSampler.svg"
     priority = 100
     category = "Data"
-    keywords = ["data", "sample"]
+    keywords = ["random"]
 
     _MAX_SAMPLE_SIZE = 2 ** 31 - 1
 

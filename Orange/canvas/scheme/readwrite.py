@@ -466,10 +466,17 @@ _arrow_params = NamedTuple(
         ("color", str),
     ])
 
+_window_group = NamedTuple(
+    "_window_group", [
+        ("name", str),
+        ("default", bool),
+        ("state", List[Tuple[str, bytes]])
+    ]
+)
 
 _session_data = NamedTuple(
     "_session_data", [
-        ("groups", List[Tuple[str, List[Tuple[str, bytes]]]])
+        ("groups", List[_window_group])
     ]
 )
 
@@ -554,6 +561,7 @@ def parse_ows_etree_v_2_0(tree):
     window_presets = []
     for window_group in tree.findall("session_state/window_groups/group"):
         name = window_group.get("name")  # type: str
+        default = window_group.get("default", "false") == "true"
         state = []
         for state_ in window_group.findall("window_state"):
             node_id = state_.get("node_id")  # type: str
@@ -564,7 +572,8 @@ def parse_ows_etree_v_2_0(tree):
             except UnicodeDecodeError:
                 data = b''
             state.append((node_id, data))
-        window_presets.append((name, state))
+
+        window_presets.append(_window_group(name, default, state))
 
     session_state = _session_data(window_presets)
 
@@ -817,13 +826,14 @@ def scheme_load(scheme, stream, registry=None, error_handler=None):
         scheme.add_annotation(annot)
 
     if desc.session_state.groups:
-        # resolve node_id -> node
         groups = []
-        for name, state in desc.session_state.groups:
+        for g in desc.session_state.groups:  # type: _window_group
+            # resolve node_id -> node
             state = [(nodes_by_id[node_id], data)
-                     for node_id, data in state if node_id in nodes_by_id]
-            groups.append((name, state))
-        scheme.setProperty("_presets", groups)
+                     for node_id, data in g.state if node_id in nodes_by_id]
+
+            groups.append(Scheme.WindowGroup(g.name, g.default, state))
+        scheme.set_window_group_presets(groups)
     return scheme
 
 
@@ -940,9 +950,11 @@ def scheme_to_etree(scheme, data_format="literal", pickle_fallback=False):
     builder.start("session_state", {})
     builder.start("window_groups", {})
 
-    for name, state in scheme.property("_presets") or []:
-        builder.start("group", {"name": name})
-        for node, data in state:
+    for g in scheme.window_group_presets():
+        builder.start(
+            "group", {"name": g.name, "default": str(g.default).lower()}
+        )
+        for node, data in g.state:
             if node not in node_ids:
                 continue
             builder.start("window_state", {"node_id": str(node_ids[node])})
@@ -1105,3 +1117,5 @@ def literal_dumps(obj, prettyprint=False, indent=4):
 
 
 literal_loads = literal_eval
+
+from .scheme import Scheme  # pylint: disable=all

@@ -17,7 +17,7 @@ which attributes will be used and how. Orange distinguishes between
 ordinary attributes, (optional) class attributes and meta attributes.
 For instance, for building a classification model, the domain would be
 composed of a set of attributes and a discrete class attribute. Meta
-attributes are not used in modelling, but several widgets can use them
+attributes are not used in modeling, but several widgets can use them
 as instance labels.
 
 Orange attributes have a type and are either discrete, continuous or a

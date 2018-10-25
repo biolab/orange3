@@ -159,6 +159,7 @@ class OWTreeGraph(OWTreeViewer2D):
     name = "Tree Viewer"
     icon = "icons/TreeViewer.svg"
     priority = 35
+    keywords = []
 
     class Inputs:
         # Had different input names before merging from

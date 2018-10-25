@@ -35,7 +35,7 @@ snapshot below). In order to create this graph, we used the *Zoo* dataset.
 
 For continuous attributes, the attribute values are displayed as a
 function graph. Class probabilities for continuous attributes are
-obtained with gaussian kernel density estimation, while the appearance
+obtained with Gaussian kernel density estimation, while the appearance
 of the curve is set with the *Precision* bar (smooth or precise). For the purpose
 of this example, we used the *Iris* dataset. 
 

@@ -14,12 +14,14 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.classification.tree import TreeLearner
 from Orange.evaluation import CrossValidation
 from Orange.distance import Euclidean
+from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.report.owreport import OWReport
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.owtreeviewer import OWTreeGraph
 from Orange.widgets.data.owfile import OWFile
+from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.evaluate.owliftcurve import OWLiftCurve
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
@@ -32,6 +34,7 @@ from Orange.widgets.unsupervised.owkmeans import OWKMeans
 from Orange.widgets.unsupervised.owmds import OWMDS
 from Orange.widgets.unsupervised.owpca import OWPCA
 from Orange.widgets.utils.itemmodels import PyTableModel
+from Orange.widgets.visualize.owlinearprojection import OWLinearProjection
 
 
 def get_owwidgets(top_module_name):
@@ -227,18 +230,51 @@ class TestReportWidgets(WidgetTest):
         self._create_report(widgets, rep, dist)
 
     def test_report_widgets_visualize(self):
+        _warnings = warnings.catch_warnings()
+        _warnings.__enter__()
+        warnings.simplefilter("ignore", OrangeDeprecationWarning)
         rep = OWReport.get_instance()
         data = Table("zoo")
         widgets = self.visu_widgets
         self._create_report(widgets, rep, data)
+        _warnings.__exit__()
+
+    def test_deprecated_graph(self):
+        # Remove this test and lines 17, 37, 233 - 235 and 252 -254
+        # since the widget is not using deprecate class any more
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", OrangeDeprecationWarning)
+            self.assertRaises(OrangeDeprecationWarning,
+                              lambda: self.create_widget(OWLinearProjection))
 
     @unittest.skipIf(AnyQt.USED_API == "pyqt5", "Segfaults on PyQt5")
     def test_report_widgets_all(self):
+        _warnings = warnings.catch_warnings()
+        _warnings.__enter__()
+        warnings.simplefilter("ignore", OrangeDeprecationWarning)
         rep = OWReport.get_instance()
         widgets = self.model_widgets + self.data_widgets + self.eval_widgets + \
                   self.unsu_widgets + self.dist_widgets + self.visu_widgets + \
                   self.spec_widgets
         self._create_report(widgets, rep, None)
+        _warnings.__exit__()
+
+    def test_disable_saving_empty(self):
+        """Test if save and print buttons are disabled on empty report"""
+        rep = OWReport.get_instance()
+        self.assertFalse(rep.save_button.isEnabled())
+        self.assertFalse(rep.print_button.isEnabled())
+
+        table = OWDataTable()
+        table.set_dataset(Table("iris"))
+        table.create_report_html()
+        rep.make_report(table)
+        self.assertTrue(rep.save_button.isEnabled())
+        self.assertTrue(rep.print_button.isEnabled())
+
+        rep.clear()
+        self.assertFalse(rep.save_button.isEnabled())
+        self.assertFalse(rep.print_button.isEnabled())
 
 
 if __name__ == "__main__":

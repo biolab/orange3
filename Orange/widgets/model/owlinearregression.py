@@ -22,6 +22,7 @@ class OWLinearRegression(OWBaseLearner):
         "Orange.widgets.regression.owlinearregression.OWLinearRegression",
     ]
     priority = 60
+    keywords = ["ridge", "lasso", "elastic net"]
 
     LEARNER = LinearRegressionLearner
 

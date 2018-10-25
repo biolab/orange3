@@ -13,3 +13,5 @@ keyring
 keyrings.alt    # for alternative keyring implementations
 setuptools>=36.3
 serverfiles		# for Data Sets synchronization
+networkx
+python-louvain

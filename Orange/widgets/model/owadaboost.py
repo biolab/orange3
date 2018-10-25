@@ -19,6 +19,7 @@ class OWAdaBoost(OWBaseLearner):
         "Orange.widgets.regression.owadaboostregression.OWAdaBoostRegression",
     ]
     priority = 80
+    keywords = ["boost"]
 
     LEARNER = SklAdaBoostLearner
 

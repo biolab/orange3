@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from os import path, remove
+from os import path, remove, getcwd
+from os.path import dirname
 from unittest.mock import Mock, patch
 import pickle
 import tempfile
@@ -12,9 +13,10 @@ import scipy.sparse as sp
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
-from os.path import dirname
 
 import Orange
+from Orange.canvas.application.canvasmain import CanvasMainWindow
+from Orange.canvas.scheme import Scheme
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable, ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
@@ -27,6 +29,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.domaineditor import ComboDelegate, VarTypeDelegate, VarTableModel
 
 TITANIC_PATH = path.join(path.dirname(Orange.__file__), 'datasets', 'titanic.tab')
+orig_path_exists = path.exists
 
 
 class FailedSheetsFormat(FileFormat):
@@ -440,3 +443,73 @@ a
         attrs = data1.domain["image"].attributes
         self.assertIn("origin", attrs)
         self.assertIn("origin1", attrs["origin"])
+
+    @patch("Orange.widgets.widget.OWWidget.workflowEnv",
+           Mock(return_value={"basedir": getcwd()}))
+    def test_open_moved_workflow(self):
+        """Test opening workflow that has been moved to another location
+        (i.e. sent by email), considering data file is stored in the same
+        directory as the workflow.
+        """
+        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
+        file_name = temp_file.name
+        temp_file.close()
+        base_name = path.basename(file_name)
+        try:
+            recent_path = RecentPath(
+                path.join("temp/datasets", base_name), "",
+                path.join("datasets", base_name)
+            )
+            stored_settings = {"recent_paths": [recent_path]}
+            w = self.create_widget(OWFile, stored_settings=stored_settings)
+            w.load_data()
+            self.assertEqual(w.file_combo.count(), 1)
+            self.assertFalse(w.Error.file_not_found.is_shown())
+        finally:
+            remove(file_name)
+
+    @patch("Orange.widgets.widget.OWWidget.workflowEnv",
+           Mock(return_value={"basedir": getcwd()}))
+    def test_files_relocated(self):
+        """
+        This test testes if paths are relocated correctly
+        """
+        temp_file = tempfile.NamedTemporaryFile(dir=getcwd(), delete=False)
+        file_name = temp_file.name
+        temp_file.close()
+        base_name = path.basename(file_name)
+        try:
+            recent_path = RecentPath(
+                path.join("temp/datasets", base_name), "",
+                path.join("datasets", base_name)
+            )
+            stored_settings = {"recent_paths": [recent_path]}
+            w = self.create_widget(OWFile, stored_settings=stored_settings)
+            w.load_data()
+
+            # relocation is called already
+            # if it works correctly relative path should be same than base name
+            self.assertEqual(w.recent_paths[0].relpath, base_name)
+
+            w.workflowEnvChanged("basedir", base_name, base_name)
+            self.assertEqual(w.recent_paths[0].relpath, base_name)
+        finally:
+            remove(file_name)
+
+    def test_relocate_recent_files_called(self):
+        """
+        This unittest check whether set_runtime_env which call
+        _relocate_recent_files_called scheme called before saving
+        """
+        window = CanvasMainWindow()
+        scheme = Scheme(title="A Scheme", description="A String\n")
+        self.runtime_called = False
+
+        def set_runtime_env(*args):
+            self.runtime_called = True
+
+        scheme.set_runtime_env = set_runtime_env
+        scheme.save_to = lambda *args, **kwargs: \
+            self.assertTrue(self.runtime_called)
+
+        window.save_scheme_to(scheme, "test.tmp")

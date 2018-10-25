@@ -18,7 +18,7 @@ class OWOutliers(widget.OWWidget):
     icon = "icons/Outliers.svg"
     priority = 3000
     category = "Data"
-    keywords = ["data", "outlier", "inlier"]
+    keywords = ["inlier"]
 
     class Inputs:
         data = Input("Data", Table)

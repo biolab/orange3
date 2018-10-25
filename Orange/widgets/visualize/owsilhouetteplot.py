@@ -44,6 +44,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     icon = "icons/SilhouettePlot.svg"
     priority = 300
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -74,7 +75,8 @@ class OWSilhouettePlot(widget.OWWidget):
     auto_commit = settings.Setting(True)
 
     Distances = [("Euclidean", Orange.distance.Euclidean),
-                 ("Manhattan", Orange.distance.Manhattan)]
+                 ("Manhattan", Orange.distance.Manhattan),
+                 ("Cosine", Orange.distance.Cosine)]
 
     graph_name = "scene"
     buttons_area_orientation = Qt.Vertical
@@ -88,6 +90,8 @@ class OWSilhouettePlot(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
             "{} instance{s} omitted (missing cluster assignment)")
+        nan_distances = Msg("{} instance{s} omitted (undefined distances)")
+        ignoring_categorical = Msg("Ignoring categorical features")
 
     def __init__(self):
         super().__init__()
@@ -250,8 +254,13 @@ class OWSilhouettePlot(widget.OWWidget):
 
         if self._matrix is None and self.data is not None:
             _, metric = self.Distances[self.distance_idx]
+            data = self.data
+            if not metric.supports_discrete and any(
+                    a.is_discrete for a in data.domain.attributes):
+                self.Warning.ignoring_categorical()
+                data = Orange.distance.remove_discrete_features(data)
             try:
-                self._matrix = np.asarray(metric(self.data))
+                self._matrix = np.asarray(metric(data))
             except MemoryError:
                 self.Error.memory_error()
                 return
@@ -270,13 +279,15 @@ class OWSilhouettePlot(widget.OWWidget):
 
     def _clear_messages(self):
         self.Error.clear()
-        self.Warning.missing_cluster_assignment.clear()
+        self.Warning.clear()
 
     def _update_labels(self):
         labelvar = self.cluster_var_model[self.cluster_var_idx]
         labels, _ = self.data.get_column_view(labelvar)
         labels = np.asarray(labels, dtype=float)
-        mask = np.isnan(labels)
+        cluster_mask = np.isnan(labels)
+        dist_mask = np.isnan(self._matrix).all(axis=0)
+        mask = cluster_mask | dist_mask
         labels = labels.astype(int)
         labels = labels[~mask]
 
@@ -295,11 +306,15 @@ class OWSilhouettePlot(widget.OWWidget):
         self._labels = labels
         self._silhouette = silhouette
 
-        if labels is not None:
-            count_missing = np.count_nonzero(mask)
+        if mask is not None:
+            count_missing = np.count_nonzero(cluster_mask)
             if count_missing:
                 self.Warning.missing_cluster_assignment(
                     count_missing, s="s" if count_missing > 1 else "")
+            count_nandist = np.count_nonzero(dist_mask)
+            if count_nandist:
+                self.Warning.nan_distances(
+                    count_nandist, s="s" if count_nandist > 1 else "")
 
     def _set_bar_height(self):
         visible = self.bar_size >= 5

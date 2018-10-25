@@ -77,7 +77,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     icon = "icons/File.svg"
     priority = 10
     category = "Data"
-    keywords = ["data", "file", "load", "read"]
+    keywords = ["file", "load", "read", "open"]
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")
@@ -482,6 +482,15 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                           urls[0].toLocalFile())  # add first file
             self.source = self.LOCAL_FILE
             self.load_data()
+
+    def workflowEnvChanged(self, key, value, oldvalue):
+        """
+        Function called when environment changes (e.g. while saving the scheme)
+        It make sure that all environment connected values are modified
+        (e.g. relative file paths are changed)
+        """
+        self.update_file_list(key, value, oldvalue)
+
 
 if __name__ == "__main__":
     import sys

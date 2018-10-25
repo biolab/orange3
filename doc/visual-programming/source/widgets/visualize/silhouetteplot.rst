@@ -14,14 +14,15 @@ Outputs
         data with an additional column showing whether a point is selected
 
 
-The **Silhouette Plot** widget offers a graphical representation of consistency within clusters of data and provides the user with the means to visually assess cluster quality. The silhouette score is a measure of how similar an object is to its own cluster in comparison to other clusters and is crucial in the creation of a silhoutte plot. The silhouette score close to 1 indicates that the data instance is close to the center of the cluster and instances posessing the silhouette scores close to 0 are on the border between two clusters. 
+The **Silhouette Plot** widget offers a graphical representation of consistency within clusters of data and provides the user with the means to visually assess cluster quality. The silhouette score is a measure of how similar an object is to its own cluster in comparison to other clusters and is crucial in the creation of a silhouette plot. The silhouette score close to 1 indicates that the data instance is close to the center of the cluster and instances possessing the silhouette scores close to 0 are on the border between two clusters. 
 
 .. figure:: images/SilhouettePlot-stamped.png
 
 1. Choose the distance metric. You can choose between:
 
-   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_ ("straight line", distance between two points)
+   -  `Euclidean <https://en.wikipedia.org/wiki/Euclidean_distance>`_ ("straight line" distance between two points)
    -  `Manhattan <https://en.wiktionary.org/wiki/Manhattan_distance>`_ (the sum of absolute differences for all attributes)
+   -  `Cosine <https://en.wiktionary.org/wiki/Cosine_similarity>`_ (1 - cosine of the angle between two vectors)
 
 2. Select the cluster label. You can decide whether to group the instances by cluster or not.
 3. Display options:
@@ -33,15 +34,15 @@ The **Silhouette Plot** widget offers a graphical representation of consistency 
 5. Produce a report.
 6. Output:
 
-   -  *Add silhouette scores* (good clusters have higher silhoutte scores)
-   -  By clicking *Commit*, changes are comminicated to the output of the widget. Alternatively, tick the box on the left and changes will be communicated automatically. 
+   -  *Add silhouette scores* (good clusters have higher silhouette scores)
+   -  By clicking *Commit*, changes are communicated to the output of the widget. Alternatively, tick the box on the left and changes will be communicated automatically. 
 
 7. The created silhouette plot. 
 
 Example
 -------
 
-In the snapshot below, we have decided to use the **Silhoutte Plot** on the *iris* dataset. We selected data intances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot <../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
+In the snapshot below, we have decided to use the **Silhouette Plot** on the *iris* dataset. We selected data instances with low silhouette scores and passed them on as a subset to the :doc:`Scatter Plot <../visualize/scatterplot>` widget. This visualization only confirms the accuracy of the **Silhouette Plot** widget, as you can clearly see that the subset lies in the border between two clusters. 
 
 .. figure:: images/SilhouettePlot-Example.png
 

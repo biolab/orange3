@@ -47,6 +47,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     name = "Correspondence Analysis"
     description = "Correspondence analysis for categorical multivariate data."
     icon = "icons/CorrespondenceAnalysis.svg"
+    keywords = []
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

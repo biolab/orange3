@@ -279,6 +279,11 @@ class SuggestMenuPage(MenuPage):
         """
         filter_proxy = self.view().model()
         filter_proxy.setFilterRegExp(pattern)
+
+        # re-sorts to make sure items that match by title are on top
+        filter_proxy.invalidate()
+        filter_proxy.sort(0)
+
         self.ensureCurrent()
 
     def setFilterWildCard(self, pattern):
@@ -296,17 +301,25 @@ class SuggestMenuPage(MenuPage):
         filter_proxy = self.view().model()
         filter_proxy.setFilterFunc(func)
 
+    def setSortingFunc(self, func):
+        """
+        Set a sorting function.
+        """
+        filter_proxy = self.view().model()
+        filter_proxy.setSortingFunc(func)
+
 
 class SortFilterProxyModel(QSortFilterProxyModel):
     """
-    An filter proxy model used to filter items based on a filtering
-    function.
+    An filter proxy model used to sort and filter items based on
+    a sort and filtering function.
 
     """
     def __init__(self, parent=None):
         QSortFilterProxyModel.__init__(self, parent)
 
         self.__filterFunc = None
+        self.__sortingFunc = None
 
     def setFilterFunc(self, func):
         """
@@ -323,13 +336,52 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         return self.__filterFunc
 
     def filterAcceptsRow(self, row, parent=QModelIndex()):
-        accepted = QSortFilterProxyModel.filterAcceptsRow(self, row, parent)
+        flat_model = self.sourceModel()
+        index = flat_model.index(row, self.filterKeyColumn(), parent)
+        description = flat_model.data(index, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+        name = description.name
+        keywords = description.keywords
+
+        # match name and keywords
+        accepted = False
+        for keyword in [name] + keywords:
+            if self.filterRegExp().indexIn(keyword) > -1:
+                accepted = True
+                break
+
+        # if matches query, apply filter function (compatibility with paired widget)
         if accepted and self.__filterFunc is not None:
             model = self.sourceModel()
             index = model.index(row, self.filterKeyColumn(), parent)
             return self.__filterFunc(index)
         else:
             return accepted
+
+    def setSortingFunc(self, func):
+        self.__sortingFunc = func
+        self.invalidate()
+        self.sort(0)
+
+    def sortingFunc(self):
+        return self.__sortingFunc
+
+    def lessThan(self, left, right):
+        if self.__sortingFunc is None:
+            return QSortFilterProxyModel.lessThan(self, left, right)
+        model = self.sourceModel()
+        left_data = model.data(left)
+        right_data = model.data(right)
+
+        flat_model = self.sourceModel()
+        left_description = flat_model.data(left, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+        right_description = flat_model.data(right, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+
+        left_matches_title = self.filterRegExp().indexIn(left_description.name) > -1
+        right_matches_title = self.filterRegExp().indexIn(right_description.name) > -1
+
+        if left_matches_title != right_matches_title:
+            return left_matches_title
+        return self.__sortingFunc(left_data, right_data)
 
 
 class SearchWidget(LineEdit):
@@ -851,6 +903,7 @@ class QuickMenu(FramelessWindow):
         self.setWindowFlags(Qt.Popup)
 
         self.__filterFunc = None
+        self.__sortingFunc = None
 
         self.__setupUi()
 
@@ -1014,6 +1067,16 @@ class QuickMenu(FramelessWindow):
         self.__model = model
         self.__suggestPage.setModel(model)
 
+    def setSortingFunc(self, func):
+        """
+        Set a sorting function in the suggest (search) menu.
+        """
+        if self.__sortingFunc != func:
+            self.__sortingFunc = func
+            for i in range(0, self.__pages.count()):
+                if isinstance(self.__pages.page(i), SuggestMenuPage):
+                    self.__pages.page(i).setSortingFunc(func)
+
     def setFilterFunc(self, func):
         """
         Set a filter function.
@@ -1144,6 +1207,14 @@ class QuickMenu(FramelessWindow):
         patt.setCaseSensitivity(False)
         self.__suggestPage.setFilterRegExp(patt)
         self.__pages.setCurrentPage(self.__suggestPage)
+        self.__selectFirstIndex()
+
+    def __selectFirstIndex(self):
+        view = self.__pages.currentPage().view()
+        model = view.model()
+
+        index = model.index(0, 0)
+        view.setCurrentIndex(index)
 
     def triggerSearch(self):
         """

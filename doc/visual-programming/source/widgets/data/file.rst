@@ -24,7 +24,7 @@ The widget reads data from Excel (**.xlsx**), simple tab-delimited
 1. Browse through previously opened data files, or load any of the sample ones.  
 2. Browse for a data file.
 3. Reloads currently selected data file.
-4. Insert data from URL adresses, including data from Google Sheets. 
+4. Insert data from URL addresses, including data from Google Sheets. 
 5. Information on the loaded dataset: dataset size, number and types of data features.
 6. Additional information on the features in the dataset. Features can be edited by double-clicking on them. The user can change the attribute names, select the type of variable per each attribute (*Continuous*, *Nominal*, *String*, *Datetime*), and choose how to further define the attributes (as *Features*, *Targets* or *Meta*). The user can also decide to ignore an attribute. 
 7. Browse documentation datasets.

@@ -37,6 +37,7 @@ Data
    widgets/data/createclass
    widgets/data/randomize
    widgets/data/concatenate
+   widgets/data/select-by-data-index
    widgets/data/paintdata
    widgets/data/pythonscript
    widgets/data/featureconstructor
@@ -112,6 +113,7 @@ Unsupervised
    widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeansclustering
+   widgets/unsupervised/louvainclustering
    widgets/unsupervised/mds
    widgets/unsupervised/manifoldlearning
    
