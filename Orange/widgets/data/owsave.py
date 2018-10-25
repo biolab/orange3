@@ -131,19 +131,17 @@ class OWSave(widget.OWWidget):
         if data is None:
             return
 
-        if (self.data is None and data.is_sparse()) or (
-                self.data is not None and not self.data.is_sparse() and data.is_sparse()):
+        if data.is_sparse():
+            items = [item for item, _, supports_sparse in FILE_TYPES
+                     if supports_sparse]
+        else:
+            items = [item for item, _, _ in FILE_TYPES]
+        if not items == [self.controls.filetype.itemText(i)
+                         for i in range(self.controls.filetype.count())]:
             self.controls.filetype.clear()
-            allowed = [item for item, _, supports_sparse in FILE_TYPES
-                       if supports_sparse]
-            self.controls.filetype.insertItems(0, allowed)
-            self.filetype = allowed[0]
+            self.controls.filetype.insertItems(0, items)
             self.update_extension()
-        elif self.data is not None and self.data.is_sparse() and not data.is_sparse():
-            self.controls.filetype.clear()
-            self.controls.filetype.insertItems(0, [item for item, _, _ in FILE_TYPES])
-            self.filetype = FILE_TYPES[0][0]
-            self.update_extension()
+
         self.data = data
         self.save_file()
 
