@@ -269,9 +269,9 @@ class OWLouvainClustering(widget.OWWidget):
         assert self.__task is not None
         assert self.__task.future is future
         assert self.__task.watcher.future() is future
-        self.__task.deleteLater()
-        self.__task.setParent(None)
-        self.__task = None
+        self.__task, task = None, self.__task
+        task.deleteLater()
+
         self.__set_state_ready()
         try:
             result = future.result()
