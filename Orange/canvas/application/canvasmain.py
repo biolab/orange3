@@ -50,11 +50,15 @@ else:
         return QDesktopServices.storageLocation(
             QDesktopServices.DocumentsLocation)
 
+from ...widgets.utils.overlay import MessageOverlayWidget
+
 from ..gui.dropshadow import DropShadowFrame
 from ..gui.dock import CollapsibleDockWidget
 from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_critical, message_question, \
                         message_warning, message_information
+
+from ..document.usagestatistics import UsageStatistics
 
 from ..help import HelpManager
 
@@ -377,6 +381,43 @@ class CanvasMainWindow(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.help_dock)
 
         self.setMinimumSize(600, 500)
+
+        # ask for anonymous data collection permission
+        def requestDataCollectionPermission():
+            permDialogButtons = MessageOverlayWidget.AcceptRole | MessageOverlayWidget.RejectRole
+            permDialog = MessageOverlayWidget(parent=w,
+                                              text="Do you wish to share anonymous usage "
+                                                   "statistics to help improve Orange?",
+                                              wordWrap=True,
+                                              standardButtons=permDialogButtons)
+            btnOK = permDialog.button(MessageOverlayWidget.AcceptRole)
+            btnOK.setText("Allow")
+
+            def respondToRequest():
+                settings["error-reporting/permission-requested"] = True
+
+            def shareData():
+                settings["error-reporting/send-statistics"] = True
+
+            permDialog.clicked.connect(respondToRequest)
+            permDialog.accepted.connect(shareData)
+
+            permDialog.setStyleSheet("""
+                        MessageOverlayWidget {
+                            background: qlineargradient(
+                                x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop:0 #666, stop:0.3 #6D6D6D, stop:1 #666)
+                        }
+                        MessageOverlayWidget QLabel#text-label {
+                            color: white;
+                        }""")
+
+            permDialog.setWidget(w)
+            permDialog.show()
+
+        settings = config.settings()
+        if not settings["error-reporting/permission-requested"]:
+            requestDataCollectionPermission()
 
     def setup_actions(self):
         """Initialize main window actions.
@@ -845,6 +886,7 @@ class CanvasMainWindow(QMainWindow):
         if widget_desc:
             scheme_widget = self.current_document()
             if scheme_widget:
+                scheme_widget.usageStatistics().set_node_type(UsageStatistics.NodeAddClick)
                 scheme_widget.createNewNode(widget_desc)
 
     def on_quick_category_action(self, action):
@@ -1837,6 +1879,8 @@ class CanvasMainWindow(QMainWindow):
                 self.ask_save_report() == QDialog.Rejected:
             event.ignore()
             return
+
+        document.usageStatistics().write_statistics()
 
         old_scheme = document.scheme()
         # Set an empty scheme to clear the document

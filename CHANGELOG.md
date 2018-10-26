@@ -6,6 +6,20 @@ Change Log
 * ...
 
 
+[3.17.0] - 2018-10-26
+--------------------
+##### Enhancements
+* OWSelectAttributes: Use input features ([#3299](../../pull/3299))
+
+##### Bugfixes
+* OWDataTable: reset selections on domain change ([#3327](../../pull/3327))
+* owlouvainclustering: Fix race conditions ([#3322](../../pull/3322))
+* Save data widget crash on no data ([#3311](../../pull/3311))
+* OWWidget: Preserve widget geometry between hide/show events ([#3304](../../pull/3304))
+* Fix OWWidget destruction ([#3296](../../pull/3296))
+* OWWidget: Fix size hint propagation ([#3253](../../pull/3253))
+
+
 [3.16.0] - 2018-09-14
 --------------------
 ##### Enhancements
@@ -925,7 +939,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.16.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.17.0...HEAD
+[3.17.0]: https://github.com/biolab/orange3/compare/3.16.0...3.17.0
 [3.16.0]: https://github.com/biolab/orange3/compare/3.15.0...3.16.0
 [3.15.0]: https://github.com/biolab/orange3/compare/3.14.0...3.15.0
 [3.14.0]: https://github.com/biolab/orange3/compare/3.13.0...3.14.0

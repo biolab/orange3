@@ -8,7 +8,7 @@ from operator import attrgetter
 
 from AnyQt.QtCore import (
     Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel, QThread, QObject,
-    pyqtSlot as Slot, QCoreApplication, QTimer
+    pyqtSlot as Slot, QTimer
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
@@ -116,12 +116,14 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.setFocus(Qt.ActiveWindowFocusReason)
 
         self.rank_model = QStandardItemModel(self)
-        self.model_proxy = QSortFilterProxyModel(self)
+        self.model_proxy = QSortFilterProxyModel(
+            self, filterCaseSensitivity=False)
         self.model_proxy.setSourceModel(self.rank_model)
         self.rank_table = view = QTableView(
             selectionBehavior=QTableView.SelectRows,
             selectionMode=QTableView.SingleSelection,
-            showGrid=False)
+            showGrid=False,
+            editTriggers=gui.TableView.NoEditTriggers)
         if self._has_bars:
             view.setItemDelegate(TableBarItem())
         else:
@@ -640,5 +642,3 @@ class ViewWithPress(QGraphicsView):
         super().mousePressEvent(event)
         if not event.isAccepted():
             self.handler()
-
-

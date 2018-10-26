@@ -316,8 +316,16 @@ using models. Function
 :obj:`Orange.widget.settings.migrate_str_to_variable(settings, names=None)`
 makes the necessary changes to the settings listed in `names`. `names` can be
 a list of setting names, a single string or `None`. In the latter case, all
-settings that may refer to variables (that is two-elements tuples constisting
+settings that may refer to variables (that is two-elements tuples consisting
 of a string and an int) are migrated.
+
+What about situations in which some context settings become inapplicable due
+to some changes in the widget? For instance, a widget that used to accept any
+kind of variables is modified so that it requires a numeric variable?
+Context with categorical variables will match and be reused ... and crash the
+widget. In these (rare) cases, `migrate_context` must raise exception
+:obj:`Orange.widget.settings.IncompatibleContext` and the context will be
+removed.
 
 So take some time, write the migrations and do not forget to bump the
 `settings_version` when you do breaking changes.

@@ -8,6 +8,7 @@ from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.widget import AttributeList
 
 from AnyQt.QtCore import Qt, QItemSelection
 from AnyQt.QtWidgets import QCheckBox
@@ -106,6 +107,13 @@ class TestOWRank(WidgetTest):
         output = self.get_output(self.widget.Outputs.scores)
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.iris.domain.attributes), 5))
+
+    def test_output_features(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        output = self.get_output(self.widget.Outputs.features)
+        self.assertIsInstance(output, AttributeList)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertIsNone(self.get_output(self.widget.Outputs.features))
 
     def test_scoring_method_problem_type(self):
         """Check scoring methods check boxes"""

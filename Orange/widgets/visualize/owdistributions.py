@@ -24,8 +24,8 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.widget import Input
 
-from Orange.widgets.visualize.owscatterplotgraph import LegendItem as SPGLegendItem,\
-    HelpEventDelegate
+from Orange.widgets.visualize.owscatterplotgraph import LegendItem as SPGLegendItem
+from Orange.widgets.visualize.utils.plotutils import HelpEventDelegate
 
 
 def selected_index(view):

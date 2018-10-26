@@ -7,7 +7,6 @@ skip_commits:
     - benchmark
     - tutorials
 
-shallow_clone: true
 clone_depth: 30
 
 matrix:

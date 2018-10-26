@@ -12,32 +12,36 @@ except ImportError:  # pragma: no cover
     pass
 
 import numpy as np
+import scipy.sparse as sp
 import sip
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QRectF, QPointF
 from AnyQt.QtTest import QTest, QSignalSpy
 from AnyQt.QtWidgets import (
     QApplication, QComboBox, QSpinBox, QDoubleSpinBox, QSlider
 )
 
 from Orange.base import SklModel, Model
-from Orange.widgets.report.owreport import OWReport
 from Orange.classification.base_classification import (
     LearnerClassification, ModelClassification
 )
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable,\
-    Variable
+from Orange.data import (
+    Table, Domain, DiscreteVariable, ContinuousVariable, Variable
+)
 from Orange.modelling import Fitter
-from Orange.preprocess import RemoveNaNColumns, Randomize
+from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
 from Orange.preprocess.preprocess import PreprocessorList
 from Orange.regression.base_regression import (
     LearnerRegression, ModelRegression
 )
+from Orange.widgets.report.owreport import OWReport
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
-from Orange.widgets.widget import OWWidget
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.plot import OWPlotGUI
+from Orange.widgets.widget import OWWidget
 
 sip.setdestroyonexit(False)
 
@@ -802,6 +806,173 @@ class WidgetOutputsTestMixin:
         self.assertLess(set(selected_vars), set(annotated_vars))
 
 
+class ProjectionWidgetTestMixin:
+    """Class for projection widget testing"""
+
+    def init(self):
+        Variable._clear_all_caches()
+        self.data = Table("iris")
+
+    def _select_data(self):
+        rect = QRectF(QPointF(-20, -20), QPointF(20, 20))
+        self.widget.graph.select_by_rectangle(rect)
+        return self.widget.graph.get_selection()
+
+    def _compare_selected_annotated_domains(self, selected, annotated):
+        selected_vars = selected.domain.variables
+        annotated_vars = annotated.domain.variables
+        self.assertLessEqual(set(selected_vars), set(annotated_vars))
+
+    def test_setup_graph(self):
+        """Plot should exist after data has been sent in order to be
+        properly set/updated"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIsNotNone(self.widget.graph.scatterplot_item)
+
+    def test_default_attrs(self, timeout=DEFAULT_TIMEOUT):
+        """Check default values for 'Color', 'Shape', 'Size' and 'Label'"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIs(self.widget.attr_color, self.data.domain.class_var)
+        self.assertIsNone(self.widget.attr_label)
+        self.assertIsNone(self.widget.attr_shape)
+        self.assertIsNone(self.widget.attr_size)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertIsNone(self.widget.attr_color)
+
+    def test_attr_models(self):
+        """Check possible values for 'Color', 'Shape', 'Size' and 'Label'"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        controls = self.widget.controls
+        self.assertEqual(len(controls.attr_color.model()), 8)
+        self.assertEqual(len(controls.attr_shape.model()), 3)
+        self.assertTrue(5 < len(controls.attr_size.model()) < 8)
+        self.assertEqual(len(controls.attr_label.model()), 8)
+
+        # color and label should contain all variables
+        # size should contain only continuous variables
+        # shape should contain only discrete variables
+        for var in self.data.domain.variables + self.data.domain.metas:
+            self.assertIn(var, controls.attr_color.model())
+            self.assertIn(var, controls.attr_label.model())
+            if var.is_continuous:
+                self.assertIn(var, controls.attr_size.model())
+                self.assertNotIn(var, controls.attr_shape.model())
+            if var.is_discrete:
+                self.assertNotIn(var, controls.attr_size.model())
+                self.assertIn(var, controls.attr_shape.model())
+
+    def test_attr_label_metas(self, timeout=DEFAULT_TIMEOUT):
+        """Set 'Label' from string meta attribute"""
+        cont = Continuize(multinomial_treatment=Continuize.AsOrdinal)
+        data = cont(Table("zoo"))
+        self.send_signal(self.widget.Inputs.data, data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        simulate.combobox_activate_item(self.widget.controls.attr_label,
+                                        data.domain[-1].name)
+
+    def test_handle_primitive_metas(self):
+        """Set 'Color' from continuous meta attribute"""
+        d, attrs = self.data.domain, self.data.domain.attributes
+        data = self.data.transform(Domain(attrs[:2], d.class_vars, attrs[2:]))
+        self.send_signal(self.widget.Inputs.data, data)
+        simulate.combobox_activate_item(self.widget.controls.attr_color,
+                                        data.domain.metas[0].name)
+
+    def test_datasets(self, timeout=DEFAULT_TIMEOUT):
+        """Test widget for datasets with missing values and constant features"""
+        for ds in datasets.datasets():
+            self.send_signal(self.widget.Inputs.data, ds)
+            if self.widget.isBlocking():
+                spy = QSignalSpy(self.widget.blockingStateChanged)
+                self.assertTrue(spy.wait(timeout))
+
+    def test_none_data(self):
+        """Test widget for empty dataset"""
+        self.send_signal(self.widget.Inputs.data, self.data[:0])
+
+    def test_subset_data(self, timeout=DEFAULT_TIMEOUT):
+        """Test widget for subset data"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+
+    def test_class_density(self, timeout=DEFAULT_TIMEOUT):
+        """Check class density update"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.cb_class_density.click()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.cb_class_density.click()
+
+    def test_dragging_tooltip(self):
+        """Dragging tooltip depends on data being jittered"""
+        text = self.widget.graph.tiptexts[0]
+        self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
+        self.assertEqual(self.widget.graph.tip_textitem.toPlainText(), text)
+        self.widget.graph.controls.jitter_size.setValue(1)
+        self.assertGreater(self.widget.graph.tip_textitem.toPlainText(), text)
+
+    def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
+        """Test widget for sparse data"""
+        table = Table("iris")
+        table.X = sp.csr_matrix(table.X)
+        self.assertTrue(sp.issparse(table.X))
+        self.send_signal(self.widget.Inputs.data, table)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data_subset, table[::30])
+        self.assertEqual(len(self.widget.subset_indices), 5)
+
+    def test_send_report(self, timeout=DEFAULT_TIMEOUT):
+        """Test report """
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.report_button.click()
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+        self.send_signal(self.widget.Inputs.data, None)
+        self.widget.report_button.click()
+
+
+class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
+    def test_sparse_data(self):
+        table = Table("iris")
+        table.X = sp.csr_matrix(table.X)
+        self.assertTrue(sp.issparse(table.X))
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertTrue(self.widget.Error.sparse_data.is_shown())
+        self.send_signal(self.widget.Inputs.data_subset, table[::30])
+        self.assertEqual(len(self.widget.subset_indices), 5)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.sparse_data.is_shown())
+
+    def test_manual_move(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
+        selection = self.widget.graph.selection
+        components = self.get_output(self.widget.Outputs.components)
+        self.widget._manual_move_start()
+        self.widget._manual_move(0, 1, 1)
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
+                         self.widget.SAMPLE_SIZE)
+        self.widget._manual_move_finish(0, 1, 2)
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
+                         len(self.data))
+        self.assertNotEqual(components,
+                            self.get_output(self.widget.Outputs.components))
+        np.testing.assert_equal(self.widget.graph.selection, selection)
+
+
 class datasets:
     @staticmethod
     def path(filename):
@@ -892,3 +1063,27 @@ class datasets:
     @classmethod
     def data_one_column_infs(cls):
         return cls.data_one_column_vals(value=np.inf)
+
+    @classmethod
+    def datasets(cls):
+        """
+        Yields multiple datasets.
+
+        Returns
+        -------
+        data : Generator of Orange.data.Table
+        """
+        ds_cls = Table(cls.path("testing_dataset_cls"))
+        ds_reg = Table(cls.path("testing_dataset_reg"))
+        for ds in (ds_cls, ds_reg):
+            d, a = ds.domain, ds.domain.attributes
+            for i in range(0, len(a), 2):
+                yield ds.transform(Domain(a[i: i + 2], d.class_vars, d.metas))
+            yield ds.transform(Domain(a[:2] + a[8: 10], d.class_vars, d.metas))
+        yield cls.missing_data_1()
+        yield cls.missing_data_2()
+        yield cls.missing_data_3()
+        yield cls.data_one_column_nans()
+        yield cls.data_one_column_infs()
+        yield ds_cls
+        yield ds_reg

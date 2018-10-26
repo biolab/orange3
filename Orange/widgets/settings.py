@@ -49,7 +49,8 @@ log = logging.getLogger(__name__)
 __all__ = ["Setting", "SettingsHandler", "SettingProvider",
            "ContextSetting", "ContextHandler",
            "DomainContextHandler", "PerfectDomainContextHandler",
-           "ClassValuesContextHandler", "widget_settings_dir"]
+           "ClassValuesContextHandler", "widget_settings_dir",
+           "IncompatibleContext"]
 
 _IMMUTABLES = (str, int, bytes, bool, float, tuple)
 
@@ -624,8 +625,16 @@ class ContextHandler(SettingsHandler):
         self._migrate_contexts(self.global_contexts)
 
     def _migrate_contexts(self, contexts):
-        for context in contexts:
-            self.widget_class.migrate_context(context, context.values.pop(VERSION_KEY, 0))
+        i = 0
+        while i < len(contexts):
+            context = contexts[i]
+            try:
+                self.widget_class.migrate_context(
+                    context, context.values.pop(VERSION_KEY, 0))
+            except IncompatibleContext:
+                del contexts[i]
+            else:
+                i += 1
 
     def write_defaults_file(self, settings_file):
         """Call the inherited method, then add global context to the pickle."""

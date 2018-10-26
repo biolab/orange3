@@ -69,7 +69,7 @@ def sparse_implicit_zero_weights(x, weights):
         )
 
 
-def bincount(x, weights=None, max_val=None, minlength=None):
+def bincount(x, weights=None, max_val=None, minlength=0):
     """Return counts of values in array X.
 
     Works kind of like np.bincount(), except that it also supports floating
@@ -134,24 +134,21 @@ def bincount(x, weights=None, max_val=None, minlength=None):
     else:
         nans = 0. if x.ndim == 1 else np.zeros(x.shape[1], dtype=float)
 
-    if minlength is None and max_val is not None:
+    if minlength == 0 and max_val is not None:
         minlength = max_val + 1
 
-    if minlength is not None and minlength <= 0:
-        bc = np.array([])
-    else:
-        bc = np.bincount(
-            x.astype(np.int32, copy=False), weights=weights, minlength=minlength
-        ).astype(float)
-        # Since `csr_matrix.values` only contain non-zero values or explicit
-        # zeros, we must count implicit zeros separately and add them to the
-        # explicit ones found before
-        if sp.issparse(x_original):
-            # If x contains only NaNs, then bc will be an empty array
-            if zero_weights and bc.size == 0:
-                bc = [zero_weights]
-            elif zero_weights:
-                bc[0] += zero_weights
+    bc = np.bincount(
+        x.astype(np.int32, copy=False), weights=weights, minlength=minlength
+    ).astype(float)
+    # Since `csr_matrix.values` only contain non-zero values or explicit
+    # zeros, we must count implicit zeros separately and add them to the
+    # explicit ones found before
+    if sp.issparse(x_original):
+        # If x contains only NaNs, then bc will be an empty array
+        if zero_weights and bc.size == 0:
+            bc = [zero_weights]
+        elif zero_weights:
+            bc[0] += zero_weights
 
     return bc, nans
 
@@ -434,11 +431,17 @@ def nanmean(x, axis=None):
 def nanvar(x, axis=None):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):
-        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
-        mean = np.nansum(x.data) / n_values
-        return np.nansum((x.data - mean) ** 2) / n_values
+        n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        n_zeros = np.prod(x.shape) - len(x.data)
+        mean = np.nansum(x.data) / n_vals
+        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / n_vals
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
+
+
+def nanstd(x, axis=None):
+    """ Equivalent of np.nanstd that supports sparse and dense matrices. """
+    return np.sqrt(nanvar(x, axis=axis))
 
 
 def nanmedian(x, axis=None):

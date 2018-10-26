@@ -1,17 +1,17 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import scipy.sparse as sp
+import numpy as np
 
-from AnyQt.QtCore import QRectF, QPointF
-
-from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data import Table
+from Orange.widgets.tests.base import (
+    WidgetTest, WidgetOutputsTestMixin, AnchorProjectionWidgetTestMixin
+)
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owfreeviz import OWFreeViz
-from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin, \
-    datasets
 
 
-class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
+class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
+                    WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -25,10 +25,6 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
     def setUp(self):
         self.widget = self.create_widget(OWFreeViz)
 
-    def test_ugly_datasets(self):
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_cls")))
-        self.send_signal(self.widget.Inputs.data, Table(datasets.path("testing_dataset_reg")))
-
     def test_error_msg(self):
         data = self.data[:, list(range(len(self.data.domain.attributes)))]
         self.assertFalse(self.widget.Error.no_class_var.is_shown())
@@ -36,68 +32,25 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Error.no_class_var.is_shown())
         data = self.data[:40]
-        data.domain.class_var.values = data.domain.class_var.values[0:1]
-        data = data.transform(self.data.domain)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Error.not_enough_class_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_class_var.is_shown())
         self.assertFalse(self.widget.Error.not_enough_class_vars.is_shown())
 
-    def _select_data(self):
-        self.widget.graph.select_by_rectangle(QRectF(QPointF(-20, -20), QPointF(20, 20)))
-        return self.widget.graph.get_selection()
-
     def test_optimization(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.btn_start.click()
 
     def test_optimization_cancelled(self):
         self.test_optimization()
         self.widget.btn_start.click()
 
-    def test_reset_optimization(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-        simulate.combobox_activate_index(self.widget.controls.initialization, 0)
-        simulate.combobox_activate_index(self.widget.controls.initialization, 1)
-
-    def test_size_hint(self):
-        self.widget.show()
-
-    def test_send_report(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-        self.widget.report_button.click()
-        self.send_signal(self.widget.Inputs.data, None)
-        self.widget.report_button.click()
-
-    def test_subset_data(self):
-        self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        self.send_signal(self.widget.Inputs.data_subset, self.heart_disease)
-
-    def test_sparse(self):
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
-        self.assertTrue(sp.issparse(table.X))
-        self.assertFalse(self.widget.Warning.sparse_not_supported.is_shown())
-        self.send_signal(self.widget.Inputs.data, table)
-        self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
-
-    def test_none_data(self):
-        table = Table(
-            Domain(
-                [ContinuousVariable("a"),
-                 DiscreteVariable("b", values=["y", "n"])]
-            ),
-            list(zip(
-                [],
-                ""))
-        )
-        self.send_signal(self.widget.Inputs.data, table)
-        self.widget.reset_graph_data()
-
-    def test_class_density(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
-        self.widget.cb_class_density.click()
+    def test_optimization_reset(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        init = self.widget.controls.initialization
+        simulate.combobox_activate_index(init, 0)
+        simulate.combobox_activate_index(init, 1)
 
     def test_set_radius_no_data(self):
         """
@@ -106,13 +59,16 @@ class TestOWFreeViz(WidgetTest, WidgetOutputsTestMixin):
         """
         w = self.widget
         self.send_signal(w.Inputs.data, None)
-        w.rslider.setSliderPosition(3)
+        self.widget.graph.controls.hide_radius.setSliderPosition(3)
 
-    def test_update_graph_no_data(self):
-        """
-        Widget should not crash when there is no data and one wants to change class density etc.
-        GH-2780
-        """
-        w = self.widget
-        self.send_signal(w.Inputs.data, None)
-        w.cb_class_density.click()
+    def test_output_components(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        components = self.get_output(self.widget.Outputs.components)
+        domain = components.domain
+        self.assertEqual(domain.attributes, self.data.domain.attributes)
+        self.assertEqual(domain.class_vars, ())
+        self.assertEqual([m.name for m in domain.metas], ["component"])
+        X = np.array([[1, 0, -1, 0], [0, 1, 0, -1]]).astype(float)
+        np.testing.assert_array_almost_equal(components.X, X)
+        metas = [["FreeViz 1"], ["FreeViz 2"]]
+        np.testing.assert_array_equal(components.metas, metas)
