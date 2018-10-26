@@ -434,11 +434,17 @@ def nanmean(x, axis=None):
 def nanvar(x, axis=None):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):
-        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
-        mean = np.nansum(x.data) / n_values
-        return np.nansum((x.data - mean) ** 2) / n_values
+        n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        n_zeros = np.prod(x.shape) - len(x.data)
+        mean = np.nansum(x.data) / n_vals
+        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / n_vals
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
+
+
+def nanstd(x, axis=None):
+    """ Equivalent of np.nanstd that supports sparse and dense matrices. """
+    return np.sqrt(nanvar(x, axis=axis))
 
 
 def nanmedian(x, axis=None):
