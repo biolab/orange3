@@ -277,7 +277,7 @@ class LinksEditWidget(QGraphicsWidget):
                     (downPos - event.pos()).manhattanLength() > \
                         QApplication.instance().startDragDistance():
                 # Start a line drag
-                line = QGraphicsLineItem(self)
+                line = LinkLineItem(self)
                 start = self.__dragStartItem.boundingRect().center()
                 start = self.mapFromItem(self.__dragStartItem, start)
                 line.setLine(start.x(), start.y(),
@@ -349,7 +349,7 @@ class LinksEditWidget(QGraphicsWidget):
                 if s2 == input:
                     self.removeLink(s1, s2)
 
-        line = QGraphicsLineItem(self)
+        line = LinkLineItem(self)
 
         source_anchor = self.sourceNodeWidget.anchor(output)
         sink_anchor = self.sinkNodeWidget.anchor(input)
@@ -782,3 +782,26 @@ class GraphicsTextWidget(QGraphicsWidget):
     def _onDocumentSizeChanged(self, size):
         """The doc size has changed"""
         self.updateGeometry()
+
+
+class LinkLineItem(QGraphicsLineItem):
+    """
+    A line connecting two Channel Anchors.
+    """
+
+    def __init__(self, parent=None):
+        QGraphicsLineItem.__init__(self, parent)
+        self.setAcceptHoverEvents(True)
+
+        self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
+                                                  offset=QPointF(0, 0))
+        self.setGraphicsEffect(self.__shadow)
+        self.__shadow.setEnabled(False)
+
+    def hoverEnterEvent(self, event):
+        self.__shadow.setEnabled(True)
+        QGraphicsLineItem.hoverEnterEvent(self, event)
+
+    def hoverLeaveEvent(self, event):
+        self.__shadow.setEnabled(False)
+        QGraphicsLineItem.hoverLeaveEvent(self, event)
