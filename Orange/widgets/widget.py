@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
-    QUrl, pyqtSignal as Signal
+    QUrl, QThread, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
@@ -774,6 +774,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         This is a short status string to be displayed inline next to
         the instantiated widget icon in the canvas.
         """
+        assert QThread.currentThread() == self.thread()
         if self.__statusMessage != text:
             self.__statusMessage = text
             self.statusMessageChanged.emit(text)
@@ -820,6 +821,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         .. note::
             Failure to clear this flag will block dependent nodes forever.
         """
+        assert QThread.currentThread() is self.thread()
         if self.__blocking != state:
             self.__blocking = state
             self.blockingStateChanged.emit(state)
