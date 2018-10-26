@@ -1,6 +1,4 @@
-from collections import Counter, defaultdict
 from xml.sax.saxutils import escape
-from math import log2
 
 import numpy as np
 
@@ -22,7 +20,6 @@ from Orange.widgets.utils.annotated_data import (
 from Orange.widgets.utils.colorpalette import (
     ColorPaletteGenerator, ContinuousPaletteGenerator, DefaultRGBColors
 )
-from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
@@ -98,13 +95,6 @@ class OWProjectionWidgetBase(OWWidget):
         """
         return None
 
-    @staticmethod
-    def __get_overlap_groups(x, y):
-        coord_to_id = defaultdict(list)
-        for i, xy in enumerate(zip(x, y)):
-            coord_to_id[xy].append(i)
-        return coord_to_id
-
     def get_column(self, attr, filter_valid=True,
                    merge_infrequent=False, return_labels=False):
         """
@@ -172,11 +162,6 @@ class OWProjectionWidgetBase(OWWidget):
     # Sizes
     def get_size_data(self):
         """Return the column corresponding to `attr_size`"""
-        if self.attr_size == OWPlotGUI.SizeByOverlap:
-            x, y = self.get_coordinates_data()
-            coord_to_id = self.__get_overlap_groups(x, y)
-            overlaps = [len(coord_to_id[xy]) for xy in zip(x, y)]
-            return [1 + log2(o) for o in overlaps]
         return self.get_column(self.attr_size)
 
     def impute_sizes(self, size_data):
@@ -195,22 +180,11 @@ class OWProjectionWidgetBase(OWWidget):
 
     def sizes_changed(self):
         self.graph.update_sizes()
-        self.graph.update_colors()  # Needed for overlapping
 
     # Colors
     def get_color_data(self):
         """Return the column corresponding to color data"""
-        colors = self.get_column(self.attr_color, merge_infrequent=True)
-        if self.attr_size == OWPlotGUI.SizeByOverlap:
-            # color overlapping points by most frequent color
-            x, y = self.get_coordinates_data()
-            coord_to_id = self.__get_overlap_groups(x, y)
-            majority_colors = np.empty(len(x))
-            for i, xy in enumerate(zip(x, y)):
-                cnt = Counter(colors[j] for j in coord_to_id[xy])
-                majority_colors[i] = cnt.most_common(1)[0][0]
-            return majority_colors
-        return colors
+        return self.get_column(self.attr_color, merge_infrequent=True)
 
     def get_color_labels(self):
         """
