@@ -14,15 +14,14 @@ import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QAction, QApplication,
-    QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
+    QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
+    QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QKeySequence, QClipboard
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
-    QItemSelectionModel, QItemSelection, QItemSelectionRange,
-    QT_VERSION
+    QItemSelectionModel, QItemSelection, QItemSelectionRange
 )
 from AnyQt.QtCore import pyqtSlot as Slot
 
@@ -33,8 +32,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import (Setting, ContextSetting,
-                                     DomainContextHandler)
+from Orange.widgets.settings import Setting, DomainContextHandler
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
