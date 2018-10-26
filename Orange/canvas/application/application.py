@@ -14,8 +14,8 @@ class CanvasApplication(QApplication):
     def __init__(self, argv):
         if hasattr(Qt, "AA_EnableHighDpiScaling"):
             # Turn on HighDPI support when available
-            #QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-            pass
+            QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+            
         QApplication.__init__(self, argv)
         self.setAttribute(Qt.AA_DontShowIconsInMenus, True)
 

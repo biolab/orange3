@@ -465,7 +465,7 @@ class Table(MutableSequence, Storage):
         return self
 
     @classmethod
-    def from_numpy(cls, domain, X, Y=None, metas=None, W=None):
+    def from_numpy(cls, domain, X, Y=None, metas=None, W=None, data_attributes=None):
         """
         Construct a table from numpy arrays with the given domain. The number
         of variables in the domain must match the number of columns in the
@@ -482,6 +482,8 @@ class Table(MutableSequence, Storage):
         :type metas: np.array
         :param W: array with weights
         :type W: np.array
+        :param data_attributes: dictionary of data attributes 
+        :type data_attributes: OrderedDict
         :return:
         """
         X, Y, W = _check_arrays(X, Y, W, dtype='float64')
@@ -532,7 +534,7 @@ class Table(MutableSequence, Storage):
         self.W = W
         self.n_rows = self.X.shape[0]
         cls._init_ids(self)
-        self.attributes = {}
+        self.attributes = data_attributes
         return self
 
     @classmethod
