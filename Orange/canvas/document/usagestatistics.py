@@ -32,7 +32,6 @@ class UsageStatistics:
         Orange version,
         operating system,
         node additions by type:
-            time since application start
             widget name
             type of addition:
                 quick menu
@@ -51,8 +50,6 @@ class UsageStatistics:
     last_search_query = None
 
     def __init__(self):
-        self.start_time = datetime.now()
-
         self.toolbox_clicks = []
         self.toolbox_drags = []
         self.quick_menu_actions = []
@@ -63,28 +60,23 @@ class UsageStatistics:
         if not config.settings()["error-reporting/send-statistics"]:
             return
 
-        time = str(datetime.now() - self.start_time)
-
         if self.__node_addition_type == UsageStatistics.NodeAddMenu:
 
             self.quick_menu_actions.append({
                 "Widget Name": widget_name,
                 "Query": UsageStatistics.last_search_query,
-                "Time": time
             })
 
         elif self.__node_addition_type == UsageStatistics.NodeAddClick:
 
             self.toolbox_clicks.append({
                 "Widget Name": widget_name,
-                "Time": time
             })
 
         elif self.__node_addition_type == UsageStatistics.NodeAddDrag:
 
             self.toolbox_drags.append({
                 "Widget Name": widget_name,
-                "Time": time
             })
 
         elif self.__node_addition_type == UsageStatistics.NodeAddExtendFromSink:
@@ -94,7 +86,6 @@ class UsageStatistics:
                 "Extended Widget": extended_widget,
                 "Direction": "FROM_SINK",
                 "Query": UsageStatistics.last_search_query,
-                "Time": time
             })
 
         elif self.__node_addition_type == UsageStatistics.NodeAddExtendFromSource:
@@ -104,7 +95,6 @@ class UsageStatistics:
                 "Extended Widget": extended_widget,
                 "Direction": "FROM_SOURCE",
                 "Query": UsageStatistics.last_search_query,
-                "Time": time
             })
 
         else:
