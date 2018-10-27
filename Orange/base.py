@@ -9,6 +9,7 @@ import scipy
 
 from Orange.data import Table, Storage, Instance, Value
 from Orange.data.filter import HasClass
+from Orange.data.table import DomainTransformationError
 from Orange.data.util import one_hot
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
@@ -246,6 +247,13 @@ class Model(Reprable):
             if isinstance(data, Instance):
                 data = Table(data.domain, [data])
             if data.domain != self.domain:
+                if self.original_domain.attributes != data.domain.attributes \
+                        and data.X.size \
+                        and not np.isnan(data.X).all():
+                    data = data.transform(self.original_domain)
+                    if np.isnan(data.X).all():
+                        raise DomainTransformationError(
+                            "domain transformation produced no defined values")
                 data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         elif isinstance(data, (list, tuple)):
