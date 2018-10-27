@@ -32,6 +32,7 @@ from AnyQt.QtCore import pyqtSlot as Slot
 from Orange.base import Learner
 import Orange.classification
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data.table import DomainTransformationError
 from Orange.data.filter import HasClass
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
@@ -209,6 +210,8 @@ class OWTestLearners(OWWidget):
         memory_error = Msg("Not enough memory.")
         no_class_values = Msg("Target variable has no values.")
         only_one_class_var_value = Msg("Target variable has only one value.")
+        test_data_incompatible = Msg(
+            "Test data may be incompatible with train data.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
@@ -221,6 +224,8 @@ class OWTestLearners(OWWidget):
     class Information(OWWidget.Information):
         data_sampled = Msg("Train data has been sampled")
         test_data_sampled = Msg("Test data has been sampled")
+        test_data_transformed = Msg(
+            "Test data has been transformed to match the train data.")
 
     def __init__(self):
         super().__init__()
@@ -551,14 +556,20 @@ class OWTestLearners(OWWidget):
             name = learner_name(slot.learner)
             head = QStandardItem(name)
             head.setData(key, Qt.UserRole)
-            if isinstance(slot.results, Try.Fail):
-                head.setToolTip(str(slot.results.exception))
+            results = slot.results
+            if isinstance(results, Try.Fail):
+                head.setToolTip(str(results.exception))
                 head.setText("{} (error)".format(name))
                 head.setForeground(QtGui.QBrush(Qt.red))
-                errors.append("{name} failed with error:\n"
-                              "{exc.__class__.__name__}: {exc!s}"
-                              .format(name=name, exc=slot.results.exception))
-
+                if isinstance(results.exception, DomainTransformationError) \
+                        and self.resampling == self.TestOnTest:
+                    self.Error.test_data_incompatible()
+                    self.Information.test_data_transformed.clear()
+                else:
+                    errors.append("{name} failed with error:\n"
+                                  "{exc.__class__.__name__}: {exc!s}"
+                                  .format(name=name, exc=slot.results.exception)
+                                  )
             row = [head]
 
             if class_var is not None and class_var.is_discrete and \
@@ -744,7 +755,13 @@ class OWTestLearners(OWWidget):
             self.cancel()
 
         self.Warning.test_data_unused.clear()
+        self.Error.test_data_incompatible.clear()
         self.Warning.test_data_missing.clear()
+        self.Information.test_data_transformed(
+            shown=self.resampling == self.TestOnTest
+            and self.data is not None
+            and self.test_data is not None
+            and self.data.domain.attributes != self.test_data.domain.attributes)
         self.warning()
         self.Error.class_inconsistent.clear()
         self.Error.too_many_folds.clear()

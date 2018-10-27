@@ -23,6 +23,7 @@ import Orange.evaluation
 
 from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value
+from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui, settings
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
@@ -265,7 +266,7 @@ class OWPredictions(OWWidget):
                     or numpy.isnan(pred.results[0]).all():
                 try:
                     results = self.predict(pred.predictor, self.data)
-                except ValueError as err:
+                except (ValueError, DomainTransformationError) as err:
                     results = "{}: {}".format(pred.predictor.name, err)
                 self.predictors[inputid] = pred._replace(results=results)
 
