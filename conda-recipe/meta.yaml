@@ -51,7 +51,7 @@ requirements:
     - commonmark
     - serverfiles
     - matplotlib    >=2.0.0
-    - fasttsne      >=0.2.9
+    - fasttsne      >=0.2.10
 
 test:
   # Python imports

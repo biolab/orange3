@@ -85,6 +85,25 @@ class TestOWManifoldLearning(WidgetTest):
             self.widget.manifold_methods_combo, callback=__callback,
         )
 
+    def test_metrics(self):
+        # Select t-SNE method, which is the only method that supports metrics
+        simulate.combobox_activate_item(self.widget.manifold_methods_combo, "t-SNE")
+
+        def __callback():
+            # Send data to input
+            self.send_signal(self.widget.Inputs.data, self.iris)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.manifold_error.is_shown())
+
+            # Clear input
+            self.send_signal(self.widget.Inputs.data, None)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.manifold_error.is_shown())
+
+        simulate.combobox_run_through_all(
+            self.widget.tsne_editor.metric_combo, callback=__callback,
+        )
+
     @skip
     def test_singular_matrices(self):
         """
