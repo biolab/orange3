@@ -1,3 +1,4 @@
+import datetime
 from collections import namedtuple
 from functools import wraps, partial
 from itertools import chain
@@ -91,22 +92,29 @@ ints = [
 
 discrete = list(chain(rgb, ints))
 
-# Time variable variations
+
+def _to_timestamps(years):
+    return [datetime.datetime(year, 1, 1).timestamp() if not np.isnan(year)
+            else np.nan for year in years]
+
+
+# Time variable variations, windows timestamps need to be valid timestamps so
+# we'll just fill it in with arbitrary years
 time_full = VarDataPair(
     TimeVariable('time_full'),
-    np.array([0, 1, 2, 3, 4], dtype=float),
+    np.array(_to_timestamps([2000, 2001, 2002, 2003, 2004]), dtype=float),
 )
 time_missing = VarDataPair(
     TimeVariable('time_missing'),
-    np.array([0, np.nan, 2, 3, 4], dtype=float),
+    np.array(_to_timestamps([2000, np.nan, 2001, 2003, 2004]), dtype=float),
 )
 time_all_missing = VarDataPair(
     TimeVariable('time_all_missing'),
-    np.array([np.nan] * 5, dtype=float),
+    np.array(_to_timestamps([np.nan] * 5), dtype=float),
 )
 time_same = VarDataPair(
     TimeVariable('time_same'),
-    np.array([4] * 5, dtype=float),
+    np.array(_to_timestamps([2004] * 5), dtype=float),
 )
 time = [
     time_full, time_missing, time_all_missing, time_same
