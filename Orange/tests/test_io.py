@@ -118,12 +118,3 @@ class TestReader(unittest.TestCase):
         self.assertEqual(len(table.domain.attributes), 2)
         self.assertEqual(cm.warning.args[0],
                          "Columns with no headers were removed.")
-
-
-class TestIo(unittest.TestCase):
-    def test_sanitize_variable_deprecated_params(self):
-        """In version 3.18 deprecation warnings in function 'sanitize_variable'
-        should be removed along with unused parameters."""
-        if version > "3.18":
-            _, _ = sanitize_variable(None, None, None, ContinuousVariable,
-                                     {}, name="name", data="data")
