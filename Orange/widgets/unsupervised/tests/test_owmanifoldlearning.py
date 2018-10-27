@@ -8,6 +8,7 @@ from scipy import sparse
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 
 
@@ -69,26 +70,20 @@ class TestOWManifoldLearning(WidgetTest):
     def test_sparse_data(self):
         data = Table("iris").to_sparse()
         self.assertTrue(sparse.issparse(data.X))
-        self.widget.manifold_method_index = 2
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.sparse_methods.is_shown())
-        self.send_signal(self.widget.Inputs.data, None)
-        self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
-        # GH 2158
-        self.widget.manifold_method_index = 0
-        self.assertEqual(
-            'TSNE',
-            self.widget.MANIFOLD_METHODS[self.widget.manifold_method_index].__name__)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
-        self.assertFalse(self.widget.Error.sparse_tsne_distance.is_shown())
-        self.assertIsInstance(self.get_output(self.widget.Outputs.transformed_data), Table)
-        self.widget.params_widget.parameters['metric'] = 'chebyshev'
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.sparse_tsne_distance.is_shown())
+
+        def __callback():
+            # Send sparse data to input
+            self.send_signal(self.widget.Inputs.data, data)
+            self.widget.apply_button.button.click()
+            self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
+            # Clear input
+            self.send_signal(self.widget.Inputs.data, None)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
+
+        simulate.combobox_run_through_all(
+            self.widget.manifold_methods_combo, callback=__callback,
+        )
 
     @skip
     def test_singular_matrices(self):

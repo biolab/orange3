@@ -1,7 +1,8 @@
 import warnings
 
-import numpy as np
 import fastTSNE
+import numpy as np
+import scipy.sparse as sp
 import sklearn.manifold as skl_manifold
 from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
@@ -197,6 +198,11 @@ class TSNEModel(Projection):
         self.embedding = table
 
     def transform(self, X: np.ndarray, **kwargs) -> fastTSNE.PartialTSNEEmbedding:
+        if sp.issparse(X):
+            raise TypeError(
+                'A sparse matrix was passed, but dense data is required. Use '
+                'X.toarray() to convert to a dense numpy array.'
+            )
         return self.embedding_.transform(X, **kwargs)
 
     def __call__(self, data: Table, **kwargs) -> Table:
@@ -329,6 +335,11 @@ class TSNE(Projector):
         )
 
     def fit(self, X: np.ndarray, Y: np.ndarray = None) -> fastTSNE.TSNEEmbedding:
+        if sp.issparse(X):
+            raise TypeError(
+                'A sparse matrix was passed, but dense data is required. Use '
+                'X.toarray() to convert to a dense numpy array.'
+            )
         return self.tsne.fit(X)
 
     def __call__(self, data: Table) -> TSNEModel:
