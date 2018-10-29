@@ -1084,6 +1084,5 @@ class datasets:
         yield cls.missing_data_2()
         yield cls.missing_data_3()
         yield cls.data_one_column_nans()
-        yield cls.data_one_column_infs()
         yield ds_cls
         yield ds_reg
