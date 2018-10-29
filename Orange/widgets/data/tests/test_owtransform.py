@@ -2,8 +2,10 @@
 # pylint: disable=missing-docstring
 from Orange.data import Table
 from Orange.preprocess import Discretize
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets.data.owtransform import OWTransform
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.unsupervised.owpca import OWPCA
 
 
 class TestOWTransform(WidgetTest):
