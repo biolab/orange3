@@ -318,16 +318,16 @@ class TSNE(Projector):
 
     def __init__(self, n_components=2, perplexity=30, learning_rate=200,
                  early_exaggeration_iter=250, early_exaggeration=12,
-                 n_iter=750, theta=0.5, min_num_intervals=10, ints_in_interval=1,
-                 initialization='random', metric='euclidean', n_jobs=1, neighbors='exact',
-                 negative_gradient_method='bh', callbacks=None, callbacks_every_iters=50,
-                 preprocessors=None):
+                 n_iter=750, exaggeration=None, theta=0.5, min_num_intervals=10,
+                 ints_in_interval=1, initialization='random', metric='euclidean',
+                 n_jobs=1, neighbors='exact', negative_gradient_method='bh', callbacks=None,
+                 callbacks_every_iters=50, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.tsne = fastTSNE.TSNE(
             n_components=n_components, perplexity=perplexity,
             learning_rate=learning_rate, early_exaggeration=early_exaggeration,
             early_exaggeration_iter=early_exaggeration_iter, n_iter=n_iter,
-            theta=theta, min_num_intervals=min_num_intervals,
+            exaggeration=exaggeration, theta=theta, min_num_intervals=min_num_intervals,
             ints_in_interval=ints_in_interval, initialization=initialization,
             metric=metric, n_jobs=n_jobs, neighbors=neighbors,
             negative_gradient_method=negative_gradient_method,
