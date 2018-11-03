@@ -796,12 +796,15 @@ class LinkLineItem(QGraphicsLineItem):
         self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
                                                   offset=QPointF(0, 0))
         self.setGraphicsEffect(self.__shadow)
+        self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
 
     def hoverEnterEvent(self, event):
+        self.prepareGeometryChange()
         self.__shadow.setEnabled(True)
         QGraphicsLineItem.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
+        self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
         QGraphicsLineItem.hoverLeaveEvent(self, event)
