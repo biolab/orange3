@@ -18,7 +18,7 @@ from AnyQt.QtWidgets import (
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
     QGraphicsDropShadowEffect, QSizePolicy
 )
-from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon
+from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon, QColor
 
 from AnyQt.QtCore import (
     Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION
@@ -361,9 +361,6 @@ class LinksEditWidget(QGraphicsWidget):
         sink_pos = self.mapFromItem(sink_anchor, sink_pos)
         line.setLine(source_pos.x(), source_pos.y(),
                      sink_pos.x(), sink_pos.y())
-        pen = QPen(self.palette().color(QPalette.Foreground), 4)
-        pen.setCapStyle(Qt.RoundCap)
-        line.setPen(pen)
 
         self.__links.append(_Link(output, input, line))
 
@@ -793,6 +790,12 @@ class LinkLineItem(QGraphicsLineItem):
         QGraphicsLineItem.__init__(self, parent)
         self.setAcceptHoverEvents(True)
 
+        self.__default_pen = QPen(QColor('#383838'), 4)
+        self.__default_pen.setCapStyle(Qt.RoundCap)
+        self.__hover_pen = QPen(QColor('#000000'), 4)
+        self.__hover_pen.setCapStyle(Qt.RoundCap)
+        self.setPen(self.__default_pen)
+
         self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
                                                   offset=QPointF(0, 0))
         self.setGraphicsEffect(self.__shadow)
@@ -802,9 +805,11 @@ class LinkLineItem(QGraphicsLineItem):
     def hoverEnterEvent(self, event):
         self.prepareGeometryChange()
         self.__shadow.setEnabled(True)
+        self.setPen(self.__hover_pen)
         QGraphicsLineItem.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
         self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
+        self.setPen(self.__default_pen)
         QGraphicsLineItem.hoverLeaveEvent(self, event)
