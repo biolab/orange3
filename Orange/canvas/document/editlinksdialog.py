@@ -8,6 +8,7 @@ An Dialog to edit links between two nodes in the scheme.
 """
 
 from collections import namedtuple
+from typing import overload
 
 from xml.sax.saxutils import escape
 
@@ -18,11 +19,10 @@ from AnyQt.QtWidgets import (
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
     QGraphicsDropShadowEffect, QSizePolicy
 )
-from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon, QColor
+from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon, QColor, QPainterPathStroker
 
 from AnyQt.QtCore import (
-    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION
-)
+    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION, QLineF)
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..scheme import SchemeNode, SchemeLink, compatible_channels
@@ -790,17 +790,52 @@ class LinkLineItem(QGraphicsLineItem):
         QGraphicsLineItem.__init__(self, parent)
         self.setAcceptHoverEvents(True)
 
+        self.__shape = None
+
         self.__default_pen = QPen(QColor('#383838'), 4)
         self.__default_pen.setCapStyle(Qt.RoundCap)
         self.__hover_pen = QPen(QColor('#000000'), 4)
         self.__hover_pen.setCapStyle(Qt.RoundCap)
         self.setPen(self.__default_pen)
 
-        self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
-                                                  offset=QPointF(0, 0))
+        self.__shadow = QGraphicsDropShadowEffect(
+            blurRadius=10, color=QColor('#9CACB4'),
+            offset=QPointF(0, 0)
+        )
+
         self.setGraphicsEffect(self.__shadow)
         self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
+
+    @overload
+    def setLine(self, line: QLineF) -> None:
+        pass
+
+    @overload
+    def setLine(self, x1: float, y1: float, x2: float, y2: float) -> None:
+        pass
+
+    def setLine(self, x1, y1=None, x2=None, y2=None):
+        if isinstance(x1, QLineF):
+            line = x1
+            x1 = line.x1()
+            y1 = line.y1()
+            x2 = line.x2()
+            y2 = line.y2()
+
+        QGraphicsLineItem.setLine(self, x1, y1, x2, y2)
+
+        # extends mouse hit area
+        stroke_path = QPainterPathStroker()
+        stroke_path.setCapStyle(Qt.RoundCap)
+
+        stroke_path.setWidth(10)
+        self.__shape = stroke_path.createStroke(super().shape())
+
+    def shape(self):
+        if self.__shape is None:
+            return QGraphicsLineItem.shape(self)
+        return self.__shape
 
     def hoverEnterEvent(self, event):
         self.prepareGeometryChange()
