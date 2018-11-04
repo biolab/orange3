@@ -690,10 +690,9 @@ class ChannelAnchor(QGraphicsRectItem):
         if channel:
             self.setChannel(channel)
 
-        self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
-                                                  offset=QPointF(0, 0))
-        self.setGraphicsEffect(self.__shadow)
-        self.__shadow.setEnabled(False)
+        self.__default_pen = QPen(QColor('#000000'), 1)
+        self.__hover_pen = QPen(QColor('#000000'), 2)
+        self.setPen(self.__default_pen)
 
     def setChannel(self, channel):
         """
@@ -714,11 +713,11 @@ class ChannelAnchor(QGraphicsRectItem):
         return self.__channel
 
     def hoverEnterEvent(self, event):
-        self.__shadow.setEnabled(True)
+        self.setPen(self.__hover_pen)
         QGraphicsRectItem.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
-        self.__shadow.setEnabled(False)
+        self.setPen(self.__default_pen)
         QGraphicsRectItem.hoverLeaveEvent(self, event)
 
 
