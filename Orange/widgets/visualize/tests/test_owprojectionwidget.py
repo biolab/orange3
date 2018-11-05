@@ -102,6 +102,16 @@ class TestOWProjectionWidget(WidgetTest):
         np.testing.assert_almost_equal(get_column(disc), x)
         self.assertEqual(get_column(disc, return_labels=True), disc.values)
 
+    def test_get_tooltip(self):
+        widget = self.widget
+        domain = Domain([ContinuousVariable("v")])
+        widget.data = Table.from_numpy(domain, [[1], [2], [3]])
+        widget.valid_data = np.array([True, False, True])
+        self.assertTrue("3" in widget.get_tooltip([1]))
+        self.assertTrue("1" in widget.get_tooltip([0, 1])
+                        and "3" in widget.get_tooltip([0, 1]))
+        self.assertEqual(widget.get_tooltip([]), "")
+
 
 class TestableDataProjectionWidget(OWDataProjectionWidget):
     def get_embedding(self):
