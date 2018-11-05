@@ -66,6 +66,17 @@ class SharedComputeValue:
         raise NotImplementedError
 
 
+class ComputeValueProjector(SharedComputeValue):
+    def __init__(self, projection, feature, transform):
+        super().__init__(transform)
+        self.projection = projection
+        self.feature = feature
+        self.transformed = None
+
+    def compute(self, data, space):
+        return space[:, self.feature]
+
+
 def vstack(arrays):
     """vstack that supports sparse and dense arrays
 

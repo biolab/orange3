@@ -2,11 +2,13 @@ import inspect
 import threading
 
 import Orange.data
-from Orange.base import _ReprableWithPreprocessors
+from Orange.base import ReprableWithPreprocessors
+from Orange.data.util import ComputeValueProjector
 from Orange.misc.wrapper_meta import WrapperMeta
 import Orange.preprocess
 
-__all__ = ["LinearCombinationSql", "Projector", "Projection", "SklProjector"]
+__all__ = ["LinearCombinationSql", "Projector", "Projection", "SklProjector",
+           "DomainProjection"]
 
 
 class LinearCombinationSql:
@@ -23,7 +25,7 @@ class LinearCombinationSql:
                           for a, m, w in zip(self.attrs, self.mean, self.weights))
 
 
-class Projector(_ReprableWithPreprocessors):
+class Projector(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to projecting
     name = 'projection'
     preprocessors = ()
@@ -90,6 +92,39 @@ class Projection:
 
     def __repr__(self):
         return self.name
+
+
+class TransformDomain:
+    def __init__(self, projection):
+        self.projection = projection
+
+    def __call__(self, data):
+        if data.domain != self.projection.pre_domain:
+            data = data.transform(self.projection.pre_domain)
+        return self.projection.transform(data.X)
+
+
+class DomainProjection(Projection):
+    var_prefix = "Component"
+
+    def __init__(self, proj, domain):
+        transformer = TransformDomain(self)
+
+        def proj_variable(i):
+            v = Orange.data.ContinuousVariable(
+                "{}{}".format(self.var_prefix, str(i)),
+                compute_value=ComputeValueProjector(self, i, transformer))
+            v.to_sql = LinearCombinationSql(
+                domain.attributes, self.components_[i, :],
+                getattr(self, 'mean_', None))
+            return v
+
+        super().__init__(proj=proj)
+        self.orig_domain = domain
+        self.n_components = self.components_.shape[0]
+        self.domain = Orange.data.Domain(
+            [proj_variable(i) for i in range(self.n_components)],
+            domain.class_vars, domain.metas)
 
 
 class SklProjector(Projector, metaclass=WrapperMeta):
