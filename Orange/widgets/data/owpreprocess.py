@@ -24,7 +24,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 from Orange import preprocess
-from Orange.preprocess import Continuize, ProjectPCA, \
+from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
     ProjectCUR, Scale as _Scale, Randomize as _Randomize
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
@@ -252,15 +252,6 @@ class ContinuizeEditor(BaseEditor):
         return self.Continuizers[self.__treatment]
 
 
-class _RemoveNaNRows(preprocess.preprocess.Preprocess):
-    _reprable_module = True
-
-    def __call__(self, data):
-        mask = numpy.isnan(data.X)
-        mask = numpy.any(mask, axis=1)
-        return data[~mask]
-
-
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
      Model, Random, DropRows, DropColumns) = 0, 1, 2, 3, 4, 5, 6
@@ -326,7 +317,7 @@ class ImputeEditor(BaseEditor):
         elif method == ImputeEditor.Model:
             return preprocess.Impute(method=preprocess.impute.Model())
         elif method == ImputeEditor.DropRows:
-            return _RemoveNaNRows()
+            return RemoveNaNRows()
         elif method == ImputeEditor.DropColumns:
             return preprocess.RemoveNaNColumns()
         else:

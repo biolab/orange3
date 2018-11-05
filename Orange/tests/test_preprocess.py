@@ -9,11 +9,10 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
-    SelectRandomFeatures, EqualFreq, RemoveNaNColumns, DropInstances
-from Orange.preprocess import EqualWidth, SelectBestFeatures
-from Orange.preprocess.preprocess import Preprocess, Scale, Randomize, \
-    Continuize, Discretize, Impute, SklImpute, Normalize, ProjectCUR, \
-    ProjectPCA, RemoveConstant
+    SelectRandomFeatures, EqualFreq, RemoveNaNColumns, DropInstances, \
+    EqualWidth, SelectBestFeatures, RemoveNaNRows, Preprocess, Scale, \
+    Randomize, Continuize, Discretize, Impute, SklImpute, Normalize, \
+    ProjectCUR, ProjectPCA, RemoveConstant
 from Orange.util import OrangeDeprecationWarning
 
 
@@ -78,6 +77,15 @@ class TestRemoveConstant(unittest.TestCase):
         data = Table("iris")
         d = RemoveConstant()(data)
         self.assertEqual(len(d.domain.attributes), 4)
+
+
+class TestRemoveNaNRows(unittest.TestCase):
+    def test_remove_row(self):
+        data = Table("iris")
+        data.X[0, 0] = np.nan
+        pp_data = RemoveNaNRows()(data)
+        self.assertEqual(len(pp_data), len(data) - 1)
+        self.assertFalse(np.isnan(pp_data.X).any())
 
 
 class TestScaling(unittest.TestCase):
