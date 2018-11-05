@@ -14,10 +14,11 @@ from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize, RemoveNaNColumns, SklImpute, Normalize
 from Orange.util import Reprable
 
-__all__ = ["Learner", "Model", "SklLearner", "SklModel"]
+__all__ = ["Learner", "Model", "SklLearner", "SklModel",
+           "ReprableWithPreprocessors"]
 
 
-class _ReprableWithPreprocessors(Reprable):
+class ReprableWithPreprocessors(Reprable):
     def _reprable_omit_param(self, name, default, value):
         if name == "preprocessors":
             default_cls = type(self).preprocessors
@@ -33,7 +34,7 @@ class _ReprableWithPreprocessors(Reprable):
             return super()._reprable_omit_param(name, default, value)
 
 
-class Learner(_ReprableWithPreprocessors):
+class Learner(ReprableWithPreprocessors):
     """The base learner class.
 
     Preprocessors can behave in a number of different ways, all of which are
