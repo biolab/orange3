@@ -965,19 +965,23 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         self.assertFalse(self.widget.Error.sparse_data.is_shown())
 
     def test_manual_move(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
-        selection = self.widget.graph.selection
-        components = self.get_output(self.widget.Outputs.components)
+        data = self.data.copy()
+        data[1, 0] = np.nan
+        nvalid, nsample = len(self.data) - 1, self.widget.SAMPLE_SIZE
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph.select_by_indices(list(range(0, len(data), 10)))
+
+        # remember state
+        selection = self.widget.graph.selection.copy()
+
+        # simulate manual move
         self.widget._manual_move_start()
         self.widget._manual_move(0, 1, 1)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         self.widget.SAMPLE_SIZE)
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nsample)
         self.widget._manual_move_finish(0, 1, 2)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         len(self.data))
-        self.assertNotEqual(components,
-                            self.get_output(self.widget.Outputs.components))
+
+        # check new state
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
 
 

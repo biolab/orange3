@@ -72,3 +72,10 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         np.testing.assert_array_almost_equal(components.X, X)
         metas = [["FreeViz 1"], ["FreeViz 2"]]
         np.testing.assert_array_equal(components.metas, metas)
+
+    def test_manual_move(self):
+        super().test_manual_move()
+        array = np.array([[1, 2], [0, 1], [-1, 0], [0, -1]])
+        np.testing.assert_array_almost_equal(self.widget.anchors, array)
+        np.testing.assert_array_almost_equal(
+            self.get_output(self.widget.Outputs.components).X, array.T)
