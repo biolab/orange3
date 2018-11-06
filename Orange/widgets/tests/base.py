@@ -40,7 +40,6 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.widget import OWWidget
 
 sip.setdestroyonexit(False)
@@ -146,27 +145,27 @@ class WidgetTest(GuiTest):
         return widget
 
     @staticmethod
-    def reset_default_settings(cls):
+    def reset_default_settings(widget):
         """Reset default setting values for widget
 
         Discards settings read from disk and changes stored by fast_save
 
         Parameters
         ----------
-        cls : OWWidget
+        widget : OWWidget
             widget to reset settings for
         """
-        settings_handler = getattr(cls, "settingsHandler", None)
+        settings_handler = getattr(widget, "settingsHandler", None)
         if settings_handler:
             # Rebind settings handler to get fresh copies of settings
             # in known_settings
-            settings_handler.bind(cls)
+            settings_handler.bind(widget)
             # Reset defaults read from disk
             settings_handler.defaults = {}
             # Reset context settings
             settings_handler.global_contexts = []
 
-    def process_events(self, until: callable=None, timeout=DEFAULT_TIMEOUT):
+    def process_events(self, until: callable = None, timeout=DEFAULT_TIMEOUT):
         """Process Qt events, optionally until `until` returns
         something True-ish.
 
@@ -1084,6 +1083,5 @@ class datasets:
         yield cls.missing_data_2()
         yield cls.missing_data_3()
         yield cls.data_one_column_nans()
-        yield cls.data_one_column_infs()
         yield ds_cls
         yield ds_reg
