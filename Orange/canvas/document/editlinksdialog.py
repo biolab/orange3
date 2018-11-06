@@ -249,7 +249,7 @@ class LinksEditWidget(QGraphicsWidget):
         if event.button() == Qt.LeftButton:
             startItem = find_item_at(self.scene(), event.pos(),
                                      type=ChannelAnchor)
-            if startItem is not None:
+            if startItem is not None and startItem.isEnabled():
                 # Start a connection line drag.
                 self.__dragStartItem = startItem
                 self.__tmpLine = None
@@ -455,6 +455,8 @@ class LinksEditWidget(QGraphicsWidget):
         self.sourceNodeTitle = left_title
         self.sinkNodeTitle = right_title
 
+        self.__resetAnchorStates()
+
         # AnchorHover hover over anchor before hovering over line
         class AnchorHover(QGraphicsRectItem):
             def __init__(self, anchor, parent=None):
@@ -468,14 +470,42 @@ class LinksEditWidget(QGraphicsWidget):
                 self.setFlag(QGraphicsItem.ItemHasNoContents, True)
 
             def hoverEnterEvent(self, event):
-                self.anchor.hoverEnterEvent(event)
+                if self.anchor.isEnabled():
+                    self.anchor.hoverEnterEvent(event)
+                else:
+                    event.ignore()
 
             def hoverLeaveEvent(self, event):
-                self.anchor.hoverLeaveEvent(event)
+                if self.anchor.isEnabled():
+                    self.anchor.hoverLeaveEvent(event)
+                else:
+                    event.ignore()
 
         for anchor in left_node.channelAnchors + right_node.channelAnchors:
             anchor_hover = AnchorHover(anchor, parent=self)
             anchor_hover.setZValue(2.0)
+
+    def __resetAnchorStates(self):
+        source_anchors = self.sourceNodeWidget.channelAnchors
+        sink_anchors = self.sinkNodeWidget.channelAnchors
+        for anchor in source_anchors:
+            self.__updateAnchorState(anchor, sink_anchors)
+        for anchor in sink_anchors:
+            self.__updateAnchorState(anchor, source_anchors)
+
+    def __updateAnchorState(self, anchor, opposite_anchors):
+        for opposite_anchor in opposite_anchors:
+            first_channel = anchor.channel()
+            second_channel = opposite_anchor.channel()
+            if isinstance(first_channel, OutputSignal):
+                if compatible_channels(first_channel, second_channel):
+                    anchor.setEnabled(True)
+                    return
+            else:
+                if compatible_channels(second_channel, first_channel):
+                    anchor.setEnabled(True)
+                    return
+        anchor.setEnabled(False)
 
     if QT_VERSION < 0x40700:
         geometryChanged = Signal()
@@ -622,8 +652,6 @@ class EditLinksNode(QGraphicsWidget):
             anchor = ChannelAnchor(self, channel=channel,
                                    rect=QRectF(0, 0, 20, 20))
 
-            anchor.setBrush(self.palette().brush(QPalette.Mid))
-
             layout_item = GraphicsItemLayoutItem(grid, item=anchor)
             grid.addItem(layout_item, i, anchor_row,
                          alignment=anchor_alignment)
@@ -717,6 +745,10 @@ class ChannelAnchor(QGraphicsRectItem):
         self.__hover_pen = QPen(QColor('#000000'), 2)
         self.setPen(self.__default_pen)
 
+        self.enabledBrush = QColor('#FFFFFF')
+        self.disabledBrush = QColor('#BBBBBB')
+        self.setBrush(self.enabledBrush)
+
     def setChannel(self, channel):
         """
         Set the channel description.
@@ -734,6 +766,20 @@ class ChannelAnchor(QGraphicsRectItem):
         Return the channel description.
         """
         return self.__channel
+
+    def setEnabled(self, enabled):
+        QGraphicsRectItem.setEnabled(self, enabled)
+        if enabled:
+            self.setBrush(self.enabledBrush)
+        else:
+            self.setBrush(self.disabledBrush)
+
+    def paint(self, painter, option, widget=None):
+        QGraphicsRectItem.paint(self, painter, option, widget)
+        # if disabled, draw X over box
+        if not self.isEnabled():
+            painter.drawLine(0, 0, int(self.rect().width()), int(self.rect().height()))
+            painter.drawLine(int(self.rect().width()), 0, 0, int(self.rect().height()))
 
     def hoverEnterEvent(self, event):
         self.setPen(self.__hover_pen)
