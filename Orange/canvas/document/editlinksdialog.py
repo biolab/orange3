@@ -17,8 +17,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsLineItem, QGraphicsTextItem, QGraphicsLayoutItem,
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
-    QGraphicsDropShadowEffect, QSizePolicy
-)
+    QGraphicsDropShadowEffect, QSizePolicy, QGraphicsItem)
 from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon, QColor, QPainterPathStroker
 
 from AnyQt.QtCore import (
@@ -456,6 +455,28 @@ class LinksEditWidget(QGraphicsWidget):
         self.sourceNodeTitle = left_title
         self.sinkNodeTitle = right_title
 
+        # AnchorHover hover over anchor before hovering over line
+        class AnchorHover(QGraphicsRectItem):
+            def __init__(self, anchor, parent=None):
+                QGraphicsRectItem.__init__(self, parent=parent)
+                self.setAcceptHoverEvents(True)
+
+                self.anchor = anchor
+                self.setRect(anchor.boundingRect())
+
+                self.setPos(self.mapFromScene(anchor.scenePos()))
+                self.setFlag(QGraphicsItem.ItemHasNoContents, True)
+
+            def hoverEnterEvent(self, event):
+                self.anchor.hoverEnterEvent(event)
+
+            def hoverLeaveEvent(self, event):
+                self.anchor.hoverLeaveEvent(event)
+
+        for anchor in left_node.channelAnchors + right_node.channelAnchors:
+            anchor_hover = AnchorHover(anchor, parent=self)
+            anchor_hover.setZValue(2.0)
+
     if QT_VERSION < 0x40700:
         geometryChanged = Signal()
 
@@ -496,7 +517,7 @@ class EditLinksNode(QGraphicsWidget):
         self.__iconLayoutItem = GraphicsItemLayoutItem(item=self.__iconItem)
 
         self.__channelLayout = QGraphicsGridLayout()
-        self.__channelAnchors = []
+        self.channelAnchors = []
 
         if self.__direction == Qt.LeftToRight:
             self.layout().addItem(self.__iconLayoutItem)
@@ -582,7 +603,7 @@ class EditLinksNode(QGraphicsWidget):
             label_row = 1
             anchor_row = 0
 
-        self.__channelAnchors = []
+        self.channelAnchors = []
         grid = self.__channelLayout
 
         for i, channel in enumerate(channels):
@@ -608,13 +629,13 @@ class EditLinksNode(QGraphicsWidget):
                          alignment=anchor_alignment)
             anchor.setToolTip(escape(channel.type))
 
-            self.__channelAnchors.append(anchor)
+            self.channelAnchors.append(anchor)
 
     def anchor(self, channel):
         """
         Return the anchor item for the `channel` name.
         """
-        for anchor in self.__channelAnchors:
+        for anchor in self.channelAnchors:
             if anchor.channel() == channel:
                 return anchor
 
@@ -678,9 +699,11 @@ class ChannelAnchor(QGraphicsRectItem):
     """
     def __init__(self, parent=None, channel=None, rect=None, **kwargs):
         QGraphicsRectItem.__init__(self, **kwargs)
-        self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.NoButton)
         self.__channel = None
+
+        # AnchorHover handles hover events
+        # self.setAcceptHoverEvents(True)
 
         if rect is None:
             rect = QRectF(0, 0, 20, 20)
@@ -850,10 +873,12 @@ class LinkLineItem(QGraphicsLineItem):
         self.prepareGeometryChange()
         self.__shadow.setEnabled(True)
         self.setPen(self.__hover_pen)
+        self.setZValue(1.0)
         QGraphicsLineItem.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
         self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
         self.setPen(self.__default_pen)
+        self.setZValue(0.0)
         QGraphicsLineItem.hoverLeaveEvent(self, event)
