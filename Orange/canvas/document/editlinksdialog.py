@@ -253,6 +253,13 @@ class LinksEditWidget(QGraphicsWidget):
                 # Start a connection line drag.
                 self.__dragStartItem = startItem
                 self.__tmpLine = None
+
+                if startItem in self.sourceNodeWidget.channelAnchors:
+                    for anchor in self.sinkNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [startItem])
+                else:
+                    for anchor in self.sourceNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [startItem])
                 event.accept()
                 return
 
@@ -309,6 +316,7 @@ class LinksEditWidget(QGraphicsWidget):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.__tmpLine:
+            self.__resetAnchorStates()
             endItem = find_item_at(self.scene(), event.scenePos(),
                                      type=ChannelAnchor)
 
