@@ -125,7 +125,13 @@ spec = \
       "Open help in an external browser"),
 
      ("error-reporting/machine-id", str, '',
-     "Report custom name instead of machine ID"),
+      "Report custom name instead of machine ID"),
+
+     ("error-reporting/send-statistics", bool, False,
+      "Share anonymous usage statistics to improve Orange"),
+
+     ("error-reporting/permission-requested", bool, False,
+      "Has the user already been asked to share statistics"),
 
      ("add-ons/allow-conda", bool, True,
       "Install add-ons with conda"),
@@ -271,9 +277,6 @@ def widgets_entry_points():
              ]
     return itertools.chain(*chain)
 
-#: Parameters for searching add-on packages in PyPi using xmlrpc api.
-ADDON_KEYWORD = 'orange3 add-on'
-ADDON_PYPI_SEARCH_SPEC = {"keywords": ADDON_KEYWORD}
 #: Entry points by which add-ons register with pkg_resources.
 ADDON_ENTRY = "orange3.addon"
 
@@ -315,4 +318,3 @@ def application_icon():
         __name__, "icons/orange-canvas.svg"
     )
     return QIcon(path)
-

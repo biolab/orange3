@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.data import Table
 
 
 class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
@@ -29,6 +30,13 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.data, 1)
         self.assertEqual(self.widget.tabs.widget(0).model().rowCount(),
                          len(self.data))
+
+    def test_reset_select(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self._select_data()
+        self.send_signal(self.widget.Inputs.data, Table('heart_disease'))
+        self.assertListEqual([], self.widget.selected_cols)
+        self.assertListEqual([], self.widget.selected_rows)
 
     def _select_data(self):
         self.widget.selected_cols = list(range(len(self.data.domain)))

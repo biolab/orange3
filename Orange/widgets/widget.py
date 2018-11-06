@@ -13,7 +13,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QRect, QMargins, QByteArray, QDataStream, QBuffer, QSettings,
-    QUrl, pyqtSignal as Signal
+    QUrl, QThread, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices
 
@@ -174,7 +174,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     contextOpened = Signal()
     contextClosed = Signal()
 
-    # pylint: disable=protected-access
+    # pylint: disable=protected-access, access-member-before-definition
     def __new__(cls, *args, captionTitle=None, **kwargs):
         self = super().__new__(cls, None, cls.get_flags())
         QDialog.__init__(self, None, self.get_flags())
@@ -207,6 +207,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         # flag indicating if the widget's position was already restored
         self.__was_restored = False
+        # flag indicating the widget is still expecting the first show event.
+        self.__was_shown = False
 
         self.__statusMessage = ""
 
@@ -221,6 +223,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         self.left_side = None
         self.controlArea = self.mainArea = self.buttonsArea = None
+        self.__progressBar = None
         self.__splitter = None
         if self.want_basic_layout:
             self.set_basic_layout()
@@ -426,7 +429,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.message_bar = MessagesWidget(self)
             self.message_bar.setSizePolicy(QSizePolicy.Preferred,
                                            QSizePolicy.Preferred)
-            pb = QProgressBar(maximumWidth=120, minimum=0, maximum=100)
+            self.__progressBar = pb = QProgressBar(
+                maximumWidth=120, minimum=0, maximum=100
+            )
             pb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Ignored)
             pb.setAttribute(Qt.WA_LayoutUsesWidgetRect)
             pb.setAttribute(Qt.WA_MacMiniSize)
@@ -434,24 +439,25 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             sb.addPermanentWidget(pb)
             sb.addPermanentWidget(self.message_bar)
 
-            def statechanged():
-                pb.setVisible(bool(self.processingState) or self.isBlocking())
-                if self.isBlocking() and not self.processingState:
-                    pb.setRange(0, 0)  # indeterminate pb
-                elif self.processingState:
-                    pb.setRange(0, 100)  # determinate pb
-
-            self.processingStateChanged.connect(statechanged)
-            self.blockingStateChanged.connect(statechanged)
-
-            @self.progressBarValueChanged.connect
-            def _(val):
-                pb.setValue(int(val))
+            self.processingStateChanged.connect(self.__processingStateChanged)
+            self.blockingStateChanged.connect(self.__processingStateChanged)
+            self.progressBarValueChanged.connect(lambda v: pb.setValue(int(v)))
 
             # Reserve the bottom margins for the status bar
             margins = self.layout().contentsMargins()
             margins.setBottom(sb.sizeHint().height())
             self.setContentsMargins(margins)
+
+    def __processingStateChanged(self):
+        # Update the progress bar in the widget's status bar
+        pb = self.__progressBar
+        if pb is None:
+            return
+        pb.setVisible(bool(self.processingState) or self.isBlocking())
+        if self.isBlocking() and not self.processingState:
+            pb.setRange(0, 0)  # indeterminate pb
+        elif self.processingState:
+            pb.setRange(0, 100)  # determinate pb
 
     def __toggleControlArea(self):
         if self.__splitter is None or self.__splitter.count() < 2:
@@ -573,16 +579,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 y = max(0, space.height() / 2 - height / 2)
 
                 self.move(x, y)
-
-        # Mark as explicitly moved/resized if not already. QDialog would
-        # otherwise adjust position/size on subsequent hide/show
-        # (move/resize events coming from the window manager do not set
-        # these flags).
-        if not self.testAttribute(Qt.WA_Moved):
-            self.setAttribute(Qt.WA_Moved)
-        if not self.testAttribute(Qt.WA_Resized):
-            self.setAttribute(Qt.WA_Resized)
-
         return restored
 
     def __updateSavedGeometry(self):
@@ -654,6 +650,15 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             if self.savedWidgetGeometry is not None:
                 self.__restoreWidgetGeometry(bytes(self.savedWidgetGeometry))
             self.__was_restored = True
+
+        if not self.__was_shown:
+            # Mark as explicitly moved/resized if not already. QDialog would
+            # otherwise adjust position/size on subsequent hide/show
+            # (move/resize events coming from the window manager do not set
+            # these flags).
+            self.setAttribute(Qt.WA_Moved, True)
+            self.setAttribute(Qt.WA_Resized, True)
+            self.__was_shown = True
         self.__quicktipOnce()
 
     def wheelEvent(self, event):
@@ -769,6 +774,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         This is a short status string to be displayed inline next to
         the instantiated widget icon in the canvas.
         """
+        assert QThread.currentThread() == self.thread()
         if self.__statusMessage != text:
             self.__statusMessage = text
             self.statusMessageChanged.emit(text)
@@ -815,6 +821,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         .. note::
             Failure to clear this flag will block dependent nodes forever.
         """
+        assert QThread.currentThread() is self.thread()
         if self.__blocking != state:
             self.__blocking = state
             self.blockingStateChanged.emit(state)

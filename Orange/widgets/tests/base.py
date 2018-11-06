@@ -848,7 +848,7 @@ class ProjectionWidgetTestMixin:
         controls = self.widget.controls
         self.assertEqual(len(controls.attr_color.model()), 8)
         self.assertEqual(len(controls.attr_shape.model()), 3)
-        self.assertTrue(7 < len(controls.attr_size.model()) < 10)
+        self.assertTrue(5 < len(controls.attr_size.model()) < 8)
         self.assertEqual(len(controls.attr_label.model()), 8)
 
         # color and label should contain all variables
@@ -863,14 +863,6 @@ class ProjectionWidgetTestMixin:
             if var.is_discrete:
                 self.assertNotIn(var, controls.attr_size.model())
                 self.assertIn(var, controls.attr_shape.model())
-
-    def test_overlap(self):
-        """Test option 'Overlap' in 'Size' combo box"""
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
-        simulate.combobox_activate_item(self.widget.controls.attr_size,
-                                        OWPlotGUI.SizeByOverlap)
-        self.assertGreater(len(set(self.widget.graph.get_sizes())), 1)
 
     def test_attr_label_metas(self, timeout=DEFAULT_TIMEOUT):
         """Set 'Label' from string meta attribute"""

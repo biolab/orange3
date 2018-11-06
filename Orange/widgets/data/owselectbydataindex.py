@@ -7,6 +7,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.widget import Input, Output
+from Orange.widgets.utils.annotated_data import (create_annotated_table)
 
 
 class OWSelectByDataIndex(widget.OWWidget):
@@ -20,7 +21,11 @@ class OWSelectByDataIndex(widget.OWWidget):
         data_subset = Input("Data Subset", Table)
 
     class Outputs:
-        data = Output("Data", Table)
+        matching_data = Output("Matching Data", Table, replaces=["Data"], default=True)
+        non_matching_data = Output("Unmatched Data", Table)
+        # avoiding the default annotated output name (Data), as it was used
+        # for Matching Data previously
+        annotated_data = Output("Annotated Data", Table)
 
     want_main_area = False
     resizing_enabled = False
@@ -73,13 +78,19 @@ class OWSelectByDataIndex(widget.OWWidget):
         if self.data_subset:
             subset_ids = self.data_subset.ids
         if not self.data:
-            output_data = None
+            matching_output = None
+            non_matching_output = None
+            annotated_output = None
         else:
             if self.data_subset and len(np.intersect1d(subset_ids, self.data.ids)) == 0:
                 self.Warning.instances_not_matching()
-            subset_indices = np.in1d(self.data.ids, subset_ids)
-            output_data = self.data[subset_indices]
-        self.Outputs.data.send(output_data)
+            row_sel = np.in1d(self.data.ids, subset_ids)
+            matching_output = self.data[row_sel]
+            non_matching_output = self.data[~row_sel]
+            annotated_output = create_annotated_table(self.data, row_sel)
+        self.Outputs.matching_data.send(matching_output)
+        self.Outputs.non_matching_data.send(non_matching_output)
+        self.Outputs.annotated_data.send(annotated_output)
 
     def _invalidate(self):
         self.commit()

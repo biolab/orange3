@@ -45,9 +45,10 @@ various k are also shown in the widget.
    -  **Random initialization** (clusters are assigned randomly at first
       and then updated with further iterations)
 
-   **Re-runs** (how many times the algorithm is run) and **maximal
-   iterations** (the maximum number of iteration within each algorithm
-   run) can be set manually.
+   **Re-runs** (how many times the algorithm is run from random initial
+   positions; the result with the lowest within-cluster sum of squares
+   will be used) and **maximal iterations** (the maximum number of iterations
+   within each algorithm run) can be set manually.
 3. The widget outputs a new dataset with appended cluster information.
    Select how to append cluster information (as class, feature or meta
    attribute) and name the column.

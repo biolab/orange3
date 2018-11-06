@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 import itertools
 
 from Orange.data import Table
@@ -82,3 +82,34 @@ class TestOWSave(WidgetTest):
                 with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", choose_file):
                     self.widget.save_file_as()
                 self.assertEqual(len(Table(filename)), 150)
+
+    def test_format_combo(self):
+        widget = self.widget
+        filetype = widget.controls.filetype
+
+        widget.save_file = Mock()
+
+        data = Table("iris")
+        sparse_data = Table("iris")
+        sparse_data.is_sparse = Mock(return_value=True)
+
+        self.send_signal(widget.Inputs.data, data)
+        n_nonsparse = filetype.count()
+
+        self.send_signal(widget.Inputs.data, sparse_data)
+        n_sparse = filetype.count()
+        self.assertGreater(n_nonsparse, n_sparse)
+
+        self.send_signal(widget.Inputs.data, sparse_data)
+        self.assertEqual(filetype.count(), n_sparse)
+
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual(filetype.count(), n_nonsparse)
+
+        self.send_signal(widget.Inputs.data, None)
+        self.send_signal(widget.Inputs.data, data)
+        self.assertEqual(filetype.count(), n_nonsparse)
+
+        self.send_signal(widget.Inputs.data, None)
+        self.send_signal(widget.Inputs.data, sparse_data)
+        self.assertEqual(filetype.count(), n_sparse)

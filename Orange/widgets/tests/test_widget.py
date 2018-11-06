@@ -1,10 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=all
+
+import gc
+import weakref
 
 from unittest.mock import patch, MagicMock
-from AnyQt.QtCore import QRect, QByteArray
+
+from AnyQt.QtCore import QRect, QByteArray, QObject, pyqtSignal
 from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
@@ -86,6 +91,64 @@ class WidgetTestCase(WidgetTest):
 
         w = TestWidget2()
         w.showEvent(QShowEvent())
+
+    def test_store_restore_layout_geom(self):
+        class Widget(OWWidget):
+            name = "Who"
+            want_control_area = True
+
+        w = Widget()
+        w._OWWidget__setControlAreaVisible(False)
+        w.setGeometry(QRect(51, 52, 53, 54))
+        state = w.saveGeometryAndLayoutState()
+        w1 = Widget()
+        self.assertTrue(w1.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+        self.assertFalse(w1.controlAreaVisible)
+
+        Widget.want_control_area = False
+        w2 = Widget()
+        self.assertTrue(w2.restoreGeometryAndLayoutState(state))
+        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+
+        self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
+        self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
+
+    def test_garbage_collect(self):
+        widget = MyWidget()
+        ref = weakref.ref(widget)
+        # insert an object in widget's __dict__ that will be deleted when its
+        # __dict__ is cleared.
+        widget._finalizer = QObject()
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
+        widget.deleteLater()
+        del widget
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        gc.collect()
+        self.assertIsNone(ref())
+
+    def test_garbage_collect_from_scheme(self):
+        from Orange.canvas.scheme.widgetsscheme import WidgetsScheme
+        from Orange.canvas.registry.description import WidgetDescription
+        new_scheme = WidgetsScheme()
+        w_desc = WidgetDescription.from_module("Orange.widgets.tests.test_widget")
+        node = new_scheme.new_node(w_desc)
+        widget = new_scheme.widget_for_node(node)
+        widget._finalizer = QObject()
+        spyw = DestroyedSignalSpy(widget)
+        spyf = DestroyedSignalSpy(widget._finalizer)
+        ref = weakref.ref(widget)
+        del widget
+        new_scheme.remove_node(node)
+        gc.collect()
+        self.assertTrue(len(spyw) == 1 or spyw.wait(1000))
+        gc.collect()
+        self.assertTrue(len(spyf) == 1 or spyf.wait(1000))
+        self.assertIsNone(ref())
 
 
 class WidgetMsgTestCase(WidgetTest):
@@ -188,24 +251,21 @@ class WidgetMsgTestCase(WidgetTest):
         w.Error.clear()
         self.assertEqual(len(messages), 0)
 
-    def test_store_restore_layout_geom(self):
-        class Widget(OWWidget):
-            name = "Who"
-            want_control_area = True
 
-        w = Widget()
-        w._OWWidget__setControlAreaVisible(False)
-        w.setGeometry(QRect(51, 52, 53, 54))
-        state = w.saveGeometryAndLayoutState()
-        w1 = Widget()
-        self.assertTrue(w1.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
-        self.assertFalse(w1.controlAreaVisible)
+class DestroyedSignalSpy(QSignalSpy):
+    """
+    A signal spy for watching QObject.destroyed signal
 
-        Widget.want_control_area = False
-        w2 = Widget()
-        self.assertTrue(w2.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+    NOTE: This class specifically does not capture the QObject pointer emitted
+    from the destroyed signal (i.e. it connects to the no arg overload).
+    """
+    class Mapper(QObject):
+        destroyed_ = pyqtSignal()
 
-        self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
-        self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
+    def __init__(self, obj):
+        # type: (QObject) -> None
+        # Route the signal via a no argument signal to drop the obj pointer.
+        # After the destroyed signal is emitted the pointer is invalid
+        self.__mapper = DestroyedSignalSpy.Mapper()
+        obj.destroyed.connect(self.__mapper.destroyed_)
+        super().__init__(self.__mapper.destroyed_)

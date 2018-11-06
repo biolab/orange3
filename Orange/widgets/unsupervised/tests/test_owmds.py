@@ -7,8 +7,6 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 
-from AnyQt.QtTest import QSignalSpy
-
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
@@ -18,7 +16,6 @@ from Orange.widgets.tests.base import (
 )
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.unsupervised.owmds import OWMDS
-from Orange.widgets.utils.plot import OWPlotGUI
 
 
 class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
@@ -274,16 +271,6 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         # Data
         self.send_signal(self.widget.Inputs.data, towns_data)
         self.assertIn(towns_data.domain["label"], attr_label.model())
-
-    def test_overlap(self):
-        self.send_signal(self.signal_name, self.signal_data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(5000))
-        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
-        simulate.combobox_activate_item(self.widget.controls.attr_size,
-                                        OWPlotGUI.SizeByOverlap)
-        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
 
 
 if __name__ == "__main__":
