@@ -24,7 +24,7 @@ from AnyQt.QtCore import (
     Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION, QLineF)
 from AnyQt.QtCore import pyqtSignal as Signal
 
-from ..scheme import SchemeNode, SchemeLink, compatible_channels
+from ..scheme import compatible_channels
 from ..registry import InputSignal, OutputSignal
 
 from ..resources import icon_loader
@@ -139,8 +139,7 @@ def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
                 item.objectName() != name:
             continue
         return item
-    else:
-        return None
+    return None
 
 
 class LinksEditScene(QGraphicsScene):
@@ -286,8 +285,10 @@ class LinksEditWidget(QGraphicsWidget):
                 line = LinkLineItem(self)
                 start = self.__dragStartItem.boundingRect().center()
                 start = self.mapFromItem(self.__dragStartItem, start)
+
+                eventPos = event.pos()
                 line.setLine(start.x(), start.y(),
-                             event.pos().x(), event.pos().y())
+                             eventPos.x(), eventPos.y())
 
                 pen = QPen(self.palette().color(QPalette.Foreground), 4)
                 pen.setCapStyle(Qt.RoundCap)
@@ -301,7 +302,7 @@ class LinksEditWidget(QGraphicsWidget):
                 line = self.__tmpLine.line()
 
                 maybe_anchor = find_item_at(self.scene(), event.scenePos(),
-                                       type=ChannelAnchor)
+                                            type=ChannelAnchor)
                 # If hovering over anchor
                 if maybe_anchor is not None:
                     target_pos = maybe_anchor.boundingRect().center()
@@ -318,7 +319,7 @@ class LinksEditWidget(QGraphicsWidget):
         if event.button() == Qt.LeftButton and self.__tmpLine:
             self.__resetAnchorStates()
             endItem = find_item_at(self.scene(), event.scenePos(),
-                                     type=ChannelAnchor)
+                                   type=ChannelAnchor)
 
             if endItem is not None:
                 startItem = self.__dragStartItem
