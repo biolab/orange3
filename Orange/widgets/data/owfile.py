@@ -306,6 +306,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             assert self.reader is not None
         except Exception:
             return self.Error.missing_reader
+        
+        if self.reader == "no_url":
+            self.Outputs.data.send(None)
+            return
 
         try:
             self._update_sheet_combo()
@@ -351,6 +355,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             url = self.url_combo.currentText().strip()
             if url:
                 return UrlReader(url)
+            else:
+                return "no_url"
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
