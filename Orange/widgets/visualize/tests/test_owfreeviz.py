@@ -39,7 +39,7 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertFalse(self.widget.Error.not_enough_class_vars.is_shown())
 
     def test_optimization(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, self.heart_disease)
         self.widget.btn_start.click()
 
     def test_optimization_cancelled(self):
