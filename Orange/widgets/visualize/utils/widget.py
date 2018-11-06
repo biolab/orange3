@@ -550,6 +550,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.data = None
         self.valid_data = None
         self.selection = None
+        self.graph.selection = None
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
