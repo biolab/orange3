@@ -326,7 +326,7 @@ def separator(widget, width=4, height=4):
     :rtype: QWidget
     """
     sep = QtWidgets.QWidget(widget)
-    if widget.layout() is not None:
+    if widget is not None and widget.layout() is not None:
         widget.layout().addWidget(sep)
     sep.setFixedSize(width, height)
     return sep
@@ -788,7 +788,7 @@ class LineEditWFocusOut(QtWidgets.QLineEdit):
 
     def __init__(self, parent, callback, focusInCallback=None):
         super().__init__(parent)
-        if parent.layout() is not None:
+        if parent is not None and parent.layout() is not None:
             parent.layout().addWidget(self)
         self.callback = callback
         self.focusInCallback = focusInCallback
