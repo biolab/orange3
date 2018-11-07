@@ -503,17 +503,21 @@ class LinksEditWidget(QGraphicsWidget):
             self.__updateAnchorState(anchor, source_anchors)
 
     def __updateAnchorState(self, anchor, opposite_anchors):
+        channel_type = anchor.channel().type
         for opposite_anchor in opposite_anchors:
             first_channel = anchor.channel()
             second_channel = opposite_anchor.channel()
             if isinstance(first_channel, OutputSignal):
                 if compatible_channels(first_channel, second_channel):
                     anchor.setEnabled(True)
+                    anchor.setToolTip(escape(channel_type))
                     return
             else:
                 if compatible_channels(second_channel, first_channel):
                     anchor.setEnabled(True)
+                    anchor.setToolTip(escape(channel_type))
                     return
+        anchor.setToolTip("No possible link to other channels.\n" + escape(channel_type))
         anchor.setEnabled(False)
 
     if QT_VERSION < 0x40700:
@@ -664,7 +668,6 @@ class EditLinksNode(QGraphicsWidget):
             layout_item = GraphicsItemLayoutItem(grid, item=anchor)
             grid.addItem(layout_item, i, anchor_row,
                          alignment=anchor_alignment)
-            anchor.setToolTip(escape(channel.type))
 
             self.channelAnchors.append(anchor)
 
