@@ -1,11 +1,12 @@
 import warnings
 
-import fastTSNE
 import numpy as np
-import scipy.sparse as sp
 import sklearn.manifold as skl_manifold
+import scipy.sparse as sp
 from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
+
+import fastTSNE
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
