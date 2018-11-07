@@ -1,7 +1,8 @@
 from unittest import TestCase
 from unittest.mock import Mock
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import QMimeData, QPoint, Qt
+from AnyQt.QtGui import QDragEnterEvent
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.data.contexthandlers import \
@@ -346,3 +347,19 @@ class TestOWSelectAttributes(WidgetTest):
         self.assertFalse(widget.use_features_box.checkbox.isChecked())
         self.assertListEqual(out_features, AttributeList(attrs))
         self.assertControlsEnabled(True, True, True, widget)
+
+    def test_used_attrs_supported_types(self):
+        data = Table("zoo")
+        event = self._drag_enter_event(data.domain[:1])
+        self.widget.used_attrs_view.dragEnterEvent(event)
+        self.assertTrue(event.isAccepted())
+
+        event = self._drag_enter_event(data.domain.metas)
+        self.widget.used_attrs_view.dragEnterEvent(event)
+        self.assertFalse(event.isAccepted())
+
+    def _drag_enter_event(self, variables):
+        self.event_data = mime = QMimeData()
+        mime.setProperty("_items", variables)
+        return QDragEnterEvent(QPoint(0, 0), Qt.MoveAction, mime,
+                               Qt.NoButton, Qt.NoModifier)
