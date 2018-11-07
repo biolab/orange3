@@ -84,7 +84,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         assert self.attr_color is not None
         master_domain = self.master.data.domain
         vars = [v for v in chain(master_domain.variables, master_domain.metas)
-                if v is not self.attr_color]
+                if v is not self.attr_color and v.is_primitive()]
         domain = Domain(attributes=vars, class_vars=self.attr_color)
         data = self.master.data.transform(domain)
         relief = ReliefF if isinstance(domain.class_var, DiscreteVariable) \

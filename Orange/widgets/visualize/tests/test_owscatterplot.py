@@ -383,6 +383,14 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                                     [True, False, True, False, True]):
             assert_vizrank_enabled(data, is_enabled)
 
+    def test_vizrank_nonprimitives(self):
+        """VizRank does not try to include non primitive attributes"""
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data)
+        with patch("Orange.widgets.visualize.owscatterplot.ReliefF",
+                   new=lambda *_1, **_2: lambda data: np.arange(len(data))):
+            self.widget.vizrank.score_heuristic()
+
     def test_auto_send_selection(self):
         """
         Scatter Plot automatically sends selection only when the checkbox Send automatically
