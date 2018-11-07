@@ -136,6 +136,9 @@ class OWLouvainClustering(widget.OWWidget):
 
     def _invalidate_pca_projection(self):
         self.pca_projection = None
+        if not self.apply_pca:
+            return
+
         self._invalidate_graph()
         self._set_modified(True)
 

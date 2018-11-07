@@ -100,6 +100,38 @@ class TestOWLouvain(WidgetTest):
             self.commit_and_wait()
             self.assertEqual(call_count + 1, commit.call_count)
 
+    def test_only_recluster_when_necessary_pca_components_change(self):
+        # Compute clustering on some data
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        # When PCA checkbox is ticked, any update to slider should invalidate results
+        self.widget.apply_pca_cbx.setChecked(True)
+        self.widget.pca_components_slider.setValue(2)
+        self.commit_and_wait()
+
+        with patch.object(self.widget, '_invalidate_output') as invalidate:
+            # Change slider value, this should invalidate output
+            self.widget.pca_components_slider.setValue(4)
+            self.commit_and_wait()
+            self.assertEqual(invalidate.call_count, 1)
+
+        with patch.object(self.widget, '_invalidate_output') as invalidate:
+            # Don't change slider value, this shouldn't do anything
+            self.widget.pca_components_slider.setValue(4)
+            self.commit_and_wait()
+            invalidate.assert_not_called()
+
+        # When PCA checkbox is not ticked updating the slider should have no effect
+        self.widget.apply_pca_cbx.setChecked(False)
+        self.widget.pca_components_slider.setValue(2)
+        self.commit_and_wait()
+
+        with patch.object(self.widget, '_invalidate_output') as invalidate:
+            # Change slider value, this should invalidate output
+            self.widget.pca_components_slider.setValue(4)
+            self.commit_and_wait()
+            invalidate.assert_not_called()
+
     def test_invalidate(self):
         # pylint: disable=protected-access
         data = self.iris
