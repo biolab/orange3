@@ -48,6 +48,7 @@ Data
    widgets/data/preprocess
    widgets/data/purgedomain
    widgets/data/rank
+   widgets/data/correlations
    widgets/data/color
 
 
