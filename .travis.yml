@@ -15,9 +15,6 @@ matrix:
           env: PYQT4=true
         - python: '3.6'
           env: UPLOAD_COVERAGE=true
-        - python: '3.7'
-          sudo: required
-          dist: xenial
     fast_finish: true
 
 cache:
