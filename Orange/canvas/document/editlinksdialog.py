@@ -503,21 +503,20 @@ class LinksEditWidget(QGraphicsWidget):
             self.__updateAnchorState(anchor, source_anchors)
 
     def __updateAnchorState(self, anchor, opposite_anchors):
-        channel_type = anchor.channel().type
         for opposite_anchor in opposite_anchors:
             first_channel = anchor.channel()
             second_channel = opposite_anchor.channel()
             if isinstance(first_channel, OutputSignal):
                 if compatible_channels(first_channel, second_channel):
                     anchor.setEnabled(True)
-                    anchor.setToolTip(escape(channel_type))
+                    anchor.setToolTip("")
                     return
             else:
                 if compatible_channels(second_channel, first_channel):
                     anchor.setEnabled(True)
-                    anchor.setToolTip(escape(channel_type))
+                    anchor.setToolTip("")
                     return
-        anchor.setToolTip("No possible link to other channels.\n" + escape(channel_type))
+        anchor.setToolTip("Link not possible.")
         anchor.setEnabled(False)
 
     if QT_VERSION < 0x40700:
@@ -767,11 +766,6 @@ class ChannelAnchor(QGraphicsRectItem):
         """
         if channel != self.__channel:
             self.__channel = channel
-
-            if hasattr(channel, "description"):
-                self.setToolTip(channel.description)
-            # TODO: Should also include name, type, flags, dynamic in the
-            #       tool tip as well as add visual clues to the anchor
 
     def channel(self):
         """
