@@ -503,20 +503,20 @@ class LinksEditWidget(QGraphicsWidget):
             self.__updateAnchorState(anchor, source_anchors)
 
     def __updateAnchorState(self, anchor, opposite_anchors):
+        first_channel = anchor.channel()
         for opposite_anchor in opposite_anchors:
-            first_channel = anchor.channel()
             second_channel = opposite_anchor.channel()
-            if isinstance(first_channel, OutputSignal):
-                if compatible_channels(first_channel, second_channel):
-                    anchor.setEnabled(True)
-                    anchor.setToolTip("")
-                    return
-            else:
-                if compatible_channels(second_channel, first_channel):
-                    anchor.setEnabled(True)
-                    anchor.setToolTip("")
-                    return
-        anchor.setToolTip("Link not possible.")
+            if isinstance(first_channel, OutputSignal) and \
+               compatible_channels(first_channel, second_channel) or \
+               isinstance(first_channel, InputSignal) and \
+               compatible_channels(second_channel, first_channel):
+                anchor.setEnabled(True)
+                anchor.setToolTip("Click and drag to connect widgets!")
+                return
+        if isinstance(first_channel, OutputSignal):
+            anchor.setToolTip("No compatible input channel.")
+        else:
+            anchor.setToolTip("No compatible output channel.")
         anchor.setEnabled(False)
 
     if QT_VERSION < 0x40700:
