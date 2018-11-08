@@ -944,6 +944,15 @@ class ProjectionWidgetTestMixin:
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
+    def test_embedding_missing_values(self):
+        table = Table("heart_disease")
+        table.X[0] = np.nan
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertFalse(np.all(self.widget.valid_data))
+        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        embedding_mask = np.all(np.isnan(output.metas[:, :2]), axis=1)
+        np.testing.assert_array_equal(~embedding_mask, self.widget.valid_data)
+
     def test_sparse_data(self):
         table = Table("iris")
         table.X = sp.csr_matrix(table.X)

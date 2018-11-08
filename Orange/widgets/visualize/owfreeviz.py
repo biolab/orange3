@@ -372,7 +372,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
             return None
         EX = np.dot(self._X, self.projection)
         EX /= np.max(np.linalg.norm(EX, axis=1)) or 1
-        embedding = np.zeros((len(self.data), 2), dtype=np.float)
+        embedding = np.full((len(self.data), 2), np.nan)
         embedding[self.valid_data] = EX
         return embedding
 

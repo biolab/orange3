@@ -394,7 +394,7 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.Warning.invalid_embedding()
             return None
 
-        embedding = np.zeros((len(self.data), 2), dtype=np.float)
+        embedding = np.full((len(self.data), 2), np.nan)
         embedding[self.valid_data] = ec
         return embedding
 
