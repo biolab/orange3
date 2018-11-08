@@ -93,6 +93,8 @@ class ProportionalBarItem(QGraphicsLinearLayout):
         return QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
 
+# The price of flexibility is complexity...
+# pylint: disable=too-many-instance-attributes
 class Histogram(QGraphicsWidget):
     """A basic histogram widget.
 

@@ -154,7 +154,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         self.target_var = None
 
         self.__attributes = self.__filter_attributes(domain.attributes, self.table.X)
-        self.__class_vars = self.__filter_attributes(domain.class_vars, self.table._Y)
+        # We disable pylint warning because the `Y` property squeezes vectors,
+        # while we need a 2d array, which `_Y` provides
+        self.__class_vars = self.__filter_attributes(domain.class_vars, self.table._Y)  # pylint: disable=protected-access
         self.__metas = self.__filter_attributes(domain.metas, self.table.metas)
 
         self.n_attributes = len(self.variables)
@@ -349,7 +351,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         var_name_indices = np.argsort(self._variable_names)
 
         # Prepare vartype indices so ready when needed
-        disc_idx, cont_idx, time_idx, str_idx = self._attr_indices(self.variables)
+        disc_idx, _, time_idx, str_idx = self._attr_indices(self.variables)
 
         # Sort by: (type)
         if column == self.Columns.ICON:
@@ -395,6 +397,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         elif column == self.Columns.MISSING:
             return self._missing
 
+        return None
+
     def _sortColumnData(self, column):
         """Allow sorting with 2d arrays."""
         data = np.asarray(self.sortColumnData(column))
@@ -437,10 +441,16 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             if role == Qt.DisplayRole:
                 return self.Columns.from_index(section).name
 
+        return None
+
     def data(self, index, role):
         # type: (QModelIndex, Qt.ItemDataRole) -> Any
+        # Text formatting for various data simply requires a lot of branches.
+        # This is much better than overengineering various formatters...
+        # pylint: disable=too-many-branches
+
         if not index.isValid():
-            return
+            return None
 
         row, column = self.mapToSourceRows(index.row()), index.column()
         # Make sure we're not out of range
@@ -660,6 +670,9 @@ class DistributionDelegate(QStyledItemDelegate):
 
         scene.render(painter, target=QRectF(option.rect), mode=Qt.IgnoreAspectRatio)
 
+        # pylint complains about inconsistent return statements
+        return None
+
 
 class OWFeatureStatistics(widget.OWWidget):
     name = 'Feature Statistics'
@@ -812,7 +825,11 @@ class OWFeatureStatistics(widget.OWWidget):
                 ('time', TimeVariable),
                 ('string', StringVariable)
         ]:
-            var_type_list = [v for v in variables if type(v) is var_type]
+            # Disable pylint here because a `TimeVariable` is also a
+            # `ContinuousVariable`, and should be labelled as such. That is why
+            # it is necessary to check the type this way instead of using
+            # `isinstance`, which would fail in the above case
+            var_type_list = [v for v in variables if type(v) is var_type]  # pylint: disable=unidiomatic-typecheck
             if var_type_list:
                 shown = var_type in self.model.HIDDEN_VAR_TYPES
                 agg.append((

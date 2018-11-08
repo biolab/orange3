@@ -187,7 +187,7 @@ def table_dense_sparse(test_case):
     return _wrapper
 
 
-class TestOWFeatureStatisticsTableTypes(WidgetTest):
+class TestVariableTypes(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
