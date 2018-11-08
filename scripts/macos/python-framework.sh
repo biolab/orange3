@@ -263,5 +263,5 @@ python-framework-relocate "${1:?}"/Python.framework
 (
     cd "${1:?}"/Python.framework/Versions
     shopt -s failglob
-    ln -sf ?.? ./Current  # assuming single version framework
+    ln -shf ?.? ./Current  # assuming single version framework
 )
