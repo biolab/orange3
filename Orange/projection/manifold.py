@@ -1,14 +1,17 @@
 import warnings
 
 import numpy as np
-
-from scipy.sparse.linalg import eigsh as arpack_eigh
-from scipy.linalg import eigh as lapack_eigh
-
 import sklearn.manifold as skl_manifold
+import scipy.sparse as sp
+from scipy.linalg import eigh as lapack_eigh
+from scipy.sparse.linalg import eigsh as arpack_eigh
 
+import fastTSNE
+
+import Orange
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.distance import Distance, DistanceModel, Euclidean
-from Orange.projection import SklProjector
+from Orange.projection import SklProjector, Projector, Projection
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
@@ -110,9 +113,9 @@ class MDS(SklProjector):
     def __call__(self, data):
         params = self.params.copy()
         dissimilarity = params['dissimilarity']
-        if isinstance(self._metric, DistanceModel) \
-                or (isinstance(self._metric, type)
-                    and issubclass(self._metric, Distance)):
+        if isinstance(self._metric, DistanceModel) or (
+                isinstance(self._metric, type) and issubclass(self._metric, Distance)
+        ):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
@@ -178,31 +181,186 @@ class SpectralEmbedding(SklProjector):
         self.params = vars()
 
 
-class TSNE(SklProjector):
-    __wraps__ = skl_manifold.TSNE
+class TSNEModel(Projection):
+    """A tSNE embedding object. Supports further optimization as well as
+    adding new data into the existing embedding.
+
+    Attributes
+    ----------
+    embedding_ : fastTSNE.TSNEEmbedding
+        The embedding object which takes care of subsequent optimizations of
+        transforms.
+    embedding : Table
+        The embedding in an Orange table, easily accessible.
+
+    """
+    def __init__(self, embedding: fastTSNE.TSNEEmbedding, table: Table):
+        self.embedding_ = embedding
+        self.embedding = table
+
+    def transform(self, X: np.ndarray, **kwargs) -> fastTSNE.PartialTSNEEmbedding:
+        if sp.issparse(X):
+            raise TypeError(
+                'A sparse matrix was passed, but dense data is required. Use '
+                'X.toarray() to convert to a dense numpy array.'
+            )
+        return self.embedding_.transform(X, **kwargs)
+
+    def __call__(self, data: Table, **kwargs) -> Table:
+        # If we want to transform new data, ensure that we use correct domain
+        if data.domain != self.original_domain:
+            data = data.transform(self.original_domain)
+
+        embedding = self.transform(data.X, **kwargs)
+        return Table(self.embedding.domain, embedding.view(), data.Y, data.metas)
+
+    def optimize(self, n_iter, inplace=False, propagate_exception=False, **kwargs):
+        """Resume optimization for the current embedding."""
+        kwargs = {'n_iter': n_iter, 'inplace': inplace,
+                  'propagate_exception': propagate_exception, **kwargs}
+        if inplace:
+            self.embedding_.optimize(**kwargs)
+            return self
+
+        # If not inplace, we return a new TSNEModel object
+        new_embedding = self.embedding_.optimize(**kwargs)
+        table = Table(self.embedding.domain, new_embedding.view(np.ndarray),
+                      self.embedding.Y, self.embedding.metas)
+        return TSNEModel(new_embedding, table)
+
+
+class TSNE(Projector):
+    """t-distributed stochastic neighbor embedding (tSNE).
+
+    Parameters
+    ----------
+    n_components : int
+        The number of embedding that the embedding should contain. Note that
+        only up to two dimensions are supported as otherwise the process can
+        become prohibitively expensive.
+    perplexity : float
+        The desired perplexity of the probability distribution.
+    learning_rate : float
+        The learning rate for t-SNE. Typical values range from 1 to 1000.
+        Setting the learning rate too high will result in the crowding problem
+        where all the points form a ball in the center of the space.
+    early_exaggeration_iter : int
+        The number of iterations that the early exaggeration phase will be run
+        for. Early exaggeration helps better separate clusters by increasing
+        attractive forces between similar points.
+    early_exaggeration : float
+        The exaggeration term is used to increase the attractive forces during
+        the first steps of the optimization. This enables points to move more
+        easily through others, helping find their true neighbors quicker.
+    n_iter : int
+        The number of iterations to run the optimization after the early
+        exaggeration phase.
+    theta : float
+        This is the trade-off parameter between speed and accuracy of the
+        Barnes-Hut approximation of the negative forces. Setting a lower value
+        will produce more accurate results, while setting a higher value will
+        search through less of the space providing a rougher approximation.
+        Scikit-learn recommends values between 0.2-0.8. This value is ignored
+        unless the Barnes-Hut algorithm is used to compute negative gradients.
+    min_num_intervals : int
+        The minimum number of intervals into which we split our embedding. A
+        larger value will produce better embeddings at the cost of performance.
+        This value is ignored unless the interpolation based algorithm is used
+        to compute negative gradients.
+    ints_in_interval : float
+        Since the coordinate range of the embedding will certainly change
+        during optimization, this value tells us how many integer values should
+        appear in a single interval. This number of intervals affect the
+        embedding quality at the cost of performance. Less ints per interval
+        will incur a larger number of intervals. This value is ignored unless
+        the interpolation based algorithm is used to compute negative gradients.
+    initialization : Optional[Union[np.ndarray, str]]
+        An initial embedding strategy can be provided. A precomputed array with
+        coordinates can be passed in, or optionally "random" or "pca"
+        initializations are available. Note that while PCA can sometimes lead
+        to faster convergence times, it can sometimes also lead to poor
+        embeddings. Random initialization is typically a safe bet.
+    metric : str
+        The metric which will be used to evaluate the similarities between the
+        input data points in the high dimensional space.
+    n_jobs : int
+        Parts of the algorithm can be in parallel and thus - faster.
+    neighbors : str
+        The method used to compute the nearest neighbors in the original, high
+        dimensional data set. Possible values are "exact" or "approx" or any
+        instance inheriting from `fastTSNE.nearest_neighbors.KNNIndex`. When
+        dealing with larger data sets, approximate NN search is faster, when
+        dealing with smaller data sets, exact NN search is typically faster.
+    negative_gradient_method : str
+        The method used to evaluate negative gradients (repulsive forces) in
+        the embedding. Possible values are "bh" for Barnes-Hut or "fft" for
+        Fast Fourier Accelerated Interpolation based tSNE or FItSNE for short.
+        BH tends to be faster for smaller data sets but scales as O(n log n)
+        while FItSNE is faster for larger data sets and scales linearly in the
+        number of points.
+    callbacks : Callable[[int, float, np.ndarray] -> bool]
+        The callback should accept three parameters, the first is the current
+        iteration, the second is the current KL divergence error and the last
+        is the current embedding. The callback should return a boolean value
+        indicating whether or not to stop optimization i.e. True to stop.
+        This is convenient because returning `None` is falsey and helps avoid
+        potential bugs if forgetting to return. Optionally, a list of callbacks
+        is also supported.
+    callbacks_every_iters : int
+        How often should the callback be called.
+    preprocessors
+
+    """
     name = 't-SNE'
+    preprocessors = [
+        Orange.preprocess.Continuize(),
+        Orange.preprocess.SklImpute(),
+    ]
 
-    def __init__(self, n_components=2, perplexity=30.0, early_exaggeration=4.0,
-                 learning_rate=1000.0, n_iter=1000, n_iter_without_progress=30,
-                 min_grad_norm=1e-07, metric='euclidean', init='random',
-                 random_state=None, method='barnes_hut', angle=0.5, n_jobs=1,
-                 preprocessors=None):
+    def __init__(self, n_components=2, perplexity=30, learning_rate=200,
+                 early_exaggeration_iter=250, early_exaggeration=12,
+                 n_iter=750, exaggeration=None, theta=0.5, min_num_intervals=10,
+                 ints_in_interval=1, initialization='random', metric='euclidean',
+                 n_jobs=1, neighbors='exact', negative_gradient_method='bh', callbacks=None,
+                 callbacks_every_iters=50, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
-        self.params = vars()
+        self.tsne = fastTSNE.TSNE(
+            n_components=n_components, perplexity=perplexity,
+            learning_rate=learning_rate, early_exaggeration=early_exaggeration,
+            early_exaggeration_iter=early_exaggeration_iter, n_iter=n_iter,
+            exaggeration=exaggeration, theta=theta, min_num_intervals=min_num_intervals,
+            ints_in_interval=ints_in_interval, initialization=initialization,
+            metric=metric, n_jobs=n_jobs, neighbors=neighbors,
+            negative_gradient_method=negative_gradient_method,
+            callbacks=callbacks, callbacks_every_iters=callbacks_every_iters,
+        )
 
-    def __call__(self, data):
-        params = self.params.copy()
-        metric = params["metric"]
-        if metric == 'precomputed':
-            X, Y, domain = data, None, None
-        else:
-            data = self.preprocess(data)
-            X, Y, domain = data.X, data.Y, data.domain
-            if isinstance(metric, Distance):
-                X = metric(X)
-                params['metric'] = 'precomputed'
+    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> fastTSNE.TSNEEmbedding:
+        if sp.issparse(X):
+            raise TypeError(
+                'A sparse matrix was passed, but dense data is required. Use '
+                'X.toarray() to convert to a dense numpy array.'
+            )
+        return self.tsne.fit(X)
 
-        tsne = self.__wraps__(**params)
-        tsne.fit(X, y=Y)
-        tsne.domain = domain
-        return tsne
+    def __call__(self, data: Table) -> TSNEModel:
+        # Preprocess the data - convert discrete to continuous
+        data = self.preprocess(data)
+
+        # Run tSNE optimization
+        embedding = self.fit(data.X, data.Y)
+
+        # The results should be accessible in an Orange table, which doesn't
+        # need the full embedding attributes and is cast into a regular array
+        tsne_cols = [ContinuousVariable('t-SNE-%d' % (i + 1))
+                     for i in range(self.tsne.n_components)]
+        embedding_domain = Domain(tsne_cols, data.domain.class_vars, data.domain.metas)
+        embedding_table = Table(embedding_domain, embedding.view(np.ndarray), data.Y, data.metas)
+
+        # Create a model object which will be capable of transforming new data
+        # into the existing embedding
+        model = TSNEModel(embedding, embedding_table)
+        model.original_domain = data.domain
+        model.name = self.name
+
+        return model

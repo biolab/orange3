@@ -1,13 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest import skip
 from unittest.mock import patch, Mock
 
 import numpy as np
 from scipy import sparse
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
-from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import simulate
+from Orange.widgets.unsupervised.owmanifoldlearning import OWManifoldLearning
 
 
 class TestOWManifoldLearning(WidgetTest):
@@ -68,31 +70,50 @@ class TestOWManifoldLearning(WidgetTest):
     def test_sparse_data(self):
         data = Table("iris").to_sparse()
         self.assertTrue(sparse.issparse(data.X))
-        self.widget.manifold_method_index = 2
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.sparse_methods.is_shown())
-        self.send_signal(self.widget.Inputs.data, None)
-        self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
-        # GH 2158
-        self.widget.manifold_method_index = 0
-        self.assertEqual(
-            'TSNE',
-            self.widget.MANIFOLD_METHODS[self.widget.manifold_method_index].__name__)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.widget.apply_button.button.click()
-        self.assertFalse(self.widget.Error.sparse_methods.is_shown())
-        self.assertFalse(self.widget.Error.sparse_tsne_distance.is_shown())
-        self.assertIsInstance(self.get_output(self.widget.Outputs.transformed_data), Table)
-        self.widget.params_widget.parameters['metric'] = 'chebyshev'
-        self.widget.apply_button.button.click()
-        self.assertTrue(self.widget.Error.sparse_tsne_distance.is_shown())
 
+        def __callback():
+            # Send sparse data to input
+            self.send_signal(self.widget.Inputs.data, data)
+            self.widget.apply_button.button.click()
+            self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
+            # Clear input
+            self.send_signal(self.widget.Inputs.data, None)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
+
+        simulate.combobox_run_through_all(
+            self.widget.manifold_methods_combo, callback=__callback,
+        )
+
+    def test_metrics(self):
+        # Select t-SNE method, which is the only method that supports metrics
+        simulate.combobox_activate_item(self.widget.manifold_methods_combo, "t-SNE")
+
+        def __callback():
+            # Send data to input
+            self.send_signal(self.widget.Inputs.data, self.iris)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.manifold_error.is_shown())
+
+            # Clear input
+            self.send_signal(self.widget.Inputs.data, None)
+            self.widget.apply_button.button.click()
+            self.assertFalse(self.widget.Error.manifold_error.is_shown())
+
+        simulate.combobox_run_through_all(
+            self.widget.tsne_editor.metric_combo, callback=__callback,
+        )
+
+    @skip
     def test_singular_matrices(self):
         """
         Handle singular matrices.
         GH-2228
+
+        TODO: This test makes sense with the ``Mahalanobis`` distance metric
+        which is currently not supported by tSNE. In case it is ever
+        re-introduced, this test is very much required.
+
         """
         table = Table(
             Domain(
