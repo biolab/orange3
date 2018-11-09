@@ -31,7 +31,7 @@ def compute_tsne_embedding(X, perplexity, iter, init):
     tsne = Orange.projection.TSNE(
         perplexity=perplexity, n_iter=iter, initialization=init, theta=.8,
         early_exaggeration_iter=0, negative_gradient_method=negative_gradient_method,
-        neighbors=neighbor_method,
+        neighbors=neighbor_method, random_state=0
     )
     tsne_model = tsne.fit(X)
     return np.asarray(tsne_model, dtype=np.float32)

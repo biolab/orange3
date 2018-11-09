@@ -308,6 +308,12 @@ class TSNE(Projector):
         is also supported.
     callbacks_every_iters : int
         How often should the callback be called.
+    random_state: Optional[Union[int, RandomState]]
+        The random state parameter follows the convention used in scikit-learn.
+        If the value is an int, random_state is the seed used by the random
+        number generator. If the value is a RandomState instance, then it will
+        be used as the random number generator. If the value is None, the random
+        number generator is the RandomState instance used by `np.random`.
     preprocessors
 
     """
@@ -321,8 +327,9 @@ class TSNE(Projector):
                  early_exaggeration_iter=250, early_exaggeration=12,
                  n_iter=750, exaggeration=None, theta=0.5, min_num_intervals=10,
                  ints_in_interval=1, initialization='random', metric='euclidean',
-                 n_jobs=1, neighbors='exact', negative_gradient_method='bh', callbacks=None,
-                 callbacks_every_iters=50, preprocessors=None):
+                 n_jobs=1, neighbors='exact', negative_gradient_method='bh',
+                 callbacks=None, callbacks_every_iters=50,
+                 random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.tsne = fastTSNE.TSNE(
             n_components=n_components, perplexity=perplexity,
@@ -333,6 +340,7 @@ class TSNE(Projector):
             metric=metric, n_jobs=n_jobs, neighbors=neighbors,
             negative_gradient_method=negative_gradient_method,
             callbacks=callbacks, callbacks_every_iters=callbacks_every_iters,
+            random_state=random_state
         )
 
     def fit(self, X: np.ndarray, Y: np.ndarray = None) -> fastTSNE.TSNEEmbedding:
