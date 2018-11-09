@@ -154,7 +154,7 @@ class LearnerScorer(Scorer):
 
     def score_data(self, data, feature=None):
 
-        def average_scores(scores):
+        def join_derived_features(scores):
             """ Obtain scores for original attributes.
 
             If a learner preprocessed the data before building a model, current scores do not
@@ -167,7 +167,7 @@ class LearnerScorer(Scorer):
                 while not (attr in data.domain) and getattr(attr, 'compute_value', False):
                     attr = getattr(attr.compute_value, 'variable', attr)
                 scores_grouped[attr].append(score)
-            return [sum(scores_grouped[attr]) / len(scores_grouped[attr])
+            return [max(scores_grouped[attr])
                     if attr in scores_grouped else 0
                     for attr in data.domain.attributes]
 
@@ -179,7 +179,7 @@ class LearnerScorer(Scorer):
                         self.domain)
 
         if data.domain != model_domain:
-            scores = np.array([average_scores(row) for row in scores])
+            scores = np.array([join_derived_features(row) for row in scores])
 
         return scores[:, data.domain.attributes.index(feature)] \
             if feature else scores
