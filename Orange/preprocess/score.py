@@ -155,10 +155,16 @@ class LearnerScorer(Scorer):
     def score_data(self, data, feature=None):
 
         def average_scores(scores):
+            """ Obtain scores for original attributes.
+
+            If a learner preprocessed the data before building a model, current scores do not
+            directly correspond to the domain. For example, continuization creates multiple
+            features from a discrete feature. """
             scores_grouped = defaultdict(list)
             for attr, score in zip(model_domain.attributes, scores):
-                # Go up the chain of preprocessors to obtain the original variable
-                while getattr(attr, 'compute_value', False):
+                # Go up the chain of preprocessors to obtain the original variable, but no further
+                # than the data.domain, because the data is perhaphs already preprocessed.
+                while not (attr in data.domain) and getattr(attr, 'compute_value', False):
                     attr = getattr(attr.compute_value, 'variable', attr)
                 scores_grouped[attr].append(score)
             return [sum(scores_grouped[attr]) / len(scores_grouped[attr])
