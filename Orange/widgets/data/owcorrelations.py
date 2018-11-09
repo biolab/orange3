@@ -191,6 +191,7 @@ class OWCorrelations(OWWidget):
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
         self.vizrank.progressBar = self.progressBar
+        self.vizrank.button.setEnabled(False)
 
         gui.separator(box)
         box.layout().addWidget(self.vizrank.filter)
@@ -242,6 +243,7 @@ class OWCorrelations(OWWidget):
         self.apply()
         self.openContext(self.data)
         self._vizrank_select()
+        self.vizrank.button.setEnabled(self.data is not None)
 
     def apply(self):
         self.vizrank.initialize()
