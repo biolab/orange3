@@ -763,10 +763,14 @@ class OWFeatureStatistics(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        # Clear outputs and reset widget state
         self.closeContext()
         self.selected_rows = []
         self.model.resetSorting()
+        self.Outputs.reduced_data.send(None)
+        self.Outputs.statistics.send(None)
 
+        # Setup widget state for new data and restore settings
         self.data = data
 
         if data is not None:
@@ -785,6 +789,7 @@ class OWFeatureStatistics(widget.OWWidget):
         self.__color_var_changed()
 
         self.set_info()
+        self.commit()
 
     def __restore_selection(self):
         """Restore the selection on the table view from saved settings."""
