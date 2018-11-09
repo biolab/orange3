@@ -49,6 +49,7 @@ Data
    widgets/data/purgedomain
    widgets/data/rank
    widgets/data/color
+   widgets/data/featurestatistics
 
 
 Visualize
