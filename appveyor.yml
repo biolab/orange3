@@ -23,10 +23,6 @@ environment:
     TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy~=1.14.0 scipy~=1.0.0 scikit-learn pandas==0.21.1
 
   matrix:
-    - PYTHON: C:\Python35
-
-    - PYTHON: C:\Python35-x64
-
     - PYTHON: C:\Python36
 
     - PYTHON: C:\Python36-x64
