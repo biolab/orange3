@@ -1,9 +1,12 @@
 """
 Data-manipulation utilities.
 """
+import re
 import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
+
+RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
 def one_hot(values, dtype=float):
@@ -132,3 +135,30 @@ def assure_column_dense(a):
     a = assure_array_dense(a)
     # column assignments must be of shape (n,) and not (n, 1)
     return np.ravel(a)
+
+
+def get_indices(names, name):
+    """
+    Return list of indices which occur in a names list for a given name.
+    :param names: list of strings
+    :param name: str
+    :return: list of indices
+    """
+    return [int(a.group(2)) for x in names
+            for a in re.finditer(RE_FIND_INDEX.format(name), x)]
+
+
+def get_unique_names(names, proposed):
+    """
+    Returns unique names of variables. Variables which are duplicate get appended by
+    unique index which is the same in all proposed variable names in a list.
+    :param names: list of strings
+    :param proposed: list of strings
+    :return: list of strings
+    """
+    if len([name for name in proposed if name in names]):
+        max_index = max([max(get_indices(names, name),
+                             default=1) for name in proposed], default=1)
+        for i, name in enumerate(proposed):
+            proposed[i] = "{} ({})".format(name, max_index + 1)
+    return proposed

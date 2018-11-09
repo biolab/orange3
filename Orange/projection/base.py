@@ -1,14 +1,17 @@
 import inspect
 import threading
 
+import numpy as np
+
 import Orange.data
 from Orange.base import ReprableWithPreprocessors
-from Orange.data.util import ComputeValueProjector
+from Orange.data.util import ComputeValueProjector, get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.preprocess import RemoveNaNRows
 import Orange.preprocess
 
 __all__ = ["LinearCombinationSql", "Projector", "Projection", "SklProjector",
-           "DomainProjection"]
+           "LinearProjector", "DomainProjection"]
 
 
 class LinearCombinationSql:
@@ -105,15 +108,15 @@ class TransformDomain:
 
 
 class DomainProjection(Projection):
-    var_prefix = "Component"
+    var_prefix = "C"
 
     def __init__(self, proj, domain):
         transformer = TransformDomain(self)
 
-        def proj_variable(i):
+        def proj_variable(i, name):
             v = Orange.data.ContinuousVariable(
-                "{}{}".format(self.var_prefix, str(i)),
-                compute_value=ComputeValueProjector(self, i, transformer))
+                name, compute_value=ComputeValueProjector(self, i, transformer)
+            )
             v.to_sql = LinearCombinationSql(
                 domain.attributes, self.components_[i, :],
                 getattr(self, 'mean_', None))
@@ -122,9 +125,38 @@ class DomainProjection(Projection):
         super().__init__(proj=proj)
         self.orig_domain = domain
         self.n_components = self.components_.shape[0]
+        var_names = self.__get_var_names()
         self.domain = Orange.data.Domain(
-            [proj_variable(i) for i in range(self.n_components)],
+            [proj_variable(i, var_names[i]) for i in range(self.n_components)],
             domain.class_vars, domain.metas)
+
+    def __get_var_names(self):
+        n = self.n_components
+        postfixes = ["-x", "-y"] if n == 2 else [str(i) for i in range(n)]
+        names = [f"{self.var_prefix}{postfix}" for postfix in postfixes]
+        domain = self.orig_domain.variables + self.orig_domain.metas
+        return get_unique_names([v.name for v in domain], names)
+
+
+class LinearProjector(Projector):
+    name = "Linear Projection"
+    supports_sparse = False
+    preprocessors = [RemoveNaNRows()]
+    projection = DomainProjection
+
+    def __init__(self, preprocessors=None):
+        super().__init__(preprocessors=preprocessors)
+        self.components_ = None
+
+    def fit(self, X, Y=None):
+        self.components_ = self.get_components(X, Y)
+        return self.projection(self, self.domain)
+
+    def get_components(self, X, Y):
+        raise NotImplementedError
+
+    def transform(self, X):
+        return np.dot(X, self.components_.T)
 
 
 class SklProjector(Projector, metaclass=WrapperMeta):

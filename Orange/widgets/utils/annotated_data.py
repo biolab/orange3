@@ -1,12 +1,11 @@
-import re
 from itertools import chain
 
 import numpy as np
 from Orange.data import Domain, DiscreteVariable
+from Orange.data.util import get_indices
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
-RE_FIND_INDEX = r"(^{} \()(\d{{1,}})(\)$)"
 
 
 def add_columns(domain, attributes=(), class_vars=(), metas=()):
@@ -33,17 +32,6 @@ def add_columns(domain, attributes=(), class_vars=(), metas=()):
     return Domain(attributes, class_vars, metas)
 
 
-def get_indices(names, name):
-    """
-    Return list of indices which occur in a names list for a given name.
-    :param names: list of strings
-    :param name: str
-    :return: list of indices
-    """
-    return [int(a.group(2)) for x in names
-            for a in re.finditer(RE_FIND_INDEX.format(name), x)]
-
-
 def get_next_name(names, name):
     """
     Returns next 'possible' attribute name. The name should not be duplicated
@@ -62,22 +50,6 @@ def get_next_name(names, name):
     if name not in names and not indexes:
         return name
     return "{} ({})".format(name, max(indexes, default=0) + 1)
-
-
-def get_unique_names(names, proposed):
-    """
-    Returns unique names of variables. Variables which are duplicate get appended by
-    unique index which is the same in all proposed variable names in a list.
-    :param names: list of strings
-    :param proposed: list of strings
-    :return: list of strings
-    """
-    if len([name for name in proposed if name in names]):
-        max_index = max([max(get_indices(names, name),
-                             default=1) for name in proposed], default=1)
-        for i, name in enumerate(proposed):
-            proposed[i] = "{} ({})".format(name, max_index + 1)
-    return proposed
 
 
 def _table_with_annotation_column(data, values, column_data, var_name):

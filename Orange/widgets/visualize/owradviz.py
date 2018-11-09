@@ -14,9 +14,9 @@ from AnyQt.QtWidgets import qApp, QApplication
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain
 from Orange.preprocess.score import ReliefF, RReliefF
-from Orange.projection import radviz
+from Orange.projection import RadViz
 from Orange.widgets import widget, gui
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
@@ -163,8 +163,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         attrs = [self.attrs[i] for i in state]
         domain = Domain(attributes=attrs, class_vars=[self.attr_color])
         data = self.data.transform(domain)
-        radviz_xy, _, mask = radviz(data, attrs)
-        y = data.Y[mask]
+        projector = RadViz()
+        projection = projector(data)
+        radviz_xy = projection(data)
+        y = projector.preprocess(data).Y
         return -self._evaluate_projection(radviz_xy, y)
 
     def bar_length(self, score):
@@ -270,17 +272,17 @@ class OWRadviz(OWAnchorProjectionWidget):
     vizrank = SettingProvider(RadvizVizRank)
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
-    embedding_variables_names = ("radviz-x", "radviz-y")
 
     class Warning(OWAnchorProjectionWidget.Warning):
         no_features = widget.Msg("Radviz requires at least two features.")
         invalid_embedding = widget.Msg("No projection for selected features")
+        removed_vars = widget.Msg("Categorical variables with more than"
+                                  " two values are not shown.")
 
     class Error(OWAnchorProjectionWidget.Error):
         no_features = widget.Msg(
             "At least three numeric or categorical variables are required"
         )
-        no_instances = widget.Msg("At least two data instances are required")
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
@@ -309,7 +311,12 @@ class OWRadviz(OWAnchorProjectionWidget):
         if self.data is None or self.data.domain is None:
             return []
         dom = self.data.domain
-        return [v for v in chain(dom.variables, dom.metas) if v.is_primitive()]
+        return [v for v in chain(dom.variables, dom.metas)
+                if v.is_continuous or v.is_discrete and len(v.values) == 2]
+
+    @property
+    def effective_variables(self):
+        return self.model_selected[:]
 
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
@@ -321,7 +328,13 @@ class OWRadviz(OWAnchorProjectionWidget):
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
                               in self.model_selected]
-        self.projection = None
+
+        self.Warning.no_features.clear()
+        if len(self.model_selected) < 2:
+            self.Warning.no_features()
+            return
+
+        self.init_projection()
         self.setup_plot()
         self.commit()
 
@@ -365,59 +378,30 @@ class OWRadviz(OWAnchorProjectionWidget):
 
         super().check_data()
         if self.data is not None:
-            if len(self.data) < 2:
-                error(self.Error.no_instances)
-            elif len(self.primitive_variables) < 3:
+            if len(self.primitive_variables) < 3:
                 error(self.Error.no_features)
+            else:
+                domain = self.data.domain
+                vars_ = chain(domain.variables, domain.metas)
+                n_vars = sum(v.is_primitive() for v in vars_)
+                if len(self.primitive_variables) < n_vars:
+                    self.Warning.removed_vars()
 
     def init_attr_values(self):
         super().init_attr_values()
         self.selected_vars = []
 
-    def get_embedding(self):
-        self.valid_data = None
-        if self.data is None:
-            return None
-
-        self.Warning.no_features.clear()
-        if len(self.model_selected) < 2:
-            self.Warning.no_features()
-            return None
-
-        ec, proj, msk = radviz(self.data, self.model_selected, self.projection)
-        angle = np.arctan2(*proj.T[::-1])
-        self.projection = np.vstack((np.cos(angle), np.sin(angle))).T
-        self.valid_data = msk
-
-        self.Warning.invalid_embedding.clear()
-        if ec is None or np.any(np.isnan(ec)):
-            self.Warning.invalid_embedding()
-            return None
-
-        embedding = np.full((len(self.data), 2), np.nan)
-        embedding[self.valid_data] = ec
-        return embedding
-
-    def get_anchors(self):
-        if self.projection is None:
-            return None, None
-        return self.projection, [a.name for a in self.model_selected]
-
     def _manual_move(self, anchor_idx, x, y):
         angle = np.arctan2(y, x)
         super()._manual_move(anchor_idx, np.cos(angle), np.sin(angle))
 
-    def send_components(self):
-        components = None
-        if self.data is not None and self.valid_data is not None and \
-                self.projection is not None:
-            angle = np.arctan2(*self.projection.T[::-1])
-            meta_attrs = [StringVariable(name='component')]
-            components = Table(Domain(self.model_selected, metas=meta_attrs),
-                               np.row_stack((self.projection.T, angle)),
-                               metas=np.array([["RX"], ["RY"], ["angle"]]))
-            components.name = self.data.name
-        self.Outputs.components.send(components)
+    def _send_components_x(self):
+        components_ = super()._send_components_x()
+        angle = np.arctan2(*components_[::-1])
+        return np.row_stack((components_, angle))
+
+    def _send_components_metas(self):
+        return np.vstack((super()._send_components_metas(), ["angle"]))
 
     def clear(self):
         if self.model_selected:
@@ -425,6 +409,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         if self.model_other:
             self.model_other.clear()
         super().clear()
+        self.projector = RadViz()
 
     @classmethod
     def migrate_context(cls, context, version):
