@@ -11,8 +11,6 @@ matrix:
         - env: BUILD_DOCS=true
           python: '3.6'
           script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
-        - python: '3.5'
-          env: PYQT4=true
         - python: '3.6'
           env: UPLOAD_COVERAGE=true
     fast_finish: true
