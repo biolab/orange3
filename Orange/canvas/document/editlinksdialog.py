@@ -253,12 +253,6 @@ class LinksEditWidget(QGraphicsWidget):
                 self.__dragStartItem = startItem
                 self.__tmpLine = None
 
-                if startItem in self.sourceNodeWidget.channelAnchors:
-                    for anchor in self.sinkNodeWidget.channelAnchors:
-                        self.__updateAnchorState(anchor, [startItem])
-                else:
-                    for anchor in self.sourceNodeWidget.channelAnchors:
-                        self.__updateAnchorState(anchor, [startItem])
                 event.accept()
                 return
 
@@ -296,6 +290,13 @@ class LinksEditWidget(QGraphicsWidget):
                 line.show()
 
                 self.__tmpLine = line
+
+                if self.__dragStartItem in self.sourceNodeWidget.channelAnchors:
+                    for anchor in self.sinkNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [self.__dragStartItem])
+                else:
+                    for anchor in self.sourceNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [self.__dragStartItem])
 
             if self.__tmpLine:
                 # Update the temp line
