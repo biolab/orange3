@@ -118,6 +118,7 @@ Unsupervised
    widgets/unsupervised/kmeansclustering
    widgets/unsupervised/louvainclustering
    widgets/unsupervised/mds
+   widgets/unsupervised/tsne
    widgets/unsupervised/manifoldlearning
    
 
