@@ -4,6 +4,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
+from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owpca import OWPCA, DECOMPOSITIONS
 
@@ -131,3 +132,16 @@ class TestOWPCA(WidgetTest):
         self.widget.set_data(data)
         ndata = Table("iris.tab")
         self.assertEqual(data.domain[0], ndata.domain[0])
+
+    def test_output_preprocessor(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        pp = self.get_output(self.widget.Outputs.preprocessor)
+        self.assertIsInstance(pp, Preprocess)
+        transformed_data = pp(data[::10])
+        self.assertIsInstance(transformed_data, Table)
+        self.assertEqual(transformed_data.X.shape, (15, 2))
+        output = self.get_output(self.widget.Outputs.transformed_data)
+        np.testing.assert_array_equal(transformed_data.X, output.X[::10])
+        self.assertEqual([a.name for a in transformed_data.domain.attributes],
+                         [m.name for m in output.domain.attributes])

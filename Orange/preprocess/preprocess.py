@@ -488,6 +488,18 @@ class Scale(Preprocess):
         return data.transform(domain)
 
 
+class ApplyDomain(Preprocess):
+    def __init__(self, domain, name):
+        self._domain = domain
+        self._name = name
+
+    def __call__(self, data):
+        return data.transform(self._domain)
+
+    def __str__(self):
+        return self._name
+
+
 class PreprocessorList(Preprocess):
     """
     Store a list of preprocessors and on call apply them to the dataset.
