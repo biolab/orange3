@@ -276,8 +276,69 @@ class TestFeatureStatisticsOutputs(WidgetTest):
             [continuous_full, continuous_missing],
             target=[rgb_full, rgb_missing], metas=[ints_full, ints_missing]
         )
-        self.send_signal('Data', self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.select_rows = partial(select_rows, widget=self.widget)
+
+    def test_changing_data_updates_ouput(self):
+        # Test behaviour of widget when auto commit is OFF
+        self.widget.auto_commit = False
+
+        # We start of with some data and select some rows
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.select_rows([0])
+        # By default, nothing should be sent since auto commit is off
+        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.statistics))
+        # When we commit, the data should be on the output
+        self.widget.unconditional_commit()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.statistics))
+
+        # Send some new data
+        iris = Table('iris')
+        self.send_signal(self.widget.Inputs.data, iris)
+        # By default, there should be nothing on the output
+        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.statistics))
+        # Nothing should change after commit, since we haven't selected any rows
+        self.widget.unconditional_commit()
+        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.statistics))
+
+        # Now let's switch back to the original data, where we selected row 0
+        self.send_signal(self.widget.Inputs.data, self.data)
+        # Again, since auto commit is off, nothing should be on the output
+        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.statistics))
+        # Since the row selection is saved into context settings, the appropriate
+        # thing should be sent to output
+        self.widget.unconditional_commit()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.statistics))
+
+    def test_changing_data_updates_output_with_autocommit(self):
+        # Test behaviour of widget when auto commit is ON
+        self.widget.auto_commit = True
+
+        # We start of with some data and select some rows
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.select_rows([0])
+        # Selecting rows should send data to output
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.statistics))
+
+        # Send some new data
+        iris = Table('iris')
+        self.send_signal(self.widget.Inputs.data, iris)
+        # Don't select anything, so the outputs should be empty
+        self.assertIsNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNone(self.get_output(self.widget.Outputs.statistics))
+
+        # Now let's switch back to the original data, where we had selected row 0,
+        # we expect that to be sent to output
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.reduced_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.statistics))
 
     def test_sends_single_attribute_table_to_output(self):
         # Check if selecting a single attribute row
