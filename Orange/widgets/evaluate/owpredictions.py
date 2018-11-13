@@ -260,7 +260,9 @@ class OWPredictions(OWWidget):
 
     def _call_predictors(self):
         for inputid, pred in self.predictors.items():
-            if pred.results is None or numpy.isnan(pred.results[0]).all():
+            if pred.results is None \
+                    or isinstance(pred.results, str) \
+                    or numpy.isnan(pred.results[0]).all():
                 try:
                     results = self.predict(pred.predictor, self.data)
                 except ValueError as err:

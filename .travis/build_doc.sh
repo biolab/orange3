@@ -22,7 +22,7 @@ done < <(echo "$images")
 echo -e 'all ok\n'
 
 # build Orange inplace (needed for docs to build)
-python setup.py build_ext --inplace
+python setup.py egg_info build_ext --inplace
 
 cd $TRAVIS_BUILD_DIR/doc/development
 make html

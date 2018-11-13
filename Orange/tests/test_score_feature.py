@@ -7,8 +7,10 @@ import numpy as np
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange import preprocess
+from Orange.modelling import RandomForestLearner
 from Orange.preprocess.score import InfoGain, GainRatio, Gini, Chi2, ANOVA,\
     UnivariateLinearRegression, ReliefF, FCBF, RReliefF
+
 
 
 class FeatureScoringTest(unittest.TestCase):
@@ -150,3 +152,11 @@ class FeatureScoringTest(unittest.TestCase):
                      np.r_[0., 1])
         weights = scorer(data, None)
         np.testing.assert_equal(weights, np.nan)
+
+    def test_learner_with_transformation(self):
+        learner = RandomForestLearner(random_state=0)
+        from Orange.projection import PCA
+        iris = Table("iris")
+        data = PCA(n_components=2)(iris)(iris)
+        scores = learner.score_data(data)
+        np.testing.assert_almost_equal(scores, [[0.7760495, 0.2239505]])

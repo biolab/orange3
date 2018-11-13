@@ -169,13 +169,12 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
+        filter_edit, self.used_attrs_view = variables_filter(
+            parent=self, model=self.used_attrs,
+            accepted_type=(Orange.data.DiscreteVariable,
+                           Orange.data.ContinuousVariable))
         self.used_attrs.rowsInserted.connect(self.__used_attrs_changed)
         self.used_attrs.rowsRemoved.connect(self.__used_attrs_changed)
-        self.used_attrs_view = VariablesListItemView(
-            acceptedType=(Orange.data.DiscreteVariable,
-                          Orange.data.ContinuousVariable))
-
-        self.used_attrs_view.setModel(self.used_attrs)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
             partial(update_on_change, self.used_attrs_view))
         self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
@@ -187,6 +186,7 @@ class OWSelectAttributes(widget.OWWidget):
         )
         self.enable_use_features_box()
         box.layout().addWidget(self.use_features_box)
+        box.layout().addWidget(filter_edit)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 

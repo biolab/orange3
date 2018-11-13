@@ -3,10 +3,10 @@ Preprocess
 ----------
 
 """
+import bottleneck as bn
 import numpy as np
 import scipy.sparse as sp
-import sklearn.preprocessing as skl_preprocessing
-import bottleneck as bn
+from sklearn.impute import SimpleImputer
 
 import Orange.data
 from Orange.data.filter import HasClass
@@ -147,7 +147,7 @@ class Impute(Preprocess):
 
 
 class SklImpute(Preprocess):
-    __wraps__ = skl_preprocessing.Imputer
+    __wraps__ = SimpleImputer
 
     def __init__(self, strategy='mean'):
         self.strategy = strategy
@@ -156,7 +156,7 @@ class SklImpute(Preprocess):
         from Orange.data.sql.table import SqlTable
         if isinstance(data, SqlTable):
             return Impute()(data)
-        imputer = skl_preprocessing.Imputer(strategy=self.strategy)
+        imputer = SimpleImputer(strategy=self.strategy)
         X = imputer.fit_transform(data.X)
         # Create new variables with appropriate `compute_value`, but
         # drop the ones which do not have valid `imputer.statistics_`
@@ -486,6 +486,18 @@ class Scale(Preprocess):
         domain = Orange.data.Domain(newvars, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
+
+
+class ApplyDomain(Preprocess):
+    def __init__(self, domain, name):
+        self._domain = domain
+        self._name = name
+
+    def __call__(self, data):
+        return data.transform(self._domain)
+
+    def __str__(self):
+        return self._name
 
 
 class PreprocessorList(Preprocess):

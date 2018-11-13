@@ -74,6 +74,14 @@ class TestLogisticRegressionLearner(unittest.TestCase):
             score = learner.score_data(self.voting, attr)
             np.testing.assert_array_almost_equal(score, scores[:, i])
 
+    def test_learner_scorer_previous_transformation(self):
+        learner = LogisticRegressionLearner()
+        from Orange.preprocess import Discretize
+        data = Discretize()(self.iris)
+        scores = learner.score_data(data)
+        # scores should be defined and positive
+        self.assertTrue(np.all(scores > 0))
+
     def test_learner_scorer_multiclass(self):
         attr = self.zoo.domain.attributes
         learner = LogisticRegressionLearner()

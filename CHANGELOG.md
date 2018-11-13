@@ -6,6 +6,31 @@ Change Log
 * ...
 
 
+[3.18.0] - 2018-11-13
+--------------------
+##### Enhancements
+* tSNE: Move from single-cell to core ([#3379](../../pull/3379))
+* Transform: Add new widget ([#3346](../../pull/3346))
+* Correlations: Move from prototypes to core ([#3362](../../pull/3362))
+* Install widget help files ([#3345](../../pull/3345))
+* Feature Statistics: Move from prototypes to core ([#3303](../../pull/3303))
+* Replace scikit-learn tSNE with faster implementation ([#3192](../../pull/3192))
+* Select Columns: Enable filtering of used features ([#3363](../../pull/3363))
+
+##### Bugfixes
+* setup.py: Remove trailing slash from directory names in data_files ([#3394](../../pull/3394))
+* condainstall.bat: Add conda.bat and activate.bat scripts again ([#3389](../../pull/3389))
+* LearnerScorer: fix for preprocessed data ([#3381](../../pull/3381))
+* Feature Statistics: Update outputs on new data ([#3382](../../pull/3382))
+* python-framework.sh: Fix 'Current' symlink creation ([#3373](../../pull/3373))
+* Fix wrong indices in tooltips in projection when some data was invalid ([#3357](../../pull/3357))
+* Scatterplot's VizRank no longer crashes in presence of nonprimitive metas ([#3347](../../pull/3347))
+* Predictions: Fix failure after failed predictor ([#3337](../../pull/3337))
+* Louvain Clustering: Do not invalidate output on PCA slider change with apply disabled ([#3339](../../pull/3339))
+* Use minimal keyring implementation for tests ([#3359](../../pull/3359))
+* OWFreeViz: Fix optimization for data with missing values ([#3358](../../pull/3358))
+
+
 [3.17.0] - 2018-10-26
 --------------------
 ##### Enhancements
@@ -939,7 +964,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.17.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.18.0...HEAD
+[3.18.0]: https://github.com/biolab/orange3/compare/3.17.0...3.18.0
 [3.17.0]: https://github.com/biolab/orange3/compare/3.16.0...3.17.0
 [3.16.0]: https://github.com/biolab/orange3/compare/3.15.0...3.16.0
 [3.15.0]: https://github.com/biolab/orange3/compare/3.14.0...3.15.0

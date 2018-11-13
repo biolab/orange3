@@ -1,6 +1,4 @@
-beautifulsoup4
 docutils
 numpydoc
-recommonmark>=0.1.1
 Sphinx>=1.3
 PyQt5

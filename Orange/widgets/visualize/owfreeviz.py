@@ -353,12 +353,12 @@ class OWFreeViz(OWAnchorProjectionWidget):
             self._X = self._Y = self.valid_data = None
             return
 
-        self._X = self.data.X.copy()
-        self._X -= np.nanmean(self._X, axis=0)
-        span = np.ptp(self._X[self.valid_data], axis=0)
+        self._X = self.data.X[self.valid_data]
+        self._X -= np.mean(self._X, axis=0)
+        span = np.ptp(self._X, axis=0)
         self._X[:, span > 0] /= span[span > 0].reshape(1, -1)
 
-        self._Y = self.data.Y
+        self._Y = self.data.Y[self.valid_data]
         if self.data.domain.class_var.is_discrete:
             self._Y = self._Y.astype(int)
 
@@ -370,9 +370,10 @@ class OWFreeViz(OWAnchorProjectionWidget):
     def get_embedding(self):
         if self.data is None:
             return None
-        embedding = np.dot(self._X, self.projection)
-        embedding /= \
-            np.max(np.linalg.norm(embedding[self.valid_data], axis=1)) or 1
+        EX = np.dot(self._X, self.projection)
+        EX /= np.max(np.linalg.norm(EX, axis=1)) or 1
+        embedding = np.full((len(self.data), 2), np.nan)
+        embedding[self.valid_data] = EX
         return embedding
 
     def get_anchors(self):

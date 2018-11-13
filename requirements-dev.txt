@@ -1,2 +1,4 @@
 pylint
 radon
+# for build_htmlhelp command
+sphinx>=1.5

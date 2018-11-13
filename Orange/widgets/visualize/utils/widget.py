@@ -320,6 +320,8 @@ class OWProjectionWidgetBase(OWWidget):
         Returns:
             (str):
         """
+        point_ids = \
+            np.flatnonzero(self.valid_data)[np.asarray(point_ids, dtype=int)]
         text = "<hr/>".join(self._point_tooltip(point_id)
                             for point_id in point_ids[:MAX_POINTS_IN_TOOLTIP])
         if len(point_ids) > MAX_POINTS_IN_TOOLTIP:
@@ -550,6 +552,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.data = None
         self.valid_data = None
         self.selection = None
+        self.graph.selection = None
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
