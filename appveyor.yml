@@ -18,7 +18,7 @@ environment:
     # disable threaded builds on Python 3.5+ when using numpy's distutils
     # (https://github.com/numpy/numpy/issues/7607)
     BUILD_GLOBAL_OPTIONS: build -j1
-    BUILD_ENV: wheel==0.29.0 pip==9.0.1 numpy==1.9.3
+    BUILD_ENV: wheel==0.29.0 pip==9.0.1 numpy==1.9.3 sphinx==1.8.2
     # SIP 4.19.4+ with PyQt5==5.9.1+ segfault our tests (GH-2756)
     TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy~=1.14.0 scipy~=1.0.0 scikit-learn pandas==0.21.1
 
@@ -28,12 +28,12 @@ environment:
     - PYTHON: C:\Python36-x64
 
     - PYTHON: C:\Python37
-      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0
+      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0 sphinx==1.8.2
       # PyQt5 >= 5.11 32-bit no longer contains QtWebEngine
       TEST_ENV: PyQt5~=5.10.0 numpy~=1.14.0 scipy~=1.1.0 scikit-learn pandas
 
     - PYTHON: C:\Python37-x64
-      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0
+      BUILD_ENV: wheel==0.29.0 pip~=9.0.1 numpy~=1.14.0 sphinx==1.8.2
       TEST_ENV: PyQt5~=5.11.1 numpy~=1.14.0 scipy~=1.1.0 scikit-learn pandas
 
 cache:
