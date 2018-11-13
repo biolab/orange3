@@ -49,6 +49,7 @@ class OWtSNE(OWDataProjectionWidget):
     description = "Two-dimensional data projection with t-SNE."
     icon = "icons/TSNE.svg"
     priority = 920
+    keywords = ["tsne"]
 
     settings_version = 3
     max_iter = Setting(300)
