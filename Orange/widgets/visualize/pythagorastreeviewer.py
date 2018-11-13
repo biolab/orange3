@@ -137,9 +137,10 @@ class PythagorasTreeViewer(QGraphicsWidget):
         """
         self.clear_tree()
         self.tree_adapter = tree_adapter
+        self.weight_adjustment = weight_adjustment
 
         if self.tree_adapter is not None:
-            self.root = self._calculate_tree(self.tree_adapter, weight_adjustment)
+            self.root = self._calculate_tree(self.tree_adapter, self.weight_adjustment)
             self.set_depth_limit(tree_adapter.max_depth)
             self.target_class_changed(target_class_index)
             self._draw_tree(self.root)
@@ -147,7 +148,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
     def set_size_calc(self, weight_adjustment):
         """Set the weight adjustment on the tree. Redraws the whole tree."""
         # Since we have to redraw the whole tree anyways, just call `set_tree`
-        self.set_tree(self.tree_adapter, weight_adjustment,
+        self.weight_adjustment = weight_adjustment
+        self.set_tree(self.tree_adapter, self.weight_adjustment,
                       self._target_class_index)
 
     def set_depth_limit(self, depth):
@@ -466,6 +468,11 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
             fnc(parent)
             # propagate up the tree
             self._propagate_to_parents(parent, fnc, other_fnc)
+
+    def mouseDoubleClickEvent(self, event):
+        self.tree_node.tree.reverse_children(self.tree_node.label)
+        p = self.parentWidget()
+        p.set_tree(p.tree_adapter, p.weight_adjustment, p._target_class_index)
 
     def selection_changed(self):
         """Handle selection changed."""

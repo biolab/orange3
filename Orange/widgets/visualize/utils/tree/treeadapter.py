@@ -296,6 +296,9 @@ class TreeAdapter(BaseTreeAdapter):
     def children(self, node):
         return [child for child in node.children if child is not None]
 
+    def reverse_children(self, node):
+        node.children = node.children[::-1]
+
     def shuffle_children(self):
         def _shuffle_children(node):
             if node and node.children:
