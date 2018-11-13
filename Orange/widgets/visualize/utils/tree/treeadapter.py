@@ -118,6 +118,20 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         """
         pass
 
+    def reverse_children(self, node):
+        """Reverse children of a given node.
+
+        Parameters
+        ----------
+        node : object
+        """
+        pass
+
+    def shuffle_children(self):
+        """Randomly shuffle node's children in the entire tree.
+        """
+        pass
+
     @abstractmethod
     def get_distribution(self, node):
         """Get the distribution of types for a given node.
