@@ -472,7 +472,7 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
     def mouseDoubleClickEvent(self, event):
         self.tree_node.tree.reverse_children(self.tree_node.label)
         p = self.parentWidget()
-        p.set_tree(p.tree_adapter, p.weight_adjustment, p._target_class_index)
+        p.set_tree(p.tree_adapter, p.weight_adjustment, self.tree_node.target_class_index)
 
     def selection_changed(self):
         """Handle selection changed."""

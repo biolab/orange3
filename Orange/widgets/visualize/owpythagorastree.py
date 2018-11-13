@@ -120,8 +120,7 @@ class OWPythagorasTree(OWWidget):
             box_plot, self, 'show_legend', label='Show legend',
             callback=self.update_show_legend)
 
-        button_redraw = gui.button(
-            self.controlArea, self, label="Redraw", callback=self.redraw)
+        gui.button(self.controlArea, self, label="Redraw", callback=self.redraw)
 
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
