@@ -248,7 +248,7 @@ class build_ext_error(build_ext):
 
 
 # ${prefix} relative install path for html help files
-DATAROOTDIR = "share/help/en/orange3/htmlhelp/"
+DATAROOTDIR = "share/help/en/orange3/htmlhelp"
 
 
 def findall(startdir, followlinks=False, ):
@@ -271,9 +271,15 @@ def find_htmlhelp_files(subdir):
     )
     for file in files:
         relpath = os.path.relpath(file, start=subdir)
-        data_files.append(
-            (os.path.join(DATAROOTDIR, os.path.dirname(relpath)), [file])
-        )
+        relsubdir = os.path.dirname(relpath)
+        # path.join("a", "") results in "a/"; distutils install_data does not
+        # accept paths that end with "/" on windows.
+        if relsubdir:
+            targetdir = os.path.join(DATAROOTDIR, relsubdir)
+        else:
+            targetdir = DATAROOTDIR
+        assert not targetdir.endswith("/")
+        data_files.append((targetdir, [file]))
     return data_files
 
 
