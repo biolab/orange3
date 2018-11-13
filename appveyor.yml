@@ -40,8 +40,6 @@ cache:
   - '%LOCALAPPDATA%\pip\cache -> appveyor.yml'
 
 install:
-  # Patch VC 2010 64-bit toolchain
-  - call .ci_tools/appveyor/patch-vcvars.bat
   # Configure pip: Add extra links url, force binary numpy, scipy, ...
   - echo [install]> pip.ini
   - echo find-links =>> pip.ini
