@@ -2,6 +2,7 @@
 from abc import ABCMeta, abstractmethod
 from functools import reduce
 from operator import add
+import random
 
 
 class BaseTreeAdapter(metaclass=ABCMeta):
@@ -294,6 +295,14 @@ class TreeAdapter(BaseTreeAdapter):
 
     def children(self, node):
         return [child for child in node.children if child is not None]
+
+    def shuffle_children(self):
+        def _shuffle_children(node):
+            if node and node.children:
+                random.shuffle(node.children)
+                for c in node.children:
+                    _shuffle_children(c)
+        _shuffle_children(self.root)
 
     def get_distribution(self, node):
         return [node.value]
