@@ -52,6 +52,14 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         simulate.combobox_activate_index(init, 0)
         simulate.combobox_activate_index(init, 1)
 
+    def test_constant_data(self):
+        data = Table("titanic")[56:59]
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.btn_start.click()
+        self.assertTrue(self.widget.Error.constant_data.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.constant_data.is_shown())
+
     def test_set_radius_no_data(self):
         """
         Widget should not crash when there is no data and radius slider is moved.
@@ -70,12 +78,17 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertEqual([m.name for m in domain.metas], ["component"])
         X = np.array([[1, 0, -1, 0], [0, 1, 0, -1]]).astype(float)
         np.testing.assert_array_almost_equal(components.X, X)
-        metas = [["FreeViz 1"], ["FreeViz 2"]]
+        metas = [["freeviz-x"], ["freeviz-y"]]
         np.testing.assert_array_equal(components.metas, metas)
 
     def test_manual_move(self):
         super().test_manual_move()
         array = np.array([[1, 2], [0, 1], [-1, 0], [0, -1]])
-        np.testing.assert_array_almost_equal(self.widget.anchors, array)
         np.testing.assert_array_almost_equal(
             self.get_output(self.widget.Outputs.components).X, array.T)
+
+    def test_discrete_attributes(self):
+        zoo = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.assertTrue(self.widget.Warning.removed_features.is_shown())
+        self.widget.btn_start.click()
