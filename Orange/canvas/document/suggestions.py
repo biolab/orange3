@@ -6,6 +6,8 @@ import logging
 from Orange.canvas import config
 from .interactions import NewLinkAction
 
+from .default_suggestion_weights import default_suggestions
+
 log = logging.getLogger(__name__)
 
 
@@ -24,34 +26,36 @@ class Suggestions:
             self.__source_probability = defaultdict(lambda: defaultdict(float))
             self.__sink_probability = defaultdict(lambda: defaultdict(float))
 
-            if not self.__load_link_frequency():
-                self.reset_suggestions()
+            try:
+                self.__load_default_suggestions()
+            except OSError:
+                log.warning("Failed to load default suggestions from file.")
+            self.__load_link_frequencies()
 
-        def __load_link_frequency(self):
+        def __load_link_frequencies(self):
             if not os.path.isfile(self.__frequencies_path):
-                return False
+                return
 
             try:
                 with open(self.__frequencies_path, "rb") as f:
                     imported_freq = pickle.load(f)
             except OSError:
                 log.warning("Failed to open widget link frequencies.")
-                return False
+                return
 
             for k, v in imported_freq.items():
                 imported_freq[k] = self.__import_factor * v
 
             self.__link_frequencies = imported_freq
-            self.__write_frequencies_into_probabilities()
-            return True
-
-        def reset_suggestions(self):
-            self.__link_frequencies[("File", "Data Table", NewLinkAction.FROM_SOURCE)] = 3
-            self.__write_frequencies_into_probabilities()
-
-        def __write_frequencies_into_probabilities(self):
             for link, count in self.__link_frequencies.items():
                 self.__increment_probability(link[0], link[1], link[2], count)
+
+        def __load_default_suggestions(self):
+            for link in default_suggestions:
+                self.__increment_probability(link["Source"],
+                                             link["Sink"],
+                                             link["Direction"],
+                                             link["Value"])
 
         def log_new_link(self, link):
             # direction is none when a widget was not added+linked via quick menu
