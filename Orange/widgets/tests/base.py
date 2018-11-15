@@ -30,7 +30,7 @@ from Orange.data import (
 )
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
-from Orange.preprocess.preprocess import PreprocessorList
+from Orange.preprocess.preprocess import PreprocessorList, Preprocess
 from Orange.regression.base_regression import (
     LearnerRegression, ModelRegression
 )
@@ -983,6 +983,18 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         # check new state
         self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
+
+    def test_output_preprocessor(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        pp = self.get_output(self.widget.Outputs.preprocessor)
+        self.assertIsInstance(pp, Preprocess)
+        transformed = pp(self.data[::10])
+        self.assertIsInstance(transformed, Table)
+        self.assertEqual(transformed.X.shape, (len(self.data) / 10, 2))
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(transformed.X, output.metas[::10, :2])
+        self.assertEqual([a.name for a in transformed.domain.attributes],
+                         [m.name for m in output.domain.metas[:2]])
 
 
 class datasets:
