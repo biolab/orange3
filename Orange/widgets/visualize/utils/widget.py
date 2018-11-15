@@ -630,8 +630,10 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
     def get_anchors(self):
         if self.projection is None:
             return None, None
-        return (self.projection.components_.T,
-                [a.name for a in self.effective_variables])
+        components = self.projection.components_
+        if components.shape == (1, 1):
+            components = np.array([[1.], [0.]])
+        return components.T, [a.name for a in self.effective_variables]
 
     def _manual_move_start(self):
         self.graph.set_sample_size(self.SAMPLE_SIZE)
