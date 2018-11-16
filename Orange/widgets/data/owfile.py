@@ -120,6 +120,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         sheet_error = widget.Msg("Error listing available sheets.")
         unknown = widget.Msg("Read error:\n{}")
 
+    class NoFileSelected:
+        pass
     def __init__(self):
         super().__init__()
         RecentPathsWComboMixin.__init__(self)
@@ -306,6 +308,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             assert self.reader is not None
         except Exception:
             return self.Error.missing_reader
+        
+        if self.reader is self.NoFileSelected:
+            self.Outputs.data.send(None)
+            return
 
         try:
             self._update_sheet_combo()
@@ -338,6 +344,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         """
         if self.source == self.LOCAL_FILE:
             path = self.last_path()
+            if path is None:
+                return self.NoFileSelected
             if self.recent_paths and self.recent_paths[0].file_format:
                 qname = self.recent_paths[0].file_format
                 reader_class = class_from_qualified_name(qname)
@@ -351,6 +359,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             url = self.url_combo.currentText().strip()
             if url:
                 return UrlReader(url)
+            else:
+                return self.NoFileSelected
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
