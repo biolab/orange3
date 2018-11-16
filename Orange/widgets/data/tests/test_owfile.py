@@ -176,7 +176,7 @@ class TestOWFile(WidgetTest):
         self.open_dataset("iris")
         self.assertFalse(self.widget.Error.file_not_found.is_shown())
 
-   def test_nothing_selected(self):
+    def test_nothing_selected(self):
         widget = self.widget = \
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
         

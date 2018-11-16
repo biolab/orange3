@@ -122,6 +122,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     class NoFileSelected:
         pass
+
     def __init__(self):
         super().__init__()
         RecentPathsWComboMixin.__init__(self)
