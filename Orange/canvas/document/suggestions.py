@@ -72,9 +72,7 @@ class Suggestions:
         def __increment_probability(self, source_id, sink_id, direction, factor):
             if direction == NewLinkAction.FROM_SOURCE:
                 self.__source_probability[source_id][sink_id] += factor
-                self.__sink_probability[sink_id][source_id] += factor * 0.5
             else:  # FROM_SINK
-                self.__source_probability[source_id][sink_id] += factor * 0.5
                 self.__sink_probability[sink_id][source_id] += factor
 
         def __save_link_frequency(self):
