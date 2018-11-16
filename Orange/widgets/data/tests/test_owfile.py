@@ -177,9 +177,10 @@ class TestOWFile(WidgetTest):
         self.assertFalse(self.widget.Error.file_not_found.is_shown())
 
     def test_nothing_selected(self):
+        # pylint: disable=protected-access
         widget = self.widget = \
             self.create_widget(OWFile, stored_settings={"recent_paths": []})
-        
+
         widget.Outputs.data.send = Mock()
         widget._try_load()
         widget.Outputs.data.send.assert_called_with(None)
@@ -291,11 +292,11 @@ a
     def test_read_format(self):
         iris = Table("iris")
 
-        def open_iris_with_no_specific_format(a, b, c, filters, e):
+        def open_iris_with_no_spec_format(a, b, c, filters, e):
             return iris.__file__, filters.split(";;")[0]
 
         with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
-                   open_iris_with_no_specific_format):
+                   open_iris_with_no_spec_format):
             self.widget.browse_file()
 
         self.assertIsNone(self.widget.recent_paths[0].file_format)
