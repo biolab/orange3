@@ -89,7 +89,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
     def __init__(self, parent=None, adapter=None, depth_limit=0, padding=0,
                  **kwargs):
-        super().__init__(parent)
+        super().__init__()
+        self.parent = parent
 
         # In case a tree was passed, it will be handled at the end of init
         self.tree_adapter = None
@@ -471,8 +472,10 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
 
     def mouseDoubleClickEvent(self, event):
         self.tree_node.tree.reverse_children(self.tree_node.label)
-        p = self.parentWidget()
+        p = self.parentWidget()  # PythagorasTreeViewer
         p.set_tree(p.tree_adapter, p.weight_adjustment, self.tree_node.target_class_index)
+        widget = p.parent  # OWPythagorasTree
+        widget._update_main_area()
 
     def selection_changed(self):
         """Handle selection changed."""

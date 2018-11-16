@@ -135,7 +135,7 @@ class OWPythagorasTree(OWWidget):
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.mainArea.layout().addWidget(self.view)
 
-        self.ptree = PythagorasTreeViewer()
+        self.ptree = PythagorasTreeViewer(self)
         self.scene.addItem(self.ptree)
         self.view.set_central_widget(self.ptree)
 
