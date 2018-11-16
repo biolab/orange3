@@ -32,7 +32,7 @@ from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
-from Orange.widgets.widget import Input, Msg
+from Orange.widgets.widget import Msg
 
 
 class LinearProjectionVizRank(VizRankDialog, OWComponent):
@@ -250,31 +250,20 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     priority = 240
     keywords = []
 
-    class Inputs(OWAnchorProjectionWidget.Inputs):
-        projection_input = Input("Projection", Table)
-
-    Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2, Projection=3),
+    Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2),
                      type=int, qualname="OWLinearProjection.Placement")
 
     Projection_name = {Placement.Circular: "Circular Placement",
                        Placement.LDA: "Linear Discriminant Analysis",
-                       Placement.PCA: "Principal Component Analysis",
-                       Placement.Projection: "Use input projection"}
+                       Placement.PCA: "Principal Component Analysis"}
 
-    settings_version = 4
+    settings_version = 5
 
     placement = Setting(Placement.Circular)
     selected_vars = ContextSetting([])
     vizrank = SettingProvider(LinearProjectionVizRank)
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)
-
-    class Warning(OWAnchorProjectionWidget.Warning):
-        not_enough_comp = Msg("Input projection has less than two components")
-        proj_and_domain_match = Msg("Projection and Data domains do not match")
-        trivial_components = Msg(
-            "All components of the PCA are trivial (explain zero variance). "
-            "Input data is constant (or near constant).")
 
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
@@ -289,7 +278,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             None, self, "Suggest Features", self.__vizrank_set_attrs)
 
         super().__init__()
-        self.projection_input = None
 
     def _add_controls(self):
         self._add_controls_variables()
@@ -385,28 +373,12 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         for btn in buttons:
             btn.setEnabled(True)
 
-        def disable_input_projection_placement():
-            buttons[self.Placement.Projection].setEnabled(False)
-            if self.placement == self.Placement.Projection:
-                self.placement = self.Placement.Circular
-                self.__placement_radio_changed()
-
         if self.data is not None:
             has_discrete_class = self.data.domain.has_discrete_class
             if not has_discrete_class or len(np.unique(self.data.Y)) < 2:
                 buttons[self.Placement.LDA].setEnabled(False)
                 if self.placement == self.Placement.LDA:
                     self.placement = self.Placement.Circular
-            self.Warning.proj_and_domain_match.clear()
-            if not self.projection_input:
-                disable_input_projection_placement()
-            else:
-                attributes = self.projection_input.domain.attributes
-                input_names = [a.name for a in attributes]
-                selected_names = [a.name for a in self.model_selected[:]]
-                if not all([el in input_names for el in selected_names]):
-                    self.Warning.proj_and_domain_match()
-                    disable_input_projection_placement()
 
         self.controls.graph.hide_radius.setEnabled(
             self.placement != self.Placement.Circular)
@@ -460,25 +432,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             self.projector = PCA(n_components=2)
             self.projector.component = 2
             self.projector.preprocessors = PCA.preprocessors + [Normalize()]
-        elif self.placement == self.Placement.Projection:
-            self.projector = Projection(self.__get_initial_components())
+
         super().init_projection()
-
-    def __get_initial_components(self):
-        var_names = [v.name for v in self.model_selected[:]]
-        return self.projection_input[:2, var_names].X
-
-    @Inputs.projection_input
-    def set_projection(self, projection):
-        self.Warning.not_enough_comp.clear()
-        if projection and len(projection) < 2:
-            self.Warning.not_enough_comp()
-            projection = None
-        if projection is not None:
-            self.placement = self.Placement.Projection
-        self.projection_input = projection
-        self._check_options()
-        self.init_projection()
 
     def get_coordinates_data(self):
         def normalized(a):
@@ -532,6 +487,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
                 selection = settings_["selection_indices"]
                 settings_["selection"] = [(i, 1) for i, selected in
                                           enumerate(selection) if selected]
+        if version < 5:
+            if "placement" in settings_ and \
+                    settings_["placement"] not in cls.Placement:
+                settings_["placement"] = cls.Placement.Circular
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -586,15 +545,6 @@ class CircularPlacement(LinearProjector):
             axes_angle = np.linspace(0, 2 * np.pi, n_axes,
                                      endpoint=False)
         return np.vstack((np.cos(axes_angle), np.sin(axes_angle)))
-
-
-class Projection(LinearProjector):
-    def __init__(self, initial, preprocessors=None):
-        super().__init__(preprocessors=preprocessors)
-        self.initial = initial
-
-    def get_components(self, *args):
-        return self.initial
 
 
 def main(argv=None):
