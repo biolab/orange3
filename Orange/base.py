@@ -279,7 +279,7 @@ class Model(Reprable):
                 max_card = max(len(c.values)
                                for c in self.domain.class_vars)
                 probs = np.zeros(value.shape + (max_card,), float)
-                for i, cvar in enumerate(self.domain.class_vars):
+                for i in range(len(self.domain.class_vars)):
                     probs[:, i, :] = one_hot(value[:, i])
             else:
                 probs = one_hot(value)

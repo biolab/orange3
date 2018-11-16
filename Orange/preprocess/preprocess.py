@@ -3,8 +3,8 @@ Preprocess
 ----------
 
 """
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 import scipy.sparse as sp
 from sklearn.impute import SimpleImputer
 

@@ -1,4 +1,4 @@
-import sklearn.discriminant_analysis as discriminant_analysis
+import sklearn.discriminant_analysis as skl_da
 
 from Orange.projection import SklProjector, DomainProjection
 
@@ -10,7 +10,7 @@ class LDAModel(DomainProjection):
 
 
 class LDA(SklProjector):
-    __wraps__ = discriminant_analysis.LinearDiscriminantAnalysis
+    __wraps__ = skl_da.LinearDiscriminantAnalysis
     name = "LDA"
     supports_sparse = False
 

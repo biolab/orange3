@@ -30,7 +30,6 @@ class RadViz(LinearProjector):
         return np.array([
             (np.cos(t), np.sin(t)) for t in
             [2.0 * np.pi * (i / X.shape[1]) for i in range(X.shape[1])]]).T
-        return DomainProjection(self, self.domain)
 
     def transform(self, X):
         table = np.zeros((X.shape[0], 2))

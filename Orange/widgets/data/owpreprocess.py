@@ -1054,7 +1054,6 @@ class OWPreprocess(widget.OWWidget):
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
-        name = saved.get("name", "")
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
@@ -1243,14 +1242,13 @@ class OWPreprocess(widget.OWWidget):
             self.report_items("Settings", pp)
 
 
-def test_main(argv=sys.argv):
-    argv = list(argv)
-    app = QApplication(argv)
-
-    if len(argv) > 1:
-        filename = argv[1]
+def test_main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv:
+        filename = argv[0]
     else:
         filename = "brown-selected"
+    app = QApplication([])
 
     w = OWPreprocess()
     w.set_data(Orange.data.Table(filename))
@@ -1261,6 +1259,7 @@ def test_main(argv=sys.argv):
     w.saveSettings()
     w.onDeleteWidget()
     return r
+
 
 if __name__ == "__main__":
     sys.exit(test_main())
