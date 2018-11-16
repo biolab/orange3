@@ -176,6 +176,19 @@ class TestOWFile(WidgetTest):
         self.open_dataset("iris")
         self.assertFalse(self.widget.Error.file_not_found.is_shown())
 
+    def test_nothing_selected(self):
+        widget = self.widget = \
+            self.create_widget(OWFile, stored_settings={"recent_paths": []})
+        
+        widget.Outputs.data.send = Mock()
+        widget._try_load()
+        widget.Outputs.data.send.assert_called_with(None)
+
+        widget.Outputs.data.send.reset_mock()
+        widget.source = widget.URL
+        widget._try_load()
+        widget.Outputs.data.send.assert_called_with(None)
+
     def test_check_column_noname(self):
         """
         Column name cannot be changed to an empty string or a string with whitespaces.
