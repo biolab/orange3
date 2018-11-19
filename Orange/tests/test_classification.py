@@ -19,6 +19,7 @@ from Orange.classification import (Learner, Model, NaiveBayesLearner,
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table, Variable)
+from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 from Orange.tests import test_filename
@@ -144,6 +145,13 @@ class ModelTest(unittest.TestCase):
         y2, probs = clf(x, ret=Model.ValueProbs)
         self.assertEqual(y2.shape, y.shape)
         self.assertEqual(probs.shape, (nrows, 2, 4))
+
+    def test_incompatible_domain(self):
+        iris = Table("iris")
+        titanic = Table("titanic")
+        clf = DummyLearner()(iris)
+        with self.assertRaises(DomainTransformationError):
+            clf(titanic)
 
 
 class ExpandProbabilitiesTest(unittest.TestCase):
