@@ -44,6 +44,10 @@ _conversion_cache = None
 _conversion_cache_lock = RLock()
 
 
+class DomainTransformationError(Exception):
+    pass
+
+
 class RowInstance(Instance):
     sparse_x = None
     sparse_y = None
