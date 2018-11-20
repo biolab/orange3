@@ -5,8 +5,9 @@ import numpy as np
 
 from Orange.data import Table, Variable
 from Orange.data.filter import SameValue
+from Orange.data.util import get_unique_names
 from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, get_next_name, get_unique_names,
+    create_annotated_table, get_next_name,
     create_groups_table, ANNOTATED_DATA_FEATURE_NAME
 )
 

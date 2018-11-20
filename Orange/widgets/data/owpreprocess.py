@@ -24,7 +24,7 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import Orange.data
 from Orange import preprocess
-from Orange.preprocess import Continuize, ProjectPCA, \
+from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
     ProjectCUR, Scale as _Scale, Randomize as _Randomize
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
@@ -252,15 +252,6 @@ class ContinuizeEditor(BaseEditor):
         return self.Continuizers[self.__treatment]
 
 
-class _RemoveNaNRows(preprocess.preprocess.Preprocess):
-    _reprable_module = True
-
-    def __call__(self, data):
-        mask = numpy.isnan(data.X)
-        mask = numpy.any(mask, axis=1)
-        return data[~mask]
-
-
 class ImputeEditor(BaseEditor):
     (NoImputation, Constant, Average,
      Model, Random, DropRows, DropColumns) = 0, 1, 2, 3, 4, 5, 6
@@ -326,7 +317,7 @@ class ImputeEditor(BaseEditor):
         elif method == ImputeEditor.Model:
             return preprocess.Impute(method=preprocess.impute.Model())
         elif method == ImputeEditor.DropRows:
-            return _RemoveNaNRows()
+            return RemoveNaNRows()
         elif method == ImputeEditor.DropColumns:
             return preprocess.RemoveNaNColumns()
         else:
@@ -1063,7 +1054,6 @@ class OWPreprocess(widget.OWWidget):
 
     def load(self, saved):
         """Load a preprocessor list from a dict."""
-        name = saved.get("name", "")
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
@@ -1252,14 +1242,13 @@ class OWPreprocess(widget.OWWidget):
             self.report_items("Settings", pp)
 
 
-def test_main(argv=sys.argv):
-    argv = list(argv)
-    app = QApplication(argv)
-
-    if len(argv) > 1:
-        filename = argv[1]
+def test_main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv:
+        filename = argv[0]
     else:
         filename = "brown-selected"
+    app = QApplication([])
 
     w = OWPreprocess()
     w.set_data(Orange.data.Table(filename))
@@ -1270,6 +1259,7 @@ def test_main(argv=sys.argv):
     w.saveSettings()
     w.onDeleteWidget()
     return r
+
 
 if __name__ == "__main__":
     sys.exit(test_main())

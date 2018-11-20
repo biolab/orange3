@@ -3,8 +3,8 @@ Preprocess
 ----------
 
 """
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 import scipy.sparse as sp
 from sklearn.impute import SimpleImputer
 
@@ -15,8 +15,8 @@ from Orange.statistics import distribution
 from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
 
-__all__ = ["Continuize", "Discretize", "Impute",
-           "SklImpute", "Normalize", "Randomize",
+__all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows", "SklImpute",
+           "Normalize", "Randomize", "Preprocess", "RemoveConstant",
            "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scale"]
 
 
@@ -196,6 +196,15 @@ class RemoveConstant(Preprocess):
         domain = Orange.data.Domain(atts, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
+
+
+class RemoveNaNRows(Preprocess):
+    _reprable_module = True
+
+    def __call__(self, data):
+        mask = np.isnan(data.X)
+        mask = np.any(mask, axis=1)
+        return data[~mask]
 
 
 @deprecated("Orange.data.filter.HasClas")
