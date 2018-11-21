@@ -1,6 +1,8 @@
 import unittest
+import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
+from Orange.preprocess import Preprocess
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
@@ -80,6 +82,19 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
             if var.is_discrete:
                 self.assertNotIn(var, controls.attr_size.model())
                 self.assertIn(var, controls.attr_shape.model())
+
+    def test_output_preprocessor(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        pp = self.get_output(self.widget.Outputs.preprocessor)
+        self.assertIsInstance(pp, Preprocess)
+        transformed = pp(self.data)
+        self.assertIsInstance(transformed, Table)
+        self.assertEqual(transformed.X.shape, (len(self.data), 2))
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_allclose(transformed.X, output.metas[:, :2],
+                                   rtol=1, atol=1)
+        self.assertEqual([a.name for a in transformed.domain.attributes],
+                         [m.name for m in output.domain.metas[:2]])
 
 
 if __name__ == '__main__':
