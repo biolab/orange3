@@ -29,6 +29,7 @@ so they can be used alter. It should be called before widget starts modifying
 (initializing) the value of the setting attributes.
 """
 
+import sys
 import copy
 import itertools
 import os
@@ -462,7 +463,12 @@ class SettingsHandler:
     def _migrate_settings(self, settings):
         """Ask widget to migrate settings to the latest version."""
         if settings:
-            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, 0))
+            try:
+                self.widget_class.migrate_settings(
+                    settings, settings.pop(VERSION_KEY, 0))
+            except Exception:
+                sys.excepthook(*sys.exc_info())
+                settings.clear()
 
     def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
@@ -632,6 +638,9 @@ class ContextHandler(SettingsHandler):
                 self.widget_class.migrate_context(
                     context, context.values.pop(VERSION_KEY, 0))
             except IncompatibleContext:
+                del contexts[i]
+            except Exception:
+                sys.excepthook(*sys.exc_info())
                 del contexts[i]
             else:
                 i += 1
