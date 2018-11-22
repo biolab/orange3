@@ -135,7 +135,7 @@ class OWDataSets(widget.OWWidget):
     # The following constants can be overridden in a subclass
     # to reuse this widget for a different repository
     # Take care when refactoring! (used in e.g. single-cell)
-    INDEX_URL = "http://datasets.orange.biolab.si/"
+    INDEX_URL = "https://datasets.biolab.si/"
     DATASET_DIR = "datasets"
 
     # override HEADER_SCHEMA to define new columns
