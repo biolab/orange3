@@ -1256,8 +1256,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             data = None
 
         self.Outputs.selected_data.send(selected_data)
-        annotated_data = create_annotated_table(data, selected_indices) if \
-            self.selection_method == 0 else None
+        annotated_data = create_annotated_table(data, selected_indices)
         self.Outputs.annotated_data.send(annotated_data)
 
     def sizeHint(self):
