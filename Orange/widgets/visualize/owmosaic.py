@@ -268,7 +268,7 @@ class OWMosaicDisplay(OWWidget):
 
     settingsHandler = DomainContextHandler()
     vizrank = SettingProvider(MosaicVizRank)
-    settings_version = 1
+    settings_version = 2
     use_boxes = Setting(True)
     variable1 = ContextSetting(None)
     variable2 = ContextSetting(None)
@@ -920,8 +920,8 @@ class OWMosaicDisplay(OWWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
-        if not version:
-            settings.migrate_str_to_variable(context)
+        if version < 2:
+            settings.migrate_str_to_variable(context, none_placeholder="(None)")
 
 
 def get_conditional_distribution(data, attrs):
@@ -974,6 +974,7 @@ def main():
     ow.set_subset_data(data[::10])
     ow.handleNewSignals()
     a.exec_()
+    ow.saveSettings()
 
 
 if __name__ == "__main__":
