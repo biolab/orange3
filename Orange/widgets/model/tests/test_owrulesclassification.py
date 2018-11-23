@@ -133,3 +133,9 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
             self.assertTrue(self.widget.Error.out_of_memory.is_shown())
         self.send_signal("Data", None)
         self.assertFalse(self.widget.Error.out_of_memory.is_shown())
+
+    def test_default_rule(self):
+        data = Table("zoo")
+        self.send_signal("Data", data)
+        self.widget.apply_button.button.click()
+        self.assertEqual(sum(self.widget.model.rule_list[-1].curr_class_dist.tolist()), len(data))
