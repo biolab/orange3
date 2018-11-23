@@ -241,9 +241,9 @@ class SettingProvider:
         data : dict
             packed data
         """
-        for setting, data, instance in self.traverse_settings(data, instance):
-            if setting.name in data and instance is not None:
-                setattr(instance, setting.name, data[setting.name])
+        for setting, _data, inst in self.traverse_settings(data, instance):
+            if setting.name in _data and inst is not None:
+                setattr(inst, setting.name, _data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -262,6 +262,7 @@ class SettingProvider:
             provider = subprovider.get_provider(provider_class)
             if provider:
                 return provider
+        return None
 
     def traverse_settings(self, data=None, instance=None):
         """Generator of tuples (setting, data, instance) for each setting
@@ -466,7 +467,7 @@ class SettingsHandler:
             try:
                 self.widget_class.migrate_settings(
                     settings, settings.pop(VERSION_KEY, 0))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 sys.excepthook(*sys.exc_info())
                 settings.clear()
 
@@ -544,9 +545,9 @@ class SettingsHandler:
         ----------
         instance : OWWidget
         """
-        for setting, _, instance in self.provider.traverse_settings(instance=instance):
+        for setting, _, inst in self.provider.traverse_settings(instance=instance):
             if setting.packable:
-                setattr(instance, setting.name, setting.default)
+                setattr(inst, setting.name, setting.default)
 
 
 class ContextSetting(Setting):
@@ -639,7 +640,7 @@ class ContextHandler(SettingsHandler):
                     context, context.values.pop(VERSION_KEY, 0))
             except IncompatibleContext:
                 del contexts[i]
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 sys.excepthook(*sys.exc_info())
                 del contexts[i]
             else:
