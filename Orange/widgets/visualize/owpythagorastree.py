@@ -120,6 +120,8 @@ class OWPythagorasTree(OWWidget):
             box_plot, self, 'show_legend', label='Show legend',
             callback=self.update_show_legend)
 
+        gui.button(self.controlArea, self, label="Redraw", callback=self.redraw)
+
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
 
@@ -133,7 +135,7 @@ class OWPythagorasTree(OWWidget):
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.mainArea.layout().addWidget(self.view)
 
-        self.ptree = PythagorasTreeViewer()
+        self.ptree = PythagorasTreeViewer(self)
         self.scene.addItem(self.ptree)
         self.view.set_central_widget(self.ptree)
 
@@ -222,6 +224,10 @@ class OWPythagorasTree(OWWidget):
     def update_size_calc(self):
         """When the tree size calculation is updated."""
         self._update_log_scale_slider()
+        self.invalidate_tree()
+
+    def redraw(self):
+        self.tree_adapter.shuffle_children()
         self.invalidate_tree()
 
     def invalidate_tree(self):

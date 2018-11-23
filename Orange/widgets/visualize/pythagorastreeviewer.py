@@ -89,7 +89,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
     def __init__(self, parent=None, adapter=None, depth_limit=0, padding=0,
                  **kwargs):
-        super().__init__(parent)
+        super().__init__()
+        self.parent = parent
 
         # In case a tree was passed, it will be handled at the end of init
         self.tree_adapter = None
@@ -137,9 +138,10 @@ class PythagorasTreeViewer(QGraphicsWidget):
         """
         self.clear_tree()
         self.tree_adapter = tree_adapter
+        self.weight_adjustment = weight_adjustment
 
         if self.tree_adapter is not None:
-            self.root = self._calculate_tree(self.tree_adapter, weight_adjustment)
+            self.root = self._calculate_tree(self.tree_adapter, self.weight_adjustment)
             self.set_depth_limit(tree_adapter.max_depth)
             self.target_class_changed(target_class_index)
             self._draw_tree(self.root)
@@ -147,7 +149,8 @@ class PythagorasTreeViewer(QGraphicsWidget):
     def set_size_calc(self, weight_adjustment):
         """Set the weight adjustment on the tree. Redraws the whole tree."""
         # Since we have to redraw the whole tree anyways, just call `set_tree`
-        self.set_tree(self.tree_adapter, weight_adjustment,
+        self.weight_adjustment = weight_adjustment
+        self.set_tree(self.tree_adapter, self.weight_adjustment,
                       self._target_class_index)
 
     def set_depth_limit(self, depth):
@@ -466,6 +469,13 @@ class InteractiveSquareGraphicsItem(SquareGraphicsItem):
             fnc(parent)
             # propagate up the tree
             self._propagate_to_parents(parent, fnc, other_fnc)
+
+    def mouseDoubleClickEvent(self, event):
+        self.tree_node.tree.reverse_children(self.tree_node.label)
+        p = self.parentWidget()  # PythagorasTreeViewer
+        p.set_tree(p.tree_adapter, p.weight_adjustment, self.tree_node.target_class_index)
+        widget = p.parent  # OWPythagorasTree
+        widget._update_main_area()
 
     def selection_changed(self):
         """Handle selection changed."""
