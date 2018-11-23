@@ -43,11 +43,11 @@ The **t-SNE** widget plots the data with a t-distributed stochastic neighbor emb
 Example
 -------
 
-We will use :doc:`Single Cell Datasets<./singlecelldatasets>` widget to load *Bone marrow mononuclear cells with AML (sample)* data. Then we will pass it through **k-Means** and select 2 clusters from Silhouette Scores. Ok, it looks like there might be two distinct clusters here.
+We will use **Single Cell Datasets** widget to load *Bone marrow mononuclear cells with AML (sample)* data. Then we will pass it through **k-Means** and select 2 clusters from Silhouette Scores. Ok, it looks like there might be two distinct clusters here.
 
-But can we find subpopulations in these cells? Let us load *Bone marrow mononuclear cells with AML (markers)* with :doc:`Single Cell Datasets<./singlecelldatasets>`. Now, pass the marker genes to **Data Table** and select, for example, natural killer cells from the list (NKG7).
+But can we find subpopulations in these cells? Let us load *Bone marrow mononuclear cells with AML (markers)* with **Single Cell Datasets**. Now, pass the marker genes to **Data Table** and select, for example, natural killer cells from the list (NKG7).
 
-Pass the markers and k-Means results to :doc:`Score Cells<./scorecells>` widget and select *geneName* to match markers with genes. Finally, add **t-SNE** to visualize the results.
+Pass the markers and k-Means results to **Score Cells** widget and select *geneName* to match markers with genes. Finally, add **t-SNE** to visualize the results.
 
 In **t-SNE**, use *Scores* attribute to color the points and set their size. We see that killer cells are nicely clustered together and that t-SNE indeed found subpopulations.
 
