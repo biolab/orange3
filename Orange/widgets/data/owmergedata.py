@@ -369,7 +369,7 @@ class OWMergeData(widget.OWWidget):
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
-        return Orange.data.Table.from_numpy(domain, X, Y, metas)
+        return Orange.data.Table.from_numpy(domain, X, Y, metas, data_attributes = getattr(self.data, "attributes"))
 
     @staticmethod
     def _join_array_by_indices(left, right, indices, string_cols=None):

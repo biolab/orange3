@@ -5,7 +5,6 @@ Linear Projection widget
 
 from itertools import islice, permutations, chain
 from math import factorial
-from types import SimpleNamespace as namespace
 
 import numpy as np
 
@@ -13,35 +12,33 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtWidgets import QGraphicsEllipseItem, QApplication, QSizePolicy
-from AnyQt.QtGui import QPen, QStandardItem
-from AnyQt.QtCore import Qt, QEvent, QRectF, QLineF
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtWidgets import QApplication, QSizePolicy
+from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable, ContinuousVariable
-from Orange.data.sql.table import SqlTable
+from Orange.data import Table, Domain, StringVariable
 from Orange.preprocess import Normalize
+from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import PCA
 from Orange.util import Enum
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import gui, report
 from Orange.widgets.gui import OWComponent
-from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME, create_groups_table, get_unique_names)
+from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
 from Orange.widgets.visualize.utils import VizRankDialog
+from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
-from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotGraph, InteractiveViewBox
-from Orange.widgets.widget import Input, Output
-from Orange.widgets import report
-from Orange.preprocess.score import ReliefF, RReliefF
+from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
+from Orange.widgets.widget import Input, Msg
 
 
 class LinearProjectionVizRank(VizRankDialog, OWComponent):
     captionTitle = "Score Plots"
-    n_attrs = settings.Setting(3)
+    n_attrs = Setting(3)
     minK = 10
 
     attrsSelected = Signal([])
@@ -59,11 +56,11 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
-        self.attr_color = master.graph.attr_color
+        self.attr_color = master.attr_color
 
     def initialize(self):
         super().initialize()
-        self.attr_color = self.master.graph.attr_color
+        self.attr_color = self.master.attr_color
 
     def before_running(self):
         """
@@ -89,7 +86,9 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             return False
         elif not master.btn_vizrank.isEnabled():
             return False
-        self.n_attrs_spin.setMaximum(self.master.n_cont_var)
+        n_cont_var = len([v for v in master.continuous_variables
+                          if v is not master.attr_color])
+        self.n_attrs_spin.setMaximum(n_cont_var)
         return True
 
     def state_count(self):
@@ -121,10 +120,11 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def compute_score(self, state):
         master = self.master
-        _, ec, _ = master.prepare_plot_data([self.attrs[i] for i in state])
+        _, ec, _ = master.prepare_projection_data(
+            [self.attrs[i] for i in state])
         y = column_data(master.data, self.attr_color, dtype=float)
         if ec.shape[0] < self.minK:
-            return
+            return None
         n_neighbors = min(self.minK, len(ec) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
         ind = knn.kneighbors(return_distance=False)
@@ -145,7 +145,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             span = col_max - col_min
             return (col - col_min) / (span or 1)
         domain = self.master.data.domain
-        attr_color = self.master.graph.attr_color
+        attr_color = self.master.attr_color
         domain = Domain(
             attributes=[v for v in chain(domain.variables, domain.metas)
                         if v.is_continuous and v is not attr_color],
@@ -177,41 +177,75 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         self.button.setEnabled(self.check_preconditions())
 
 
-class LinProjInteractiveViewBox(InteractiveViewBox):
-    def _dragtip_pos(self):
-        return 10, 10
+class OWLinProjGraph(OWGraphWithAnchors):
+    hide_radius = Setting(0)
+
+    @property
+    def always_show_axes(self):
+        return self.master.placement == self.master.Placement.Circular
+
+    @property
+    def scaled_radius(self):
+        return self.hide_radius / 100 + 1e-5
+
+    def update_radius(self):
+        self.update_circle()
+        self.update_anchors()
+
+    def set_view_box_range(self):
+        def min_max(a, b):
+            return (min(np.amin(a), np.amin(b), -1.05),
+                    max(np.amax(a), np.amax(b), 1.05))
+
+        points, _ = self.master.get_anchors()
+        coords = self.master.get_coordinates_data()
+        if points is None or coords is None:
+            return
+
+        min_x, max_x = min_max(points[:, 0], coords[0])
+        min_y, max_y = min_max(points[:, 1], coords[1])
+        rect = QRectF(min_x, min_y, max_x - min_x, max_y - min_y)
+        self.view_box.setRange(rect, padding=0.025)
+
+    def update_anchors(self):
+        points, labels = self.master.get_anchors()
+        if points is None:
+            return
+        r = self.scaled_radius * np.max(np.linalg.norm(points, axis=1))
+        if self.anchor_items is None:
+            self.anchor_items = []
+            for point, label in zip(points, labels):
+                anchor = AnchorItem(line=QLineF(0, 0, *point), text=label)
+                visible = self.always_show_axes or np.linalg.norm(point) > r
+                anchor.setVisible(visible)
+                anchor.setPen(pg.mkPen((100, 100, 100)))
+                self.plot_widget.addItem(anchor)
+                self.anchor_items.append(anchor)
+        else:
+            for anchor, point, label in zip(self.anchor_items, points, labels):
+                anchor.setLine(QLineF(0, 0, *point))
+                visible = self.always_show_axes or np.linalg.norm(point) > r
+                anchor.setVisible(visible)
+
+    def update_circle(self):
+        super().update_circle()
+
+        if self.always_show_axes:
+            self.plot_widget.removeItem(self.circle_item)
+            self.circle_item = None
+
+        if self.circle_item is not None:
+            points, _ = self.master.get_anchors()
+            if points is None:
+                return
+
+            r = self.scaled_radius * np.max(np.linalg.norm(points, axis=1))
+            self.circle_item.setRect(QRectF(-r, -r, 2 * r, 2 * r))
+            pen = pg.mkPen(QColor(Qt.lightGray), width=1, cosmetic=True)
+            self.circle_item.setPen(pen)
 
 
-class OWLinProjGraph(OWScatterPlotGraph):
-    jitter_size = settings.Setting(0)
-
-    def hide_axes(self):
-        for axis in ["left", "bottom"]:
-            self.plot_widget.hideAxis(axis)
-
-    def update_data(self, attr_x, attr_y, reset_view=True):
-        axes = self.master.plotdata.axes
-        axes_x, axes_y = axes[:, 0], axes[:, 1]
-        x_data, y_data = self.get_xy_data_positions(attr_x, attr_y, self.valid_data)
-        f = lambda a, b: (min(np.nanmin(a), np.nanmin(b)), max(np.nanmax(a), np.nanmax(b)))
-        min_x, max_x = f(axes_x, x_data)
-        min_y, max_y = f(axes_y, y_data)
-        self.view_box.setRange(QRectF(min_x, min_y, max_x - min_x, max_y - min_y), padding=0.025)
-        self.view_box.setAspectLocked(True, 1)
-
-        super().update_data(attr_x, attr_y, reset_view=False)
-        self.hide_axes()
-
-    def update_labels(self):
-        if self.master.model_selected[:]:
-            super().update_labels()
-
-    def update_shapes(self):
-        if self.master.model_selected[:]:
-            super().update_shapes()
-
-
-class OWLinearProjection(widget.OWWidget):
+class OWLinearProjection(OWAnchorProjectionWidget):
     name = "Linear Projection"
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
@@ -219,526 +253,295 @@ class OWLinearProjection(widget.OWWidget):
     priority = 240
     keywords = []
 
-    selection_indices = settings.Setting(None, schema_only=True)
+    class Inputs(OWAnchorProjectionWidget.Inputs):
+        projection_input = Input("Projection", Table)
 
-    class Inputs:
-        data = Input("Data", Table, default=True)
-        data_subset = Input("Data Subset", Table)
-        projection = Input("Projection", Table)
+    Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2, Projection=3),
+                     type=int, qualname="OWLinearProjection.Placement")
 
-    class Outputs:
-        selected_data = Output("Selected Data", Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        components = Output("Components", Table)
-
-    Placement = Enum("Placement",
-                     dict(Circular=0,
-                          LDA=1,
-                          PCA=2,
-                          Projection=3),
-                     type=int,
-                     qualname="OWLinearProjection.Placement")
-
-    Component_name = {Placement.Circular: "C", Placement.LDA: "LD", Placement.PCA: "PC"}
+    Component_name = {Placement.Circular: "C", Placement.LDA: "LD",
+                      Placement.PCA: "PC"}
     Variable_name = {Placement.Circular: "circular",
                      Placement.LDA: "lda",
                      Placement.PCA: "pca",
                      Placement.Projection: "projection"}
+    Projection_name = {Placement.Circular: "Circular Placement",
+                       Placement.LDA: "Linear Discriminant Analysis",
+                       Placement.PCA: "Principal Component Analysis",
+                       Placement.Projection: "Use input projection"}
 
-    jitter_sizes = [0, 0.1, 0.5, 1.0, 2.0]
+    settings_version = 4
 
-    settings_version = 3
-    settingsHandler = settings.DomainContextHandler()
+    placement = Setting(Placement.Circular)
+    selected_vars = ContextSetting([])
+    vizrank = SettingProvider(LinearProjectionVizRank)
+    GRAPH_CLASS = OWLinProjGraph
+    graph = SettingProvider(OWLinProjGraph)
 
-    variable_state = settings.ContextSetting({})
-    placement = settings.Setting(Placement.Circular)
-    radius = settings.Setting(0)
-    auto_commit = settings.Setting(True)
-
-    resolution = 256
-
-    graph = settings.SettingProvider(OWLinProjGraph)
-    ReplotRequest = QEvent.registerEventType()
-    vizrank = settings.SettingProvider(LinearProjectionVizRank)
-    graph_name = "graph.plot_widget.plotItem"
-
-    class Warning(widget.OWWidget.Warning):
-        no_cont_features = widget.Msg("Plotting requires numeric features")
-        not_enough_components = widget.Msg("Input projection has less than 2 components")
-        trivial_components = widget.Msg(
-            "All components of the PCA are trivial (explain 0 variance). "
+    class Warning(OWAnchorProjectionWidget.Warning):
+        not_enough_comp = Msg("Input projection has less than two components")
+        trivial_components = Msg(
+            "All components of the PCA are trivial (explain zero variance). "
             "Input data is constant (or near constant).")
 
-    class Error(widget.OWWidget.Error):
-        proj_and_domain_match = widget.Msg("Projection and Data domains do not match")
-        no_valid_data = widget.Msg("No projection due to invalid data")
+    class Error(OWAnchorProjectionWidget.Error):
+        no_cont_features = Msg("Plotting requires numeric features")
+        proj_and_domain_match = Msg("Projection and Data domains do not match")
 
     def __init__(self):
-        super().__init__()
-
-        self.data = None
-        self.projection = None
-        self.subset_data = None
-        self._subset_mask = None
-        self._selection = None
-        self.__replot_requested = False
-        self.n_cont_var = 0
-        #: Remember the saved state to restore
-        self.__pending_selection_restore = self.selection_indices
-        self.selection_indices = None
-
-        self.variable_x = None
-        self.variable_y = None
-
-        box = gui.vBox(self.mainArea, True, margin=0)
-        self.graph = OWLinProjGraph(self, box, "Plot", view_box=LinProjInteractiveViewBox)
-        box.layout().addWidget(self.graph.plot_widget)
-        plot = self.graph.plot_widget
-
-        SIZE_POLICY = (QSizePolicy.Minimum, QSizePolicy.Maximum)
-
-        self.variables_selection = VariablesSelection()
         self.model_selected = VariableListModel(enable_dnd=True)
+        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
+        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
         self.model_other = VariableListModel(enable_dnd=True)
-        self.variables_selection(self, self.model_selected, self.model_other)
 
         self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
-            self.controlArea, self, "Suggest Features", self._vizrank)
-        self.variables_selection.add_remove.layout().addWidget(self.btn_vizrank)
+            None, self, "Suggest Features", self.__vizrank_set_attrs)
 
+        super().__init__()
+        self.projection_input = None
+        self.variables = None
+
+    def _add_controls(self):
+        self._add_controls_variables()
+        self._add_controls_placement()
+        super()._add_controls()
+        self.graph.gui.add_control(
+            self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
+            value="hide_radius", minValue=0, maxValue=100, step=10,
+            createLabel=False, callback=self.__radius_slider_changed
+        )
+        self.controlArea.layout().removeWidget(self.control_area_stretch)
+        self.control_area_stretch.setParent(None)
+
+    def _add_controls_variables(self):
+        self.variables_selection = VariablesSelection(
+            self, self.model_selected, self.model_other, self.controlArea
+        )
+        self.variables_selection.add_remove.layout().addWidget(
+            self.btn_vizrank
+        )
+
+    def _add_controls_placement(self):
         box = gui.widgetBox(
-            self.controlArea, "Placement", sizePolicy=SIZE_POLICY)
+            self.controlArea, True,
+            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum)
+        )
         self.radio_placement = gui.radioButtonsInBox(
             box, self, "placement",
-            btnLabels=["Circular Placement",
-                       "Linear Discriminant Analysis",
-                       "Principal Component Analysis",
-                       "Use input projection"],
-            callback=self._change_placement
+            btnLabels=[self.Projection_name[x] for x in self.Placement],
+            callback=self.__placement_radio_changed
         )
 
-        self.viewbox = plot.getViewBox()
-        self.replot = None
+    @property
+    def continuous_variables(self):
+        if self.data is None or self.data.domain is None:
+            return []
+        dom = self.data.domain
+        return [v for v in chain(dom.variables, dom.metas) if v.is_continuous]
 
-        g = self.graph.gui
-        box = g.point_properties_box(self.controlArea)
-        self.models = g.points_models
-        g.add_widget(g.JitterSizeSlider, box)
-        box.setSizePolicy(*SIZE_POLICY)
-
-        box = gui.widgetBox(self.controlArea, "Hide axes", sizePolicy=SIZE_POLICY)
-        self.rslider = gui.hSlider(
-            box, self, "radius", minValue=0, maxValue=100,
-            step=5, label="Radius", createLabel=False, ticks=True,
-            callback=self.update_radius)
-        self.rslider.setTickInterval(0)
-        self.rslider.setPageStep(10)
-
-        box = gui.vBox(self.controlArea, "Plot Properties")
-        box.setSizePolicy(*SIZE_POLICY)
-
-        g.add_widgets([g.ShowLegend,
-                       g.ToolTipShowsAll,
-                       g.ClassDensity,
-                       g.LabelOnlySelected], box)
-
-        box = self.graph.box_zoom_select(self.controlArea)
-        box.setSizePolicy(*SIZE_POLICY)
-
-        self.icons = gui.attributeIconDict
-
-        gui.auto_commit(self.controlArea, self, "auto_commit", "Send Selection",
-                        auto_label="Send Automatically")
-        self.graph.zoom_actions(self)
-
-        self._new_plotdata()
-        self._change_placement()
-        self.graph.jitter_continuous = True
-
-    def reset_graph_data(self):
-        if self.data is not None:
-            self.graph.rescale_data()
-            self._update_graph(reset_view=True)
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        self.graph.update_tooltip(event.modifiers())
-
-    def keyReleaseEvent(self, event):
-        super().keyReleaseEvent(event)
-        self.graph.update_tooltip(event.modifiers())
-
-    def _vizrank(self, attrs):
-        self.variables_selection.display_none()
+    def __vizrank_set_attrs(self, attrs):
+        if not attrs:
+            return
         self.model_selected[:] = attrs[:]
-        self.model_other[:] = [var for var in self.model_other if var not in attrs]
+        self.model_other[:] = [var for var in self.continuous_variables
+                               if var not in attrs]
 
-    def _change_placement(self):
-        placement = self.placement
-        p_Circular = self.Placement.Circular
-        p_LDA = self.Placement.LDA
-        self.variables_selection.set_enabled(placement in [p_Circular, p_LDA])
-        self._vizrank_color_change()
-        self.rslider.setEnabled(placement != p_Circular)
-        self._setup_plot()
+    def __model_selected_changed(self):
+        self.selected_vars = [(var.name, vartype(var)) for var
+                              in self.model_selected]
+        self.projection = None
+        self.variables = None
+        self._check_options()
+        self.setup_plot()
         self.commit()
 
-    def _get_min_radius(self):
-        return self.radius * np.max(np.linalg.norm(self.plotdata.axes, axis=1)) / 100 + 1e-5
+    def __placement_radio_changed(self):
+        self.variables_selection.set_enabled(
+            self.placement in [self.Placement.Circular, self.Placement.LDA])
+        self.controls.graph.hide_radius.setEnabled(
+            self.placement != self.Placement.Circular)
+        self.projection = None
+        self.variables = None
+        self._init_vizrank()
+        self.setup_plot()
+        self.commit()
 
-    def update_radius(self):
-        # Update the anchor/axes visibility
-        pd = self.plotdata
-        assert pd is not None
-        if pd.hidecircle is None:
-            return
-        min_radius = self._get_min_radius()
-        for anchor, item in zip(pd.axes, pd.axisitems):
-            item.setVisible(np.linalg.norm(anchor) > min_radius)
-        pd.hidecircle.setRect(QRectF(-min_radius, -min_radius, 2 * min_radius, 2 * min_radius))
+    def __radius_slider_changed(self):
+        self.graph.update_radius()
 
-    def _new_plotdata(self):
-        self.plotdata = namespace(
-            valid_mask=None,
-            embedding_coords=None,
-            axisitems=[],
-            axes=[],
-            variables=[],
-            data=None,
-            hidecircle=None
-        )
+    def colors_changed(self):
+        super().colors_changed()
+        self._init_vizrank()
 
-    def _anchor_circle(self, variables):
-        # minimum visible anchor radius (radius)
-        min_radius = self._get_min_radius()
-        axisitems = []
-        for anchor, var in zip(self.plotdata.axes, variables[:]):
-            axitem = AnchorItem(line=QLineF(0, 0, *anchor), text=var.name,)
-            axitem.setVisible(np.linalg.norm(anchor) > min_radius)
-            axitem.setPen(pg.mkPen((100, 100, 100)))
-            axitem.setArrowVisible(True)
-            self.viewbox.addItem(axitem)
-            axisitems.append(axitem)
+    def set_data(self, data):
+        super().set_data(data)
+        if self.data is not None and len(self.selected_vars):
+            d, selected = self.data.domain, [v[0] for v in self.selected_vars]
+            self.model_selected[:] = [d[attr] for attr in selected]
+            self.model_other[:] = [d[attr.name] for attr in
+                                   self.continuous_variables
+                                   if attr.name not in selected]
+        elif self.data is not None:
+            self.model_selected[:] = self.continuous_variables[:3]
+            self.model_other[:] = self.continuous_variables[3:]
 
-        self.plotdata.axisitems = axisitems
-        if self.placement == self.Placement.Circular:
-            return
+        self._check_options()
+        self._init_vizrank()
 
-        hidecircle = QGraphicsEllipseItem()
-        hidecircle.setRect(QRectF(-min_radius, -min_radius, 2 * min_radius, 2 * min_radius))
+    def _check_options(self):
+        buttons = self.radio_placement.buttons
+        for btn in buttons:
+            btn.setEnabled(True)
+        if self.data is not None:
+            has_discrete_class = self.data.domain.has_discrete_class
+            if not has_discrete_class or len(np.unique(self.data.Y)) < 2:
+                buttons[self.Placement.LDA].setEnabled(False)
+                if self.placement == self.Placement.LDA:
+                    self.placement = self.Placement.Circular
+            if not self.projection_input:
+                buttons[self.Placement.Projection].setEnabled(False)
+                if self.placement == self.Placement.Projection:
+                    self.placement = self.Placement.Circular
 
-        _pen = QPen(Qt.lightGray, 1)
-        _pen.setCosmetic(True)
-        hidecircle.setPen(_pen)
+        self.variables_selection.set_enabled(
+            self.placement in [self.Placement.Circular, self.Placement.LDA])
+        self.controls.graph.hide_radius.setEnabled(
+            self.placement != self.Placement.Circular)
 
-        self.viewbox.addItem(hidecircle)
-        self.plotdata.hidecircle = hidecircle
-
-    def update_colors(self):
-        self._vizrank_color_change()
-
-    def clear(self):
-        # Clear/reset the widget state
-        self.data = None
-        self.model_selected.clear()
-        self.model_other.clear()
-        self._clear_plot()
-        self.selection_indices = None
-
-    def _clear_plot(self):
-        self.Warning.trivial_components.clear()
-        for axisitem in self.plotdata.axisitems:
-            self.viewbox.removeItem(axisitem)
-        if self.plotdata.hidecircle:
-            self.viewbox.removeItem(self.plotdata.hidecircle)
-        self._new_plotdata()
-        self.graph.hide_axes()
-
-    def invalidate_plot(self):
-        """
-        Schedule a delayed replot.
-        """
-        if not self.__replot_requested:
-            self.__replot_requested = True
-            QApplication.postEvent(self, QEvent(self.ReplotRequest), Qt.LowEventPriority - 10)
-
-    def init_attr_values(self):
-        self.graph.set_domain(self.data)
-
-    def _vizrank_color_change(self):
-        is_enabled = False
+    def _init_vizrank(self):
+        is_enabled, msg = False, ""
         if self.data is None:
-            self.btn_vizrank.setToolTip("There is no data.")
-            return
-        vars = [v for v in chain(self.data.domain.variables, self.data.domain.metas) if
-                v.is_primitive and v is not self.graph.attr_color]
-        self.n_cont_var = len(vars)
-        if self.placement not in [self.Placement.Circular, self.Placement.LDA]:
+            msg = "There is no data."
+        elif self.placement not in [self.Placement.Circular,
+                                    self.Placement.LDA]:
             msg = "Suggest Features works only for Circular and " \
                   "Linear Discriminant Analysis Projection"
-        elif self.graph.attr_color is None:
+        elif self.attr_color is None:
             msg = "Color variable has to be selected"
-        elif self.graph.attr_color.is_continuous and self.placement == self.Placement.LDA:
-            msg = "Suggest Features does not work for Linear Discriminant Analysis Projection " \
-                  "when continuous color variable is selected."
-        elif len(vars) < 3:
+        elif self.attr_color.is_continuous and \
+                self.placement == self.Placement.LDA:
+            msg = "Suggest Features does not work for Linear " \
+                  "Discriminant Analysis Projection when " \
+                  "continuous color variable is selected."
+        elif len([v for v in self.continuous_variables
+                  if v is not self.attr_color]) < 3:
             msg = "Not enough available continuous variables"
+        elif len(self.data[self.valid_data]) < 2:
+            msg = "Not enough valid data instances"
         else:
-            is_enabled = True
-            msg = ""
+            is_enabled = not np.isnan(self.data.get_column_view(
+                self.attr_color)[0].astype(float)).all()
         self.btn_vizrank.setToolTip(msg)
         self.btn_vizrank.setEnabled(is_enabled)
-        self.vizrank.stop_and_reset(is_enabled)
+        if is_enabled:
+            self.vizrank.initialize()
 
-    @Inputs.projection
+    def check_data(self):
+        def error(err):
+            err()
+            self.data = None
+
+        super().check_data()
+        if self.data is not None:
+            if not len(self.continuous_variables):
+                error(self.Error.no_cont_features)
+
+    def init_attr_values(self):
+        super().init_attr_values()
+        self.selected_vars = []
+
+    @Inputs.projection_input
     def set_projection(self, projection):
-        self.Warning.not_enough_components.clear()
+        self.Warning.not_enough_comp.clear()
         if projection and len(projection) < 2:
-            self.Warning.not_enough_components()
+            self.Warning.not_enough_comp()
             projection = None
         if projection is not None:
             self.placement = self.Placement.Projection
-        self.projection = projection
+        self.projection_input = projection
+        self._check_options()
 
-    @Inputs.data
-    def set_data(self, data):
-        """
-        Set the input dataset.
+    def get_embedding(self):
+        self.valid_data = None
+        if self.data is None or not self.variables:
+            return None
 
-        Args:
-            data (Orange.data.table): data instances
-        """
-        def sql(data):
-            if isinstance(data, SqlTable):
-                if data.approx_len() < 4000:
-                    data = Table(data)
-                else:
-                    self.information("Data has been sampled")
-                    data_sample = data.sample_time(1, no_cache=True)
-                    data_sample.download_data(2000, partial=True)
-                    data = Table(data_sample)
-            return data
-
-        def settings(data):
-            # get the default encoded state, replacing the position with Inf
-            state = VariablesSelection.encode_var_state(
-                [list(self.model_selected), list(self.model_other)]
-            )
-            state = {key: (source_ind, np.inf) for key, (source_ind, _) in state.items()}
-
-            self.openContext(data.domain)
-            selected_keys = [key for key, (sind, _) in self.variable_state.items() if sind == 0]
-
-            if set(selected_keys).issubset(set(state.keys())):
-                pass
-
-            if self.__pending_selection_restore is not None:
-                self._selection = np.array(self.__pending_selection_restore, dtype=int)
-                self.__pending_selection_restore = None
-
-            # update the defaults state (the encoded state must contain
-            # all variables in the input domain)
-            state.update(self.variable_state)
-            # ... and restore it with saved positions taking precedence over
-            # the defaults
-            selected, other = VariablesSelection.decode_var_state(
-                state, [list(self.model_selected), list(self.model_other)])
-            return selected, other
-
-        self.closeContext()
-        self.clear()
-        self.Warning.no_cont_features.clear()
-        self.information()
-        data = sql(data)
-        if data is not None:
-            domain = data.domain
-            vars = [var for var in chain(domain.variables, domain.metas) if var.is_continuous]
-            if not len(vars):
-                self.Warning.no_cont_features()
-                data = None
-        self.data = data
-        self.init_attr_values()
-        if data is not None and len(data):
-            self._initialize(data)
-            self.model_selected[:], self.model_other[:] = settings(data)
-            self.vizrank.stop_and_reset()
-            self.vizrank.attrs = self.data.domain.attributes if self.data is not None else []
-
-    def _check_possible_opt(self):
-        def set_enabled(is_enabled):
-            for btn in self.radio_placement.buttons:
-                btn.setEnabled(is_enabled)
-            self.variables_selection.set_enabled(is_enabled)
-
-        p_Circular = self.Placement.Circular
-        p_LDA = self.Placement.LDA
-        p_Input = self.Placement.Projection
-        if self.data:
-            set_enabled(True)
-            domain = self.data.domain
-            if not domain.has_discrete_class or len(domain.class_var.values) < 2:
-                self.radio_placement.buttons[p_LDA].setEnabled(False)
-                if self.placement == p_LDA:
-                    self.placement = p_Circular
-            if not self.projection:
-                self.radio_placement.buttons[p_Input].setEnabled(False)
-                if self.placement == p_Input:
-                    self.placement = p_Circular
-            self._setup_plot()
+        if self.placement == self.Placement.PCA:
+            self.valid_data, ec, self.projection = self._get_pca()
+            self.variables = self._pca.orig_domain.attributes
         else:
-            self.graph.new_data(None)
-            self.rslider.setEnabled(False)
-            set_enabled(False)
-        self.commit()
+            self.valid_data, ec, self.projection = \
+                self.prepare_projection_data(self.variables)
 
-    @Inputs.data_subset
-    def set_subset_data(self, subset):
-        """
-        Set the supplementary input subset dataset.
+        self.Error.no_valid_data.clear()
+        if self.valid_data is None or not sum(self.valid_data) or \
+                self.projection is None or ec is None:
+            self.Error.no_valid_data()
+            return None
 
-        Args:
-            subset (Orange.data.table): subset of data instances
-        """
-        self.subset_data = subset
-        self._subset_mask = None
-        self.controls.graph.alpha_value.setEnabled(subset is None)
+        embedding = np.zeros((len(self.data), 2), dtype=np.float)
+        embedding[self.valid_data] = ec
+        return embedding
 
-    def handleNewSignals(self):
-        if self.data is not None and self.subset_data is not None:
-            # Update the plot's highlight items
-            dataids = self.data.ids.ravel()
-            subsetids = np.unique(self.subset_data.ids)
-            self._subset_mask = np.in1d(dataids, subsetids, assume_unique=True)
-        self._check_possible_opt()
-        self._change_placement()
-        self.commit()
-
-    def customEvent(self, event):
-        if event.type() == OWLinearProjection.ReplotRequest:
-            self.__replot_requested = False
-            self._setup_plot()
-            self.commit()
-        else:
-            super().customEvent(event)
-
-    def closeContext(self):
-        self.variable_state = VariablesSelection.encode_var_state(
-            [list(self.model_selected), list(self.model_other)]
-        )
-        super().closeContext()
-
-    def _initialize(self, data):
-        # Initialize the GUI controls from data's domain.
-        vars = [v for v in chain(data.domain.metas, data.domain.attributes) if v.is_continuous]
-        self.model_other[:] = vars[3:]
-        self.model_selected[:] = vars[:3]
-
-    def prepare_plot_data(self, variables):
-        def projection(variables):
-            if set(self.projection.domain.attributes).issuperset(variables):
-                axes = self.projection[:2, variables].X
-            elif set(f.name for f in
-                     self.projection.domain.attributes).issuperset(f.name for f in variables):
-                axes = self.projection[:2, [f.name for f in variables]].X
+    def prepare_projection_data(self, variables):
+        def projection(_vars):
+            attrs = self.projection_input.domain.attributes
+            if set(attrs).issuperset(_vars):
+                return self.projection_input[:2, _vars].X
+            elif set(f.name for f in attrs).issuperset(f.name for f in _vars):
+                return self.projection_input[:2, [f.name for f in _vars]].X
             else:
                 self.Error.proj_and_domain_match()
-                axes = None
-            return axes
+                return None
 
-        def get_axes(variables):
+        def get_axes(_vars):
             self.Error.proj_and_domain_match.clear()
-            axes = None
             if self.placement == self.Placement.Circular:
-                axes = LinProj.defaultaxes(len(variables))
+                return LinProj.defaultaxes(len(_vars))
             elif self.placement == self.Placement.LDA:
-                axes = self._get_lda(self.data, variables)
-            elif self.placement == self.Placement.Projection and self.projection:
-                axes = projection(variables)
-            return axes
+                return self._get_lda(self.data, _vars)
+            elif self.placement == self.Placement.Projection and \
+                    self.projection_input is not None:
+                return projection(_vars)
+            else:
+                return None
 
-        coords = [column_data(self.data, var, dtype=float) for var in variables]
-        coords = np.vstack(coords)
-        p, N = coords.shape
-        assert N == len(self.data), p == len(variables)
-
+        coords = np.vstack(column_data(self.data, v, float) for v in variables)
         axes = get_axes(variables)
         if axes is None:
             return None, None, None
-        assert axes.shape == (2, p)
 
         valid_mask = ~np.isnan(coords).any(axis=0)
-        coords = coords[:, valid_mask]
-
-        X, Y = np.dot(axes, coords)
+        X, Y = np.dot(axes, coords[:, valid_mask])
         if X.size and Y.size:
             X = normalized(X)
             Y = normalized(Y)
-
         return valid_mask, np.stack((X, Y), axis=1), axes.T
 
-    def _setup_plot(self):
-        self._clear_plot()
+    def get_anchors(self):
+        if self.projection is None:
+            return None, None
+        return self.projection, [v.name for v in self.variables]
+
+    def setup_plot(self):
+        self.init_projection_variables()
+        super().setup_plot()
+
+    def init_projection_variables(self):
+        self.variables = None
         if self.data is None:
             return
-        self.__replot_requested = False
-        names = get_unique_names([v.name for v in chain(self.data.domain.variables,
-                                                        self.data.domain.metas)],
-                                 ["{}-x".format(self.Variable_name[self.placement]),
-                                  "{}-y".format(self.Variable_name[self.placement])])
-        self.variable_x = ContinuousVariable(names[0])
-        self.variable_y = ContinuousVariable(names[1])
+
         if self.placement in [self.Placement.Circular, self.Placement.LDA]:
-            variables = list(self.model_selected)
+            self.variables = self.model_selected[:]
         elif self.placement == self.Placement.Projection:
-            variables = self.model_selected[:] + self.model_other[:]
+            self.variables = self.model_selected[:] + self.model_other[:]
         elif self.placement == self.Placement.PCA:
-            variables = [var for var in self.data.domain.attributes if var.is_continuous]
-        if not variables:
-            self.graph.new_data(None)
-            return
-        if self.placement == self.Placement.PCA:
-            valid_mask, ec, axes = self._get_pca()
-            variables = self._pca.orig_domain.attributes
-        else:
-            valid_mask, ec, axes = self.prepare_plot_data(variables)
-
-        self.plotdata.variables = variables
-        self.plotdata.valid_mask = valid_mask
-        self.plotdata.embedding_coords = ec
-        self.plotdata.axes = axes
-        if any(e is None for e in (valid_mask, ec, axes)):
-            return
-
-        if not sum(valid_mask):
-            self.Error.no_valid_data()
-            self.graph.new_data(None, None)
-            return
-        self.Error.no_valid_data.clear()
-
-        self._anchor_circle(variables=variables)
-        self._plot()
-
-    def _plot(self):
-        domain = self.data.domain
-        new_metas = domain.metas + (self.variable_x, self.variable_y)
-        domain = Domain(attributes=domain.attributes, class_vars=domain.class_vars, metas=new_metas)
-        valid_mask = self.plotdata.valid_mask
-        array = np.zeros((len(self.data), 2), dtype=np.float)
-        array[valid_mask] = self.plotdata.embedding_coords
-        self.plotdata.data = data = self.data.transform(domain)
-        data[:, self.variable_x] = array[:, 0].reshape(-1, 1)
-        data[:, self.variable_y] = array[:, 1].reshape(-1, 1)
-        subset_data = data[self._subset_mask & valid_mask]\
-            if self._subset_mask is not None and len(self._subset_mask) else None
-        self.plotdata.data = data
-        self.graph.new_data(data[valid_mask], subset_data)
-        if self._selection is not None:
-            self.graph.selection = self._selection[valid_mask]
-        self.graph.update_data(self.variable_x, self.variable_y, False)
+            self.variables = [var for var in self.data.domain.attributes
+                              if var.is_continuous]
 
     def _get_lda(self, data, variables):
-        domain = Domain(attributes=variables, class_vars=data.domain.class_vars)
-        data = data.transform(domain)
+        data = data.transform(Domain(variables, data.domain.class_vars))
         lda = LinearDiscriminantAnalysis(solver='eigen', n_components=2)
         lda.fit(data.X, data.Y)
         scalings = lda.scalings_[:, :2].T
@@ -747,16 +550,11 @@ class OWLinearProjection(widget.OWWidget):
         return scalings
 
     def _get_pca(self):
-        data = self.data
-        MAX_COMPONENTS = 2
-        ncomponents = 2
-        DECOMPOSITIONS = [PCA]  # TruncatedSVD
-        cls = DECOMPOSITIONS[0]
-        pca_projector = cls(n_components=MAX_COMPONENTS)
-        pca_projector.component = ncomponents
-        pca_projector.preprocessors = cls.preprocessors + [Normalize()]
+        pca_projector = PCA(n_components=2)
+        pca_projector.component = 2
+        pca_projector.preprocessors = PCA.preprocessors + [Normalize()]
 
-        pca = pca_projector(data)
+        pca = pca_projector(self.data)
         variance_ratio = pca.explained_variance_ratio_
         cumulative = np.cumsum(variance_ratio)
 
@@ -764,108 +562,62 @@ class OWLinearProjection(widget.OWWidget):
         if not np.isfinite(cumulative[-1]):
             self.Warning.trivial_components()
 
-        coords = pca(data).X
+        coords = pca(self.data).X
         valid_mask = ~np.isnan(coords).any(axis=1)
         # scale axes
-        max_radius = np.min([np.abs(np.min(coords, axis=0)), np.max(coords, axis=0)])
+        max_radius = np.min([np.abs(np.min(coords, axis=0)),
+                             np.max(coords, axis=0)])
         axes = pca.components_.T.copy()
         axes *= max_radius / np.max(np.linalg.norm(axes, axis=1))
         return valid_mask, coords, axes
 
-    def _update_graph(self, reset_view=False):
-        self.graph.zoomStack = []
-        if self.graph.data is None:
-            return
-        self.graph.update_data(self.variable_x, self.variable_y, reset_view)
-
-    def update_density(self):
-        self._update_graph(reset_view=False)
-
-    def selection_changed(self):
-        if self.graph.selection is not None:
-            self._selection = np.zeros(len(self.data), dtype=np.uint8)
-            self._selection[self.plotdata.valid_mask] = self.graph.selection
-            self.selection_indices = self._selection.tolist()
-        else:
-            self._selection = self.selection_indices = None
-        self.commit()
-
-    def prepare_data(self):
-        pass
-
-    def commit(self):
-        def prepare_components():
+    def send_components(self):
+        components = None
+        if self.data is not None and self.valid_data is not None and \
+                self.projection is not None:
             if self.placement in [self.Placement.Circular, self.Placement.LDA]:
-                attrs = [a for a in self.model_selected[:]]
-                axes = self.plotdata.axes
+                axes = self.projection
+                attrs = self.model_selected
             elif self.placement == self.Placement.PCA:
                 axes = self._pca.components_.T
-                attrs = [a for a in self._pca.orig_domain.attributes]
+                attrs = self._pca.orig_domain.attributes
             if self.placement != self.Placement.Projection:
-                domain = Domain([ContinuousVariable(a.name, compute_value=lambda _: None)
-                                 for a in attrs],
-                                metas=[StringVariable(name='component')])
-                metas = np.array([["{}{}".format(self.Component_name[self.placement], i + 1)
-                                   for i in range(axes.shape[1])]],
-                                 dtype=object).T
-                components = Table(domain, axes.T, metas=metas)
-                components.name = 'components'
+                meta_attrs = [StringVariable(name='component')]
+                metas = np.array(
+                    [["{}{}".format(self.Component_name[self.placement], i + 1)
+                      for i in range(axes.shape[1])]], dtype=object).T
+                components = Table(Domain(attrs, metas=meta_attrs),
+                                   axes.T, metas=metas)
+                components.name = self.data.name
             else:
-                components = self.projection
-            return components
-
-        selected = annotated = components = None
-        if self.data is not None and self.plotdata.data is not None:
-            components = prepare_components()
-
-            graph = self.graph
-            mask = self.plotdata.valid_mask.astype(int)
-            mask[mask == 1] = graph.selection if graph.selection is not None \
-            else [False * len(mask)]
-
-            selection = np.array([], dtype=np.uint8) if mask is None else np.flatnonzero(mask)
-            name = self.data.name
-            data = self.plotdata.data
-            if len(selection):
-                selected = data[selection]
-                selected.name = name + ": selected"
-                selected.attributes = self.data.attributes
-
-            if graph.selection is not None and np.max(graph.selection) > 1:
-                annotated = create_groups_table(data, mask)
-            else:
-                annotated = create_annotated_table(data, selection)
-            annotated.attributes = self.data.attributes
-            annotated.name = name + ": annotated"
-
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
+                components = self.projection_input
         self.Outputs.components.send(components)
 
-    def send_report(self):
-        if self.data is None:
-            return
+    def _get_projection_variables(self):
+        pn = self.Variable_name[self.placement]
+        self.embedding_variables_names = ("{}-x".format(pn), "{}-y".format(pn))
+        return super()._get_projection_variables()
 
-        def name(var):
-            return var and var.name
-
+    def _get_send_report_caption(self):
         def projection_name():
-            name = ("Circular Placement",
-                    "Linear Discriminant Analysis",
-                    "Principal Component Analysis",
-                    "Input projection")
-            return name[self.placement]
+            return self.Projection_name[self.placement]
 
-        caption = report.render_items_vert((
+        return report.render_items_vert((
             ("Projection", projection_name()),
-            ("Color", name(self.graph.attr_color)),
-            ("Label", name(self.graph.attr_label)),
-            ("Shape", name(self.graph.attr_shape)),
-            ("Size", name(self.graph.attr_size)),
-            ("Jittering", self.graph.jitter_size != 0 and "{} %".format(self.graph.jitter_size))))
-        self.report_plot()
-        if caption:
-            self.report_caption(caption)
+            ("Color", self._get_caption_var_name(self.attr_color)),
+            ("Label", self._get_caption_var_name(self.attr_label)),
+            ("Shape", self._get_caption_var_name(self.attr_shape)),
+            ("Size", self._get_caption_var_name(self.attr_size)),
+            ("Jittering", self.graph.jitter_size != 0 and
+             "{} %".format(self.graph.jitter_size))))
+
+    def clear(self):
+        self.variables = None
+        if self.model_selected:
+            self.model_selected.clear()
+        if self.model_other:
+            self.model_other.clear()
+        super().clear()
 
     @classmethod
     def migrate_settings(cls, settings_, version):
@@ -878,6 +630,14 @@ class OWLinearProjection(widget.OWWidget):
             settings_graph["alpha_value"] = settings_["alpha_value"]
             settings_graph["class_density"] = settings_["class_density"]
             settings_["graph"] = settings_graph
+        if version < 4:
+            if "radius" in settings_:
+                settings_["graph"]["hide_radius"] = settings_["radius"]
+            if "selection_indices" in settings_ and \
+                    settings_["selection_indices"] is not None:
+                selection = settings_["selection_indices"]
+                settings_["selection"] = [(i, 1) for i, selected in
+                                          enumerate(selection) if selected]
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -897,6 +657,12 @@ class OWLinearProjection(widget.OWWidget):
                 "attr_shape": context.values["attr_shape"],
                 "attr_size": context.values["attr_size"]
             }
+        if version == 3:
+            values = context.values
+            values["attr_color"] = values["graph"]["attr_color"]
+            values["attr_size"] = values["graph"]["attr_size"]
+            values["attr_shape"] = values["graph"]["attr_shape"]
+            values["attr_label"] = values["graph"]["attr_label"]
 
 
 def column_data(table, var, dtype):
@@ -937,6 +703,7 @@ class LinProj:
     def project(axes, X):
         return np.dot(axes, X)
 
+
 def normalized(a):
     if not a.size:
         return a.copy()
@@ -950,7 +717,6 @@ def normalized(a):
 
 def main(argv=None):
     import sys
-    import sip
 
     argv = sys.argv[1:] if argv is None else argv
     if argv:
@@ -967,12 +733,10 @@ def main(argv=None):
     w.handleNewSignals()
     w.show()
     w.raise_()
-    r = app.exec()
+    app.exec()
     w.set_data(None)
     w.saveSettings()
-    sip.delete(w)
     del w
-    return r
 
 
 if __name__ == "__main__":

@@ -8,22 +8,16 @@ from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 
-from Orange.data import ContinuousVariable, Domain, Table, Variable
+from Orange.data import ContinuousVariable, Domain, Table
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
 
-from Orange.widgets import gui, settings, report
+from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
-from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.visualize.owscatterplotgraph import (
-    OWScatterPlotBase, OWProjectionWidget
-)
-from Orange.widgets.widget import Msg, OWWidget, Input, Output
-from Orange.widgets.utils.annotated_data import (
-    ANNOTATED_DATA_SIGNAL_NAME, create_annotated_table, create_groups_table,
-    get_unique_names
-)
+from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
+from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
+from Orange.widgets.widget import Msg, OWWidget, Input
 
 
 def stress(X, distD):
@@ -110,21 +104,15 @@ class OWMDSGraph(OWScatterPlotBase):
         self.plot_widget.addItem(self.pairs_curve)
 
 
-class OWMDS(OWProjectionWidget):
+class OWMDS(OWDataProjectionWidget):
     name = "MDS"
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
     icon = "icons/MDS.svg"
     keywords = ["multidimensional scaling", "multi dimensional scaling"]
 
-    class Inputs:
-        data = Input("Data", Table, default=True)
+    class Inputs(OWDataProjectionWidget.Inputs):
         distances = Input("Distances", DistMatrix)
-        data_subset = Input("Data Subset", Table)
-
-    class Outputs:
-        selected_data = Output("Selected Data", Table, default=True)
-        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settings_version = 3
 
@@ -144,18 +132,15 @@ class OWMDS(OWProjectionWidget):
     #: Runtime state
     Running, Finished, Waiting = 1, 2, 3
 
-    settingsHandler = settings.DomainContextHandler()
-
     max_iter = settings.Setting(300)
     initialization = settings.Setting(PCA)
     refresh_rate = settings.Setting(3)
 
-    auto_commit = settings.Setting(True)
-
+    GRAPH_CLASS = OWMDSGraph
     graph = SettingProvider(OWMDSGraph)
-    graph_name = "graph.plot_widget.plotItem"
+    embedding_variables_names = ("mds-x", "mds-y")
 
-    class Error(OWWidget.Error):
+    class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
         matrix_too_small = Msg("Input matrix must be at least 2x2")
         no_attributes = Msg("Data has no attributes")
@@ -168,15 +153,13 @@ class OWMDS(OWProjectionWidget):
         super().__init__()
         #: Input dissimilarity matrix
         self.matrix = None  # type: Optional[DistMatrix]
-        #: Input subset data table
-        self.subset_data = None  # type: Optional[Table]
         #: Data table from the `self.matrix.row_items` (if present)
         self.matrix_data = None  # type: Optional[Table]
         #: Input data table
         self.signal_data = None
 
-        self._subset_mask = None  # type: Optional[np.ndarray]
         self._invalidated = False
+        self.embedding = None
         self.effective_matrix = None
 
         self.__update_loop = None
@@ -186,13 +169,24 @@ class OWMDS(OWProjectionWidget):
         self.__state = OWMDS.Waiting
         self.__in_next_step = False
 
-        box = gui.vBox(self.mainArea, True, margin=0)
-        self.graph = OWMDSGraph(self, box)
         self.graph.pause_drawing_pairs()
-        box.layout().addWidget(self.graph.plot_widget)
-        self.plot = self.graph.plot_widget
-        g = self.graph.gui
 
+        g = self.graph.gui
+        self.size_model = g.points_models[2]
+        self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
+                                g.points_models[2].order[1:]
+        # self._initialize()
+
+    def _add_controls(self):
+        self._add_controls_optimization()
+        super()._add_controls()
+        self.graph.gui.add_control(
+            self._effects_box, gui.hSlider, "Show similar pairs:",
+            master=self.graph, value="connected_pairs", minValue=0,
+            maxValue=20, createLabel=False, callback=self._on_connected_changed
+        )
+
+    def _add_controls_optimization(self):
         box = gui.vBox(self.controlArea, box=True)
         self.runbutton = gui.button(box, self, "Run optimization",
                                     callback=self._toggle_run)
@@ -205,31 +199,6 @@ class OWMDS(OWProjectionWidget):
         gui.button(hbox, self, "Randomize", callback=self.do_random)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter)
 
-        g.point_properties_box(self.controlArea)
-        box = g.effects_box(self.controlArea)
-        g.add_control(box, gui.hSlider, "Show similar pairs:",
-            master=self.graph, value="connected_pairs",
-            minValue=0, maxValue=20, createLabel=False,
-            callback=self._on_connected_changed
-        )
-        g.plot_properties_box(self.controlArea)
-
-        self.size_model = g.points_models[2]
-        self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
-                                g.points_models[2].order[1:]
-
-        self.controlArea.layout().addStretch(100)
-        self.graph.box_zoom_select(self.controlArea)
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
-
-        self._initialize()
-
-    def selection_changed(self):
-        self.commit()
-
-    @Inputs.data
-    @check_sql_input
     def set_data(self, data):
         """Set the input dataset.
 
@@ -249,6 +218,7 @@ class OWMDS(OWProjectionWidget):
                 len(self.matrix) == len(data):
             self.closeContext()
             self.data = data
+            self.init_attr_values()
             self.openContext(data)
         else:
             self._invalidated = True
@@ -272,34 +242,21 @@ class OWMDS(OWProjectionWidget):
         self.matrix_data = matrix.row_items if matrix is not None else None
         self._invalidated = True
 
-    @Inputs.data_subset
-    def set_subset_data(self, subset_data):
-        """Set a subset of `data` input to highlight in the plot.
-
-        Parameters
-        ----------
-        subset_data: Optional[Table]
-        """
-        self.subset_data = subset_data
-        # invalidate the pen/brush when the subset is changed
-        self._subset_mask = None  # type: Optional[np.ndarray]
-        self.controls.graph.alpha_value.setEnabled(subset_data is None)
-
-    def _clear(self):
+    def clear(self):
+        super().clear()
+        self.embedding = None
+        self.effective_matrix = None
         self.graph.set_effective_matrix(None)
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
 
     def _initialize(self):
-        # clear everything
         self.closeContext()
-        self._clear()
-        self.Error.clear()
-        self.effective_matrix = None
-        self.embedding = None
+        self.clear()
+        self.clear_messages()
 
         # if no data nor matrix is present reset plot
-        if self.signal_data is None and self.matrix_data is None:
+        if self.signal_data is None and self.matrix is None:
             self.data = None
             self.init_attr_values()
             return
@@ -307,7 +264,7 @@ class OWMDS(OWProjectionWidget):
         if self.signal_data is not None and self.matrix is not None and \
                 len(self.signal_data) != len(self.matrix):
             self.Error.mismatching_dimensions()
-            self._update_plot()
+            self.init_attr_values()
             return
 
         if self.signal_data is not None:
@@ -324,6 +281,7 @@ class OWMDS(OWProjectionWidget):
             self.effective_matrix = Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
+            self.init_attr_values()
             return
 
         self.init_attr_values()
@@ -485,11 +443,12 @@ class OWMDS(OWProjectionWidget):
 
         # reset/invalidate the MDS embedding, to the default initialization
         # (Random or PCA), restarting the optimization if necessary.
-        if self.embedding is None:
-            return
         state = self.__state
         if self.__update_loop is not None:
             self.__set_update_loop(None)
+
+        if self.effective_matrix is None:
+            return
 
         X = self.effective_matrix
 
@@ -501,7 +460,7 @@ class OWMDS(OWProjectionWidget):
             jitter_coord(self.embedding[:, 0])
             jitter_coord(self.embedding[:, 1])
 
-        self._update_plot()
+        self.setup_plot()
 
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
@@ -524,10 +483,11 @@ class OWMDS(OWProjectionWidget):
             self.graph.pause_drawing_pairs()
             self._invalidated = False
             self._initialize()
+            self.__invalidate_embedding()
+            self.cb_class_density.setEnabled(self.can_draw_density())
             self.start()
 
-        self._update_plot()
-        self.unconditional_commit()
+        super().handleNewSignals()
 
     def _invalidate_output(self):
         self.commit()
@@ -536,8 +496,8 @@ class OWMDS(OWProjectionWidget):
         self.graph.set_effective_matrix(self.effective_matrix)
         self.graph.update_pairs(reconnect=True)
 
-    def _update_plot(self):
-        self.graph.reset_graph()
+    def setup_plot(self):
+        super().setup_plot()
         if self.embedding is not None:
             self.graph.update_pairs(reconnect=True)
 
@@ -547,64 +507,20 @@ class OWMDS(OWProjectionWidget):
         else:
             return super().get_size_data()
 
-    def get_coordinates_data(self):
-        return self.embedding.T if self.embedding is not None else (None, None)
+    def get_embedding(self):
+        self.valid_data = np.ones(len(self.embedding), dtype=bool) \
+            if self.embedding is not None else None
+        return self.embedding
 
-    def get_subset_mask(self):
-        if self.data is not None and self.subset_data is not None:
-            return np.in1d(self.data.ids, self.subset_data.ids)
+    def _get_projection_data(self):
+        if self.embedding is None:
+            return None
 
-    def commit(self):
-        if self.embedding is not None:
-            names = get_unique_names([v.name for v in self.data.domain.variables],
-                                     ["mds-x", "mds-y"])
-            domain = Domain([ContinuousVariable(names[0]),
-                             ContinuousVariable(names[1])])
-            output = embedding = Table.from_numpy(domain, self.embedding)
-        else:
-            output = embedding = None
-
-        if self.embedding is not None and self.data is not None:
-            domain = self.data.domain
-            domain = Domain(domain.attributes, domain.class_vars,
-                            domain.metas + embedding.domain.attributes)
-            output = self.data.transform(domain)
-            output.metas[:, -2:] = embedding.X
-
-        selection = self.graph.get_selection()
-        if output is not None and len(selection) > 0:
-            selected = output[selection]
-        else:
-            selected = None
-        if self.graph.selection is not None and np.max(self.graph.selection) > 1:
-            annotated = create_groups_table(output, self.graph.selection)
-        else:
-            annotated = create_annotated_table(output, selection)
-        self.Outputs.selected_data.send(selected)
-        self.Outputs.annotated_data.send(annotated)
-
-    def onDeleteWidget(self):
-        super().onDeleteWidget()
-        self.graph.clear()
-        self._clear()
-
-    def send_report(self):
         if self.data is None:
-            return
-
-        def name(var):
-            return var.name if isinstance(var, Variable) else var
-
-        caption = report.render_items_vert((
-            ("Color", name(self.attr_color)),
-            ("Label", name(self.attr_label)),
-            ("Shape", name(self.attr_shape)),
-            ("Size", name(self.attr_size)),
-            ("Jittering", self.graph.jitter_size != 0 and "{} %".format(
-                self.graph.jitter_size))))
-        self.report_plot()
-        if caption:
-            self.report_caption(caption)
+            x_name, y_name = self.embedding_variables_names
+            variables = ContinuousVariable(x_name), ContinuousVariable(y_name)
+            return Table(Domain(variables), self.embedding)
+        return super()._get_projection_data()
 
     @classmethod
     def migrate_settings(cls, settings_, version):
@@ -683,6 +599,7 @@ def main(argv=None):
     gc.collect()
     app.processEvents()
     return rval
+
 
 if __name__ == "__main__":
     sys.exit(main())
