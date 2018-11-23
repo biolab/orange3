@@ -2,6 +2,7 @@ import os
 import logging
 from warnings import catch_warnings
 from urllib.parse import urlparse
+from typing import List
 
 import numpy as np
 from AnyQt.QtWidgets import \
@@ -51,7 +52,7 @@ class NamedURLModel(PyListModel):
         self.mapping = mapping
         super().__init__()
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
         data = super().data(index, role)
         if role == Qt.DisplayRole:
             return self.mapping.get(data, data)
@@ -91,6 +92,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     settingsHandler = PerfectDomainContextHandler(
         match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
     )
+
+    # pylint seems to want declarations separated from definitions
+    recent_paths: List[RecentPath]
+    recent_urls: List[str]
+    variables: list
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
     recent_paths = Setting([
@@ -309,10 +315,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             assert self.reader is not None
         except Exception:
             return self.Error.missing_reader
-        
+
         if self.reader is self.NoFileSelected:
             self.Outputs.data.send(None)
-            return
+            return None
 
         try:
             self._update_sheet_combo()
@@ -335,6 +341,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
+        return None
 
     def _get_reader(self):
         """
@@ -356,7 +363,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
-        elif self.source == self.URL:
+        else:
             url = self.url_combo.currentText().strip()
             if url:
                 return UrlReader(url)
@@ -503,7 +510,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.update_file_list(key, value, oldvalue)
 
 
-if __name__ == "__main__":
+def main():
     import sys
     from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
@@ -511,3 +518,6 @@ if __name__ == "__main__":
     ow.show()
     a.exec_()
     ow.saveSettings()
+
+if __name__ == "__main__":
+    main()
