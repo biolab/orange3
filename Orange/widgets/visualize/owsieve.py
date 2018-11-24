@@ -15,7 +15,7 @@ from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
-from Orange.widgets.utils import to_html as to_html
+from Orange.widgets.utils import to_html
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel

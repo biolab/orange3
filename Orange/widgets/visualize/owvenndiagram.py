@@ -24,7 +24,7 @@ from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
-import Orange.statistics.util as util
+from Orange.statistics import util
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,

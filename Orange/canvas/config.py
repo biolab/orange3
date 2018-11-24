@@ -6,7 +6,6 @@ Orange Canvas Configuration
 import os
 import sys
 import logging
-import pickle as pickle
 import itertools
 import warnings
 

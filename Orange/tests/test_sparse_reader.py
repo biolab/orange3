@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-import Orange.data._io as _io
+from Orange.data import _io
 
 
 simple_file = """\
