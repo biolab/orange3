@@ -1,11 +1,12 @@
+import fastTSNE.initialization
 import numpy as np
-
 from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.projection import PCA, TSNE
+from Orange.projection.manifold import TSNEModel
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -14,15 +15,43 @@ from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Output
 
 
-def compute_tsne(data, perplexity, iter, init):
-    negative_gradient_method = 'fft' if len(data.X) > 10000 else 'bh'
-    neighbor_method = 'approx' if len(data.X) > 10000 else 'exact'
-    tsne = TSNE(
-        perplexity=perplexity, n_iter=iter, initialization=init, theta=.8,
-        early_exaggeration_iter=0, negative_gradient_method=negative_gradient_method,
-        neighbors=neighbor_method, random_state=0
-    )
-    return tsne(data)
+class TSNERunner:
+    def __init__(self, tsne: TSNEModel, step_size=50):
+        self.embedding = tsne
+        self.iterations_done = 0
+        self.step_size = step_size
+
+        # Larger data sets need a larger number of iterations
+        if self.n_samples > 100_000:
+            self.early_exagg_iter, self.n_iter = 500, 1000
+        else:
+            self.early_exagg_iter, self.n_iter = 250, 750
+
+    @property
+    def n_samples(self):
+        return self.embedding.embedding_.shape[0]
+
+    def run_optimization(self):
+        total_iterations = self.early_exagg_iter + self.n_iter
+
+        # Default values of early exaggeration phase
+        exaggeration, momentum = 12, 0.5
+
+        current_iter = self.iterations_done
+        while not current_iter >= total_iterations:
+            # Switch to normal regime if early exaggeration phase is over
+            if current_iter >= self.early_exagg_iter:
+                exaggeration, momentum = 1, 0.8
+
+            # Resume optimization for some number of steps
+            self.embedding.optimize(
+                self.step_size, inplace=True, exaggeration=exaggeration,
+                momentum=momentum,
+            )
+
+            current_iter += self.step_size
+
+            yield self.embedding, current_iter / total_iterations
 
 
 class OWtSNEGraph(OWScatterPlotBase):
@@ -42,6 +71,8 @@ class OWtSNE(OWDataProjectionWidget):
     settings_version = 3
     max_iter = Setting(300)
     perplexity = Setting(30)
+    multiscale = Setting(False)
+    exaggeration = Setting(1)
     pca_components = Setting(20)
 
     GRAPH_CLASS = OWtSNEGraph
@@ -66,6 +97,8 @@ class OWtSNE(OWDataProjectionWidget):
         super().__init__()
         self.pca_data = None
         self.projection = None
+        self.tsne_runner = None
+        self.__invalidated = True
         self.__update_loop = None
         # timer for scheduling updates
         self.__timer = QTimer(self, singleShot=True, interval=1,
@@ -91,25 +124,32 @@ class OWtSNE(OWDataProjectionWidget):
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            verticalSpacing=10
+            verticalSpacing=10,
         )
 
-        form.addRow(
-            "Max iterations:",
-            gui.spin(box, self, "max_iter", 1, 2000, step=50))
+        self.perplexity_spin = gui.spin(
+            box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight)
+        form.addRow("Perplexity:", self.perplexity_spin)
+        form.addRow(gui.checkBox(
+            box, self, "multiscale", label="Preserve global structure",
+        ))
 
-        form.addRow(
-            "Perplexity:",
-            gui.spin(box, self, "perplexity", 1, 100, step=1))
+        form.addRow("Exaggeration:", gui.hSlider(
+            box, self, "exaggeration", createLabel=False, minValue=1, maxValue=4,
+            step=1))
+        form.addRow("PCA components:", gui.hSlider(
+            box, self, "pca_components", createLabel=False, minValue=2, maxValue=50,
+            step=1))
 
         box.layout().addLayout(form)
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
 
-        gui.separator(box, 10)
-        gui.hSlider(box, self, "pca_components", label="PCA components:",
-                    minValue=2, maxValue=50, step=1)
+    def set_data(self, data):
+        self.__invalidated = not (self.data and data and
+                                  np.array_equal(self.data.X, data.X))
+        super().set_data(data)
 
     def check_data(self):
         def error(err):
@@ -167,28 +207,35 @@ class OWtSNE(OWDataProjectionWidget):
 
     def __start(self):
         self.pca_preprocessing()
-        initial = 'random' if self.projection is None \
-            else self.projection.embedding.X
-        step_size = 50
 
-        def update_loop(data, max_iter, step, embedding):
-            # NOTE: this code MUST NOT call into QApplication.processEvents
-            done = False
-            iterations_done = 0
+        # We call PCA through fastTSNE because it involves scaling. Instead of
+        # worrying about this ourselves, we'll let the library worry for us.
+        initialization = fastTSNE.initialization.pca(
+            self.pca_data.X, n_components=2, random_state=0)
 
-            while not done:
-                step_iter = min(max_iter - iterations_done, step)
-                projection = compute_tsne(
-                    data, self.perplexity, step_iter, embedding)
-                embedding = projection.embedding.X
-                iterations_done += step_iter
-                if iterations_done >= max_iter:
-                    done = True
+        # Compute perplexity settings for multiscale
+        n_samples = self.pca_data.X.shape[0]
+        if self.multiscale:
+            perplexity = min((n_samples - 1) / 3, 50), min((n_samples - 1) / 3, 500)
+        else:
+            perplexity = self.perplexity
 
-                yield projection, iterations_done / max_iter
+        # Determine whether to use settings for large data sets
+        if n_samples > 10_000:
+            neighbor_method, gradient_method = "approx", "fft"
+        else:
+            neighbor_method, gradient_method = "exact", "bh"
 
-        self.__set_update_loop(update_loop(
-            self.pca_data, self.max_iter, step_size, initial))
+        # Set number of iterations to 0 - these will be run subsequently
+        self.projection = TSNE(
+            n_components=2, perplexity=perplexity, multiscale=self.multiscale,
+            early_exaggeration_iter=0, n_iter=0, initialization=initialization,
+            neighbors=neighbor_method, negative_gradient_method=gradient_method,
+        )(self.pca_data)
+
+        self.tsne_runner = TSNERunner(self.projection, step_size=50)
+
+        self.__set_update_loop(self.tsne_runner.run_optimization())
         self.progressBarInit(processEvents=None)
 
     def __set_update_loop(self, loop):
