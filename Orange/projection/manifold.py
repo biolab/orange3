@@ -1,4 +1,5 @@
 import warnings
+from collections import Iterable
 
 import numpy as np
 import sklearn.manifold as skl_manifold
@@ -7,6 +8,8 @@ from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
 
 import fastTSNE
+import fastTSNE.affinity
+import fastTSNE.initialization
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
@@ -183,7 +186,7 @@ class SpectralEmbedding(SklProjector):
 
 
 class TSNEModel(Projection):
-    """A tSNE embedding object. Supports further optimization as well as
+    """A t-SNE embedding object. Supports further optimization as well as
     adding new data into the existing embedding.
 
     Attributes
@@ -215,8 +218,8 @@ class TSNEModel(Projection):
     def transform(self, X: np.ndarray, **kwargs) -> fastTSNE.PartialTSNEEmbedding:
         if sp.issparse(X):
             raise TypeError(
-                'A sparse matrix was passed, but dense data is required. Use '
-                'X.toarray() to convert to a dense numpy array.'
+                "A sparse matrix was passed, but dense data is required. Use "
+                "X.toarray() to convert to a dense numpy array."
             )
         return self.embedding_.transform(X, **kwargs)
 
@@ -230,8 +233,8 @@ class TSNEModel(Projection):
 
     def optimize(self, n_iter, inplace=False, propagate_exception=False, **kwargs):
         """Resume optimization for the current embedding."""
-        kwargs = {'n_iter': n_iter, 'inplace': inplace,
-                  'propagate_exception': propagate_exception, **kwargs}
+        kwargs = {"n_iter": n_iter, "inplace": inplace,
+                  "propagate_exception": propagate_exception, **kwargs}
         if inplace:
             self.embedding_.optimize(**kwargs)
             return self
@@ -252,8 +255,11 @@ class TSNE(Projector):
         The number of embedding that the embedding should contain. Note that
         only up to two dimensions are supported as otherwise the process can
         become prohibitively expensive.
-    perplexity : float
-        The desired perplexity of the probability distribution.
+    perplexity : Union[float, List[float]]
+        The desired perplexity of the probability distribution. If using
+        `multiscale` option, this must be a list of perplexities. The most
+        typical multiscale case consists a small perplexity ~50 and a higher
+        perplexity on the order ~N/50.
     learning_rate : float
         The learning rate for t-SNE. Typical values range from 1 to 1000.
         Setting the learning rate too high will result in the crowding problem
@@ -312,6 +318,12 @@ class TSNE(Projector):
         BH tends to be faster for smaller data sets but scales as O(n log n)
         while FItSNE is faster for larger data sets and scales linearly in the
         number of points.
+    multiscale : bool
+        If this option is set to true, the multiscale version of t-SNE will be
+        run. Please note that this can take a substantially longer time than
+        the default t-SNE. Also note that if this option is set, `perplexity`
+        must be a list of perplexities to use, as opposed to the single
+        perplexity value otherwise.
     callbacks : Callable[[int, float, np.ndarray] -> bool]
         The callback should accept three parameters, the first is the current
         iteration, the second is the current KL divergence error and the last
@@ -331,39 +343,117 @@ class TSNE(Projector):
     preprocessors
 
     """
-    name = 't-SNE'
+    name = "t-SNE"
     preprocessors = [
         Orange.preprocess.Continuize(),
         Orange.preprocess.SklImpute(),
     ]
 
-    def __init__(self, n_components=2, perplexity=30, learning_rate=200,
-                 early_exaggeration_iter=250, early_exaggeration=12,
-                 n_iter=750, exaggeration=None, theta=0.5, min_num_intervals=10,
-                 ints_in_interval=1, initialization='random', metric='euclidean',
-                 n_jobs=1, neighbors='exact', negative_gradient_method='bh',
-                 callbacks=None, callbacks_every_iters=50,
-                 random_state=None, preprocessors=None):
+    def __init__(
+        self,
+        n_components=2,
+        perplexity=30,
+        learning_rate=200,
+        early_exaggeration_iter=250,
+        early_exaggeration=12,
+        n_iter=750,
+        exaggeration=None,
+        theta=0.5,
+        min_num_intervals=10,
+        ints_in_interval=1,
+        initialization="random",
+        metric="euclidean",
+        n_jobs=1,
+        neighbors="exact",
+        negative_gradient_method="bh",
+        multiscale=False,
+        callbacks=None,
+        callbacks_every_iters=50,
+        random_state=None,
+        preprocessors=None,
+    ):
         super().__init__(preprocessors=preprocessors)
-        self.tsne = fastTSNE.TSNE(
-            n_components=n_components, perplexity=perplexity,
-            learning_rate=learning_rate, early_exaggeration=early_exaggeration,
-            early_exaggeration_iter=early_exaggeration_iter, n_iter=n_iter,
-            exaggeration=exaggeration, theta=theta, min_num_intervals=min_num_intervals,
-            ints_in_interval=ints_in_interval, initialization=initialization,
-            metric=metric, n_jobs=n_jobs, neighbors=neighbors,
-            negative_gradient_method=negative_gradient_method,
-            callbacks=callbacks, callbacks_every_iters=callbacks_every_iters,
-            random_state=random_state
-        )
+        self.n_components = n_components
+        self.perplexity = perplexity
+        self.learning_rate = learning_rate
+        self.early_exaggeration = early_exaggeration
+        self.early_exaggeration_iter = early_exaggeration_iter
+        self.n_iter = n_iter
+        self.exaggeration = exaggeration
+        self.theta = theta
+        self.min_num_intervals = min_num_intervals
+        self.ints_in_interval = ints_in_interval
+        self.initialization = initialization
+        self.metric = metric
+        self.n_jobs = n_jobs
+        self.neighbors = neighbors
+        self.negative_gradient_method = negative_gradient_method
+        self.multiscale = multiscale
+        self.callbacks = callbacks
+        self.callbacks_every_iters = callbacks_every_iters
+        self.random_state = random_state
 
     def fit(self, X: np.ndarray, Y: np.ndarray = None) -> fastTSNE.TSNEEmbedding:
+        # Sparse data are not supported
         if sp.issparse(X):
             raise TypeError(
-                'A sparse matrix was passed, but dense data is required. Use '
-                'X.toarray() to convert to a dense numpy array.'
+                "A sparse matrix was passed, but dense data is required. Use "
+                "X.toarray() to convert to a dense numpy array."
             )
-        return self.tsne.fit(X)
+
+        # Build up the affinity matrix, using multiscale if needed
+        if self.multiscale:
+            # The local perplexity should be on the order ~50 while the higher
+            # perplexity should be on the order ~N/50
+            if not isinstance(self.perplexity, Iterable):
+                raise ValueError(
+                    "Perplexity should be an instance of `Iterable`, `%s` "
+                    "given." % type(self.perplexity).__name__)
+            affinities = fastTSNE.affinity.Multiscale(
+                X, perplexities=self.perplexity, metric=self.metric,
+                method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
+        else:
+            if isinstance(self.perplexity, Iterable):
+                raise ValueError(
+                    "Perplexity should be an instance of `float`, `%s` "
+                    "given." % type(self.perplexity).__name__)
+            affinities = fastTSNE.affinity.PerplexityBasedNN(
+                X, perplexity=self.perplexity, metric=self.metric,
+                method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
+
+        # Create an initial embedding
+        if isinstance(self.initialization, np.ndarray):
+            initialization = self.initialization
+        elif self.initialization == "pca":
+            initialization = fastTSNE.initialization.pca(
+                X, self.n_components, random_state=self.random_state)
+        elif self.initialization == "random":
+            initialization = fastTSNE.initialization.random(
+                X.shape[0], self.n_components, random_state=self.random_state)
+        else:
+            raise ValueError(
+                "Invalid initialization `%s`. Please use either `pca` or "
+                "`random` or provide a numpy array." % self.initialization)
+
+        embedding = fastTSNE.TSNEEmbedding(
+            initialization, affinities, learning_rate=self.learning_rate,
+            theta=self.theta, min_num_intervals=self.min_num_intervals,
+            ints_in_interval=self.ints_in_interval, n_jobs=self.n_jobs,
+            negative_gradient_method=self.negative_gradient_method,
+            callbacks=self.callbacks, callbacks_every_iters=self.callbacks_every_iters,
+        )
+
+        # Run standard t-SNE optimization
+        embedding.optimize(
+            n_iter=self.early_exaggeration_iter, exaggeration=self.early_exaggeration,
+            inplace=True, momentum=0.5, propagate_exception=True,
+        )
+        embedding.optimize(
+            n_iter=self.n_iter, exaggeration=self.exaggeration,
+            inplace=True, momentum=0.8, propagate_exception=True,
+        )
+
+        return embedding
 
     def __call__(self, data: Table) -> TSNEModel:
         # Preprocess the data - convert discrete to continuous
@@ -374,9 +464,9 @@ class TSNE(Projector):
 
         # The results should be accessible in an Orange table, which doesn't
         # need the full embedding attributes and is cast into a regular array
-        n = self.tsne.n_components
-        postfixes = ['x', 'y'] if n == 2 else list(range(1, n + 1))
-        tsne_cols = [ContinuousVariable(f't-SNE-{p}') for p in postfixes]
+        n = self.n_components
+        postfixes = ["x", "y"] if n == 2 else list(range(1, n + 1))
+        tsne_cols = [ContinuousVariable(f"t-SNE-{p}") for p in postfixes]
         embedding_domain = Domain(tsne_cols, data.domain.class_vars, data.domain.metas)
         embedding_table = Table(embedding_domain, embedding.view(np.ndarray), data.Y, data.metas)
 
