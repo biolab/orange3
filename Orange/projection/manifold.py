@@ -361,7 +361,7 @@ class TSNE(Projector):
         theta=0.5,
         min_num_intervals=10,
         ints_in_interval=1,
-        initialization="random",
+        initialization="pca",
         metric="euclidean",
         n_jobs=1,
         neighbors="exact",
