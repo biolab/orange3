@@ -1073,11 +1073,11 @@ class Table(MutableSequence, Storage):
         """Return `True` if there are any missing class values."""
         return bn.anynan(self._Y)
 
-    def get_nan_percentile_attribute(self):
-        return np.isnan(self.X).sum() / self.X.size * 100
+    def get_nan_frequency_attribute(self):
+        return np.isnan(self.X).sum() / self.X.size
 
-    def get_nan_percentile_class(self):
-        return np.isnan(self._Y).sum() / self._Y.size * 100
+    def get_nan_frequency_class(self):
+        return np.isnan(self._Y).sum() / self._Y.size
 
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object
