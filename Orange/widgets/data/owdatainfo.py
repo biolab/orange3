@@ -33,61 +33,82 @@ class OWDataInfo(widget.OWWidget):
     def __init__(self):
         super().__init__()
 
-        self.data(None)
-        self.data_set_size = self.features = self.meta_attributes = ""
-        self.location = ""
-        for box in ("Data Set Size", "Features", "Targets", "Meta Attributes",
-                    "Location", "Data Attributes"):
+        self._clear_fields()
+
+        for box in ("Data Set Name", "Data Set Size", "Features", "Targets",
+                    "Meta Attributes", "Location", "Data Attributes"):
             name = box.lower().replace(" ", "_")
             bo = gui.vBox(self.controlArea, box,
                           addSpace=False and box != "Meta Attributes")
             gui.label(bo, self, "%%(%s)s" % name)
 
         # ensure the widget has some decent minimum width.
-        self.targets = "Discrete outcome with 123 values"
+        self.targets = "Categorical outcome with 123 values"
         self.layout().activate()
         # NOTE: The minimum width is set on the 'contained' widget and
         # not `self`. The layout will set a fixed size to `self` taking
         # into account the minimum constraints of the children (it would
         # override any minimum/fixed size set on `self`).
+        self.targets = ""
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
         self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
-        self.targets = ""
-        self.data_attributes = ""
-        self.data_desc = None
 
     @Inputs.data
     def data(self, data):
-        def n_or_none(i):
-            return i or "(none)"
+        if data is None:
+            self._clear_fields()
+        else:
+            self._set_fields(data)
+            self._set_report(data)
 
-        def count(s, tpe):
-            return sum(isinstance(x, tpe) for x in s)
+    def _clear_fields(self):
+        self.data_set_name = ""
+        self.data_set_size = ""
+        self.features = self.targets = self.meta_attributes = ""
+        self.location = ""
+        self.data_desc = None
+        self.data_attributes = ""
+
+    @staticmethod
+    def _count(s, tpe):
+        return sum(isinstance(x, tpe) for x in s)
+
+    def _set_fields(self, data):
+        def n_or_none(n):
+            return n or "-"
 
         def pack_table(info):
             return '<table>\n' + "\n".join(
-                '<tr><td align="right" width="90">%s:</td>\n'
-                '<td width="40">%s</td></tr>\n' % (d, textwrap.shorten(str(v), width=30, placeholder="..."))
+                '<tr><td align="right" width="90">{}:</td>\n'
+                '<td width="40">{}</td></tr>\n'.format(
+                    d,
+                    textwrap.shorten(str(v), width=30, placeholder="..."))
                 for d, v in info
             ) + "</table>\n"
 
-        if data is None:
-            self.data_set_size = "No data"
-            self.features = self.targets = self.meta_attributes = "None"
-            self.location = ""
-            self.data_desc = None
-            self.data_attributes = ""
-            return
+        def pack_counts(s, include_non_primitive=False):
+            if not s:
+                return "None"
+            return pack_table(
+                (name, n_or_none(self._count(s, type_)))
+                for name, type_ in (
+                    ("Categorical", DiscreteVariable),
+                    ("Numeric", ContinuousVariable),
+                    ("Text", StringVariable))[:2 + include_non_primitive]
+            )
+
+        domain = data.domain
+        class_var = domain.class_var
 
         sparseness = [s for s, m in (("features", data.X_density),
                                      ("meta attributes", data.metas_density),
                                      ("targets", data.Y_density)) if m() > 1]
         if sparseness:
-            sparseness = "<p>Sparse representation: %s</p>" % ", ".join(sparseness)
+            sparseness = "<p>Sparse representation: {}</p>"\
+                         .format(", ".join(sparseness))
         else:
             sparseness = ""
-        domain = data.domain
         self.data_set_size = pack_table((
             ("Rows", '~{}'.format(data.approx_len())),
             ("Columns", len(domain)+len(domain.metas)))) + sparseness
@@ -99,56 +120,50 @@ class OWDataInfo(widget.OWWidget):
 
         threading.Thread(target=update_size).start()
 
-        if not domain.attributes:
-            self.features = "None"
-        else:
-            disc_features = count(domain.attributes, DiscreteVariable)
-            cont_features = count(domain.attributes, ContinuousVariable)
-            self.features = pack_table((
-                ("Discrete", n_or_none(disc_features)),
-                ("Numeric", n_or_none(cont_features))
-            ))
+        self.data_set_name = getattr(data, "name", "N/A")
 
-        if not domain.metas:
-            self.meta_attributes = "None"
-        else:
-            disc_metas = count(domain.metas, DiscreteVariable)
-            cont_metas = count(domain.metas, ContinuousVariable)
-            str_metas = count(domain.metas, StringVariable)
-            self.meta_attributes = pack_table((
-                ("Discrete", n_or_none(disc_metas)),
-                ("Numeric", n_or_none(cont_metas)),
-                ("Textual", n_or_none(str_metas))))
-
-        class_var = domain.class_var
+        self.features = pack_counts(domain.attributes)
+        self.meta_attributes = pack_counts(domain.metas, True)
         if class_var:
             if class_var.is_continuous:
                 self.targets = "Numeric target variable"
             else:
-                self.targets = "Discrete outcome with %i values" % \
-                               len(class_var.values)
+                self.targets = "Categorical outcome with {} values"\
+                               .format(len(class_var.values))
         elif domain.class_vars:
-            disc_class = count(domain.class_vars, DiscreteVariable)
-            cont_class = count(domain.class_vars, ContinuousVariable)
+            disc_class = self._count(domain.class_vars, DiscreteVariable)
+            cont_class = self._count(domain.class_vars, ContinuousVariable)
             if not cont_class:
-                self.targets = "Multi-target data,\n%i categorical targets" % \
-                               n_or_none(disc_class)
+                self.targets = "Multi-target data,\n{} categorical targets"\
+                               .format(n_or_none(disc_class))
             elif not disc_class:
-                self.targets = "Multi-target data,\n%i numeric targets" % \
-                               n_or_none(cont_class)
+                self.targets = "Multi-target data,\n{} numeric targets"\
+                               .format(n_or_none(cont_class))
             else:
-                self.targets = "<p>Multi-target data</p>\n" + pack_table(
-                    (("Categorical", disc_class), ("Numeric", cont_class)))
+                self.targets = "<p>Multi-target data</p>\n" + \
+                               pack_counts(domain.class_vars)
+        else:
+            self.targets = "None"
+
+        if data.attributes:
+            self.data_attributes = pack_table(data.attributes.items())
+        else:
+            self.data_attributes = ""
+
+    def _set_report(self, data):
+        domain = data.domain
+        count = self._count
 
         self.data_desc = dd = OrderedDict()
+        dd["Name"] = self.data_set_name
 
         if SqlTable is not None and isinstance(data, SqlTable):
             connection_string = ' '.join(
-                '%s=%s' % (key, value)
+                '{}={}'.format(key, value)
                 for key, value in data.connection_params.items()
                 if value is not None and key != 'password')
-            self.location = "Table '%s', using connection:\n%s" % (
-                data.table_name, connection_string)
+            self.location = "Table '{}', using connection:\n{}"\
+                            .format(data.table_name, connection_string)
             dd["Rows"] = data.approx_len()
         else:
             self.location = "Data is stored in memory"
@@ -157,9 +172,9 @@ class OWDataInfo(widget.OWWidget):
         def join_if(items):
             return ", ".join(s.format(n) for s, n in items if n)
 
-        dd["Features"] = len(domain.attributes) and join_if((
-            ("{} categorical", disc_features),
-            ("{} numeric", cont_features)
+        dd["Features"] = len(domain.attributes) > 0 and join_if((
+            ("{} categorical", count(domain.attributes, DiscreteVariable)),
+            ("{} numeric", count(domain.attributes, ContinuousVariable))
         ))
         if domain.class_var:
             name = domain.class_var.name
@@ -168,21 +183,18 @@ class OWDataInfo(widget.OWWidget):
             else:
                 dd["Target"] = "numeric target '{}'".format(name)
         elif domain.class_vars:
+            disc_class = count(domain.class_vars, DiscreteVariable)
+            cont_class = count(domain.class_vars, ContinuousVariable)
             tt = ""
             if disc_class:
                 tt += report.plural("{number} categorical outcome{s}", disc_class)
             if cont_class:
                 tt += report.plural("{number} numeric target{s}", cont_class)
         dd["Meta attributes"] = len(domain.metas) > 0 and join_if((
-            ("{} categorical", disc_metas),
-            ("{} numeric", cont_metas),
-            ("{} textual", str_metas)
+            ("{} categorical", count(domain.metas, DiscreteVariable)),
+            ("{} numeric", count(domain.metas, ContinuousVariable)),
+            ("{} text", count(domain.metas, StringVariable))
         ))
-
-        if data.attributes:
-            self.data_attributes = pack_table(data.attributes.items())
-        else:
-            self.data_attributes = ""
 
     def send_report(self):
         if self.data_desc:
