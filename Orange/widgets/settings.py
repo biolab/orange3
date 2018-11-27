@@ -1222,7 +1222,7 @@ def rename_setting(settings, old_name, new_name):
         settings[new_name] = settings.pop(old_name)
 
 
-def migrate_str_to_variable(settings, names=None):
+def migrate_str_to_variable(settings, names=None, none_placeholder=None):
     """
     Change variables stored as `(str, int)` to `(Variable, int)`.
 
@@ -1235,6 +1235,8 @@ def migrate_str_to_variable(settings, names=None):
         var, vartype = settings.values[name]
         if 0 <= vartype <= 100:
             settings.values[name] = (var, 100 + vartype)
+        elif var == none_placeholder and vartype == -2:
+            settings.values[name] = None
 
     if names is None:
         for name, setting in settings.values.items():
