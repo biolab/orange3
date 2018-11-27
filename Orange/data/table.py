@@ -1074,9 +1074,13 @@ class Table(MutableSequence, Storage):
         return bn.anynan(self._Y)
 
     def get_nan_frequency_attribute(self):
+        if self.X.size == 0:
+            return 0
         return np.isnan(self.X).sum() / self.X.size
 
     def get_nan_frequency_class(self):
+        if self.Y.size == 0:
+            return 0
         return np.isnan(self._Y).sum() / self._Y.size
 
     def checksum(self, include_metas=True):
