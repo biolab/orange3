@@ -258,7 +258,7 @@ class OWtSNE(OWDataProjectionWidget):
             self.setup_plot()
             self.start()
         else:
-            self.graph.update_coordinates()
+            self.graph.update_point_props()
         self.commit()
 
     def commit(self):
@@ -282,11 +282,12 @@ class OWtSNE(OWDataProjectionWidget):
         self.Outputs.preprocessor.send(prep)
 
     def clear(self):
-        super().clear()
-        self.__set_update_loop(None)
-        self.__state = OWtSNE.Waiting
-        self.pca_data = None
-        self.projection = None
+        if self.__invalidated:
+            super().clear()
+            self.__set_update_loop(None)
+            self.__state = OWtSNE.Waiting
+            self.pca_data = None
+            self.projection = None
 
     @classmethod
     def migrate_settings(cls, settings, version):
