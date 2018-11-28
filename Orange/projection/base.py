@@ -5,7 +5,7 @@ import numpy as np
 
 import Orange.data
 from Orange.base import ReprableWithPreprocessors
-from Orange.data.util import ComputeValueProjector, get_unique_names
+from Orange.data.util import SharedComputeValue, get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import RemoveNaNRows
 import Orange.preprocess
@@ -105,6 +105,17 @@ class TransformDomain:
         if data.domain != self.projection.pre_domain:
             data = data.transform(self.projection.pre_domain)
         return self.projection.transform(data.X)
+
+
+class ComputeValueProjector(SharedComputeValue):
+    def __init__(self, projection, feature, transform):
+        super().__init__(transform)
+        self.projection = projection
+        self.feature = feature
+        self.transformed = None
+
+    def compute(self, data, space):
+        return space[:, self.feature]
 
 
 class DomainProjection(Projection):
