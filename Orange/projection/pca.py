@@ -12,10 +12,11 @@ except ImportError:
 
 import Orange.data
 from Orange.data import Variable
+from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
-from Orange.projection import SklProjector, DomainProjection
 from Orange.preprocess.score import LearnerScorer
+from Orange.projection import SklProjector, DomainProjection
 
 __all__ = ["PCA", "SparsePCA", "IncrementalPCA", "TruncatedSVD"]
 
@@ -69,6 +70,11 @@ class SparsePCA(SklProjector):
 
 class PCAModel(DomainProjection, metaclass=WrapperMeta):
     var_prefix = "PC"
+
+    def _get_var_names(self, n):
+        names = [f"{self.var_prefix}{postfix}" for postfix in range(1, n + 1)]
+        domain = self.orig_domain.variables + self.orig_domain.metas
+        return get_unique_names([v.name for v in domain], names)
 
 
 class IncrementalPCA(SklProjector):
