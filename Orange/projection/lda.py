@@ -27,4 +27,4 @@ class LDA(SklProjector):
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         proj.components_ = proj.scalings_.T[:params["n_components"]]
-        return LDAModel(proj, self.domain)
+        return LDAModel(proj, self.domain, len(proj.components_))

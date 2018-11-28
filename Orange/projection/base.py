@@ -121,7 +121,7 @@ class ComputeValueProjector(SharedComputeValue):
 class DomainProjection(Projection):
     var_prefix = "C"
 
-    def __init__(self, proj, domain):
+    def __init__(self, proj, domain, n_components):
         transformer = TransformDomain(self)
 
         def proj_variable(i, name):
@@ -135,14 +135,12 @@ class DomainProjection(Projection):
 
         super().__init__(proj=proj)
         self.orig_domain = domain
-        self.n_components = self.components_.shape[0]
-        var_names = self.__get_var_names()
+        var_names = self.__get_var_names(n_components)
         self.domain = Orange.data.Domain(
-            [proj_variable(i, var_names[i]) for i in range(self.n_components)],
+            [proj_variable(i, var_names[i]) for i in range(n_components)],
             domain.class_vars, domain.metas)
 
-    def __get_var_names(self):
-        n = self.n_components
+    def __get_var_names(self, n):
         postfixes = ["-x", "-y"] if n == 2 else [str(i) for i in range(n)]
         names = [f"{self.var_prefix}{postfix}" for postfix in postfixes]
         domain = self.orig_domain.variables + self.orig_domain.metas
@@ -161,7 +159,7 @@ class LinearProjector(Projector):
 
     def fit(self, X, Y=None):
         self.components_ = self.get_components(X, Y)
-        return self.projection(self, self.domain)
+        return self.projection(self, self.domain, len(self.components_))
 
     def get_components(self, X, Y):
         raise NotImplementedError

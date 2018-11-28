@@ -362,7 +362,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
         data = self.projector.preprocess(self.effective_data)
         self.projector.domain = data.domain
         self.projector.components_ = anchors.T
-        self.projection = FreeVizModel(self.projector, self.projector.domain)
+        self.projection = FreeVizModel(self.projector, self.projector.domain, 2)
         self.projection.pre_domain = data.domain
         self.projection.name = self.projector.name
 

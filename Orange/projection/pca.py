@@ -47,7 +47,7 @@ class PCA(SklProjector, _FeatureScorerMixin):
             params["n_components"] = min(min(X.shape), params["n_components"])
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class SparsePCA(SklProjector):
@@ -64,7 +64,7 @@ class SparsePCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class PCAModel(DomainProjection, metaclass=WrapperMeta):
@@ -84,7 +84,7 @@ class IncrementalPCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return IncrementalPCAModel(proj, self.domain)
+        return IncrementalPCAModel(proj, self.domain, len(proj.components_))
 
     def partial_fit(self, data):
         return self(data)
@@ -120,7 +120,7 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
 
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class RemotePCA:
