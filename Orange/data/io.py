@@ -922,6 +922,10 @@ class CSVReader(FileFormat):
             cls.write_data(writer.writerow, data)
         cls.write_table_metadata(filename, data)
 
+    @classmethod
+    def write_headers(cls, write, data):
+        write(cls.header_names(data))
+
 
 class TabReader(CSVReader):
     """Reader for tab separated files"""
