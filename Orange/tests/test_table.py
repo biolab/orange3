@@ -2245,6 +2245,32 @@ class InterfaceTest(unittest.TestCase):
         self.assertIsInstance(data_url, _ExtendedTable)
 
 
+class TestTableStats(TableTests):
+    def test_get_nan_frequency(self):
+        domain = self.create_domain(self.attributes, self.class_vars)
+        table = data.Table(domain, self.data, self.class_data)
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+        table.X[1, 2] = table.X[4, 5] = np.nan
+        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+        table.Y[3:6] = np.nan
+        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
+        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+
+        table.X[1, 2] = table.X[4, 5] = 0
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+
+    def test_get_nan_frequency_empty_table(self):
+        domain = self.create_domain(self.attributes, self.class_vars)
+        table = data.Table(domain)
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+
 class TestRowInstance(unittest.TestCase):
     def test_assignment(self):
         table = data.Table("zoo")

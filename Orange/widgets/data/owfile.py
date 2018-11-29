@@ -403,19 +403,27 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             descs[0] = "<b>{}</b>".format(descs[0])
         if descs:
             text += "<p>{}</p>".format("<br/>".join(descs))
-
-        text += "<p>{} instance(s), {} feature(s), {} meta attribute(s)".\
-            format(len(table), len(domain.attributes), len(domain.metas))
+        # Instances
+        text += "<p>{} instance(s)".format(len(table))
+        # Attributes
+        missing_attr = "({:.1f}% missing values)".format(table.get_nan_frequency_attribute() * 100) \
+            if table.has_missing_attribute() else "(no missing values)"
+        text += "<br/>{} feature(s) {}".format(len(domain.attributes), missing_attr)
+        # Classes
+        missing_class = "({:.1f}% missing values)".format(table.get_nan_frequency_class() * 100) \
+            if table.has_missing_class() else "(no missing values)"
         if domain.has_continuous_class:
-            text += "<br/>Regression; numerical class."
+            text += "<br/>Regression; numerical class {}".format(missing_class)
         elif domain.has_discrete_class:
-            text += "<br/>Classification; categorical class with {} values.".\
-                format(len(domain.class_var.values))
+            text += "<br/>Classification; categorical class with {} values {}".format(
+                len(domain.class_var.values), missing_class)
         elif table.domain.class_vars:
-            text += "<br/>Multi-target; {} target variables.".format(
-                len(table.domain.class_vars))
+            text += "<br/>Multi-target; {} target variables {}".format(
+                len(table.domain.class_vars), missing_class)
         else:
             text += "<br/>Data has no target variable."
+        # Metas
+        text += "<br/>{} meta attribute(s)".format(len(domain.metas))
         text += "</p>"
 
         if 'Timestamp' in table.domain:
