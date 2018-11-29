@@ -6,6 +6,7 @@ from AnyQt.QtWidgets import QSizePolicy
 from Orange.data import Table
 from Orange.preprocess import Randomize
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets import gui
 
@@ -116,4 +117,4 @@ class OWRandomize(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWRandomize.test_run(Table("iris"))
+    WidgetPreview(OWRandomize).run(Table("iris"))

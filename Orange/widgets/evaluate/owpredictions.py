@@ -24,6 +24,7 @@ from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value
 from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
@@ -569,35 +570,6 @@ class OWPredictions(OWWidget):
         values = predictor(data, Model.Value)
         return values, [None] * len(data)
 
-    def test_run_signals(self):
-        filename = "iris.tab"
-        data = Orange.data.Table(filename)
-
-        def pred_error(data, *args, **kwargs):
-            raise ValueError
-
-        pred_error.domain = data.domain
-        pred_error.name = "To err is human"
-
-        if data.domain.has_discrete_class:
-            predictors = [
-                Orange.classification.SVMLearner(probability=True)(data),
-                Orange.classification.LogisticRegressionLearner()(data),
-                pred_error
-            ]
-        elif data.domain.has_continuous_class:
-            predictors = [
-                Orange.regression.RidgeRegressionLearner(alpha=1.0)(data),
-                Orange.regression.LinearRegressionLearner()(data),
-                pred_error
-            ]
-        else:
-            predictors = [pred_error]
-
-        self.set_data(data)
-        for i, pred in enumerate(predictors):
-            self.set_predictor(pred, i)
-
 
 class PredictionsItemDelegate(QStyledItemDelegate):
     """
@@ -938,4 +910,30 @@ def tool_tip(value):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWPredictions.test_run()
+    filename = "iris.tab"
+    data = Orange.data.Table(filename)
+
+    def pred_error(data, *args, **kwargs):
+        raise ValueError
+
+    pred_error.domain = data.domain
+    pred_error.name = "To err is human"
+
+    if data.domain.has_discrete_class:
+        predictors = [
+            Orange.classification.SVMLearner(probability=True)(data),
+            Orange.classification.LogisticRegressionLearner()(data),
+            pred_error
+        ]
+    elif data.domain.has_continuous_class:
+        predictors = [
+            Orange.regression.RidgeRegressionLearner(alpha=1.0)(data),
+            Orange.regression.LinearRegressionLearner()(data),
+            pred_error
+        ]
+    else:
+        predictors = [pred_error]
+
+    WidgetPreview(OWPredictions).run(
+        set_data=data,
+        set_predictor=[(pred, i) for i, pred in enumerate(predictors)])

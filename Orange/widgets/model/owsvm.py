@@ -9,6 +9,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWSVM(OWBaseLearner):
@@ -239,5 +240,5 @@ class OWSVM(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSVM.test_run(Table("iris"))
+    WidgetPreview(OWSVM).run(Table("iris"))
 

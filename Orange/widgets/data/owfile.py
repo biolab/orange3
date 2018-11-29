@@ -20,6 +20,7 @@ from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
@@ -519,4 +520,4 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWFile.test_run()
+    WidgetPreview(OWFile).run()

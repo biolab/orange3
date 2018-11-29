@@ -15,6 +15,7 @@ import Orange.evaluation
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -520,5 +521,5 @@ class OWConfusionMatrix(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from Orange.widgets.evaluate.utils import results_for_test_run
-    OWConfusionMatrix.test_run(results_for_test_run("iris"))
+    from Orange.widgets.evaluate.utils import results_for_preview
+    WidgetPreview(OWConfusionMatrix).run(results_for_preview("iris"))

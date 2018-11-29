@@ -23,6 +23,7 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
@@ -632,5 +633,4 @@ class OWImpute(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    logging.basicConfig()
-    OWImpute.test_run(Orange.data.Table("brown-selected"))
+    WidgetPreview(OWImpute).run(Orange.data.Table("brown-selected"))

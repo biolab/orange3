@@ -4,6 +4,7 @@ from Orange.data import Table
 from Orange.modelling import RandomForestLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 
@@ -100,4 +101,4 @@ class OWRandomForest(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWRandomForest.test_run(Table("iris"))
+    WidgetPreview(OWRandomForest).run(Table("iris"))

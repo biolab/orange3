@@ -23,6 +23,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.widgets import report
@@ -700,4 +701,4 @@ class DropDownToolButton(QToolButton):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSelectRows.test_run(Table("zoo"))
+    WidgetPreview(OWSelectRows).run(Table("zoo"))

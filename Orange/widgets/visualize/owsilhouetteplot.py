@@ -30,6 +30,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 from Orange.widgets.visualize.owheatmap import scaled
 
@@ -1196,4 +1197,4 @@ class TextListWidget(QGraphicsWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSilhouettePlot.test_run(Orange.data.Table("iris"))
+    WidgetPreview(OWSilhouettePlot).run(Orange.data.Table("iris"))

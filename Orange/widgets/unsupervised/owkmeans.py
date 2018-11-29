@@ -16,6 +16,7 @@ from Orange.widgets.utils.annotated_data import get_next_name, \
     ANNOTATED_DATA_SIGNAL_NAME, add_columns
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureSetWatcher
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -522,4 +523,4 @@ class OWKMeans(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWKMeans.test_run(Table("iris.tab"))
+    WidgetPreview(OWKMeans).run(Table("iris.tab"))

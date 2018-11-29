@@ -7,6 +7,7 @@ import Orange.misc
 from Orange import distance
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -170,4 +171,4 @@ class OWDistances(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDistances.test_run(Orange.data.Table("iris"))
+    WidgetPreview(OWDistances).run(Orange.data.Table("iris"))

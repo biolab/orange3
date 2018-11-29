@@ -23,6 +23,9 @@ from Orange.widgets.utils.concurrent import (
 
 
 # [start-snippet-2]
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+
+
 class Task:
     """
     A class that will hold the state for an learner evaluation.
@@ -538,4 +541,4 @@ def results_add(x, y):
 
 
 if __name__ == "__main__":
-    OWLearningCurveC.test_run()
+    WidgetPreview(OWLearningCurveC).run()

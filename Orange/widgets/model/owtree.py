@@ -9,6 +9,7 @@ from Orange.modelling.tree import TreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWTreeLearner(OWBaseLearner):
@@ -104,4 +105,4 @@ class OWTreeLearner(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWTreeLearner.test_run(Table("iris"))
+    WidgetPreview(OWTreeLearner).run(Table("iris"))

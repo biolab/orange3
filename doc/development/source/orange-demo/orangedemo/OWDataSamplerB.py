@@ -2,6 +2,7 @@ import numpy
 
 import Orange.data
 from Orange.widgets.widget import OWWidget, Input, Output, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets import gui
 
 
@@ -83,4 +84,4 @@ class OWDataSamplerB(OWWidget):
 
 
 if __name__ == "__main__":
-    OWDataSamplerB.test_run(Orange.data.Table("iris"))
+    WidgetPreview(OWDataSamplerB).run(Orange.data.Table("iris"))

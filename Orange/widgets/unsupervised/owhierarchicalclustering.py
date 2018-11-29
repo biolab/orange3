@@ -33,6 +33,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import colorpalette, itemmodels, combobox
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, Msg
 
 __all__ = ["OWHierarchicalClustering"]
@@ -1881,4 +1882,4 @@ if __name__ == "__main__":  # pragma: no cover
     from Orange import distance
     data = Orange.data.Table("iris")
     matrix = distance.Euclidean(distance._preprocess(data))
-    OWHierarchicalClustering.test_run(matrix)
+    WidgetPreview(OWHierarchicalClustering).run(matrix)

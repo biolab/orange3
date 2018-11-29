@@ -25,7 +25,7 @@ def check_results_adequacy(results, error_group, check_nan=True):
     else:
         return results
 
-def results_for_test_run(data_name=""):
+def results_for_preview(data_name=""):
     from Orange.data import Table
     from Orange.evaluation import CrossValidation
     from Orange.classification import \

@@ -10,6 +10,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.data import Table
 from Orange.data.sql.table import SqlTable
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, OWWidget, Input, Output
 from Orange.util import Reprable
 
@@ -433,4 +434,4 @@ class SampleBootstrap(Reprable):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDataSampler.test_run(Table("iris"))
+    WidgetPreview(OWDataSampler).run(Table("iris"))

@@ -21,6 +21,7 @@ from Orange.preprocess import Discretize, EqualWidth
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem as SPGLegendItem
@@ -811,4 +812,4 @@ def shape_reduce_keep_dims(shape, axis):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDistributions.test_run(Orange.data.Table("heart_disease.tab"))
+    WidgetPreview(OWDistributions).run(Orange.data.Table("heart_disease.tab"))

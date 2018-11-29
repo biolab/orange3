@@ -15,6 +15,7 @@ from Orange.data import Table
 from Orange.projection import FreeViz
 from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
@@ -416,4 +417,4 @@ class MoveIndicator(pg.GraphicsObject):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("zoo")
-    OWFreeViz.test_run(set_data=data, set_subset_data=data[::10])
+    WidgetPreview(OWFreeViz).run(set_data=data, set_subset_data=data[::10])

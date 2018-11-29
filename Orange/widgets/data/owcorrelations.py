@@ -18,6 +18,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg
 
@@ -285,4 +286,4 @@ class OWCorrelations(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWCorrelations.test_run(Table("iris"))
+    WidgetPreview(OWCorrelations).run(Table("iris"))

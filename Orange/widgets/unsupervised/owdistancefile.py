@@ -7,6 +7,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
@@ -144,4 +145,4 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDistanceFile.test_run()
+    WidgetPreview(OWDistanceFile).run()

@@ -22,6 +22,7 @@ from Orange.widgets.settings import (
 )
 from Orange.widgets.utils import get_variable_values_sorted
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
@@ -489,4 +490,4 @@ class OWScatterPlot(OWDataProjectionWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("iris")
-    OWScatterPlot.test_run(set_data=data, set_subset_data=data[:30])
+    WidgetPreview(OWScatterPlot).run(set_data=data, set_subset_data=data[:30])

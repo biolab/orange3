@@ -8,6 +8,7 @@ from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 
@@ -142,4 +143,4 @@ class OWSaveModel(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSaveModel.test_run()
+    WidgetPreview(OWSaveModel).run()

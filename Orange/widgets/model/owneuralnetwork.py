@@ -18,6 +18,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureWatcher
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class Task(QObject):
@@ -292,4 +293,4 @@ class OWNNLearner(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWNNLearner.test_run(Table("iris"))
+    WidgetPreview(OWNNLearner).run(Table("iris"))

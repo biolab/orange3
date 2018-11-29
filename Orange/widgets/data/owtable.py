@@ -33,6 +33,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, DomainContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -911,14 +912,6 @@ class OWDataTable(widget.OWWidget):
         self.report_data_brief(model.source)
         self.report_table(view)
 
-    def test_run_signals(self):
-        iris = Table("iris")
-        brown = Table("brown-selected")
-        housing = Table("housing")
-        self.set_dataset(iris, iris.name)
-        self.set_dataset(brown, brown.name)
-        self.set_dataset(housing, housing.name)
-
 
 # Table Summary
 
@@ -1076,4 +1069,8 @@ def test_model():
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDataTable.test_run()
+    WidgetPreview(OWDataTable).run(
+        [(Table("iris"), "iris"),
+         (Table("brown-selected"), "brown-selected"),
+         (Table("housing"), "housing")])
+

@@ -8,6 +8,7 @@ from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.projection import PCA, TSNE
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Output
@@ -305,6 +306,6 @@ class OWtSNE(OWDataProjectionWidget):
 
 if __name__ == "__main__":
     data = Table("iris")
-    OWtSNE.test_run(
+    WidgetPreview(OWtSNE).run(
         set_data=data,
         set_subset_data=data[np.random.choice(len(data), 10)])

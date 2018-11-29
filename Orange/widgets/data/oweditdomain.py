@@ -33,6 +33,7 @@ import Orange.data
 from Orange.preprocess.transformation import Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 #: An ordered sequence of key, value pairs (variable annotations)
@@ -1455,4 +1456,4 @@ def apply_transform_string(var, trs):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWEditDomain.test_run(Orange.data.Table("iris"))
+    WidgetPreview(OWEditDomain).run(Orange.data.Table("iris"))

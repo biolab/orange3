@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -210,10 +211,6 @@ class OWConcatenate(widget.OWWidget):
                 self.id_roles[self.source_column_role].lower())
         self.report_items(items)
 
-    def test_run_signals(self):
-        self.set_more_data(Orange.data.Table("iris"), 0)
-        self.set_more_data(Orange.data.Table("zoo"), 1)
-
 
 def unique(seq):
     seen_set = set()
@@ -247,4 +244,6 @@ def domain_intersection(A, B):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWConcatenate.test_run()
+    WidgetPreview(OWConcatenate).run(
+        set_more_data=[(Orange.data.Table("iris"), 0),
+                       (Orange.data.Table("zoo"), 1)])

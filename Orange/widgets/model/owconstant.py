@@ -1,6 +1,7 @@
 from Orange.data import Table
 from Orange.modelling.constant import ConstantLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWConstant(OWBaseLearner):
@@ -19,4 +20,4 @@ class OWConstant(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWConstant.test_run(Table("iris"))
+    WidgetPreview(OWConstant).run(Table("iris"))

@@ -4,6 +4,7 @@
 from Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWNaiveBayes(OWBaseLearner):
@@ -21,4 +22,4 @@ class OWNaiveBayes(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWNaiveBayes.test_run(Table("iris"))
+    WidgetPreview(OWNaiveBayes).run(Table("iris"))

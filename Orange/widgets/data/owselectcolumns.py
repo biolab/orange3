@@ -13,6 +13,7 @@ from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting, Setting
 from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
@@ -550,4 +551,4 @@ class OWSelectAttributes(widget.OWWidget):
 if __name__ == "__main__":  # pragma: no cover
     data = Orange.data.Table("brown-selected")
     features = AttributeList(data.domain.attributes[:2])
-    OWSelectAttributes.test_run(set_data=data, set_features=features)
+    WidgetPreview(OWSelectAttributes).run(set_data=data, set_features=features)

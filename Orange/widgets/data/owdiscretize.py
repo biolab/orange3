@@ -9,6 +9,7 @@ import Orange.preprocess.discretize as disc
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWDiscretize"]
@@ -494,4 +495,4 @@ class OWDiscretize(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDiscretize.test_run(Orange.data.Table("brown-selected"))
+    WidgetPreview(OWDiscretize).run(Orange.data.Table("brown-selected"))

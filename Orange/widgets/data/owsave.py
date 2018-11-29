@@ -9,6 +9,7 @@ from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, Pickle
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import filedialogs
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 FILE_TYPES = [
@@ -189,4 +190,4 @@ class OWSave(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSave.test_run(Table("iris"))
+    WidgetPreview(OWSave).run(Table("iris"))

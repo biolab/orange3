@@ -13,6 +13,7 @@ from Orange.classification.rules import _RuleClassifier
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -379,4 +380,4 @@ if __name__ == "__main__":  # pragma: no cover
     learner = CN2Learner()
     model = learner(data)
     model.instances = data
-    OWRuleViewer.test_run(model)
+    WidgetPreview(OWRuleViewer).run(model)

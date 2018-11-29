@@ -28,6 +28,7 @@ from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
@@ -549,4 +550,4 @@ class CircularPlacement(LinearProjector):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("iris")
-    OWLinearProjection.test_run(set_data=data, set_subset_data=data[::10])
+    WidgetPreview(OWLinearProjection).run(set_data=data, set_subset_data=data[::10])

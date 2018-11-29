@@ -7,6 +7,7 @@ from Orange.data import Table, Domain, ContinuousVariable
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import TSNEModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets import gui
@@ -326,4 +327,4 @@ class OWManifoldLearning(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWManifoldLearning.test_run(Table("ionosphere"))
+    WidgetPreview(OWManifoldLearning).run(Table("ionosphere"))

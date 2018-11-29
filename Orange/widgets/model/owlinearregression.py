@@ -10,6 +10,7 @@ from Orange.regression.linear import (
 )
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
@@ -160,4 +161,4 @@ class OWLinearRegression(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWLinearRegression.test_run(Table("housing"))
+    WidgetPreview(OWLinearRegression).run(Table("housing"))

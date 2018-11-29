@@ -33,7 +33,6 @@ from Orange.widgets.utils.signals import WidgetSignalsMixin
 # Module exposes Input, Output and AttributeList to be used in widgets
 # pylint: disable=unused-import
 from Orange.widgets.utils.signals import Input, Output, AttributeList
-from Orange.widgets.utils.test_run import WidgetTestRunMixin
 from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 from Orange.widgets.utils.buttons import SimpleButton
 
@@ -71,7 +70,7 @@ class WidgetMetaClass(type(QDialog)):
 
 # pylint: disable=too-many-instance-attributes
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
-               WidgetMessagesMixin, WidgetSignalsMixin, WidgetTestRunMixin,
+               WidgetMessagesMixin, WidgetSignalsMixin,
                metaclass=WidgetMetaClass):
     """Base widget class"""
 

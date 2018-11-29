@@ -14,6 +14,7 @@ from Orange.widgets import gui
 from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Output, Msg
 
 MAX_DL_LIMIT = 1000000
@@ -440,4 +441,4 @@ class OWSql(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSql.test_run()
+    WidgetPreview(OWSql).run()

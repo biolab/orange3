@@ -22,6 +22,7 @@ from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
 __all__ = ["OWPythonScript"]
@@ -703,4 +704,4 @@ class OWPythonScript(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWPythonScript.test_run()
+    WidgetPreview(OWPythonScript).run()

@@ -36,6 +36,7 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     DendrogramWidget
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -2397,4 +2398,4 @@ def join_ellided(sep, maxlen, values, ellidetemplate="..."):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWHeatMap.test_run(Table("brown-selected.tab"))
+    WidgetPreview(OWHeatMap).run(Table("brown-selected.tab"))

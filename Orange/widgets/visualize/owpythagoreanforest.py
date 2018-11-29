@@ -13,6 +13,7 @@ from Orange.data import Table
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
@@ -391,4 +392,4 @@ if __name__ == '__main__':  # pragma: no cover
     data = Table('iris')
     rf = RandomForestLearner(n_estimators=10)(data)
     rf.instances = data
-    OWPythagoreanForest.test_run(rf)
+    WidgetPreview(OWPythagoreanForest).run(rf)

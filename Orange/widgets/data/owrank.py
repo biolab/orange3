@@ -33,7 +33,10 @@ from Orange.widgets.settings import (DomainContextHandler, Setting,
                                      ContextSetting)
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, Msg, Input, Output, AttributeList
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import (
+    OWWidget, Msg, Input, Output, AttributeList
+)
 
 
 log = logging.getLogger(__name__)
@@ -586,6 +589,14 @@ class OWRank(OWWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import RandomForestLearner
-    OWRank.test_run(
+    previewer = WidgetPreview(OWRank)
+    previewer.run(Table("heart_disease.tab"), no_exit=True)
+    previewer.send_signals(
+        set_learner=(RandomForestLearner(), (3, 'Learner', None)))
+    previewer.run()
+
+    """
+    WidgetPreview(OWRank).run(
         set_learner=(RandomForestLearner(), (3, 'Learner', None)),
         set_data=Table("heart_disease.tab"))
+"""

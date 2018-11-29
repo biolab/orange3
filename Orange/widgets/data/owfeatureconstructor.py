@@ -37,6 +37,7 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 FeatureDescriptor = \
@@ -1015,4 +1016,4 @@ def unique(seq):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWFeatureConstructor.test_run(Orange.data.Table("iris"))
+    WidgetPreview(OWFeatureConstructor).run(Orange.data.Table("iris"))

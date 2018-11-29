@@ -27,6 +27,7 @@ from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 from Orange.widgets.data.utils.preprocess import (
@@ -1241,4 +1242,4 @@ class OWPreprocess(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWPreprocess.test_run(Orange.data.Table("brown-selected"))
+    WidgetPreview(OWPreprocess).run(Orange.data.Table("brown-selected"))

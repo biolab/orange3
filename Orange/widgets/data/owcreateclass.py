@@ -14,6 +14,7 @@ from Orange.preprocess.transformation import Transformation, Lookup
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -519,4 +520,4 @@ class OWCreateClass(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWCreateClass.test_run(Table("zoo"))
+    WidgetPreview(OWCreateClass).run(Table("zoo"))

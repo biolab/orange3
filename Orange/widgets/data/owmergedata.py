@@ -11,6 +11,7 @@ from Orange.data.util import hstack
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -397,6 +398,6 @@ class OWMergeData(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWMergeData.test_run(
+    WidgetPreview(OWMergeData).run(
         setData=Orange.data.Table("tests/data-gender-region"),
         setExtraData=Orange.data.Table("tests/data-regions"))

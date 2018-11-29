@@ -23,6 +23,7 @@ from Orange.widgets.settings import (Setting, DomainContextHandler,
 from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -1111,4 +1112,4 @@ class OWBoxPlot(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWBoxPlot.test_run(Orange.data.Table("heart_disease.tab"))
+    WidgetPreview(OWBoxPlot).run(Orange.data.Table("heart_disease.tab"))

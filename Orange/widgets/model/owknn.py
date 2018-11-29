@@ -5,6 +5,7 @@ from Orange.modelling import KNNLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWKNNLearner(OWBaseLearner):
@@ -57,4 +58,4 @@ class OWKNNLearner(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWKNNLearner.test_run(Table("iris"))
+    WidgetPreview(OWKNNLearner).run(Table("iris"))

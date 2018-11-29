@@ -21,6 +21,7 @@ from Orange.classification.logistic_regression import \
     LogisticRegressionClassifier
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input
 from Orange.widgets import gui
 
@@ -1188,4 +1189,4 @@ if __name__ == "__main__":  # pragma: no cover
     data = Table("heart_disease")
     clf = NaiveBayesLearner()(data)
     # clf = LogisticRegressionLearner()(data)
-    OWNomogram.test_run(set_classifier=clf, set_data=data)
+    WidgetPreview(OWNomogram).run(set_classifier=clf, set_data=data)

@@ -28,6 +28,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -1302,4 +1303,4 @@ class OWPaintData(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWPaintData.test_run()
+    WidgetPreview(OWPaintData).run()

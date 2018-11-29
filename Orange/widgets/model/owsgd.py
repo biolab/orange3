@@ -10,6 +10,7 @@ from Orange.widgets.model.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 MAXINT = 2 ** 31 - 1
 
@@ -327,4 +328,4 @@ class OWSGD(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSGD.test_run(Table("iris"))
+    WidgetPreview(OWSGD).run(Table("iris"))

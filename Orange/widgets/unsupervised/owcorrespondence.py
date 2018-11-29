@@ -12,6 +12,7 @@ from Orange.statistics import contingency
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 from Orange.widgets.visualize.owscatterplotgraph import ScatterPlotItem
 from Orange.widgets.widget import Input
@@ -404,4 +405,4 @@ class CA(CA):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWCorrespondenceAnalysis.test_run(Orange.data.Table("smokers_ct"))
+    WidgetPreview(OWCorrespondenceAnalysis).run(Orange.data.Table("smokers_ct"))

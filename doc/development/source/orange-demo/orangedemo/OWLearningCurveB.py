@@ -10,6 +10,7 @@ import Orange.classification
 import Orange.evaluation
 
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input
 from Orange.evaluation.testing import Results
 
@@ -387,4 +388,4 @@ def results_add(x, y):
 
 
 if __name__ == "__main__":
-    OWLearningCurveB.test_run()
+    WidgetPreview(OWLearningCurveB).run()

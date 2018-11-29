@@ -25,6 +25,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorbrewer
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.unsupervised.owhierarchicalclustering import (
     DendrogramWidget, GraphicsSimpleTextList)
@@ -744,4 +745,4 @@ if __name__ == "__main__":  # pragma: no cover
     import Orange.distance
     data = Orange.data.Table("iris")
     dist = Orange.distance.Euclidean(data)
-    OWDistanceMap.test_run(dist)
+    WidgetPreview(OWDistanceMap).run(dist)

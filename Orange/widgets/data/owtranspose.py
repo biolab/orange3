@@ -2,6 +2,7 @@ from Orange.data import Table, StringVariable
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets import gui
 from Orange.widgets.widget import Input, Output
@@ -123,4 +124,4 @@ class OWTranspose(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWTranspose.test_run(Table("zoo"))
+    WidgetPreview(OWTranspose).run(Table("zoo"))

@@ -13,6 +13,7 @@ from Orange.preprocess import Normalize
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.projection import PCA, TruncatedSVD
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 try:
@@ -518,4 +519,4 @@ class OWPCA(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWPCA.test_run(Table("housing"))
+    WidgetPreview(OWPCA).run(Table("housing"))

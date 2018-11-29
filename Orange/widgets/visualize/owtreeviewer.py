@@ -10,6 +10,7 @@ from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
 from Orange.base import TreeModel, SklModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -441,4 +442,4 @@ if __name__ == "__main__":  # pragma: no cover
     data = Table("titanic")
     clf = TreeLearner()(data)
     clf.instances = data
-    OWTreeGraph.test_run(clf)
+    WidgetPreview(OWTreeGraph).run(clf)

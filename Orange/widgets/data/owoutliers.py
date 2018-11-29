@@ -6,6 +6,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -227,4 +228,4 @@ class OWOutliers(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWOutliers.test_run(Table("iris"))
+    WidgetPreview(OWOutliers).run(Table("iris"))

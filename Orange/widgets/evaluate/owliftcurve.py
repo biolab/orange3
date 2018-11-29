@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import check_results_adequacy
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.evaluate.owrocanalysis import convex_hull
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 from Orange.widgets import report
 
@@ -258,5 +259,5 @@ def lift_curve(ytrue, ypred, target=1):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from Orange.widgets.evaluate.utils import results_for_test_run
-    OWLiftCurve.test_run(results_for_test_run())
+    from Orange.widgets.evaluate.utils import results_for_preview
+    WidgetPreview(OWLiftCurve).run(results_for_preview())

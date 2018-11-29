@@ -25,6 +25,7 @@ from Orange.widgets.utils import to_html, get_variable_values_sorted
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -964,4 +965,4 @@ def get_conditional_distribution(data, attrs):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("zoo")
-    OWMosaicDisplay.test_run(data, set_subset_data=data[::10])
+    WidgetPreview(OWMosaicDisplay).run(data, set_subset_data=data[::10])

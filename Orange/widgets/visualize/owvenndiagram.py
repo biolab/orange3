@@ -30,6 +30,7 @@ from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -636,26 +637,6 @@ class OWVennDiagram(widget.OWWidget):
 
     def send_report(self):
         self.report_plot()
-
-    def test_run_signals(self):
-        from Orange.evaluation import ShuffleSplit
-
-        data = Orange.data.Table("brown-selected")
-        # data1 = Orange.data.Table("brown-selected")
-        # self.setData(data, 1)
-        # self.setData(data1, 2)
-        # return
-
-        data = append_column(data, "M", Orange.data.StringVariable("Test"),
-                             numpy.arange(len(data)).reshape(-1, 1) % 30)
-        res = ShuffleSplit(data, [None], n_resamples=5,
-                           test_size=0.7, stratified=False)
-        indices = iter(res.indices)
-        for i in range(1, 6):
-            sample, _ = next(indices)
-            data1 = data[sample]
-            data1.name = chr(ord("A") + i)
-            self.setData(data1, key=i)
 
 
 def pairwise(iterable):
@@ -1688,4 +1669,22 @@ def group_table_indices(table, key_var):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWVennDiagram.test_run()
+    from Orange.evaluation import ShuffleSplit
+
+    data = Orange.data.Table("brown-selected")
+    # data1 = Orange.data.Table("brown-selected")
+    # datasets = [(data, 1), (data, 2)]
+
+    data = append_column(data, "M", Orange.data.StringVariable("Test"),
+                         numpy.arange(len(data)).reshape(-1, 1) % 30)
+    res = ShuffleSplit(data, [None], n_resamples=5,
+                       test_size=0.7, stratified=False)
+    indices = iter(res.indices)
+    datasets = []
+    for i in range(1, 6):
+        sample, _ = next(indices)
+        data1 = data[sample]
+        data1.name = chr(ord("A") + i)
+        datasets.append((data1, i))
+
+    WidgetPreview(OWVennDiagram).run(setData=datasets)

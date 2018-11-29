@@ -27,6 +27,7 @@ from Orange.widgets.report import plural
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 def _categorical_entropy(x):
@@ -910,4 +911,4 @@ class OWFeatureStatistics(widget.OWWidget):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    OWFeatureStatistics.test_run(Table("iris"))
+    WidgetPreview(OWFeatureStatistics).run(Table("iris"))

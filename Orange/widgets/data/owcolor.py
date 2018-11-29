@@ -12,6 +12,7 @@ from Orange.widgets import widget, settings, gui
 from Orange.widgets.gui import HorizontalGridDelegate
 from Orange.widgets.utils.colorpalette import \
     ContinuousPaletteGenerator, ColorPaletteDlg
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 ColorRole = next(gui.OrangeUserRole)
@@ -453,4 +454,4 @@ class OWColor(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWColor.test_run(Orange.data.Table("heart_disease.tab"))
+    WidgetPreview(OWColor).run(Orange.data.Table("heart_disease.tab"))

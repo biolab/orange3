@@ -14,8 +14,9 @@ import pyqtgraph as pg
 import Orange
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import \
-    check_results_adequacy, results_for_test_run
+    check_results_adequacy, results_for_preview
 from Orange.widgets.utils import colorpalette, colorbrewer
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 from Orange.widgets import report
 
@@ -233,4 +234,4 @@ def gaussian_smoother(x, y, sigma=1.0):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWCalibrationPlot.test_run(results_for_test_run())
+    WidgetPreview(OWCalibrationPlot).run(results_for_preview())

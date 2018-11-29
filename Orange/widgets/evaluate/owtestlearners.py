@@ -34,6 +34,7 @@ from Orange.preprocess.preprocess import Preprocess
 import Orange.regression
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.concurrent import ThreadExecutor
 
@@ -968,25 +969,6 @@ class OWTestLearners(OWWidget):
         self.cancel()
         super().onDeleteWidget()
 
-    def test_run_signals(self):
-        filename = "iris"
-        data = Table(filename)
-        class_var = data.domain.class_var
-        if class_var.is_discrete:
-            learners = [lambda data: 1 / 0,
-                        Orange.classification.LogisticRegressionLearner(),
-                        Orange.classification.MajorityLearner(),
-                        Orange.classification.NaiveBayesLearner()]
-        else:
-            learners = [lambda data: 1 / 0,
-                        Orange.regression.MeanLearner(),
-                        Orange.regression.KNNRegressionLearner(),
-                        Orange.regression.RidgeRegressionLearner()]
-        self.set_train_data(data)
-        self.set_test_data(data)
-        for i, learner in enumerate(learners):
-            self.set_learner(learner, i)
-
 
 def scorer_caller(scorer, ovr_results, target=None):
     if scorer.is_binary:
@@ -1106,5 +1088,23 @@ class Task:
         concurrent.futures.wait([self.future])
 
 
-if __name__ == "__main__":
-    OWTestLearners.test_run()
+if __name__ == "__main__":  # pragma: no cover
+    filename = "iris"
+    data = Table(filename)
+    class_var = data.domain.class_var
+    if class_var.is_discrete:
+        learners = [lambda data: 1 / 0,
+                    Orange.classification.LogisticRegressionLearner(),
+                    Orange.classification.MajorityLearner(),
+                    Orange.classification.NaiveBayesLearner()]
+    else:
+        learners = [lambda data: 1 / 0,
+                    Orange.regression.MeanLearner(),
+                    Orange.regression.KNNRegressionLearner(),
+                    Orange.regression.RidgeRegressionLearner()]
+
+    WidgetPreview(OWTestLearners).run(
+        set_train_data=data,
+        set_test_data=data,
+        set_learner=[(learner, i) for i, learner in enumerate(learners)]
+    )

@@ -6,6 +6,7 @@ from Orange.modelling import SklAdaBoostLearner, SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input
 
 
@@ -111,4 +112,4 @@ class OWAdaBoost(OWBaseLearner):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWAdaBoost.test_run(Table("iris"))
+    WidgetPreview(OWAdaBoost).run(Table("iris"))

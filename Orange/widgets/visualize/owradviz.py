@@ -23,6 +23,7 @@ from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import TextItem
@@ -458,4 +459,4 @@ class MoveIndicator(pg.GraphicsObject):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("heart_disease")
-    OWRadviz.test_run(set_data=data, set_subset_data=data[::10])
+    WidgetPreview(OWRadviz).run(set_data=data, set_subset_data=data[::10])

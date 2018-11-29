@@ -14,6 +14,7 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     SquareGraphicsItem,
@@ -415,4 +416,4 @@ if __name__ == "__main__":  # pragma: no cover
     data = Table('iris')
     model = TreeLearner(max_depth=1000)(data)
     model.instances = data
-    OWPythagorasTree.test_run(model)
+    WidgetPreview(OWPythagorasTree).run(model)

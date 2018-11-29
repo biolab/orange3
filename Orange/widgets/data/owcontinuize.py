@@ -12,6 +12,7 @@ from Orange.data.table import Table
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -388,4 +389,4 @@ class DomainContinuizer(Reprable):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWContinuize.test_run(Table("lenses"))
+    WidgetPreview(OWContinuize).run(Table("lenses"))

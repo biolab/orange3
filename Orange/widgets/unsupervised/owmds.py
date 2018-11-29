@@ -12,6 +12,7 @@ from Orange.projection.manifold import torgerson, MDS
 
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Input
@@ -566,4 +567,4 @@ class OWMDS(OWDataProjectionWidget):
 
 if __name__ == "__main__":  # pragma: no cover
     data = Table("iris")
-    OWMDS.test_run(set_data=data, set_subset_data=data[:30])
+    WidgetPreview(OWMDS).run(set_data=data, set_subset_data=data[:30])

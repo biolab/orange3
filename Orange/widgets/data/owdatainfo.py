@@ -5,6 +5,7 @@ import textwrap
 from AnyQt import QtWidgets
 
 from Orange.widgets import widget, gui
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 from Orange.data.table import Table
 from Orange.data import StringVariable, DiscreteVariable, ContinuousVariable
@@ -202,4 +203,4 @@ class OWDataInfo(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDataInfo.test_run(Table("iris"))
+    WidgetPreview(OWDataInfo).run(Table("iris"))

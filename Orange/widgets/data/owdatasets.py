@@ -27,6 +27,7 @@ import Orange.data
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 
@@ -610,4 +611,4 @@ def description_html(datainfo):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWDataSets.test_run()
+    WidgetPreview(OWDataSets).run()

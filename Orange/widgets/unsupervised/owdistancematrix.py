@@ -16,6 +16,7 @@ from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -381,4 +382,4 @@ if __name__ == "__main__":  # pragma: no cover
     import Orange.distance
     data = Orange.data.Table("iris")
     dist = Orange.distance.Euclidean(data[:50])
-    OWDistanceMatrix.test_run(dist)
+    WidgetPreview(OWDistanceMatrix).run(dist)

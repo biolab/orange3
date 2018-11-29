@@ -19,6 +19,7 @@ from Orange.widgets.utils import to_html
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
 from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
@@ -507,4 +508,4 @@ class OWSieveDiagram(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    OWSieveDiagram.test_run(Table("zoo"))
+    WidgetPreview(OWSieveDiagram).run(Table("zoo"))
