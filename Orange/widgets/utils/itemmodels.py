@@ -496,6 +496,7 @@ class PyListModel(QAbstractListModel):
     """
     MIME_TYPE = "application/x-Orange-PyListModelData"
     Separator = object()
+    removed = Signal()
 
     def __init__(self, iterable=None, parent=None,
                  flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled,
@@ -616,6 +617,7 @@ class PyListModel(QAbstractListModel):
         """
         if not parent.isValid():
             del self[row:row + count]
+            self.removed.emit()
             return True
         else:
             return False

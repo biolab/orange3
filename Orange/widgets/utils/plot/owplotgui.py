@@ -31,7 +31,7 @@ import unicodedata
 from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction,\
     QDialog, QSizePolicy, QPushButton, QListView, QLabel
 from AnyQt.QtGui import QIcon, QKeySequence
-from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
+from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize, QObject
 
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
@@ -52,6 +52,8 @@ SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)
 
 
 class AddVariablesDialog(QDialog):
+    add = pyqtSignal()
+
     def __init__(self, master, model):
         QDialog.__init__(self)
 
@@ -134,10 +136,16 @@ class AddVariablesDialog(QDialog):
             del model[i]
 
         self.master.model_selected.extend(variables)
+        self.add.emit()
 
 
-class VariablesSelection:
-    def __init__(self, master, model_selected, model_other, widget=None):
+class VariablesSelection(QObject):
+    added = pyqtSignal()
+    removed = pyqtSignal()
+
+    def __init__(self, master, model_selected, model_other,
+                 widget=None, parent=None):
+        super().__init__(parent)
         self.master = master
         self.model_selected = model_selected
         self.model_other = model_other
@@ -197,9 +205,11 @@ class VariablesSelection:
             del model[i]
 
         self.model_other.extend(variables)
+        self.removed.emit()
 
     def _action_add(self):
         self.add_variables_dialog = AddVariablesDialog(self, self.model_other)
+        self.add_variables_dialog.add.connect(lambda: self.added.emit())
 
 
 class OrientedWidget(QWidget):

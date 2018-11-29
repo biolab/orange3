@@ -287,8 +287,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
-        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
-        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
+        self.model_selected.removed.connect(self.__model_selected_changed)
         self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
@@ -300,6 +299,8 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.variables_selection = VariablesSelection(
             self, self.model_selected, self.model_other, self.controlArea
         )
+        self.variables_selection.added.connect(self.__model_selected_changed)
+        self.variables_selection.removed.connect(self.__model_selected_changed)
         self.variables_selection.add_remove.layout().addWidget(
             self.btn_vizrank
         )
@@ -325,6 +326,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.model_selected[:] = attrs[:]
         self.model_other[:] = [var for var in self.primitive_variables
                                if var not in attrs]
+        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
@@ -359,6 +361,7 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.model_other[:] = variables[5:] + class_var
 
         self._init_vizrank()
+        self.init_projection()
 
     def _init_vizrank(self):
         is_enabled = self.data is not None and \

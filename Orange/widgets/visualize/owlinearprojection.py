@@ -271,8 +271,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
-        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
-        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
+        self.model_selected.removed.connect(self.__model_selected_changed)
         self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
@@ -296,6 +295,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.variables_selection = VariablesSelection(
             self, self.model_selected, self.model_other, self.controlArea
         )
+        self.variables_selection.added.connect(self.__model_selected_changed)
+        self.variables_selection.removed.connect(self.__model_selected_changed)
         self.variables_selection.add_remove.layout().addWidget(
             self.btn_vizrank
         )
@@ -328,6 +329,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.model_selected[:] = attrs[:]
         self.model_other[:] = [var for var in self.continuous_variables
                                if var not in attrs]
+        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
@@ -368,6 +370,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
         self._check_options()
         self._init_vizrank()
+        self.init_projection()
 
     def _check_options(self):
         buttons = self.radio_placement.buttons
@@ -423,8 +426,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.selected_vars = []
 
     def init_projection(self):
-        if not len(self.effective_variables):
-            return
         if self.placement == self.Placement.Circular:
             self.projector = CircularPlacement()
         elif self.placement == self.Placement.LDA:
