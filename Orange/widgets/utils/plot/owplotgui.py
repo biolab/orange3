@@ -643,7 +643,7 @@ class OWPlotGUI:
             widget.addWidget(element, row, 1)
             return element
         else:
-            return control(widget,  label=label, **args)
+            return control(widget, label=label, **args)
 
     def _slider(self, widget, value, label, min_value, max_value, step, cb_name,
                 show_number=False):

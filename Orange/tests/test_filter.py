@@ -367,9 +367,9 @@ class TestSameValueFilter(unittest.TestCase):
     def setUp(self):
         self.table = Table('zoo')
 
-        self.attr_disc  = self.table.domain["type"]
-        self.attr_cont  = self.table.domain["legs"]
-        self.attr_meta  = self.table.domain["name"]
+        self.attr_disc = self.table.domain["type"]
+        self.attr_cont = self.table.domain["legs"]
+        self.attr_meta = self.table.domain["name"]
 
         self.value_cont = 4
         self.value_disc = self.attr_disc.to_val("mammal")
@@ -432,7 +432,7 @@ class TestSameValueFilter(unittest.TestCase):
 class TestFilterReprs(unittest.TestCase):
     def setUp(self):
         self.table = Table('zoo')
-        self.attr_disc  = self.table.domain["type"]
+        self.attr_disc = self.table.domain["type"]
         self.value_disc = self.attr_disc.to_val("mammal")
         self.vs = self.table.domain.variables
 

@@ -5,7 +5,7 @@ A widget containing a grid of clickable actions/buttons.
 from collections import namedtuple, deque
 
 from AnyQt.QtWidgets import (
-    QFrame, QAction, QToolButton, QGridLayout,  QSizePolicy,
+    QFrame, QAction, QToolButton, QGridLayout, QSizePolicy,
     QStyleOptionToolButton, QStylePainter, QStyle
 )
 from AnyQt.QtGui import QFontMetrics
