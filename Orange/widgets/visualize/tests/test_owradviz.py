@@ -63,10 +63,12 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
     def test_saved_features(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.model_selected.pop(0)
+        self.widget.variables_selection.removed.emit()
+        selected = [a.name for a in self.widget.model_selected]
+
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(OWRadviz, stored_settings=settings)
-        self.send_signal(self.widget.Inputs.data, self.data, widget=w)
-        selected = [a.name for a in self.widget.model_selected]
+        self.send_signal(w.Inputs.data, self.data, widget=w)
         self.assertListEqual(selected, [a.name for a in w.model_selected])
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
         selected = [a.name for a in self.widget.model_selected]

@@ -156,7 +156,7 @@ class OWMDS(OWDataProjectionWidget):
         #: Input data table
         self.signal_data = None
 
-        self._invalidated = False
+        self.__invalidated = True
         self.embedding = None
         self.effective_matrix = None
 
@@ -212,15 +212,6 @@ class OWMDS(OWDataProjectionWidget):
 
         self.signal_data = data
 
-        if self.matrix is not None and data is not None and \
-                len(self.matrix) == len(data):
-            self.closeContext()
-            self.data = data
-            self.init_attr_values()
-            self.openContext(data)
-        else:
-            self._invalidated = True
-
     @Inputs.distances
     def set_disimilarity(self, matrix):
         """Set the dissimilarity (distance) matrix.
@@ -238,30 +229,33 @@ class OWMDS(OWDataProjectionWidget):
 
         self.matrix = matrix
         self.matrix_data = matrix.row_items if matrix is not None else None
-        self._invalidated = True
 
     def clear(self):
         super().clear()
         self.embedding = None
-        self.effective_matrix = None
         self.graph.set_effective_matrix(None)
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
 
     def _initialize(self):
+        matrix_existed = self.effective_matrix is not None
+        effective_matrix = self.effective_matrix
+        self.__invalidated = True
+        self.data = None
+        self.effective_matrix = None
         self.closeContext()
-        self.clear()
         self.clear_messages()
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
-            self.data = None
+            self.clear()
             self.init_attr_values()
             return
 
         if self.signal_data is not None and self.matrix is not None and \
                 len(self.signal_data) != len(self.matrix):
             self.Error.mismatching_dimensions()
+            self.clear()
             self.init_attr_values()
             return
 
@@ -279,11 +273,18 @@ class OWMDS(OWDataProjectionWidget):
             self.effective_matrix = Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
+            self.clear()
             self.init_attr_values()
             return
 
         self.init_attr_values()
         self.openContext(self.data)
+        self.__invalidated = not (matrix_existed and
+                                  self.effective_matrix is not None and
+                                  np.array_equal(effective_matrix,
+                                                 self.effective_matrix))
+        if self.__invalidated:
+            self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
 
     def _toggle_run(self):
@@ -407,7 +408,6 @@ class OWMDS(OWDataProjectionWidget):
             self.__set_update_loop(None)
             self.unconditional_commit()
             self.graph.resume_drawing_pairs()
-            self.graph.update_coordinates()
         except MemoryError:
             self.Error.out_of_memory()
             self.__set_update_loop(None)
@@ -446,6 +446,7 @@ class OWMDS(OWDataProjectionWidget):
             self.__set_update_loop(None)
 
         if self.effective_matrix is None:
+            self.graph.reset_graph()
             return
 
         X = self.effective_matrix
@@ -477,15 +478,16 @@ class OWMDS(OWDataProjectionWidget):
             self.__start()
 
     def handleNewSignals(self):
-        if self._invalidated:
+        self._initialize()
+        if self.__invalidated:
             self.graph.pause_drawing_pairs()
-            self._invalidated = False
-            self._initialize()
+            self.__invalidated = False
             self.__invalidate_embedding()
             self.cb_class_density.setEnabled(self.can_draw_density())
             self.start()
-
-        super().handleNewSignals()
+        else:
+            self.graph.update_point_props()
+        self.commit()
 
     def _invalidate_output(self):
         self.commit()

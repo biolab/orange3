@@ -373,6 +373,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.subset_data = None
         self.subset_indices = None
         self.__pending_selection = self.selection
+        self.__invalidated = True
         self.setup_gui()
 
     # GUI
@@ -395,22 +396,39 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
 
+    @property
+    def effective_variables(self):
+        return self.data.domain.attributes
+
+    @property
+    def effective_data(self):
+        return self.data.transform(Domain(self.effective_variables,
+                                          self.data.domain.class_vars,
+                                          self.data.domain.metas))
+
     # Input
     @Inputs.data
     @check_sql_input
     def set_data(self, data):
-        same_domain = (self.data and data and
+        data_existed = self.data is not None
+        effective_data = self.effective_data if data_existed else None
+        same_domain = (data_existed and data is not None and
                        data.domain.checksum() == self.data.domain.checksum())
         self.closeContext()
-        self.clear()
         self.data = data
         self.check_data()
         if not same_domain:
             self.init_attr_values()
         self.openContext(self.data)
+        self.__invalidated = not (data_existed and self.data is not None and
+                                  np.array_equal(effective_data.X,
+                                                 self.effective_data.X))
+        if self.__invalidated:
+            self.clear()
         self.cb_class_density.setEnabled(self.can_draw_density())
 
     def check_data(self):
+        self.valid_data = None
         self.clear_messages()
 
     @Inputs.data_subset
@@ -422,7 +440,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
-        self.setup_plot()
+        if self.__invalidated:
+            self.__invalidated = False
+            self.setup_plot()
+        else:
+            self.graph.update_point_props()
         self.commit()
 
     def get_subset_mask(self):
@@ -439,7 +461,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         should return embedding for all data (valid and invalid). Invalid
         data embedding coordinates should be set to 0 (in some cases to Nan).
 
-        The method should also sets self.valid_data.
+        The method should also set self.valid_data.
 
         Returns:
             np.array: Array of embedding coordinates with shape
@@ -552,8 +574,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         return QSize(1132, 708)
 
     def clear(self):
-        self.data = None
-        self.valid_data = None
         self.selection = None
         self.graph.selection = None
 
@@ -587,16 +607,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
         self.graph.view_box.moved.connect(self._manual_move)
         self.graph.view_box.finished.connect(self._manual_move_finish)
 
-    @property
-    def effective_variables(self):
-        return self.data.domain.attributes
-
-    @property
-    def effective_data(self):
-        return self.data.transform(Domain(self.effective_variables,
-                                          self.data.domain.class_vars,
-                                          self.data.domain.metas))
-
     def check_data(self):
         def error(err):
             err()
@@ -615,7 +625,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
 
     def init_projection(self):
         self.projection = None
-        if not len(self.effective_variables):
+        if not self.effective_variables:
             return
         try:
             self.projection = self.projector(self.effective_data)

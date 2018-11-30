@@ -169,8 +169,6 @@ class LinProjVizRankTests(WidgetTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.data = Table("iris")
-        # dom = Domain(cls.iris.domain.attributes, [])
-        # cls.iris_no_class = Table(dom, cls.iris)
 
     def setUp(self):
         self.widget = self.create_widget(OWLinearProjection)
@@ -192,6 +190,7 @@ class LinProjVizRankTests(WidgetTest):
     def test_set_attrs(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         model_selected = self.widget.model_selected[:]
+        c1 = self.get_output(self.widget.Outputs.components)
         self.vizrank.toggle()
         self.process_events(until=lambda: not self.vizrank.keep_running)
         self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
@@ -200,3 +199,5 @@ class LinProjVizRankTests(WidgetTest):
             QItemSelectionModel.ClearAndSelect
         )
         self.assertNotEqual(self.widget.model_selected[:], model_selected)
+        c2 = self.get_output(self.widget.Outputs.components)
+        self.assertNotEqual(c1.domain.attributes, c2.domain.attributes)
