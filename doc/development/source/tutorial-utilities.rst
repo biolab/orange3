@@ -125,6 +125,59 @@ messags (`self.clear_message()`) apply to all messages of this type.
 `self.information(id, text)`, `self.warning(id, text)` and
 `self.error(id, text)` is deprecated and will be removed in the future.
 
+
+I/O Summaries
+-------------
+
+.. versionadded:: 3.19
+
+Widgets can optionally summarize their inputs/outputs via the
+:attr:`~Orange.widgets.widget.OWWidget.info` namespace using the
+:func:`~Orange.widgets.widget.StateInfo.set_input_summary` and
+:func:`~Orange.widgets.widget.StateInfo.set_output_summary` methods.
+::
+
+   self.info.set_input_summary("foo")
+   self.info.set_output_summary("bar")
+
+Summaries are then displayed in the widget's status bar:
+
+.. image:: images/io-summary.png
+   :scale: 50 %
+   :alt: Inline status bar summary
+
+Predefined constants indicating no input/output are available as
+``self.info.NoInput`` and ``self.info.NoOutput`` respectively
+::
+
+   self.info.set_input_summary(self.info.NoInput)
+   self.info.set_output_summary(self.info.NoOutput)
+
+.. image:: images/io-summary-empty.png
+   :scale: 50 %
+   :alt: Empty summary
+
+The summaries can also contain more detailed information to be displayed
+in tool tip or popup::
+
+   self.info.set_output_summary("2 animals", "• 1 cat\n• 1 dog")
+
+
+.. image:: images/io-summary-popup.png
+   :scale: 50 %
+   :alt: Detailed summary popup
+
+
+.. seealso::
+   :func:`~Orange.widgets.widget.StateInfo.set_input_summary`,
+   :func:`~Orange.widgets.widget.StateInfo.set_output_summary`
+
+
+.. note::
+   No I/O summary messages are displayed initially. Widget authors should
+   initialize them (to empty state) in the widget's ``__init__`` method.
+
+
 Tips
 ----
 
