@@ -66,7 +66,6 @@ class OWtSNE(OWDataProjectionWidget):
         super().__init__()
         self.pca_data = None
         self.projection = None
-        self.__invalidated = True
         self.__update_loop = None
         # timer for scheduling updates
         self.__timer = QTimer(self, singleShot=True, interval=1,
@@ -111,11 +110,6 @@ class OWtSNE(OWDataProjectionWidget):
         gui.separator(box, 10)
         gui.hSlider(box, self, "pca_components", label="PCA components:",
                     minValue=2, maxValue=50, step=1)
-
-    def set_data(self, data):
-        self.__invalidated = not (self.data and data and
-                                  np.array_equal(self.data.X, data.X))
-        super().set_data(data)
 
     def check_data(self):
         def error(err):
@@ -251,14 +245,9 @@ class OWtSNE(OWDataProjectionWidget):
 
         self.__in_next_step = False
 
-    def handleNewSignals(self):
-        if self.__invalidated:
-            self.__invalidated = False
-            self.setup_plot()
-            self.start()
-        else:
-            self.graph.update_point_props()
-        self.commit()
+    def setup_plot(self):
+        super().setup_plot()
+        self.start()
 
     def commit(self):
         super().commit()
@@ -281,12 +270,11 @@ class OWtSNE(OWDataProjectionWidget):
         self.Outputs.preprocessor.send(prep)
 
     def clear(self):
-        if self.__invalidated:
-            super().clear()
-            self.__set_update_loop(None)
-            self.__state = OWtSNE.Waiting
-            self.pca_data = None
-            self.projection = None
+        super().clear()
+        self.__set_update_loop(None)
+        self.__state = OWtSNE.Waiting
+        self.pca_data = None
+        self.projection = None
 
     @classmethod
     def migrate_settings(cls, settings, version):

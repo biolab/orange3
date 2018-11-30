@@ -1,8 +1,6 @@
 import unittest
 import numpy as np
 
-from AnyQt.QtTest import QSignalSpy
-
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.preprocess import Preprocess
 from Orange.widgets.tests.base import (
@@ -97,23 +95,6 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
                                    rtol=1, atol=1)
         self.assertEqual([a.name for a in transformed.domain.attributes],
                          [m.name for m in output.domain.metas[:2]])
-
-    def test_invalidated_embedding(self):
-        self.widget.graph.update_coordinates = unittest.mock.Mock()
-        self.widget.graph.update_point_props = unittest.mock.Mock()
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.update_coordinates.assert_called_once()
-        self.widget.graph.update_point_props.assert_called_once()
-
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(5000))
-
-        self.widget.graph.update_coordinates.reset_mock()
-        self.widget.graph.update_point_props.reset_mock()
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.update_coordinates.assert_not_called()
-        self.widget.graph.update_point_props.assert_called_once()
 
 
 if __name__ == '__main__':

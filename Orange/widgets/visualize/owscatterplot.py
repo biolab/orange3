@@ -262,6 +262,10 @@ class OWScatterPlot(OWDataProjectionWidget):
             callback=self.switch_sampling, commit=lambda: self.add_data(1))
         self.sampling.setVisible(False)
 
+    @property
+    def effective_variables(self):
+        return [self.attr_x, self.attr_y]
+
     def _vizrank_color_change(self):
         self.vizrank.initialize()
         is_enabled = self.data is not None and not self.data.is_sparse() and \

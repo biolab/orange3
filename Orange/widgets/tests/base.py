@@ -894,13 +894,22 @@ class ProjectionWidgetTestMixin:
         """Test widget for empty dataset"""
         self.send_signal(self.widget.Inputs.data, self.data[:0])
 
-    def test_subset_data(self, timeout=DEFAULT_TIMEOUT):
-        """Test widget for subset data"""
+    def test_plot_once(self, timeout=DEFAULT_TIMEOUT):
+        """Test if data is plotted only once but committed on every input change"""
+        self.widget.setup_plot = Mock()
+        self.widget.commit = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+
+        self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
 
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
@@ -931,6 +940,24 @@ class ProjectionWidgetTestMixin:
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
         self.assertEqual(len(self.widget.subset_indices), 5)
+
+    def test_invalidated_embedding(self, timeout=DEFAULT_TIMEOUT):
+        """Check if graph has been replotted when sending same data"""
+        self.widget.graph.update_coordinates = Mock()
+        self.widget.graph.update_point_props = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_called_once()
+        self.widget.graph.update_point_props.assert_called_once()
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.widget.graph.update_coordinates.reset_mock()
+        self.widget.graph.update_point_props.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_not_called()
+        self.widget.graph.update_point_props.assert_called_once()
 
     def test_send_report(self, timeout=DEFAULT_TIMEOUT):
         """Test report """
