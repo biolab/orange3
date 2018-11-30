@@ -4,7 +4,8 @@ from unittest.mock import patch, Mock
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import Compression, CSVReader, TabReader, PickleReader, FileFormat
+from Orange.data.io import Compression, CSVReader, TabReader, PickleReader, \
+    ExcelReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter
@@ -14,7 +15,7 @@ FILE_TYPES = [
     ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
      w.EXTENSIONS[0],
      w.SUPPORT_SPARSE_DATA)
-    for w in (TabReader, CSVReader, PickleReader)
+    for w in (TabReader, CSVReader, PickleReader, ExcelReader)
 ]
 
 COMPRESSIONS = [
@@ -47,7 +48,8 @@ class TestOWSave(WidgetTest):
             self.widget.compress = d
             self.widget.filetype = t
             self.widget.update_extension()
-            self.assertEqual(len(self.widget.get_writer_selected().EXTENSIONS), 1)
+            self.assertEqual(
+                len(self.widget.get_writer_selected().EXTENSIONS), 1)
 
     def test_ordinary_save(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
