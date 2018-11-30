@@ -2,7 +2,7 @@ import datetime
 from collections import namedtuple
 from functools import wraps, partial
 from itertools import chain
-from typing import Callable, List  # pylint: disable=unused-import
+from typing import Callable, List
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \

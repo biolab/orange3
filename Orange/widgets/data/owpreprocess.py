@@ -1,4 +1,3 @@
-import sys
 from collections import OrderedDict
 import pkg_resources
 
@@ -21,7 +20,6 @@ from AnyQt.QtCore import (
 
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-
 import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
@@ -29,6 +27,7 @@ from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 from Orange.widgets.data.utils.preprocess import (
@@ -1242,24 +1241,5 @@ class OWPreprocess(widget.OWWidget):
             self.report_items("Settings", pp)
 
 
-def test_main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "brown-selected"
-    app = QApplication([])
-
-    w = OWPreprocess()
-    w.set_data(Orange.data.Table(filename))
-    w.show()
-    w.raise_()
-    r = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    w.onDeleteWidget()
-    return r
-
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWPreprocess).run(Orange.data.Table("brown-selected"))

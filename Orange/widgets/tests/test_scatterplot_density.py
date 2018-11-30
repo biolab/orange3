@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from math import *
+from math import pi, sin, cos
 import numpy as np
 from numpy.random import random, randint, uniform
 

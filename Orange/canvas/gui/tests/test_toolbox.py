@@ -3,11 +3,11 @@ Tests for ToolBox widget.
 
 """
 
-from .. import test
-from .. import toolbox
-
 from AnyQt.QtWidgets import QLabel, QListView, QSpinBox, QAbstractButton
 from AnyQt.QtGui import QIcon
+
+from .. import test
+from .. import toolbox
 
 
 class TestToolBox(test.QAppTestCase):

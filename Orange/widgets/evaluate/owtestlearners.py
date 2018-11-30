@@ -1,7 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
 
-import sys
 from itertools import chain
 import abc
 import enum
@@ -13,13 +12,7 @@ from functools import partial, reduce
 import concurrent.futures
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
-
-try:
-    # only used in type hinting
-    # pylint: disable=unused-import
-    from typing import Any, Optional, List, Tuple, Dict, Callable
-except ImportError:
-    pass
+from typing import Any, Optional, List, Dict, Callable
 
 import numpy as np
 
@@ -41,6 +34,7 @@ from Orange.preprocess.preprocess import Preprocess
 import Orange.regression
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.concurrent import ThreadExecutor
 
@@ -1094,25 +1088,11 @@ class Task:
         concurrent.futures.wait([self.future])
 
 
-def main(argv=None):
-    """Show and test the widget"""
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig(level=logging.DEBUG)
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
+if __name__ == "__main__":  # pragma: no cover
+    filename = "iris"
     data = Table(filename)
     class_var = data.domain.class_var
-
-    if class_var is None:
-        return 1
-    elif class_var.is_discrete:
+    if class_var.is_discrete:
         learners = [lambda data: 1 / 0,
                     Orange.classification.LogisticRegressionLearner(),
                     Orange.classification.MajorityLearner(),
@@ -1123,22 +1103,8 @@ def main(argv=None):
                     Orange.regression.KNNRegressionLearner(),
                     Orange.regression.RidgeRegressionLearner()]
 
-    w = OWTestLearners()
-    w.show()
-    w.set_train_data(data)
-    w.set_test_data(data)
-
-    for i, learner in enumerate(learners):
-        w.set_learner(learner, i)
-
-    w.handleNewSignals()
-    rval = app.exec_()
-
-    for i in range(len(learners)):
-        w.set_learner(None, i)
-    w.handleNewSignals()
-    w.saveSettings()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+    WidgetPreview(OWTestLearners).run(
+        set_train_data=data,
+        set_test_data=data,
+        set_learner=[(learner, i) for i, learner in enumerate(learners)]
+    )

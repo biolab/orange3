@@ -15,7 +15,6 @@ from Orange.data import (
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import TableDesc, BackendError
-from Orange.misc import import_late_warning
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
@@ -596,6 +595,8 @@ class SqlTable(Table):
                             no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
+        # the module is optional, but this function is not called if it's not installed
+        # pylint: disable=import-error
         import psycopg2
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")

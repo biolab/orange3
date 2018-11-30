@@ -19,7 +19,7 @@ import types
 from traceback import format_exception_only
 from collections import namedtuple, OrderedDict
 from itertools import chain, count
-from typing import List, Dict, Any  # pylint: disable=unused-import
+from typing import List, Dict, Any
 
 import numpy as np
 
@@ -37,6 +37,7 @@ from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import itemmodels, vartype
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets import report
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 FeatureDescriptor = \
@@ -1014,29 +1015,5 @@ def unique(seq):
     return unique_el
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    w = OWFeatureConstructor()
-    w.show()
-    w.raise_()
-    data = Orange.data.Table(filename)
-    w.setData(data)
-    w.handleNewSignals()
-    app.exec_()
-    w.setData(None)
-    w.handleNewSignals()
-    w.saveSettings()
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWFeatureConstructor).run(Orange.data.Table("iris"))

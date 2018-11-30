@@ -1,9 +1,7 @@
 """Pythagorean forest widget for visualizing random forests."""
 from math import log, sqrt
-# pylint: disable=unused-import
 from typing import Any, Callable, Optional
 
-# pylint: disable=unused-import
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
     QItemSelection, QT_VERSION
 from AnyQt.QtGui import QPainter, QPen, QColor, QBrush, QMouseEvent
@@ -15,6 +13,7 @@ from Orange.data import Table
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
@@ -388,20 +387,9 @@ class SklRandomForestAdapter:
         return self._domain
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     from Orange.modelling import RandomForestLearner
-    from AnyQt.QtWidgets import QApplication
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWPythagoreanForest()
-    ow.resetSettings()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    rf = RandomForestLearner(n_estimators=100)(data)
+    data = Table('iris')
+    rf = RandomForestLearner(n_estimators=10)(data)
     rf.instances = data
-    ow.set_rf(rf)
-
-    ow.show()
-    ow.raise_()
-    ow.handleNewSignals()
-    app.exec_()
+    WidgetPreview(OWPythagoreanForest).run(rf)

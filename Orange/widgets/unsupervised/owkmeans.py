@@ -1,5 +1,5 @@
-from concurrent.futures import Future  # pylint: disable=unused-import
-from typing import Optional, List, Dict  # pylint: disable=unused-import
+from concurrent.futures import Future
+from typing import Optional, List, Dict
 
 import numpy as np
 from AnyQt.QtCore import Qt, QTimer, QAbstractTableModel, QModelIndex, QThread, \
@@ -8,7 +8,7 @@ from AnyQt.QtGui import QIntValidator
 from AnyQt.QtWidgets import QGridLayout, QTableView
 
 from Orange.clustering import KMeans
-from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES  # pylint: disable=unused-import
+from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -16,6 +16,7 @@ from Orange.widgets.utils.annotated_data import get_next_name, \
     ANNOTATED_DATA_SIGNAL_NAME, add_columns
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureSetWatcher
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -521,18 +522,5 @@ class OWKMeans(widget.OWWidget):
         super().onDeleteWidget()
 
 
-def main():  # pragma: no cover
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWKMeans()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else "iris.tab")
-    ow.set_data(d)
-    ow.show()
-    a.exec()
-    ow.saveSettings()
-
-
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    WidgetPreview(OWKMeans).run(Table("iris.tab"))

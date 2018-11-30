@@ -1,5 +1,8 @@
 import numpy as np
 
+from AnyQt.QtCore import Qt, QItemSelection
+from AnyQt.QtWidgets import QCheckBox
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
 from Orange.preprocess.score import Scorer
@@ -9,9 +12,6 @@ from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import AttributeList
-
-from AnyQt.QtCore import Qt, QItemSelection
-from AnyQt.QtWidgets import QCheckBox
 
 
 class TestOWRank(WidgetTest):

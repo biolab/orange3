@@ -13,6 +13,7 @@ from Orange.preprocess import Normalize
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.projection import PCA, TruncatedSVD
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 try:
@@ -517,23 +518,5 @@ class OWPCA(widget.OWWidget):
             settings["ncomponents"] = MAX_COMPONENTS
 
 
-def main():
-    import gc
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    w = OWPCA()
-    # data = Table("iris")
-    # data = Table("wine")
-    data = Table("housing")
-    w.set_data(data)
-    w.show()
-    w.raise_()
-    rval = w.exec()
-    w.deleteLater()
-    del w
-    app.processEvents()
-    gc.collect()
-    return rval
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWPCA).run(Table("housing"))

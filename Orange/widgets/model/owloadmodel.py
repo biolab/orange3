@@ -11,6 +11,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import stdpaths
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
 
 
@@ -131,13 +132,5 @@ class OWLoadModel(widget.OWWidget):
         self.load(self.history[self.selectedIndex])
 
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    w = OWLoadModel()
-    w.show()
-    return app.exec_()
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWLoadModel).run()

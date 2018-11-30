@@ -32,7 +32,6 @@ import traceback
 from operator import attrgetter
 from warnings import warn
 from inspect import getattr_static
-# pylint: disable=unused-import
 from typing import Optional
 
 from AnyQt.QtWidgets import QStyle, QSizePolicy

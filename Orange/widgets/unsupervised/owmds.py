@@ -1,9 +1,6 @@
-import sys
-
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtWidgets import QApplication
 from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
@@ -15,9 +12,10 @@ from Orange.projection.manifold import torgerson, MDS
 
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
-from Orange.widgets.widget import Msg, OWWidget, Input
+from Orange.widgets.widget import Msg, Input
 
 
 def stress(X, distD):
@@ -567,39 +565,6 @@ class OWMDS(OWDataProjectionWidget):
             values["attr_label"] = values["graph"]["attr_label"]
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    import gc
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-    w = OWMDS()
-    w.set_data(data)
-    w.set_subset_data(data[np.random.choice(len(data), 10)])
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-
-    w.set_subset_data(None)
-    w.set_data(None)
-    w.handleNewSignals()
-
-    w.saveSettings()
-    w.onDeleteWidget()
-    w.deleteLater()
-    del w
-    gc.collect()
-    app.processEvents()
-    return rval
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("iris")
+    WidgetPreview(OWMDS).run(set_data=data, set_subset_data=data[:30])

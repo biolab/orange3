@@ -15,14 +15,13 @@ from collections import defaultdict, Sequence
 import pkg_resources
 
 from AnyQt import QtWidgets, QtCore, QtGui
-# pylint: disable=unused-import
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSize, QItemSelection, QTimer, pyqtSignal as Signal
+    Qt, QEvent, QSize, QItemSelection, QTimer, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
-    QComboBox, QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
+    QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
     QTableView, QHeaderView, QListView
 )
 

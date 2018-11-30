@@ -10,6 +10,7 @@ from Orange.widgets.model.owlogisticregression import create_coef_table
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 MAXINT = 2 ** 31 - 1
 
@@ -326,16 +327,5 @@ class OWSGD(OWBaseLearner):
             settings_["tol_enabled"] = False
 
 
-if __name__ == '__main__':
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    from Orange.data import Table
-
-    a = QApplication(sys.argv)
-    ow = OWSGD()
-    ow.resetSettings()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSGD).run(Table("iris"))

@@ -1,4 +1,3 @@
-from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QFocusEvent
 from AnyQt.QtWidgets import QStyle, QApplication
 from Orange.widgets.tests.base import GuiTest

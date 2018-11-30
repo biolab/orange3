@@ -1,4 +1,4 @@
-import os, sys
+import os
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
 from AnyQt.QtCore import QTimer
@@ -7,6 +7,7 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
@@ -142,10 +143,6 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             self.report_items([("File name", self.loaded_file)])
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWDistanceFile()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDistanceFile).run()

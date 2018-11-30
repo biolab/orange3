@@ -1,5 +1,3 @@
-import sys
-
 import numpy as np
 from AnyQt.QtWidgets import QLayout
 
@@ -8,6 +6,7 @@ from Orange.classification import OneClassSVMLearner, EllipticEnvelopeLearner
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 from Orange.widgets.utils.sql import check_sql_input
 
@@ -227,16 +226,6 @@ class OWOutliers(widget.OWWidget):
                  ("Contamination", self.cont),
                  ("Support fraction", self.support_fraction)))
 
-def test_main():
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication([])
-    data = Table("iris")
-    w = OWOutliers()
-    w.set_data(data)
-    w.commit()
-    w.show()
-    return app.exec_()
 
-
-if __name__ == "__main__":
-    sys.exit(test_main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWOutliers).run(Table("iris"))

@@ -4,6 +4,7 @@ from Orange.preprocess.remove import Remove
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -168,16 +169,9 @@ class OWPurgeDomain(widget.OWWidget):
             ))
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    appl = QApplication([])
-    ow = OWPurgeDomain()
+if __name__ == "__main__":  # pragma: no cover
     data = Table("car.tab")
-    subset = [inst for inst in data
-              if inst["buying"] == "v-high"]
+    subset = [inst for inst in data if inst["buying"] == "v-high"]
     subset = Table(data.domain, subset)
     # The "buying" should be removed and the class "y" reduced
-    ow.setData(subset)
-    ow.show()
-    appl.exec_()
-    ow.saveSettings()
+    WidgetPreview(OWPurgeDomain).run(subset)

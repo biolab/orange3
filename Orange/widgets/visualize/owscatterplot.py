@@ -8,7 +8,6 @@ from sklearn.metrics import r2_score
 
 from AnyQt.QtCore import Qt, QTimer, QPointF
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 
@@ -23,6 +22,7 @@ from Orange.widgets.settings import (
 )
 from Orange.widgets.utils import get_variable_values_sorted
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
@@ -488,35 +488,6 @@ class OWScatterPlot(OWDataProjectionWidget):
             values["attr_label"] = values["graph"]["attr_label"]
 
 
-def main(argv=None):
-    import sys
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    a = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    ow = OWScatterPlot()
-    ow.show()
-    ow.raise_()
-    data = Table(filename)
-    ow.set_data(data)
-    ow.set_subset_data(data[:30])
-    ow.handleNewSignals()
-
-    rval = a.exec()
-
-    ow.set_data(None)
-    ow.set_subset_data(None)
-    ow.handleNewSignals()
-    ow.saveSettings()
-    ow.onDeleteWidget()
-
-    return rval
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("iris")
+    WidgetPreview(OWScatterPlot).run(set_data=data, set_subset_data=data[:30])

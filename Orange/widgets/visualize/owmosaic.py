@@ -25,6 +25,7 @@ from Orange.widgets.utils import to_html, get_variable_values_sorted
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -962,19 +963,6 @@ def get_conditional_distribution(data, attrs):
     return cond_dist, dist
 
 
-def main():
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWMosaicDisplay()
-    ow.show()
-    data = Table("zoo.tab")
-    ow.set_data(data)
-    ow.set_subset_data(data[::10])
-    ow.handleNewSignals()
-    a.exec_()
-    ow.saveSettings()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("zoo")
+    WidgetPreview(OWMosaicDisplay).run(data, set_subset_data=data[::10])

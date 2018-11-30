@@ -23,7 +23,7 @@ import enum
 import itertools
 from collections import namedtuple, deque
 from urllib.parse import urlencode
-from typing import List, Tuple, Union
+from typing import List, Tuple
 import sip
 
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction

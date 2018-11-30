@@ -7,6 +7,7 @@ import Orange.misc
 from Orange import distance
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -167,3 +168,7 @@ class OWDistances(OWWidget):
             # normalize_dist is set to False when restoring settings from
             # an older version to preserve old semantics.
             settings["normalized_dist"] = False
+
+
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDistances).run(Orange.data.Table("iris"))

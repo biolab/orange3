@@ -27,8 +27,8 @@ from . import SchemeNode, SchemeLink
 from .annotations import SchemeTextAnnotation, SchemeArrowAnnotation
 from .errors import IncompatibleChannelTypeError
 
-from ..registry import global_registry
-from ..registry import WidgetDescription, InputSignal, OutputSignal
+from ..registry import (
+    global_registry, WidgetDescription, InputSignal, OutputSignal)
 
 log = logging.getLogger(__name__)
 

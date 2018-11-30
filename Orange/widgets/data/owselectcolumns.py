@@ -1,9 +1,8 @@
-import sys
 from functools import partial
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
+from AnyQt.QtWidgets import QListView
 from AnyQt.QtCore import (
     Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
     QMimeData
@@ -14,6 +13,7 @@ from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting, Setting
 from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
@@ -548,30 +548,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(list(argv))
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWSelectAttributes()
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.set_features(AttributeList(data.domain.attributes[:2]))
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    return rval
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+    data = Orange.data.Table("brown-selected")
+    features = AttributeList(data.domain.attributes[:2])
+    WidgetPreview(OWSelectAttributes).run(set_data=data, set_features=features)

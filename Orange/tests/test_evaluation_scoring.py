@@ -10,12 +10,11 @@ from Orange.classification import LogisticRegressionLearner, SklTreeLearner, Nai
                                   MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
-from Orange.evaluation.scoring import ScoreMetaType
 from Orange.preprocess import discretize, Discretize
 
 
 class TestScoreMetaType(unittest.TestCase):
-    class BaseScore(metaclass=ScoreMetaType):
+    class BaseScore(metaclass=scoring.ScoreMetaType):
         pass
 
     class Score1(BaseScore, abstract=True):

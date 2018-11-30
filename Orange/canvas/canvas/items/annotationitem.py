@@ -20,9 +20,10 @@ from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtProperty as Property, pyqtSlot as Slot
 )
 
-log = logging.getLogger(__name__)
-
 from .graphicspathobject import GraphicsPathObject
+
+
+log = logging.getLogger(__name__)
 
 
 class Annotation(QGraphicsWidget):

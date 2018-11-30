@@ -1,5 +1,6 @@
-from Orange.classification import SklLearner, SklModel
 import numpy as np
+
+from Orange.classification import SklLearner, SklModel
 
 
 class DummyLearner(SklLearner):

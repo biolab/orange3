@@ -1,14 +1,13 @@
 import logging
 import numbers
 import os
-import sys
 import traceback
 
 from xml.sax.saxutils import escape
-from concurrent.futures import ThreadPoolExecutor, Future  # pylint: disable=unused-import
+from concurrent.futures import ThreadPoolExecutor, Future
 
 from types import SimpleNamespace
-from typing import Optional, Dict, Tuple, List  # pylint: disable=unused-import
+from typing import Optional, Dict, Tuple, List
 from collections import namedtuple
 
 from AnyQt.QtWidgets import (
@@ -28,6 +27,7 @@ import Orange.data
 from Orange.misc.environ import data_dir
 from Orange.widgets import widget, settings, gui
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 
@@ -610,19 +610,5 @@ def description_html(datainfo):
     return "\n".join(html)
 
 
-def main(args=None):
-    if args is None:
-        args = sys.argv
-
-    app = QApplication(list(args))
-    w = OWDataSets()
-    w.show()
-    w.raise_()
-    rv = app.exec_()
-    w.saveSettings()
-    w.onDeleteWidget()
-    return rv
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDataSets).run()

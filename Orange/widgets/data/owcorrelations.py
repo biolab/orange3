@@ -11,7 +11,6 @@ from sklearn.cluster import KMeans
 
 from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, QSize
 from AnyQt.QtGui import QStandardItem, QColor
-from AnyQt.QtWidgets import QApplication
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.preprocess import SklImpute, Normalize
@@ -19,6 +18,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
 from Orange.widgets.widget import OWWidget, AttributeList, Msg
 
@@ -285,11 +285,5 @@ class OWCorrelations(OWWidget):
                           self.vizrank.rank_table)
 
 
-if __name__ == "__main__":
-    app = QApplication([])
-    ow = OWCorrelations()
-    iris = Table("iris")
-    ow.set_data(iris)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWCorrelations).run(Table("iris"))

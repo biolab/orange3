@@ -3,6 +3,8 @@ import platform
 import json
 import logging
 import os
+import requests
+
 from Orange.canvas import config
 try:
     from Orange.version import full_version, release
@@ -10,7 +12,6 @@ except ImportError:
     full_version = '???'
     release = True
 
-import requests
 
 log = logging.getLogger(__name__)
 

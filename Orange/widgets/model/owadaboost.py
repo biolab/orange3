@@ -6,6 +6,7 @@ from Orange.modelling import SklAdaBoostLearner, SklTreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input
 
 
@@ -110,14 +111,5 @@ class OWAdaBoost(OWBaseLearner):
                     self.loss_index].capitalize()))
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWAdaBoost()
-    ow.resetSettings()
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWAdaBoost).run(Table("iris"))

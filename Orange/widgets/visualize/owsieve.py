@@ -15,10 +15,11 @@ from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
-from Orange.widgets.utils import to_html as to_html
+from Orange.widgets.utils import to_html
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
 from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
@@ -506,17 +507,5 @@ class OWSieveDiagram(OWWidget):
         self.report_plot()
 
 
-def main():
-    # pylint: disable=missing-docstring
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWSieveDiagram()
-    ow.show()
-    data = Table(r"zoo.tab")
-    ow.set_data(data)
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSieveDiagram).run(Table("zoo"))

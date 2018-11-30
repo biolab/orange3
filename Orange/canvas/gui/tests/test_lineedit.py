@@ -4,7 +4,6 @@ Test for searchwidget
 """
 
 from AnyQt.QtWidgets import QAction, QStyle, QMenu
-from AnyQt.QtGui import QIcon
 
 from ..lineedit import LineEdit
 

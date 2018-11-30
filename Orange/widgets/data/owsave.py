@@ -9,6 +9,7 @@ from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, Pickle
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import filedialogs
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 FILE_TYPES = [
@@ -188,15 +189,5 @@ class OWSave(widget.OWWidget):
         self.adjust_label()
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    table = Table("iris")
-
-    ow = OWSave()
-    ow.show()
-    ow.dataset(table)
-    a.exec()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSave).run(Table("iris"))

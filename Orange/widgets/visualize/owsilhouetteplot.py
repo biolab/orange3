@@ -1,4 +1,3 @@
-import sys
 import itertools
 import enum
 
@@ -13,7 +12,7 @@ import sklearn.metrics
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
-    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX
+    QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX,
 )
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QFontMetrics, QPalette
 from AnyQt.QtCore import Qt, QEvent, QRectF, QSizeF, QSize, QPointF
@@ -31,7 +30,9 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     WrapperLayoutItem
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
+from Orange.widgets.visualize.owheatmap import scaled
 
 
 ROW_NAMES_WIDTH = 200
@@ -1089,9 +1090,6 @@ class BarPlotItem(QGraphicsWidget):
                                 v - base, h).normalized())
 
 
-from Orange.widgets.visualize.owheatmap import scaled
-
-
 class TextListWidget(QGraphicsWidget):
     def __init__(self, parent=None, items=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -1198,26 +1196,5 @@ class TextListWidget(QGraphicsWidget):
         self.__textitems = []
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-    w = OWSilhouettePlot()
-    w.show()
-    w.raise_()
-    w.set_data(Orange.data.Table(filename))
-    w.handleNewSignals()
-    app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.onDeleteWidget()
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSilhouettePlot).run(Orange.data.Table("iris"))

@@ -4,6 +4,7 @@ from AnyQt.QtCore import Qt
 from Orange.util import scale
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -90,3 +91,10 @@ class OWDistanceTransformation(widget.OWWidget):
 
     def _invalidate(self):
         self.commit()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import Orange.distance
+    data = Orange.data.Table("iris")
+    dist = Orange.distance.Euclidean(data)
+    WidgetPreview(OWDistanceTransformation).run(dist)
