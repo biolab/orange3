@@ -55,7 +55,6 @@ class OWSave(widget.OWWidget):
         self.basename = ""
         self.type_ext = ""
         self.compress_ext = ""
-        self.writer = None
 
         form = QFormLayout(
             labelAlignment=Qt.AlignLeft,
@@ -159,7 +158,6 @@ class OWSave(widget.OWWidget):
             return
 
         self.filename = filename
-        self.writer = writer
         self.last_dir = os.path.split(self.filename)[0]
         self.basename = os.path.basename(self.remove_extensions(filename))
         self.unconditional_save_file()
@@ -172,9 +170,11 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         else:
             try:
-                self.writer.write(os.path.join(self.last_dir,
-                                               self.basename + self.type_ext + self.compress_ext),
-                                  self.data)
+                self.get_writer_selected().write(
+                    os.path.join(
+                        self.last_dir,
+                        self.basename + self.type_ext + self.compress_ext),
+                    self.data)
             except Exception as err_value:
                 self.error(str(err_value))
             else:
