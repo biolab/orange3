@@ -5,7 +5,8 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from Orange.data.table import Table
-from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader
+from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader, \
+    ExcelReader
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import filedialogs
@@ -16,7 +17,7 @@ FILE_TYPES = [
     ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
      w.EXTENSIONS[0],
      w.SUPPORT_SPARSE_DATA)
-    for w in (TabReader, CSVReader, PickleReader)
+    for w in (TabReader, CSVReader, PickleReader, ExcelReader)
 ]
 
 COMPRESSIONS = [

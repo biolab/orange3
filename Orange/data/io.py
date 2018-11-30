@@ -25,8 +25,7 @@ import numpy as np
 from chardet.universaldetector import UniversalDetector
 
 import xlrd
-import xlwt
-from pyexcel_ods import save_data as ods_write
+import xlsxwriter
 
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
@@ -980,25 +979,34 @@ class BasketReader(FileFormat):
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
-    EXTENSIONS = ('.xls', '.xlsx', '.ods')
-    DESCRIPTION = 'Mircosoft Excel spreadsheet'
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+    SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
-        super().__init__(filename)
-        self.workbook = xlrd.open_workbook(self.filename)
+        super().__init__(filename=filename)
+        self._workbook = None
+
+    @property
+    def workbook(self):
+        if not self._workbook:
+            self._workbook = xlrd.open_workbook(self.filename, on_demand=True)
+        return self._workbook
 
     @property
     @lru_cache(1)
     def sheets(self):
-        return self.workbook.sheet_names()
+        if self.workbook:
+            return self.workbook.sheet_names()
+        else:
+            return ()
 
     def read(self):
-        wb = xlrd.open_workbook(self.filename, on_demand=True)
         if self.sheet:
-            ss = wb.sheet_by_name(self.sheet)
+            ss = self.workbook.sheet_by_name(self.sheet)
         else:
-            ss = wb.sheet_by_index(0)
+            ss = self.workbook.sheet_by_index(0)
         try:
             first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
             first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
@@ -1027,19 +1035,14 @@ class ExcelReader(FileFormat):
                                data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
                                data.metas)
         headers = cls.header_names(data)
-        if filename.endswith((".xls", ".xlsx")):
-            workbook = xlwt.Workbook(encoding="utf-8")
-            sheet = workbook.add_sheet("Sheet1", cell_overwrite_ok=True)
-            for c, header in enumerate(headers):
-                sheet.write(0, c, header)
-            for i, row in enumerate(zipped_list_data, 1):
-                for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
-                    sheet.write(i, j, fmt(v))
-            workbook.save(filename)
-        elif filename.endswith(".ods"):
-            ods_formatted_data = [[str(fmt(v)) for fmt, v in zip(formatters, flatten(row))]
-                                  for row in zipped_list_data]
-            ods_write(filename, {"Sheet1": [headers] + ods_formatted_data})
+        workbook = xlsxwriter.Workbook(filename)
+        sheet = workbook.add_worksheet()
+        for c, header in enumerate(headers):
+            sheet.write(0, c, header)
+        for i, row in enumerate(zipped_list_data, 1):
+            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                sheet.write(i, j, fmt(v))
+        workbook.close()
 
 
 class DotReader(FileFormat):
