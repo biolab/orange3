@@ -29,7 +29,7 @@ def class_density_image(min_x, max_x, min_y, max_y, resolution, x_data, y_data, 
                           x_data_norm[sample], y_data_norm[sample], np.array(rgb_data)[sample])
     density_img = ImageItem(img.astype(np.uint8), autoLevels=False)
     density_img.setRect(QRectF(min_x-x_sz/2, min_y-y_sz/2,
-                                    max_x-min_x+x_sz, max_y-min_y+y_sz))
+                               max_x-min_x+x_sz, max_y-min_y+y_sz))
     density_img.setZValue(-1)
     return density_img
 

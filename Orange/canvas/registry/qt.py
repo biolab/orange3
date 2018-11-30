@@ -298,8 +298,7 @@ def tooltip_helper(desc):
         tooltip[0] += " (from {0})".format(desc.project_name)
 
     if desc.description:
-        tooltip.append("{0}".format(
-                            escape(desc.description)))
+        tooltip.append("{0}".format(escape(desc.description)))
 
     inputs_fmt = "<li>{name}</li>"
 

@@ -1106,7 +1106,7 @@ def literal_dumps(obj, prettyprint=False, indent=4):
             return all(map(check, chain(iter(obj.keys()), iter(obj.values()))))
         else:
             raise TypeError("{0} can not be serialized as a python "
-                             "literal".format(type(obj)))
+                            "literal".format(type(obj)))
 
     check(obj)
 

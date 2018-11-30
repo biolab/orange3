@@ -90,11 +90,11 @@ class TestSelectAttributesDomainContextHandler(TestCase):
         self.handler.bind(SimpleWidget)
         context = Mock(values=dict(
             domain_role_hints=({('d1', Discrete): ('available', 0),
-                               ('d2', Discrete): ('meta', 0),
-                               ('c1', Continuous): ('attribute', 0),
-                               ('d3', Discrete): ('attribute', 1),
-                               ('d4', Discrete): ('attribute', 2),
-                               ('c2', Continuous): ('class', 0)}, -2),
+                                ('d2', Discrete): ('meta', 0),
+                                ('c1', Continuous): ('attribute', 0),
+                                ('d3', Discrete): ('attribute', 1),
+                                ('d4', Discrete): ('attribute', 2),
+                                ('c2', Continuous): ('class', 0)}, -2),
             required=('g1', Continuous),
         ))
         self.handler.global_contexts = [context]

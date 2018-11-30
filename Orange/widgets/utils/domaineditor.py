@@ -264,11 +264,11 @@ class DomainEditor(QTableView):
 
         # Exit early with original domain if the user didn't actually change anything
         if all((name == orig_var.name and tpe == type(orig_var) and place == orig_plc)
-               for (name, tpe, place, _, _), (orig_var, orig_plc) in \
-                       zip(variables,
-                           chain(((at, Place.feature) for at in domain.attributes),
-                                 ((cl, Place.class_var) for cl in domain.class_vars),
-                                 ((mt, Place.meta) for mt in domain.metas)))):
+               for (name, tpe, place, _, _), (orig_var, orig_plc) in
+               zip(variables,
+                   chain(((at, Place.feature) for at in domain.attributes),
+                         ((cl, Place.class_var) for cl in domain.class_vars),
+                         ((mt, Place.meta) for mt in domain.metas)))):
             return domain, [data.X, data.Y, data.metas]
 
         for (name, tpe, place, _, may_be_numeric), (orig_var, orig_plc) in \

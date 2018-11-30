@@ -35,15 +35,16 @@ class TestTabReader(unittest.TestCase):
             X, Y, metas, attr_indices, class_indices, meta_indices = \
                 _io.sparse_read_float(f.name.encode("ascii"))
 
-            self.assertEqual(attr_indices,
+            self.assertEqual(
+                attr_indices,
                 {b"abc": 0, b"def": 1, b"g": 2, b"h": 3, b"ij k": 4, b"t": 5,
                  b"ij": 6, b"kl": 7, b"m": 8})
             np.testing.assert_almost_equal(X.data, [1, 1, 1, 1, 5, 1,
-                                                  1, 1, 1, 1, 4, 1,
-                                                  1])
+                                                    1, 1, 1, 1, 4, 1,
+                                                    1])
             np.testing.assert_equal(X.indices, [0, 1, 2, 3, 4, 5,
-                                           1, 2, 3, 6, 7, 8,
-                                           1])
+                                                1, 2, 3, 6, 7, 8,
+                                                1])
             np.testing.assert_equal(X.indptr, [0, 6, 12, 13])
 
             self.assertEqual(class_indices, {})
@@ -63,7 +64,8 @@ class TestTabReader(unittest.TestCase):
             X, Y, metas, attr_indices, class_indices, meta_indices = \
                 _io.sparse_read_float(f.name.encode("ascii"))
 
-            self.assertEqual(attr_indices,
+            self.assertEqual(
+                attr_indices,
                 {b"abc": 0, b"g": 1, b"h": 2, b"ij": 3})
             np.testing.assert_equal(X.data,    [1, 1, 1, 1, 1, 1, 1])
             np.testing.assert_equal(X.indices, [0, 1, 2, 3, 1, 2, 3])

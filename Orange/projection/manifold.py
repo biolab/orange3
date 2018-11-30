@@ -115,8 +115,8 @@ class MDS(SklProjector):
         params = self.params.copy()
         dissimilarity = params['dissimilarity']
         if isinstance(self._metric, DistanceModel) or (
-                isinstance(self._metric, type) and issubclass(self._metric, Distance)
-        ):
+                isinstance(self._metric, type)
+                and issubclass(self._metric, Distance)):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)

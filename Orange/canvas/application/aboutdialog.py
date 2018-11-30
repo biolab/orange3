@@ -48,7 +48,7 @@ class AboutDialog(QDialog):
             git_revision = "Unknown"
 
         text = ABOUT_TEMPLATE.format(version=version,
-                git_revision=git_revision[:7])
+                                     git_revision=git_revision[:7])
         # TODO: Also list all known add-on versions.
         text_label = QLabel(text)
         layout.addWidget(text_label, Qt.AlignCenter)

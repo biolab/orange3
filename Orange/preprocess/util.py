@@ -19,7 +19,7 @@ class _RefuseDataInConstructor:
             warnings.warn(
                 'Passing data into {0} constructor is deprecated. Instead, '
                 'first make an instance, i.e. {0}(), then call it with data.'
-                    .format(cls.__name__), OrangeDeprecationWarning,
+                .format(cls.__name__), OrangeDeprecationWarning,
                 stacklevel=2)
 
             return obj(data)

@@ -302,7 +302,7 @@ class LinksEditWidget(QGraphicsWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.__tmpLine:
             endItem = find_item_at(self.scene(), event.scenePos(),
-                                     type=ChannelAnchor)
+                                   type=ChannelAnchor)
 
             if endItem is not None:
                 startItem = self.__dragStartItem
