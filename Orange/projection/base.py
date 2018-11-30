@@ -5,7 +5,7 @@ import numpy as np
 
 import Orange.data
 from Orange.base import ReprableWithPreprocessors
-from Orange.data.util import ComputeValueProjector, get_unique_names
+from Orange.data.util import SharedComputeValue, get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import RemoveNaNRows
 import Orange.preprocess
@@ -107,10 +107,21 @@ class TransformDomain:
         return self.projection.transform(data.X)
 
 
+class ComputeValueProjector(SharedComputeValue):
+    def __init__(self, projection, feature, transform):
+        super().__init__(transform)
+        self.projection = projection
+        self.feature = feature
+        self.transformed = None
+
+    def compute(self, data, space):
+        return space[:, self.feature]
+
+
 class DomainProjection(Projection):
     var_prefix = "C"
 
-    def __init__(self, proj, domain):
+    def __init__(self, proj, domain, n_components):
         transformer = TransformDomain(self)
 
         def proj_variable(i, name):
@@ -124,16 +135,14 @@ class DomainProjection(Projection):
 
         super().__init__(proj=proj)
         self.orig_domain = domain
-        self.n_components = self.components_.shape[0]
-        var_names = self.__get_var_names()
+        var_names = self._get_var_names(n_components)
         self.domain = Orange.data.Domain(
-            [proj_variable(i, var_names[i]) for i in range(self.n_components)],
+            [proj_variable(i, var_names[i]) for i in range(n_components)],
             domain.class_vars, domain.metas)
 
-    def __get_var_names(self):
-        n = self.n_components
-        postfixes = ["-x", "-y"] if n == 2 else [str(i) for i in range(n)]
-        names = [f"{self.var_prefix}{postfix}" for postfix in postfixes]
+    def _get_var_names(self, n):
+        postfixes = ["x", "y"] if n == 2 else [str(i) for i in range(1, n + 1)]
+        names = [f"{self.var_prefix}-{postfix}" for postfix in postfixes]
         domain = self.orig_domain.variables + self.orig_domain.metas
         return get_unique_names([v.name for v in domain], names)
 
@@ -150,7 +159,7 @@ class LinearProjector(Projector):
 
     def fit(self, X, Y=None):
         self.components_ = self.get_components(X, Y)
-        return self.projection(self, self.domain)
+        return self.projection(self, self.domain, len(self.components_))
 
     def get_components(self, X, Y):
         raise NotImplementedError

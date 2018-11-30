@@ -12,10 +12,11 @@ except ImportError:
 
 import Orange.data
 from Orange.data import Variable
+from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
-from Orange.projection import SklProjector, DomainProjection
 from Orange.preprocess.score import LearnerScorer
+from Orange.projection import SklProjector, DomainProjection
 
 __all__ = ["PCA", "SparsePCA", "IncrementalPCA", "TruncatedSVD"]
 
@@ -47,7 +48,7 @@ class PCA(SklProjector, _FeatureScorerMixin):
             params["n_components"] = min(min(X.shape), params["n_components"])
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class SparsePCA(SklProjector):
@@ -64,11 +65,16 @@ class SparsePCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class PCAModel(DomainProjection, metaclass=WrapperMeta):
     var_prefix = "PC"
+
+    def _get_var_names(self, n):
+        names = [f"{self.var_prefix}{postfix}" for postfix in range(1, n + 1)]
+        domain = self.orig_domain.variables + self.orig_domain.metas
+        return get_unique_names([v.name for v in domain], names)
 
 
 class IncrementalPCA(SklProjector):
@@ -84,7 +90,7 @@ class IncrementalPCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return IncrementalPCAModel(proj, self.domain)
+        return IncrementalPCAModel(proj, self.domain, len(proj.components_))
 
     def partial_fit(self, data):
         return self(data)
@@ -120,7 +126,7 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
 
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class RemotePCA:

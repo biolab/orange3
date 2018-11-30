@@ -10,10 +10,9 @@ import fastTSNE
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.data.util import ComputeValueProjector
 from Orange.distance import Distance, DistanceModel, Euclidean
 from Orange.projection import SklProjector, Projector, Projection
-from Orange.projection.base import TransformDomain
+from Orange.projection.base import TransformDomain, ComputeValueProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
