@@ -43,4 +43,3 @@ def results_for_preview(data_name=""):
     )
     results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
     return results
-

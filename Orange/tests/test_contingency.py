@@ -272,4 +272,3 @@ class TestDiscrete(unittest.TestCase):
         d.Y[5] = 1024
         with self.assertRaises(IndexError):
             contingency.get_contingency(d, X, C)
-

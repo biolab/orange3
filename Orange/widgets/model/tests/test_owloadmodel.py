@@ -32,4 +32,3 @@ class TestOWLoadModel(WidgetTest):
             self.assertTrue(self.widget.Error.load_error.is_shown())
         finally:
             os.remove(fname)
-

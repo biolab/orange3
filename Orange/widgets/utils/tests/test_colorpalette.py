@@ -15,5 +15,3 @@ class TestColorPalette(WidgetTest):
         dlg.contLeft.getColor().getRgb()
         dlg.contRight.getColor().getRgb()
         dlg.contpassThroughBlack
-
-
