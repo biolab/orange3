@@ -17,9 +17,6 @@ from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
 from Orange.widgets.widget import OWWidget
 
 
-DEFAULT_TIMEOUT = 5000
-
-
 class MockWidget(OWWidget):
     name = "Mock"
 
@@ -167,7 +164,8 @@ class TestOWScatterPlotBase(WidgetTest):
         master.get_label_data = lambda: \
             np.array([str(x) for x in d], dtype=object)
         graph.reset_graph()
-        self.process_events(until=lambda: not self.graph._timer.isActive())
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
 
         # Check proper sampling
         scatterplot_item = graph.scatterplot_item
@@ -195,7 +193,8 @@ class TestOWScatterPlotBase(WidgetTest):
 
         # Check that sample is extended when sample size is changed
         graph.set_sample_size(4)
-        self.process_events(until=lambda: not self.graph._timer.isActive())
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
@@ -235,7 +234,8 @@ class TestOWScatterPlotBase(WidgetTest):
 
         # Enable sampling when data is already present and not sampled
         graph.set_sample_size(3)
-        self.process_events(until=lambda: not self.graph._timer.isActive())
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
@@ -271,7 +271,8 @@ class TestOWScatterPlotBase(WidgetTest):
                    np.arange(100, 105, dtype=float))
         d = self.xy[0] - 100
         graph.reset_graph()
-        self.process_events(until=lambda: not self.graph._timer.isActive())
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         self.assertEqual(len(x), 3)
@@ -376,7 +377,8 @@ class TestOWScatterPlotBase(WidgetTest):
 
         d[4] = np.nan
         graph.update_sizes()
-        self.process_events(until=lambda: not self.graph._timer.isActive())
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
         sizes2 = scatterplot_item.data["size"]
 
         self.assertEqual(sizes[1] - sizes[0], sizes2[1] - sizes2[0])

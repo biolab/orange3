@@ -405,7 +405,7 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
         self.view_box.sigTransformChanged.connect(self.update_density)
 
-        self._timer = QTimer()
+        self.timer = None
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -487,6 +487,9 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.clear()
 
         self.density_img = None
+        if self.timer is not None and self.timer.isActive():
+            self.timer.stop()
+            self.timer = None
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
         self.labels = []
@@ -730,34 +733,38 @@ class OWScatterPlotBase(gui.OWComponent):
                 self.master, "impute_sizes", self.default_impute_sizes)
             size_imputer(size_data)
 
-            if self._timer.isActive():
-                self._timer.stop()
+            if self.timer is not None and self.timer.isActive():
+                self.timer.stop()
+                self.timer = None
 
-            current_size_data = self.scatterplot_item.data["size"]
+            current_size_data = self.scatterplot_item.data["size"].copy()
             diff = size_data - current_size_data
+            widget = self
 
             class Timeout:
-                n_iter = 5
+                # 0.5 - np.cos(np.arange(0.17, 1, 0.17) * np.pi) / 2
+                factors = [0.07, 0.26, 0.52, 0.77, 0.95, 1]
 
-                def __init__(self, diff_=diff, item=self.scatterplot_item,
-                             item_sel=self.scatterplot_item_sel):
+                def __init__(self):
                     self._counter = 0
-                    self._step = diff_ / self.n_iter
-                    self._scatter_item, self._scatter_item_sel = item, item_sel
 
                 def __call__(self):
+                    factor = self.factors[self._counter]
                     self._counter += 1
-                    size = current_size_data + self._step
-                    if self.n_iter == self._counter:
-                        tmr.stop()
+                    size = current_size_data + diff * factor
+                    if len(self.factors) == self._counter:
+                        widget.timer.stop()
+                        widget.timer = None
                         size = size_data
-                    self._scatter_item.setSize(size)
-                    self._scatter_item_sel.setSize(size + SELECTION_WIDTH)
+                    widget.scatterplot_item.setSize(size)
+                    widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
 
             if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
-                self._timer = tmr = QTimer(self.scatterplot_item, interval=50)
-                self._timer.timeout.connect(Timeout())
-                self._timer.start()
+                # If encountered any strange behaviour when updating sizes,
+                # implement it with threads
+                self.timer = QTimer(self.scatterplot_item, interval=50)
+                self.timer.timeout.connect(Timeout())
+                self.timer.start()
             else:
                 self.scatterplot_item.setSize(size_data)
                 self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
