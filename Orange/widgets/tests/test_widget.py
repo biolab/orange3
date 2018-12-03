@@ -100,17 +100,19 @@ class WidgetTestCase(WidgetTest):
 
         w = Widget()
         w._OWWidget__setControlAreaVisible(False)
-        w.setGeometry(QRect(51, 52, 53, 54))
+        geom = QRect(51, 52, 53, 54)
+        geom.setSize(geom.size().expandedTo(w.minimumSize()))
+        w.setGeometry(geom)
         state = w.saveGeometryAndLayoutState()
         w1 = Widget()
         self.assertTrue(w1.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+        self.assertEqual(w1.geometry(), geom)
         self.assertFalse(w1.controlAreaVisible)
 
         Widget.want_control_area = False
         w2 = Widget()
         self.assertTrue(w2.restoreGeometryAndLayoutState(state))
-        self.assertEqual(w1.geometry(), QRect(51, 52, 53, 54))
+        self.assertEqual(w1.geometry(), geom)
 
         self.assertFalse((w2.restoreGeometryAndLayoutState(QByteArray())))
         self.assertFalse(w2.restoreGeometryAndLayoutState(QByteArray(b'ab')))
