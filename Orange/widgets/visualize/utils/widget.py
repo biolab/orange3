@@ -420,9 +420,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         if not same_domain:
             self.init_attr_values()
         self.openContext(self.data)
-        self.__invalidated = not (data_existed and self.data is not None and
-                                  np.array_equal(effective_data.X,
-                                                 self.effective_data.X))
+        self.__invalidated = not (
+            data_existed and self.data is not None and
+            effective_data.X.shape == self.effective_data.X.shape and
+            np.allclose(effective_data.X,
+                        self.effective_data.X, equal_nan=True))
         if self.__invalidated:
             self.clear()
         self.cb_class_density.setEnabled(self.can_draw_density())

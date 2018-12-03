@@ -896,9 +896,10 @@ class ProjectionWidgetTestMixin:
 
     def test_plot_once(self, timeout=DEFAULT_TIMEOUT):
         """Test if data is plotted only once but committed on every input change"""
+        table = Table("heart_disease")
         self.widget.setup_plot = Mock()
         self.widget.commit = Mock()
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, table)
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
@@ -907,7 +908,7 @@ class ProjectionWidgetTestMixin:
             self.assertTrue(spy.wait(timeout))
 
         self.widget.commit.reset_mock()
-        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+        self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
