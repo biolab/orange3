@@ -6,7 +6,7 @@ from math import log10, floor, ceil
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize, QTimer
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
 )
@@ -405,6 +405,8 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
         self.view_box.sigTransformChanged.connect(self.update_density)
 
+        self._timer = QTimer()
+
     def _create_legend(self, anchor):
         legend = LegendItem()
         legend.setParentItem(self.plot_widget.getViewBox())
@@ -725,8 +727,38 @@ class OWScatterPlotBase(gui.OWComponent):
             size_imputer = getattr(
                 self.master, "impute_sizes", self.default_impute_sizes)
             size_imputer(size_data)
-            self.scatterplot_item.setSize(size_data)
-            self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
+
+            if self._timer.isActive():
+                self._timer.stop()
+
+            current_size_data = self.scatterplot_item.data["size"]
+            diff = size_data - current_size_data
+
+            class Timeout:
+                n_iter = 5
+
+                def __init__(self, diff_=diff, item=self.scatterplot_item,
+                             item_sel=self.scatterplot_item_sel):
+                    self._counter = 0
+                    self._step = diff_ / self.n_iter
+                    self._scatter_item, self._scatter_item_sel = item, item_sel
+
+                def __call__(self):
+                    self._counter += 1
+                    size = current_size_data + self._step
+                    if self.n_iter == self._counter:
+                        tmr.stop()
+                        size = size_data
+                    self._scatter_item.setSize(size)
+                    self._scatter_item_sel.setSize(size + SELECTION_WIDTH)
+
+            if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
+                self._timer = tmr = QTimer(self.scatterplot_item, interval=50)
+                self._timer.timeout.connect(Timeout())
+                self._timer.start()
+            else:
+                self.scatterplot_item.setSize(size_data)
+                self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
     update_point_size = update_sizes  # backward compatibility (needed?!)
     update_size = update_sizes

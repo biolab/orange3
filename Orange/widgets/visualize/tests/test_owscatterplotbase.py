@@ -8,12 +8,16 @@ from AnyQt.QtGui import QColor
 
 from pyqtgraph import mkPen
 
-from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.settings import SettingProvider
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator, \
     ContinuousPaletteGenerator, NAN_GREY
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
     ScatterPlotItem, SELECTION_WIDTH
 from Orange.widgets.widget import OWWidget
+
+
+DEFAULT_TIMEOUT = 5000
 
 
 class MockWidget(OWWidget):
@@ -34,6 +38,9 @@ class MockWidget(OWWidget):
     combined_legend = Mock(return_value=False)
     selection_changed = Mock(return_value=None)
 
+    GRAPH_CLASS = OWScatterPlotBase
+    graph = SettingProvider(OWScatterPlotBase)
+
     def get_palette(self):
         if self.is_continuous_color():
             return ContinuousPaletteGenerator(Qt.white, Qt.black, False)
@@ -41,7 +48,7 @@ class MockWidget(OWWidget):
             return ColorPaletteGenerator(12)
 
 
-class TestOWScatterPlotBase(GuiTest):
+class TestOWScatterPlotBase(WidgetTest):
     def setUp(self):
         self.master = MockWidget()
         self.graph = OWScatterPlotBase(self.master)
@@ -160,6 +167,7 @@ class TestOWScatterPlotBase(GuiTest):
         master.get_label_data = lambda: \
             np.array([str(x) for x in d], dtype=object)
         graph.reset_graph()
+        self.process_events(until=lambda: not self.graph._timer.isActive())
 
         # Check proper sampling
         scatterplot_item = graph.scatterplot_item
@@ -187,6 +195,7 @@ class TestOWScatterPlotBase(GuiTest):
 
         # Check that sample is extended when sample size is changed
         graph.set_sample_size(4)
+        self.process_events(until=lambda: not self.graph._timer.isActive())
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
@@ -226,6 +235,7 @@ class TestOWScatterPlotBase(GuiTest):
 
         # Enable sampling when data is already present and not sampled
         graph.set_sample_size(3)
+        self.process_events(until=lambda: not self.graph._timer.isActive())
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
@@ -261,6 +271,7 @@ class TestOWScatterPlotBase(GuiTest):
                    np.arange(100, 105, dtype=float))
         d = self.xy[0] - 100
         graph.reset_graph()
+        self.process_events(until=lambda: not self.graph._timer.isActive())
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         self.assertEqual(len(x), 3)
@@ -365,6 +376,7 @@ class TestOWScatterPlotBase(GuiTest):
 
         d[4] = np.nan
         graph.update_sizes()
+        self.process_events(until=lambda: not self.graph._timer.isActive())
         sizes2 = scatterplot_item.data["size"]
 
         self.assertEqual(sizes[1] - sizes[0], sizes2[1] - sizes2[0])
