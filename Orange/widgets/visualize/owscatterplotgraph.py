@@ -706,8 +706,10 @@ class OWScatterPlotBase(gui.OWComponent):
                            self.MinShapeSize + (5 + self.point_width) * 0.5)
         size_column = self._filter_visible(size_column)
         size_column = size_column.copy()
-        size_column -= np.nanmin(size_column)
-        mx = np.nanmax(size_column)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            size_column -= np.nanmin(size_column)
+            mx = np.nanmax(size_column)
         if mx > 0:
             size_column /= mx
         else:
