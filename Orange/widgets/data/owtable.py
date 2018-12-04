@@ -1073,4 +1073,3 @@ if __name__ == "__main__":  # pragma: no cover
         [(Table("iris"), "iris"),
          (Table("brown-selected"), "brown-selected"),
          (Table("housing"), "housing")])
-

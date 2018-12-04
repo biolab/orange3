@@ -241,4 +241,3 @@ class OWSVM(OWBaseLearner):
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWSVM).run(Table("iris"))
-

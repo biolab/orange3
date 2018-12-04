@@ -225,10 +225,9 @@ class Settings(QObject, MutableMapping, metaclass=QABCMeta):
             if not isinstance(value, value_type):
                 value = qt_to_mapped_type(value)
                 if not isinstance(value, value_type):
-                    raise TypeError("Expected {0!r} got {1!r}".format(
-                                        value_type.__name__,
-                                        type(value).__name__)
-                                    )
+                    raise TypeError(
+                        "Expected {0!r} got {1!r}".format(value_type.__name__,
+                                                          type(value).__name__))
 
         if key in self:
             oldValue = self.get(key)

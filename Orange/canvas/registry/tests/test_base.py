@@ -93,11 +93,9 @@ class TestRegistry(unittest.TestCase):
 
         # Test ordering by priority
         self.assertSequenceEqual(
-             reg.widgets("Data"),
-             sorted([file_desc, discretize_desc], key=attrgetter("priority"))
-        )
+            reg.widgets("Data"),
+            sorted([file_desc, discretize_desc], key=attrgetter("priority")))
 
-        self.assertTrue(all(isinstance(desc.priority, int)
-                            for desc in [file_desc, discretize_desc,
-                                         bayes_desc])
-                        )
+        self.assertTrue(
+            all(isinstance(desc.priority, int)
+                for desc in [file_desc, discretize_desc, bayes_desc]))

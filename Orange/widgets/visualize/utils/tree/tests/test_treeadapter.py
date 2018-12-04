@@ -65,7 +65,7 @@ class TestTreeAdapter(unittest.TestCase):
             self.data.X)
         np.testing.assert_almost_equal(
             adapt.get_instances_in_nodes([self.left, self.right]).X,
-            np.array([[8,  9, 10],
+            np.array([[8, 9, 10],
                       [12, 13, 14],
                       [16, 17, 18],
                       [20, 21, 22],
@@ -75,4 +75,3 @@ class TestTreeAdapter(unittest.TestCase):
         self.assertEqual(adapt.num_nodes, 7)
         self.assertIs(adapt.root, self.root)
         self.assertIs(adapt.domain, self.domain)
-

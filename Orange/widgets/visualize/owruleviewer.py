@@ -118,9 +118,11 @@ class OWRuleViewer(widget.OWWidget):
         self.selected = None
         selection_model = self.view.selectionModel()
         if selection_model.hasSelection():
-            selection = (selection_model.selection() if not actual
-                         else self.proxy_model.mapSelectionToSource(
-                                selection_model.selection()))
+            if not actual:
+                selection = selection_model.selection()
+            else:
+                selection = self.proxy_model.mapSelectionToSource(
+                    selection_model.selection())
 
             self.selected = sorted(set(index.row() for index
                                        in selection.indexes()))

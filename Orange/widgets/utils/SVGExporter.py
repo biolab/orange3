@@ -26,9 +26,10 @@ from pyqtgraph import functions as fn
 
 __all__ = ['SVGExporter']
 
+
 class SVGExporter(Exporter):
     Name = "Scalable Vector Graphics (SVG)"
-    allowCopy=True
+    allowCopy = True
 
     def __init__(self, item):
         Exporter.__init__(self, item)
@@ -173,7 +174,7 @@ def _generateItemSvg(item, nodes=None, root=None):
 
         ## offset to corner of root item
         if isinstance(root, QtGui.QGraphicsScene):
-            rootPos = QtCore.QPoint(0,0)
+            rootPos = QtCore.QPoint(0, 0)
         else:
             rootPos = root.scenePos()
         tr2 = QtGui.QTransform()
@@ -330,7 +331,7 @@ def correctCoordinates(node, defs, item):
         matrix = grp.getAttribute('transform')
         match = re.match(r'matrix\((.*)\)', matrix)
         if match is None:
-            vals = [1,0,0,1,0,0]
+            vals = [1, 0, 0, 1, 0, 0]
         else:
             vals = [float(a) for a in match.groups()[0].split(',')]
         tr = np.array([[vals[0], vals[2], vals[4]], [vals[1], vals[3], vals[5]]])
@@ -351,14 +352,14 @@ def correctCoordinates(node, defs, item):
                 if oldCoords == '':
                     continue
                 for c in oldCoords.split(' '):
-                    x,y = c.split(',')
+                    x, y = c.split(',')
                     if x[0].isalpha():
                         t = x[0]
                         x = x[1:]
                     else:
                         t = ''
-                    nc = fn.transformCoordinates(tr, np.array([[float(x),float(y)]]), transpose=True)
-                    newCoords += t+str(nc[0,0])+','+str(nc[0,1])+' '
+                    nc = fn.transformCoordinates(tr, np.array([[float(x), float(y)]]), transpose=True)
+                    newCoords += t+str(nc[0, 0])+','+str(nc[0, 1])+' '
                 ch.setAttribute('d', newCoords)
             elif ch.tagName == 'text':
                 removeTransform = False
@@ -389,7 +390,7 @@ def correctCoordinates(node, defs, item):
             ## correct line widths if needed
             if removeTransform and ch.getAttribute('vector-effect') != 'non-scaling-stroke' and grp.getAttribute('stroke-width'):
                 w = float(grp.getAttribute('stroke-width'))
-                s = fn.transformCoordinates(tr, np.array([[w,0], [0,0]]), transpose=True)
+                s = fn.transformCoordinates(tr, np.array([[w, 0], [0, 0]]), transpose=True)
                 w = ((s[0]-s[1])**2).sum()**0.5
                 ch.setAttribute('stroke-width', str(w))
 

@@ -365,4 +365,3 @@ class OWRuleLearner(OWBaseLearner):
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWRuleLearner).run(Table("iris"))
-

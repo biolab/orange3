@@ -285,9 +285,8 @@ class Reprable:
         sig = inspect.signature(cls.__init__)
         for param in sig.parameters.values():
             # Skip self, *args, **kwargs
-            if (param.name != 'self' and
-                        param.kind not in (param.VAR_POSITIONAL,
-                                           param.VAR_KEYWORD)):
+            if param.name != 'self' and \
+                    param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 yield param.name, param.default
 
     def _reprable_omit_param(self, name, default, value):

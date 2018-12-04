@@ -319,7 +319,7 @@ class Scheme(QObject):
                   "Link is not in the scheme.")
 
         self.__links.remove(link)
-        log.info("Removed link %r (%r) -> %r (%r) from scheme %r." % \
+        log.info("Removed link %r (%r) -> %r (%r) from scheme %r." %
                  (link.source_node.title, link.source_channel.name,
                   link.sink_node.title, link.sink_channel.name,
                   self.title)
@@ -350,9 +350,9 @@ class Scheme(QObject):
 
         if not self.compatible_channels(link):
             raise IncompatibleChannelTypeError(
-                    "Cannot connect %r to %r." \
-                    % (link.source_channel.type, link.sink_channel.type)
-                )
+                "Cannot connect %r to %r."
+                % (link.source_channel.type, link.sink_channel.type)
+            )
 
         links = self.find_links(source_node=link.source_node,
                                 source_channel=link.source_channel,
@@ -361,18 +361,18 @@ class Scheme(QObject):
 
         if links:
             raise DuplicatedLinkError(
-                    "A link from %r (%r) -> %r (%r) already exists" \
-                    % (link.source_node.title, link.source_channel.name,
-                       link.sink_node.title, link.sink_channel.name)
-                )
+                "A link from %r (%r) -> %r (%r) already exists"
+                % (link.source_node.title, link.source_channel.name,
+                   link.sink_node.title, link.sink_channel.name)
+            )
 
         if link.sink_channel.single:
             links = self.find_links(sink_node=link.sink_node,
                                     sink_channel=link.sink_channel)
             if links:
                 raise SinkChannelError(
-                        "%r is already connected." % link.sink_channel.name
-                    )
+                    "%r is already connected." % link.sink_channel.name
+                )
 
     def creates_cycle(self, link):
         """

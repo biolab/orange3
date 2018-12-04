@@ -47,7 +47,7 @@ class OWDataSamplerC(OWWidget):
         gui.button(self.optionsBox, self, "Commit", callback=self.commit)
         self.optionsBox.setDisabled(True)
 
-        self.resize(100,50)
+        self.resize(100, 50)
 
     @Inputs.data
     def set_data(self, dataset):

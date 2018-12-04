@@ -40,7 +40,7 @@ ROCCurve = namedtuple(
     "ROCCurve",
     ["points",  # ROCPoints
      "hull"     # ROCPoints of the convex hull
-    ]
+     ]
 )
 ROCCurve.is_valid = property(lambda self: self.points.is_valid)
 

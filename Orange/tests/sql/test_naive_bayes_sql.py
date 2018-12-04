@@ -14,10 +14,13 @@ from Orange.tests.sql.base import sql_test, connection_params
 @sql_test
 class NaiveBayesTest(unittest.TestCase):
     def test_NaiveBayes(self):
-        table = SqlTable(connection_params(), 'iris',
-                         type_hints=Domain([], DiscreteVariable("iris",
-                                values=['Iris-setosa', 'Iris-virginica',
-                                        'Iris-versicolor'])))
+        table = SqlTable(
+            connection_params(), 'iris',
+            type_hints=Domain(
+                [],
+                DiscreteVariable(
+                    "iris",
+                    values=['Iris-setosa', 'Iris-virginica', 'Iris-versicolor'])))
         table = preprocess.Discretize(table)
         bayes = nb.NaiveBayesLearner()
         clf = bayes(table)

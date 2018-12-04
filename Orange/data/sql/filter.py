@@ -62,7 +62,7 @@ class FilterContinuousSql(filter.FilterContinuous):
                                               self.column, self.max)
         elif self.oper == self.Outside:
             return "(%s < %s OR %s > %s)" % (self.column, self.ref,
-                                           self.column, self.max)
+                                             self.column, self.max)
         elif self.oper == self.IsDefined:
             return "%s IS NOT NULL" % self.column
         else:

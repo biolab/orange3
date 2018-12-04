@@ -1023,7 +1023,7 @@ class OWScatterPlotBase(gui.OWComponent):
         if shape_data is not None:
             shape_data = np.copy(shape_data)
         shape_imputer = getattr(
-             self.master, "impute_shapes", self.default_impute_shapes)
+            self.master, "impute_shapes", self.default_impute_shapes)
         shape_imputer(shape_data, len(self.CurveSymbols) - 1)
         if isinstance(shape_data, np.ndarray):
             shape_data = shape_data.astype(int)

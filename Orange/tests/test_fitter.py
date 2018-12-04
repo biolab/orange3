@@ -167,4 +167,3 @@ class FitterTest(unittest.TestCase):
         iris, housing = Table('iris')[:5], Table('housing')[:5]
         self.assertEqual(learner(iris).param, 'classification_default')
         self.assertEqual(learner(housing).param, 'regression_default')
-

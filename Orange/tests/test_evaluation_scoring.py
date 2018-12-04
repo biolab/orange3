@@ -315,8 +315,8 @@ class TestAUC(unittest.TestCase):
     def compute_auc(self, actual, predicted):
         predicted = np.array(predicted).reshape(1, -1)
         probabilities = np.zeros((1, predicted.shape[1], 2))
-        probabilities[0,:,1] = predicted[0]
-        probabilities[0,:,0] = 1 - predicted[0]
+        probabilities[0, :, 1] = predicted[0]
+        probabilities[0, :, 0] = 1 - predicted[0]
         results = Results(
             nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
             actual=actual, predicted=predicted)

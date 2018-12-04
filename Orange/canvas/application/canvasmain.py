@@ -105,10 +105,10 @@ def canvas_icons(name):
     if icon_file.exists():
         return QIcon("canvas_icons:" + name)
     else:
-        return QIcon(pkg_resources.resource_filename(
-                      config.__name__,
-                      os.path.join("icons", name))
-                     )
+        return QIcon(
+            pkg_resources.resource_filename(config.__name__,
+                                            os.path.join("icons", name))
+        )
 
 
 class FakeToolBar(QToolBar):
@@ -193,10 +193,10 @@ class CanvasMainWindow(QMainWindow):
         log.info("Setting up Canvas main window.")
 
         # Two dummy tool bars to reserve space
-        self.__dummy_top_toolbar = FakeToolBar(
-                            objectName="__dummy_top_toolbar")
-        self.__dummy_bottom_toolbar = FakeToolBar(
-                            objectName="__dummy_bottom_toolbar")
+        self.__dummy_top_toolbar = \
+            FakeToolBar(objectName="__dummy_top_toolbar")
+        self.__dummy_bottom_toolbar = \
+            FakeToolBar(objectName="__dummy_bottom_toolbar")
 
         self.__dummy_top_toolbar.setFixedHeight(20)
         self.__dummy_bottom_toolbar.setFixedHeight(20)
@@ -365,8 +365,7 @@ class CanvasMainWindow(QMainWindow):
 
         self.help_dock = DockWidget(
             self.tr("Help"), self, objectName="help-dock",
-            allowedAreas=Qt.RightDockWidgetArea |
-                         Qt.BottomDockWidgetArea,
+            allowedAreas=Qt.RightDockWidgetArea | Qt.BottomDockWidgetArea,
             visible=False
         )
         if QWebEngineView is not None:
@@ -871,8 +870,8 @@ class CanvasMainWindow(QMainWindow):
         settings = QSettings()
 
         state = settings.value("mainwindow/widgettoolbox/state",
-                                defaultValue=QByteArray(),
-                                type=QByteArray)
+                               defaultValue=QByteArray(),
+                               type=QByteArray)
         if state:
             self.widgets_tool_box.restoreState(state)
 
@@ -1186,21 +1185,20 @@ class CanvasMainWindow(QMainWindow):
 
         except Exception:
             message_critical(
-                 self.tr("Could not load an Orange Workflow file"),
-                 title=self.tr("Error"),
-                 informative_text=self.tr("An unexpected error occurred "
-                                          "while loading '%s'.") % filename,
-                 exc_info=True,
-                 parent=self)
+                self.tr("Could not load an Orange Workflow file"),
+                title=self.tr("Error"),
+                informative_text=self.tr("An unexpected error occurred "
+                                         "while loading '%s'.") % filename,
+                exc_info=True,
+                parent=self)
             return None
         if errors:
             message_warning(
                 self.tr("Errors occurred while loading the workflow."),
                 title=self.tr("Problem"),
                 informative_text=self.tr(
-                     "There were problems loading some "
-                     "of the widgets/links in the "
-                     "workflow."
+                    "There were problems loading some widgets/links"
+                    "in the workflow."
                 ),
                 details="\n".join(map(repr, errors))
             )
@@ -1286,12 +1284,10 @@ class CanvasMainWindow(QMainWindow):
         document = self.current_document()
         title = document.scheme().title or "untitled"
         selected = message_question(
-            self.tr('Do you want to save the changes you made to workflow "%s"?')
-                    % title,
+            self.tr('Save the changes to the workflow "%s"?') % title,
             self.tr("Save Changes?"),
-            self.tr("Your changes will be lost if you do not save them."),
-            buttons=QMessageBox.Save | QMessageBox.Cancel | \
-                    QMessageBox.Discard,
+            self.tr("Changes will be lost if they are not saved."),
+            buttons=QMessageBox.Save | QMessageBox.Cancel | QMessageBox.Discard,
             default_button=QMessageBox.Save,
             parent=self)
 
@@ -2087,8 +2083,8 @@ class CanvasMainWindow(QMainWindow):
             triggers |= SchemeEditWidget.DoubleClicked
 
         right_click = settings.value("trigger-on-right-click",
-                                    defaultValue=True,
-                                    type=bool)
+                                     defaultValue=True,
+                                     type=bool)
         if right_click:
             triggers |= SchemeEditWidget.RightClicked
 

@@ -134,8 +134,8 @@ class OWLinearRegression(OWBaseLearner):
         coef_table = None
         if self.model is not None:
             domain = Domain(
-                    [ContinuousVariable("coef", number_of_decimals=7)],
-                    metas=[StringVariable("name")])
+                [ContinuousVariable("coef", number_of_decimals=7)],
+                metas=[StringVariable("name")])
             coefs = [self.model.intercept] + list(self.model.coefficients)
             names = ["intercept"] + \
                     [attr.name for attr in self.model.domain.attributes]

@@ -121,9 +121,9 @@ class SchemeLink(QObject):
 
         if not compatible_channels(source_channel, sink_channel):
             raise IncompatibleChannelTypeError(
-                    "Cannot connect %r to %r" \
-                    % (source_channel.type, sink_channel.type)
-                )
+                "Cannot connect %r to %r"
+                % (source_channel.type, sink_channel.type)
+            )
 
         self.__enabled = enabled
         self.__dynamic_enabled = False
@@ -224,9 +224,9 @@ class SchemeLink(QObject):
 
     def __str__(self):
         return "{0}(({1}, {2}) -> ({3}, {4}))".format(
-                    type(self).__name__,
-                    self.source_node.title,
-                    self.source_channel.name,
-                    self.sink_node.title,
-                    self.sink_channel.name
-                )
+            type(self).__name__,
+            self.source_node.title,
+            self.source_channel.name,
+            self.sink_node.title,
+            self.sink_channel.name
+        )

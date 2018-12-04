@@ -94,7 +94,7 @@ class TestHasClassFilter(unittest.TestCase):
     def test_has_class_multiclass(self):
         domain = Domain([DiscreteVariable("x", values="01")],
                         [DiscreteVariable("y1", values="01"),
-                        DiscreteVariable("y2", values="01")])
+                         DiscreteVariable("y2", values="01")])
         table = Table(domain, [[0, 1, np.nan],
                                [1, np.nan, 0],
                                [1, 0, 1],
@@ -367,9 +367,9 @@ class TestSameValueFilter(unittest.TestCase):
     def setUp(self):
         self.table = Table('zoo')
 
-        self.attr_disc  = self.table.domain["type"]
-        self.attr_cont  = self.table.domain["legs"]
-        self.attr_meta  = self.table.domain["name"]
+        self.attr_disc = self.table.domain["type"]
+        self.attr_cont = self.table.domain["legs"]
+        self.attr_meta = self.table.domain["name"]
 
         self.value_cont = 4
         self.value_disc = self.attr_disc.to_val("mammal")
@@ -432,7 +432,7 @@ class TestSameValueFilter(unittest.TestCase):
 class TestFilterReprs(unittest.TestCase):
     def setUp(self):
         self.table = Table('zoo')
-        self.attr_disc  = self.table.domain["type"]
+        self.attr_disc = self.table.domain["type"]
         self.value_disc = self.attr_disc.to_val("mammal")
         self.vs = self.table.domain.variables
 

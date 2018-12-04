@@ -229,11 +229,9 @@ class WidgetMsgTestCase(WidgetTest):
         self.assertEqual(len(messages), 0)
         self.assertSetEqual(set(self.active_messages(w)), set())
 
-        with patch.object(
-                WidgetMsgTestCase.TestWidget,
-                "want_basic_layout", False):
-            # OWWidget without a basic layout (completely empty; no default
-            # message bar)
+        # OWWidget without a basic layout (completely empty; no default msg bar
+        with patch.object(WidgetMsgTestCase.TestWidget,
+                          "want_basic_layout", False):
             w = WidgetMsgTestCase.TestWidget()
 
         messages = set(self.active_messages(w))

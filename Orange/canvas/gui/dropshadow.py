@@ -167,7 +167,7 @@ class DropShadowFrame(QWidget):
         # Shadow casting rectangle in the source pixmap.
         pixmap_shadow_rect = pixmap_rect.adjusted(left, top, -right, -bottom)
         source_rects = self.__shadowPixmapFragments(pixmap_rect,
-                                                   pixmap_shadow_rect)
+                                                    pixmap_shadow_rect)
         target_rects = self.__shadowPixmapFragments(shadow_rect, widget_rect)
 
         painter = QPainter(self)
@@ -229,13 +229,13 @@ class DropShadowFrame(QWidget):
         rect_fill_color = self.palette().color(QPalette.Window)
 
         pixmap = render_drop_shadow_frame(
-                      pixmap,
-                      QRectF(shadow_rect),
-                      shadow_color=self.color_,
-                      offset=QPointF(0, 0),
-                      radius=self.radius_,
-                      rect_fill_color=rect_fill_color
-                      )
+            pixmap,
+            QRectF(shadow_rect),
+            shadow_color=self.color_,
+            offset=QPointF(0, 0),
+            radius=self.radius_,
+            rect_fill_color=rect_fill_color
+        )
 
         self.__shadowPixmap = pixmap
         self.update()
