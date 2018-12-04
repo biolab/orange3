@@ -583,6 +583,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         super().onDeleteWidget()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
+        self.graph.clear()
 
 
 class OWAnchorProjectionWidget(OWDataProjectionWidget):

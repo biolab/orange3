@@ -6,7 +6,7 @@ from math import log10, floor, ceil
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize, QTimer
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
 )
@@ -405,6 +405,8 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
         self.view_box.sigTransformChanged.connect(self.update_density)
 
+        self.timer = None
+
     def _create_legend(self, anchor):
         legend = LegendItem()
         legend.setParentItem(self.plot_widget.getViewBox())
@@ -485,6 +487,9 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.clear()
 
         self.density_img = None
+        if self.timer is not None and self.timer.isActive():
+            self.timer.stop()
+            self.timer = None
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
         self.labels = []
@@ -704,8 +709,10 @@ class OWScatterPlotBase(gui.OWComponent):
                            self.MinShapeSize + (5 + self.point_width) * 0.5)
         size_column = self._filter_visible(size_column)
         size_column = size_column.copy()
-        size_column -= np.nanmin(size_column)
-        mx = np.nanmax(size_column)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            size_column -= np.nanmin(size_column)
+            mx = np.nanmax(size_column)
         if mx > 0:
             size_column /= mx
         else:
@@ -725,8 +732,42 @@ class OWScatterPlotBase(gui.OWComponent):
             size_imputer = getattr(
                 self.master, "impute_sizes", self.default_impute_sizes)
             size_imputer(size_data)
-            self.scatterplot_item.setSize(size_data)
-            self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
+
+            if self.timer is not None and self.timer.isActive():
+                self.timer.stop()
+                self.timer = None
+
+            current_size_data = self.scatterplot_item.data["size"].copy()
+            diff = size_data - current_size_data
+            widget = self
+
+            class Timeout:
+                # 0.5 - np.cos(np.arange(0.17, 1, 0.17) * np.pi) / 2
+                factors = [0.07, 0.26, 0.52, 0.77, 0.95, 1]
+
+                def __init__(self):
+                    self._counter = 0
+
+                def __call__(self):
+                    factor = self.factors[self._counter]
+                    self._counter += 1
+                    size = current_size_data + diff * factor
+                    if len(self.factors) == self._counter:
+                        widget.timer.stop()
+                        widget.timer = None
+                        size = size_data
+                    widget.scatterplot_item.setSize(size)
+                    widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
+
+            if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
+                # If encountered any strange behaviour when updating sizes,
+                # implement it with threads
+                self.timer = QTimer(self.scatterplot_item, interval=50)
+                self.timer.timeout.connect(Timeout())
+                self.timer.start()
+            else:
+                self.scatterplot_item.setSize(size_data)
+                self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
     update_point_size = update_sizes  # backward compatibility (needed?!)
     update_size = update_sizes
