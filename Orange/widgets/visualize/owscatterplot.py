@@ -411,10 +411,11 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.data.domain is not None and \
                 all(attr in self.data.domain for attr
                         in self.attribute_selection_list):
-            self.attr_x = self.attribute_selection_list[0]
-            self.attr_y = self.attribute_selection_list[1]
-        self.attribute_selection_list = None
-        super().handleNewSignals()
+            self.set_attr(self.attribute_selection_list[0],
+                          self.attribute_selection_list[1])
+            self.attribute_selection_list = None
+        else:
+            super().handleNewSignals()
         self._vizrank_color_change()
         self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
 

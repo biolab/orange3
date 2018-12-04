@@ -320,10 +320,16 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
     def test_features_and_data(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
+        x, y = self.widget.graph.scatterplot_item.getData()
+        np.testing.assert_array_equal(x, data.X[:, 0])
+        np.testing.assert_array_equal(y, data.X[:, 1])
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(data.domain[2:]))
         self.assertIs(self.widget.attr_x, data.domain[2])
         self.assertIs(self.widget.attr_y, data.domain[3])
+        x, y = self.widget.graph.scatterplot_item.getData()
+        np.testing.assert_array_equal(x, data.X[:, 2])
+        np.testing.assert_array_equal(y, data.X[:, 3])
 
     def test_output_features(self):
         data = Table("iris")
