@@ -2,3 +2,4 @@
 # pylint: disable=wildcard-import
 
 from .ada_boost import *
+from .stack import *
