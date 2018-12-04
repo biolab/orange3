@@ -427,8 +427,9 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attribute_selection_list = None
 
     def set_attr(self, attr_x, attr_y):
-        self.attr_x, self.attr_y = attr_x, attr_y
-        self.attr_changed()
+        if attr_x != self.attr_x or attr_y != self.attr_y:
+            self.attr_x, self.attr_y = attr_x, attr_y
+            self.attr_changed()
 
     def attr_changed(self):
         self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
