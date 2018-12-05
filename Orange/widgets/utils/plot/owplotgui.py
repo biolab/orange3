@@ -438,9 +438,9 @@ class OWPlotGUI:
 
     JITTER_SIZES = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
-
-    def __init__(self, plot):
-        self._plot = plot
+    def __init__(self, master):
+        self._master = master
+        self._plot = master.graph
         self.color_model = DomainModel(
             placeholder="(Same color)", valid_types=DomainModel.PRIMITIVE)
         self.shape_model = DomainModel(
@@ -599,17 +599,17 @@ class OWPlotGUI:
 
     def tooltip_shows_all_check_box(self, widget):
         gui.checkBox(
-            widget=widget, master=self._plot.master, value="tooltip_shows_all",
+            widget=widget, master=self._master, value="tooltip_shows_all",
             label='Show all data on mouse hover')
 
     def class_density_check_box(self, widget):
-        self._plot.master.cb_class_density = \
+        self._master.cb_class_density = \
             self._check_box(widget=widget, value="class_density",
                             label="Show color regions",
                             cb_name=self._plot.update_density)
 
     def regression_line_check_box(self, widget):
-        self._plot.master.cb_reg_line = \
+        self._master.cb_reg_line = \
             self._check_box(widget=widget, value="show_reg_line",
                             label="Show regression line",
                             cb_name=self._plot.update_regression_line)
@@ -651,7 +651,7 @@ class OWPlotGUI:
             widget, gui.hSlider, label,
             master=self._plot, value=value, minValue=min_value,
             maxValue=max_value, step=step, createLabel=show_number,
-            callback=self._get_callback(cb_name, self._plot.master))
+            callback=self._get_callback(cb_name, self._master))
 
     def point_size_slider(self, widget, label="Symbol size:   "):
         '''
@@ -668,8 +668,8 @@ class OWPlotGUI:
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
         return self.add_control(
             widget, gui.comboBox, label,
-            master=self._plot.master, value=value, items=items, model=model,
-            callback=self._get_callback(cb_name, self._plot.master),
+            master=self._master, value=value, items=items, model=model,
+            callback=self._get_callback(cb_name, self._master),
             orientation=Qt.Horizontal, valueType=str,
             sendSelectedValue=True, contentsLength=12,
             labelWidth=50)
@@ -885,3 +885,19 @@ class OWPlotGUI:
         c.addItem('Light')
         c.addItem('Dark')
         return c
+
+    def box_zoom_select(self, parent):
+        box_zoom_select = gui.vBox(parent, "Zoom/Select")
+        zoom_select_toolbar = self.zoom_select_toolbar(
+            box_zoom_select, nomargin=True,
+            buttons=[self.StateButtonsBegin,
+                     self.SimpleSelect, self.Pan, self.Zoom,
+                     self.StateButtonsEnd,
+                     self.ZoomReset]
+        )
+        buttons = zoom_select_toolbar.buttons
+        buttons[self.Zoom].clicked.connect(self._plot.zoom_button_clicked)
+        buttons[self.Pan].clicked.connect(self._plot.pan_button_clicked)
+        buttons[self.SimpleSelect].clicked.connect(self._plot.select_button_clicked)
+        buttons[self.ZoomReset].clicked.connect(self._plot.reset_button_clicked)
+        return box_zoom_select

@@ -231,12 +231,12 @@ class OWScatterPlot(OWDataProjectionWidget):
         self._add_controls_axis()
         self._add_controls_sampling()
         super()._add_controls()
-        self.graph.gui.add_widget(self.graph.gui.JitterNumericValues,
-                                  self._effects_box)
-        self.graph.gui.add_widgets([self.graph.gui.ShowGridLines,
-                                    self.graph.gui.ToolTipShowsAll,
-                                    self.graph.gui.RegressionLine],
-                                   self._plot_box)
+        self.gui.add_widget(self.gui.JitterNumericValues, self._effects_box)
+        self.gui.add_widgets(
+            [self.gui.ShowGridLines,
+             self.gui.ToolTipShowsAll,
+             self.gui.RegressionLine],
+            self._plot_box)
 
     def _add_controls_axis(self):
         common_options = dict(
@@ -298,17 +298,13 @@ class OWScatterPlot(OWDataProjectionWidget):
         if isinstance(self.attr_y, str):
             self.attr_y = findvar(self.attr_y, self.xy_model)
         if isinstance(self.attr_label, str):
-            self.attr_label = findvar(
-                self.attr_label, self.graph.gui.label_model)
+            self.attr_label = findvar(self.attr_label, self.gui.label_model)
         if isinstance(self.attr_color, str):
-            self.attr_color = findvar(
-                self.attr_color, self.graph.gui.color_model)
+            self.attr_color = findvar(self.attr_color, self.gui.color_model)
         if isinstance(self.attr_shape, str):
-            self.attr_shape = findvar(
-                self.attr_shape, self.graph.gui.shape_model)
+            self.attr_shape = findvar(self.attr_shape, self.gui.shape_model)
         if isinstance(self.attr_size, str):
-            self.attr_size = findvar(
-                self.attr_size, self.graph.gui.size_model)
+            self.attr_size = findvar(self.attr_size, self.gui.size_model)
 
     def check_data(self):
         self.clear_messages()

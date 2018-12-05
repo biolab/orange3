@@ -246,7 +246,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
     def _add_controls(self):
         self.__add_controls_start_box()
         super()._add_controls()
-        self.graph.gui.add_control(
+        self.gui.add_control(
             self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
             value="hide_radius", minValue=0, maxValue=100, step=10,
             createLabel=False, callback=self.__radius_slider_changed

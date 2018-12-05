@@ -26,7 +26,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
+from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
     OWScatterPlotGraph as OWScatterPlotGraphObs
 )
@@ -386,7 +386,6 @@ class OWScatterPlotBase(gui.OWComponent):
         self.sample_size = None
         self.sample_indices = None
 
-        self.gui = OWPlotGUI(self)
         self.palette = None
 
         self.shape_legend = self._create_legend(((1, 0), (1, 0)))
@@ -1290,21 +1289,6 @@ class OWScatterPlotBase(gui.OWComponent):
             return True
         else:
             return False
-
-    def box_zoom_select(self, parent):
-        g = self.gui
-        box_zoom_select = gui.vBox(parent, "Zoom/Select")
-        zoom_select_toolbar = g.zoom_select_toolbar(
-            box_zoom_select, nomargin=True,
-            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
-                     g.StateButtonsEnd, g.ZoomReset]
-        )
-        buttons = zoom_select_toolbar.buttons
-        buttons[g.Zoom].clicked.connect(self.zoom_button_clicked)
-        buttons[g.Pan].clicked.connect(self.pan_button_clicked)
-        buttons[g.SimpleSelect].clicked.connect(self.select_button_clicked)
-        buttons[g.ZoomReset].clicked.connect(self.reset_button_clicked)
-        return box_zoom_select
 
 
 class HelpEventDelegate(EventDelegate):
