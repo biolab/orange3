@@ -275,7 +275,6 @@ class OWRadviz(OWAnchorProjectionWidget):
     graph = SettingProvider(OWRadvizGraph)
 
     class Warning(OWAnchorProjectionWidget.Warning):
-        no_features = widget.Msg("Radviz requires at least two features.")
         invalid_embedding = widget.Msg("No projection for selected features")
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
@@ -331,12 +330,6 @@ class OWRadviz(OWAnchorProjectionWidget):
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
                               in self.model_selected]
-
-        self.Warning.no_features.clear()
-        if len(self.model_selected) < 2:
-            self.Warning.no_features()
-            return
-
         self.init_projection()
         self.setup_plot()
         self.commit()

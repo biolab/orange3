@@ -101,3 +101,16 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertTrue(self.widget.Warning.removed_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.removed_vars.is_shown())
+
+    def test_saved_selected_vars(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        self.widget.model_selected[:] = self.data.domain[:1]
+        self.widget.variables_selection.removed.emit()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(self.widget.model_selected[:]), 1)
+
+        self.widget.model_selected[:] = self.data.domain[:0]
+        self.widget.variables_selection.removed.emit()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(self.widget.model_selected[:]), 4)
