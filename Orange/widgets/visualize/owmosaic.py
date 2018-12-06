@@ -457,7 +457,7 @@ class OWMosaicDisplay(OWWidget):
         self.update_graph()
 
     def set_color_data(self):
-        if self.data is None or len(self.data) < 2:
+        if self.data is None:
             return
         self.bar_button.setEnabled(self.variable_color is not None)
         attrs = [v for v in self.model_1 if v and v is not self.variable_color]

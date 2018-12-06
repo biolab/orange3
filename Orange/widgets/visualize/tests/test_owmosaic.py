@@ -15,6 +15,7 @@ from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
 from Orange.widgets.tests.utils import simulate
 
+
 class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
@@ -111,6 +112,14 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
             setattr(self.widget, "variable" + str(i), attr)
             self.widget.update_graph()
             self.assertEqual(canvas_rectangle.call_count, 7 + 2 ** (i + 1))
+
+    def test_change_domain(self):
+        """Test for GH-3419 fix"""
+        self.send_signal(self.widget.Inputs.data, self.data[:, :2])
+        subset = self.data[:1, 2:3]
+        self.send_signal(self.widget.Inputs.data, subset)
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(output.X, subset.X)
 
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
