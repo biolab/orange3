@@ -121,6 +121,14 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.annotated_data)
         np.testing.assert_array_equal(output.X, subset.X)
 
+    def test_subset(self):
+        """Test for GH-3416 fix"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data_subset, self.data[10:])
+        self.send_signal(self.widget.Inputs.data, self.data[:1])
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(output.X, self.data[:1].X)
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
