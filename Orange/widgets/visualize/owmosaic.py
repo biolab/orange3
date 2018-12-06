@@ -6,7 +6,7 @@ from operator import mul, attrgetter
 
 import numpy as np
 from scipy.stats import distributions
-from scipy.misc import comb
+from scipy.special import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem
@@ -457,7 +457,7 @@ class OWMosaicDisplay(OWWidget):
         self.update_graph()
 
     def set_color_data(self):
-        if self.data is None or len(self.data) < 2:
+        if self.data is None:
             return
         self.bar_button.setEnabled(self.variable_color is not None)
         attrs = [v for v in self.model_1 if v and v is not self.variable_color]
@@ -712,7 +712,7 @@ class OWMosaicDisplay(OWWidget):
                     (apriori_dists[i][used_vals[i]] / float(s)
                      for i in range(len(used_vals))))
                 actual = conditionaldict[attr_vals]
-                pearson = (actual - expected) / sqrt(expected)
+                pearson = float((actual - expected) / sqrt(expected))
                 if pearson == 0:
                     ind = 0
                 else:
