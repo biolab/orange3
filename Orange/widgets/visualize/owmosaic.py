@@ -6,7 +6,7 @@ from operator import mul, attrgetter
 
 import numpy as np
 from scipy.stats import distributions
-from scipy.misc import comb
+from scipy.special import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem
@@ -712,7 +712,7 @@ class OWMosaicDisplay(OWWidget):
                     (apriori_dists[i][used_vals[i]] / float(s)
                      for i in range(len(used_vals))))
                 actual = conditionaldict[attr_vals]
-                pearson = (actual - expected) / sqrt(expected)
+                pearson = float((actual - expected) / sqrt(expected))
                 if pearson == 0:
                     ind = 0
                 else:
