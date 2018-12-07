@@ -960,6 +960,15 @@ class ProjectionWidgetTestMixin:
         self.widget.graph.update_coordinates.assert_not_called()
         self.widget.graph.update_point_props.assert_called_once()
 
+    def test_saved_selection(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(self.widget.__class__, stored_settings=settings)
+        self.send_signal(self.widget.Inputs.data, self.data, widget=w)
+        self.assertEqual(np.sum(w.graph.selection), 15)
+        np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
+
     def test_send_report(self, timeout=DEFAULT_TIMEOUT):
         """Test report """
         self.send_signal(self.widget.Inputs.data, self.data)
