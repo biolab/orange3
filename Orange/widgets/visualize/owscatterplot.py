@@ -407,8 +407,8 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.data.domain is not None and \
                 all(attr in self.data.domain for attr
                         in self.attribute_selection_list):
-            self.set_attr(self.attribute_selection_list[0],
-                          self.attribute_selection_list[1])
+            self.attr_x, self.attr_y = self.attribute_selection_list[:2]
+            self.attr_changed()
             self.attribute_selection_list = None
         else:
             super().handleNewSignals()
