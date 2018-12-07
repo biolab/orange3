@@ -1,12 +1,12 @@
+import logging
 import warnings
 
 import numpy as np
-import sklearn.manifold as skl_manifold
+import fastTSNE
 import scipy.sparse as sp
 from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
-
-import fastTSNE
+import sklearn.manifold as skl_manifold
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
@@ -16,6 +16,10 @@ from Orange.projection.base import TransformDomain, ComputeValueProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
+
+# Disable t-SNE user warnings
+fastTSNE.tsne.log.setLevel(logging.ERROR)
+fastTSNE.affinity.log.setLevel(logging.ERROR)
 
 
 def torgerson(distances, n_components=2, eigen_solver="auto"):
