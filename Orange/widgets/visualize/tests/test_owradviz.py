@@ -1,8 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
 import numpy as np
 
-from Orange.data import Table, Domain
+from Orange.data import Table
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin,
     AnchorProjectionWidgetTestMixin, datasets
@@ -43,14 +44,7 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
             check_vizrank(ds)
 
     def test_no_features(self):
-        w = self.widget
-        data2 = self.data.transform(Domain(self.data.domain.attributes[:1],
-                                           self.data.domain.class_vars))
-        self.assertFalse(w.Error.no_features.is_shown())
-        self.send_signal(w.Inputs.data, data2)
-        self.assertTrue(w.Error.no_features.is_shown())
-        self.send_signal(w.Inputs.data, None)
-        self.assertFalse(w.Error.no_features.is_shown())
+        self.send_signal(self.widget.Inputs.data, self.data[:, :0])
 
     def test_not_enough_instances(self):
         w = self.widget
@@ -101,3 +95,38 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertTrue(self.widget.Warning.removed_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Warning.removed_vars.is_shown())
+
+    def test_saved_selected_vars(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        self.widget.model_selected[:] = self.data.domain[:1]
+        self.widget.variables_selection.removed.emit()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(self.widget.model_selected[:]), 1)
+
+        self.widget.model_selected[:] = self.data.domain[:0]
+        self.widget.variables_selection.removed.emit()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(self.widget.model_selected[:]), 4)
+
+    def test_invalidated_model_selected(self):
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.widget.model_selected[:] = self.data.domain[2:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.widget.setup_plot.assert_not_called()
+
+        self.widget.model_selected[:] = self.data.domain[3:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()

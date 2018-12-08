@@ -423,6 +423,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         if not same_domain:
             self.init_attr_values()
         self.openContext(self.data)
+        self.use_context()
         self.__invalidated = not (
             data_existed and self.data is not None and
             effective_data.X.shape == self.effective_data.X.shape and
@@ -435,6 +436,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
     def check_data(self):
         self.valid_data = None
         self.clear_messages()
+
+    def use_context(self):
+        pass
 
     @Inputs.data_subset
     @check_sql_input

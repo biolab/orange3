@@ -275,15 +275,9 @@ class OWRadviz(OWAnchorProjectionWidget):
     graph = SettingProvider(OWRadvizGraph)
 
     class Warning(OWAnchorProjectionWidget.Warning):
-        no_features = widget.Msg("Radviz requires at least two features.")
         invalid_embedding = widget.Msg("No projection for selected features")
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
-
-    class Error(OWAnchorProjectionWidget.Error):
-        no_features = widget.Msg(
-            "At least three numeric or categorical variables are required"
-        )
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
@@ -331,12 +325,6 @@ class OWRadviz(OWAnchorProjectionWidget):
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
                               in self.model_selected]
-
-        self.Warning.no_features.clear()
-        if len(self.model_selected) < 2:
-            self.Warning.no_features()
-            return
-
         self.init_projection()
         self.setup_plot()
         self.commit()
@@ -347,6 +335,12 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def set_data(self, data):
         super().set_data(data)
+        self._init_vizrank()
+        self.init_projection()
+
+    def use_context(self):
+        self.model_selected.clear()
+        self.model_other.clear()
         if self.data is not None and len(self.selected_vars):
             d, selected = self.data.domain, [v[0] for v in self.selected_vars]
             self.model_selected[:] = [d[name] for name in selected]
@@ -359,9 +353,6 @@ class OWRadviz(OWAnchorProjectionWidget):
                 if d.class_var in variables else []
             self.model_selected[:] = variables[:5]
             self.model_other[:] = variables[5:] + class_var
-
-        self._init_vizrank()
-        self.init_projection()
 
     def _init_vizrank(self):
         is_enabled = self.data is not None and \
@@ -376,20 +367,13 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.vizrank.initialize()
 
     def check_data(self):
-        def error(err):
-            err()
-            self.data = None
-
         super().check_data()
         if self.data is not None:
-            if len(self.primitive_variables) < 3:
-                error(self.Error.no_features)
-            else:
-                domain = self.data.domain
-                vars_ = chain(domain.variables, domain.metas)
-                n_vars = sum(v.is_primitive() for v in vars_)
-                if len(self.primitive_variables) < n_vars:
-                    self.Warning.removed_vars()
+            domain = self.data.domain
+            vars_ = chain(domain.variables, domain.metas)
+            n_vars = sum(v.is_primitive() for v in vars_)
+            if len(self.primitive_variables) < n_vars:
+                self.Warning.removed_vars()
 
     def init_attr_values(self):
         super().init_attr_values()
@@ -408,10 +392,6 @@ class OWRadviz(OWAnchorProjectionWidget):
         return np.vstack((super()._send_components_metas(), ["angle"]))
 
     def clear(self):
-        if self.model_selected:
-            self.model_selected.clear()
-        if self.model_other:
-            self.model_other.clear()
         super().clear()
         self.projector = RadViz()
 
