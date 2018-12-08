@@ -335,6 +335,12 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def set_data(self, data):
         super().set_data(data)
+        self._init_vizrank()
+        self.init_projection()
+
+    def use_context(self):
+        self.model_selected.clear()
+        self.model_other.clear()
         if self.data is not None and len(self.selected_vars):
             d, selected = self.data.domain, [v[0] for v in self.selected_vars]
             self.model_selected[:] = [d[name] for name in selected]
@@ -347,9 +353,6 @@ class OWRadviz(OWAnchorProjectionWidget):
                 if d.class_var in variables else []
             self.model_selected[:] = variables[:5]
             self.model_other[:] = variables[5:] + class_var
-
-        self._init_vizrank()
-        self.init_projection()
 
     def _init_vizrank(self):
         is_enabled = self.data is not None and \
@@ -389,10 +392,6 @@ class OWRadviz(OWAnchorProjectionWidget):
         return np.vstack((super()._send_components_metas(), ["angle"]))
 
     def clear(self):
-        if self.model_selected:
-            self.model_selected.clear()
-        if self.model_other:
-            self.model_other.clear()
         super().clear()
         self.projector = RadViz()
 

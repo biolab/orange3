@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table
@@ -107,3 +108,25 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.variables_selection.removed.emit()
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(len(self.widget.model_selected[:]), 4)
+
+    def test_invalidated_model_selected(self):
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.widget.model_selected[:] = self.data.domain[2:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.widget.setup_plot.assert_not_called()
+
+        self.widget.model_selected[:] = self.data.domain[3:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
