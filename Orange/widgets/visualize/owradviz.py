@@ -279,11 +279,6 @@ class OWRadviz(OWAnchorProjectionWidget):
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
 
-    class Error(OWAnchorProjectionWidget.Error):
-        no_features = widget.Msg(
-            "At least three numeric or categorical variables are required"
-        )
-
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
         self.model_selected.removed.connect(self.__model_selected_changed)
@@ -369,20 +364,13 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.vizrank.initialize()
 
     def check_data(self):
-        def error(err):
-            err()
-            self.data = None
-
         super().check_data()
         if self.data is not None:
-            if len(self.primitive_variables) < 3:
-                error(self.Error.no_features)
-            else:
-                domain = self.data.domain
-                vars_ = chain(domain.variables, domain.metas)
-                n_vars = sum(v.is_primitive() for v in vars_)
-                if len(self.primitive_variables) < n_vars:
-                    self.Warning.removed_vars()
+            domain = self.data.domain
+            vars_ = chain(domain.variables, domain.metas)
+            n_vars = sum(v.is_primitive() for v in vars_)
+            if len(self.primitive_variables) < n_vars:
+                self.Warning.removed_vars()
 
     def init_attr_values(self):
         super().init_attr_values()
