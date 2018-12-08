@@ -254,12 +254,16 @@ class OWtSNE(OWDataProjectionWidget):
         self.send_preprocessor()
 
     def _get_projection_data(self):
-        if self.data is None or self.projection is None:
+        if self.data is None:
             return None
+        if self.projection is None:
+            variables = self._get_projection_variables()
+        else:
+            variables = self.projection.domain.attributes
         data = self.data.transform(
             Domain(self.data.domain.attributes,
                    self.data.domain.class_vars,
-                   self.data.domain.metas + self.projection.domain.attributes))
+                   self.data.domain.metas + variables))
         data.metas[:, -2:] = self.get_embedding()
         return data
 
