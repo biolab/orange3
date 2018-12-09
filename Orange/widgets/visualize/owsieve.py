@@ -39,6 +39,7 @@ class ChiSqStats:
             return
         self.observed = get_contingency(data, attr1, attr2)
         self.n = np.sum(self.observed)
+        # pylint: disable=unexpected-keyword-arg
         self.probs_x = self.observed.sum(axis=0) / self.n
         self.probs_y = self.observed.sum(axis=1) / self.n
         self.expected = np.outer(self.probs_y, self.probs_x) * self.n
@@ -502,6 +503,7 @@ class OWSieveDiagram(OWWidget):
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
+        return None
 
     def send_report(self):
         self.report_plot()

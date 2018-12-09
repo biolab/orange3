@@ -53,6 +53,9 @@ class OWVennDiagram(widget.OWWidget):
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
 
+    inputhints: dict
+    selection: list
+
     # Selected disjoint subset indices
     selection = settings.Setting([])
     #: Stored input set hints
@@ -402,7 +405,7 @@ class OWVennDiagram(widget.OWWidget):
         vennitems = []
         colors = colorpalette.ColorPaletteHSV(n)
 
-        for i, (key, item) in enumerate(self.itemsets.items()):
+        for i, (_, item) in enumerate(self.itemsets.items()):
             count = len(set(item.items))
             count_all = len(item.items)
             if count != count_all:
@@ -541,6 +544,8 @@ class OWVennDiagram(widget.OWWidget):
         names = uniquify(names)
 
         for i, (key, input) in enumerate(self.data.items()):
+            # cell vars are in functions that are only used in the loop
+            # pylint: disable=cell-var-from-loop
             if not len(input.table):
                 continue
             if self.useidentifiers:
@@ -1019,7 +1024,7 @@ class VennSetItem(QGraphicsPathItem):
 
 class VennIntersectionArea(QGraphicsPathItem):
     def __init__(self, parent=None, text=""):
-        super(QGraphicsPathItem, self).__init__(parent)
+        super().__init__(parent)
         self.setAcceptHoverEvents(True)
         self.setPen(QPen(Qt.NoPen))
 
@@ -1034,9 +1039,6 @@ class VennIntersectionArea(QGraphicsPathItem):
         if self._text != text:
             self._text = text
             self.text.setPlainText(text)
-
-    def text(self):
-        return self._text
 
     def setTextAnchor(self, pos):
         if self._anchor != pos:
@@ -1242,9 +1244,9 @@ class VennDiagram(QGraphicsWidget):
         return list(self._vennareas)
 
     def setFont(self, font):
-        if self._font != font:
+        if font != self.font():
             self.prepareGeometryChange()
-            self._font = font
+            super().setFont(font)
 
             for item in self.items():
                 item.setFont(font)
@@ -1330,10 +1332,6 @@ class VennDiagram(QGraphicsWidget):
     def setGeometry(self, geometry):
         super(VennDiagram, self).setGeometry(geometry)
         self._updateLayout()
-
-    def paint(self, painter, option, w):
-        super(VennDiagram, self).paint(painter, option, w)
-#         painter.drawRect(self.boundingRect())
 
     def _on_editingStarted(self):
         item = self.sender()
@@ -1490,6 +1488,7 @@ def subset_anchors(shapes):
 
         assert all(anchors[1:])
         return anchors[1:]
+    return None
 
 
 def bit_rot_left(x, y, bits=32):
@@ -1619,7 +1618,7 @@ def venn_intersection(paths, key):
 
 
 def append_column(data, where, variable, column):
-    X, Y, M, W = data.X, data.Y, data.metas, data.W
+    X, Y, M = data.X, data.Y, data.metas
     domain = data.domain
     attr = domain.attributes
     class_vars = domain.class_vars

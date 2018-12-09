@@ -39,6 +39,8 @@ class OWRuleViewer(widget.OWWidget):
     want_control_area = False
 
     def __init__(self):
+        super().__init__()
+
         self.data = None
         self.classifier = None
         self.selected = None
@@ -202,6 +204,7 @@ class CustomRuleViewerTableModel(QAbstractTableModel):
             headers = self._headers.get(orientation)
             return (headers[section] if headers and section < len(headers)
                     else str(section))
+        return None
 
     def set_horizontal_header_labels(self, labels):
         self._headers[Qt.Horizontal] = labels
@@ -234,7 +237,7 @@ class CustomRuleViewerTableModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if self._domain is None or not index.isValid():
-            return
+            return None
 
         def _display_role():
             if column == 0:
@@ -273,11 +276,13 @@ class CustomRuleViewerTableModel(QAbstractTableModel):
             if column == 6:
                 return rule.length
 
+            return None
+
         def _tooltip_role():
             if column == 0:
                 return _display_role().replace(" AND ", " AND\n")
             if column == 1:
-                return
+                return None
             if column == 3:
                 # list of int, float
                 curr_class_dist = _display_role()

@@ -35,7 +35,7 @@ class PythagoreanForestModel(PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         # type: (QModelIndex, Qt.QDisplayRole) -> Any
         if not index.isValid():
-            return
+            return None
 
         idx = index.row()
 
@@ -103,7 +103,8 @@ class PythagorasTreeDelegate(QStyledItemDelegate):
         # type: (QPainter, QStyleOptionViewItem, QModelIndex) -> None
         scene = index.data(Qt.DisplayRole)  # type: Optional[QGraphicsScene]
         if scene is None:
-            return super().paint(painter, option, index)
+            super().paint(painter, option, index)
+            return
 
         painter.save()
         rect = QRectF(QPointF(option.rect.topLeft()), QSizeF(option.rect.size()))

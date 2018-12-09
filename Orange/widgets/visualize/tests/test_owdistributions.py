@@ -31,18 +31,19 @@ class TestOWDistributions(WidgetTest):
                 self.assertIn(meta, self.widget.groupvarmodel)
 
         # select meta attribute
-        self.widget.cb_disc_cont.setChecked(True)
+        self.widget.controls.disc_cont.setChecked(True)
         self.widget.variable_idx = 2
         self.widget._setup()
 
     def test_remove_data(self):
         """Check widget when data is removed"""
+        prob = self.widget.controls.show_prob
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.assertEqual(self.widget.cb_prob.count(), 5)
-        self.assertEqual(self.widget.groupvarview.count(), 2)
+        self.assertEqual(prob.count(), 5)
+        self.assertEqual(self.widget.controls.groupvar_idx.count(), 2)
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(self.widget.cb_prob.count(), 0)
-        self.assertEqual(self.widget.groupvarview.count(), 0)
+        self.assertEqual(prob.count(), 0)
+        self.assertEqual(self.widget.controls.groupvar_idx.count(), 0)
 
     def test_discretize_meta(self):
         """The widget discretizes continuous meta attributes"""
@@ -75,11 +76,12 @@ class TestOWDistributions(WidgetTest):
         GH-2383
         GH-2428
         """
+        cb = self.widget.controls.relative_freq
         self.send_signal(self.widget.Inputs.data, None)
-        self.widget.cb_rel_freq.click()
+        cb.click()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.cb_rel_freq.setChecked(False)
-        self.widget.cb_rel_freq.click()
+        cb.setChecked(False)
+        cb.click()
         self.send_signal(self.widget.Inputs.data, None)
-        self.widget.cb_rel_freq.setChecked(True)
-        self.widget.cb_rel_freq.click()
+        cb.setChecked(True)
+        cb.click()
