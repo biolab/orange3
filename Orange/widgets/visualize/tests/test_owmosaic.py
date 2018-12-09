@@ -1,5 +1,4 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import time
 import unittest
 from unittest.mock import patch
@@ -154,7 +153,6 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_count(self):
         """MosaicVizrank correctly computes the number of combinations"""
-        widget = self.widget
         vizrank = self.vizrank
 
         data = self.iris

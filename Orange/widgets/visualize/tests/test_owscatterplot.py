@@ -582,7 +582,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         def assert_equal(data, max):
             self.send_signal(self.widget.Inputs.data, data)
-            pen_data, brush_data = self.widget.graph.get_colors()
+            pen_data, _ = self.widget.graph.get_colors()
             self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
 
         assert_equal(prepare_data(), MAX_CATEGORIES)

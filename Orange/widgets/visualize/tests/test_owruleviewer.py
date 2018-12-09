@@ -1,5 +1,4 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QApplication
 

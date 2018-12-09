@@ -67,6 +67,7 @@ class TestVennDiagram(unittest.TestCase):
         cv = np.random.randint(len(class_var.values), size=(3, len(sources)))
 
         tables = []
+        # pylint: disable=consider-using-enumerate
         for i in range(len(sources)):
             temp_table = Table.from_table(table.domain, table,
                                           [0 + i, 1 + i, 2 + i])
