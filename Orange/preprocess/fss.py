@@ -8,7 +8,6 @@ from scipy.sparse import issparse
 import Orange
 from Orange.util import Reprable
 from Orange.preprocess.preprocess import Preprocess
-from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
 
 __all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
 
@@ -57,6 +56,10 @@ class SelectBestFeatures(Reprable):
             discr_ratio = (sum(a.is_discrete
                                for a in data.domain.attributes)
                            / len(data.domain.attributes))
+
+            from Orange.preprocess.score import ANOVA, GainRatio, \
+                UnivariateLinearRegression
+
             if data.domain.has_discrete_class:
                 if discr_ratio >= 0.5:
                     method = GainRatio()

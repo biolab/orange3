@@ -8,6 +8,7 @@ from sklearn import feature_selection as skl_fss
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.data.filter import HasClass
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.preprocess.fss import RemoveNaNColumns
 from Orange.preprocess.preprocess import Discretize, SklImpute
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import contingency, distribution
@@ -66,6 +67,7 @@ class Scorer(_RefuseDataInConstructor, Reprable):
             f = data.domain[feature]
             data = data.transform(Domain([f], data.domain.class_vars))
 
+        orig_domain = data.domain
         for pp in self.preprocessors:
             data = pp(data)
 
@@ -76,7 +78,14 @@ class Scorer(_RefuseDataInConstructor, Reprable):
                     .format(self.friendly_name,
                             self._friendly_vartype_name(type(var))))
 
-        return self.score_data(data, feature)
+        if feature is not None:
+            return self.score_data(data, feature)
+
+        scores = np.full(len(orig_domain.attributes), np.nan)
+        names = [a.name for a in data.domain.attributes]
+        mask = np.array([a.name in names for a in orig_domain.attributes])
+        scores[mask] = self.score_data(data, feature)
+        return scores
 
     def score_data(self, data, feature):
         raise NotImplementedError
@@ -340,6 +349,7 @@ class ReliefF(Scorer):
     class_type = DiscreteVariable
     supports_sparse_data = False
     friendly_name = "ReliefF"
+    preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
     def __init__(self, n_iterations=50, k_nearest=10, random_state=None):
         self.n_iterations = n_iterations
@@ -374,6 +384,7 @@ class RReliefF(Scorer):
     class_type = ContinuousVariable
     supports_sparse_data = False
     friendly_name = "RReliefF"
+    preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
     def __init__(self, n_iterations=50, k_nearest=50, random_state=None):
         self.n_iterations = n_iterations
