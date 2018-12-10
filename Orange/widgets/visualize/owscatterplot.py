@@ -105,12 +105,16 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         super().clear()
         self.reg_line_item = None
 
-    def set_axis_title(self, axis, title):
-        self.plot_widget.setLabel(axis=axis, text=title)
-
     def update_coordinates(self):
         super().update_coordinates()
+        self.update_axes()
         self.update_regression_line()
+
+    def update_axes(self):
+        for axis, title in self.master.get_axes().items():
+            self.plot_widget.setLabel(axis=axis, text=title or "")
+            if title is None:
+                self.plot_widget.hideAxis(axis)
 
     def update_regression_line(self):
         if self.reg_line_item is not None:
@@ -393,10 +397,8 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.setup_plot()
         self.commit()
 
-    def setup_plot(self):
-        super().setup_plot()
-        self.graph.set_axis_title("bottom", self.attr_x)
-        self.graph.set_axis_title("left", self.attr_y)
+    def get_axes(self):
+        return {"bottom": self.attr_x, "left": self.attr_y}
 
     def colors_changed(self):
         super().colors_changed()
