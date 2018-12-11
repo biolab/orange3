@@ -5,7 +5,9 @@ import os
 import pickle
 import unittest
 from unittest.mock import Mock
+
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from Orange.data import Table
 from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
@@ -86,6 +88,29 @@ class TestRemoveNaNRows(unittest.TestCase):
         pp_data = RemoveNaNRows()(data)
         self.assertEqual(len(pp_data), len(data) - 1)
         self.assertFalse(np.isnan(pp_data.X).any())
+
+
+class TestRemoveNaNColumns(unittest.TestCase):
+    def test_column_filtering(self):
+        data = Table("iris")
+        data.X[:, (1, 3)] = np.NaN
+
+        new_data = RemoveNaNColumns()(data)
+        self.assertEqual(len(new_data.domain.attributes),
+                         len(data.domain.attributes) - 2)
+
+        data = Table("iris")
+        data.X[0, 0] = np.NaN
+        new_data = RemoveNaNColumns()(data)
+        self.assertEqual(len(new_data.domain.attributes),
+                         len(data.domain.attributes))
+
+    def test_column_filtering_sparse(self):
+        data = Table("iris")
+        data.X = csr_matrix(data.X)
+
+        new_data = RemoveNaNColumns()(data)
+        self.assertEqual(data, new_data)
 
 
 class TestScaling(unittest.TestCase):
