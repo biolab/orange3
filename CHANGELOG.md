@@ -6,6 +6,37 @@ Change Log
 * ...
 
 
+[3.19.0] - 2018-12-11
+--------------------
+##### Enhancements
+* Remove discrete attributes from scatter plot's axes ([#3434](../../pull/3434))
+* OWScatterPlotBase: Animate dot resize ([#3436](../../pull/3436))
+* Introduce stacking ([#3291](../../pull/3291))
+* OWWidget: Input/output summary  ([#2556](../../pull/2556))
+* File: Provide percent missing values in Info box ([#3305](../../pull/3305))
+* OWHierarchicalClustering: Use selection indices for selection restore ([#3282](../../pull/3282))
+* Data Info display data set name ([#3187](../../pull/3187))
+* tSNE: Output preprocessor ([#3407](../../pull/3407))
+* Pythagorean Tree: children order ([#3393](../../pull/3393))
+
+##### Bugfixes
+* RemoveNaNColumns: Move to preprocess ([#3464](../../pull/3464))
+* Scatterplot Vizrank: Don't use discrete variables ([#3463](../../pull/3463))
+* canvas/widgetsscheme: Remove use of QObject.destroyed for logging ([#3447](../../pull/3447))
+* OWFeatureStatistics: Don't attempt to sort when no data on input ([#3449](../../pull/3449))
+* Rank: Fix crash on dataset with missing values ([#3458](../../pull/3458))
+* Radviz: Enable projection for less than two selected variables ([#3444](../../pull/3444))
+* t-SNE: Generate temporary projection data ([#3454](../../pull/3454))
+* Scatter Plot: Always setup plot ([#3450](../../pull/3450))
+* Mosaic: Always reset discrete_data ([#3445](../../pull/3445))
+* Save Data: Reset writer upon changing the extension ([#3437](../../pull/3437))
+* Scatter Plot: Replot when input Features ([#3439](../../pull/3439))
+* build-conda-installer: Update the included Miniconda installer ([#3429](../../pull/3429))
+* OWDataProjectionWidget: Consider tables with nan-s equal ([#3435](../../pull/3435))
+* Projections: Retain embedding if non-relevant variables change ([#3428](../../pull/3428))
+* PCA: Rename components to PC1, PC2, PC3, ... ([#3423](../../pull/3423))
+
+
 [3.18.0] - 2018-11-13
 --------------------
 ##### Enhancements
@@ -964,7 +995,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.18.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.19.0...HEAD
+[3.19.0]: https://github.com/biolab/orange3/compare/3.18.0...3.19.0
 [3.18.0]: https://github.com/biolab/orange3/compare/3.17.0...3.18.0
 [3.17.0]: https://github.com/biolab/orange3/compare/3.16.0...3.17.0
 [3.16.0]: https://github.com/biolab/orange3/compare/3.15.0...3.16.0
