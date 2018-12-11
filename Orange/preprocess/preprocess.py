@@ -15,9 +15,10 @@ from Orange.statistics import distribution
 from Orange.util import Reprable, Enum, deprecated
 from . import impute, discretize, transformation
 
-__all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows", "SklImpute",
-           "Normalize", "Randomize", "Preprocess", "RemoveConstant",
-           "RemoveNaNClasses", "ProjectPCA", "ProjectCUR", "Scale"]
+__all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
+           "SklImpute", "Normalize", "Randomize", "Preprocess",
+           "RemoveConstant", "RemoveNaNClasses", "RemoveNaNColumns",
+           "ProjectPCA", "ProjectCUR", "Scale"]
 
 
 class Preprocess(_RefuseDataInConstructor, Reprable):
@@ -205,6 +206,35 @@ class RemoveNaNRows(Preprocess):
         mask = np.isnan(data.X)
         mask = np.any(mask, axis=1)
         return data[~mask]
+
+
+class RemoveNaNColumns(Preprocess):
+    """
+    Remove features from the data domain if they contain
+    `threshold` or more unknown values.
+
+    `threshold` can be an integer or a float in the range (0, 1) representing
+    the fraction of the data size. When not provided, columns with only missing
+    values are removed (default).
+    """
+    def __init__(self, threshold=None):
+        self.threshold = threshold
+
+    def __call__(self, data, threshold=None):
+        # missing entries in sparse data are treated as zeros so we skip removing NaNs
+        if sp.issparse(data.X):
+            return data
+
+        if threshold is None:
+            threshold = data.X.shape[0] if self.threshold is None else \
+                        self.threshold
+        if isinstance(threshold, float):
+            threshold = threshold * data.X.shape[0]
+        nans = np.sum(np.isnan(data.X), axis=0)
+        att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
+        domain = Orange.data.Domain(att, data.domain.class_vars,
+                                    data.domain.metas)
+        return data.transform(domain)
 
 
 @deprecated("Orange.data.filter.HasClas")

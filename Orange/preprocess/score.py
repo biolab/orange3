@@ -8,8 +8,7 @@ from sklearn import feature_selection as skl_fss
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.data.filter import HasClass
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.preprocess.fss import RemoveNaNColumns
-from Orange.preprocess.preprocess import Discretize, SklImpute
+from Orange.preprocess.preprocess import Discretize, SklImpute, RemoveNaNColumns
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import contingency, distribution
 from Orange.util import Reprable
@@ -84,7 +83,8 @@ class Scorer(_RefuseDataInConstructor, Reprable):
         scores = np.full(len(orig_domain.attributes), np.nan)
         names = [a.name for a in data.domain.attributes]
         mask = np.array([a.name in names for a in orig_domain.attributes])
-        scores[mask] = self.score_data(data, feature)
+        if len(mask):
+            scores[mask] = self.score_data(data, feature)
         return scores
 
     def score_data(self, data, feature):
