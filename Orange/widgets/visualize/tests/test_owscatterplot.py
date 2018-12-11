@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 import numpy as np
 
 from AnyQt.QtCore import QRectF, Qt
@@ -588,6 +588,108 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIs(self.widget.data, self.data)
         self.assertIsNotNone(
             self.get_output(self.widget.Outputs.annotated_data))
+
+    def test_invalidated_same_features(self):
+        self.widget.setup_plot = Mock()
+        # send data and set default features
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+        # send the same features as already set
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[:2]))
+        self.widget.setup_plot.assert_not_called()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+    def test_invalidated_same_time(self):
+        self.widget.setup_plot = Mock()
+        # send data and features at the same time (data first)
+        features = self.data.domain.attributes[:2]
+        signals = [(self.widget.Inputs.data, self.data),
+                   (self.widget.Inputs.features, AttributeList(features))]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features (same as default ones)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[:2]))
+        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.widget.setup_plot.assert_called_once()
+
+        # send data
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+    def test_invalidated_same_time_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features and data at the same time (features first)
+        features = self.data.domain.attributes[:2]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_diff_features(self):
+        self.widget.setup_plot = Mock()
+        # send data and set default features
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+        # send different features
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[2:4]))
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[2:4]))
+
+    def test_invalidated_diff_features_same_time(self):
+        self.widget.setup_plot = Mock()
+        # send data and different features at the same time (data first)
+        features = self.data.domain.attributes[2:4]
+        signals = [(self.widget.Inputs.data, self.data),
+                   (self.widget.Inputs.features, AttributeList(features))]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_diff_features_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features (not the same as defaults)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[2:4]))
+        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.widget.setup_plot.assert_called_once()
+
+        # send data
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[2:4]))
+
+    def test_invalidated_diff_features_same_time_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send data and different features at the same time (features first)
+        features = self.data.domain.attributes[2:4]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
 
 
 if __name__ == "__main__":

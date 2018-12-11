@@ -374,7 +374,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.subset_data = None
         self.subset_indices = None
         self.__pending_selection = self.selection
-        self.__invalidated = True
+        self._invalidated = True
         self.setup_gui()
 
     # GUI
@@ -424,12 +424,12 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
             self.init_attr_values()
         self.openContext(self.data)
         self.use_context()
-        self.__invalidated = not (
+        self._invalidated = not (
             data_existed and self.data is not None and
             effective_data.X.shape == self.effective_data.X.shape and
             np.allclose(effective_data.X,
                         self.effective_data.X, equal_nan=True))
-        if self.__invalidated:
+        if self._invalidated:
             self.clear()
         self.cb_class_density.setEnabled(self.can_draw_density())
 
@@ -449,8 +449,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
-        if self.__invalidated:
-            self.__invalidated = False
+        if self._invalidated:
+            self._invalidated = False
             self.setup_plot()
         else:
             self.graph.update_point_props()

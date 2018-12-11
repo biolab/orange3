@@ -223,8 +223,32 @@ class WidgetTest(GuiTest):
         wait : int
             The amount of time to wait for the widget to complete.
         """
+        return self.send_signals([(input, value)], *args,
+                                 widget=widget, wait=wait)
+
+    def send_signals(self, signals, *args, widget=None, wait=-1):
+        """ Send signals to widget by calling appropriate triggers.
+        After all the signals are send, widget's handleNewSignals() in invoked.
+
+        Parameters
+        ----------
+        signals : list of (str, Object)
+        widget : Optional[OWWidget]
+            widget to send signals to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
+        """
         if widget is None:
             widget = self.widget
+        for input, value in signals:
+            self._send_signal(widget, input, value, *args)
+        widget.handleNewSignals()
+        if wait >= 0 and widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
+
+    @staticmethod
+    def _send_signal(widget, input, value, *args):
         if isinstance(input, str):
             for input_signal in widget.get_signals("inputs"):
                 if input_signal.name == input:
@@ -243,10 +267,6 @@ class WidgetTest(GuiTest):
             '{} should be {}'.format(value.__class__.__mro__, input.type)
 
         handler(value, *args)
-        widget.handleNewSignals()
-        if wait >= 0 and widget.isBlocking():
-            spy = QSignalSpy(widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout=wait))
 
     def wait_until_stop_blocking(self, widget=None, wait=DEFAULT_TIMEOUT):
         """Wait until the widget stops blocking i.e. finishes computation.

@@ -375,16 +375,17 @@ class OWScatterPlot(OWDataProjectionWidget):
                 all(attr in self.data.domain for attr
                         in self.attribute_selection_list):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
-            self.attr_changed()
             self.attribute_selection_list = None
-        else:
-            super().handleNewSignals()
+        super().handleNewSignals()
         self._vizrank_color_change()
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
+            self._invalidated = self._invalidated \
+                or self.attr_x != attributes[0] \
+                or self.attr_y != attributes[1]
         else:
             self.attribute_selection_list = None
 
