@@ -256,8 +256,7 @@ def remove_unused_values(var, data):
                             values=used_values,
                             base_value=base_value,
                             compute_value=Lookup(var, translation_table),
-                            sparse=var.sparse,
-                            )
+                            sparse=var.sparse)
 
 
 def sort_var_values(var):

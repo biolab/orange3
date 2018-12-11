@@ -24,3 +24,22 @@ def check_results_adequacy(results, error_group, check_nan=True):
             "Results contains invalid values")
     else:
         return results
+
+def results_for_preview(data_name=""):
+    from Orange.data import Table
+    from Orange.evaluation import CrossValidation
+    from Orange.classification import \
+        LogisticRegressionLearner, SVMLearner, NuSVMLearner
+
+    data = Table(data_name or "ionosphere")
+    results = CrossValidation(
+        data,
+        [LogisticRegressionLearner(penalty="l2"),
+         LogisticRegressionLearner(penalty="l1"),
+         SVMLearner(probability=True),
+         NuSVMLearner(probability=True)
+        ],
+        store_data=True
+    )
+    results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
+    return results

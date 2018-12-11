@@ -4,7 +4,6 @@ Tests for SchemeLink
 
 from ...gui import test
 from ...registry.tests import small_testing_registry
-from ...registry import InputSignal, OutputSignal
 
 from .. import SchemeNode, SchemeLink, IncompatibleChannelTypeError
 

@@ -69,7 +69,8 @@ class Discrete(np.ndarray):
         row_variable = _get_variable(row_variable, data, "row_variable")
         col_variable = _get_variable(col_variable, data, "col_variable")
         try:
-            conts, unknown_rows = data._compute_contingency([col_variable], row_variable)
+            conts, unknown_rows = \
+                data._compute_contingency([col_variable], row_variable)
             dist, unknowns = conts[0]
 
             self = super().__new__(cls, dist.shape)

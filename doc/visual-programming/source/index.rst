@@ -96,6 +96,7 @@ Model
    widgets/model/adaboost
    widgets/model/neuralnetwork
    widgets/model/stochasticgradient
+   widgets/model/stacking
    widgets/model/loadmodel
    widgets/model/savemodel
 

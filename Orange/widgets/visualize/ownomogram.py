@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy, QApplication, QDesktopWidget,
+    QSizePolicy, QDesktopWidget,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
@@ -21,6 +21,7 @@ from Orange.classification.logistic_regression import \
     LogisticRegressionClassifier
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input
 from Orange.widgets import gui
 
@@ -1183,17 +1184,9 @@ class OWNomogram(OWWidget):
                sorted_coefficients[i] * sorted_values[i] * (1 - k)
 
 
-if __name__ == "__main__":
-    from Orange.classification import NaiveBayesLearner, \
-        LogisticRegressionLearner
-
-    app = QApplication([])
-    ow = OWNomogram()
+if __name__ == "__main__":  # pragma: no cover
+    from Orange.classification import NaiveBayesLearner  #, LogisticRegressionLearner
     data = Table("heart_disease")
     clf = NaiveBayesLearner()(data)
     # clf = LogisticRegressionLearner()(data)
-    ow.set_classifier(clf)
-    ow.set_data(data)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+    WidgetPreview(OWNomogram).run(set_classifier=clf, set_data=data)

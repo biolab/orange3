@@ -2,7 +2,6 @@
 Predictions widget
 
 """
-import sys
 from collections import OrderedDict, namedtuple
 
 import numpy
@@ -23,7 +22,9 @@ import Orange.evaluation
 
 from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value
+from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.sql import check_sql_input
@@ -265,7 +266,7 @@ class OWPredictions(OWWidget):
                     or numpy.isnan(pred.results[0]).all():
                 try:
                     results = self.predict(pred.predictor, self.data)
-                except ValueError as err:
+                except (ValueError, DomainTransformationError) as err:
                     results = "{}: {}".format(pred.predictor.name, err)
                 self.predictors[inputid] = pred._replace(results=results)
 
@@ -908,18 +909,13 @@ def tool_tip(value):
         return str(value)
 
 
-def main(argv=None):
-    app = QApplication(list(argv if argv is not None else sys.argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris.tab"
-
+if __name__ == "__main__":  # pragma: no cover
+    filename = "iris.tab"
     data = Orange.data.Table(filename)
 
     def pred_error(data, *args, **kwargs):
         raise ValueError
+
     pred_error.domain = data.domain
     pred_error.name = "To err is human"
 
@@ -938,23 +934,6 @@ def main(argv=None):
     else:
         predictors = [pred_error]
 
-    w = OWPredictions()
-    w.show()
-    w.raise_()
-
-    w.set_data(data)
-    for i, pred in enumerate(predictors):
-        w.set_predictor(pred, i)
-    w.handleNewSignals()
-    app.exec()
-    w.set_data(None)
-    w.handleNewSignals()
-    for i in range(len(predictors)):
-        w.set_predictor(None, i)
-    w.handleNewSignals()
-    w.saveSettings()
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+    WidgetPreview(OWPredictions).run(
+        set_data=data,
+        set_predictor=[(pred, i) for i, pred in enumerate(predictors)])

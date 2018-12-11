@@ -8,7 +8,7 @@ TODO:
 import datetime
 import locale
 from enum import IntEnum
-from typing import Any, Optional, Tuple, List  # pylint: disable=unused-import
+from typing import Any, Optional, Tuple, List
 
 import numpy as np
 import scipy.stats as ss
@@ -16,17 +16,18 @@ from AnyQt.QtCore import Qt, QSize, QRectF, QVariant, QModelIndex, pyqtSlot, \
     QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
-    QHeaderView, QStyle, QStyleOptionViewItem  # pylint: disable=unused-import
+    QHeaderView, QStyle, QStyleOptionViewItem
 
 import Orange.statistics.util as ut
 from Orange.data import Table, StringVariable, DiscreteVariable, \
-    ContinuousVariable, TimeVariable, Domain, Variable  # pylint: disable=unused-import
+    ContinuousVariable, TimeVariable, Domain, Variable
 from Orange.widgets import widget, gui
 from Orange.widgets.data.utils.histogram import Histogram
 from Orange.widgets.report import plural
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 def _categorical_entropy(x):
@@ -806,7 +807,7 @@ class OWFeatureStatistics(widget.OWWidget):
     def __restore_sorting(self):
         """Restore the sort column and order from saved settings."""
         sort_column, sort_order = self.sorting
-        if sort_column < self.model.columnCount():
+        if self.data is not None and sort_column < self.model.columnCount():
             self.model.sort(sort_column, sort_order)
             self.table_view.horizontalHeader().setSortIndicator(sort_column, sort_order)
 
@@ -909,13 +910,5 @@ class OWFeatureStatistics(widget.OWWidget):
         pass
 
 
-if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWFeatureStatistics()
-
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    app.exec_()
+if __name__ == '__main__':  # pragma: no cover
+    WidgetPreview(OWFeatureStatistics).run(Table("iris"))

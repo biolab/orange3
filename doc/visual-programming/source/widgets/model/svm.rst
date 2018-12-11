@@ -65,7 +65,7 @@ Examples
 
 In the first (regression) example, we have used *housing* dataset and split the data into two data subsets (*Data Sample* and *Remaining Data*) with :doc:`Data Sampler <../data/datasampler>`. The sample was sent to SVM which produced a *Model*, which was then used in :doc:`Predictions <../evaluation/predictions>` to predict the values in *Remaining Data*. A similar schema can be used if the data is already in two separate files; in this case, two :doc:`File <../data/file>` widgets would be used instead of the :doc:`File <../data/file>` - :doc:`Data Sampler <../data/datasampler>` combination.
 
-.. figure:: images/SVM-predictions.png
+.. figure:: images/SVM-Predictions.png
 
 The second example shows how to use **SVM** in combination with :doc:`Scatterplot <../visualize/scatterplot>`. The following workflow trains a SVM model on *iris* data and outputs support vectors, which are those data instances that were used as support vectors in the learning phase. We can observe which are these data instances in a scatter plot visualization. Note that for the workflow to work correctly, you must set the links between widgets as demonstrated in the screenshot below.
 

@@ -2,6 +2,7 @@ import os
 import logging
 from warnings import catch_warnings
 from urllib.parse import urlparse
+from typing import List
 
 import numpy as np
 from AnyQt.QtWidgets import \
@@ -19,6 +20,7 @@ from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 # Backward compatibility: class RecentPath used to be defined in this module,
@@ -51,7 +53,7 @@ class NamedURLModel(PyListModel):
         self.mapping = mapping
         super().__init__()
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
         data = super().data(index, role)
         if role == Qt.DisplayRole:
             return self.mapping.get(data, data)
@@ -92,6 +94,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         match_values=PerfectDomainContextHandler.MATCH_VALUES_ALL
     )
 
+    # pylint seems to want declarations separated from definitions
+    recent_paths: List[RecentPath]
+    recent_urls: List[str]
+    variables: list
+
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
     recent_paths = Setting([
         RecentPath("", "sample-datasets", "iris.tab"),
@@ -119,6 +126,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         missing_reader = widget.Msg("Missing reader.")
         sheet_error = widget.Msg("Error listing available sheets.")
         unknown = widget.Msg("Read error:\n{}")
+
+    class NoFileSelected:
+        pass
 
     def __init__(self):
         super().__init__()
@@ -307,6 +317,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         except Exception:
             return self.Error.missing_reader
 
+        if self.reader is self.NoFileSelected:
+            self.Outputs.data.send(None)
+            return None
+
         try:
             self._update_sheet_combo()
         except Exception:
@@ -328,6 +342,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
+        return None
 
     def _get_reader(self):
         """
@@ -338,6 +353,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         """
         if self.source == self.LOCAL_FILE:
             path = self.last_path()
+            if path is None:
+                return self.NoFileSelected
             if self.recent_paths and self.recent_paths[0].file_format:
                 qname = self.recent_paths[0].file_format
                 reader_class = class_from_qualified_name(qname)
@@ -347,10 +364,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
-        elif self.source == self.URL:
+        else:
             url = self.url_combo.currentText().strip()
             if url:
                 return UrlReader(url)
+            else:
+                return self.NoFileSelected
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
@@ -385,19 +404,27 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             descs[0] = "<b>{}</b>".format(descs[0])
         if descs:
             text += "<p>{}</p>".format("<br/>".join(descs))
-
-        text += "<p>{} instance(s), {} feature(s), {} meta attribute(s)".\
-            format(len(table), len(domain.attributes), len(domain.metas))
+        # Instances
+        text += "<p>{} instance(s)".format(len(table))
+        # Attributes
+        missing_attr = "({:.1f}% missing values)".format(table.get_nan_frequency_attribute() * 100) \
+            if table.has_missing_attribute() else "(no missing values)"
+        text += "<br/>{} feature(s) {}".format(len(domain.attributes), missing_attr)
+        # Classes
+        missing_class = "({:.1f}% missing values)".format(table.get_nan_frequency_class() * 100) \
+            if table.has_missing_class() else "(no missing values)"
         if domain.has_continuous_class:
-            text += "<br/>Regression; numerical class."
+            text += "<br/>Regression; numerical class {}".format(missing_class)
         elif domain.has_discrete_class:
-            text += "<br/>Classification; categorical class with {} values.".\
-                format(len(domain.class_var.values))
+            text += "<br/>Classification; categorical class with {} values {}".format(
+                len(domain.class_var.values), missing_class)
         elif table.domain.class_vars:
-            text += "<br/>Multi-target; {} target variables.".format(
-                len(table.domain.class_vars))
+            text += "<br/>Multi-target; {} target variables {}".format(
+                len(table.domain.class_vars), missing_class)
         else:
             text += "<br/>Data has no target variable."
+        # Metas
+        text += "<br/>{} meta attribute(s)".format(len(domain.metas))
         text += "</p>"
 
         if 'Timestamp' in table.domain:
@@ -492,11 +519,5 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.update_file_list(key, value, oldvalue)
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWFile()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWFile).run()

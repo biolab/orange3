@@ -1,6 +1,5 @@
 from itertools import chain
 import numpy as np
-from AnyQt import QtWidgets
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -8,6 +7,7 @@ from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWLogisticRegression(OWBaseLearner):
@@ -110,9 +110,5 @@ def create_coef_table(classifier):
     return coef_table
 
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    w = OWLogisticRegression()
-    w.set_data(Table("zoo"))
-    w.show()
-    app.exec_()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWLogisticRegression).run(Table("zoo"))

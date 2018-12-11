@@ -14,6 +14,7 @@ from Orange.preprocess.transformation import Transformation, Lookup
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
@@ -518,18 +519,5 @@ class OWCreateClass(widget.OWWidget):
             self.report_raw("<ol>{}</ol>".format(output))
 
 
-def main():  # pragma: no cover
-    """Simple test for manual inspection of the widget"""
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    table = Table("zoo")
-    ow = OWCreateClass()
-    ow.show()
-    ow.set_data(table)
-    a.exec()
-    ow.saveSettings()
-
 if __name__ == "__main__":  # pragma: no cover
-    main()
+    WidgetPreview(OWCreateClass).run(Table("zoo"))

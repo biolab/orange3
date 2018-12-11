@@ -11,6 +11,7 @@ from Orange.data import Table
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class CustomRuleClassifier(_RuleClassifier):
@@ -361,14 +362,6 @@ class OWRuleLearner(OWBaseLearner):
                               else self.parent_alpha))
         ])
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
 
-    a = QApplication(sys.argv)
-    ow = OWRuleLearner()
-    d = Table('iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWRuleLearner).run(Table("iris"))

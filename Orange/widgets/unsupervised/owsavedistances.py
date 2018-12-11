@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import QFileDialog
 from Orange.misc import DistMatrix
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 
@@ -84,12 +85,6 @@ class OWSaveDistances(widget.OWWidget):
 
 
 if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    table = Table("iris")
-    ow = OWSaveDistances()
-    ow.show()
-    ow.set_distances(table)
-    a.exec()
-    ow.saveSettings()
+    from Orange.data import Table
+    from Orange.distance import Euclidean
+    WidgetPreview(OWSaveDistances).run(Euclidean(Table("iris")))

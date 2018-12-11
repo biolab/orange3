@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
 from collections import OrderedDict
 
 from AnyQt.QtWidgets import (
@@ -16,6 +14,7 @@ from Orange.widgets import gui
 from Orange.widgets.credentials import CredentialManager
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Output, Msg
 
 MAX_DL_LIMIT = 1000000
@@ -318,7 +317,7 @@ class OWSql(OWWidget):
             what = self.sql = self.sqltext.toPlainText()
             self.table = "Custom SQL"
             if self.materialize:
-                import psycopg2
+                import psycopg2  # pylint: disable=import-error
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
@@ -441,9 +440,5 @@ class OWSql(OWWidget):
             cm.password = settings["password"]
 
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWSql()
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSql).run()

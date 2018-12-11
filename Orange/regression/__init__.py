@@ -12,5 +12,5 @@ from .simple_random_forest import *
 from .svm import *
 from .random_forest import *
 from .tree import *
-from Orange.classification.simple_tree import *
 from .neural_network import *
+from ..classification.simple_tree import *

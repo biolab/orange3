@@ -1,5 +1,6 @@
 """Tree adapter class for sklearn trees."""
 from collections import OrderedDict
+import random
 
 import numpy as np
 from Orange.widgets.visualize.utils.tree.treeadapter import BaseTreeAdapter
@@ -62,6 +63,15 @@ class SklTreeAdapter(BaseTreeAdapter):
 
     def __right_child(self, node):
         return self._tree.children_right[node]
+
+    def reverse_children(self, node):
+        self._tree.children_left[node], self._tree.children_right[node] = \
+            self._tree.children_right[node], self._tree.children_left[node]
+
+    def shuffle_children(self):
+        for i in range(self.num_nodes):
+            if random.randrange(2) == 0:
+                self.reverse_children(i)
 
     @memoize_method(maxsize=1024)
     def get_distribution(self, node):

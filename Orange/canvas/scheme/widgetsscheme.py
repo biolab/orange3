@@ -23,7 +23,8 @@ import enum
 import itertools
 from collections import namedtuple, deque
 from urllib.parse import urlencode
-from typing import List, Tuple, Union
+from weakref import finalize
+from typing import List, Tuple
 import sip
 
 from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
@@ -513,11 +514,9 @@ class WidgetManager(QObject):
             widget.deleteLater()
             name = "{} '{}'".format(type(widget).__name__, widget.captionTitle)
             if log.isEnabledFor(logging.DEBUG):
-                widget.destroyed.connect(
-                    lambda: log.debug("Destroyed: %s", name))
-                widget.__marker = QObject()
-                widget.__marker.destroyed.connect(
-                    lambda: log.debug("Destroyed namespace: %s", name))
+                finalize(
+                    widget, log.debug, "Destroyed namespace: %s", name
+                )
             del self.__widget_processing_state[widget]
 
     def create_widget_instance(self, node):

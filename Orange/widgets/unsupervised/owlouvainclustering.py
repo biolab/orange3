@@ -24,6 +24,7 @@ from Orange.widgets.utils.annotated_data import get_next_name, add_columns, \
     ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import FutureWatcher
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
 
 try:
@@ -612,14 +613,5 @@ def run_on_graph(graph, resolution, state):
     return res
 
 
-if __name__ == '__main__':
-    from AnyQt.QtWidgets import QApplication  # pylint: disable=ungrouped-imports
-    import sys
-
-    app = QApplication(sys.argv)
-    ow = OWLouvainClustering()
-    ow.resetSettings()
-
-    ow.set_data(Table(sys.argv[1] if len(sys.argv) > 1 else 'iris'))
-    ow.show()
-    app.exec_()
+if __name__ == '__main__':  # pragma: no cover
+    WidgetPreview(OWLouvainClustering).run(Table("iris"))

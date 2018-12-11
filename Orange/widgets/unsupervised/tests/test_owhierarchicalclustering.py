@@ -1,6 +1,10 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import numpy as np
+
+from AnyQt.QtCore import QPoint, Qt, QEvent
+from AnyQt.QtGui import QMouseEvent
+
 import Orange.misc
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
@@ -46,12 +50,12 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         # change selection to 'Height ratio'
         self.widget.selection_box.buttons[1].click()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
         # change selection to 'Top N'
         self.widget.selection_box.buttons[2].click()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
-        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_all_zero_inputs(self):
         d = Orange.misc.DistMatrix(np.zeros((10, 10)))
@@ -123,3 +127,43 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Error.not_finite_distances.is_shown())
         self.send_signal(self.widget.Inputs.distances, self.distances)
         self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
+
+    def test_output_cut_ratio(self):
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+
+        # no data is selected
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsNotNone(annotated)
+
+        # selecting clusters with cutoff should select all data
+        self.widget.eventFilter(self.widget.top_axis_view.viewport(),
+                                self._mouse_button_press_event())
+        selected = self.get_output(self.widget.Outputs.selected_data)
+        annotated = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(selected), len(self.data))
+        self.assertIsNotNone(annotated)
+
+    def _mouse_button_press_event(self):
+        return QMouseEvent(QEvent.MouseButtonPress, QPoint(100, 10),
+                           Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
+
+    def test_retain_selection(self):
+        """Hierarchical Clustering didn't retain selection. GH-1563"""
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self._select_data()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.selected_data))
+
+    def test_restore_state(self):
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        self._select_data()
+        ids_1 = self.get_output(self.widget.Outputs.selected_data).ids
+        state = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(
+            OWHierarchicalClustering, stored_settings=state
+        )
+        self.send_signal(w.Inputs.distances, self.distances, widget=w)
+        ids_2 = self.get_output(w.Outputs.selected_data, widget=w).ids
+        self.assertSequenceEqual(list(ids_1), list(ids_2))

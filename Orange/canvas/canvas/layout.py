@@ -3,17 +3,16 @@ Node/Link layout.
 
 """
 from operator import attrgetter, add
+from functools import reduce
 
 import numpy
 
 import sip
-
 from AnyQt.QtWidgets import QGraphicsObject, QApplication
 from AnyQt.QtCore import QRectF, QLineF, QEvent
 
 from .items import NodeItem, LinkItem, SourceAnchorItem, SinkAnchorItem
 from .items.utils import invert_permutation_indices, linspace
-from functools import reduce
 
 
 def composition(f, g):

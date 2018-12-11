@@ -2,6 +2,7 @@ from Orange.data import Table
 from Orange.preprocess.preprocess import Preprocess, Discretize
 from Orange.widgets import gui
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
@@ -97,16 +98,7 @@ class OWTransform(OWWidget):
             self.report_data("Transformed data", self.transformed_data)
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-
-    app = QApplication([])
-    ow = OWTransform()
-    d = Table("iris")
-    pp = Discretize()
-    ow.set_data(d)
-    ow.set_preprocessor(pp)
-    ow.handleNewSignals()
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWTransform).run(
+        set_data=Table("iris"),
+        set_preprocessor=Discretize())

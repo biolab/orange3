@@ -76,15 +76,16 @@ def lac(conts, k, nsteps=30, window_size=1):
     m data points,
     each with dim dimensions
     """
+    import sys
+
     dim = len(conts)
 
     np.random.seed(42)
     # Initialize parameters
     priors = np.ones(k) / k
 
-
     print("Initializing")
-    import sys; sys.stdout.flush()
+    sys.stdout.flush()
     means, covars = initialize_random(conts, k)
     #means, covars = initialize_kmeans(conts, k)
     print("Done")

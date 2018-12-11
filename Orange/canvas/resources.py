@@ -5,6 +5,8 @@ Orange Canvas Resource Loader
 
 import os
 import logging
+import glob
+import unittest
 
 log = logging.getLogger(__name__)
 
@@ -145,8 +147,6 @@ class resource_loader(object):
         else:
             raise IOError(2, "Cannot find %r" % name)
 
-import glob
-
 
 class icon_loader(resource_loader):
     DEFAULT_ICON = "icons/Unknown.png"
@@ -190,9 +190,6 @@ class icon_loader(resource_loader):
 
     def load(self, name):
         return self.get(name)
-
-
-import unittest
 
 
 class TestIconLoader(unittest.TestCase):

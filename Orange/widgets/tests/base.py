@@ -30,7 +30,7 @@ from Orange.data import (
 )
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
-from Orange.preprocess.preprocess import PreprocessorList
+from Orange.preprocess.preprocess import PreprocessorList, Preprocess
 from Orange.regression.base_regression import (
     LearnerRegression, ModelRegression
 )
@@ -894,13 +894,23 @@ class ProjectionWidgetTestMixin:
         """Test widget for empty dataset"""
         self.send_signal(self.widget.Inputs.data, self.data[:0])
 
-    def test_subset_data(self, timeout=DEFAULT_TIMEOUT):
-        """Test widget for subset data"""
-        self.send_signal(self.widget.Inputs.data, self.data)
+    def test_plot_once(self, timeout=DEFAULT_TIMEOUT):
+        """Test if data is plotted only once but committed on every input change"""
+        table = Table("heart_disease")
+        self.widget.setup_plot = Mock()
+        self.widget.commit = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
-        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+
+        self.widget.commit.reset_mock()
+        self.send_signal(self.widget.Inputs.data_subset, table[::10])
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
 
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
@@ -931,6 +941,33 @@ class ProjectionWidgetTestMixin:
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
         self.assertEqual(len(self.widget.subset_indices), 5)
+
+    def test_invalidated_embedding(self, timeout=DEFAULT_TIMEOUT):
+        """Check if graph has been replotted when sending same data"""
+        self.widget.graph.update_coordinates = Mock()
+        self.widget.graph.update_point_props = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_called_once()
+        self.widget.graph.update_point_props.assert_called_once()
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.widget.graph.update_coordinates.reset_mock()
+        self.widget.graph.update_point_props.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_not_called()
+        self.widget.graph.update_point_props.assert_called_once()
+
+    def test_saved_selection(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(self.widget.__class__, stored_settings=settings)
+        self.send_signal(self.widget.Inputs.data, self.data, widget=w)
+        self.assertEqual(np.sum(w.graph.selection), 15)
+        np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
 
     def test_send_report(self, timeout=DEFAULT_TIMEOUT):
         """Test report """
@@ -965,20 +1002,36 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         self.assertFalse(self.widget.Error.sparse_data.is_shown())
 
     def test_manual_move(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
-        selection = self.widget.graph.selection
-        components = self.get_output(self.widget.Outputs.components)
+        data = self.data.copy()
+        data[1, 0] = np.nan
+        nvalid, nsample = len(self.data) - 1, self.widget.SAMPLE_SIZE
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph.select_by_indices(list(range(0, len(data), 10)))
+
+        # remember state
+        selection = self.widget.graph.selection.copy()
+
+        # simulate manual move
         self.widget._manual_move_start()
         self.widget._manual_move(0, 1, 1)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         self.widget.SAMPLE_SIZE)
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nsample)
         self.widget._manual_move_finish(0, 1, 2)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         len(self.data))
-        self.assertNotEqual(components,
-                            self.get_output(self.widget.Outputs.components))
+
+        # check new state
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
+
+    def test_output_preprocessor(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        pp = self.get_output(self.widget.Outputs.preprocessor)
+        self.assertIsInstance(pp, Preprocess)
+        transformed = pp(self.data[::10])
+        self.assertIsInstance(transformed, Table)
+        self.assertEqual(transformed.X.shape, (len(self.data) / 10, 2))
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(transformed.X, output.metas[::10, :2])
+        self.assertEqual([a.name for a in transformed.domain.attributes],
+                         [m.name for m in output.domain.metas[:2]])
 
 
 class datasets:

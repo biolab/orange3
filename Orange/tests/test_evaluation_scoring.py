@@ -10,12 +10,11 @@ from Orange.classification import LogisticRegressionLearner, SklTreeLearner, Nai
                                   MajorityLearner
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
-from Orange.evaluation.scoring import ScoreMetaType
 from Orange.preprocess import discretize, Discretize
 
 
 class TestScoreMetaType(unittest.TestCase):
-    class BaseScore(metaclass=ScoreMetaType):
+    class BaseScore(metaclass=scoring.ScoreMetaType):
         pass
 
     class Score1(BaseScore, abstract=True):
@@ -316,8 +315,8 @@ class TestAUC(unittest.TestCase):
     def compute_auc(self, actual, predicted):
         predicted = np.array(predicted).reshape(1, -1)
         probabilities = np.zeros((1, predicted.shape[1], 2))
-        probabilities[0,:,1] = predicted[0]
-        probabilities[0,:,0] = 1 - predicted[0]
+        probabilities[0, :, 1] = predicted[0]
+        probabilities[0, :, 0] = 1 - predicted[0]
         results = Results(
             nmethods=1, domain=Domain([], [DiscreteVariable(values='01')]),
             actual=actual, predicted=predicted)

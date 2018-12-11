@@ -8,7 +8,7 @@ from sklearn import feature_selection as skl_fss
 from Orange.data import Domain, Variable, DiscreteVariable, ContinuousVariable
 from Orange.data.filter import HasClass
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.preprocess.preprocess import Discretize, SklImpute
+from Orange.preprocess.preprocess import Discretize, SklImpute, RemoveNaNColumns
 from Orange.preprocess.util import _RefuseDataInConstructor
 from Orange.statistics import contingency, distribution
 from Orange.util import Reprable
@@ -66,6 +66,7 @@ class Scorer(_RefuseDataInConstructor, Reprable):
             f = data.domain[feature]
             data = data.transform(Domain([f], data.domain.class_vars))
 
+        orig_domain = data.domain
         for pp in self.preprocessors:
             data = pp(data)
 
@@ -76,7 +77,15 @@ class Scorer(_RefuseDataInConstructor, Reprable):
                     .format(self.friendly_name,
                             self._friendly_vartype_name(type(var))))
 
-        return self.score_data(data, feature)
+        if feature is not None:
+            return self.score_data(data, feature)
+
+        scores = np.full(len(orig_domain.attributes), np.nan)
+        names = [a.name for a in data.domain.attributes]
+        mask = np.array([a.name in names for a in orig_domain.attributes])
+        if len(mask):
+            scores[mask] = self.score_data(data, feature)
+        return scores
 
     def score_data(self, data, feature):
         raise NotImplementedError
@@ -154,7 +163,7 @@ class LearnerScorer(Scorer):
 
     def score_data(self, data, feature=None):
 
-        def average_scores(scores):
+        def join_derived_features(scores):
             """ Obtain scores for original attributes.
 
             If a learner preprocessed the data before building a model, current scores do not
@@ -167,7 +176,7 @@ class LearnerScorer(Scorer):
                 while not (attr in data.domain) and getattr(attr, 'compute_value', False):
                     attr = getattr(attr.compute_value, 'variable', attr)
                 scores_grouped[attr].append(score)
-            return [sum(scores_grouped[attr]) / len(scores_grouped[attr])
+            return [max(scores_grouped[attr])
                     if attr in scores_grouped else 0
                     for attr in data.domain.attributes]
 
@@ -179,7 +188,7 @@ class LearnerScorer(Scorer):
                         self.domain)
 
         if data.domain != model_domain:
-            scores = np.array([average_scores(row) for row in scores])
+            scores = np.array([join_derived_features(row) for row in scores])
 
         return scores[:, data.domain.attributes.index(feature)] \
             if feature else scores
@@ -265,12 +274,16 @@ class FCBF(ClassificationScorer):
 
         p = 1
         while True:
-            try: SUpc, Fp = S[-p]
-            except IndexError: break
+            try:
+                SUpc, Fp = S[-p]
+            except IndexError:
+                break
             q = p + 1
             while True:
-                try: SUqc, Fq = S[-q]
-                except IndexError: break
+                try:
+                    SUqc, Fq = S[-q]
+                except IndexError:
+                    break
                 if _symmetrical_uncertainty(data, attributes[Fp], attributes[Fq]) >= SUqc:
                     del S[-q]
                     worst.append((1e-4*SUqc, Fq))
@@ -336,6 +349,7 @@ class ReliefF(Scorer):
     class_type = DiscreteVariable
     supports_sparse_data = False
     friendly_name = "ReliefF"
+    preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
     def __init__(self, n_iterations=50, k_nearest=10, random_state=None):
         self.n_iterations = n_iterations
@@ -370,6 +384,7 @@ class RReliefF(Scorer):
     class_type = ContinuousVariable
     supports_sparse_data = False
     friendly_name = "RReliefF"
+    preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
     def __init__(self, n_iterations=50, k_nearest=50, random_state=None):
         self.n_iterations = n_iterations

@@ -37,15 +37,12 @@ def save_plot(data, file_formats, filename=""):
         settings.setValue(_LAST_FILTER_KEY, filter)
 
 
-if __name__ == "__main__":
+def main():  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     from Orange.widgets.widget import OWWidget
     app = QApplication([])
-
     save_plot(None, OWWidget.graph_writers)
-    """
-    ow = _ChangeExtension(".png", "Scalable Vector Graphics",
-                          ".svg", "Portable Network Graphics")
-    ow.exec()
-    print(ow.clickedButton() == ow.change_ext)
-"""
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

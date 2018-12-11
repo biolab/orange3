@@ -1,13 +1,12 @@
 import sys
 import itertools
 import warnings
-import threading
 from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
 
-from AnyQt.QtCore import Qt, QRectF, QSize
+from AnyQt.QtCore import Qt, QRectF, QSize, QTimer
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
 )
@@ -27,7 +26,7 @@ from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import classdensity
 from Orange.widgets.utils.colorpalette import ColorPaletteGenerator
-from Orange.widgets.utils.plot import OWPalette, OWPlotGUI
+from Orange.widgets.utils.plot import OWPalette
 from Orange.widgets.visualize.owscatterplotgraph_obsolete import (
     OWScatterPlotGraph as OWScatterPlotGraphObs
 )
@@ -219,18 +218,10 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
-    def __init__(self, *args, **kwargs):
-        self.lock = threading.Lock()
-        super().__init__(*args, **kwargs)
-
     def paint(self, painter, option, widget=None):
-        with self.lock:
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-            super().paint(painter, option, widget)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        super().paint(painter, option, widget)
 
-    def setData(self, *args, **kwargs):
-        with self.lock:
-            super().setData(*args ,**kwargs)
 
 def _define_symbols():
     """
@@ -395,7 +386,6 @@ class OWScatterPlotBase(gui.OWComponent):
         self.sample_size = None
         self.sample_indices = None
 
-        self.gui = OWPlotGUI(self)
         self.palette = None
 
         self.shape_legend = self._create_legend(((1, 0), (1, 0)))
@@ -413,6 +403,8 @@ class OWScatterPlotBase(gui.OWComponent):
         self._tooltip_delegate = EventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
         self.view_box.sigTransformChanged.connect(self.update_density)
+
+        self.timer = None
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -494,6 +486,9 @@ class OWScatterPlotBase(gui.OWComponent):
         self.plot_widget.clear()
 
         self.density_img = None
+        if self.timer is not None and self.timer.isActive():
+            self.timer.stop()
+            self.timer = None
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
         self.labels = []
@@ -713,8 +708,10 @@ class OWScatterPlotBase(gui.OWComponent):
                            self.MinShapeSize + (5 + self.point_width) * 0.5)
         size_column = self._filter_visible(size_column)
         size_column = size_column.copy()
-        size_column -= np.nanmin(size_column)
-        mx = np.nanmax(size_column)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            size_column -= np.nanmin(size_column)
+            mx = np.nanmax(size_column)
         if mx > 0:
             size_column /= mx
         else:
@@ -734,8 +731,42 @@ class OWScatterPlotBase(gui.OWComponent):
             size_imputer = getattr(
                 self.master, "impute_sizes", self.default_impute_sizes)
             size_imputer(size_data)
-            self.scatterplot_item.setSize(size_data)
-            self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
+
+            if self.timer is not None and self.timer.isActive():
+                self.timer.stop()
+                self.timer = None
+
+            current_size_data = self.scatterplot_item.data["size"].copy()
+            diff = size_data - current_size_data
+            widget = self
+
+            class Timeout:
+                # 0.5 - np.cos(np.arange(0.17, 1, 0.17) * np.pi) / 2
+                factors = [0.07, 0.26, 0.52, 0.77, 0.95, 1]
+
+                def __init__(self):
+                    self._counter = 0
+
+                def __call__(self):
+                    factor = self.factors[self._counter]
+                    self._counter += 1
+                    size = current_size_data + diff * factor
+                    if len(self.factors) == self._counter:
+                        widget.timer.stop()
+                        widget.timer = None
+                        size = size_data
+                    widget.scatterplot_item.setSize(size)
+                    widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
+
+            if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
+                # If encountered any strange behaviour when updating sizes,
+                # implement it with threads
+                self.timer = QTimer(self.scatterplot_item, interval=50)
+                self.timer.timeout.connect(Timeout())
+                self.timer.start()
+            else:
+                self.scatterplot_item.setSize(size_data)
+                self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
 
     update_point_size = update_sizes  # backward compatibility (needed?!)
     update_size = update_sizes
@@ -1032,7 +1063,7 @@ class OWScatterPlotBase(gui.OWComponent):
         if shape_data is not None:
             shape_data = np.copy(shape_data)
         shape_imputer = getattr(
-             self.master, "impute_shapes", self.default_impute_shapes)
+            self.master, "impute_shapes", self.default_impute_shapes)
         shape_imputer(shape_data, len(self.CurveSymbols) - 1)
         if isinstance(shape_data, np.ndarray):
             shape_data = shape_data.astype(int)
@@ -1258,21 +1289,6 @@ class OWScatterPlotBase(gui.OWComponent):
             return True
         else:
             return False
-
-    def box_zoom_select(self, parent):
-        g = self.gui
-        box_zoom_select = gui.vBox(parent, "Zoom/Select")
-        zoom_select_toolbar = g.zoom_select_toolbar(
-            box_zoom_select, nomargin=True,
-            buttons=[g.StateButtonsBegin, g.SimpleSelect, g.Pan, g.Zoom,
-                     g.StateButtonsEnd, g.ZoomReset]
-        )
-        buttons = zoom_select_toolbar.buttons
-        buttons[g.Zoom].clicked.connect(self.zoom_button_clicked)
-        buttons[g.Pan].clicked.connect(self.pan_button_clicked)
-        buttons[g.SimpleSelect].clicked.connect(self.select_button_clicked)
-        buttons[g.ZoomReset].clicked.connect(self.reset_button_clicked)
-        return box_zoom_select
 
 
 class HelpEventDelegate(EventDelegate):

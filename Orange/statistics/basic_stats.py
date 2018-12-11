@@ -49,4 +49,3 @@ class DomainBasicStats:
         if index < 0:
             index = len(self.domain) + (-1 - index)
         return self.stats[index]
-

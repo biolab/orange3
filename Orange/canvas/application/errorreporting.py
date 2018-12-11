@@ -13,6 +13,7 @@ from tempfile import mkstemp
 from collections import OrderedDict
 from urllib.parse import urljoin, urlencode
 from urllib.request import pathname2url, urlopen, build_opener
+from urllib.error import URLError
 from unittest.mock import patch
 
 import pkg_resources
@@ -51,6 +52,14 @@ def get_installed_distributions():
             # PKG-INFO/METADATA is not available or parsable.
             version = "Unknown"
         yield "{name}=={version}".format(name=name, version=version)
+
+
+def internet_on():
+    try:
+        urlopen(REPORT_POST_URL, timeout=1)
+        return True
+    except URLError:
+        return False
 
 
 class ErrorReporting(QDialog):
@@ -224,7 +233,8 @@ class ErrorReporting(QDialog):
 
         # If this exact error was already reported in this session,
         # just warn about it
-        if (err_module, widget_module) in cls._cache:
+        # or if computer not connected to the internet
+        if (err_module, widget_module) in cls._cache or not internet_on():
             QMessageBox(QMessageBox.Warning, 'Error Encountered',
                         'Error encountered{}:<br><br><tt>{}</tt>'.format(
                             (' in widget <b>{}</b>'.format(widget_class.name)

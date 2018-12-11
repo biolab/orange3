@@ -1,7 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
 
-import sys
 from itertools import chain
 import abc
 import enum
@@ -13,13 +12,7 @@ from functools import partial, reduce
 import concurrent.futures
 from concurrent.futures import Future
 from collections import OrderedDict, namedtuple
-
-try:
-    # only used in type hinting
-    # pylint: disable=unused-import
-    from typing import Any, Optional, List, Tuple, Dict, Callable
-except ImportError:
-    pass
+from typing import Any, Optional, List, Dict, Callable
 
 import numpy as np
 
@@ -32,6 +25,7 @@ from AnyQt.QtCore import pyqtSlot as Slot
 from Orange.base import Learner
 import Orange.classification
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data.table import DomainTransformationError
 from Orange.data.filter import HasClass
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
@@ -40,6 +34,7 @@ from Orange.preprocess.preprocess import Preprocess
 import Orange.regression
 from Orange.widgets import gui, settings, widget
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.concurrent import ThreadExecutor
 
@@ -209,6 +204,8 @@ class OWTestLearners(OWWidget):
         memory_error = Msg("Not enough memory.")
         no_class_values = Msg("Target variable has no values.")
         only_one_class_var_value = Msg("Target variable has only one value.")
+        test_data_incompatible = Msg(
+            "Test data may be incompatible with train data.")
 
     class Warning(OWWidget.Warning):
         missing_data = \
@@ -221,6 +218,8 @@ class OWTestLearners(OWWidget):
     class Information(OWWidget.Information):
         data_sampled = Msg("Train data has been sampled")
         test_data_sampled = Msg("Test data has been sampled")
+        test_data_transformed = Msg(
+            "Test data has been transformed to match the train data.")
 
     def __init__(self):
         super().__init__()
@@ -551,14 +550,20 @@ class OWTestLearners(OWWidget):
             name = learner_name(slot.learner)
             head = QStandardItem(name)
             head.setData(key, Qt.UserRole)
-            if isinstance(slot.results, Try.Fail):
-                head.setToolTip(str(slot.results.exception))
+            results = slot.results
+            if isinstance(results, Try.Fail):
+                head.setToolTip(str(results.exception))
                 head.setText("{} (error)".format(name))
                 head.setForeground(QtGui.QBrush(Qt.red))
-                errors.append("{name} failed with error:\n"
-                              "{exc.__class__.__name__}: {exc!s}"
-                              .format(name=name, exc=slot.results.exception))
-
+                if isinstance(results.exception, DomainTransformationError) \
+                        and self.resampling == self.TestOnTest:
+                    self.Error.test_data_incompatible()
+                    self.Information.test_data_transformed.clear()
+                else:
+                    errors.append("{name} failed with error:\n"
+                                  "{exc.__class__.__name__}: {exc!s}"
+                                  .format(name=name, exc=slot.results.exception)
+                                  )
             row = [head]
 
             if class_var is not None and class_var.is_discrete and \
@@ -744,7 +749,13 @@ class OWTestLearners(OWWidget):
             self.cancel()
 
         self.Warning.test_data_unused.clear()
+        self.Error.test_data_incompatible.clear()
         self.Warning.test_data_missing.clear()
+        self.Information.test_data_transformed(
+            shown=self.resampling == self.TestOnTest
+            and self.data is not None
+            and self.test_data is not None
+            and self.data.domain.attributes != self.test_data.domain.attributes)
         self.warning()
         self.Error.class_inconsistent.clear()
         self.Error.too_many_folds.clear()
@@ -1077,25 +1088,11 @@ class Task:
         concurrent.futures.wait([self.future])
 
 
-def main(argv=None):
-    """Show and test the widget"""
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig(level=logging.DEBUG)
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
+if __name__ == "__main__":  # pragma: no cover
+    filename = "iris"
     data = Table(filename)
     class_var = data.domain.class_var
-
-    if class_var is None:
-        return 1
-    elif class_var.is_discrete:
+    if class_var.is_discrete:
         learners = [lambda data: 1 / 0,
                     Orange.classification.LogisticRegressionLearner(),
                     Orange.classification.MajorityLearner(),
@@ -1106,22 +1103,8 @@ def main(argv=None):
                     Orange.regression.KNNRegressionLearner(),
                     Orange.regression.RidgeRegressionLearner()]
 
-    w = OWTestLearners()
-    w.show()
-    w.set_train_data(data)
-    w.set_test_data(data)
-
-    for i, learner in enumerate(learners):
-        w.set_learner(learner, i)
-
-    w.handleNewSignals()
-    rval = app.exec_()
-
-    for i in range(len(learners)):
-        w.set_learner(None, i)
-    w.handleNewSignals()
-    w.saveSettings()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+    WidgetPreview(OWTestLearners).run(
+        set_train_data=data,
+        set_test_data=data,
+        set_learner=[(learner, i) for i, learner in enumerate(learners)]
+    )

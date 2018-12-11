@@ -2,9 +2,10 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from collections import defaultdict
+
 import numpy as np
 import scipy.sparse as sp
-from collections import defaultdict
 
 from Orange.data import (Table, Domain, StringVariable,
                          DiscreteVariable, ContinuousVariable)

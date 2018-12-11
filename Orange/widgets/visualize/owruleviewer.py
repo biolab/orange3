@@ -13,6 +13,7 @@ from Orange.classification.rules import _RuleClassifier
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -117,9 +118,11 @@ class OWRuleViewer(widget.OWWidget):
         self.selected = None
         selection_model = self.view.selectionModel()
         if selection_model.hasSelection():
-            selection = (selection_model.selection() if not actual
-                         else self.proxy_model.mapSelectionToSource(
-                                selection_model.selection()))
+            if not actual:
+                selection = selection_model.selection()
+            else:
+                selection = self.proxy_model.mapSelectionToSource(
+                    selection_model.selection())
 
             self.selected = sorted(set(index.row() for index
                                        in selection.indexes()))
@@ -372,19 +375,11 @@ class DistributionItemDelegate(QItemDelegate):
 
         painter.restore()
 
-if __name__ == "__main__":
-    from PyQt4.QtGui import QApplication
 
+if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import CN2Learner
-
     data = Table("iris")
     learner = CN2Learner()
     model = learner(data)
     model.instances = data
-
-    a = QApplication([])
-    ow = OWRuleViewer()
-    ow.set_classifier(model)
-
-    ow.show()
-    a.exec()
+    WidgetPreview(OWRuleViewer).run(model)

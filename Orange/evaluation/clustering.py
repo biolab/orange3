@@ -123,6 +123,8 @@ def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):
     :param xlim tuple (float, float):
             Limit x-axis values.
     """
+    # If the module is not there, let the user install it
+    # pylint: disable=import-error
     import matplotlib.pyplot as plt
 
     if isinstance(X, Table):
@@ -133,7 +135,7 @@ def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):
 
     # Detect number of clusters and set colors
     N = len(set(y))
-    if isinstance(colors, type(None)) :
+    if isinstance(colors, type(None)):
         colors = ["g" if i % 2 else "b" for i in range(N)]
     elif len(colors) != N:
         import sys

@@ -3,7 +3,6 @@ import io
 from unittest.mock import Mock
 
 import numpy as np
-from Orange.base import Model
 
 from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest

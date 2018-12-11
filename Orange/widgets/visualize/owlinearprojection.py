@@ -8,20 +8,19 @@ from math import factorial
 
 import numpy as np
 
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtWidgets import QApplication, QSizePolicy
+from AnyQt.QtWidgets import QSizePolicy
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import ReliefF, RReliefF
-from Orange.projection import PCA
+from Orange.projection import PCA, LDA, LinearProjector
 from Orange.util import Enum
 from Orange.widgets import gui, report
 from Orange.widgets.gui import OWComponent
@@ -29,11 +28,12 @@ from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
-from Orange.widgets.widget import Input, Msg
+from Orange.widgets.widget import Msg
 
 
 class LinearProjectionVizRank(VizRankDialog, OWComponent):
@@ -120,9 +120,11 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def compute_score(self, state):
         master = self.master
-        _, ec, _ = master.prepare_projection_data(
-            [self.attrs[i] for i in state])
-        y = column_data(master.data, self.attr_color, dtype=float)
+        data = master.data
+        domain = Domain([self.attrs[i] for i in state], data.domain.class_vars)
+        projection = master.projector(data.transform(domain))
+        ec = projection(data).X
+        y = column_data(data, self.attr_color, dtype=float)
         if ec.shape[0] < self.minK:
             return None
         n_neighbors = min(self.minK, len(ec) - 1)
@@ -130,20 +132,17 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         ind = knn.kneighbors(return_distance=False)
         if self.attr_color.is_discrete:
             return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
-        return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(master.data))
+        return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(data))
 
     def bar_length(self, score):
         return max(0, -score)
 
     def _score_heuristic(self):
-        def normalized(col):
-            if not col.size:
-                return col.copy()
-            col_min, col_max = np.nanmin(col), np.nanmax(col)
-            if np.isnan(col_min):
-                return col.copy()
-            span = col_max - col_min
-            return (col - col_min) / (span or 1)
+        def normalized(a):
+            span = np.max(a, axis=0) - np.min(a, axis=0)
+            span[span == 0] = 1
+            return (a - np.mean(a, axis=0)) / span
+
         domain = self.master.data.domain
         attr_color = self.master.attr_color
         domain = Domain(
@@ -152,8 +151,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             class_vars=attr_color
         )
         data = self.master.data.transform(domain)
-        for i, col in enumerate(data.X.T):
-            data.X.T[i] = normalized(col)
+        data.X = normalized(data.X)
         relief = ReliefF if attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         results = sorted(zip(weights, domain.attributes), key=lambda x: (-x[0], x[1].name))
@@ -253,24 +251,14 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     priority = 240
     keywords = []
 
-    class Inputs(OWAnchorProjectionWidget.Inputs):
-        projection_input = Input("Projection", Table)
-
-    Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2, Projection=3),
+    Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2),
                      type=int, qualname="OWLinearProjection.Placement")
 
-    Component_name = {Placement.Circular: "C", Placement.LDA: "LD",
-                      Placement.PCA: "PC"}
-    Variable_name = {Placement.Circular: "circular",
-                     Placement.LDA: "lda",
-                     Placement.PCA: "pca",
-                     Placement.Projection: "projection"}
     Projection_name = {Placement.Circular: "Circular Placement",
                        Placement.LDA: "Linear Discriminant Analysis",
-                       Placement.PCA: "Principal Component Analysis",
-                       Placement.Projection: "Use input projection"}
+                       Placement.PCA: "Principal Component Analysis"}
 
-    settings_version = 4
+    settings_version = 5
 
     placement = Setting(Placement.Circular)
     selected_vars = ContextSetting([])
@@ -278,34 +266,24 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)
 
-    class Warning(OWAnchorProjectionWidget.Warning):
-        not_enough_comp = Msg("Input projection has less than two components")
-        trivial_components = Msg(
-            "All components of the PCA are trivial (explain zero variance). "
-            "Input data is constant (or near constant).")
-
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
-        proj_and_domain_match = Msg("Projection and Data domains do not match")
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
-        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
-        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
+        self.model_selected.removed.connect(self.__model_selected_changed)
         self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
             None, self, "Suggest Features", self.__vizrank_set_attrs)
 
         super().__init__()
-        self.projection_input = None
-        self.variables = None
 
     def _add_controls(self):
         self._add_controls_variables()
         self._add_controls_placement()
         super()._add_controls()
-        self.graph.gui.add_control(
+        self.gui.add_control(
             self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
             value="hide_radius", minValue=0, maxValue=100, step=10,
             createLabel=False, callback=self.__radius_slider_changed
@@ -317,6 +295,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.variables_selection = VariablesSelection(
             self, self.model_selected, self.model_other, self.controlArea
         )
+        self.variables_selection.added.connect(self.__model_selected_changed)
+        self.variables_selection.removed.connect(self.__model_selected_changed)
         self.variables_selection.add_remove.layout().addWidget(
             self.btn_vizrank
         )
@@ -339,30 +319,33 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         dom = self.data.domain
         return [v for v in chain(dom.variables, dom.metas) if v.is_continuous]
 
+    @property
+    def effective_variables(self):
+        return self.model_selected[:]
+
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
             return
         self.model_selected[:] = attrs[:]
         self.model_other[:] = [var for var in self.continuous_variables
                                if var not in attrs]
+        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
                               in self.model_selected]
         self.projection = None
-        self.variables = None
         self._check_options()
+        self.init_projection()
         self.setup_plot()
         self.commit()
 
     def __placement_radio_changed(self):
-        self.variables_selection.set_enabled(
-            self.placement in [self.Placement.Circular, self.Placement.LDA])
         self.controls.graph.hide_radius.setEnabled(
             self.placement != self.Placement.Circular)
-        self.projection = None
-        self.variables = None
+        self.projection = self.projector = None
         self._init_vizrank()
+        self.init_projection()
         self.setup_plot()
         self.commit()
 
@@ -387,24 +370,20 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
         self._check_options()
         self._init_vizrank()
+        self.init_projection()
 
     def _check_options(self):
         buttons = self.radio_placement.buttons
         for btn in buttons:
             btn.setEnabled(True)
+
         if self.data is not None:
             has_discrete_class = self.data.domain.has_discrete_class
             if not has_discrete_class or len(np.unique(self.data.Y)) < 2:
                 buttons[self.Placement.LDA].setEnabled(False)
                 if self.placement == self.Placement.LDA:
                     self.placement = self.Placement.Circular
-            if not self.projection_input:
-                buttons[self.Placement.Projection].setEnabled(False)
-                if self.placement == self.Placement.Projection:
-                    self.placement = self.Placement.Circular
 
-        self.variables_selection.set_enabled(
-            self.placement in [self.Placement.Circular, self.Placement.LDA])
         self.controls.graph.hide_radius.setEnabled(
             self.placement != self.Placement.Circular)
 
@@ -412,10 +391,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         is_enabled, msg = False, ""
         if self.data is None:
             msg = "There is no data."
-        elif self.placement not in [self.Placement.Circular,
-                                    self.Placement.LDA]:
-            msg = "Suggest Features works only for Circular and " \
-                  "Linear Discriminant Analysis Projection"
         elif self.attr_color is None:
             msg = "Color variable has to be selected"
         elif self.attr_color.is_continuous and \
@@ -450,153 +425,30 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         super().init_attr_values()
         self.selected_vars = []
 
-    @Inputs.projection_input
-    def set_projection(self, projection):
-        self.Warning.not_enough_comp.clear()
-        if projection and len(projection) < 2:
-            self.Warning.not_enough_comp()
-            projection = None
-        if projection is not None:
-            self.placement = self.Placement.Projection
-        self.projection_input = projection
-        self._check_options()
-
-    def get_embedding(self):
-        self.valid_data = None
-        if self.data is None or not self.variables:
-            return None
-
-        if self.placement == self.Placement.PCA:
-            self.valid_data, ec, self.projection = self._get_pca()
-            self.variables = self._pca.orig_domain.attributes
-        else:
-            self.valid_data, ec, self.projection = \
-                self.prepare_projection_data(self.variables)
-
-        self.Error.no_valid_data.clear()
-        if self.valid_data is None or not sum(self.valid_data) or \
-                self.projection is None or ec is None:
-            self.Error.no_valid_data()
-            return None
-
-        embedding = np.full((len(self.data), 2), np.nan)
-        embedding[self.valid_data] = ec
-        return embedding
-
-    def prepare_projection_data(self, variables):
-        def projection(_vars):
-            attrs = self.projection_input.domain.attributes
-            if set(attrs).issuperset(_vars):
-                return self.projection_input[:2, _vars].X
-            elif set(f.name for f in attrs).issuperset(f.name for f in _vars):
-                return self.projection_input[:2, [f.name for f in _vars]].X
-            else:
-                self.Error.proj_and_domain_match()
-                return None
-
-        def get_axes(_vars):
-            self.Error.proj_and_domain_match.clear()
-            if self.placement == self.Placement.Circular:
-                return LinProj.defaultaxes(len(_vars))
-            elif self.placement == self.Placement.LDA:
-                return self._get_lda(self.data, _vars)
-            elif self.placement == self.Placement.Projection and \
-                    self.projection_input is not None:
-                return projection(_vars)
-            else:
-                return None
-
-        coords = np.vstack(column_data(self.data, v, float) for v in variables)
-        axes = get_axes(variables)
-        if axes is None:
-            return None, None, None
-
-        valid_mask = ~np.isnan(coords).any(axis=0)
-        X, Y = np.dot(axes, coords[:, valid_mask])
-        if X.size and Y.size:
-            X = normalized(X)
-            Y = normalized(Y)
-        return valid_mask, np.stack((X, Y), axis=1), axes.T
-
-    def get_anchors(self):
-        if self.projection is None:
-            return None, None
-        return self.projection, [v.name for v in self.variables]
-
-    def setup_plot(self):
-        self.init_projection_variables()
-        super().setup_plot()
-
-    def init_projection_variables(self):
-        self.variables = None
-        if self.data is None:
-            return
-
-        if self.placement in [self.Placement.Circular, self.Placement.LDA]:
-            self.variables = self.model_selected[:]
-        elif self.placement == self.Placement.Projection:
-            self.variables = self.model_selected[:] + self.model_other[:]
+    def init_projection(self):
+        if self.placement == self.Placement.Circular:
+            self.projector = CircularPlacement()
+        elif self.placement == self.Placement.LDA:
+            self.projector = LDA(solver="eigen", n_components=2)
         elif self.placement == self.Placement.PCA:
-            self.variables = [var for var in self.data.domain.attributes
-                              if var.is_continuous]
+            self.projector = PCA(n_components=2)
+            self.projector.component = 2
+            self.projector.preprocessors = PCA.preprocessors + [Normalize()]
 
-    def _get_lda(self, data, variables):
-        data = data.transform(Domain(variables, data.domain.class_vars))
-        lda = LinearDiscriminantAnalysis(solver='eigen', n_components=2)
-        lda.fit(data.X, data.Y)
-        scalings = lda.scalings_[:, :2].T
-        if scalings.shape == (1, 1):
-            scalings = np.array([[1.], [0.]])
-        return scalings
+        super().init_projection()
 
-    def _get_pca(self):
-        pca_projector = PCA(n_components=2)
-        pca_projector.component = 2
-        pca_projector.preprocessors = PCA.preprocessors + [Normalize()]
+    def get_coordinates_data(self):
+        def normalized(a):
+            span = np.max(a, axis=0) - np.min(a, axis=0)
+            span[span == 0] = 1
+            return (a - np.mean(a, axis=0)) / span
 
-        pca = pca_projector(self.data)
-        variance_ratio = pca.explained_variance_ratio_
-        cumulative = np.cumsum(variance_ratio)
-
-        self._pca = pca
-        if not np.isfinite(cumulative[-1]):
-            self.Warning.trivial_components()
-
-        coords = pca(self.data).X
-        valid_mask = ~np.isnan(coords).any(axis=1)
-        # scale axes
-        max_radius = np.min([np.abs(np.min(coords, axis=0)),
-                             np.max(coords, axis=0)])
-        axes = pca.components_.T.copy()
-        axes *= max_radius / np.max(np.linalg.norm(axes, axis=1))
-        return valid_mask, coords, axes
-
-    def send_components(self):
-        components = None
-        if self.data is not None and self.valid_data is not None and \
-                self.projection is not None:
-            if self.placement in [self.Placement.Circular, self.Placement.LDA]:
-                axes = self.projection
-                attrs = self.model_selected
-            elif self.placement == self.Placement.PCA:
-                axes = self._pca.components_.T
-                attrs = self._pca.orig_domain.attributes
-            if self.placement != self.Placement.Projection:
-                meta_attrs = [StringVariable(name='component')]
-                metas = np.array(
-                    [["{}{}".format(self.Component_name[self.placement], i + 1)
-                      for i in range(axes.shape[1])]], dtype=object).T
-                components = Table(Domain(attrs, metas=meta_attrs),
-                                   axes.T, metas=metas)
-                components.name = self.data.name
-            else:
-                components = self.projection_input
-        self.Outputs.components.send(components)
-
-    def _get_projection_variables(self):
-        pn = self.Variable_name[self.placement]
-        self.embedding_variables_names = ("{}-x".format(pn), "{}-y".format(pn))
-        return super()._get_projection_variables()
+        embedding = self.get_embedding()
+        if embedding is None:
+            return None, None
+        norm_emb = normalized(embedding[self.valid_data])
+        return (norm_emb.ravel(), np.zeros(len(norm_emb), dtype=float)) \
+            if embedding.shape[1] == 1 else norm_emb.T
 
     def _get_send_report_caption(self):
         def projection_name():
@@ -612,7 +464,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
              "{} %".format(self.graph.jitter_size))))
 
     def clear(self):
-        self.variables = None
         if self.model_selected:
             self.model_selected.clear()
         if self.model_other:
@@ -638,6 +489,10 @@ class OWLinearProjection(OWAnchorProjectionWidget):
                 selection = settings_["selection_indices"]
                 settings_["selection"] = [(i, 1) for i, selected in
                                           enumerate(selection) if selected]
+        if version < 5:
+            if "placement" in settings_ and \
+                    settings_["placement"] not in cls.Placement:
+                settings_["placement"] = cls.Placement.Circular
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -680,65 +535,20 @@ def column_data(table, var, dtype):
     return col
 
 
-class LinProj:
-    @staticmethod
-    def defaultaxes(naxes):
+class CircularPlacement(LinearProjector):
+    def get_components(self, X, Y):
         # Return circular axes for linear projection
-        assert naxes > 0
-
-        if naxes == 1:
+        n_axes = X.shape[1]
+        if n_axes == 1:
             axes_angle = [0]
-        elif naxes == 2:
+        elif n_axes == 2:
             axes_angle = [0, np.pi / 2]
         else:
-            axes_angle = np.linspace(0, 2 * np.pi, naxes, endpoint=False)
-
-        axes = np.vstack(
-            (np.cos(axes_angle),
-             np.sin(axes_angle))
-        )
-        return axes
-
-    @staticmethod
-    def project(axes, X):
-        return np.dot(axes, X)
+            axes_angle = np.linspace(0, 2 * np.pi, n_axes,
+                                     endpoint=False)
+        return np.vstack((np.cos(axes_angle), np.sin(axes_angle)))
 
 
-def normalized(a):
-    if not a.size:
-        return a.copy()
-    amin, amax = np.nanmin(a), np.nanmax(a)
-    if np.isnan(amin):
-        return a.copy()
-    span = amax - amin
-    mean = np.nanmean(a)
-    return (a - mean) / (span or 1)
-
-
-def main(argv=None):
-    import sys
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWLinearProjection()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    del w
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("iris")
+    WidgetPreview(OWLinearProjection).run(set_data=data, set_subset_data=data[::10])

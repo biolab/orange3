@@ -8,13 +8,14 @@ from AnyQt.QtCore import (
     pyqtSignal as Signal, pyqtSlot as Slot
 )
 from AnyQt.QtGui import QColor
-from AnyQt.QtWidgets import QApplication
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain, StringVariable
-from Orange.projection.freeviz import FreeViz
+from Orange.data import Table
+from Orange.projection import FreeViz
+from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
@@ -220,7 +221,6 @@ class OWFreeViz(OWAnchorProjectionWidget):
     initialization = settings.Setting(InitType.Circular)
     GRAPH_CLASS = OWFreeVizGraph
     graph = settings.SettingProvider(OWFreeVizGraph)
-    embedding_variables_names = ("freeviz-x", "freeviz-y")
 
     class Error(OWAnchorProjectionWidget.Error):
         no_class_var = widget.Msg("Data has no target variable")
@@ -229,13 +229,15 @@ class OWFreeViz(OWAnchorProjectionWidget):
         features_exceeds_instances = widget.Msg(
             "Number of features exceeds the number of instances.")
         too_many_data_instances = widget.Msg("Data is too large.")
+        constant_data = widget.Msg("All data columns are constant.")
+        not_enough_features = widget.Msg("At least two features are required")
+
+    class Warning(OWAnchorProjectionWidget.Warning):
+        removed_features = widget.Msg("Categorical features with more than"
+                                      " two values are not shown.")
 
     def __init__(self):
         super().__init__()
-        self._X = None
-        self._Y = None
-
-        # FreeViz
         self._loop = AsyncUpdateLoop(parent=self)
         self._loop.yielded.connect(self.__set_projection)
         self._loop.finished.connect(self.__freeviz_finished)
@@ -244,7 +246,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
     def _add_controls(self):
         self.__add_controls_start_box()
         super()._add_controls()
-        self.graph.gui.add_control(
+        self.gui.add_control(
             self._effects_box, gui.hSlider, "Hide radius:", master=self.graph,
             value="hide_radius", minValue=0, maxValue=100, step=10,
             createLabel=False, callback=self.__radius_slider_changed
@@ -258,6 +260,11 @@ class OWFreeViz(OWAnchorProjectionWidget):
             labelWidth=90, callback=self.__init_combo_changed)
         self.btn_start = gui.button(
             box, self, "Optimize", self.__toggle_start, enabled=False)
+
+    @property
+    def effective_variables(self):
+        return [a for a in self.data.domain.attributes
+                if a.is_continuous or a.is_discrete and len(a.values) == 2]
 
     def __radius_slider_changed(self):
         self.graph.update_radius()
@@ -276,33 +283,33 @@ class OWFreeViz(OWAnchorProjectionWidget):
         running = self._loop.isRunning()
         if running:
             self._loop.cancel()
-        self.init_embedding_coords()
+        self.init_projection()
         self.graph.update_coordinates()
+        self.commit()
         if running:
             self._start()
 
     def _start(self):
         def update_freeviz(anchors):
             while True:
-                _, projection, *_ = FreeViz.freeviz(
-                    self._X, self._Y, scale=False, center=False,
-                    initial=anchors, maxiter=10)
-                yield projection
-                if np.allclose(anchors, projection, rtol=1e-5, atol=1e-4):
+                self.projection = self.projector(self.effective_data)
+                _anchors = self.projector.components_.T
+                self.projector.initial = _anchors
+                yield _anchors
+                if np.allclose(anchors, _anchors, rtol=1e-5, atol=1e-4):
                     return
-                anchors = projection
+                anchors = _anchors
 
         self.graph.set_sample_size(self.SAMPLE_SIZE)
-        self._loop.setCoroutine(update_freeviz(self.projection))
+        self._loop.setCoroutine(update_freeviz(self.projector.components_.T))
         self.btn_start.setText("Stop")
         self.progressBarInit()
         self.setBlocking(True)
         self.setStatusMessage("Optimizing")
 
-    def __set_projection(self, projection):
+    def __set_projection(self, _):
         # Set/update the projection matrix and coordinate embeddings
         self.progressBarAdvance(100. / self.MAX_ITERATIONS)
-        self.projection = projection
         self.graph.update_coordinates()
 
     def __freeviz_finished(self):
@@ -323,7 +330,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
 
         super().check_data()
         if self.data is not None:
-            class_var = self.data.domain.class_var
+            class_var, domain = self.data.domain.class_var, self.data.domain
             if class_var is None:
                 error(self.Error.no_class_var)
             elif class_var.is_discrete and len(np.unique(self.data.Y)) < 2:
@@ -332,70 +339,47 @@ class OWFreeViz(OWAnchorProjectionWidget):
                 error(self.Error.not_enough_features)
             elif len(self.data.domain.attributes) > self.data.X.shape[0]:
                 error(self.Error.features_exceeds_instances)
+            elif not np.sum(np.std(self.data.X, axis=0)):
+                error(self.Error.constant_data)
+            elif np.sum(self.valid_data) > self.MAX_INSTANCES:
+                error(self.Error.too_many_data_instances)
             else:
-                self.valid_data = np.all(np.isfinite(self.data.X), axis=1) & \
-                                  np.isfinite(self.data.Y)
-                n_valid = np.sum(self.valid_data)
-                if n_valid > self.MAX_INSTANCES:
-                    error(self.Error.too_many_data_instances)
-                elif n_valid == 0:
-                    error(self.Error.no_valid_data)
+                if len(self.effective_variables) < len(domain.attributes):
+                    self.Warning.removed_features()
         self.btn_start.setEnabled(self.data is not None)
 
     def set_data(self, data):
         super().set_data(data)
         if self.data is not None:
-            self.prepare_projection_data()
-            self.init_embedding_coords()
+            self.init_projection()
 
-    def prepare_projection_data(self):
-        if not np.any(self.valid_data):
-            self._X = self._Y = self.valid_data = None
-            return
-
-        self._X = self.data.X[self.valid_data]
-        self._X -= np.mean(self._X, axis=0)
-        span = np.ptp(self._X, axis=0)
-        self._X[:, span > 0] /= span[span > 0].reshape(1, -1)
-
-        self._Y = self.data.Y[self.valid_data]
-        if self.data.domain.class_var.is_discrete:
-            self._Y = self._Y.astype(int)
-
-    def init_embedding_coords(self):
-        self.projection = FreeViz.init_radial(self._X.shape[1]) \
+    def init_projection(self):
+        anchors = FreeViz.init_radial(len(self.effective_variables)) \
             if self.initialization == InitType.Circular \
-            else FreeViz.init_random(self._X.shape[1], 2)
+            else FreeViz.init_random(len(self.effective_variables), 2)
+        self.projector = FreeViz(scale=False, center=False,
+                                 initial=anchors, maxiter=10)
+        data = self.projector.preprocess(self.effective_data)
+        self.projector.domain = data.domain
+        self.projector.components_ = anchors.T
+        self.projection = FreeVizModel(self.projector, self.projector.domain, 2)
+        self.projection.pre_domain = data.domain
+        self.projection.name = self.projector.name
 
-    def get_embedding(self):
-        if self.data is None:
-            return None
-        EX = np.dot(self._X, self.projection)
-        EX /= np.max(np.linalg.norm(EX, axis=1)) or 1
-        embedding = np.full((len(self.data), 2), np.nan)
-        embedding[self.valid_data] = EX
-        return embedding
-
-    def get_anchors(self):
-        if self.projection is None:
+    def get_coordinates_data(self):
+        embedding = self.get_embedding()
+        if embedding is None:
             return None, None
-        return self.projection, [a.name for a in self.data.domain.attributes]
+        valid_emb = embedding[self.valid_data]
+        return valid_emb.T / (np.max(np.linalg.norm(valid_emb, axis=1)) or 1)
 
-    def send_components(self):
-        components = None
-        if self.data is not None and self.valid_data is not None:
-            meta_attrs = [StringVariable(name='component')]
-            domain = Domain(self.data.domain.attributes, metas=meta_attrs)
-            metas = np.array([["FreeViz 1"], ["FreeViz 2"]])
-            components = Table(domain, self.projection.T, metas=metas)
-            components.name = self.data.name
-        self.Outputs.components.send(components)
+    def _manual_move(self, anchor_idx, x, y):
+        self.projector.initial[anchor_idx] = [x, y]
+        super()._manual_move(anchor_idx, x, y)
 
     def clear(self):
         super().clear()
         self._loop.cancel()
-        self._X = None
-        self._Y = None
 
     @classmethod
     def migrate_settings(cls, _settings, version):
@@ -431,29 +415,6 @@ class MoveIndicator(pg.GraphicsObject):
         return QRectF()
 
 
-def main(argv=None):
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "zoo"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWFreeViz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    w.raise_()
-    r = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-
-    del w
-    return r
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("zoo")
+    WidgetPreview(OWFreeViz).run(set_data=data, set_subset_data=data[::10])

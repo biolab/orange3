@@ -3,13 +3,10 @@
 
 import unittest
 
-import numpy as np
-from scipy.sparse import csr_matrix
-
 from Orange.data import Table, Variable
 from Orange.preprocess.score import ANOVA, Gini, UnivariateLinearRegression, \
     Chi2
-from Orange.preprocess import SelectBestFeatures, Impute, RemoveNaNColumns, SelectRandomFeatures
+from Orange.preprocess import SelectBestFeatures, Impute, SelectRandomFeatures
 
 
 class TestFSS(unittest.TestCase):
@@ -71,29 +68,6 @@ class TestFSS(unittest.TestCase):
         self.assertTrue(all(a.is_continuous for a in data2.domain.attributes))
         data2 = fs(self.titanic)
         self.assertTrue(all(a.is_discrete for a in data2.domain.attributes))
-
-
-class TestRemoveNaNColumns(unittest.TestCase):
-    def test_column_filtering(self):
-        data = Table("iris")
-        data.X[:, (1, 3)] = np.NaN
-
-        new_data = RemoveNaNColumns()(data)
-        self.assertEqual(len(new_data.domain.attributes),
-                         len(data.domain.attributes) - 2)
-
-        data = Table("iris")
-        data.X[0, 0] = np.NaN
-        new_data = RemoveNaNColumns()(data)
-        self.assertEqual(len(new_data.domain.attributes),
-                         len(data.domain.attributes))
-
-    def test_column_filtering_sparse(self):
-        data = Table("iris")
-        data.X = csr_matrix(data.X)
-
-        new_data = RemoveNaNColumns()(data)
-        self.assertEqual(data, new_data)
 
 
 class TestSelectRandomFeatures(unittest.TestCase):

@@ -14,6 +14,7 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     SquareGraphicsItem,
@@ -120,6 +121,8 @@ class OWPythagorasTree(OWWidget):
             box_plot, self, 'show_legend', label='Show legend',
             callback=self.update_show_legend)
 
+        gui.button(self.controlArea, self, label="Redraw", callback=self.redraw)
+
         # Stretch to fit the rest of the unsused area
         gui.rubber(self.controlArea)
 
@@ -133,7 +136,7 @@ class OWPythagorasTree(OWWidget):
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.mainArea.layout().addWidget(self.view)
 
-        self.ptree = PythagorasTreeViewer()
+        self.ptree = PythagorasTreeViewer(self)
         self.scene.addItem(self.ptree)
         self.view.set_central_widget(self.ptree)
 
@@ -222,6 +225,10 @@ class OWPythagorasTree(OWWidget):
     def update_size_calc(self):
         """When the tree size calculation is updated."""
         self._update_log_scale_slider()
+        self.invalidate_tree()
+
+    def redraw(self):
+        self.tree_adapter.shuffle_children()
         self.invalidate_tree()
 
     def invalidate_tree(self):
@@ -404,25 +411,9 @@ class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     pass
 
 
-def main():
+if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling import TreeLearner
-    from AnyQt.QtWidgets import QApplication
-    import sys
-
-    app = QApplication(sys.argv)
-
-    ow = OWPythagorasTree()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-
+    data = Table('iris')
     model = TreeLearner(max_depth=1000)(data)
     model.instances = data
-    ow.set_tree(model)
-
-    ow.show()
-    ow.raise_()
-    ow.handleNewSignals()
-    app.exec_()
-
-
-if __name__ == '__main__':
-    main()
+    WidgetPreview(OWPythagorasTree).run(model)

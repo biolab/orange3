@@ -3,11 +3,11 @@ Tests for ToolBox widget.
 
 """
 
-from .. import test
-from .. import toolbox
-
 from AnyQt.QtWidgets import QLabel, QListView, QSpinBox, QAbstractButton
 from AnyQt.QtGui import QIcon
+
+from .. import test
+from .. import toolbox
 
 
 class TestToolBox(test.QAppTestCase):
@@ -32,7 +32,7 @@ class TestToolBox(test.QAppTestCase):
             self.assertIs(item, w.widget(i))
             b = w.tabButton(i)
             a = w.tabAction(i)
-            self.assertIsInstance(b,  QAbstractButton)
+            self.assertIsInstance(b, QAbstractButton)
             self.assertIs(b.defaultAction(), a)
 
         w.show()

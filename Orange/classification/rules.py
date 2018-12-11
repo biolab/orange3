@@ -271,7 +271,8 @@ class GuardianValidator(Validator):
                 rule.length <= self.max_rule_length and
                 (True if rule.parent_rule is None
                  else not np.array_equal(rule.curr_class_dist,
-                                         rule.parent_rule.curr_class_dist)))
+                                         rule.parent_rule.curr_class_dist)
+                 or rule.parent_rule.length == 0))
 
 
 class LRSValidator(Validator):
@@ -540,10 +541,13 @@ class TopDownSearchStrategy(SearchStrategy):
                     possible_selectors.extend([s1, s2])
             # if continuous variable
             elif attribute.is_continuous:
+                if X.shape[0] == 1:
+                    values = X[:, i]
                 # choose best thresholds if constrain_continuous is True
-                values = (self.discretize(X[:, i], Y, W, domain)
-                          if self.constrain_continuous
-                          else np.unique(X[:, i]))
+                else:
+                    values = (self.discretize(X[:, i], Y, W, domain)
+                              if self.constrain_continuous
+                              else np.unique(X[:, i]))
                 # for each unique value, generate all possible selectors
                 for val in values:
                     s1 = Selector(column=i, op="<=", value=val)
@@ -867,7 +871,10 @@ class RuleHunter:
                 new_rules = self.search_strategy.refine_rule(
                     X, Y, W, candidate_rule)
                 rules.extend(new_rules)
-                for new_rule in new_rules:
+                #remove default rule from list of rules
+                if best_rule.length == 0:
+                    best_rule = new_rules[0]
+                for new_rule in new_rules[1:]:
                     if (new_rule.quality > best_rule.quality and
                             new_rule.is_significant() and
                             new_rule not in existing_rules):

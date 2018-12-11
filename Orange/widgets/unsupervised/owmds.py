@@ -1,9 +1,6 @@
-import sys
-
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtWidgets import QApplication
 from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
@@ -15,9 +12,10 @@ from Orange.projection.manifold import torgerson, MDS
 
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
-from Orange.widgets.widget import Msg, OWWidget, Input
+from Orange.widgets.widget import Msg, Input
 
 
 def stress(X, distD):
@@ -158,7 +156,7 @@ class OWMDS(OWDataProjectionWidget):
         #: Input data table
         self.signal_data = None
 
-        self._invalidated = False
+        self.__invalidated = True
         self.embedding = None
         self.effective_matrix = None
 
@@ -171,16 +169,17 @@ class OWMDS(OWDataProjectionWidget):
 
         self.graph.pause_drawing_pairs()
 
-        g = self.graph.gui
-        self.size_model = g.points_models[2]
-        self.size_model.order = g.points_models[2].order[:1] + ("Stress", ) + \
-                                g.points_models[2].order[1:]
+        self.size_model = self.gui.points_models[2]
+        self.size_model.order = \
+            self.gui.points_models[2].order[:1] \
+            + ("Stress", ) + \
+            self.gui.points_models[2].order[1:]
         # self._initialize()
 
     def _add_controls(self):
         self._add_controls_optimization()
         super()._add_controls()
-        self.graph.gui.add_control(
+        self.gui.add_control(
             self._effects_box, gui.hSlider, "Show similar pairs:",
             master=self.graph, value="connected_pairs", minValue=0,
             maxValue=20, createLabel=False, callback=self._on_connected_changed
@@ -214,15 +213,6 @@ class OWMDS(OWDataProjectionWidget):
 
         self.signal_data = data
 
-        if self.matrix is not None and data is not None and \
-                len(self.matrix) == len(data):
-            self.closeContext()
-            self.data = data
-            self.init_attr_values()
-            self.openContext(data)
-        else:
-            self._invalidated = True
-
     @Inputs.distances
     def set_disimilarity(self, matrix):
         """Set the dissimilarity (distance) matrix.
@@ -240,30 +230,33 @@ class OWMDS(OWDataProjectionWidget):
 
         self.matrix = matrix
         self.matrix_data = matrix.row_items if matrix is not None else None
-        self._invalidated = True
 
     def clear(self):
         super().clear()
         self.embedding = None
-        self.effective_matrix = None
         self.graph.set_effective_matrix(None)
         self.__set_update_loop(None)
         self.__state = OWMDS.Waiting
 
     def _initialize(self):
+        matrix_existed = self.effective_matrix is not None
+        effective_matrix = self.effective_matrix
+        self.__invalidated = True
+        self.data = None
+        self.effective_matrix = None
         self.closeContext()
-        self.clear()
         self.clear_messages()
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:
-            self.data = None
+            self.clear()
             self.init_attr_values()
             return
 
         if self.signal_data is not None and self.matrix is not None and \
                 len(self.signal_data) != len(self.matrix):
             self.Error.mismatching_dimensions()
+            self.clear()
             self.init_attr_values()
             return
 
@@ -281,11 +274,18 @@ class OWMDS(OWDataProjectionWidget):
             self.effective_matrix = Euclidean(preprocessed_data)
         else:
             self.Error.no_attributes()
+            self.clear()
             self.init_attr_values()
             return
 
         self.init_attr_values()
         self.openContext(self.data)
+        self.__invalidated = not (matrix_existed and
+                                  self.effective_matrix is not None and
+                                  np.array_equal(effective_matrix,
+                                                 self.effective_matrix))
+        if self.__invalidated:
+            self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
 
     def _toggle_run(self):
@@ -409,7 +409,6 @@ class OWMDS(OWDataProjectionWidget):
             self.__set_update_loop(None)
             self.unconditional_commit()
             self.graph.resume_drawing_pairs()
-            self.graph.update_coordinates()
         except MemoryError:
             self.Error.out_of_memory()
             self.__set_update_loop(None)
@@ -448,6 +447,7 @@ class OWMDS(OWDataProjectionWidget):
             self.__set_update_loop(None)
 
         if self.effective_matrix is None:
+            self.graph.reset_graph()
             return
 
         X = self.effective_matrix
@@ -479,15 +479,16 @@ class OWMDS(OWDataProjectionWidget):
             self.__start()
 
     def handleNewSignals(self):
-        if self._invalidated:
+        self._initialize()
+        if self.__invalidated:
             self.graph.pause_drawing_pairs()
-            self._invalidated = False
-            self._initialize()
+            self.__invalidated = False
             self.__invalidate_embedding()
             self.cb_class_density.setEnabled(self.can_draw_density())
             self.start()
-
-        super().handleNewSignals()
+        else:
+            self.graph.update_point_props()
+        self.commit()
 
     def _invalidate_output(self):
         self.commit()
@@ -567,39 +568,6 @@ class OWMDS(OWDataProjectionWidget):
             values["attr_label"] = values["graph"]["attr_label"]
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    import gc
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Table(filename)
-    w = OWMDS()
-    w.set_data(data)
-    w.set_subset_data(data[np.random.choice(len(data), 10)])
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-
-    w.set_subset_data(None)
-    w.set_data(None)
-    w.handleNewSignals()
-
-    w.saveSettings()
-    w.onDeleteWidget()
-    w.deleteLater()
-    del w
-    gc.collect()
-    app.processEvents()
-    return rval
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("iris")
+    WidgetPreview(OWMDS).run(set_data=data, set_subset_data=data[:30])

@@ -1,4 +1,3 @@
-import os
 import sys
 import copy
 import math
@@ -151,10 +150,11 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
         _set("View", PaletteView(box))
         _set("Right", ColorButton(self, box, color=QColor(initialColor2)))
         _set("passThroughColors", passThroughColors)
-        _set("passThroughColorsCheckbox", gui.checkBox(buttBox, self,
-             "exCont" + paletteName + "passThroughColors",
-             "Use pass-through colors",
-             callback=self.colorSchemaChange))
+        _set("passThroughColorsCheckbox",
+             gui.checkBox(buttBox, self,
+                          "exCont" + paletteName + "passThroughColors",
+                          "Use pass-through colors",
+                          callback=self.colorSchemaChange))
 
         box = gui.hBox(buttBox, "Pass-through colors")
         for i, (color, check) in enumerate(extendedPassThroughColors):
@@ -316,7 +316,7 @@ class ColorPaletteDlg(QDialog, gui.OWComponent):
                 if check and chk:
                     colorsList.append(rgbToQColor(color))
             self.__dict__["exCont" + name + "colorCount"] = \
-                self.__dict__.get("exCont" + name + "colorCount",  len(colors))
+                self.__dict__.get("exCont" + name + "colorCount", len(colors))
             self.__dict__["exCont" + name + "View"].setExContPalette(
                 rgbToQColor(l), rgbToQColor(r), colorsList)
 
@@ -967,8 +967,10 @@ class PaletteSelectorComboBox(QComboBox):
                 butt, disc, cont, exCont = state
                 name, (c1, c2, chk, colors) = exCont[paletteIndex]
                 palettes.append((schemaName, (
-                (rgbToQColor(c1), rgbToQColor(c2),
-                 [rgbToQColor(color)for color, check in colors if check and chk]))))
+                    (rgbToQColor(c1),
+                     rgbToQColor(c2),
+                     [rgbToQColor(color)
+                      for color, check in colors if check and chk]))))
             self.setContinuousPalettes(palettes)
 
     def setDiscretePalettes(self, palettes):
@@ -992,7 +994,7 @@ class PaletteSelectorComboBox(QComboBox):
             self.addItem(icon, name)
 
 
-if __name__ == "__main__":
+def main():  # pragma: no cover
     from AnyQt.QtWidgets import QApplication
     a = QApplication(sys.argv)
 
@@ -1005,3 +1007,7 @@ if __name__ == "__main__":
     c.setColorSchemas()
     c.show()
     a.exec()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()

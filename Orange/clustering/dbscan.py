@@ -1,7 +1,8 @@
 import sklearn.cluster as skl_cluster
+from numpy import ndarray
+
 from Orange.data import Table, DiscreteVariable, Domain, Instance
 from Orange.projection import SklProjector, Projection
-from numpy import atleast_2d, ndarray, where
 
 
 __all__ = ["DBSCAN"]

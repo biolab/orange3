@@ -114,9 +114,9 @@ class CollapsibleDockWidget(QDockWidget):
 
     def setWidget(self, w):
         raise NotImplementedError(
-                "Please use the 'setExpandedWidget'/'setCollapsedWidget' "
-                "methods to set the contents of the dock widget."
-              )
+            "Use the 'setExpandedWidget'/'setCollapsedWidget' "
+            "methods to set the contents of the dock widget."
+        )
 
     def setExpandedWidget(self, widget):
         """

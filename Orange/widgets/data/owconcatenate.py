@@ -10,7 +10,7 @@ from collections import OrderedDict
 from functools import reduce
 
 import numpy as np
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 import Orange.data
@@ -19,6 +19,7 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -242,18 +243,7 @@ def domain_intersection(A, B):
     return intersection
 
 
-def main():
-    app = QApplication([])
-    w = OWConcatenate()
-    data_a = Orange.data.Table("iris")
-    data_b = Orange.data.Table("zoo")
-    w.set_more_data(data_a, 0)
-    w.set_more_data(data_b, 1)
-    w.handleNewSignals()
-    w.show()
-
-    app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWConcatenate).run(
+        set_more_data=[(Orange.data.Table("iris"), 0),
+                       (Orange.data.Table("zoo"), 1)])

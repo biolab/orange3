@@ -1,40 +1,28 @@
-import os.path
-import sys
-
 import numpy as np
-from joblib.memory import Memory
 
 from AnyQt.QtCore import Qt, QTimer
-from AnyQt.QtWidgets import QFormLayout, QApplication
+from AnyQt.QtWidgets import QFormLayout
 
-import Orange.data
-import Orange.distance
-import Orange.misc
-import Orange.projection
-from Orange.misc.environ import cache_dir
+from Orange.data import Table, Domain
+from Orange.preprocess.preprocess import Preprocess, ApplyDomain
+from Orange.projection import PCA, TSNE
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, Output
 
 
-tsne_cache = os.path.join(cache_dir(), "tsne")
-memory = Memory(tsne_cache, verbose=0, bytes_limit=1e8)
-memory.reduce_size()
-
-
-@memory.cache
-def compute_tsne_embedding(X, perplexity, iter, init):
-    negative_gradient_method = 'fft' if len(X) > 10000 else 'bh'
-    neighbor_method = 'approx' if len(X) > 10000 else 'exact'
-    tsne = Orange.projection.TSNE(
+def compute_tsne(data, perplexity, iter, init):
+    negative_gradient_method = 'fft' if len(data.X) > 10000 else 'bh'
+    neighbor_method = 'approx' if len(data.X) > 10000 else 'exact'
+    tsne = TSNE(
         perplexity=perplexity, n_iter=iter, initialization=init, theta=.8,
         early_exaggeration_iter=0, negative_gradient_method=negative_gradient_method,
         neighbors=neighbor_method, random_state=0
     )
-    tsne_model = tsne.fit(X)
-    return np.asarray(tsne_model, dtype=np.float32)
+    return tsne(data)
 
 
 class OWtSNEGraph(OWScatterPlotBase):
@@ -49,6 +37,7 @@ class OWtSNE(OWDataProjectionWidget):
     description = "Two-dimensional data projection with t-SNE."
     icon = "icons/TSNE.svg"
     priority = 920
+    keywords = ["tsne"]
 
     settings_version = 3
     max_iter = Setting(300)
@@ -57,10 +46,13 @@ class OWtSNE(OWDataProjectionWidget):
 
     GRAPH_CLASS = OWtSNEGraph
     graph = SettingProvider(OWtSNEGraph)
-    embedding_variables_names = ("tsne-x", "tsne-y")
+    embedding_variables_names = ("t-SNE-x", "t-SNE-y")
 
     #: Runtime state
     Running, Finished, Waiting = 1, 2, 3
+
+    class Outputs(OWDataProjectionWidget.Outputs):
+        preprocessor = Output("Preprocessor", Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -73,8 +65,7 @@ class OWtSNE(OWDataProjectionWidget):
     def __init__(self):
         super().__init__()
         self.pca_data = None
-        self.embedding = None
-        self.__invalidated = True
+        self.projection = None
         self.__update_loop = None
         # timer for scheduling updates
         self.__timer = QTimer(self, singleShot=True, interval=1,
@@ -90,7 +81,7 @@ class OWtSNE(OWDataProjectionWidget):
         # showing all attributes in combo boxes can cause problems
         # QUICKFIX: Remove a separator and attributes from order
         # (leaving just the class and metas)
-        self.models = self.graph.gui.points_models
+        self.models = self.gui.points_models
         for model in self.models:
             model.order = model.order[:-2]
 
@@ -120,11 +111,6 @@ class OWtSNE(OWDataProjectionWidget):
         gui.hSlider(box, self, "pca_components", label="PCA components:",
                     minValue=2, maxValue=50, step=1)
 
-    def set_data(self, data):
-        self.__invalidated = not (self.data and data and
-                                  np.array_equal(self.data.X, data.X))
-        super().set_data(data)
-
     def check_data(self):
         def error(err):
             err()
@@ -144,9 +130,15 @@ class OWtSNE(OWDataProjectionWidget):
                 error(self.Error.no_valid_data)
 
     def get_embedding(self):
-        self.valid_data = np.ones(len(self.embedding), dtype=bool) \
-            if self.embedding is not None else None
-        return self.embedding
+        if self.data is None:
+            self.valid_data = None
+            return None
+        elif self.projection is None:
+            embedding = np.random.normal(size=(len(self.data), 2))
+        else:
+            embedding = self.projection.embedding.X
+        self.valid_data = np.ones(len(embedding), dtype=bool)
+        return embedding
 
     def _toggle_run(self):
         if self.__state == OWtSNE.Running:
@@ -169,54 +161,37 @@ class OWtSNE(OWDataProjectionWidget):
         if self.pca_data is not None and \
                 self.pca_data.X.shape[1] == self.pca_components:
             return
-        pca = Orange.projection.PCA(
-            n_components=self.pca_components, random_state=0)
+        pca = PCA(n_components=self.pca_components, random_state=0)
         model = pca(self.data)
         self.pca_data = model(self.data)
 
     def __start(self):
         self.pca_preprocessing()
-        embedding = 'random' if self.embedding is None else self.embedding
+        initial = 'random' if self.projection is None \
+            else self.projection.embedding.X
         step_size = 50
 
         def update_loop(data, max_iter, step, embedding):
-            """
-            return an iterator over successive improved MDS point embeddings.
-            """
             # NOTE: this code MUST NOT call into QApplication.processEvents
             done = False
             iterations_done = 0
 
             while not done:
                 step_iter = min(max_iter - iterations_done, step)
-                embedding = compute_tsne_embedding(
-                    data.X, self.perplexity, step_iter, embedding)
+                projection = compute_tsne(
+                    data, self.perplexity, step_iter, embedding)
+                embedding = projection.embedding.X
                 iterations_done += step_iter
                 if iterations_done >= max_iter:
                     done = True
 
-                yield embedding, iterations_done / max_iter
+                yield projection, iterations_done / max_iter
 
         self.__set_update_loop(update_loop(
-            self.pca_data, self.max_iter, step_size, embedding))
+            self.pca_data, self.max_iter, step_size, initial))
         self.progressBarInit(processEvents=None)
 
     def __set_update_loop(self, loop):
-        """
-        Set the update `loop` coroutine.
-
-        The `loop` is a generator yielding `(embedding, progress)`
-        tuples where `embedding` is a `(N, 2) ndarray` of current updated
-        MDS points, and `progress` a float ratio (0 <= progress <= 1)
-
-        If an existing update coroutine loop is already in place it is
-        interrupted (i.e. closed).
-
-        .. note::
-            The `loop` must not explicitly yield control flow to the event
-            loop (i.e. call `QApplication.processEvents`)
-
-        """
         if self.__update_loop is not None:
             self.__update_loop.close()
             self.__update_loop = None
@@ -249,7 +224,7 @@ class OWtSNE(OWDataProjectionWidget):
         self.Error.out_of_memory.clear()
         self.Error.optimization_error.clear()
         try:
-            embedding, progress = next(self.__update_loop)
+            projection, progress = next(self.__update_loop)
             assert self.__update_loop is loop
         except StopIteration:
             self.__set_update_loop(None)
@@ -262,7 +237,7 @@ class OWtSNE(OWDataProjectionWidget):
             self.__set_update_loop(None)
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
-            self.embedding = embedding
+            self.projection = projection
             self.graph.update_coordinates()
             self.graph.update_density()
             # schedule next update
@@ -270,27 +245,40 @@ class OWtSNE(OWDataProjectionWidget):
 
         self.__in_next_step = False
 
-    def __invalidate_embedding(self):
-        if self.data is not None:
-            self.embedding = np.random.normal(size=(len(self.data), 2))
+    def setup_plot(self):
+        super().setup_plot()
+        self.start()
 
-    def handleNewSignals(self):
-        if self.__invalidated:
-            self.__invalidated = False
-            self.__invalidate_embedding()
-            self.setup_plot()
-            self.embedding = None
-            self.start()
+    def commit(self):
+        super().commit()
+        self.send_preprocessor()
+
+    def _get_projection_data(self):
+        if self.data is None:
+            return None
+        if self.projection is None:
+            variables = self._get_projection_variables()
         else:
-            self.graph.update_coordinates()
-        self.commit()
+            variables = self.projection.domain.attributes
+        data = self.data.transform(
+            Domain(self.data.domain.attributes,
+                   self.data.domain.class_vars,
+                   self.data.domain.metas + variables))
+        data.metas[:, -2:] = self.get_embedding()
+        return data
+
+    def send_preprocessor(self):
+        prep = None
+        if self.data is not None and self.projection is not None:
+            prep = ApplyDomain(self.projection.domain, self.projection.name)
+        self.Outputs.preprocessor.send(prep)
 
     def clear(self):
         super().clear()
         self.__set_update_loop(None)
         self.__state = OWtSNE.Waiting
         self.pca_data = None
-        self.embedding = None
+        self.projection = None
 
     @classmethod
     def migrate_settings(cls, settings, version):
@@ -308,39 +296,8 @@ class OWtSNE(OWDataProjectionWidget):
             values["attr_label"] = values["graph"]["attr_label"]
 
 
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    import gc
-    app = QApplication(list(argv))
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Orange.data.Table(filename)
-    w = OWtSNE()
-    w.set_data(data)
-    w.set_subset_data(data[np.random.choice(len(data), 10)])
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-
-    w.set_subset_data(None)
-    w.set_data(None)
-    w.handleNewSignals()
-
-    w.saveSettings()
-    w.onDeleteWidget()
-    w.deleteLater()
-    del w
-    gc.collect()
-    app.processEvents()
-    return rval
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    data = Table("iris")
+    WidgetPreview(OWtSNE).run(
+        set_data=data,
+        set_subset_data=data[np.random.choice(len(data), 10)])

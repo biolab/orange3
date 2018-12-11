@@ -13,6 +13,16 @@ from Orange.widgets.io import PngFormat
 from Orange.data.sql.table import SqlTable
 from Orange.widgets.utils import getdeepattr
 
+__all__ = ["Report",
+           "bool_str", "colored_square",
+           "plural", "plural_w",
+           "clip_string", "clipped_list",
+           "describe_data", "describe_data_brief",
+           "describe_domain", "describe_domain_brief",
+           "get_html_img", "get_html_section", "get_html_subsection",
+           "list_legend",
+           "render_items", "render_items_vert"]
+
 
 class Report:
     """

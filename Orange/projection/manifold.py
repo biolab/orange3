@@ -1,20 +1,25 @@
+import logging
 import warnings
 
 import numpy as np
-import sklearn.manifold as skl_manifold
+import fastTSNE
 import scipy.sparse as sp
 from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
-
-import fastTSNE
+import sklearn.manifold as skl_manifold
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.distance import Distance, DistanceModel, Euclidean
 from Orange.projection import SklProjector, Projector, Projection
+from Orange.projection.base import TransformDomain, ComputeValueProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
+
+# Disable t-SNE user warnings
+fastTSNE.tsne.log.setLevel(logging.ERROR)
+fastTSNE.affinity.log.setLevel(logging.ERROR)
 
 
 def torgerson(distances, n_components=2, eigen_solver="auto"):
@@ -114,8 +119,8 @@ class MDS(SklProjector):
         params = self.params.copy()
         dissimilarity = params['dissimilarity']
         if isinstance(self._metric, DistanceModel) or (
-                isinstance(self._metric, type) and issubclass(self._metric, Distance)
-        ):
+                isinstance(self._metric, type)
+                and issubclass(self._metric, Distance)):
             data = self.preprocess(data)
             _X, Y, domain = data.X, data.Y, data.domain
             X = dist_matrix = self._metric(_X)
@@ -192,11 +197,24 @@ class TSNEModel(Projection):
         transforms.
     embedding : Table
         The embedding in an Orange table, easily accessible.
-
+    pre_domain : Domain
+        Original data domain
     """
-    def __init__(self, embedding: fastTSNE.TSNEEmbedding, table: Table):
+    def __init__(self, embedding: fastTSNE.TSNEEmbedding, table: Table,
+                 pre_domain: Domain):
+        transformer = TransformDomain(self)
+
+        def proj_variable(i):
+            return self.embedding.domain[i].copy(
+                compute_value=ComputeValueProjector(self, i, transformer))
+
         self.embedding_ = embedding
         self.embedding = table
+        self.pre_domain = pre_domain
+        self.domain = Domain(
+            [proj_variable(attr) for attr in range(self.embedding.X.shape[1])],
+            class_vars=table.domain.class_vars,
+            metas=table.domain.metas)
 
     def transform(self, X: np.ndarray, **kwargs) -> fastTSNE.PartialTSNEEmbedding:
         if sp.issparse(X):
@@ -208,11 +226,11 @@ class TSNEModel(Projection):
 
     def __call__(self, data: Table, **kwargs) -> Table:
         # If we want to transform new data, ensure that we use correct domain
-        if data.domain != self.original_domain:
-            data = data.transform(self.original_domain)
+        if data.domain != self.pre_domain:
+            data = data.transform(self.pre_domain)
 
         embedding = self.transform(data.X, **kwargs)
-        return Table(self.embedding.domain, embedding.view(), data.Y, data.metas)
+        return Table(self.domain, embedding.view(), data.Y, data.metas)
 
     def optimize(self, n_iter, inplace=False, propagate_exception=False, **kwargs):
         """Resume optimization for the current embedding."""
@@ -226,7 +244,7 @@ class TSNEModel(Projection):
         new_embedding = self.embedding_.optimize(**kwargs)
         table = Table(self.embedding.domain, new_embedding.view(np.ndarray),
                       self.embedding.Y, self.embedding.metas)
-        return TSNEModel(new_embedding, table)
+        return TSNEModel(new_embedding, table, self.pre_domain)
 
 
 class TSNE(Projector):
@@ -360,15 +378,15 @@ class TSNE(Projector):
 
         # The results should be accessible in an Orange table, which doesn't
         # need the full embedding attributes and is cast into a regular array
-        tsne_cols = [ContinuousVariable('t-SNE-%d' % (i + 1))
-                     for i in range(self.tsne.n_components)]
+        n = self.tsne.n_components
+        postfixes = ['x', 'y'] if n == 2 else list(range(1, n + 1))
+        tsne_cols = [ContinuousVariable(f't-SNE-{p}') for p in postfixes]
         embedding_domain = Domain(tsne_cols, data.domain.class_vars, data.domain.metas)
         embedding_table = Table(embedding_domain, embedding.view(np.ndarray), data.Y, data.metas)
 
         # Create a model object which will be capable of transforming new data
         # into the existing embedding
-        model = TSNEModel(embedding, embedding_table)
-        model.original_domain = data.domain
+        model = TSNEModel(embedding, embedding_table, data.domain)
         model.name = self.name
 
         return model

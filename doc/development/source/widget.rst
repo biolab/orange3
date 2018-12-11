@@ -139,3 +139,51 @@ Class Member Documentation
 
 
 .. autoclass:: Orange.widgets.widget.Message
+
+
+.. autoclass:: Orange.widgets.widget.StateInfo
+   :members: Summary, Empty, Partial, input_summary_changed,
+       output_summary_changed
+   :exclude-members: Summary, Empty, Partial,
+      input_summary_changed, output_summary_changed,
+      set_input_summary, set_output_summary,
+      NoInput, NoOutput
+
+   .. autoclass:: Orange.widgets.widget::StateInfo.Summary
+      :members:
+
+   .. autoclass:: Orange.widgets.widget::StateInfo.Empty
+      :show-inheritance:
+
+   .. autoclass:: Orange.widgets.widget::StateInfo.Partial
+      :show-inheritance:
+
+   .. autoattribute:: NoInput
+      :annotation: Empty()
+
+   .. autoattribute:: NoOutput
+      :annotation: Empty()
+
+   .. function:: set_input_summary(summary: Optional[StateInfo.Summary]])
+
+      Set the input summary description.
+
+      :parameter summary:
+      :type summary: Optional[StateInfo.Summary]
+
+   .. function:: set_input_summary(brief:str, detailed:str="", \
+                    icon:QIcon=QIcon, format:Qt.TextFormat=Qt.PlainText)
+
+   .. function:: set_output_summary(summary: Optional[StateInfo.Summary]])
+
+      Set the output summary description.
+
+      :parameter summary:
+      :type summary: Optional[StateInfo.Summary]
+
+   .. function:: set_output_summary(brief:str, detailed:str="", \
+                    icon:QIcon=QIcon, format:Qt.TextFormat=Qt.PlainText)
+
+   .. autoattribute:: input_summary_changed(message: StateInfo.Message)
+
+   .. autoattribute:: output_summary_changed(message: StateInfo.Message)

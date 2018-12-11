@@ -15,8 +15,7 @@ def configuration(parent_package='', top_path=None):
                          libraries=libraries,
                          export_symbols=[
                              "build_tree", "destroy_tree", "new_node",
-                             "predict_classification", "predict_regression"]
-                         )
+                             "predict_classification", "predict_regression"])
     config.add_extension('_tree_scorers',
                          sources=['_tree_scorers.c'],
                          include_dirs=[numpy.get_include()],

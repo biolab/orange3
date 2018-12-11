@@ -104,7 +104,7 @@ class TestRuleInduction(unittest.TestCase):
         # all learning instances are covered when limitations do not
         # impose rule length or minimum number of covered examples
         num_covered = np.sum([rule.curr_class_dist
-                              for rule in classifier.rule_list])
+                              for rule in classifier.rule_list[:-1]])
         self.assertEqual(num_covered, self.titanic.X.shape[0])
 
         # prediction (matrix-wise, all testing instances at once)

@@ -15,7 +15,7 @@ import numpy
 
 from AnyQt.QtWidgets import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
-    QGraphicsPathItem, QGraphicsTextItem, QStyle, QApplication
+    QGraphicsPathItem, QGraphicsTextItem, QStyle
 )
 from AnyQt.QtGui import (
     QPainterPath, QPainter, QTransform, QColor, QBrush, QPen, QPalette
@@ -24,13 +24,13 @@ from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
-import Orange.statistics.util as util
+from Orange.statistics import util
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -1668,57 +1668,23 @@ def group_table_indices(table, key_var):
     return groups
 
 
-def test():
+if __name__ == "__main__":  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
 
-    app = QApplication([])
-    w = OWVennDiagram()
     data = Orange.data.Table("brown-selected")
+    # data1 = Orange.data.Table("brown-selected")
+    # datasets = [(data, 1), (data, 2)]
+
     data = append_column(data, "M", Orange.data.StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
-
     res = ShuffleSplit(data, [None], n_resamples=5,
                        test_size=0.7, stratified=False)
     indices = iter(res.indices)
-
-    def select(data):
+    datasets = []
+    for i in range(1, 6):
         sample, _ = next(indices)
-        return data[sample]
+        data1 = data[sample]
+        data1.name = chr(ord("A") + i)
+        datasets.append((data1, i))
 
-    d1 = select(data)
-    d2 = select(data)
-    d3 = select(data)
-    d4 = select(data)
-    d5 = select(data)
-
-    for i, data in enumerate([d1, d2, d3, d4, d5]):
-        data.name = chr(ord("A") + i)
-        w.setData(data, key=i)
-
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-    del w
-    app.processEvents()
-    return app
-
-
-def test1():
-    app = QApplication([])
-    w = OWVennDiagram()
-    data1 = Orange.data.Table("brown-selected")
-    data2 = Orange.data.Table("brown-selected")
-    w.setData(data1, 1)
-    w.setData(data2, 2)
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    app.exec_()
-
-    del w
-    return app
-
-if __name__ == "__main__":
-    test()
+    WidgetPreview(OWVennDiagram).run(setData=datasets)

@@ -2,13 +2,12 @@ from functools import partial
 import copy
 import logging
 import re
-import sys
 import concurrent.futures
 from itertools import chain
 
 import numpy as np
 
-from AnyQt.QtWidgets import QApplication, QFormLayout, QLabel
+from AnyQt.QtWidgets import QFormLayout, QLabel
 from AnyQt.QtCore import Qt, QThread, QObject
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -19,6 +18,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureWatcher
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class Task(QObject):
@@ -292,11 +292,5 @@ class OWNNLearner(OWBaseLearner):
                     np.argmin(np.abs(np.array(cls.alphas) - alpha))
 
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWNNLearner()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWNNLearner).run(Table("iris"))

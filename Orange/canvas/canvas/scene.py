@@ -789,12 +789,14 @@ class CanvasScene(QGraphicsScene):
             return list(map(toGraphicsObjectIfPossible, items))
 
         def selectedItems(self, *args, **kwargs):
-            return list(map(toGraphicsObjectIfPossible,
-                       QGraphicsScene.selectedItems(self, *args, **kwargs)))
+            return [toGraphicsObjectIfPossible(obj)
+                    for obj in
+                    QGraphicsScene.selectedItems(self, *args, **kwargs)]
 
         def collidingItems(self, *args, **kwargs):
-            return list(map(toGraphicsObjectIfPossible,
-                       QGraphicsScene.collidingItems(self, *args, **kwargs)))
+            return [toGraphicsObjectIfPossible(obj)
+                    for obj in
+                    QGraphicsScene.collidingItems(self, *args, **kwargs)]
 
         def focusItem(self, *args, **kwargs):
             item = QGraphicsScene.focusItem(self, *args, **kwargs)

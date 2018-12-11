@@ -1,4 +1,3 @@
-import sys
 import enum
 from collections import OrderedDict
 from itertools import chain
@@ -24,6 +23,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.widgets import report
@@ -700,20 +700,5 @@ class DropDownToolButton(QToolButton):
         self.set_text()
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(argv or [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "zoo"
-
-    w = OWSelectRows()
-    w.set_data(Table(filename))
-    w.show()
-    app.exec_()
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main(sys.argv))
+    WidgetPreview(OWSelectRows).run(Table("zoo"))

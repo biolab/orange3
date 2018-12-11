@@ -1,8 +1,8 @@
-import sys
 import numpy
 
 import Orange.data
 from Orange.widgets.widget import OWWidget, Input, Output, settings
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets import gui
 
 
@@ -47,7 +47,7 @@ class OWDataSamplerC(OWWidget):
         gui.button(self.optionsBox, self, "Commit", callback=self.commit)
         self.optionsBox.setDisabled(True)
 
-        self.resize(100,50)
+        self.resize(100, 50)
 
     @Inputs.data
     def set_data(self, dataset):
@@ -85,28 +85,5 @@ class OWDataSamplerC(OWWidget):
             self.commit()
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    # PyQt changes argv list in-place
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    ow = OWDataSamplerC()
-    ow.show()
-    ow.raise_()
-
-    dataset = Orange.data.Table(filename)
-    ow.set_data(dataset)
-    ow.handleNewSignals()
-    app.exec_()
-    ow.set_data(None)
-    ow.handleNewSignals()
-    ow.onDeleteWidget()
-    return 0
-
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    WidgetPreview(OWDataSamplerC).run(Orange.data.Table("iris"))

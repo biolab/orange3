@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 import time
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, \
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
 from Orange.widgets.tests.utils import simulate
+
 
 class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
@@ -86,15 +88,47 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         def assertCount(cb_color, cb_attr, areas):
             self.assertEqual(len(self.widget.areas), areas)
             self.assertEqual(self.widget.cb_attr_color.count(), cb_color)
-            for i, combo in enumerate(self.widget.attr_combos):
-                self.assertEqual(combo.count(), cb_attr[i])
+            for combo, cb_count in zip(self.widget.attr_combos, cb_attr):
+                self.assertEqual(combo.count(), cb_count)
 
         data = Table("iris")
-        assertCount(1, [0, 0, 0, 0], 0)
+        assertCount(1, [0, 1, 1, 1], 0)
         self.send_signal(self.widget.Inputs.data, data)
         assertCount(6, [5, 6, 6, 6], 16)
         self.send_signal(self.widget.Inputs.data, None)
-        assertCount(1, [0, 0, 0, 0], 0)
+        assertCount(1, [0, 1, 1, 1], 0)
+
+    @patch('Orange.widgets.visualize.owmosaic.CanvasRectangle')
+    def test_different_number_of_attributes(self, canvas_rectangle):
+        domain = Domain([DiscreteVariable(c, values="01") for c in "abcd"])
+        data = Table.from_list(
+            domain,
+            [list("{:04b}".format(i)[-4:]) for i in range(16)])
+        self.send_signal(self.widget.Inputs.data, data)
+        widget = self.widget
+        widget.variable2 = widget.variable3 = widget.variable4 = None
+        for i, attr in enumerate(data.domain[:4], start=1):
+            canvas_rectangle.reset_mock()
+            setattr(self.widget, "variable" + str(i), attr)
+            self.widget.update_graph()
+            self.assertEqual(canvas_rectangle.call_count, 7 + 2 ** (i + 1))
+
+    def test_change_domain(self):
+        """Test for GH-3419 fix"""
+        self.send_signal(self.widget.Inputs.data, self.data[:, :2])
+        subset = self.data[:1, 2:3]
+        self.send_signal(self.widget.Inputs.data, subset)
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(output.X, subset.X)
+
+    def test_subset(self):
+        """Test for GH-3416 fix"""
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data_subset, self.data[10:])
+        self.send_signal(self.widget.Inputs.data, self.data[:1])
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(output.X, self.data[:1].X)
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
@@ -134,7 +168,6 @@ class MosaicVizRankTests(WidgetTest):
             self.send_signal(self.widget.Inputs.data, data)
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
-            self.assertTrue(widget.interior_coloring == widget.PEARSON)
             vizrank.max_attrs = 2
             self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
             vizrank.max_attrs = 3
@@ -143,7 +176,6 @@ class MosaicVizRankTests(WidgetTest):
             self.assertEqual(vizrank.state_count(), 25)  # above + 5x4x3x2 / 2x3x4
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 2, 0)
-            self.assertTrue(widget.interior_coloring == widget.CLASS_DISTRIBUTION)
             vizrank.max_attrs = 2
             self.assertEqual(vizrank.state_count(), 10)  # 4 + 4x3 / 2
             vizrank.max_attrs = 3
@@ -167,7 +199,6 @@ class MosaicVizRankTests(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         vizrank.compute_attr_order()
 
-        widget.interior_coloring = widget.CLASS_DISTRIBUTION
         vizrank.max_attrs = 4
         self.assertEqual([state.copy()
                           for state in vizrank.iterate_states(None)],
@@ -190,7 +221,7 @@ class MosaicVizRankTests(WidgetTest):
                           for state in vizrank.iterate_states([0, 3])],
                          [[0, 3], [1, 3], [2, 3]])
 
-        widget.interior_coloring = widget.PEARSON
+        widget.variable_color = None
         vizrank.max_attrs = 4
         self.assertEqual([state.copy()
                           for state in vizrank.iterate_states(None)],
@@ -303,10 +334,8 @@ class MosaicVizRankTests(WidgetTest):
             discrete_data = self.widget.discrete_data
 
             if color == "(Pearson residuals)":
-                self.widget.interior_coloring = self.widget.PEARSON
                 self.assertIsNone(discrete_data.domain.class_var)
             else:
-                self.widget.interior_coloring = self.widget.CLASS_DISTRIBUTION
                 self.assertEqual(color, str(discrete_data.domain.class_var))
 
             output = self.get_output("Data")
@@ -366,3 +395,7 @@ class MosaicVizRankTests(WidgetTest):
         self.assertTrue(self.widget.Warning.incompatible_subset.is_shown())
         self.send_signal(self.widget.Inputs.data_subset, self.iris)
         self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -3,8 +3,7 @@ Tests for scheme document.
 """
 
 from ..schemeedit import SchemeEditWidget
-from ...scheme import Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation, \
-                      SchemeArrowAnnotation
+from ...scheme import Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation
 
 from ...registry.tests import small_testing_registry
 
@@ -52,8 +51,7 @@ class TestSchemeEdit(QAppTestCase):
         scheme.annotation_added.connect(annot_list.append)
         scheme.annotation_removed.connect(annot_list.remove)
 
-        node = SchemeNode(file_desc, title="title1",
-                                 position=(100, 100))
+        node = SchemeNode(file_desc, title="title1", position=(100, 100))
         w.addNode(node)
 
         self.assertSequenceEqual(node_list, [node])
