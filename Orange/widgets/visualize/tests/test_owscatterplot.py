@@ -67,13 +67,24 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
     def test_score_heuristics(self):
         domain = Domain([ContinuousVariable(c) for c in "abcd"],
-                        DiscreteVariable("c", values="ab"))
+                        DiscreteVariable("e", values="ab"))
         a = np.arange(10).reshape((10, 1))
         data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
         self.send_signal(self.widget.Inputs.data, data)
         vizrank = ScatterPlotVizRank(self.widget)
         self.assertEqual([x.name for x in vizrank.score_heuristic()],
                          list("abcd"))
+
+    def test_score_heuristics_no_disc(self):
+        domain = Domain([ContinuousVariable(c) for c in "abc"] +
+                        [DiscreteVariable("d", values="abcdefghij")],
+                        DiscreteVariable("e", values="ab"))
+        a = np.arange(10).reshape((10, 1))
+        data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        self.assertEqual([x.name for x in vizrank.score_heuristic()],
+                         list("abc"))
 
     def test_optional_combos(self):
         domain = self.data.domain
