@@ -282,9 +282,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             OWScatterPlot, stored_settings={
                 "selection_group": [(i, 1) for i in range(50)]}
         )
-        self.send_signal(self.widget.Inputs.data, self.data[:10])
-        selected_data = self.get_output(self.widget.Outputs.selected_data)
-        self.assertEqual(len(selected_data), 10)
+        data = self.data.copy()[:11]
+        data[0, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
     def test_set_strings_settings(self):
         """

@@ -490,11 +490,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     # Selection
     def apply_selection(self):
-        if self.data is not None and self.__pending_selection is not None \
-                and self.graph.n_valid:
-            index_group = [(index, group) for index, group in
-                           self.__pending_selection if index < len(self.data)]
-            index_group = np.array(index_group).T
+        pending = self.__pending_selection
+        if self.data is not None and pending is not None and len(pending) \
+                and max(i for i, _ in pending) < self.graph.n_valid:
+            index_group = np.array(pending).T
             selection = np.zeros(self.graph.n_valid, dtype=np.uint8)
             selection[index_group[0]] = index_group[1]
 
