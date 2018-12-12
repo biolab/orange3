@@ -226,7 +226,23 @@ class TSNEModel(Projection):
                 "A sparse matrix was passed, but dense data is required. Use "
                 "X.toarray() to convert to a dense numpy array."
             )
-        return self.embedding_.transform(X, **kwargs)
+        if isinstance(self.embedding_.affinities, fastTSNE.affinity.Multiscale):
+            perplexity = kwargs.pop("perplexity", False)
+            if perplexity:
+                if not isinstance(self.perplexity, Iterable):
+                    raise ValueError(
+                        "Perplexity should be an instance of `Iterable`, `%s` "
+                        "given." % type(self.perplexity).__name__)
+                perplexity_params = {"perplexities": perplexity}
+            else:
+                perplexity_params = {}
+        else:
+            perplexity_params = {"perplexity": kwargs.pop("perplexity", None)}
+
+        embedding = self.embedding_.prepare_partial(X, **perplexity_params,
+                                                    **kwargs)
+        embedding.optimize(100, inplace=True, momentum=0.4)
+        return embedding
 
     def __call__(self, data: Table, **kwargs) -> Table:
         # If we want to transform new data, ensure that we use correct domain
