@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
-from Orange.projection import PCA, TSNE
+from Orange.projection import PCA, TSNE, TruncatedSVD
 from Orange.projection.manifold import TSNEModel
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
@@ -195,8 +195,9 @@ class OWtSNE(OWDataProjectionWidget):
         if self.pca_data is not None and \
                 self.pca_data.X.shape[1] == self.pca_components:
             return
-        pca = PCA(n_components=self.pca_components, random_state=0)
-        model = pca(self.data)
+        cls = TruncatedSVD if self.data.is_sparse() else PCA
+        projector = cls(n_components=self.pca_components, random_state=0)
+        model = projector(self.data)
         self.pca_data = model(self.data)
 
     def __start(self):
