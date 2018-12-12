@@ -163,7 +163,7 @@ class OWtSNE(OWDataProjectionWidget):
             elif not self.data.domain.attributes:
                 error(self.Error.no_attributes)
             elif not self.data.is_sparse() and \
-                    np.allclose(self.data.X - self.data.X[0], 0):
+                    not np.sum(np.nanstd(self.data.X, axis=0)):
                 error(self.Error.constant_data)
             elif not self.data.is_sparse() and \
                     np.all(~np.isfinite(self.data.X)):
