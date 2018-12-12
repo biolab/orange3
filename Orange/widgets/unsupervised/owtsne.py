@@ -98,7 +98,6 @@ class OWtSNE(OWDataProjectionWidget):
         self.pca_data = None
         self.projection = None
         self.tsne_runner = None
-        self.__invalidated = True
         self.__update_loop = None
         # timer for scheduling updates
         self.__timer = QTimer(self, singleShot=True, interval=1,
@@ -145,11 +144,6 @@ class OWtSNE(OWDataProjectionWidget):
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
-
-    def set_data(self, data):
-        self.__invalidated = not (self.data and data and
-                                  np.array_equal(self.data.X, data.X))
-        super().set_data(data)
 
     def check_data(self):
         def error(err):
