@@ -230,7 +230,8 @@ class OWtSNE(OWDataProjectionWidget):
         self.projection = TSNE(
             n_components=2, perplexity=perplexity, multiscale=self.multiscale,
             early_exaggeration_iter=0, n_iter=0, initialization=initialization,
-            neighbors=neighbor_method, negative_gradient_method=gradient_method,
+            exaggeration=self.exaggeration, neighbors=neighbor_method,
+            negative_gradient_method=gradient_method, random_state=0
         )(self.pca_data)
 
         self.tsne_runner = TSNERunner(self.projection, step_size=50)
