@@ -3,9 +3,11 @@ import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.preprocess import Preprocess
+from Orange.projection.manifold import TSNE
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
+from Orange.widgets.unsupervised import owtsne
 from Orange.widgets.unsupervised.owtsne import OWtSNE
 
 
@@ -21,12 +23,36 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
         cls.signal_data = cls.data
 
     def setUp(self):
+        def fit(*args, **_):
+            return np.ones((len(args[1]), 2), float)
+
+        def transform(*args, **_):
+            return np.ones((len(args[1]), 2), float)
+
+        def optimize(*_, **__):
+            return TSNE()()
+
+        self._fit = owtsne.TSNE.fit
+        self._transform = owtsne.TSNEModel.transform
+        self._optimize = owtsne.TSNEModel.optimize
+        owtsne.TSNE.fit = fit
+        owtsne.TSNEModel.transform = transform
+        owtsne.TSNEModel.optimize = optimize
+
         self.widget = self.create_widget(OWtSNE)
 
         self.class_var = DiscreteVariable('Stage name', values=['STG1', 'STG2'])
         self.attributes = [ContinuousVariable('GeneName' + str(i)) for i in range(5)]
         self.domain = Domain(self.attributes, class_vars=self.class_var)
         self.empty_domain = Domain([], class_vars=self.class_var)
+
+    def tearDown(self):
+        self.reset_tsne()
+
+    def reset_tsne(self):
+        owtsne.TSNE.fit = self._fit
+        owtsne.TSNEModel.transform = self._transform
+        owtsne.TSNEModel.optimize = self._optimize
 
     def test_wrong_input(self):
         # no data
