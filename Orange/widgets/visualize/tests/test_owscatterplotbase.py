@@ -1,10 +1,10 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,too-many-lines,too-many-public-methods
 from unittest.mock import patch, Mock
 import numpy as np
 
 from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtGui import QColor
+from AnyQt.QtTest import QSignalSpy
 
 from pyqtgraph import mkPen
 
@@ -104,18 +104,21 @@ class TestOWScatterPlotBase(WidgetTest):
 
     def test_update_coordinates_and_labels(self):
         graph = self.graph
-        xy = self.xy = (np.array([1, 2]), np.array([3, 4]))
-        self.master.get_label_data = lambda: ["a", "b"]
+        xy = self.xy = (np.array([1., 2]), np.array([3, 4]))
+        self.master.get_label_data = lambda: np.array(["a", "b"])
         graph.reset_graph()
         self.assertEqual(graph.labels[0].pos().x(), 1)
-        xy[0][0] = 0
+        xy[0][0] = 1.5
         graph.update_coordinates()
-        self.assertEqual(graph.labels[0].pos().x(), 0)
+        self.assertEqual(graph.labels[0].pos().x(), 1.5)
+        xy[0][0] = 0  # This label goes out of the range
+        graph.update_coordinates()
+        self.assertEqual(graph.labels[0].pos().x(), 2)
 
     def test_update_coordinates_and_density(self):
         graph = self.graph
         xy = self.xy = (np.array([1, 2]), np.array([3, 4]))
-        self.master.get_label_data = lambda: ["a", "b"]
+        self.master.get_label_data = lambda: np.array(["a", "b"])
         graph.reset_graph()
         self.assertEqual(graph.labels[0].pos().x(), 1)
         xy[0][0] = 0
@@ -127,7 +130,7 @@ class TestOWScatterPlotBase(WidgetTest):
         graph = self.graph
         graph.view_box.setRange = self.setRange
         xy = self.xy = (np.array([2, 1]), np.array([3, 10]))
-        self.master.get_label_data = lambda: ["a", "b"]
+        self.master.get_label_data = lambda: np.array(["a", "b"])
         graph.reset_graph()
         self.assertEqual(self.last_setRange, [[1, 2], [3, 10]])
 
@@ -968,6 +971,56 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.update_selection_colors.assert_not_called()
         graph.update_labels.assert_not_called()
         self.master.selection_changed.assert_not_called()
+
+    def test_hiding_too_many_labels(self):
+        spy = QSignalSpy(self.graph.too_many_labels)
+        self.graph.MAX_VISIBLE_LABELS = 5
+
+        graph = self.graph
+        coords = np.array(
+            [(x, 0) for x in range(10)], dtype=float).T
+        self.master.get_coordinates_data = lambda: coords
+        graph.reset_graph()
+
+        self.assertFalse(spy and spy[-1][0])
+
+        self.master.get_label_data = lambda: \
+            np.array([str(x) for x in range(10)], dtype=object)
+        graph.update_labels()
+        self.assertTrue(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
+
+        graph.view_box.setRange(QRectF(1, -1, 4, 4))
+        graph.view_box.sigRangeChangedManually.emit(((1, 5), (-1, 3)))
+        self.assertFalse(spy[-1][0])
+        self.assertTrue(bool(self.graph.labels))
+
+        graph.view_box.setRange(QRectF(1, -1, 8, 8))
+        graph.view_box.sigRangeChangedManually.emit(((1, 9), (-1, 7)))
+        self.assertTrue(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
+
+        graph.label_only_selected = True
+        graph.update_labels()
+        self.assertFalse(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
+
+        graph.selection_select([1, 2, 3, 4, 5, 6])
+        self.assertTrue(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
+
+        graph.selection_select([1, 2, 3])
+        self.assertFalse(spy[-1][0])
+        self.assertTrue(bool(self.graph.labels))
+
+        graph.label_only_selected = False
+        graph.update_labels()
+        self.assertTrue(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
+
+        graph.clear()
+        self.assertFalse(spy[-1][0])
+        self.assertFalse(bool(self.graph.labels))
 
 
 if __name__ == "__main__":
