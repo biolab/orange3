@@ -96,6 +96,17 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual([a.name for a in transformed.domain.attributes],
                          [m.name for m in output.domain.metas[:2]])
 
+    def test_multiscale_changed(self):
+        self.assertTrue(self.widget.controls.multiscale.isChecked())
+        self.assertFalse(self.widget.perplexity_spin.isEnabled())
+        self.widget.controls.multiscale.setChecked(False)
+        self.assertTrue(self.widget.perplexity_spin.isEnabled())
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(OWtSNE, stored_settings=settings)
+        self.assertFalse(w.controls.multiscale.isChecked())
+        self.assertTrue(w.perplexity_spin.isEnabled())
+
 
 if __name__ == '__main__':
     unittest.main()

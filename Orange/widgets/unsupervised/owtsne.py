@@ -71,7 +71,7 @@ class OWtSNE(OWDataProjectionWidget):
     settings_version = 3
     max_iter = Setting(300)
     perplexity = Setting(30)
-    multiscale = Setting(False)
+    multiscale = Setting(True)
     exaggeration = Setting(1)
     pca_components = Setting(20)
 
@@ -131,7 +131,9 @@ class OWtSNE(OWDataProjectionWidget):
         form.addRow("Perplexity:", self.perplexity_spin)
         form.addRow(gui.checkBox(
             box, self, "multiscale", label="Preserve global structure",
+            callback=self._multiscale_changed
         ))
+        self._multiscale_changed()
 
         form.addRow("Exaggeration:", gui.hSlider(
             box, self, "exaggeration", createLabel=False, minValue=1, maxValue=4,
@@ -144,6 +146,9 @@ class OWtSNE(OWDataProjectionWidget):
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
+
+    def _multiscale_changed(self):
+        self.perplexity_spin.setEnabled(not self.multiscale)
 
     def check_data(self):
         def error(err):
