@@ -135,12 +135,15 @@ class OWtSNE(OWDataProjectionWidget):
         ))
         self._multiscale_changed()
 
-        form.addRow("Exaggeration:", gui.hSlider(
-            box, self, "exaggeration", createLabel=False, minValue=1, maxValue=4,
-            step=1))
-        form.addRow("PCA components:", gui.hSlider(
-            box, self, "pca_components", createLabel=False, minValue=2, maxValue=50,
-            step=1))
+        sbe = gui.hBox(self.controlArea, False, addToLayout=False)
+        gui.hSlider(
+            sbe, self, "exaggeration", minValue=1, maxValue=4, step=1)
+        form.addRow("Exaggeration:", sbe)
+
+        sbp = gui.hBox(self.controlArea, False, addToLayout=False)
+        gui.hSlider(
+            sbp, self, "pca_components", minValue=2, maxValue=50, step=1)
+        form.addRow("PCA components:", sbp)
 
         box.layout().addLayout(form)
 
