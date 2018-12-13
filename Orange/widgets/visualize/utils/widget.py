@@ -360,6 +360,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    class Warning(OWProjectionWidgetBase.Warning):
+        too_many_labels = Msg(
+            "Too many labels to show (zoom in or label only selected)")
+
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
     auto_commit = Setting(True)
@@ -386,6 +390,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         box = gui.vBox(self.mainArea, True, margin=0)
         self.graph = self.GRAPH_CLASS(self, box)
         box.layout().addWidget(self.graph.plot_widget)
+        self.graph.too_many_labels.connect(
+            lambda too_many: self.Warning.too_many_labels(shown=too_many))
 
     def _add_controls(self):
         self.gui = OWPlotGUI(self)
