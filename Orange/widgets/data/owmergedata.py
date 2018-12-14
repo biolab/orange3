@@ -360,16 +360,17 @@ class OWMergeData(widget.OWWidget):
         of rows given in indices"""
         if not len(indices):
             return None
-        self.data.domain = Orange.data.Domain(
+        merged = self.data.copy()
+        merged.domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
               for x in ("attributes", "class_vars", "metas")))
-        self.data.X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
-        self.data.Y = self._join_array_by_indices(
+        merged.X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
+        merged.Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
         string_cols = [i for i, var in enumerate(self.data.domain.metas) if var.is_string]
-        self.data.metas = self._join_array_by_indices(
+        merged.metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
-        return self.data
+        return merged
 
     @staticmethod
     def _join_array_by_indices(left, right, indices, string_cols=None):

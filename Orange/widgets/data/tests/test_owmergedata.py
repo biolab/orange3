@@ -231,7 +231,10 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_augment_data = domainA[0]
         self.widget.attr_augment_extra = domainB[0]
         self.widget.commit()
-        self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertTablesEqual(output, result)
+        self.assertNotEqual(id(output), id(self.dataA))
+        self.assertNotEqual(id(output), id(self.dataB))
 
     def test_output_merge_by_attribute_inner(self):
         """Check output for merging option 'Find matching rows' by attribute"""
