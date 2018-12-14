@@ -3,8 +3,6 @@ import numpy as np
 from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtWidgets import QFormLayout
 
-import fastTSNE.initialization
-
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.projection import PCA, TSNE, TruncatedSVD
@@ -208,7 +206,7 @@ class OWtSNE(OWDataProjectionWidget):
 
         # We call PCA through fastTSNE because it involves scaling. Instead of
         # worrying about this ourselves, we'll let the library worry for us.
-        initialization = fastTSNE.initialization.pca(
+        initialization = TSNE.default_initialization(
             self.pca_data.X, n_components=2, random_state=0)
 
         # Compute perplexity settings for multiscale
