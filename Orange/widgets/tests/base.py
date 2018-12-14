@@ -952,8 +952,7 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
+        table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         if self.widget.isBlocking():

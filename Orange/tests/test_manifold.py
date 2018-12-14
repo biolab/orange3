@@ -166,6 +166,12 @@ class TestTSNE(unittest.TestCase):
         # The new embedding should not contain NaNs
         self.assertFalse(np.any(np.isnan(new_embedding.X)))
 
+    def test_multiscale(self):
+        tsne = TSNE(perplexity=(10, 10), multiscale=True)
+        model = tsne(self.iris[::2])
+        embedding = model(self.iris[1::2])
+        self.assertFalse(np.any(np.isnan(embedding.X)))
+
     def test_continue_optimization(self):
         tsne = TSNE(n_iter=100)
         model = tsne(self.iris)
