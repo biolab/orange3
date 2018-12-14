@@ -212,6 +212,7 @@ class TSNEModel(Projection):
             return self.embedding.domain[i].copy(
                 compute_value=ComputeValueProjector(self, i, transformer))
 
+        super().__init__(self)
         self.embedding_ = embedding
         self.embedding = table
         self.pre_domain = pre_domain
@@ -370,29 +371,14 @@ class TSNE(Projector):
         Orange.preprocess.SklImpute(),
     ]
 
-    def __init__(
-        self,
-        n_components=2,
-        perplexity=30,
-        learning_rate=200,
-        early_exaggeration_iter=250,
-        early_exaggeration=12,
-        n_iter=750,
-        exaggeration=None,
-        theta=0.5,
-        min_num_intervals=10,
-        ints_in_interval=1,
-        initialization="pca",
-        metric="euclidean",
-        n_jobs=1,
-        neighbors="exact",
-        negative_gradient_method="bh",
-        multiscale=False,
-        callbacks=None,
-        callbacks_every_iters=50,
-        random_state=None,
-        preprocessors=None,
-    ):
+    def __init__(self, n_components=2, perplexity=30, learning_rate=200,
+                 early_exaggeration_iter=250, early_exaggeration=12,
+                 n_iter=750, exaggeration=None, theta=0.5,
+                 min_num_intervals=10, ints_in_interval=1,
+                 initialization="pca", metric="euclidean", n_jobs=1,
+                 neighbors="exact", negative_gradient_method="bh",
+                 multiscale=False, callbacks=None, callbacks_every_iters=50,
+                 random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.n_components = n_components
         self.perplexity = perplexity

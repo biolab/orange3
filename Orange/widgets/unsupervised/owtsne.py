@@ -1,7 +1,9 @@
-import fastTSNE.initialization
 import numpy as np
+
 from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtWidgets import QFormLayout
+
+import fastTSNE.initialization
 
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
