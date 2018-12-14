@@ -111,13 +111,6 @@ class OWtSNE(OWDataProjectionWidget):
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
-        # Because sc data frequently has many genes,
-        # showing all attributes in combo boxes can cause problems
-        # QUICKFIX: Remove a separator and attributes from order
-        # (leaving just the class and metas)
-        self.models = self.gui.points_models
-        for model in self.models:
-            model.order = model.order[:-2]
 
     def _add_controls_start_box(self):
         box = gui.vBox(self.controlArea, True)
