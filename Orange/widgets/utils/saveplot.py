@@ -1,7 +1,5 @@
 import os.path
-import traceback
 
-from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import QSettings
 
 from Orange.widgets.utils import filedialogs
@@ -22,19 +20,9 @@ def save_plot(data, file_formats, filename=""):
         filedialogs.get_file_name(start_dir, last_filter, file_formats)
     if not filename:
         return
-    try:
-        writer.write(filename, data)
-    except Exception as e:
-        mb = QMessageBox(
-            None,
-            windowTitle="Error",
-            text='Error occurred while saving file "{}": {}'.format(filename, e),
-            detailedText=traceback.format_exc(),
-            icon=QMessageBox.Critical)
-        mb.exec_()
-    else:
-        settings.setValue(_LAST_DIR_KEY, os.path.split(filename)[0])
-        settings.setValue(_LAST_FILTER_KEY, filter)
+    writer.write(filename, data)
+    settings.setValue(_LAST_DIR_KEY, os.path.split(filename)[0])
+    settings.setValue(_LAST_FILTER_KEY, filter)
 
 
 def main():  # pragma: no cover
