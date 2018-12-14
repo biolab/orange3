@@ -60,6 +60,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         yield from super().iterate_states(initial_state)
 
     def compute_score(self, state):
+        # pylint: disable=invalid-unary-operand-type
         attrs = [self.attrs[i] for i in state]
         data = self.master.data
         data = data.transform(Domain(attrs, self.attr_color))

@@ -358,28 +358,26 @@ class OWTreeGraph(OWTreeViewer2D):
         else:
             modus = np.argmax(distr)
             tabs = distr[modus]
-            text = self.domain.class_vars[0].values[int(modus)] + "<br/>"
+            text = f"{self.domain.class_vars[0].values[int(modus)]}<br/>"
         if tabs > 0.999:
-            text += "100%, {}/{}".format(total, total)
+            text += f"100%, {total}/{total}"
         else:
-            text += "{:2.1f}%, {}/{}".format(100 * tabs,
-                                             int(total * tabs), total)
+            text += f"{100 * tabs:2.1f}%, {int(total * tabs)}/{total}"
 
         text = self._update_node_info_attr_name(node, text)
-        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">'
-                     '{}</p>'.
-                     format(text))
+        node.setHtml(
+            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
 
     def update_node_info_reg(self, node):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
         mean, var = self.tree_adapter.get_distribution(node_inst)[0]
         insts = self.tree_adapter.num_samples(node_inst)
-        text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
-        text += "{} instances".format(insts)
+        text = f"{mean:.1f} ± {var:.1f}<br/>"
+        text += f"{insts} instances"
         text = self._update_node_info_attr_name(node, text)
-        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">{}</p>'.
-                     format(text))
+        node.setHtml(
+            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
 
     def toggle_node_color_cls(self):
         """Update the node color for classification trees"""

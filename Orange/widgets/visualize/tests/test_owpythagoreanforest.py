@@ -1,3 +1,5 @@
+# pylint: disable=missing-docstring,protected-access
+
 from unittest.mock import Mock
 
 from AnyQt.QtCore import Qt

@@ -132,9 +132,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
             self.send_signal(self.widget.Inputs.data, data)
             self.assertFalse(self.widget.Error.memory_error.is_shown())
             self.assertFalse(self.widget.Error.value_error.is_shown())
-            with unittest.mock.patch(
-                "numpy.asarray",
-                side_effect=side_effect):
+            with unittest.mock.patch("numpy.asarray", side_effect=side_effect):
                 self.widget._matrix = None
                 self.widget.data = data
                 self.widget._effective_data = data

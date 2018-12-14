@@ -289,7 +289,7 @@ RowPart = namedtuple(
 )
 
 
-class RowPart(RowPart):
+class RowPart(RowPart):  # pylint: disable=function-redefined
     """
     A row group
 
@@ -336,7 +336,7 @@ ColumnPart = namedtuple(
 )
 
 
-class ColumnPart(ColumnPart):
+class ColumnPart(ColumnPart):  # pylint: disable=function-redefined
     """
     A column group
 
@@ -450,7 +450,7 @@ class OWHeatMap(widget.OWWidget):
         super().__init__()
 
         # set default settings
-        self.SpaceX = 10
+        self.space_x = 10
 
         self.colorSettings = None
         self.selectedSchemaIndex = 0
@@ -943,7 +943,7 @@ class OWHeatMap(widget.OWWidget):
         widget.layoutDidActivate.connect(self.__update_selection_geometry)
 
         grid = QGraphicsGridLayout()
-        grid.setSpacing(self.SpaceX)
+        grid.setSpacing(self.space_x)
         self.heatmap_scene.addItem(widget)
 
         N, M = len(parts.rows), len(parts.columns)
@@ -1250,14 +1250,6 @@ class OWHeatMap(widget.OWWidget):
             annot[1].setContentsMargins(left_offset, top, right, bottom)
 
     def __update_clustering_enable_state(self, data):
-        def enable(item, state):
-            """Set QStandardItem's enabled state to `state`."""
-            flags = item.flags()
-            if state:
-                item.setFlags(flags | Qt.ItemIsEnabled)
-            else:
-                item.setFlags(flags & ~Qt.ItemIsEnabled)
-
         if data is not None:
             N = len(data)
             M = len(data.domain.attributes)
@@ -1333,7 +1325,7 @@ class OWHeatMap(widget.OWWidget):
         """
         if self.scene.widget:
             layout = self.scene.widget.layout()
-            layout.setSpacing(self.SpaceX)
+            layout.setSpacing(self.space_x)
             self.__fixup_grid_layout()
 
     def update_lowslider(self):
@@ -1870,7 +1862,6 @@ class HeatmapScene(QGraphicsScene):
             append = (key & Qt.ControlModifier)
             self.selection_manager.selection_add(
                 start, end, heatmap, clear=clear, remove=remove, append=append)
-        return
 
     def mousePressEvent(self, event):
         pos = event.scenePos()
@@ -1895,7 +1886,6 @@ class HeatmapScene(QGraphicsScene):
         pos = event.scenePos()
         heatmap = self.heatmap_at_pos(pos)
         if heatmap and event.button() == Qt.LeftButton and self.__selecting:
-            row, _ = heatmap.cell_at(heatmap.mapFromScene(pos))
             self.selection_manager.selection_finish(heatmap, event)
 
         if event.button() == Qt.LeftButton and self.__selecting:
@@ -1956,7 +1946,7 @@ class GraphicsSimpleTextLayoutItem(QGraphicsLayoutItem):
 
 class GraphicsSimpleTextList(QGraphicsWidget):
     """A simple text list widget."""
-    def __init__(self, labels=[], orientation=Qt.Vertical, parent=None):
+    def __init__(self, labels=(), orientation=Qt.Vertical, parent=None):
         super().__init__(parent)
         self.label_items = []
         self.orientation = orientation
@@ -2310,22 +2300,6 @@ class HeatmapSelectionManager(QObject):
     def update_selection_rects(self):
         """ Update the selection rects.
         """
-        def continuous_ranges(selections):
-            """ Group continuous ranges
-            """
-            selections = iter(selections)
-            start = end = next(selections)
-            try:
-                while True:
-                    new_end = next(selections)
-                    if new_end > end + 1:
-                        yield start, end
-                        start = end = new_end
-                    else:
-                        end = new_end
-            except StopIteration:
-                yield start, end
-
         def group_selections(selections):
             """Group selections along with heatmaps.
             """
@@ -2385,7 +2359,7 @@ def join_ellided(sep, maxlen, values, ellidetemplate="..."):
             yield i, itertools.islice(parts, i + 1), length, ellide
 
     best = None
-    for i, parts, length, ellide in generate(sep, ellidetemplate, values):
+    for _, parts, length, ellide in generate(sep, ellidetemplate, values):
         if length > maxlen:
             if best is None:
                 best = sep.join(parts) + ellide
@@ -2393,8 +2367,7 @@ def join_ellided(sep, maxlen, values, ellidetemplate="..."):
         fulllen = length + len(ellide)
         if fulllen < maxlen or best is None:
             best = sep.join(parts) + ellide
-    else:
-        return best
+    return best
 
 
 if __name__ == "__main__":  # pragma: no cover

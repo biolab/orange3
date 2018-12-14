@@ -218,9 +218,6 @@ class GraphicsNode(TextTreeNode):
     def boundingRect(self):
         return super().boundingRect().adjusted(-5, -5, 5, 5)
 
-    def mousePressEvent(self, event):
-        return super().mousePressEvent(event)
-
 
 class GraphicsEdge(QGraphicsLineItem, GraphEdge):
     def __init__(self, *args, **kwargs):

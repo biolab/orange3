@@ -403,12 +403,10 @@ class TreeGraphicsView(
 ):
     """QGraphicsView that contains all functionality we will use to display
     tree."""
-    pass
 
 
 class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     """QGraphicsScene that the tree uses."""
-    pass
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -130,6 +130,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         n_neighbors = min(self.minK, len(ec) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
         ind = knn.kneighbors(return_distance=False)
+        # pylint: disable=invalid-unary-operand-type
         if self.attr_color.is_discrete:
             return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
         return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(data))
