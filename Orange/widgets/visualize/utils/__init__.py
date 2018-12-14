@@ -434,8 +434,9 @@ class VizRankDialogAttr(VizRankDialog):
         return can_rank
 
     def on_selection_changed(self, selected, deselected):
-        attr = selected.indexes()[0].data(self._AttrRole)
-        self.attrSelected.emit(attr)
+        if not selected.isEmpty():
+            attr = selected.indexes()[0].data(self._AttrRole)
+            self.attrSelected.emit(attr)
 
     def state_count(self):
         return len(self.attrs)
@@ -470,6 +471,9 @@ class VizRankDialogAttrPair(VizRankDialog):
         VizRankDialog.__init__(self, master)
         self.resize(320, 512)
         self.attrs = []
+        manual_change_signal = getattr(master, "xy_changed_manually", None)
+        if manual_change_signal:
+            manual_change_signal.connect(self.on_manual_change)
 
     def sizeHint(self):
         """Assuming two columns in the table, return `QSize(320, 512)` as
@@ -490,6 +494,15 @@ class VizRankDialogAttrPair(VizRankDialog):
             return
         attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit(attrs)
+
+    def on_manual_change(self, attr1, attr2):
+        model = self.rank_model
+        self.rank_table.selectionModel().clear()
+        for row in range(model.rowCount()):
+            a1, a2 = model.data(model.index(row, 0), self._AttrRole)
+            if a1 is attr1 and a2 is attr2:
+                self.rank_table.selectRow(row)
+                return
 
     def state_count(self):
         n_attrs = len(self.attrs)

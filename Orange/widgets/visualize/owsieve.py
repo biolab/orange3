@@ -4,7 +4,7 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtCore import Qt, QSize, Signal
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
@@ -94,6 +94,8 @@ class OWSieveDiagram(OWWidget):
     attr_y = ContextSetting(None)
     selection = ContextSetting(set())
 
+    xy_changed_manually = Signal(Variable, Variable)
+
     def __init__(self):
         # pylint: disable=missing-docstring
         super().__init__()
@@ -108,7 +110,7 @@ class OWSieveDiagram(OWWidget):
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
             widget=self.attr_box, master=self, contentsLength=12,
-            callback=self.update_attr, sendSelectedValue=True, valueType=str,
+            callback=self.attr_changed, sendSelectedValue=True, valueType=str,
             model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
@@ -195,6 +197,10 @@ class OWSieveDiagram(OWWidget):
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y
         self.update_attr()
+
+    def attr_changed(self):
+        self.update_attr()
+        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
 
     def update_attr(self):
         """Update the graph and selection."""

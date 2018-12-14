@@ -60,6 +60,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.data = None
         self.valid_data = None
 
+        self.rank_table.clicked.connect(self.on_row_clicked)
+        self.rank_table.verticalHeader().sectionClicked.connect(
+            self.on_header_clicked)
+
     def initialize(self):
         super().initialize()
         self.attr_color = self.master.attr_color
@@ -131,9 +135,11 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_attrs_spin.setMaximum(20)  # all primitive vars except color one
         return True
 
-    def on_selection_changed(self, selected, deselected):
-        attrs = selected.indexes()[0].data(self._AttrRole)
-        self.selectionChanged.emit([attrs])
+    def on_row_clicked(self, index):
+        self.selectionChanged.emit(index.data(self._AttrRole))
+
+    def on_header_clicked(self, section):
+        self.on_row_clicked(self.rank_model.index(section, 0))
 
     def iterate_states(self, state):
         if state is None:  # on the first call, compute order
@@ -285,7 +291,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.__vizrank_set_attrs
+            None, self, "Suggest features", self.vizrank_set_attrs
         )
         super().__init__()
 
@@ -314,7 +320,7 @@ class OWRadviz(OWAnchorProjectionWidget):
     def effective_variables(self):
         return self.model_selected[:]
 
-    def __vizrank_set_attrs(self, attrs):
+    def vizrank_set_attrs(self, *attrs):
         if not attrs:
             return
         self.model_selected[:] = attrs[:]

@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from math import isnan
+import unittest
 from unittest.mock import patch
 
 import numpy as np
@@ -10,6 +11,7 @@ from AnyQt.QtGui import QMouseEvent
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owsieve import OWSieveDiagram
 from Orange.widgets.visualize.owsieve import ChiSqStats
 from Orange.widgets.visualize.owsieve import Discretize
@@ -147,3 +149,22 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(self.widget.discrete_data.domain), 2)
         output = self.get_output("Data")
         self.assertTrue(output.is_sparse())
+
+    @patch('Orange.widgets.visualize.owsieve.SieveRank.on_manual_change')
+    def test_vizrank_receives_manual_change(self, on_manual_change):
+        # Recreate the widget so the patch kicks in
+        self.widget = self.create_widget(OWSieveDiagram)
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        model = self.widget.controls.attr_x.model()
+        self.widget.attr_x = model[2]
+        self.widget.attr_y = model[3]
+        simulate.combobox_activate_index(self.widget.controls.attr_x, 4)
+        call_args = on_manual_change.call_args[0]
+        self.assertEqual(len(call_args), 2)
+        self.assertEqual(call_args[0].name, data.domain[2].name)
+        self.assertEqual(call_args[1].name, data.domain[1].name)
+
+
+if __name__ == "__main__":
+    unittest.main()
