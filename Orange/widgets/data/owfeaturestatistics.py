@@ -787,6 +787,7 @@ class OWFeatureStatistics(widget.OWWidget):
 
         if data is not None:
             self.color_var_model.set_domain(data.domain)
+            self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:

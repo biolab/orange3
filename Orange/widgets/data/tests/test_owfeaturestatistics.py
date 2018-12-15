@@ -251,6 +251,30 @@ class TestVariableTypes(WidgetTest):
         self.send_signal('Data', prepare_table(data))
         self.run_through_variables()
 
+    def test_switching_to_dataset_with_no_target_var(self):
+        """Switching from data set with target variable to a data set with
+        no target variable should not result in crash."""
+        data1 = make_table([continuous_full, ints_full], [ints_same, rgb_same])
+        data2 = make_table([rgb_full, ints_full])
+
+        self.send_signal(self.widget.Inputs.data, data1)
+        self.force_render_table()
+
+        self.send_signal(self.widget.Inputs.data, data2)
+        self.force_render_table()
+
+    def test_switching_to_dataset_with_target_var(self):
+        """Switching from data set with no target variable to a data set with
+        a target variable should not result in crash."""
+        data1 = make_table([rgb_full, ints_full])
+        data2 = make_table([continuous_full, ints_full], [ints_same, rgb_same])
+
+        self.send_signal(self.widget.Inputs.data, data1)
+        self.force_render_table()
+
+        self.send_signal(self.widget.Inputs.data, data2)
+        self.force_render_table()
+
 
 def select_rows(rows: List[int], widget: OWFeatureStatistics):
     """Since the widget sorts the rows, selecting rows isn't trivial."""
