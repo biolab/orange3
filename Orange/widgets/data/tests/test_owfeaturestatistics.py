@@ -10,7 +10,7 @@ from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
@@ -187,7 +187,7 @@ def table_dense_sparse(test_case):
     return _wrapper
 
 
-class TestVariableTypes(WidgetTest):
+class TestVariousDataSets(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
@@ -274,6 +274,11 @@ class TestVariableTypes(WidgetTest):
 
         self.send_signal(self.widget.Inputs.data, data2)
         self.force_render_table()
+
+    def test_on_edge_case_datasets(self):
+        for data in datasets.datasets():
+            self.send_signal(self.widget.Inputs.data, data)
+            self.force_render_table()
 
 
 def select_rows(rows: List[int], widget: OWFeatureStatistics):
