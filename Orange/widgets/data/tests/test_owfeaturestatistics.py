@@ -207,48 +207,48 @@ class TestVariableTypes(WidgetTest):
 
     @table_dense_sparse
     def test_runs_on_iris(self, prepare_table):
-        self.send_signal('Data', prepare_table(Table('iris')))
+        self.send_signal(self.widget.Inputs.data, prepare_table(Table('iris')))
 
     def test_does_not_crash_on_data_removal(self):
-        self.send_signal('Data', make_table(discrete))
-        self.send_signal('Data', None)
+        self.send_signal(self.widget.Inputs.data, make_table(discrete))
+        self.send_signal(self.widget.Inputs.data, None)
 
     # No missing values
     @table_dense_sparse
     def test_on_data_with_no_missing_values(self, prepare_table):
         data = make_table([continuous_full, rgb_full, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_no_missing_values_full_domain(self, prepare_table):
         data = make_table([continuous_full, time_full], [ints_full], [rgb_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     # With missing values
     @table_dense_sparse
     def test_on_data_with_missing_continuous_values(self, prepare_table):
         data = make_table([continuous_full, continuous_missing, rgb_full, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_missing_discrete_values(self, prepare_table):
         data = make_table([continuous_full, rgb_full, rgb_missing, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_discrete_values_all_the_same(self, prepare_table):
         data = make_table([continuous_full], [ints_same, rgb_same])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_continuous_values_all_the_same(self, prepare_table):
         data = make_table([ints_full, ints_same], [continuous_same, continuous_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     def test_switching_to_dataset_with_no_target_var(self):
