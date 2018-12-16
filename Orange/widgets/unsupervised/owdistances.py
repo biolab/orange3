@@ -20,6 +20,7 @@ METRICS = [
     ("Absolute Spearman", distance.SpearmanRAbsolute),
     ("Pearson", distance.PearsonR),
     ("Absolute Pearson", distance.PearsonRAbsolute),
+    ("Hamming", distance.Hamming)
 ]
 
 

@@ -869,6 +869,76 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                           [0.4, 1, 5/12],
                           [0.25, 5/12, 1]]))
 
+class HammingDistanceTest:
+    Distance = distance.Hamming
+
+    def test_hamming_disc(self):
+
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.disc_data
+
+        model = distance.Euclidean().fit(data)
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1/3, 2/3, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 5/9, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
+        assert_almost_equal(dist,
+                            np.sqrt(np.array([[0, 2, 3],
+                                              [2, 0, 2],
+                                              [3, 2, 0]])))
+
+        data.X[1, 0] = np.nan
+        model = distance.Euclidean().fit(data)
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1/2, 1/2, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]
+                            ])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 2/4, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
+        assert_almost_equal(dist,
+                            np.sqrt(np.array([[0, 2.5, 3],
+                                              [2.5, 0, 1.5],
+                                              [3, 1.5, 0]])))
+
+        data.X[0, 0] = np.nan
+        model = distance.Euclidean().fit(data)
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1, 0, 1, 1],
+                             [2/3, 2/3, 1, 2/3],
+                             [2/3, 1/3, 1, 1]])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 1, 1 - 3/9, 1 - 5/9])
+
+        dist = model(data)
+        assert_almost_equal(dist,
+                            np.sqrt(np.array([[0, 2, 2],
+                                              [2, 0, 1],
+                                              [2, 1, 0]])))
+
+        data = self.disc_data4
+        data.X[:2, 0] = np.nan
+        model = distance.Euclidean().fit(data)
+
+        assert_almost_equal(model.dist_missing_disc,
+                            [[1/2, 1/2, 1, 1],
+                             [3/4, 2/4, 1, 3/4],
+                             [3/4, 1/4, 1, 1]])
+        assert_almost_equal(model.dist_missing2_disc,
+                            [1 - 2/4, 1 - 6/16, 1 - 10/16])
+
+        dist = model(data)
+        assert_almost_equal(dist,
+                            np.sqrt(np.array([[0, 2.5, 2.5, 2.5],
+                                              [2.5, 0, 0.5, 1.5],
+                                              [2.5, 0.5, 0, 2],
+                                              [2.5, 1.5, 2, 0]])))
 
 if __name__ == "__main__":
     unittest.main()

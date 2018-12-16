@@ -2,13 +2,14 @@ import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
+from sklearn.metrics import hamming_loss
+from itertools import combinations
 
 from Orange.distance import _distance
 from Orange.statistics import util
 
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
                    SklDistance, _orange_to_numpy)
-
 
 class EuclideanRowsModel(FittedDistanceModel):
     """
@@ -636,3 +637,35 @@ class MahalanobisDistance:
         if data is None:
             return cls
         return Mahalanobis(axis=axis).fit(data)
+
+class Hamming(Distance):
+    supports_sparse = False
+    supports_missing = False
+    supports_normalization = False
+    supports_discrete = True
+
+    def fit(self, data):
+        x = _orange_to_numpy(data)
+        return HammingColumnModel(self.axis, self.impute, x)
+
+class HammingColumnModel(DistanceModel):
+    """
+    Model for computation of Hamming distances between columns.
+    """
+    def __init__(self, axis, impute, x):
+        super().__init__(axis, impute)
+        self.x = x
+
+    def __call__(self, e1, e2=None, impute=None):
+        if impute is not None:
+            self.impute = impute
+        return super().__call__(e1, e2)
+
+    def compute_distances(self, x1, x2=None):
+        n = x1.shape[1]
+        distances = np.zeros((n, n))
+        for i, j in combinations(range(n), 2):
+            tmp = hamming_loss(x1[:, i], x1[:, j])
+            distances[i, j], distances[j, i] = tmp, tmp
+        return distances
+
