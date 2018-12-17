@@ -52,6 +52,7 @@ Data
    widgets/data/correlations
    widgets/data/color
    widgets/data/featurestatistics
+   widgets/data/neighbors
 
 
 Visualize
@@ -64,6 +65,7 @@ Visualize
    widgets/visualize/distributions
    widgets/visualize/heatmap
    widgets/visualize/scatterplot
+   widgets/visualize/lineplot
    widgets/visualize/venndiagram
    widgets/visualize/linearprojection
    widgets/visualize/sievediagram
