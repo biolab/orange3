@@ -53,21 +53,25 @@ class TestOWNeighbors(WidgetTest):
 
     def test_settings(self):
         """Check neighbors for various distance metrics"""
-        settings = [ParameterMapping("", self.widget.distance_combo, METRICS),
-                    ParameterMapping("", self.widget.nn_spin)]
+        settings = [
+            ParameterMapping("", self.widget.controls.distance_index, METRICS),
+            ParameterMapping("", self.widget.controls.n_neighbors)]
         for setting in settings:
             for val in setting.values:
                 self.send_signal("Data", self.iris)
                 self.send_signal("Reference", self.iris[:10])
                 setting.set_value(val)
                 self.widget.apply_button.button.click()
-                self.assertIsNotNone(self.get_output("Neighbors"))
+                if METRICS[self.widget.distance_index][0] != "Jaccard" \
+                        and self.widget.n_neighbors != 0:
+                    self.assertIsNotNone(self.get_output("Neighbors"))
 
     def test_exclude_reference(self):
         """Check neighbors when reference is excluded"""
         reference = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.reference, reference)
+        self.exclude_reference = True
         self.widget.apply_button.button.click()
         neighbors = self.get_output(self.widget.Outputs.data)
         for inst in reference:

@@ -3,12 +3,13 @@ import numpy as np
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data.util import get_unique_names
 from Orange.preprocess import RemoveNaNColumns, Impute
 from Orange import distance
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
-from Orange.widgets.widget import OWWidget
+from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 METRICS = [
@@ -22,6 +23,7 @@ METRICS = [
     ("Pearson", distance.PearsonR),
     ("Absolute Pearson", distance.PearsonRAbsolute),
 ]
+
 
 class OWNeighbors(OWWidget):
     name = "Neighbors"
@@ -37,6 +39,10 @@ class OWNeighbors(OWWidget):
     class Outputs:
         data = Output("Neighbors", Table)
 
+    class Warning(OWWidget.Warning):
+        all_data_as_reference = \
+            Msg("Every data instance is same as some reference")
+
     n_neighbors = Setting(10)
     distance_index = Setting(0)
     exclude_reference = Setting(True)
@@ -45,96 +51,113 @@ class OWNeighbors(OWWidget):
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
 
-    _data_info_default = "No data."
-    _ref_info_default = "No reference."
-
     def __init__(self):
         super().__init__()
 
         self.data = None
         self.reference = None
-        self.dist = None
-        box = gui.vBox(self.controlArea, "Info")
-        self.data_info_label = gui.widgetLabel(box, self._data_info_default)
-        self.ref_info_label = gui.widgetLabel(box, self._ref_info_default)
+        self.distances = None
 
-        box = gui.vBox(self.controlArea, "Settings")
-        self.distance_combo = gui.comboBox(
+        box = gui.vBox(self.controlArea, "Info")
+        self.data_info_label = gui.widgetLabel(box, "")
+        self.reference_info_label = gui.widgetLabel(box, "")
+        self._set_label_text("data")
+        self._set_label_text("reference")
+
+        box = gui.vBox(self.controlArea, box=True)
+        gui.comboBox(
             box, self, "distance_index", orientation=Qt.Horizontal,
             label="Distance: ", items=[d[0] for d in METRICS],
-            callback=self.compute_distance)
-
-        check_box = gui.hBox(box)
-        self.exclude_ref_label = gui.label(
-            check_box, self, "Exclude references:")
-        self.exclude_ref_check = gui.checkBox(
-            check_box, self, "exclude_reference", label="",
+            callback=self.recompute)
+        gui.spin(
+            box, self, "n_neighbors", label="Number of neighbors:",
+            step=1, spinType=int, minv=0, maxv=100, callback=self.apply)
+        gui.checkBox(
+            box, self, "exclude_reference",
+            label="Exclude rows (equal to) references",
             callback=self.apply)
 
-        box = gui.vBox(self.controlArea, "Output")
-        self.nn_spin = gui.spin(
-            box, self, "n_neighbors", label="Neighbors:", step=1, spinType=int,
-            minv=0, maxv=100, callback=self.apply)
+        self.apply_button = gui.auto_commit(
+            self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
 
-        box = gui.hBox(self.controlArea, True)
-        self.apply_button = gui.auto_commit(box, self, "auto_apply", "&Apply",
-                                            box=False, commit=self.apply)
+    def _set_label_text(self, name):
+        data = getattr(self, name)
+        label = getattr(self, f"{name}_info_label")
+        if data is None:
+            label.setText(f"No {name} instances")
+        else:
+            pl = "s" if len(data) else ""
+            label.setText(f"{len(data)} {name} instance{pl} on input.")
 
     @Inputs.data
     def set_data(self, data):
-        text = self._data_info_default if data is None \
-            else "{} data instances on input.".format(len(data))
         self.data = data
-        self.data_info_label.setText(text)
-        self.apply()
+        self._set_label_text("data")
 
     @Inputs.reference
-    def set_ref(self, reference):
-        text = self._ref_info_default if reference is None \
-            else "{} reference instances on input.".format(len(reference))
-        self.reference = reference
-        self.ref_info_label.setText(text)
-        self.apply()
-
-    def compute_distance(self):
-        distance = METRICS[self.distance_index][1]
-        n_data, n_ref = len(self.data), len(self.reference)
-        all_data = Table.concatenate([self.reference, self.data], 0)
-        pp_all_data = Impute()(RemoveNaNColumns()(all_data))
-        pp_data, pp_reference = pp_all_data[n_ref:], pp_all_data[:n_ref]
-        self.dist = np.array(distance(np.vstack((pp_data, pp_reference)))[
-                             :n_data, n_data:])
+    def set_ref(self, refs):
+        self.reference = refs
+        self._set_label_text("reference")
 
     def handleNewSignals(self):
-        if self.data is None or self.reference is None:
-            self.Outputs.data.send(None)
-            return
-        self.compute_distance()
+        self.recompute()
+
+    def recompute(self):
+        self.compute_distances()
         self.apply()
 
+    def compute_distances(self):
+        if self.data is None or len(self.data) == 0 \
+                or self.reference is None or len(self.reference) == 0:
+            self.distances = None
+            return
+        distance = METRICS[self.distance_index][1]
+        n_ref = len(self.reference)
+        all_data = Table.concatenate([self.reference, self.data], 0)
+        pp_all_data = Impute()(RemoveNaNColumns()(all_data))
+        pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
+        self.distances = distance(pp_data, pp_reference).min(axis=1)
+
     def apply(self):
-        sorted_indices = list(np.argsort(self.dist.flatten()))[::-1]
-        indices = []
-        while len(sorted_indices) > 0 and len(indices) < self.n_neighbors:
-            index = int(sorted_indices.pop() / len(self.reference))
-            if (self.data[index] not in self.reference or
-                    not self.exclude_reference) and index not in indices:
-                indices.append(index)
-                self._add_similarity(self.data, self.dist)
-        neighbors = self._add_similarity(self.data[indices], self.dist[indices])
-        neighbors.attributes = self.data.attributes
-        self.Outputs.data.send(self.data)
+        indices = self._compute_indices()
+        if indices is None:
+            neighbors = None
+        else:
+            neighbors = self._data_with_similarity(indices)
+        self.Outputs.data.send(neighbors)
 
-    @staticmethod
-    def _add_similarity(data, dist):
-        dist = np.min(dist, axis=1)[:, None]
-        metas = data.domain.metas + (ContinuousVariable("similarity"),)
+    def _compute_indices(self):
+        self.Warning.all_data_as_reference.clear()
+        dist = self.distances
+        if dist is None:
+            return None
+        if self.exclude_reference:
+            non_ref = dist > 1e-5
+            skip = len(dist) - non_ref.sum()
+            up_to = min(self.n_neighbors + skip, len(dist))
+            if skip >= up_to:
+                self.Warning.all_data_as_reference()
+                return None
+            indices = np.argpartition(dist, up_to - 1)[:up_to]
+            return indices[non_ref[indices]]
+        else:
+            up_to = min(self.n_neighbors, len(dist))
+            return np.argpartition(dist, up_to - 1)[:up_to]
+
+    def _data_with_similarity(self, indices):
+        data = self.data
+        varname = get_unique_names(data.domain, "distance")
+        metas = data.domain.metas + (ContinuousVariable(varname), )
         domain = Domain(data.domain.attributes, data.domain.class_vars, metas)
-        data_metas = np.hstack((data.metas, 100 * (1 - dist / np.max(dist))))
-        return Table(domain, data.X, data.Y, data_metas)
+        data_metas = self.distances[indices].reshape((-1, 1))
+        if data.domain.metas:
+            data_metas = np.hstack((data.metas[indices], data_metas))
+        neighbors = Table(domain, data.X[indices], data.Y[indices], data_metas)
+        neighbors.attributes = self.data.attributes
+        return neighbors
 
 
-if __name__ == "__main__": # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     data = Table("iris.tab")
     WidgetPreview(OWNeighbors).run(
         set_data=data,
