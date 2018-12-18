@@ -500,8 +500,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     def get_coordinates_data(self):
         embedding = self.get_embedding()
-        return embedding[self.valid_data].T[:2] if embedding is not None \
-            else (None, None)
+        if embedding is not None and len(embedding[self.valid_data]):
+            return embedding[self.valid_data].T
+        return None, None
 
     def setup_plot(self):
         self.graph.reset_graph()

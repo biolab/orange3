@@ -735,6 +735,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         selection = vizrank.rank_table.selectedIndexes()
         self.assertEqual(len(selection), 0)
 
+    def test_regression_line(self):
+        self.widget.graph.controls.show_reg_line.setChecked(True)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        data = self.data.copy()
+        data[:, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+
 
 if __name__ == "__main__":
     import unittest
