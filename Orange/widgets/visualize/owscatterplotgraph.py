@@ -5,8 +5,8 @@ from xml.sax.saxutils import escape
 from math import log10, floor, ceil
 
 import numpy as np
-
-from AnyQt.QtCore import Qt, QRectF, QSize, QTimer
+from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
+    QObject
 from AnyQt.QtGui import (
     QStaticText, QColor, QPen, QBrush, QPainterPath, QTransform, QPainter
 )
@@ -251,7 +251,7 @@ def _make_pen(color, width):
     return p
 
 
-class OWScatterPlotBase(gui.OWComponent):
+class OWScatterPlotBase(gui.OWComponent, QObject):
     """
     Provide a graph component for widgets that show any kind of point plot
 
@@ -338,6 +338,8 @@ class OWScatterPlotBase(gui.OWComponent):
     to the entire set etc. Internally, sampling happens as early as possible
     (in methods `get_<something>`).
     """
+    too_many_labels = Signal(bool)
+
     label_only_selected = Setting(False)
     point_width = Setting(10)
     alpha_value = Setting(128)
@@ -357,8 +359,11 @@ class OWScatterPlotBase(gui.OWComponent):
     COLOR_SUBSET = (128, 128, 128, 255)
     COLOR_DEFAULT = (128, 128, 128, 0)
 
+    MAX_VISIBLE_LABELS = 500
+
     def __init__(self, scatter_widget, parent=None, view_box=ViewBox):
-        super().__init__(scatter_widget)
+        QObject.__init__(self)
+        gui.OWComponent.__init__(self, scatter_widget)
 
         self.subset_is_shown = False
 
@@ -393,6 +398,7 @@ class OWScatterPlotBase(gui.OWComponent):
         self.update_legend_visibility()
 
         self.scale = None  # DiscretizedScale
+        self._too_many_labels = False
 
         # self.setMouseTracking(True)
         # self.grabGesture(QPinchGesture)
@@ -403,6 +409,7 @@ class OWScatterPlotBase(gui.OWComponent):
         self._tooltip_delegate = EventDelegate(self.help_event)
         self.plot_widget.scene().installEventFilter(self._tooltip_delegate)
         self.view_box.sigTransformChanged.connect(self.update_density)
+        self.view_box.sigRangeChangedManually.connect(self.update_labels)
 
         self.timer = None
 
@@ -463,7 +470,7 @@ class OWScatterPlotBase(gui.OWComponent):
             return
         self._update_plot_coordinates(self.scatterplot_item, x, y)
         self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
-        self._update_label_coords(x, y)
+        self.update_labels()
 
     # TODO: Rename to remove_plot_items
     def clear(self):
@@ -492,6 +499,7 @@ class OWScatterPlotBase(gui.OWComponent):
         self.scatterplot_item = None
         self.scatterplot_item_sel = None
         self.labels = []
+        self._signal_too_many_labels(False)
         self.view_box.init_history()
         self.view_box.tag_history()
 
@@ -686,8 +694,8 @@ class OWScatterPlotBase(gui.OWComponent):
         else:
             self._update_plot_coordinates(self.scatterplot_item, x, y)
             self._update_plot_coordinates(self.scatterplot_item_sel, x, y)
+            self.update_labels()
 
-        self._update_label_coords(x, y)
         self.update_density()  # Todo: doesn't work: try MDS with density on
         self._reset_view(x, y)
 
@@ -1007,7 +1015,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def update_labels(self):
         """
-        Trigger an updaet of labels
+        Trigger an update of labels
 
         The method calls `get_labels` which in turn calls the widget's
         `get_label_data`. The obtained labels are shown if the corresponding
@@ -1018,31 +1026,38 @@ class OWScatterPlotBase(gui.OWComponent):
         self.labels = []
         if self.scatterplot_item is None \
                 or self.label_only_selected and self.selection is None:
+            self._signal_too_many_labels(False)
             return
         labels = self.get_labels()
         if labels is None:
+            self._signal_too_many_labels(False)
+            return
+        (x0, x1), (y0, y1) = self.view_box.viewRange()
+        x, y = self.scatterplot_item.getData()
+        mask = np.logical_and(
+            np.logical_and(x >= x0, x <= x1),
+            np.logical_and(y >= y0, y <= y1))
+        if self.label_only_selected:
+            mask = np.logical_and(
+                mask, self._filter_visible(self.selection) != 0)
+        if mask.sum() > self.MAX_VISIBLE_LABELS:
+            self._signal_too_many_labels(True)
             return
         black = pg.mkColor(0, 0, 0)
-        x, y = self.scatterplot_item.getData()
-        if self.label_only_selected:
-            selected = np.nonzero(self._filter_visible(self.selection))
-            labels = labels[selected]
-            x = x[selected]
-            y = y[selected]
+        labels = labels[mask]
+        x = x[mask]
+        y = y[mask]
         for label, xp, yp in zip(labels, x, y):
             ti = TextItem(label, black)
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
+        self._signal_too_many_labels(False)
 
-    def _update_label_coords(self, x, y):
-        """Update label coordinates"""
-        if self.label_only_selected:
-            selected = np.nonzero(self._filter_visible(self.selection))
-            x = x[selected]
-            y = y[selected]
-        for label, xp, yp in zip(self.labels, x, y):
-            label.setPos(xp, yp)
+    def _signal_too_many_labels(self, too_many):
+        if self._too_many_labels != too_many:
+            self._too_many_labels = too_many
+            self.too_many_labels.emit(too_many)
 
     # Shapes
     def get_shapes(self):
@@ -1194,6 +1209,7 @@ class OWScatterPlotBase(gui.OWComponent):
 
     def reset_button_clicked(self):
         self.plot_widget.getViewBox().autoRange()
+        self.update_labels()
 
     def select_by_click(self, _, points):
         if self.scatterplot_item is not None:

@@ -154,3 +154,13 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
+
+    def test_too_many_labels(self):
+        w = self.widget.Warning.too_many_labels
+        self.assertFalse(w.is_shown())
+
+        self.widget.graph.too_many_labels.emit(True)
+        self.assertTrue(w.is_shown())
+
+        self.widget.graph.too_many_labels.emit(False)
+        self.assertFalse(w.is_shown())
