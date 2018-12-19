@@ -433,7 +433,9 @@ class SpearmanModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
         if x2 is None:
             n1 = x1.shape[1 - self.axis]
-            if n1 == 2:
+            if n1 == 1:
+                rho = 1.0
+            elif n1 == 2:
                 # Special case to properly fill degenerate self correlations
                 # (nan, inf on the diagonals)
                 rho = stats.spearmanr(x1, x1, axis=self.axis)[0]
