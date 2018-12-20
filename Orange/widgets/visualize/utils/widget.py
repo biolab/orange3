@@ -442,7 +442,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
                         self.effective_data.X, equal_nan=True))
         if self._invalidated:
             self.clear()
-        self.cb_class_density.setEnabled(self.can_draw_density())
+        self.enable_controls()
 
     def check_data(self):
         self.valid_data = None
@@ -450,6 +450,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     def use_context(self):
         pass
+
+    def enable_controls(self):
+        self.cb_class_density.setEnabled(self.can_draw_density())
 
     @Inputs.data_subset
     @check_sql_input
