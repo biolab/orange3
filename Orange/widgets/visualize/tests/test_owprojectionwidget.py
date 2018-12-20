@@ -208,6 +208,13 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.valid_data = np.zeros((10,), dtype=bool)
         self.assertIsNone(self.widget.get_coordinates_data()[0])
 
+    def test_sparse_data_reload(self):
+        table = Table("heart_disease").to_sparse()
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

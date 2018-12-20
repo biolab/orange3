@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import QApplication
 from Orange.data import (
     Table, ContinuousVariable, Domain, Variable, StringVariable
 )
-from Orange.data.util import get_unique_names
+from Orange.data.util import get_unique_names, array_equal
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.statistics.util import bincount
@@ -437,9 +437,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.use_context()
         self._invalidated = not (
             data_existed and self.data is not None and
-            effective_data.X.shape == self.effective_data.X.shape and
-            np.allclose(effective_data.X,
-                        self.effective_data.X, equal_nan=True))
+            array_equal(effective_data.X, self.effective_data.X))
         if self._invalidated:
             self.clear()
         self.enable_controls()
