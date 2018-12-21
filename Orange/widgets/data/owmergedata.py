@@ -370,11 +370,11 @@ class OWMergeData(widget.OWWidget):
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
         table = Orange.data.Table.from_numpy(domain, X, Y, metas)
-        table.name = getattr(self.data, 'name')
-        table.attributes = getattr(self.data, 'attributes')
-        table.ids = getattr(self.data, 'ids')
-        return table 
-    
+        table.name = getattr(self.data, 'name', '')
+        table.attributes = getattr(self.data, 'attributes', {})
+        table.ids = self.data.ids
+        return table
+
     @staticmethod
     def _join_array_by_indices(left, right, indices, string_cols=None):
         """Join (horizontally) two arrays, taking pairs of rows given in indices
