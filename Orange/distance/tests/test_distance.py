@@ -869,6 +869,31 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                           [0.4, 1, 5/12],
                           [0.25, 5/12, 1]]))
 
+class HammingDistanceTest(FittedDistanceTest):
+    Distance = distance.Hamming
+
+    def test_hamming_col(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.disc_data
+        dist = distance.Hamming(data, axis=0)
+
+        assert_almost_equal(
+            dist,
+            [[0, 2/3, 1/3],
+             [2/3, 0, 1/3],
+             [1/3, 1/3, 0]])
+
+    def test_hamming_row(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.disc_data
+        dist = distance.Hamming(data)
+
+        assert_almost_equal(
+            dist,
+            [[0, 2/3, 1],
+             [2/3, 0, 2/3],
+             [1, 2/3, 0]]
+        )
 
 if __name__ == "__main__":
     unittest.main()

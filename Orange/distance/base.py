@@ -243,7 +243,7 @@ class DistanceModel:
 
     def compute_distances(self, x1, x2):
         """
-        Abstract method for computation of distances between rows or colums of
+        Abstract method for computation of distances between rows or columns of
         `x1`, or between rows of `x1` and `x2`. Do not call directly."""
         pass
 
