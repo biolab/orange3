@@ -1,8 +1,6 @@
-from itertools import chain
-
 import numpy as np
 from Orange.data import Domain, DiscreteVariable
-from Orange.data.util import get_indices
+from Orange.data.util import get_unique_names
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
 ANNOTATED_DATA_FEATURE_NAME = "Selected"
@@ -32,28 +30,8 @@ def add_columns(domain, attributes=(), class_vars=(), metas=()):
     return Domain(attributes, class_vars, metas)
 
 
-def get_next_name(names, name):
-    """
-    Returns next 'possible' attribute name. The name should not be duplicated
-    and is generated using name parameter, appended by smallest possible index.
-
-    :param names: list
-    :param name: str
-    :return: str
-    """
-    if isinstance(names, Domain):
-        names = [
-            var.name
-            for var in chain(names.attributes, names.class_vars, names.metas)
-        ]
-    indexes = get_indices(names, name)
-    if name not in names and not indexes:
-        return name
-    return "{} ({})".format(name, max(indexes, default=0) + 1)
-
-
 def _table_with_annotation_column(data, values, column_data, var_name):
-    var = DiscreteVariable(get_next_name(data.domain, var_name), values)
+    var = DiscreteVariable(get_unique_names(data.domain, var_name), values)
     class_vars, metas = data.domain.class_vars, data.domain.metas
     if not data.domain.class_vars:
         class_vars += (var, )

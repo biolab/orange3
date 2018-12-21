@@ -16,11 +16,12 @@ from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
+from Orange.data.util import get_unique_names
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, report
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
-from Orange.widgets.utils.annotated_data import get_next_name, add_columns, \
+from Orange.widgets.utils.annotated_data import add_columns, \
     ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import FutureWatcher
 from Orange.widgets.utils.signals import Input, Output
@@ -358,7 +359,7 @@ class OWLouvainClustering(widget.OWWidget):
         new_partition = list(map(index_map.get, self.partition))
 
         cluster_var = DiscreteVariable(
-            get_next_name(domain, 'Cluster'),
+            get_unique_names(domain, 'Cluster'),
             values=['C%d' % (i + 1) for i, _ in enumerate(np.unique(new_partition))]
         )
 
