@@ -1,9 +1,12 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
+import pyqtgraph
+import pyqtgraph.exporters
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsRectItem
+from AnyQt.QtGui import QImage
 
 import Orange
 from Orange.tests import named_file
@@ -23,6 +26,53 @@ class TestIO(GuiTest):
         os.close(fd)
         try:
             imgio.PdfFormat.write_image(fname, sc)
+        finally:
+            os.unlink(fname)
+
+
+class TestImgFormat(GuiTest):
+
+    def test_pyqtgraph_exporter(self):
+        graph = pyqtgraph.PlotWidget()
+        with patch("Orange.widgets.io.ImgFormat._get_exporter",
+                   Mock()) as mfn:
+            with self.assertRaises(Exception):
+                imgio.ImgFormat.write("", graph)
+            self.assertEqual(1, mfn.call_count)  # run pyqtgraph exporter
+
+    def test_other_exporter(self):
+        sc = QGraphicsScene()
+        sc.addItem(QGraphicsRectItem(0, 0, 3, 3))
+        with patch("Orange.widgets.io.ImgFormat._get_exporter",
+                   Mock()) as mfn:
+            with self.assertRaises(Exception):
+                imgio.ImgFormat.write("", sc)
+            self.assertEqual(0, mfn.call_count)
+
+
+class TestPng(GuiTest):
+
+    def test_pyqtgraph(self):
+        fd, fname = tempfile.mkstemp('.png')
+        os.close(fd)
+        graph = pyqtgraph.PlotWidget()
+        try:
+            imgio.PngFormat.write(fname, graph)
+            im = QImage(fname)
+            self.assertLess((200, 200), (im.width(), im.height()))
+        finally:
+            os.unlink(fname)
+
+    def test_other(self):
+        fd, fname = tempfile.mkstemp('.png')
+        os.close(fd)
+        sc = QGraphicsScene()
+        sc.addItem(QGraphicsRectItem(0, 0, 3, 3))
+        try:
+            imgio.PngFormat.write(fname, sc)
+            im = QImage(fname)
+            # writer adds 15*2 of empty space
+            self.assertEqual((30+4, 30+4), (im.width(), im.height()))
         finally:
             os.unlink(fname)
 
