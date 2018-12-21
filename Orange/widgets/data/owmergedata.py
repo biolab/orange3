@@ -360,18 +360,21 @@ class OWMergeData(widget.OWWidget):
         of rows given in indices"""
         if not len(indices):
             return None
-        merged = self.data.copy()
-        merged.domain = Orange.data.Domain(
+        domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
               for x in ("attributes", "class_vars", "metas")))
-        merged.X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
-        merged.Y = self._join_array_by_indices(
+        X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
+        Y = self._join_array_by_indices(
             np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
         string_cols = [i for i, var in enumerate(self.data.domain.metas) if var.is_string]
-        merged.metas = self._join_array_by_indices(
+        metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
-        return merged
-
+        table = Orange.data.Table.from_numpy(domain, X, Y, metas)
+        table.name = getattr(self.data, 'name')
+        table.attributes = getattr(self.data, 'attributes')
+        table.ids = getattr(self.data, 'ids')
+        return Orange.data.Table.from_numpy(domain, X, Y, metas)
+    
     @staticmethod
     def _join_array_by_indices(left, right, indices, string_cols=None):
         """Join (horizontally) two arrays, taking pairs of rows given in indices
