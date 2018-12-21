@@ -144,3 +144,17 @@ class TestUtil(unittest.TestCase):
         a2 = sp.csc_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
         a2[0, 1] = 0  # explicitly setting to 0
         self.assertTrue(array_equal(a1, a2))
+
+    def test_csc_scr_equal(self):
+        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))
+
+        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))
+
+    def test_csc_unordered_array_equal(self):
+        a1 = sp.csc_matrix(([1, 4, 5], [0, 0, 1], [0, 1, 1, 3]), shape=(2, 3))
+        a2 = sp.csc_matrix(([1, 5, 4], [0, 1, 0], [0, 1, 1, 3]), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))
