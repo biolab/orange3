@@ -32,7 +32,11 @@ class TestOWMergeData(WidgetTest):
         yB = np.array([np.nan, 1, 0])
         metasB = np.array([[np.nan], [1], [0]]).astype(object)
         cls.dataA = Table(domainA, XA, yA, metasA)
+        cls.dataA.name = 'dataA'
+        cls.dataA.attributes = 'dataA attributes'
         cls.dataB = Table(domainB, XB, yB, metasB)
+        cls.dataB.name = 'dataB'
+        cls.dataB.attributes = 'dataB attributes'
 
     def setUp(self):
         self.widget = self.create_widget(OWMergeData)
@@ -231,7 +235,11 @@ class TestOWMergeData(WidgetTest):
         self.widget.attr_augment_data = domainA[0]
         self.widget.attr_augment_extra = domainB[0]
         self.widget.commit()
-        self.assertTablesEqual(self.get_output(self.widget.Outputs.data), result)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertTablesEqual(output, result)
+        self.assertEqual(output.name, self.dataA.name)
+        np.testing.assert_array_equal(output.ids, self.dataA.ids)
+        self.assertEqual(output.attributes, self.dataA.attributes)
 
     def test_output_merge_by_attribute_inner(self):
         """Check output for merging option 'Find matching rows' by attribute"""
