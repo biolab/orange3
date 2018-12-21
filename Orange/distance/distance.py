@@ -2,7 +2,7 @@ import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
-from sklearn.metrics import hamming_loss
+from sklearn.metrics import hamming_loss, pairwise_distances
 from itertools import combinations
 
 from Orange.distance import _distance
@@ -639,16 +639,19 @@ class MahalanobisDistance:
         return Mahalanobis(axis=axis).fit(data)
 
 class Hamming(Distance):
-    supports_sparse = False
+    supports_sparse = True
     supports_missing = False
     supports_normalization = False
     supports_discrete = True
 
     def fit(self, data):
         x = _orange_to_numpy(data)
-        return HammingColumnModel(self.axis, self.impute, x)
+        if self.axis == 0:
+            return HammingColumnsModel(self.axis, self.impute, x)
+        else:
+            return HammingRowsModel(self.axis, self.impute, x)
 
-class HammingColumnModel(DistanceModel):
+class HammingColumnsModel(DistanceModel):
     """
     Model for computation of Hamming distances between columns.
     """
@@ -662,10 +665,20 @@ class HammingColumnModel(DistanceModel):
         return super().__call__(e1, e2)
 
     def compute_distances(self, x1, x2=None):
-        n = x1.shape[1]
-        distances = np.zeros((n, n))
-        for i, j in combinations(range(n), 2):
-            tmp = hamming_loss(x1[:, i], x1[:, j])
-            distances[i, j], distances[j, i] = tmp, tmp
-        return distances
+        return pairwise_distances(x1.T, metric='hamming')
 
+class HammingRowsModel(DistanceModel):
+    """
+    Model for computation of Hamming distances between rows.
+    """
+    def __init__(self, axis, impute, x):
+        super().__init__(axis, impute)
+        self.x = x
+
+    def __call__(self, e1, e2=None, impute=None):
+        if impute is not None:
+            self.impute = impute
+        return super().__call__(e1, e2)
+
+    def compute_distances(self, x1, x2=None):
+        return pairwise_distances(x1, metric='hamming')
