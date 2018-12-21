@@ -541,11 +541,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         return data
 
     def _get_projection_variables(self):
-        domain = self.data.domain
         names = get_unique_names(
-            [v.name for v in domain.variables + domain.metas],
-            self.embedding_variables_names
-        )
+            self.data.domain, self.embedding_variables_names)
         return ContinuousVariable(names[0]), ContinuousVariable(names[1])
 
     @staticmethod

@@ -113,12 +113,6 @@ class TestAnnotatedData(unittest.TestCase):
         self.assertEqual(data.domain.metas[1].name,
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 4))
 
-    def test_get_unique_names(self):
-        names = ["charlie", "bravo", "charlie (2)", "charlie (3)", "bravo (2)", "charlie (4)",
-                 "bravo (3)"]
-        self.assertEqual(get_unique_names(names, ["bravo", "charlie"]),
-                         ["bravo (5)", "charlie (5)"])
-
     def test_create_groups_table_include_unselected(self):
         group_indices = random.sample(range(0, len(self.zoo)), 20)
         selection = np.zeros(len(self.zoo), dtype=np.uint8)
