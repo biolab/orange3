@@ -2,8 +2,7 @@ import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
-from sklearn.metrics import hamming_loss, pairwise_distances
-from itertools import combinations
+from sklearn.metrics import pairwise_distances
 
 from Orange.distance import _distance
 from Orange.statistics import util
