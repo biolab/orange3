@@ -198,6 +198,7 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
     def new_prompt(self, prompt):
         self.write(prompt)
         self.newPromptPos = self.textCursor().position()
+        self.repaint()
 
     def write(self, data):
         cursor = QTextCursor(self.document())
