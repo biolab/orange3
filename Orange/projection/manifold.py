@@ -483,3 +483,8 @@ class TSNE(Projector):
         model.name = self.name
 
         return model
+
+    @staticmethod
+    def default_initialization(data, n_components=2, random_state=None):
+        return fastTSNE.initialization.pca(
+            data, n_components, random_state=random_state)
