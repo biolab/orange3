@@ -285,8 +285,10 @@ a
         self.assertTrue(self.widget.Warning.load_warning.is_shown())
 
     def test_fail(self):
-        with named_file("name\nc\n\nstring", suffix=".tab") as fn:
+        with named_file("name\nc\n\nstring", suffix=".tab") as fn, \
+                patch("Orange.widgets.data.owfile.log.exception") as log:
             self.open_dataset(fn)
+            log.assert_called()
         self.assertTrue(self.widget.Error.unknown.is_shown())
 
     def test_read_format(self):
