@@ -354,7 +354,8 @@ def stats(X, weights=None, compute_variance=False):
 
 def _nan_min_max(x, func, axis=0):
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*", RuntimeWarning)
+        warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*",
+                                RuntimeWarning)
         if not sp.issparse(x):
             return func(x, axis=axis)
         if axis is None:
