@@ -3,6 +3,7 @@
 
 import gc
 import weakref
+import warnings
 
 from unittest.mock import patch, MagicMock
 
@@ -12,7 +13,7 @@ from AnyQt.QtWidgets import QAction
 from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.gui import OWComponent
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.messagewidget import MessagesWidget
@@ -26,6 +27,7 @@ class MyWidget(OWWidget):
     name = "Dummy"
 
     field = Setting(42)
+    component = SettingProvider(DummyComponent)
 
     def __init__(self):
         super().__init__()
