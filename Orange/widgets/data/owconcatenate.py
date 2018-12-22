@@ -186,7 +186,7 @@ class OWConcatenate(widget.OWWidget):
 
         tables = [table.transform(domain) for table in tables]
         if tables:
-            data = type(tables[0]).concatenate(tables, axis=0)
+            data = type(tables[0]).concatenate(tables)
             if source_var:
                 source_ids = np.array(list(flatten(
                     [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
