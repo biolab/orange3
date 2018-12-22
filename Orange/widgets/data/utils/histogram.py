@@ -366,7 +366,8 @@ class Histogram(QGraphicsWidget):
 
             colors = []
             for bin_idx in range(self.n_bins):
-                mean = ut.nanmean(self.y[mask[bin_idx]], axis=0) / self.y.max()
+                mean = ut.nanmean(self.y[mask[bin_idx]], axis=0) \
+                       / ut.nanmax(self.y)
                 colors.append([palette[mean]])
 
         else:
