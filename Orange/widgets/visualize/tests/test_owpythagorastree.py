@@ -298,15 +298,18 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         regex = r'Nodes:(.+)\s*Depth:(.+)'
         # Should contain no info by default
         self.assertNotRegex(
-            self.widget.info.text(), regex,
+            self.widget.infolabel.text(), regex,
             'Initial info should not contain node or depth info')
         # Test info label for tree
         self.send_signal(w.Inputs.tree, self.titanic)
-        self.assertRegex(w.info.text(), regex, 'Valid tree does not update info')
+        self.assertRegex(
+            w.infolabel.text(), regex,
+            'Valid tree does not update info')
         # Remove tree from input
         self.send_signal(w.Inputs.tree, None)
         self.assertNotRegex(
-            w.info.text(), regex, 'Initial info should not contain node or depth info')
+            w.infolabel.text(), regex,
+            'Initial info should not contain node or depth info')
 
     def test_tree_determinism(self):
         """Check that the tree is drawn identically upon receiving the same

@@ -170,7 +170,7 @@ class TestOWFile(WidgetTest):
         self.assertEqual(file_name, path.basename(self.widget.last_path()))
         self.assertTrue(self.widget.Error.file_not_found.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
-        self.assertEqual(self.widget.info.text(), "No data.")
+        self.assertEqual(self.widget.infolabel.text(), "No data.")
 
         # Open a sample dataset
         self.open_dataset("iris")
