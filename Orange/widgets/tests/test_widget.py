@@ -274,17 +274,20 @@ class WidgetMsgTestCase(WidgetTest):
         w.messageActivated.connect(messages.add)
         w.messageDeactivated.connect(messages.remove)
 
-        w.error(1, "A")
+        with self.assertWarns(UserWarning):
+            w.error(1, "A")
 
         self.assertEqual(len(w.Error.active), 1)
         self.assertEqual(len(messages), 1)
 
-        w.error(1)
+        with self.assertWarns(UserWarning):
+            w.error(1)
 
         self.assertEqual(len(messages), 0)
         self.assertEqual(len(w.Error.active), 0)
 
-        w.error(2, "B")
+        with self.assertWarns(UserWarning):
+            w.error(2, "B")
         self.assertEqual(len(messages), 1)
 
         w.Error.clear()
