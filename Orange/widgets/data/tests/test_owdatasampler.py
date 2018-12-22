@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
+
 from Orange.data import Table
 from Orange.widgets.data.owdatasampler import OWDataSampler
 from Orange.widgets.tests.base import WidgetTest
@@ -64,7 +66,9 @@ class TestOWDataSampler(WidgetTest):
     def test_no_intersection_in_outputs(self):
         """ Check whether outputs intersect and whether length of outputs sums
         to length of original data """
-        self.send_signal("Data", self.zoo)
+        iris = Table("iris")
+        iris.X = np.arange(iris.X.size).reshape(iris.X.shape)
+        self.send_signal("Data", iris)
         w = self.widget
         sampling_types = [w.FixedProportion, w.FixedSize, w.CrossValidation]
 
@@ -78,7 +82,7 @@ class TestOWDataSampler(WidgetTest):
 
                     sample = self.get_output("Data Sample")
                     other = self.get_output("Remaining Data")
-                    self.assertEqual(len(self.zoo), len(sample) + len(other))
+                    self.assertEqual(len(iris), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
 
     def test_bigger_size_with_replacement(self):
