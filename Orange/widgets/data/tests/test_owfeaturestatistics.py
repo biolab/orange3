@@ -277,8 +277,11 @@ class TestVariousDataSets(WidgetTest):
 
     def test_on_edge_case_datasets(self):
         for data in datasets.datasets():
-            self.send_signal(self.widget.Inputs.data, data)
-            self.force_render_table()
+            try:
+                self.send_signal(self.widget.Inputs.data, data)
+                self.force_render_table()
+            except Exception as e:
+                raise AssertionError(f"Failed on `{data.name}`") from e
 
 
 def select_rows(rows: List[int], widget: OWFeatureStatistics):
