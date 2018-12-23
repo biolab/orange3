@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import warnings
+
 import numpy as np
 
 from AnyQt.QtCore import QPoint, Qt, QEvent
@@ -121,7 +123,9 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
             list(zip([1.79e308, -1e120],
                      "yy"))
         )
-        distances = Euclidean(table)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*", RuntimeWarning)
+            distances = Euclidean(table)
         self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
         self.send_signal(self.widget.Inputs.distances, distances)
         self.assertTrue(self.widget.Error.not_finite_distances.is_shown())
