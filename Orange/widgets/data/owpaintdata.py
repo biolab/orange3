@@ -795,7 +795,7 @@ class OWPaintData(OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        if not self.data:
+        if self.data is None or not len(self.data):
             self.data = []
             self.__buffer = np.zeros((0, 3))
         elif isinstance(self.data, np.ndarray):

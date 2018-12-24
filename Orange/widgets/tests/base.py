@@ -1,3 +1,4 @@
+import warnings
 from contextlib import contextmanager
 import os
 import pickle
@@ -952,6 +953,10 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
+        # scipy.sparse uses matrix; this filter can be removed when it stops
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
+
         table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
