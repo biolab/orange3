@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import scipy.spatial.distance
 
@@ -337,15 +339,20 @@ class OWMDS(OWDataProjectionWidget):
                     init_type=init_type, init_data=init
                 )
 
-                mdsfit = mds(X)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", ".*double_scalars.*", RuntimeWarning)
+                    mdsfit = mds(X)
                 iterations_done += step_iter
 
                 embedding, stress = mdsfit.embedding_, mdsfit.stress_
-                stress /= np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
+                emb_norm = np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
+                if emb_norm > 0:
+                    stress /= emb_norm
 
-                if iterations_done >= max_iter:
-                    done = True
-                elif (oldstress - stress) < mds.params["eps"]:
+                if iterations_done >= max_iter \
+                        or (oldstress - stress) < mds.params["eps"] \
+                        or stress == 0:
                     done = True
                 init = embedding
                 oldstress = stress
