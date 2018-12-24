@@ -1,6 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import warnings
+
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import Continuize
@@ -77,6 +80,10 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
     def test_not_enough_data_settings_changed(self):
         """Check widget for dataset with one feature or for one instance"""
+        # Test tests that widget handles this exact condition
+        warnings.filterwarnings("ignore", "Number of distinct clusters",
+                                ConvergenceWarning)
+
         msg = self.widget.Error
         for kmeans_checked in (False, True):
             self.widget.controls.merge_kmeans.setChecked(kmeans_checked)
@@ -136,6 +143,10 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         table = Table.from_numpy(Domain([ContinuousVariable()]),
                                  data.reshape((9, 1)))
         self.widget.controls.merge_kmeans.setChecked(True)
+
+        # Test tests that widget handles this exact condition
+        warnings.filterwarnings("ignore", "Number of distinct clusters",
+                                ConvergenceWarning)
         self.send_signal(self.widget.Inputs.data, table)
 
         self.assertTrue(self.widget.Warning.empty_clusters.is_shown())
