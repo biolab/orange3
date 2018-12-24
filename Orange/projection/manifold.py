@@ -109,7 +109,7 @@ class MDS(SklProjector):
     __wraps__ = skl_manifold.MDS
     name = 'MDS'
 
-    def __init__(self, n_components=2, metric=True, n_init=4, max_iter=300,
+    def __init__(self, n_components=2, metric=True, n_init=None, max_iter=300,
                  eps=0.001, n_jobs=1, random_state=None,
                  dissimilarity='euclidean', init_type="random", init_data=None,
                  preprocessors=None):
@@ -147,6 +147,8 @@ class MDS(SklProjector):
             init_data = None
 
         params["dissimilarity"] = dissimilarity
+        if params["n_init"] is None:
+            params["n_init"] = 4 if init_data is None else 1
         mds = self.__wraps__(**params)
         mds.fit(X, y=Y, init=init_data)
         mds.domain = domain
