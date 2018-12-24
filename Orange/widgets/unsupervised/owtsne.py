@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from AnyQt.QtCore import Qt, QTimer
@@ -169,12 +171,16 @@ class OWtSNE(OWDataProjectionWidget):
                 error(self.Error.not_enough_rows)
             elif not self.data.domain.attributes:
                 error(self.Error.no_attributes)
-            elif not self.data.is_sparse() and \
-                    not np.sum(np.nanstd(self.data.X, axis=0)):
-                error(self.Error.constant_data)
-            elif not self.data.is_sparse() and \
-                    np.all(~np.isfinite(self.data.X)):
-                error(self.Error.no_valid_data)
+            elif not self.data.is_sparse():
+                if np.all(~np.isfinite(self.data.X)):
+                    error(self.Error.no_valid_data)
+                else:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore", "Degrees of freedom .*", RuntimeWarning)
+                        if np.nan_to_num(np.nanstd(self.data.X, axis=0)).sum() \
+                                == 0:
+                            error(self.Error.constant_data)
 
     def get_embedding(self):
         if self.data is None:
