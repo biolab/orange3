@@ -58,11 +58,11 @@ class TestDistMatrix(TestCase):
 
     def test_from_file(self):
         with named_file(
-            """3 axis=0 asymmetric col_labels row_labels
-                ann	bert	chad
-                danny	0.12	3.45	6.78
-                eve	9.01	2.34	5.67
-                frank	8.90	1.23	4.56""") as name:
+                """3 axis=0 asymmetric col_labels row_labels
+                    ann	bert	chad
+                    danny	0.12	3.45	6.78
+                    eve	9.01	2.34	5.67
+                    frank	8.90	1.23	4.56""") as name:
             m = DistMatrix.from_file(name)
             np.testing.assert_almost_equal(m, np.array([[0.12, 3.45, 6.78],
                                                         [9.01, 2.34, 5.67],
@@ -76,10 +76,10 @@ class TestDistMatrix(TestCase):
             self.assertEqual(m.axis, 0)
 
         with named_file(
-            """3 axis=1 row_labels
-                danny	0.12	3.45	6.78
-                eve 	9.01	2.34	5.67
-                frank	8.90""") as name:
+                """3 axis=1 row_labels
+                    danny	0.12	3.45	6.78
+                    eve 	9.01	2.34	5.67
+                    frank	8.90""") as name:
             m = DistMatrix.from_file(name)
             np.testing.assert_almost_equal(m, np.array([[0.12, 9.01, 8.90],
                                                         [9.01, 2.34, 0],

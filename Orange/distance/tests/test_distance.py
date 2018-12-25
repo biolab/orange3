@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 from math import sqrt
 
 import numpy as np
@@ -671,6 +672,12 @@ class ManhattanDistanceTest(FittedDistanceTest, CommonNormalizedTests):
 
 class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
     Distance = distance.Cosine
+
+    def test_no_data(self):
+        with patch("warnings.warn") as warn:
+            super().test_no_data()
+            self.assertEqual(warn.call_args[0],
+                             ("Mean of empty slice", RuntimeWarning))
 
     def test_cosine_disc(self):
         assert_almost_equal = np.testing.assert_almost_equal
