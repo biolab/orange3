@@ -211,7 +211,7 @@ class OWLouvainClustering(widget.OWWidget):
 
         # Preprocess the dataset
         if self.preprocessed_data is None:
-            louvain = Louvain()
+            louvain = Louvain(random_state=0)
             self.preprocessed_data = louvain.preprocess(self.data)
 
         state = TaskState(self)
@@ -590,7 +590,7 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
     if state.is_interuption_requested():
         return res
 
-    louvain = Louvain(resolution=resolution)
+    louvain = Louvain(resolution=resolution, random_state=0)
     res.partition = louvain.fit_predict(graph)
     state.set_partial_results(("partition", res.partition))
     return res
@@ -603,7 +603,7 @@ def run_on_graph(graph, resolution, state):
     """
     state = state  # type: TaskState
     res = Results(resolution=resolution)
-    louvain = Louvain(resolution=resolution)
+    louvain = Louvain(resolution=resolution, random_state=0)
     state.set_status("Detecting communities...")
     if state.is_interuption_requested():
         return res
