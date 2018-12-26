@@ -4,6 +4,7 @@
 
 import unittest
 from unittest.mock import Mock
+import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -430,6 +431,7 @@ class TestDomainDistribution(unittest.TestCase):
              [0, 0, 0, 0,      0,      0,      0, 0, 0, 0, 0, 0, 0,   0, 0, 0, 0,      0, 0, 0],
              [0, 0, 2, 0,      0,      0,      1, 0, 0, 0, 0, 0, 0, 1.1, 0, 0, 0,      0, 0, 0]]
         )
+        warnings.filterwarnings("ignore", ".*", sp.SparseEfficiencyWarning)
         X[0, 0] = 0
 
         d = data.Table.from_numpy(domain, X)
