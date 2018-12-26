@@ -344,7 +344,11 @@ class FreeViz(LinearProjector):
                                      is_class_discrete=is_class_discrete)
 
             # Scale the changes (the largest anchor move is alpha * radius)
-            step = np.min(np.linalg.norm(A, axis=1) / np.linalg.norm(G, axis=1))
+            with np.errstate(divide="ignore"):  # inf's will be ignored by min
+                step = np.min(np.linalg.norm(A, axis=1)
+                              / np.linalg.norm(G, axis=1))
+                if not np.isfinite(step):
+                    break
             step = alpha * step
             Anew = A - step * G
 
