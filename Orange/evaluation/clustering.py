@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from sklearn.metrics import silhouette_score, adjusted_mutual_info_score, silhouette_samples
 
@@ -35,17 +37,22 @@ class ClusteringScore(Score):
 
     def from_predicted(self, results, score_function):
         # Clustering scores from labels
-        if self.considers_actual:
-            return np.fromiter(
-                (score_function(results.actual.flatten(), predicted.flatten())
-                 for predicted in results.predicted),
-                dtype=np.float64, count=len(results.predicted))
-        # Clustering scores from data only
-        else:
-            return np.fromiter(
-                (score_function(results.data.X, predicted.flatten())
-                 for predicted in results.predicted),
-                dtype=np.float64, count=len(results.predicted))
+        # This warning filter can be removed in scikit 0.22
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", "The behavior of AMI will change in version 0\.22.*")
+            if self.considers_actual:
+                return np.fromiter(
+                    (score_function(results.actual.flatten(),
+                                    predicted.flatten())
+                     for predicted in results.predicted),
+                    dtype=np.float64, count=len(results.predicted))
+            # Clustering scores from data only
+            else:
+                return np.fromiter(
+                    (score_function(results.data.X, predicted.flatten())
+                     for predicted in results.predicted),
+                    dtype=np.float64, count=len(results.predicted))
 
 
 class Silhouette(ClusteringScore):
