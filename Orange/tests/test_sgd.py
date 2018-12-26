@@ -2,8 +2,10 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import warnings
 
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table
 from Orange.classification import SGDClassificationLearner
@@ -12,6 +14,11 @@ from Orange.evaluation import CrossValidation, RMSE, AUC
 
 
 class TestSGDRegressionLearner(unittest.TestCase):
+    def setUp(self):
+        # Convergence warnings are irrelevant for these tests
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
+        super().setUp()
+
     def test_SGDRegression(self):
         nrows, ncols = 500, 5
         X = np.random.rand(nrows, ncols)
@@ -31,6 +38,11 @@ class TestSGDClassificationLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
+
+    def setUp(self):
+        # Convergence warnings are irrelevant for these tests
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
+        super().setUp()
 
     def test_SGDClassification(self):
         sgd = SGDClassificationLearner()

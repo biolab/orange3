@@ -907,7 +907,8 @@ def varying_between(table, idvar):
         subset = table[indices]
         for var in list(candidate_set):
             column, _ = subset.get_column_view(var)
-            values = util.unique(column)
+            with numpy.errstate(invalid="ignore"):  # nans are removed below
+                values = util.unique(column)
 
             if not var.is_string:
                 values = unique_non_nan(values)
