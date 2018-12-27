@@ -24,6 +24,9 @@ from glob import glob
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
+import xlrd
+import xlsxwriter
+
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
@@ -170,19 +173,8 @@ def guess_data_type(orig_values, namask=None):
 
 
 def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
-                      domain_vars=None, existing_var=None, new_var_name=None, data=None, name=None):
+                      name=None):
     assert issubclass(coltype, Variable)
-
-    if name is None or existing_var is not None or new_var_name is not None:
-        name = existing_var.strip() if existing_var else new_var_name
-        raise DeprecationWarning("Arguments 'existing_var' and 'new_var_name' are "\
-                                 "deprecated since 3.16; use 'name' instead")
-
-    if domain_vars is not None:
-        raise DeprecationWarning("Argument 'domain_vars' is deprecated since 3.16")
-
-    if data is not None:
-        raise DeprecationWarning("Argument 'data' is deprecated since 3.16")
 
     def get_number_of_decimals(values):
         len_ = len
@@ -813,6 +805,22 @@ class FileFormat(metaclass=FileFormatMeta):
         write(cls.header_flags(data))
 
     @classmethod
+    def formatter(cls, var):
+        # type: (Variable) -> Callable[[Variable], Any]
+        # Return a column 'formatter' function. The function must return
+        # something that `write` knows how to write
+        if var.is_time:
+            return var.repr_val
+        elif var.is_continuous:
+            return lambda value: "" if isnan(value) else value
+        elif var.is_discrete:
+            return lambda value: "" if isnan(value) else var.values[int(value)]
+        elif var.is_string:
+            return lambda value: value
+        else:
+            return var.repr_val
+
+    @classmethod
     def write_data(cls, write, data):
         """`write` is a callback that accepts an iterable"""
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
@@ -820,22 +828,7 @@ class FileFormat(metaclass=FileFormatMeta):
                           data.domain.class_vars,
                           data.domain.metas))
 
-        def formatter(var):
-            # type: (Variable) -> Callable[[Variable], Any]
-            # Return a column 'formatter' function. The function must return
-            # something that `write` knows how to write
-            if var.is_time:
-                return var.repr_val
-            elif var.is_continuous:
-                return lambda value: "" if isnan(value) else value
-            elif var.is_discrete:
-                return lambda value: "" if isnan(value) else var.values[int(value)]
-            elif var.is_string:
-                return lambda value: value
-            else:
-                return var.repr_val
-
-        formatters = [formatter(v) for v in vars]
+        formatters = [cls.formatter(v) for v in vars]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
@@ -986,28 +979,34 @@ class BasketReader(FileFormat):
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
-    EXTENSIONS = ('.xls', '.xlsx')
-    DESCRIPTION = 'Mircosoft Excel spreadsheet'
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+    SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
-        super().__init__(filename)
+        super().__init__(filename=filename)
+        self._workbook = None
 
-        from xlrd import open_workbook
-        self.workbook = open_workbook(self.filename)
+    @property
+    def workbook(self):
+        if not self._workbook:
+            self._workbook = xlrd.open_workbook(self.filename, on_demand=True)
+        return self._workbook
 
     @property
     @lru_cache(1)
     def sheets(self):
-        return self.workbook.sheet_names()
+        if self.workbook:
+            return self.workbook.sheet_names()
+        else:
+            return ()
 
     def read(self):
-        import xlrd
-        wb = xlrd.open_workbook(self.filename, on_demand=True)
         if self.sheet:
-            ss = wb.sheet_by_name(self.sheet)
+            ss = self.workbook.sheet_by_name(self.sheet)
         else:
-            ss = wb.sheet_by_index(0)
+            ss = self.workbook.sheet_by_index(0)
         try:
             first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
             first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
@@ -1023,6 +1022,27 @@ class ExcelReader(FileFormat):
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
+
+    @classmethod
+    def write_file(cls, filename, data):
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
+        headers = cls.header_names(data)
+        workbook = xlsxwriter.Workbook(filename)
+        sheet = workbook.add_worksheet()
+        for c, header in enumerate(headers):
+            sheet.write(0, c, header)
+        for i, row in enumerate(zipped_list_data, 1):
+            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                sheet.write(i, j, fmt(v))
+        workbook.close()
 
 
 class DotReader(FileFormat):

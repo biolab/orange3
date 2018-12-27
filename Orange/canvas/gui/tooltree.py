@@ -169,8 +169,8 @@ class ToolTree(QWidget):
 
             space_activates = \
                 self.style().styleHint(
-                        QStyle.SH_Menu_SpaceActivatesItem,
-                        None, None)
+                    QStyle.SH_Menu_SpaceActivatesItem,
+                    None, None)
 
             if key in [Qt.Key_Enter, Qt.Key_Return, Qt.Key_Select] or \
                     (key == Qt.Key_Space and space_activates):

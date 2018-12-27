@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
-from unittest.mock import MagicMock, patch
+# pylint: disable=missing-docstring,too-many-public-methods,protected-access
+from unittest.mock import MagicMock, patch, Mock
 import numpy as np
 
 from AnyQt.QtCore import QRectF, Qt
@@ -67,13 +67,24 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
     def test_score_heuristics(self):
         domain = Domain([ContinuousVariable(c) for c in "abcd"],
-                        DiscreteVariable("c", values="ab"))
+                        DiscreteVariable("e", values="ab"))
         a = np.arange(10).reshape((10, 1))
         data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
         self.send_signal(self.widget.Inputs.data, data)
         vizrank = ScatterPlotVizRank(self.widget)
         self.assertEqual([x.name for x in vizrank.score_heuristic()],
                          list("abcd"))
+
+    def test_score_heuristics_no_disc(self):
+        domain = Domain([ContinuousVariable(c) for c in "abc"] +
+                        [DiscreteVariable("d", values="abcdefghij")],
+                        DiscreteVariable("e", values="ab"))
+        a = np.arange(10).reshape((10, 1))
+        data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        self.assertEqual([x.name for x in vizrank.score_heuristic()],
+                         list("abc"))
 
     def test_optional_combos(self):
         domain = self.data.domain
@@ -133,18 +144,6 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, table)
         attr_x = self.widget.controls.attr_x
         simulate.combobox_activate_item(attr_x, "b")
-
-    def test_regression_line(self):
-        """It is possible to draw the line only for pair of continuous attrs"""
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertTrue(self.widget.cb_reg_line.isEnabled())
-        self.assertIsNone(self.widget.graph.reg_line_item)
-        self.widget.cb_reg_line.setChecked(True)
-        self.assertIsNotNone(self.widget.graph.reg_line_item)
-        self.widget.cb_attr_y.activated.emit(4)
-        self.widget.cb_attr_y.setCurrentIndex(4)
-        self.assertFalse(self.widget.cb_reg_line.isEnabled())
-        self.assertIsNone(self.widget.graph.reg_line_item)
 
     def test_points_combo_boxes(self):
         """Check Point box combo models and values"""
@@ -266,8 +265,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(len(selected_data), 50)
 
         # Changing the dataset should clear selection
-        titanic = Table("titanic")
-        self.send_signal(self.widget.Inputs.data, titanic)
+        heart = Table("heart_disease")
+        self.send_signal(self.widget.Inputs.data, heart)
         selected_data = self.get_output(self.widget.Outputs.selected_data)
         self.assertIsNone(selected_data)
 
@@ -283,15 +282,15 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
             OWScatterPlot, stored_settings={
                 "selection_group": [(i, 1) for i in range(50)]}
         )
-        self.send_signal(self.widget.Inputs.data, self.data[:10])
-        selected_data = self.get_output(self.widget.Outputs.selected_data)
-        self.assertEqual(len(selected_data), 10)
+        data = self.data.copy()[:11]
+        data[0, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
 
     def test_set_strings_settings(self):
         """
         Test if settings can be loaded as strings and successfully put
         in new owplotgui combos.
-        GH-2240
         """
         self.send_signal(self.widget.Inputs.data, self.data)
         settings = self.widget.settingsHandler.pack_data(self.widget)
@@ -310,7 +309,6 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
     def test_features_and_no_data(self):
         """
         Prevent crashing when features are sent but no data.
-        GH-2384
         """
         domain = Table("iris").domain
         self.send_signal(self.widget.Inputs.features,
@@ -320,10 +318,16 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
     def test_features_and_data(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
+        x, y = self.widget.graph.scatterplot_item.getData()
+        np.testing.assert_array_equal(x, data.X[:, 0])
+        np.testing.assert_array_equal(y, data.X[:, 1])
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(data.domain[2:]))
         self.assertIs(self.widget.attr_x, data.domain[2])
         self.assertIs(self.widget.attr_y, data.domain[3])
+        x, y = self.widget.graph.scatterplot_item.getData()
+        np.testing.assert_array_equal(x, data.X[:, 2])
+        np.testing.assert_array_equal(y, data.X[:, 3])
 
     def test_output_features(self):
         data = Table("iris")
@@ -383,6 +387,14 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                                     [True, False, True, False, True]):
             assert_vizrank_enabled(data, is_enabled)
 
+    def test_vizrank_nonprimitives(self):
+        """VizRank does not try to include non primitive attributes"""
+        data = Table("brown-selected")
+        self.send_signal(self.widget.Inputs.data, data)
+        with patch("Orange.widgets.visualize.owscatterplot.ReliefF",
+                   new=lambda *_1, **_2: lambda data: np.arange(len(data))):
+            self.widget.vizrank.score_heuristic()
+
     def test_auto_send_selection(self):
         """
         Scatter Plot automatically sends selection only when the checkbox Send automatically
@@ -401,56 +413,56 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIsInstance(output, Table)
 
     def test_color_is_optional(self):
-        zoo = Table("zoo")
-        backbone, breathes, airborne, type = \
-            [zoo.domain[x] for x in ["backbone", "breathes", "airborne", "type"]]
-        default_x, default_y, default_color = \
-            zoo.domain[0], zoo.domain[1], zoo.domain.class_var
+        heart = Table("heart_disease")
+        age, rest_sbp, max_hr, cholesterol, gender, narrowing = \
+            [heart.domain[x]
+             for x in ["age", "rest SBP", "max HR", "cholesterol", "gender",
+                       "diameter narrowing"]]
         attr_x = self.widget.controls.attr_x
         attr_y = self.widget.controls.attr_y
         attr_color = self.widget.controls.attr_color
 
         # Send dataset, ensure defaults are what we expect them to be
-        self.send_signal(self.widget.Inputs.data, zoo)
-        self.assertEqual(attr_x.currentText(), default_x.name)
-        self.assertEqual(attr_y.currentText(), default_y.name)
-        self.assertEqual(attr_color.currentText(), default_color.name)
+        self.send_signal(self.widget.Inputs.data, heart)
+        self.assertEqual(attr_x.currentText(), age.name)
+        self.assertEqual(attr_y.currentText(), rest_sbp.name)
+        self.assertEqual(attr_color.currentText(), narrowing.name)
         # Select different values
-        simulate.combobox_activate_item(attr_x, backbone.name)
-        simulate.combobox_activate_item(attr_y, breathes.name)
-        simulate.combobox_activate_item(attr_color, airborne.name)
+        simulate.combobox_activate_item(attr_x, max_hr.name)
+        simulate.combobox_activate_item(attr_y, cholesterol.name)
+        simulate.combobox_activate_item(attr_color, gender.name)
 
         # Send compatible dataset, values should not change
-        zoo2 = zoo[:, (backbone, breathes, airborne, type)]
-        self.send_signal(self.widget.Inputs.data, zoo2)
-        self.assertEqual(attr_x.currentText(), backbone.name)
-        self.assertEqual(attr_y.currentText(), breathes.name)
-        self.assertEqual(attr_color.currentText(), airborne.name)
+        heart2 = heart[:, (cholesterol, gender, max_hr, narrowing)]
+        self.send_signal(self.widget.Inputs.data, heart2)
+        simulate.combobox_activate_item(attr_x, max_hr.name)
+        simulate.combobox_activate_item(attr_y, cholesterol.name)
+        simulate.combobox_activate_item(attr_color, gender.name)
 
         # Send dataset without color variable
         # x and y should remain, color reset to default
-        zoo3 = zoo[:, (backbone, breathes, type)]
-        self.send_signal(self.widget.Inputs.data, zoo3)
-        self.assertEqual(attr_x.currentText(), backbone.name)
-        self.assertEqual(attr_y.currentText(), breathes.name)
-        self.assertEqual(attr_color.currentText(), default_color.name)
+        heart3 = heart[:, (age, max_hr, cholesterol, narrowing)]
+        self.send_signal(self.widget.Inputs.data, heart3)
+        simulate.combobox_activate_item(attr_x, max_hr.name)
+        simulate.combobox_activate_item(attr_y, cholesterol.name)
+        self.assertEqual(attr_color.currentText(), narrowing.name)
 
         # Send dataset without x
-        # y and color should be the same as with zoo
-        zoo4 = zoo[:, (default_x, default_y, breathes, airborne, type)]
-        self.send_signal(self.widget.Inputs.data, zoo4)
-        self.assertEqual(attr_x.currentText(), default_x.name)
-        self.assertEqual(attr_y.currentText(), default_y.name)
-        self.assertEqual(attr_color.currentText(), default_color.name)
+        # y and color should be the same as with heart
+        heart4 = heart[:, (age, rest_sbp, cholesterol, narrowing)]
+        self.send_signal(self.widget.Inputs.data, heart4)
+        self.assertEqual(attr_x.currentText(), age.name)
+        self.assertEqual(attr_y.currentText(), rest_sbp.name)
+        self.assertEqual(attr_color.currentText(), narrowing.name)
 
-        # Send dataset compatible with zoo2 and zoo3
-        # Color should reset to one in zoo3, as it was used more
+        # Send dataset compatible with heart2 and heart3
+        # Color should reset to one in heart3, as it was used more
         # recently
-        zoo5 = zoo[:, (default_x, backbone, breathes, airborne, type)]
-        self.send_signal(self.widget.Inputs.data, zoo5)
-        self.assertEqual(attr_x.currentText(), backbone.name)
-        self.assertEqual(attr_y.currentText(), breathes.name)
-        self.assertEqual(attr_color.currentText(), type.name)
+        heart5 = heart[:, (age, max_hr, cholesterol, gender, narrowing)]
+        self.send_signal(self.widget.Inputs.data, heart5)
+        simulate.combobox_activate_item(attr_x, max_hr.name)
+        simulate.combobox_activate_item(attr_y, cholesterol.name)
+        self.assertEqual(attr_color.currentText(), narrowing.name)
 
     def test_handle_metas(self):
         """
@@ -504,10 +516,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, data)
         widget = self.widget
         graph = widget.graph
-        scatterplot_item = graph.scatterplot_item
 
-        widget.controls.attr_x = data.domain["chest pain"]
-        widget.controls.attr_y = data.domain["cholesterol"]
+        widget.attr_x = data.domain["age"]
+        widget.attr_y = data.domain["max HR"]
+        scatterplot_item = graph.scatterplot_item
         all_points = scatterplot_item.points()
 
         event = MagicMock()
@@ -522,8 +534,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
                 self.assertIn("age = {}".format(data[42, "age"]), text)
-                self.assertIn("gender = {}".format(data[42, "gender"]), text)
-                self.assertNotIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertNotIn("gender = {}".format(data[42, "gender"]), text)
                 self.assertNotIn("others", text)
 
                 # Show all attributes
@@ -568,7 +580,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         def assert_equal(data, max):
             self.send_signal(self.widget.Inputs.data, data)
-            pen_data, brush_data = self.widget.graph.get_colors()
+            pen_data, _ = self.widget.graph.get_colors()
             self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
 
         assert_equal(prepare_data(), MAX_CATEGORIES)
@@ -576,6 +588,152 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = prepare_data()
         data.Y[42] = np.nan
         assert_equal(data, MAX_CATEGORIES + 1)
+
+    def test_change_data(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, Table("titanic"))
+        self.assertTrue(self.widget.Warning.no_continuous_vars.is_shown())
+        self.assertIsNone(self.widget.data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.annotated_data))
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertFalse(self.widget.Warning.no_continuous_vars.is_shown())
+        self.assertIs(self.widget.data, self.data)
+        self.assertIsNotNone(
+            self.get_output(self.widget.Outputs.annotated_data))
+
+    def test_invalidated_same_features(self):
+        self.widget.setup_plot = Mock()
+        # send data and set default features
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+        # send the same features as already set
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[:2]))
+        self.widget.setup_plot.assert_not_called()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+    def test_invalidated_same_time(self):
+        self.widget.setup_plot = Mock()
+        # send data and features at the same time (data first)
+        features = self.data.domain.attributes[:2]
+        signals = [(self.widget.Inputs.data, self.data),
+                   (self.widget.Inputs.features, AttributeList(features))]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features (same as default ones)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[:2]))
+        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.widget.setup_plot.assert_called_once()
+
+        # send data
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+    def test_invalidated_same_time_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features and data at the same time (features first)
+        features = self.data.domain.attributes[:2]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_diff_features(self):
+        self.widget.setup_plot = Mock()
+        # send data and set default features
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[:2]))
+
+        # send different features
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[2:4]))
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[2:4]))
+
+    def test_invalidated_diff_features_same_time(self):
+        self.widget.setup_plot = Mock()
+        # send data and different features at the same time (data first)
+        features = self.data.domain.attributes[2:4]
+        signals = [(self.widget.Inputs.data, self.data),
+                   (self.widget.Inputs.features, AttributeList(features))]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    def test_invalidated_diff_features_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send features (not the same as defaults)
+        self.send_signal(self.widget.Inputs.features,
+                         AttributeList(self.data.domain.attributes[2:4]))
+        self.assertListEqual(self.widget.effective_variables, [None, None])
+        self.widget.setup_plot.assert_called_once()
+
+        # send data
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables,
+                             list(self.data.domain.attributes[2:4]))
+
+    def test_invalidated_diff_features_same_time_features_first(self):
+        self.widget.setup_plot = Mock()
+        # send data and different features at the same time (features first)
+        features = self.data.domain.attributes[2:4]
+        signals = [(self.widget.Inputs.features, AttributeList(features)),
+                   (self.widget.Inputs.data, self.data)]
+        self.send_signals(signals)
+        self.widget.setup_plot.assert_called_once()
+        self.assertListEqual(self.widget.effective_variables, list(features))
+
+    @patch('Orange.widgets.visualize.owscatterplot.ScatterPlotVizRank.'
+           'on_manual_change')
+    def test_vizrank_receives_manual_change(self, on_manual_change):
+        # Recreate the widget so the patch kicks in
+        self.widget = self.create_widget(OWScatterPlot)
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        model = self.widget.controls.attr_x.model()
+        self.widget.attr_x = model[0]
+        self.widget.attr_y = model[1]
+        simulate.combobox_activate_index(self.widget.controls.attr_x, 2)
+        self.assertIs(self.widget.attr_x, model[2])
+        on_manual_change.assert_called_with(model[2], model[1])
+
+    def test_on_manual_change(self):
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = self.widget.vizrank
+        vizrank.toggle()
+        self.process_events(until=lambda: not vizrank.keep_running)
+
+        model = vizrank.rank_model
+        attrs = model.data(model.index(3, 0), vizrank._AttrRole)
+        vizrank.on_manual_change(*attrs)
+        selection = vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 1)
+        self.assertEqual(selection[0].row(), 3)
+
+        vizrank.on_manual_change(*attrs[::-1])
+        selection = vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 0)
 
 
 if __name__ == "__main__":

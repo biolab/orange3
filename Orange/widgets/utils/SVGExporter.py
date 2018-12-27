@@ -11,6 +11,10 @@ Fixes:
 Remove this file when pyqtgraph updates.
 """
 
+import re
+import xml.dom.minidom as xml
+
+import numpy as np
 
 from pyqtgraph.exporters.Exporter import Exporter
 from pyqtgraph.python2_3 import asUnicode
@@ -18,17 +22,15 @@ from pyqtgraph.parametertree import Parameter
 from pyqtgraph.Qt import QtGui, QtCore, QtSvg, USE_PYSIDE
 from pyqtgraph import debug
 from pyqtgraph import functions as fn
-import re
-import xml.dom.minidom as xml
-import numpy as np
 
 
 __all__ = ['SVGExporter']
 
+
 class SVGExporter(Exporter):
     Name = "Scalable Vector Graphics (SVG)"
-    allowCopy=True
-    
+    allowCopy = True
+
     def __init__(self, item):
         Exporter.__init__(self, item)
         #tr = self.getTargetRect()
@@ -46,25 +48,25 @@ class SVGExporter(Exporter):
         sr = self.getSourceRect()
         ar = sr.height() / sr.width()
         self.params.param('height').setValue(self.params['width'] * ar, blockSignal=self.heightChanged)
-        
+
     def heightChanged(self):
         sr = self.getSourceRect()
         ar = sr.width() / sr.height()
         self.params.param('width').setValue(self.params['height'] * ar, blockSignal=self.widthChanged)
-        
+
     def parameters(self):
         return self.params
-    
+
     def export(self, fileName=None, toBytes=False, copy=False):
         if toBytes is False and copy is False and fileName is None:
             self.fileSaveDialog(filter="Scalable Vector Graphics (*.svg)")
             return
-        
+
         ## Qt's SVG generator is not complete. (notably, it lacks clipping)
         ## Instead, we will use Qt to generate SVG for each item independently,
         ## then manually reconstruct the entire document.
         xml = generateSvg(self.item)
-        
+
         if toBytes:
             return xml.encode('UTF-8')
         elif copy:
@@ -98,9 +100,9 @@ def generateSvg(item):
         for i in items:
             if hasattr(i, 'setExportMode'):
                 i.setExportMode(False)
-    
+
     cleanXml(node)
-    
+
     defsXml = "<defs>\n"
     for d in defs:
         defsXml += d.toprettyxml(indent='    ')
@@ -114,9 +116,9 @@ def _generateItemSvg(item, nodes=None, root=None):
     ## 1) Qt SVG does not implement clipping paths. This is absurd.
     ##    The solution is to let Qt generate SVG for each item independently,
     ##    then glue them together manually with clipping.
-    ##    
+    ##
     ##    The format Qt generates for all items looks like this:
-    ##    
+    ##
     ##    <g>
     ##        <g transform="matrix(...)">
     ##            one or more of: <path/> or <polyline/> or <text/>
@@ -126,35 +128,35 @@ def _generateItemSvg(item, nodes=None, root=None):
     ##        </g>
     ##        . . .
     ##    </g>
-    ##    
+    ##
     ## 2) There seems to be wide disagreement over whether path strokes
-    ##    should be scaled anisotropically. 
+    ##    should be scaled anisotropically.
     ##      see: http://web.mit.edu/jonas/www/anisotropy/
     ##    Given that both inkscape and illustrator seem to prefer isotropic
-    ##    scaling, we will optimize for those cases.  
-    ##    
-    ## 3) Qt generates paths using non-scaling-stroke from SVG 1.2, but 
-    ##    inkscape only supports 1.1. 
-    ##    
+    ##    scaling, we will optimize for those cases.
+    ##
+    ## 3) Qt generates paths using non-scaling-stroke from SVG 1.2, but
+    ##    inkscape only supports 1.1.
+    ##
     ##    Both 2 and 3 can be addressed by drawing all items in world coordinates.
-    
+
     profiler = debug.Profiler()
-    
-    if nodes is None:  ## nodes maps all node IDs to their XML element. 
+
+    if nodes is None:  ## nodes maps all node IDs to their XML element.
                        ## this allows us to ensure all elements receive unique names.
         nodes = {}
-        
+
     if root is None:
         root = item
-                
+
     ## Skip hidden items
     if hasattr(item, 'isVisible') and not item.isVisible():
         return None
-        
+
     ## If this item defines its own SVG generator, use that.
     if hasattr(item, 'generateSvg'):
         return item.generateSvg(nodes)
-    
+
 
     ## Generate SVG text for just this item (exclude its children; we'll handle them later)
     tr = QtGui.QTransform()
@@ -169,10 +171,10 @@ def _generateItemSvg(item, nodes=None, root=None):
     else:
         childs = item.childItems()
         tr = itemTransform(item, item.scene())
-        
+
         ## offset to corner of root item
         if isinstance(root, QtGui.QGraphicsScene):
-            rootPos = QtCore.QPoint(0,0)
+            rootPos = QtCore.QPoint(0, 0)
         else:
             rootPos = root.scenePos()
         tr2 = QtGui.QTransform()
@@ -205,13 +207,13 @@ def _generateItemSvg(item, nodes=None, root=None):
         else:
             xmlStr = bytes(arr).decode('utf-8')
         doc = xml.parseString(xmlStr.encode('utf-8'))
-        
+
     try:
         ## Get top-level group for this item
         g1 = doc.getElementsByTagName('g')[0]
         ## get list of sub-groups
         g2 = [n for n in g1.childNodes if isinstance(n, xml.Element) and n.tagName == 'g']
-        
+
         defs = doc.getElementsByTagName('defs')
         if len(defs) > 0:
             defs = [n for n in defs[0].childNodes if isinstance(n, xml.Element)]
@@ -228,14 +230,14 @@ def _generateItemSvg(item, nodes=None, root=None):
     ## make sure g1 has the transformation matrix
     #m = (tr.m11(), tr.m12(), tr.m21(), tr.m22(), tr.m31(), tr.m32())
     #g1.setAttribute('transform', "matrix(%f,%f,%f,%f,%f,%f)" % m)
-    
+
     #print "=================",item,"====================="
     #print g1.toprettyxml(indent="  ", newl='')
-    
+
     ## Inkscape does not support non-scaling-stroke (this is SVG 1.2, inkscape supports 1.1)
     ## So we need to correct anything attempting to use this.
     #correctStroke(g1, item, root)
-    
+
     ## decide on a name for this item
     baseName = item.__class__.__name__
     i = 1
@@ -246,7 +248,7 @@ def _generateItemSvg(item, nodes=None, root=None):
         i += 1
     nodes[name] = g1
     g1.setAttribute('id', name)
-    
+
     ## If this item clips its children, we need to take care of that.
     childGroup = g1  ## add children directly to this node unless we are clipping
     if not isinstance(item, QtGui.QGraphicsScene):
@@ -265,19 +267,19 @@ def _generateItemSvg(item, nodes=None, root=None):
                 # assume <defs> for this path is empty.. possibly problematic.
             finally:
                 item.scene().removeItem(path)
-            
+
             ## and for the clipPath element
             clip = name + '_clip'
             clipNode = g1.ownerDocument.createElement('clipPath')
             clipNode.setAttribute('id', clip)
             clipNode.appendChild(pathNode)
             g1.appendChild(clipNode)
-            
+
             childGroup = g1.ownerDocument.createElement('g')
             childGroup.setAttribute('clip-path', 'url(#%s)' % clip)
             g1.appendChild(childGroup)
     profiler('clipping')
-            
+
     ## Add all child items as sub-elements.
     childs.sort(key=lambda c: c.zValue())
     for ch in childs:
@@ -287,18 +289,18 @@ def _generateItemSvg(item, nodes=None, root=None):
         cg, cdefs = csvg
         childGroup.appendChild(cg)  ### this isn't quite right--some items draw below their parent (good enough for now)
         defs.extend(cdefs)
-        
+
     profiler('children')
     return g1, defs
 
 def correctCoordinates(node, defs, item):
     # TODO: correct gradient coordinates inside defs
-    
+
     ## Remove transformation matrices from <g> tags by applying matrix to coordinates inside.
     ## Each item is represented by a single top-level group with one or more groups inside.
     ## Each inner group contains one or more drawing primitives, possibly of different types.
     groups = node.getElementsByTagName('g')
-    
+
     ## Since we leave text unchanged, groups which combine text and non-text primitives must be split apart.
     ## (if at some point we start correcting text transforms as well, then it should be safe to remove this)
     groups2 = []
@@ -323,17 +325,17 @@ def correctCoordinates(node, defs, item):
             node.insertBefore(sg, grp)
         node.removeChild(grp)
     groups = groups2
-        
-    
+
+
     for grp in groups:
         matrix = grp.getAttribute('transform')
         match = re.match(r'matrix\((.*)\)', matrix)
         if match is None:
-            vals = [1,0,0,1,0,0]
+            vals = [1, 0, 0, 1, 0, 0]
         else:
             vals = [float(a) for a in match.groups()[0].split(',')]
         tr = np.array([[vals[0], vals[2], vals[4]], [vals[1], vals[3], vals[5]]])
-        
+
         removeTransform = False
         for ch in grp.childNodes:
             if not isinstance(ch, xml.Element):
@@ -350,21 +352,21 @@ def correctCoordinates(node, defs, item):
                 if oldCoords == '':
                     continue
                 for c in oldCoords.split(' '):
-                    x,y = c.split(',')
+                    x, y = c.split(',')
                     if x[0].isalpha():
                         t = x[0]
                         x = x[1:]
                     else:
                         t = ''
-                    nc = fn.transformCoordinates(tr, np.array([[float(x),float(y)]]), transpose=True)
-                    newCoords += t+str(nc[0,0])+','+str(nc[0,1])+' '
+                    nc = fn.transformCoordinates(tr, np.array([[float(x), float(y)]]), transpose=True)
+                    newCoords += t+str(nc[0, 0])+','+str(nc[0, 1])+' '
                 ch.setAttribute('d', newCoords)
             elif ch.tagName == 'text':
                 removeTransform = False
                 ## leave text alone for now. Might need this later to correctly render text with outline.
                 #c = np.array([
-                    #[float(ch.getAttribute('x')), float(ch.getAttribute('y'))], 
-                    #[float(ch.getAttribute('font-size')), 0], 
+                    #[float(ch.getAttribute('x')), float(ch.getAttribute('y'))],
+                    #[float(ch.getAttribute('font-size')), 0],
                     #[0,0]])
                 #c = fn.transformCoordinates(tr, c, transpose=True)
                 #ch.setAttribute('x', str(c[0,0]))
@@ -372,7 +374,7 @@ def correctCoordinates(node, defs, item):
                 #fs = c[1]-c[2]
                 #fs = (fs**2).sum()**0.5
                 #ch.setAttribute('font-size', str(fs))
-                
+
                 ## Correct some font information
                 families = ch.getAttribute('font-family').split(',')
                 if len(families) == 1:
@@ -384,14 +386,14 @@ def correctCoordinates(node, defs, item):
                     elif font.style() == font.Courier:
                         families.append('monospace')
                     ch.setAttribute('font-family', ', '.join([f if ' ' not in f else '"%s"'%f for f in families]))
-                
+
             ## correct line widths if needed
             if removeTransform and ch.getAttribute('vector-effect') != 'non-scaling-stroke' and grp.getAttribute('stroke-width'):
                 w = float(grp.getAttribute('stroke-width'))
-                s = fn.transformCoordinates(tr, np.array([[w,0], [0,0]]), transpose=True)
+                s = fn.transformCoordinates(tr, np.array([[w, 0], [0, 0]]), transpose=True)
                 w = ((s[0]-s[1])**2).sum()**0.5
                 ch.setAttribute('stroke-width', str(w))
-            
+
         if removeTransform:
             grp.removeAttribute('transform')
 
@@ -402,14 +404,14 @@ def correctCoordinates(node, defs, item):
 def itemTransform(item, root):
     ## Return the transformation mapping item to root
     ## (actually to parent coordinate system of root)
-    
+
     if item is root:
         tr = QtGui.QTransform()
         tr.translate(*item.pos())
         tr = tr * item.transform()
         return tr
-        
-    
+
+
     if int(item.flags() & item.ItemIgnoresTransformations) > 0:
         pos = item.pos()
         parent = item.parentItem()
@@ -419,7 +421,7 @@ def itemTransform(item, root):
         tr.translate(pos.x(), pos.y())
         tr = item.transform() * tr
     else:
-        ## find next parent that is either the root item or 
+        ## find next parent that is either the root item or
         ## an item that ignores its transformation
         nextRoot = item
         while True:
@@ -429,15 +431,15 @@ def itemTransform(item, root):
                 break
             if nextRoot is root or int(nextRoot.flags() & nextRoot.ItemIgnoresTransformations) > 0:
                 break
-        
+
         if isinstance(nextRoot, QtGui.QGraphicsScene):
             tr = item.sceneTransform()
         else:
             tr = itemTransform(nextRoot, root) * item.itemTransform(nextRoot)[0]
-    
+
     return tr
 
-            
+
 def cleanXml(node):
     ## remove extraneous text; let the xml library do the formatting.
     hasElement = False
@@ -448,7 +450,7 @@ def cleanXml(node):
             cleanXml(ch)
         else:
             nonElement.append(ch)
-    
+
     if hasElement:
         for ch in nonElement:
             node.removeChild(ch)

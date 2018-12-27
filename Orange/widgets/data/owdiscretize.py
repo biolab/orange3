@@ -1,9 +1,7 @@
 from collections import namedtuple
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
-from AnyQt.QtWidgets import (
-    QListView, QHBoxLayout, QStyledItemDelegate, QApplication
-)
+from AnyQt.QtWidgets import QListView, QHBoxLayout, QStyledItemDelegate
 from AnyQt.QtCore import Qt
 
 import Orange.data
@@ -11,6 +9,7 @@ import Orange.preprocess.discretize as disc
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, vartype
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 __all__ = ["OWDiscretize"]
@@ -42,7 +41,8 @@ _dispatch = {
     EqualFreq: lambda m, data, var: disc.EqualFreq(m.k)(data, var),
     EqualWidth: lambda m, data, var: disc.EqualWidth(m.k)(data, var),
     Remove: lambda m, data, var: None,
-    Custom: lambda m, data, var:
+    Custom:
+        lambda m, data, var:
         disc.Discretizer.create_discretized_var(var, m.points)
 }
 
@@ -495,17 +495,5 @@ class OWDiscretize(widget.OWWidget):
                 for i, var in enumerate(self.varmodel)])
 
 
-def main():
-    app = QApplication([])
-    w = OWDiscretize()
-    data = Orange.data.Table("brown-selected")
-    w.set_data(data)
-    w.set_data(None)
-    w.set_data(data)
-    w.show()
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDiscretize).run(Orange.data.Table("brown-selected"))

@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
-    QSizePolicy, QApplication, QDesktopWidget,
+    QSizePolicy, QDesktopWidget,
 )
 from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush
 from AnyQt.QtCore import Qt, QRectF, QSize
@@ -21,6 +21,7 @@ from Orange.classification.logistic_regression import \
     LogisticRegressionClassifier
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input
 from Orange.widgets import gui
 
@@ -230,6 +231,7 @@ class DiscreteMovableDotItem(MovableDotItem):
         for i, val in enumerate(self.tooltip_values):
             if val > self.value:
                 break
+        # pylint: disable=undefined-loop-variable
         diff = self.tooltip_values[i] - self.tooltip_values[i - 1]
         p1 = 0 if diff < 1e-6 else (-self.value + self.tooltip_values[i]) / diff
         return [(self.tooltip_labels[i - 1].replace("<", "&lt;"), abs(p1)),
@@ -1006,6 +1008,7 @@ class OWNomogram(OWWidget):
 
     def create_footer_nomogram(self, probs_text, d, minimums,
                                max_width, name_offset):
+        # pylint: disable=invalid-unary-operand-type
         eps, d_ = 0.05, 1
         k = - np.log(self.p / (1 - self.p)) if self.p is not None else - self.b0
         min_sum = k[self.target_class_index] - np.log((1 - eps) / eps)
@@ -1013,7 +1016,7 @@ class OWNomogram(OWWidget):
         if self.align == OWNomogram.ALIGN_LEFT:
             max_sum = max_sum - sum(minimums)
             min_sum = min_sum - sum(minimums)
-            for i in range(len(k)):
+            for i in range(len(k)):  # pylint: disable=consider-using-enumerate
                 k[i] = k[i] - sum([min(q) for q in [p[i] for p in self.points]])
         if self.scale == OWNomogram.POINT_SCALE:
             min_sum *= d
@@ -1079,13 +1082,13 @@ class OWNomogram(OWWidget):
         marker_values = self.scale_marker_values(self.feature_marker_values)
 
         invisible_sum = 0
-        for i in range(len(marker_values)):
+        for i, marker in enumerate(marker_values):
             try:
                 item = self.feature_items[i]
             except KeyError:
-                invisible_sum += marker_values[i]
+                invisible_sum += marker
             else:
-                item.dot.move_to_val(marker_values[i])
+                item.dot.move_to_val(marker)
 
         item.dot.probs_dot.move_to_sum(invisible_sum)
 
@@ -1170,6 +1173,7 @@ class OWNomogram(OWWidget):
     def get_points_from_coeffs(current_value, coefficients, possible_values):
         if np.isnan(possible_values).any():
             return 0
+        # pylint: disable=undefined-loop-variable
         indices = np.argsort(possible_values)
         sorted_values = possible_values[indices]
         sorted_coefficients = coefficients[indices]
@@ -1183,17 +1187,9 @@ class OWNomogram(OWWidget):
                sorted_coefficients[i] * sorted_values[i] * (1 - k)
 
 
-if __name__ == "__main__":
-    from Orange.classification import NaiveBayesLearner, \
-        LogisticRegressionLearner
-
-    app = QApplication([])
-    ow = OWNomogram()
+if __name__ == "__main__":  # pragma: no cover
+    from Orange.classification import NaiveBayesLearner  #, LogisticRegressionLearner
     data = Table("heart_disease")
     clf = NaiveBayesLearner()(data)
     # clf = LogisticRegressionLearner()(data)
-    ow.set_classifier(clf)
-    ow.set_data(data)
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+    WidgetPreview(OWNomogram).run(set_classifier=clf, set_data=data)

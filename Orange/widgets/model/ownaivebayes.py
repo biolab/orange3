@@ -4,6 +4,7 @@
 from Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class OWNaiveBayes(OWBaseLearner):
@@ -20,14 +21,5 @@ class OWNaiveBayes(OWBaseLearner):
     LEARNER = NaiveBayesLearner
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWNaiveBayes()
-    d = Table('iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWNaiveBayes).run(Table("iris"))

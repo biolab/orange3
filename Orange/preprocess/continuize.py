@@ -1,8 +1,9 @@
-from Orange.data import ContinuousVariable, Domain, Table
+from Orange.data import ContinuousVariable, Domain
 from Orange.statistics import distribution
 from Orange.util import Reprable
-from .transformation import Identity, Indicator, Indicator1, Normalizer
-from .preprocess import Continuize
+from Orange.preprocess.transformation import \
+    Identity, Indicator, Indicator1, Normalizer
+from Orange.preprocess.preprocess import Continuize
 from Orange.preprocess.util import _RefuseDataInConstructor
 
 __all__ = ["DomainContinuizer"]

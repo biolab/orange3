@@ -22,6 +22,7 @@ from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
 __all__ = ["OWPythonScript"]
@@ -702,10 +703,5 @@ class OWPythonScript(widget.OWWidget):
             getattr(self.Outputs, signal).send(out_var)
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(sys.argv)
-    ow = OWPythonScript()
-    ow.show()
-    app.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWPythonScript).run()

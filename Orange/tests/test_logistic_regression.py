@@ -74,17 +74,25 @@ class TestLogisticRegressionLearner(unittest.TestCase):
             score = learner.score_data(self.voting, attr)
             np.testing.assert_array_almost_equal(score, scores[:, i])
 
+    def test_learner_scorer_previous_transformation(self):
+        learner = LogisticRegressionLearner()
+        from Orange.preprocess import Discretize
+        data = Discretize()(self.iris)
+        scores = learner.score_data(data)
+        # scores should be defined and positive
+        self.assertTrue(np.all(scores > 0))
+
     def test_learner_scorer_multiclass(self):
         attr = self.zoo.domain.attributes
         learner = LogisticRegressionLearner()
         scores = learner.score_data(self.zoo)
-        self.assertEqual('aquatic', attr[np.argmax(scores[0])].name)
-        self.assertEqual('feathers', attr[np.argmax(scores[1])].name)
-        self.assertEqual('fins', attr[np.argmax(scores[2])].name)
-        self.assertEqual('backbone', attr[np.argmax(scores[3])].name)
-        self.assertEqual('backbone', attr[np.argmax(scores[4])].name)
-        self.assertEqual('milk', attr[np.argmax(scores[5])].name)
-        self.assertEqual('hair', attr[np.argmax(scores[6])].name)
+        self.assertEqual('aquatic', attr[np.argmax(scores[0])].name)  # amphibian
+        self.assertEqual('feathers', attr[np.argmax(scores[1])].name)  # bird
+        self.assertEqual('fins', attr[np.argmax(scores[2])].name)  # fish
+        self.assertEqual('legs', attr[np.argmax(scores[3])].name)  # insect
+        self.assertEqual('backbone', attr[np.argmax(scores[4])].name)  # invertebrate
+        self.assertEqual('milk', attr[np.argmax(scores[5])].name)  # mammal
+        self.assertEqual('hair', attr[np.argmax(scores[6])].name)  # reptile
         self.assertEqual(scores.shape,
                          (len(self.zoo.domain.class_var.values), len(attr)))
 

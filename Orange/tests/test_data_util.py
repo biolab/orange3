@@ -25,10 +25,11 @@ class TestDataUtil(unittest.TestCase):
 class DummyPlus(SharedComputeValue):
 
     def compute(self, data, shared_data):
-        return data.X[:,0] + shared_data
+        return data.X[:, 0] + shared_data
 
 
-class DummyTable(Orange.data.Table): pass
+class DummyTable(Orange.data.Table):
+    pass
 
 
 class TestSharedComputeValue(unittest.TestCase):
@@ -37,7 +38,7 @@ class TestSharedComputeValue(unittest.TestCase):
         data = Orange.data.Table("iris")
         obj = DummyPlus(lambda data: 1.)
         res = obj(data)
-        obj = lambda data: data.X[:,0] + 1.
+        obj = lambda data: data.X[:, 0] + 1.
         res2 = obj(data)
         np.testing.assert_equal(res, res2)
 

@@ -2,9 +2,11 @@
 # pylint: disable=missing-docstring
 
 import unittest
+
 import numpy as np
+from sklearn import linear_model
+
 from Orange.data import Table
-from Orange.preprocess import *
 from Orange.regression import (LinearRegressionLearner,
                                RidgeRegressionLearner,
                                LassoRegressionLearner,
@@ -12,7 +14,6 @@ from Orange.regression import (LinearRegressionLearner,
                                ElasticNetCVLearner,
                                MeanLearner)
 from Orange.evaluation import CrossValidation, RMSE
-from sklearn import linear_model
 
 
 class TestLinearRegressionLearner(unittest.TestCase):
@@ -105,10 +106,10 @@ class TestLinearRegressionLearner(unittest.TestCase):
         for a in alphas:
             lasso = LassoRegressionLearner(alpha=a)
             lasso_model = lasso(self.housing)
-            elastic = ElasticNetLearner(alpha=a, l1_ratio=1)
-            elastic_model = elastic(self.housing)
-            d = np.sum(lasso_model.coefficients - elastic_model.coefficients)
-            self.assertEqual(d, 0)
+            en = ElasticNetLearner(alpha=a, l1_ratio=1)
+            en_model = en(self.housing)
+            np.testing.assert_allclose(
+                lasso_model.coefficients, en_model.coefficients, atol=1e-07)
 
     def test_linear_regression_repr(self):
         learner = LinearRegressionLearner()

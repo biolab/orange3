@@ -89,8 +89,8 @@ class EditLinksDialog(QDialog):
 
     def setNodes(self, source_node, sink_node):
         """
-        Set the source/sink nodes (:class:`.SchemeNode` instances)
-        between which to edit the links.
+        Set the source/sink nodes (:class:`~Orange.canvas.scheme.SchemeNode`
+        instances) between which to edit the links.
 
         .. note:: This should be called before :func:`setLinks`.
 
@@ -213,8 +213,8 @@ class LinksEditWidget(QGraphicsWidget):
 
     def setNodes(self, source, sink):
         """
-        Set the source/sink nodes (:class:`SchemeNode` instances) between
-        which to edit the links.
+        Set the source/sink nodes (:class:`~Orange.canvas.scheme.SchemeNode`
+        instances) between which to edit the links.
 
         .. note:: Call this before :func:`setLinks`.
 
@@ -612,8 +612,8 @@ class EditLinksNode(QGraphicsWidget):
 
     def setSchemeNode(self, node):
         """
-        Set an instance of `SchemeNode`. The widget will be initialized
-        with its icon and channels.
+        Set an instance of :class:`~Orange.canvas.scheme.SchemeNode`.
+        The widget will be initialized with its icon and channels.
 
         """
         self.node = node

@@ -11,7 +11,7 @@ from Orange.data.sql.table import SqlTable
 
 def sql_test(f):
     try:
-        import psycopg2
+        import psycopg2  # pylint: disable=import-error
         return unittest.skipIf(not sql_version, "Database is not running.")(f)
     except:
         return unittest.skip("Psycopg2 is required for sql tests.")(f)
@@ -55,7 +55,7 @@ def parse_uri(uri):
 
 
 try:
-    import psycopg2
+    import psycopg2  # pylint: disable=import-error
     with psycopg2.connect(**connection_params()) as conn:
         sql_version = conn.server_version
 except:
@@ -148,7 +148,7 @@ class TestParseUri(unittest.TestCase):
 class PostgresTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from psycopg2.pool import ThreadedConnectionPool
+        from psycopg2.pool import ThreadedConnectionPool  # pylint: disable=import-error
         from Orange.data.sql.backend.postgres import Psycopg2Backend
 
         Psycopg2Backend.connection_pool = \
@@ -196,7 +196,8 @@ class PostgresTest(unittest.TestCase):
                 for i, t in enumerate(sql_column_types)
             )
         )
-        with self.backend.execute_sql_query(create_table_sql): pass
+        with self.backend.execute_sql_query(create_table_sql):
+            pass
         for row in data:
             values = []
             for v, t in zip(row, sql_column_types):
@@ -213,7 +214,8 @@ class PostgresTest(unittest.TestCase):
                 table_name=table_name,
                 values=', '.join(values)
             )
-            with self.backend.execute_sql_query(insert_sql): pass
+            with self.backend.execute_sql_query(insert_sql):
+                pass
         return str(table_name)
 
     def _get_column_types(self, data):
@@ -227,7 +229,8 @@ class PostgresTest(unittest.TestCase):
         return column_size
 
     def drop_sql_table(self, table_name):
-        with self.backend.execute_sql_query("""DROP TABLE "%s" """ % table_name): pass
+        with self.backend.execute_sql_query('DROP TABLE "%s" ' % table_name):
+            pass
 
     def float_variable(self, size):
         return [i*.1 for i in range(size)]

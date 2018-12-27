@@ -14,7 +14,7 @@ class TestLDA(unittest.TestCase):
     def test_lda(self):
         iris = Table('iris')
         n_components = 2
-        lda = LDA(n_components=n_components)
+        lda = LDA(solver="eigen", n_components=n_components)
         model = lda(iris)
         transformed = model(iris)
         self.assertEqual(transformed.X.shape, (len(iris), n_components))

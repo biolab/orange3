@@ -15,7 +15,6 @@ from Orange.data import (
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import TableDesc, BackendError
-from Orange.misc import import_late_warning
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
@@ -596,6 +595,8 @@ class SqlTable(Table):
                             no_cache=no_cache)
 
     def _sample(self, method, parameter, no_cache=False):
+        # the module is optional, but this function is not called if it's not installed
+        # pylint: disable=import-error
         import psycopg2
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
@@ -617,27 +618,29 @@ class SqlTable(Table):
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
-            with self.backend.execute_sql_query(query): pass
+            with self.backend.execute_sql_query(query):
+                pass
 
             if no_cache:
                 query = "DROP TABLE " + sample_table_q
-                with self.backend.execute_sql_query(query): pass
+                with self.backend.execute_sql_query(query):
+                    pass
                 create = True
 
         except BackendError:
             create = True
 
         if create:
-            with self.backend.execute_sql_query(" ".join([
-                    "CREATE TABLE", sample_table_q, "AS",
-                    "SELECT * FROM", self.table_name,
-                    "TABLESAMPLE", method, "(", parameter, ")"])):
+            with self.backend.execute_sql_query(
+                    " ".join(["CREATE TABLE", sample_table_q, "AS",
+                              "SELECT * FROM", self.table_name,
+                              "TABLESAMPLE", method, "(", parameter, ")"])):
                 pass
 
         sampled_table = self.copy()
         sampled_table.table_name = sample_table_q
-        with sampled_table.backend.execute_sql_query(
-                'ANALYZE' + sample_table_q):
+        with sampled_table.backend.execute_sql_query('ANALYZE'
+                                                     + sample_table_q):
             pass
         return sampled_table
 

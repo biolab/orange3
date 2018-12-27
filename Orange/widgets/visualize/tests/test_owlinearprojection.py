@@ -1,12 +1,11 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
 import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel
 
-from Orange.data import (
-    Table, Domain, ContinuousVariable, DiscreteVariable, StringVariable
-)
+from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.settings import Context
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets,
@@ -29,7 +28,6 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         cls.signal_name = "Data"
         cls.signal_data = cls.data
         cls.same_input_output_domain = False
-        cls.projection_table = cls._get_projection_table()
 
     def setUp(self):
         self.widget = self.create_widget(OWLinearProjection)  # type: OWLinearProjection
@@ -69,37 +67,6 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         check_vizrank(None)
         for ds in datasets.datasets():
             check_vizrank(ds)
-
-    @classmethod
-    def _get_projection_table(cls):
-        domain = Domain(cls.data.domain.attributes,
-                        metas=[StringVariable("Component")])
-        table = Table.from_numpy(domain,
-                                 X=np.array([[0.522, -0.263, 0.581, 0.566],
-                                             [0.372, 0.926, 0.021, 0.065]]),
-                                 metas=[["PC1"], ["PC2"]])
-        return table
-
-    def test_projection(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertFalse(self.widget.radio_placement.buttons[3].isEnabled())
-        self.send_signal(self.widget.Inputs.projection_input,
-                         self.projection_table)
-        self.assertTrue(self.widget.radio_placement.buttons[3].isEnabled())
-        self.widget.radio_placement.buttons[3].click()
-        self.send_signal(self.widget.Inputs.projection_input, None)
-        self.assertFalse(self.widget.radio_placement.buttons[3].isChecked())
-        self.assertTrue(self.widget.radio_placement.buttons[0].isChecked())
-
-    def test_projection_error(self):
-        domain = Domain(attributes=[ContinuousVariable("Attr {}".format(i)) for i in range(4)],
-                        metas=[StringVariable("Component")])
-        table = Table.from_numpy(domain,
-                                 X=np.array([[0.522, -0.263, 0.581, 0.566]]),
-                                 metas=[["PC1"]])
-        self.assertFalse(self.widget.Warning.not_enough_comp.is_shown())
-        self.send_signal(self.widget.Inputs.projection_input, table)
-        self.assertTrue(self.widget.Warning.not_enough_comp.is_shown())
 
     def test_bad_data(self):
         w = self.widget
@@ -193,6 +160,28 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(w.Inputs.data, None)
         w.controls.graph.hide_radius.setSliderPosition(3)
 
+    def test_invalidated_model_selected(self):
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.widget.model_selected[:] = self.data.domain[2:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.widget.setup_plot.assert_not_called()
+
+        self.widget.model_selected[:] = self.data.domain[3:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+
 
 class LinProjVizRankTests(WidgetTest):
     """
@@ -203,8 +192,6 @@ class LinProjVizRankTests(WidgetTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.data = Table("iris")
-        # dom = Domain(cls.iris.domain.attributes, [])
-        # cls.iris_no_class = Table(dom, cls.iris)
 
     def setUp(self):
         self.widget = self.create_widget(OWLinearProjection)
@@ -226,6 +213,7 @@ class LinProjVizRankTests(WidgetTest):
     def test_set_attrs(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         model_selected = self.widget.model_selected[:]
+        c1 = self.get_output(self.widget.Outputs.components)
         self.vizrank.toggle()
         self.process_events(until=lambda: not self.vizrank.keep_running)
         self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
@@ -234,3 +222,5 @@ class LinProjVizRankTests(WidgetTest):
             QItemSelectionModel.ClearAndSelect
         )
         self.assertNotEqual(self.widget.model_selected[:], model_selected)
+        c2 = self.get_output(self.widget.Outputs.components)
+        self.assertNotEqual(c1.domain.attributes, c2.domain.attributes)

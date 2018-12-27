@@ -30,7 +30,7 @@ from Orange.data import (
 )
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
-from Orange.preprocess.preprocess import PreprocessorList
+from Orange.preprocess.preprocess import PreprocessorList, Preprocess
 from Orange.regression.base_regression import (
     LearnerRegression, ModelRegression
 )
@@ -40,7 +40,6 @@ from Orange.widgets.utils.annotated_data import (
     ANNOTATED_DATA_FEATURE_NAME, ANNOTATED_DATA_SIGNAL_NAME
 )
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
-from Orange.widgets.utils.plot import OWPlotGUI
 from Orange.widgets.widget import OWWidget
 
 sip.setdestroyonexit(False)
@@ -146,27 +145,27 @@ class WidgetTest(GuiTest):
         return widget
 
     @staticmethod
-    def reset_default_settings(cls):
+    def reset_default_settings(widget):
         """Reset default setting values for widget
 
         Discards settings read from disk and changes stored by fast_save
 
         Parameters
         ----------
-        cls : OWWidget
+        widget : OWWidget
             widget to reset settings for
         """
-        settings_handler = getattr(cls, "settingsHandler", None)
+        settings_handler = getattr(widget, "settingsHandler", None)
         if settings_handler:
             # Rebind settings handler to get fresh copies of settings
             # in known_settings
-            settings_handler.bind(cls)
+            settings_handler.bind(widget)
             # Reset defaults read from disk
             settings_handler.defaults = {}
             # Reset context settings
             settings_handler.global_contexts = []
 
-    def process_events(self, until: callable=None, timeout=DEFAULT_TIMEOUT):
+    def process_events(self, until: callable = None, timeout=DEFAULT_TIMEOUT):
         """Process Qt events, optionally until `until` returns
         something True-ish.
 
@@ -224,8 +223,32 @@ class WidgetTest(GuiTest):
         wait : int
             The amount of time to wait for the widget to complete.
         """
+        return self.send_signals([(input, value)], *args,
+                                 widget=widget, wait=wait)
+
+    def send_signals(self, signals, *args, widget=None, wait=-1):
+        """ Send signals to widget by calling appropriate triggers.
+        After all the signals are send, widget's handleNewSignals() in invoked.
+
+        Parameters
+        ----------
+        signals : list of (str, Object)
+        widget : Optional[OWWidget]
+            widget to send signals to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
+        """
         if widget is None:
             widget = self.widget
+        for input, value in signals:
+            self._send_signal(widget, input, value, *args)
+        widget.handleNewSignals()
+        if wait >= 0 and widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
+
+    @staticmethod
+    def _send_signal(widget, input, value, *args):
         if isinstance(input, str):
             for input_signal in widget.get_signals("inputs"):
                 if input_signal.name == input:
@@ -244,10 +267,6 @@ class WidgetTest(GuiTest):
             '{} should be {}'.format(value.__class__.__mro__, input.type)
 
         handler(value, *args)
-        widget.handleNewSignals()
-        if wait >= 0 and widget.isBlocking():
-            spy = QSignalSpy(widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout=wait))
 
     def wait_until_stop_blocking(self, widget=None, wait=DEFAULT_TIMEOUT):
         """Wait until the widget stops blocking i.e. finishes computation.
@@ -848,7 +867,7 @@ class ProjectionWidgetTestMixin:
         controls = self.widget.controls
         self.assertEqual(len(controls.attr_color.model()), 8)
         self.assertEqual(len(controls.attr_shape.model()), 3)
-        self.assertTrue(7 < len(controls.attr_size.model()) < 10)
+        self.assertTrue(5 < len(controls.attr_size.model()) < 8)
         self.assertEqual(len(controls.attr_label.model()), 8)
 
         # color and label should contain all variables
@@ -863,14 +882,6 @@ class ProjectionWidgetTestMixin:
             if var.is_discrete:
                 self.assertNotIn(var, controls.attr_size.model())
                 self.assertIn(var, controls.attr_shape.model())
-
-    def test_overlap(self):
-        """Test option 'Overlap' in 'Size' combo box"""
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertEqual(len(set(self.widget.graph.get_sizes())), 1)
-        simulate.combobox_activate_item(self.widget.controls.attr_size,
-                                        OWPlotGUI.SizeByOverlap)
-        self.assertGreater(len(set(self.widget.graph.get_sizes())), 1)
 
     def test_attr_label_metas(self, timeout=DEFAULT_TIMEOUT):
         """Set 'Label' from string meta attribute"""
@@ -903,13 +914,23 @@ class ProjectionWidgetTestMixin:
         """Test widget for empty dataset"""
         self.send_signal(self.widget.Inputs.data, self.data[:0])
 
-    def test_subset_data(self, timeout=DEFAULT_TIMEOUT):
-        """Test widget for subset data"""
-        self.send_signal(self.widget.Inputs.data, self.data)
+    def test_plot_once(self, timeout=DEFAULT_TIMEOUT):
+        """Test if data is plotted only once but committed on every input change"""
+        table = Table("heart_disease")
+        self.widget.setup_plot = Mock()
+        self.widget.commit = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
-        self.send_signal(self.widget.Inputs.data_subset, self.data[::10])
+
+        self.widget.commit.reset_mock()
+        self.send_signal(self.widget.Inputs.data_subset, table[::10])
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
 
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
@@ -931,8 +952,7 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
+        table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         if self.widget.isBlocking():
@@ -940,6 +960,33 @@ class ProjectionWidgetTestMixin:
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
         self.assertEqual(len(self.widget.subset_indices), 5)
+
+    def test_invalidated_embedding(self, timeout=DEFAULT_TIMEOUT):
+        """Check if graph has been replotted when sending same data"""
+        self.widget.graph.update_coordinates = Mock()
+        self.widget.graph.update_point_props = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_called_once()
+        self.widget.graph.update_point_props.assert_called_once()
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.widget.graph.update_coordinates.reset_mock()
+        self.widget.graph.update_point_props.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.update_coordinates.assert_not_called()
+        self.widget.graph.update_point_props.assert_called_once()
+
+    def test_saved_selection(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(self.widget.__class__, stored_settings=settings)
+        self.send_signal(self.widget.Inputs.data, self.data, widget=w)
+        self.assertEqual(np.sum(w.graph.selection), 15)
+        np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
 
     def test_send_report(self, timeout=DEFAULT_TIMEOUT):
         """Test report """
@@ -953,6 +1000,15 @@ class ProjectionWidgetTestMixin:
 
 
 class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
+    def test_embedding_missing_values(self):
+        table = Table("heart_disease")
+        table.X[0] = np.nan
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertFalse(np.all(self.widget.valid_data))
+        output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
+        embedding_mask = np.all(np.isnan(output.metas[:, :2]), axis=1)
+        np.testing.assert_array_equal(~embedding_mask, self.widget.valid_data)
+
     def test_sparse_data(self):
         table = Table("iris")
         table.X = sp.csr_matrix(table.X)
@@ -965,20 +1021,36 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         self.assertFalse(self.widget.Error.sparse_data.is_shown())
 
     def test_manual_move(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
-        selection = self.widget.graph.selection
-        components = self.get_output(self.widget.Outputs.components)
+        data = self.data.copy()
+        data[1, 0] = np.nan
+        nvalid, nsample = len(self.data) - 1, self.widget.SAMPLE_SIZE
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph.select_by_indices(list(range(0, len(data), 10)))
+
+        # remember state
+        selection = self.widget.graph.selection.copy()
+
+        # simulate manual move
         self.widget._manual_move_start()
         self.widget._manual_move(0, 1, 1)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         self.widget.SAMPLE_SIZE)
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nsample)
         self.widget._manual_move_finish(0, 1, 2)
-        self.assertEqual(len(self.widget.graph.scatterplot_item.data),
-                         len(self.data))
-        self.assertNotEqual(components,
-                            self.get_output(self.widget.Outputs.components))
+
+        # check new state
+        self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
+
+    def test_output_preprocessor(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        pp = self.get_output(self.widget.Outputs.preprocessor)
+        self.assertIsInstance(pp, Preprocess)
+        transformed = pp(self.data[::10])
+        self.assertIsInstance(transformed, Table)
+        self.assertEqual(transformed.X.shape, (len(self.data) / 10, 2))
+        output = self.get_output(self.widget.Outputs.annotated_data)
+        np.testing.assert_array_equal(transformed.X, output.metas[::10, :2])
+        self.assertEqual([a.name for a in transformed.domain.attributes],
+                         [m.name for m in output.domain.metas[:2]])
 
 
 class datasets:
@@ -1092,6 +1164,5 @@ class datasets:
         yield cls.missing_data_2()
         yield cls.missing_data_3()
         yield cls.data_one_column_nans()
-        yield cls.data_one_column_infs()
         yield ds_cls
         yield ds_reg

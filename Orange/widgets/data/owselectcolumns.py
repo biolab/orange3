@@ -1,9 +1,8 @@
-import sys
 from functools import partial
-from typing import Optional  # pylint: disable=unused-import
+from typing import Optional
 
 from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtWidgets import QListView  # pylint: disable=unused-import
+from AnyQt.QtWidgets import QListView
 from AnyQt.QtCore import (
     Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
     QMimeData
@@ -14,7 +13,8 @@ from Orange.widgets.data.contexthandlers import \
     SelectAttributesDomainContextHandler
 from Orange.widgets.settings import ContextSetting, Setting
 from Orange.widgets.utils.listfilter import VariablesListItemView, slices, variables_filter
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import Input, Output, AttributeList, Msg
 from Orange.data.table import Table
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
@@ -106,21 +106,29 @@ class OWSelectAttributes(widget.OWWidget):
     keywords = ["filter"]
 
     class Inputs:
-        data = Input("Data", Table)
+        data = Input("Data", Table, default=True)
+        features = Input("Features", AttributeList)
 
     class Outputs:
         data = Output("Data", Table)
-        features = Output("Features", widget.AttributeList, dynamic=False)
+        features = Output("Features", AttributeList, dynamic=False)
 
     want_main_area = False
     want_control_area = True
 
     settingsHandler = SelectAttributesDomainContextHandler()
     domain_role_hints = ContextSetting({})
+    use_input_features = Setting(False)
     auto_commit = Setting(True)
+
+    class Warning(widget.OWWidget.Warning):
+        mismatching_domain = Msg("Features and data domain do not match")
 
     def __init__(self):
         super().__init__()
+        self.data = None
+        self.features = None
+
         # Schedule interface updates (enabled buttons) using a coalescing
         # single shot timer (complex interactions on selection and filtering
         # updates in the 'available_attrs_view')
@@ -161,14 +169,24 @@ class OWSelectAttributes(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Features", addToLayout=False)
         self.used_attrs = VariablesListItemModel()
-        self.used_attrs_view = VariablesListItemView(
-            acceptedType=(Orange.data.DiscreteVariable,
-                          Orange.data.ContinuousVariable))
-
-        self.used_attrs_view.setModel(self.used_attrs)
+        filter_edit, self.used_attrs_view = variables_filter(
+            parent=self, model=self.used_attrs,
+            accepted_type=(Orange.data.DiscreteVariable,
+                           Orange.data.ContinuousVariable))
+        self.used_attrs.rowsInserted.connect(self.__used_attrs_changed)
+        self.used_attrs.rowsRemoved.connect(self.__used_attrs_changed)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
             partial(update_on_change, self.used_attrs_view))
         self.used_attrs_view.dragDropActionDidComplete.connect(dropcompleted)
+        self.use_features_box = gui.auto_commit(
+            self.controlArea, self, "use_input_features",
+            "Use input features", "Always use input features",
+            box=False, commit=self.__use_features_clicked,
+            callback=self.__use_features_changed, addToLayout=False
+        )
+        self.enable_use_features_box()
+        box.layout().addWidget(self.use_features_box)
+        box.layout().addWidget(filter_edit)
         box.layout().addWidget(self.used_attrs_view)
         layout.addWidget(box, 0, 2, 1, 1)
 
@@ -244,11 +262,39 @@ class OWSelectAttributes(widget.OWWidget):
         layout.setHorizontalSpacing(0)
         self.controlArea.setLayout(layout)
 
-        self.data = None
         self.output_data = None
         self.original_completer_items = []
 
-        self.resize(500, 600)
+        self.resize(600, 600)
+
+    @property
+    def features_from_data_attributes(self):
+        if self.data is None or self.features is None:
+            return []
+        domain = self.data.domain
+        return [domain[feature.name] for feature in self.features
+                if feature.name in domain and domain[feature.name]
+                in domain.attributes]
+
+    def can_use_features(self):
+        return bool(self.features_from_data_attributes) and \
+               self.features_from_data_attributes != self.used_attrs[:]
+
+    def __use_features_changed(self):  # Use input features check box
+        # Needs a check since callback is invoked before object is created
+        if not hasattr(self, "use_features_box"):
+            return
+        self.enable_used_attrs(not self.use_input_features)
+        if self.use_input_features and self.can_use_features():
+            self.use_features()
+        if not self.use_input_features:
+            self.enable_use_features_box()
+
+    def __use_features_clicked(self):  # Use input features button
+        self.use_features()
+
+    def __used_attrs_changed(self):
+        self.enable_use_features_box()
 
     @Inputs.data
     def set_data(self, data=None):
@@ -302,8 +348,6 @@ class OWSelectAttributes(widget.OWWidget):
             self.meta_attrs[:] = []
             self.available_attrs[:] = []
 
-        self.unconditional_commit()
-
     def update_domain_role_hints(self):
         """ Update the domain hints to be stored in the widgets settings.
         """
@@ -315,6 +359,46 @@ class OWSelectAttributes(widget.OWWidget):
         hints.update(hints_from_model("class", self.class_attrs))
         hints.update(hints_from_model("meta", self.meta_attrs))
         self.domain_role_hints = hints
+
+    @Inputs.features
+    def set_features(self, features):
+        self.features = features
+
+    def handleNewSignals(self):
+        self.check_data()
+        self.enable_used_attrs()
+        self.enable_use_features_box()
+        if self.use_input_features and len(self.features_from_data_attributes):
+            self.enable_used_attrs(False)
+            self.use_features()
+        self.unconditional_commit()
+
+    def check_data(self):
+        self.Warning.mismatching_domain.clear()
+        if self.data is not None and self.features is not None and \
+                not len(self.features_from_data_attributes):
+            self.Warning.mismatching_domain()
+
+    def enable_used_attrs(self, enable=True):
+        self.up_attr_button.setEnabled(enable)
+        self.move_attr_button.setEnabled(enable)
+        self.down_attr_button.setEnabled(enable)
+        self.used_attrs_view.setEnabled(enable)
+        self.used_attrs_view.repaint()
+
+    def enable_use_features_box(self):
+        self.use_features_box.button.setEnabled(self.can_use_features())
+        enable_checkbox = bool(self.features_from_data_attributes)
+        self.use_features_box.setHidden(not enable_checkbox)
+        self.use_features_box.repaint()
+
+    def use_features(self):
+        attributes = self.features_from_data_attributes
+        available, used = self.available_attrs[:], self.used_attrs[:]
+        self.available_attrs[:] = [attr for attr in used + available
+                                   if attr not in attributes]
+        self.used_attrs[:] = attributes
+        self.commit()
 
     def selected_rows(self, view):
         """ Return the selected rows in the view.
@@ -397,8 +481,9 @@ class OWSelectAttributes(widget.OWWidget):
         all_primitive = all(var.is_primitive()
                             for var in available_types)
 
-        move_attr_enabled = (available_selected and all_primitive) or \
-                             attrs_selected
+        move_attr_enabled = \
+            ((available_selected and all_primitive) or attrs_selected) and \
+            self.used_attrs_view.isEnabled()
 
         self.move_attr_button.setEnabled(bool(move_attr_enabled))
         if move_attr_enabled:
@@ -429,13 +514,15 @@ class OWSelectAttributes(widget.OWWidget):
             newdata = self.data.transform(domain)
             self.output_data = newdata
             self.Outputs.data.send(newdata)
-            self.Outputs.features.send(widget.AttributeList(attributes))
+            self.Outputs.features.send(AttributeList(attributes))
         else:
             self.output_data = None
             self.Outputs.data.send(None)
             self.Outputs.features.send(None)
 
     def reset(self):
+        self.enable_used_attrs()
+        self.use_features_box.checkbox.setChecked(False)
         if self.data is not None:
             self.available_attrs[:] = []
             self.used_attrs[:] = self.data.domain.attributes
@@ -461,28 +548,7 @@ class OWSelectAttributes(widget.OWWidget):
                 self.report_items((("Removed", text),))
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(list(argv))
-
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWSelectAttributes()
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.show()
-    w.raise_()
-    rval = app.exec_()
-    w.set_data(None)
-    w.saveSettings()
-    return rval
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main())
+    data = Orange.data.Table("brown-selected")
+    features = AttributeList(data.domain.attributes[:2])
+    WidgetPreview(OWSelectAttributes).run(set_data=data, set_features=features)

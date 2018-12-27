@@ -29,6 +29,7 @@ so they can be used alter. It should be called before widget starts modifying
 (initializing) the value of the setting attributes.
 """
 
+import sys
 import copy
 import itertools
 import os
@@ -240,9 +241,9 @@ class SettingProvider:
         data : dict
             packed data
         """
-        for setting, data, instance in self.traverse_settings(data, instance):
-            if setting.name in data and instance is not None:
-                setattr(instance, setting.name, data[setting.name])
+        for setting, _data, inst in self.traverse_settings(data, instance):
+            if setting.name in _data and inst is not None:
+                setattr(inst, setting.name, _data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -261,6 +262,7 @@ class SettingProvider:
             provider = subprovider.get_provider(provider_class)
             if provider:
                 return provider
+        return None
 
     def traverse_settings(self, data=None, instance=None):
         """Generator of tuples (setting, data, instance) for each setting
@@ -462,7 +464,12 @@ class SettingsHandler:
     def _migrate_settings(self, settings):
         """Ask widget to migrate settings to the latest version."""
         if settings:
-            self.widget_class.migrate_settings(settings, settings.pop(VERSION_KEY, 0))
+            try:
+                self.widget_class.migrate_settings(
+                    settings, settings.pop(VERSION_KEY, 0))
+            except Exception:  # pylint: disable=broad-except
+                sys.excepthook(*sys.exc_info())
+                settings.clear()
 
     def _select_provider(self, instance):
         provider = self.provider.get_provider(instance.__class__)
@@ -538,9 +545,9 @@ class SettingsHandler:
         ----------
         instance : OWWidget
         """
-        for setting, _, instance in self.provider.traverse_settings(instance=instance):
+        for setting, _, inst in self.provider.traverse_settings(instance=instance):
             if setting.packable:
-                setattr(instance, setting.name, setting.default)
+                setattr(inst, setting.name, setting.default)
 
 
 class ContextSetting(Setting):
@@ -632,6 +639,9 @@ class ContextHandler(SettingsHandler):
                 self.widget_class.migrate_context(
                     context, context.values.pop(VERSION_KEY, 0))
             except IncompatibleContext:
+                del contexts[i]
+            except Exception:  # pylint: disable=broad-except
+                sys.excepthook(*sys.exc_info())
                 del contexts[i]
             else:
                 i += 1
@@ -1212,7 +1222,7 @@ def rename_setting(settings, old_name, new_name):
         settings[new_name] = settings.pop(old_name)
 
 
-def migrate_str_to_variable(settings, names=None):
+def migrate_str_to_variable(settings, names=None, none_placeholder=None):
     """
     Change variables stored as `(str, int)` to `(Variable, int)`.
 
@@ -1225,6 +1235,8 @@ def migrate_str_to_variable(settings, names=None):
         var, vartype = settings.values[name]
         if 0 <= vartype <= 100:
             settings.values[name] = (var, 100 + vartype)
+        elif var == none_placeholder and vartype == -2:
+            settings.values[name] = None
 
     if names is None:
         for name, setting in settings.values.items():

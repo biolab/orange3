@@ -9,9 +9,7 @@ This module implements a discovery process
 """
 
 import os
-import sys
 import stat
-import glob
 import logging
 import types
 import pkgutil
@@ -25,7 +23,6 @@ from .description import (
 
 from . import VERSION_HEX
 from . import cache, WidgetRegistry
-import collections
 
 log = logging.getLogger(__name__)
 
@@ -178,10 +175,9 @@ class WidgetDiscovery(object):
         self.handle_category(cat_desc)
 
         desc_iter = self.iter_widget_descriptions(
-                        category,
-                        category_name=cat_desc.name,
-                        distribution=distribution
-                        )
+            category,
+            category_name=cat_desc.name,
+            distribution=distribution)
 
         for desc in desc_iter:
             self.handle_widget(desc)
@@ -267,16 +263,13 @@ class WidgetDiscovery(object):
 
                     try:
                         desc = self.widget_description(
-                                 module,
-                                 category_name=category_name,
-                                 distribution=distribution
-                                 )
+                            module,
+                            category_name=category_name,
+                            distribution=distribution)
                     except WidgetSpecificationError:
                         self.cache_log_error(
-                                 source_path, WidgetSpecificationError,
-                                 distribution
-                                 )
-
+                            source_path, WidgetSpecificationError,
+                            distribution)
                         continue
                     except Exception:
                         log.warning("Problem parsing %r", name, exc_info=True)

@@ -15,14 +15,13 @@ from collections import defaultdict, Sequence
 import pkg_resources
 
 from AnyQt import QtWidgets, QtCore, QtGui
-# pylint: disable=unused-import
 from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QSize, QItemSelection, QTimer, pyqtSignal as Signal
+    Qt, QEvent, QSize, QItemSelection, QTimer, pyqtSignal as Signal
 )
 from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
-    QComboBox, QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
+    QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
     QTableView, QHeaderView, QListView
 )
 
@@ -326,7 +325,7 @@ def separator(widget, width=4, height=4):
     :rtype: QWidget
     """
     sep = QtWidgets.QWidget(widget)
-    if widget.layout() is not None:
+    if widget is not None and widget.layout() is not None:
         widget.layout().addWidget(sep)
     sep.setFixedSize(width, height)
     return sep
@@ -788,7 +787,7 @@ class LineEditWFocusOut(QtWidgets.QLineEdit):
 
     def __init__(self, parent, callback, focusInCallback=None):
         super().__init__(parent)
-        if parent.layout() is not None:
+        if parent is not None and parent.layout() is not None:
             parent.layout().addWidget(self)
         self.callback = callback
         self.focusInCallback = focusInCallback

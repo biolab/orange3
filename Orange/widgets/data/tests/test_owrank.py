@@ -1,5 +1,8 @@
 import numpy as np
 
+from AnyQt.QtCore import Qt, QItemSelection
+from AnyQt.QtWidgets import QCheckBox
+
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.modelling import RandomForestLearner, SGDLearner
 from Orange.preprocess.score import Scorer
@@ -7,10 +10,8 @@ from Orange.classification import LogisticRegressionLearner
 from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, REG_SCORES
-from Orange.widgets.tests.base import WidgetTest
-
-from AnyQt.QtCore import Qt, QItemSelection
-from AnyQt.QtWidgets import QCheckBox
+from Orange.widgets.tests.base import WidgetTest, datasets
+from Orange.widgets.widget import AttributeList
 
 
 class TestOWRank(WidgetTest):
@@ -106,6 +107,13 @@ class TestOWRank(WidgetTest):
         output = self.get_output(self.widget.Outputs.scores)
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.iris.domain.attributes), 5))
+
+    def test_output_features(self):
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        output = self.get_output(self.widget.Outputs.features)
+        self.assertIsInstance(output, AttributeList)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertIsNone(self.get_output(self.widget.Outputs.features))
 
     def test_scoring_method_problem_type(self):
         """Check scoring methods check boxes"""
@@ -339,3 +347,9 @@ class TestOWRank(WidgetTest):
         self.assertTrue(self.widget.Error.no_attributes.is_shown())
         self.send_signal(self.widget.Inputs.data, data)
         self.assertFalse(self.widget.Error.no_attributes.is_shown())
+
+    def test_dataset(self):
+        for method in CLS_SCORES + REG_SCORES:
+            self._get_checkbox(method.shortname).setChecked(True)
+        for ds in datasets.datasets():
+            self.send_signal(self.widget.Inputs.data, ds)

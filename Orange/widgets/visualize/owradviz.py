@@ -9,20 +9,21 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor
 from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
-from AnyQt.QtWidgets import qApp, QApplication
+from AnyQt.QtWidgets import qApp
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 
-from Orange.data import Table, Domain, StringVariable
+from Orange.data import Table, Domain
 from Orange.preprocess.score import ReliefF, RReliefF
-from Orange.projection import radviz
+from Orange.projection import RadViz
 from Orange.widgets import widget, gui
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import TextItem
@@ -58,6 +59,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.attr_ordering = None
         self.data = None
         self.valid_data = None
+
+        self.rank_table.clicked.connect(self.on_row_clicked)
+        self.rank_table.verticalHeader().sectionClicked.connect(
+            self.on_header_clicked)
 
     def initialize(self):
         super().initialize()
@@ -130,9 +135,11 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_attrs_spin.setMaximum(20)  # all primitive vars except color one
         return True
 
-    def on_selection_changed(self, selected, deselected):
-        attrs = selected.indexes()[0].data(self._AttrRole)
-        self.selectionChanged.emit([attrs])
+    def on_row_clicked(self, index):
+        self.selectionChanged.emit(index.data(self._AttrRole))
+
+    def on_header_clicked(self, section):
+        self.on_row_clicked(self.rank_model.index(section, 0))
 
     def iterate_states(self, state):
         if state is None:  # on the first call, compute order
@@ -163,8 +170,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         attrs = [self.attrs[i] for i in state]
         domain = Domain(attributes=attrs, class_vars=[self.attr_color])
         data = self.data.transform(domain)
-        radviz_xy, _, mask = radviz(data, attrs)
-        y = data.Y[mask]
+        projector = RadViz()
+        projection = projector(data)
+        radviz_xy = projection(data)
+        y = projector.preprocess(data).Y
         return -self._evaluate_projection(radviz_xy, y)
 
     def bar_length(self, score):
@@ -270,26 +279,19 @@ class OWRadviz(OWAnchorProjectionWidget):
     vizrank = SettingProvider(RadvizVizRank)
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
-    embedding_variables_names = ("radviz-x", "radviz-y")
 
     class Warning(OWAnchorProjectionWidget.Warning):
-        no_features = widget.Msg("Radviz requires at least two features.")
         invalid_embedding = widget.Msg("No projection for selected features")
-
-    class Error(OWAnchorProjectionWidget.Error):
-        no_features = widget.Msg(
-            "At least three numeric or categorical variables are required"
-        )
-        no_instances = widget.Msg("At least two data instances are required")
+        removed_vars = widget.Msg("Categorical variables with more than"
+                                  " two values are not shown.")
 
     def __init__(self):
         self.model_selected = VariableListModel(enable_dnd=True)
-        self.model_selected.rowsInserted.connect(self.__model_selected_changed)
-        self.model_selected.rowsRemoved.connect(self.__model_selected_changed)
+        self.model_selected.removed.connect(self.__model_selected_changed)
         self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.__vizrank_set_attrs
+            None, self, "Suggest features", self.vizrank_set_attrs
         )
         super().__init__()
 
@@ -297,6 +299,8 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.variables_selection = VariablesSelection(
             self, self.model_selected, self.model_other, self.controlArea
         )
+        self.variables_selection.added.connect(self.__model_selected_changed)
+        self.variables_selection.removed.connect(self.__model_selected_changed)
         self.variables_selection.add_remove.layout().addWidget(
             self.btn_vizrank
         )
@@ -309,19 +313,25 @@ class OWRadviz(OWAnchorProjectionWidget):
         if self.data is None or self.data.domain is None:
             return []
         dom = self.data.domain
-        return [v for v in chain(dom.variables, dom.metas) if v.is_primitive()]
+        return [v for v in chain(dom.variables, dom.metas)
+                if v.is_continuous or v.is_discrete and len(v.values) == 2]
 
-    def __vizrank_set_attrs(self, attrs):
+    @property
+    def effective_variables(self):
+        return self.model_selected[:]
+
+    def vizrank_set_attrs(self, *attrs):
         if not attrs:
             return
         self.model_selected[:] = attrs[:]
         self.model_other[:] = [var for var in self.primitive_variables
                                if var not in attrs]
+        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.selected_vars = [(var.name, vartype(var)) for var
                               in self.model_selected]
-        self.projection = None
+        self.init_projection()
         self.setup_plot()
         self.commit()
 
@@ -331,6 +341,12 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def set_data(self, data):
         super().set_data(data)
+        self._init_vizrank()
+        self.init_projection()
+
+    def use_context(self):
+        self.model_selected.clear()
+        self.model_other.clear()
         if self.data is not None and len(self.selected_vars):
             d, selected = self.data.domain, [v[0] for v in self.selected_vars]
             self.model_selected[:] = [d[name] for name in selected]
@@ -343,8 +359,6 @@ class OWRadviz(OWAnchorProjectionWidget):
                 if d.class_var in variables else []
             self.model_selected[:] = variables[:5]
             self.model_other[:] = variables[5:] + class_var
-
-        self._init_vizrank()
 
     def _init_vizrank(self):
         is_enabled = self.data is not None and \
@@ -359,72 +373,33 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.vizrank.initialize()
 
     def check_data(self):
-        def error(err):
-            err()
-            self.data = None
-
         super().check_data()
         if self.data is not None:
-            if len(self.data) < 2:
-                error(self.Error.no_instances)
-            elif len(self.primitive_variables) < 3:
-                error(self.Error.no_features)
+            domain = self.data.domain
+            vars_ = chain(domain.variables, domain.metas)
+            n_vars = sum(v.is_primitive() for v in vars_)
+            if len(self.primitive_variables) < n_vars:
+                self.Warning.removed_vars()
 
     def init_attr_values(self):
         super().init_attr_values()
         self.selected_vars = []
 
-    def get_embedding(self):
-        self.valid_data = None
-        if self.data is None:
-            return None
-
-        self.Warning.no_features.clear()
-        if len(self.model_selected) < 2:
-            self.Warning.no_features()
-            return None
-
-        ec, proj, msk = radviz(self.data, self.model_selected, self.projection)
-        angle = np.arctan2(*proj.T[::-1])
-        self.projection = np.vstack((np.cos(angle), np.sin(angle))).T
-        self.valid_data = msk
-
-        self.Warning.invalid_embedding.clear()
-        if ec is None or np.any(np.isnan(ec)):
-            self.Warning.invalid_embedding()
-            return None
-
-        embedding = np.zeros((len(self.data), 2), dtype=np.float)
-        embedding[self.valid_data] = ec
-        return embedding
-
-    def get_anchors(self):
-        if self.projection is None:
-            return None, None
-        return self.projection, [a.name for a in self.model_selected]
-
     def _manual_move(self, anchor_idx, x, y):
         angle = np.arctan2(y, x)
         super()._manual_move(anchor_idx, np.cos(angle), np.sin(angle))
 
-    def send_components(self):
-        components = None
-        if self.data is not None and self.valid_data is not None and \
-                self.projection is not None:
-            angle = np.arctan2(*self.projection.T[::-1])
-            meta_attrs = [StringVariable(name='component')]
-            components = Table(Domain(self.model_selected, metas=meta_attrs),
-                               np.row_stack((self.projection.T, angle)),
-                               metas=np.array([["RX"], ["RY"], ["angle"]]))
-            components.name = self.data.name
-        self.Outputs.components.send(components)
+    def _send_components_x(self):
+        components_ = super()._send_components_x()
+        angle = np.arctan2(*components_[::-1])
+        return np.row_stack((components_, angle))
+
+    def _send_components_metas(self):
+        return np.vstack((super()._send_components_metas(), ["angle"]))
 
     def clear(self):
-        if self.model_selected:
-            self.model_selected.clear()
-        if self.model_other:
-            self.model_other.clear()
         super().clear()
+        self.projector = RadViz()
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -471,27 +446,6 @@ class MoveIndicator(pg.GraphicsObject):
         return QRectF()
 
 
-def main(argv=None):
-    import sys
-
-    argv = sys.argv[1:] if argv is None else argv
-    if argv:
-        filename = argv[0]
-    else:
-        filename = "heart_disease"
-
-    data = Table(filename)
-
-    app = QApplication([])
-    w = OWRadviz()
-    w.set_data(data)
-    w.set_subset_data(data[::10])
-    w.handleNewSignals()
-    w.show()
-    app.exec()
-    w.saveSettings()
-
-
-if __name__ == "__main__":
-    import sys
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    data = Table("heart_disease")
+    WidgetPreview(OWRadviz).run(set_data=data, set_subset_data=data[::10])

@@ -1,11 +1,10 @@
 """Various small utilities that might be useful everywhere"""
 import os
 import inspect
-import itertools
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
-from itertools import chain, count
+from itertools import chain, count, repeat
 
 from collections import OrderedDict
 import warnings
@@ -115,11 +114,11 @@ class Registry(type):
         return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
 
 
-def namegen(prefix='_', *args, count=count, **kwargs):
+def namegen(prefix='_', *args, spec_count=count, **kwargs):
     """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
-    count = iter(count(*args, **kwargs))
+    spec_count = iter(spec_count(*args, **kwargs))
     while True:
-        yield prefix + str(next(count))
+        yield prefix + str(next(spec_count))
 
 
 def export_globals(globals, module_name):
@@ -189,7 +188,7 @@ def interleave(seq1, seq2):
     -------
     >>> list(interleave([1, 3, 5], [2, 4]))
     [1, 2, 3, 4, 5]
-    >>> list(interleave([1, 2, 3, 4], itertools.repeat("<")))
+    >>> list(interleave([1, 2, 3, 4], repeat("<")))
     [1, '<', 2, '<', 3, '<', 4]
     """
     iterator1, iterator2 = iter(seq1), iter(seq2)
@@ -222,7 +221,7 @@ def Reprable_repr_pretty(name, itemsiter, printer, cycle):
             printer.breakable()
 
         itemsiter = (partial(printitem, *item) for item in itemsiter)
-        sepiter = itertools.repeat(printsep)
+        sepiter = repeat(printsep)
 
         with printer.group(len(name) + 1, "{0}(".format(name), ")"):
             for part in interleave(itemsiter, sepiter):
@@ -286,9 +285,8 @@ class Reprable:
         sig = inspect.signature(cls.__init__)
         for param in sig.parameters.values():
             # Skip self, *args, **kwargs
-            if (param.name != 'self' and
-                        param.kind not in (param.VAR_POSITIONAL,
-                                           param.VAR_KEYWORD)):
+            if param.name != 'self' and \
+                    param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 yield param.name, param.default
 
     def _reprable_omit_param(self, name, default, value):

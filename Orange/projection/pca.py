@@ -11,12 +11,12 @@ except ImportError:
         pass
 
 import Orange.data
-from Orange.data.util import SharedComputeValue
 from Orange.data import Variable
+from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import Continuize
-from Orange.projection import SklProjector, Projection, LinearCombinationSql
 from Orange.preprocess.score import LearnerScorer
+from Orange.projection import SklProjector, DomainProjection
 
 __all__ = ["PCA", "SparsePCA", "IncrementalPCA", "TruncatedSVD"]
 
@@ -48,7 +48,7 @@ class PCA(SklProjector, _FeatureScorerMixin):
             params["n_components"] = min(min(X.shape), params["n_components"])
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class SparsePCA(SklProjector):
@@ -65,41 +65,16 @@ class SparsePCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
-class _PCATransformDomain:
-    """Computation common for all PCA variables."""
+class PCAModel(DomainProjection, metaclass=WrapperMeta):
+    var_prefix = "PC"
 
-    def __init__(self, pca):
-        self.pca = pca
-
-    def __call__(self, data):
-        if data.domain != self.pca.pre_domain:
-            data = data.transform(self.pca.pre_domain)
-        return self.pca.transform(data.X)
-
-
-class PCAModel(Projection, metaclass=WrapperMeta):
-
-    def __init__(self, proj, domain):
-        pca_transform = _PCATransformDomain(self)
-
-        def pca_variable(i):
-            v = Orange.data.ContinuousVariable(
-                'PC%d' % (i + 1),
-                compute_value=Projector(self, i, pca_transform))
-            v.to_sql = LinearCombinationSql(
-                domain.attributes, self.components_[i, :],
-                getattr(self, 'mean_', None))
-            return v
-
-        super().__init__(proj=proj)
-        self.orig_domain = domain
-        self.n_components = self.components_.shape[0]
-        self.domain = Orange.data.Domain(
-            [pca_variable(i) for i in range(self.n_components)],
-            domain.class_vars, domain.metas)
+    def _get_var_names(self, n):
+        names = [f"{self.var_prefix}{postfix}" for postfix in range(1, n + 1)]
+        domain = self.orig_domain.variables + self.orig_domain.metas
+        return get_unique_names([v.name for v in domain], names)
 
 
 class IncrementalPCA(SklProjector):
@@ -115,7 +90,7 @@ class IncrementalPCA(SklProjector):
     def fit(self, X, Y=None):
         proj = self.__wraps__(**self.params)
         proj = proj.fit(X, Y)
-        return IncrementalPCAModel(proj, self.domain)
+        return IncrementalPCAModel(proj, self.domain, len(proj.components_))
 
     def partial_fit(self, data):
         return self(data)
@@ -151,20 +126,7 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
 
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain)
-
-
-class Projector(SharedComputeValue):
-    """Transform into a given PCA component."""
-
-    def __init__(self, projection, feature, pca_transform):
-        super().__init__(pca_transform)
-        self.projection = projection
-        self.feature = feature
-        self.transformed = None
-
-    def compute(self, data, pca_space):
-        return pca_space[:, self.feature]
+        return PCAModel(proj, self.domain, len(proj.components_))
 
 
 class RemotePCA:

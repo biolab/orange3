@@ -5,7 +5,6 @@ Edit Domain
 A widget for manual editing of a domain's attributes.
 
 """
-import sys
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest
@@ -34,6 +33,7 @@ import Orange.data
 from Orange.preprocess.transformation import Identity, Lookup
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 #: An ordered sequence of key, value pairs (variable annotations)
@@ -1455,25 +1455,5 @@ def apply_transform_string(var, trs):
     return variable
 
 
-def main(argv=None):  # pragma: no cover
-    from AnyQt.QtWidgets import QApplication
-    app = QApplication(argv or [])
-    argv = app.arguments()
-    w = OWEditDomain()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.show()
-    w.raise_()
-    rval = app.exec()
-    w.set_data(None)
-    w.saveSettings()
-    w.onDeleteWidget()
-    return rval
-
-
 if __name__ == "__main__":  # pragma: no cover
-    sys.exit(main(sys.argv))
+    WidgetPreview(OWEditDomain).run(Orange.data.Table("iris"))

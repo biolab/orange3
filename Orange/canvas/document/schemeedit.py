@@ -1057,12 +1057,10 @@ class SchemeEditWidget(QWidget):
         Edit (rename) the `node`'s title. Opens an input dialog.
         """
         name, ok = QInputDialog.getText(
-                    self, self.tr("Rename"),
-                    str(self.tr("Enter a new name for the '%s' widget")) \
-                    % node.title,
-                    text=node.title
-                    )
-
+            self, self.tr("Rename"),
+            str(self.tr("Enter a new name for the '%s' widget")) % node.title,
+            text=node.title
+            )
         if ok:
             self.__undoStack.push(
                 commands.RenameNodeCommand(self.__scheme, node, node.title,
@@ -1744,9 +1742,9 @@ class SchemeEditWidget(QWidget):
 
         selection = self.selectedNodes()
 
-        links = [link for link in scheme.links
-                 if link.source_node in selection and
-                    link.sink_node in selection]
+        links = [
+            link for link in scheme.links
+            if link.source_node in selection and link.sink_node in selection]
         nodedups = [copy_node(node) for node in selection]
         allnames = {node.title for node in scheme.nodes + nodedups}
         for nodedup in nodedups:

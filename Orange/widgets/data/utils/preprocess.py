@@ -16,7 +16,7 @@ from AnyQt.QtCore import (
 )
 
 from AnyQt.QtGui import (
-    QCursor, QIcon, QPainter, QPixmap, QStandardItemModel, QStandardItem,
+    QCursor, QIcon, QPainter, QPixmap, QStandardItemModel,
     QDrag, QKeySequence
 )
 

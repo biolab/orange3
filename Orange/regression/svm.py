@@ -49,4 +49,3 @@ if __name__ == '__main__':
     res = Orange.evaluation.CrossValidation(data, learners)
     for l, ca in zip(learners, Orange.evaluation.RMSE(res)):
         print("learner: {}\nRMSE: {}\n".format(l, ca))
-

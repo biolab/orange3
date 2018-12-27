@@ -7,7 +7,7 @@ from ...registry.tests import small_testing_registry
 
 from .. import (
     Scheme, SchemeNode, SchemeLink, SchemeTextAnnotation,
-    SchemeArrowAnnotation, SchemeTopologyError, SinkChannelError,
+    SchemeTopologyError, SinkChannelError,
     DuplicatedLinkError, IncompatibleChannelTypeError
 )
 

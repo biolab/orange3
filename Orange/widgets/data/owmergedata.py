@@ -4,7 +4,6 @@ from itertools import chain, product, tee
 from AnyQt.QtWidgets import QApplication, QStyle, QSizePolicy
 
 import numpy as np
-import scipy.sparse as sp
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable
@@ -12,6 +11,7 @@ from Orange.data.util import hstack
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -369,7 +369,11 @@ class OWMergeData(widget.OWWidget):
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
             self.data.metas, reduced_extra.metas, indices, string_cols)
-        return Orange.data.Table.from_numpy(domain, X, Y, metas)
+        table = Orange.data.Table.from_numpy(domain, X, Y, metas)
+        table.name = getattr(self.data, 'name', '')
+        table.attributes = getattr(self.data, 'attributes', {})
+        table.ids = self.data.ids
+        return table
 
     @staticmethod
     def _join_array_by_indices(left, right, indices, string_cols=None):
@@ -397,17 +401,7 @@ class OWMergeData(widget.OWWidget):
         return res
 
 
-def main():
-    app = QApplication([])
-    w = OWMergeData()
-    data = Orange.data.Table("tests/data-gender-region")
-    extra_data = Orange.data.Table("tests/data-regions")
-    w.setData(data)
-    w.setExtraData(extra_data)
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWMergeData).run(
+        setData=Orange.data.Table("tests/data-gender-region"),
+        setExtraData=Orange.data.Table("tests/data-regions"))

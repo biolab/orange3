@@ -15,7 +15,7 @@ import numpy
 
 from AnyQt.QtWidgets import (
     QComboBox, QGraphicsScene, QGraphicsView, QGraphicsWidget,
-    QGraphicsPathItem, QGraphicsTextItem, QStyle, QApplication
+    QGraphicsPathItem, QGraphicsTextItem, QStyle
 )
 from AnyQt.QtGui import (
     QPainterPath, QPainter, QTransform, QColor, QBrush, QPen, QPalette
@@ -24,13 +24,13 @@ from AnyQt.QtCore import Qt, QPointF, QRectF, QLineF
 from AnyQt.QtCore import pyqtSignal as Signal
 
 import Orange.data
-import Orange.statistics.util as util
+from Orange.statistics import util
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, colorpalette
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.io import FileFormat
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -52,6 +52,9 @@ class OWVennDiagram(widget.OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
+
+    inputhints: dict
+    selection: list
 
     # Selected disjoint subset indices
     selection = settings.Setting([])
@@ -402,7 +405,7 @@ class OWVennDiagram(widget.OWWidget):
         vennitems = []
         colors = colorpalette.ColorPaletteHSV(n)
 
-        for i, (key, item) in enumerate(self.itemsets.items()):
+        for i, (_, item) in enumerate(self.itemsets.items()):
             count = len(set(item.items))
             count_all = len(item.items)
             if count != count_all:
@@ -541,6 +544,8 @@ class OWVennDiagram(widget.OWWidget):
         names = uniquify(names)
 
         for i, (key, input) in enumerate(self.data.items()):
+            # cell vars are in functions that are only used in the loop
+            # pylint: disable=cell-var-from-loop
             if not len(input.table):
                 continue
             if self.useidentifiers:
@@ -1019,7 +1024,7 @@ class VennSetItem(QGraphicsPathItem):
 
 class VennIntersectionArea(QGraphicsPathItem):
     def __init__(self, parent=None, text=""):
-        super(QGraphicsPathItem, self).__init__(parent)
+        super().__init__(parent)
         self.setAcceptHoverEvents(True)
         self.setPen(QPen(Qt.NoPen))
 
@@ -1034,9 +1039,6 @@ class VennIntersectionArea(QGraphicsPathItem):
         if self._text != text:
             self._text = text
             self.text.setPlainText(text)
-
-    def text(self):
-        return self._text
 
     def setTextAnchor(self, pos):
         if self._anchor != pos:
@@ -1242,9 +1244,9 @@ class VennDiagram(QGraphicsWidget):
         return list(self._vennareas)
 
     def setFont(self, font):
-        if self._font != font:
+        if font != self.font():
             self.prepareGeometryChange()
-            self._font = font
+            super().setFont(font)
 
             for item in self.items():
                 item.setFont(font)
@@ -1330,10 +1332,6 @@ class VennDiagram(QGraphicsWidget):
     def setGeometry(self, geometry):
         super(VennDiagram, self).setGeometry(geometry)
         self._updateLayout()
-
-    def paint(self, painter, option, w):
-        super(VennDiagram, self).paint(painter, option, w)
-#         painter.drawRect(self.boundingRect())
 
     def _on_editingStarted(self):
         item = self.sender()
@@ -1490,6 +1488,7 @@ def subset_anchors(shapes):
 
         assert all(anchors[1:])
         return anchors[1:]
+    return None
 
 
 def bit_rot_left(x, y, bits=32):
@@ -1619,7 +1618,7 @@ def venn_intersection(paths, key):
 
 
 def append_column(data, where, variable, column):
-    X, Y, M, W = data.X, data.Y, data.metas, data.W
+    X, Y, M = data.X, data.Y, data.metas
     domain = data.domain
     attr = domain.attributes
     class_vars = domain.class_vars
@@ -1668,57 +1667,23 @@ def group_table_indices(table, key_var):
     return groups
 
 
-def test():
+if __name__ == "__main__":  # pragma: no cover
     from Orange.evaluation import ShuffleSplit
 
-    app = QApplication([])
-    w = OWVennDiagram()
     data = Orange.data.Table("brown-selected")
+    # data1 = Orange.data.Table("brown-selected")
+    # datasets = [(data, 1), (data, 2)]
+
     data = append_column(data, "M", Orange.data.StringVariable("Test"),
                          numpy.arange(len(data)).reshape(-1, 1) % 30)
-
     res = ShuffleSplit(data, [None], n_resamples=5,
                        test_size=0.7, stratified=False)
     indices = iter(res.indices)
-
-    def select(data):
+    datasets = []
+    for i in range(1, 6):
         sample, _ = next(indices)
-        return data[sample]
+        data1 = data[sample]
+        data1.name = chr(ord("A") + i)
+        datasets.append((data1, i))
 
-    d1 = select(data)
-    d2 = select(data)
-    d3 = select(data)
-    d4 = select(data)
-    d5 = select(data)
-
-    for i, data in enumerate([d1, d2, d3, d4, d5]):
-        data.name = chr(ord("A") + i)
-        w.setData(data, key=i)
-
-    w.handleNewSignals()
-    w.show()
-    app.exec_()
-
-    del w
-    app.processEvents()
-    return app
-
-
-def test1():
-    app = QApplication([])
-    w = OWVennDiagram()
-    data1 = Orange.data.Table("brown-selected")
-    data2 = Orange.data.Table("brown-selected")
-    w.setData(data1, 1)
-    w.setData(data2, 2)
-    w.handleNewSignals()
-
-    w.show()
-    w.raise_()
-    app.exec_()
-
-    del w
-    return app
-
-if __name__ == "__main__":
-    test()
+    WidgetPreview(OWVennDiagram).run(setData=datasets)

@@ -9,7 +9,6 @@ from AnyQt.QtGui import (
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap
 )
 from AnyQt.QtSvg import QSvgRenderer
-# pylint: disable=unused-import
 from AnyQt.QtCore import Qt, QTimer, QRectF, QRect, QSize
 
 

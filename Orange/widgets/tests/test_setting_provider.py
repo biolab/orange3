@@ -143,8 +143,10 @@ class SettingProviderTestCase(unittest.TestCase):
         settings = {}
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5}
         zoom_data = {ALLOW_ZOOMING: 6}
-        all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2,
-                GRAPH: graph_data, ZOOM_TOOLBAR: zoom_data}
+        all_data = {SHOW_GRAPH: 1,
+                    SHOW_ZOOM_TOOLBAR: 2,
+                    GRAPH: graph_data,
+                    ZOOM_TOOLBAR: zoom_data}
 
         for setting, data, instance in default_provider.traverse_settings(all_data):
             settings[setting.name] = data

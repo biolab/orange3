@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-import sys
 import math
 from itertools import chain
 import numpy as np
@@ -25,6 +23,7 @@ from Orange.widgets.settings import (Setting, DomainContextHandler,
 from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -484,7 +483,8 @@ class OWBoxPlot(widget.OWWidget):
             return
 
         if not self.is_continuous:
-            return self.display_changed_disc()
+            self.display_changed_disc()
+            return
 
         self.mean_labels = [self.mean_label(stat, attr, lab)
                             for stat, lab in zip(self.stats, self.label_txts)]
@@ -503,7 +503,8 @@ class OWBoxPlot(widget.OWWidget):
             return
 
         if not self.is_continuous:
-            return self.display_changed_disc()
+            self.display_changed_disc()
+            return
 
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.compare]
@@ -579,6 +580,7 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
 
             if self.sort_freqs:
+                # pylint: disable=invalid-unary-operand-type
                 self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
         else:
             self.boxes = [self.strudel(self.dist)]
@@ -1044,7 +1046,7 @@ class OWBoxPlot(widget.OWWidget):
                 if xs[to] - frm_x > 1.5:
                     to -= 1
                     break
-            if last_to == to or frm == to:
+            if to in (last_to, frm):
                 continue
             for rowi, used in enumerate(used_to):
                 if used < frm:
@@ -1060,8 +1062,7 @@ class OWBoxPlot(widget.OWWidget):
             last_to = to
 
     def get_widget_name_extension(self):
-        if self.attribute:
-            return self.attribute.name
+        return self.attribute.name if self.attribute else None
 
     def send_report(self):
         self.report_plot()
@@ -1112,28 +1113,5 @@ class OWBoxPlot(widget.OWWidget):
                 text)
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "heart_disease"
-
-    data = Orange.data.Table(filename)
-    w = OWBoxPlot()
-    w.show()
-    w.raise_()
-    w.set_data(data)
-    w.handleNewSignals()
-    rval = app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.saveSettings()
-    return rval
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWBoxPlot).run(Orange.data.Table("heart_disease.tab"))

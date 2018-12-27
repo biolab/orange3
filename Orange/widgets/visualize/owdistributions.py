@@ -6,22 +6,22 @@ A widget for plotting attribute distributions.
 
 """
 from math import sqrt
-import sys
 import collections
 from xml.sax.saxutils import escape
+
+import numpy
+import pyqtgraph as pg
 
 from AnyQt.QtWidgets import QSizePolicy, QLabel, QListView, QToolTip
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPicture, QPalette
 from AnyQt.QtCore import Qt, QRectF
-
-import numpy
-import pyqtgraph as pg
 
 import Orange.data
 from Orange.preprocess import Discretize, EqualWidth
 from Orange.statistics import distribution, contingency
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem as SPGLegendItem
@@ -201,7 +201,7 @@ class OWDistributions(widget.OWWidget):
                     callback=self._on_set_smoothing, createLabel=False)
         self.l_smoothing_r = gui.widgetLabel(box2, "Precise")
 
-        self.cb_disc_cont = gui.checkBox(
+        gui.checkBox(
             gui.indentedBox(box, sep=4),
             self, "disc_cont", "Bin numeric variables",
             callback=self._on_groupvar_idx_changed,
@@ -209,18 +209,18 @@ class OWDistributions(widget.OWWidget):
 
         box = gui.vBox(self.controlArea, "Group by")
         self.icons = gui.attributeIconDict
-        self.groupvarview = gui.comboBox(
+        gui.comboBox(
             box, self, "groupvar_idx",
             callback=self._on_groupvar_idx_changed,
             valueType=str, contentsLength=12)
         box2 = gui.indentedBox(box, sep=4)
-        self.cb_rel_freq = gui.checkBox(
+        gui.checkBox(
             box2, self, "relative_freq", "Show relative frequencies",
             callback=self._on_relative_freq_changed,
             tooltip="Normalize probabilities so that probabilities "
                     "for each group-by value sum to 1.")
         gui.separator(box2)
-        self.cb_prob = gui.comboBox(
+        gui.comboBox(
             box2, self, "show_prob", label="Show probabilities:",
             orientation=Qt.Horizontal,
             callback=self._on_relative_freq_changed,
@@ -289,13 +289,14 @@ class OWDistributions(widget.OWWidget):
             self.varmodel[:] = list(domain.variables) + \
                                [meta for meta in domain.metas
                                 if meta.is_continuous or meta.is_discrete]
-            self.groupvarview.clear()
+            groupvarview = self.controls.groupvar_idx
+            groupvarview.clear()
             self.groupvarmodel = \
                 ["(None)"] + [var for var in domain.variables if var.is_discrete] + \
                 [meta for meta in domain.metas if meta.is_discrete]
-            self.groupvarview.addItem("(None)")
+            groupvarview.addItem("(None)")
             for var in self.groupvarmodel[1:]:
-                self.groupvarview.addItem(self.icons[var], var.name)
+                groupvarview.addItem(self.icons[var], var.name)
             if domain.has_discrete_class:
                 self.groupvar_idx = \
                     self.groupvarmodel[1:].index(domain.class_var) + 1
@@ -316,17 +317,18 @@ class OWDistributions(widget.OWWidget):
         self.groupvar_idx = 0
         self._legend.clear()
         self._legend.hide()
-        self.groupvarview.clear()
-        self.cb_prob.clear()
+        self.controls.groupvar_idx.clear()
+        self.controls.show_prob.clear()
 
     def _setup_smoothing(self):
         if not self.disc_cont and self.var and self.var.is_continuous:
-            self.cb_disc_cont.setText("Bin numeric variables")
+            self.controls.disc_cont.setText("Bin numeric variables")
             self.l_smoothing_l.setText("Smooth")
             self.l_smoothing_r.setText("Precise")
         else:
-            self.cb_disc_cont.setText("Bin numeric variables into {} bins".
-                                      format(self.bins[self.smoothing_index]))
+            self.controls.disc_cont.setText(
+                "Bin numeric variables into {} bins".
+                format(self.bins[self.smoothing_index]))
             self.l_smoothing_l.setText(" " + str(self.bins[0]))
             self.l_smoothing_r.setText(" " + str(self.bins[-1]))
 
@@ -346,10 +348,11 @@ class OWDistributions(widget.OWWidget):
             self.var = self.varmodel[varidx]
         if self.groupvar_idx > 0:
             self.cvar = self.groupvarmodel[self.groupvar_idx]
-            self.cb_prob.clear()
-            self.cb_prob.addItem("(None)")
-            self.cb_prob.addItems(self.cvar.values)
-            self.cb_prob.addItem("(All)")
+            prob = self.controls.show_prob
+            prob.clear()
+            prob.addItem("(None)")
+            prob.addItems(self.cvar.values)
+            prob.addItem("(All)")
             self.show_prob = min(max(self.show_prob, 0),
                                  len(self.cvar.values) + 1)
         data = self.data
@@ -617,9 +620,9 @@ class OWDistributions(widget.OWWidget):
         leftaxis.resizeEvent()
 
     def enable_disable_rel_freq(self):
-        self.cb_prob.setDisabled(self.var is None or self.cvar is None)
-        self.cb_rel_freq.setDisabled(
-            self.var is None or self.cvar is None)
+        disable = self.var is None or self.cvar is None
+        self.controls.show_prob.setDisabled(disable)
+        self.controls.relative_freq.setDisabled(disable)
 
     def _on_variable_idx_changed(self):
         self.variable_idx = selected_index(self.varview)
@@ -638,6 +641,7 @@ class OWDistributions(widget.OWWidget):
     def get_widget_name_extension(self):
         if self.variable_idx >= 0:
             return self.varmodel[self.variable_idx]
+        return None
 
     def send_report(self):
         self.plotview.scene().setSceneRect(self.plotview.sceneRect())
@@ -648,7 +652,7 @@ class OWDistributions(widget.OWWidget):
             self.varmodel[self.variable_idx])
         if self.groupvar_idx:
             group_var = self.groupvarmodel[self.groupvar_idx]
-            prob = self.cb_prob
+            prob = self.controls.show_prob
             indiv_probs = 0 < prob.currentIndex() < prob.count() - 1
             if not indiv_probs or self.relative_freq:
                 text += " grouped by '{}'".format(group_var)
@@ -773,7 +777,7 @@ def weighted_std(a, axis=None, weights=None, ddof=0):
     return numpy.sqrt(mean_sq_diff)
 
 
-def weighted_quantiles(a, prob=[0.25, 0.5, 0.75], alphap=0.4, betap=0.4,
+def weighted_quantiles(a, prob=(0.25, 0.5, 0.75), alphap=0.4, betap=0.4,
                        axis=None, weights=None):
     a = numpy.asarray(a)
     prob = numpy.asarray(prob)
@@ -811,31 +815,5 @@ def shape_reduce_keep_dims(shape, axis):
     return tuple(shape)
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    import gc
-    if argv is None:
-        argv = sys.argv
-    argv = list(argv)
-    app = QApplication(argv)
-    w = OWDistributions()
-    w.show()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "heart_disease"
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.handleNewSignals()
-    rval = app.exec_()
-    w.set_data(None)
-    w.handleNewSignals()
-    w.deleteLater()
-    del w
-    app.processEvents()
-    gc.collect()
-    return rval
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDistributions).run(Orange.data.Table("heart_disease.tab"))

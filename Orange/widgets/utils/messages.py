@@ -32,7 +32,6 @@ import traceback
 from operator import attrgetter
 from warnings import warn
 from inspect import getattr_static
-# pylint: disable=unused-import
 from typing import Optional
 
 from AnyQt.QtWidgets import QStyle, QSizePolicy
@@ -368,6 +367,7 @@ class WidgetMessagesMixin(MessagesMixin):
         self.message_bar.clear()
         if messages:
             self.message_bar.setMessages((m, msg(m)) for m in messages)
+        self.message_bar.setVisible(bool(messages))
 
     def insert_message_bar(self):
         """Insert message bar into the widget.

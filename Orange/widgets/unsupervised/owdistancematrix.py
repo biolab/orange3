@@ -16,6 +16,7 @@ from Orange.widgets.gui import OrangeUserRole
 from Orange.widgets.settings import Setting, ContextSetting, ContextHandler
 from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
 from Orange.widgets.utils.itemmodels import VariableListModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
 
@@ -346,8 +347,8 @@ class OWDistanceMatrix(widget.OWWidget):
             self.report_raw('<table style="border-collapse:collapse">')
             self.report_raw("<tr><td></td>")
             self.report_raw("".join(
-                    '<td style="background-color: {}">{}</td>'.format(*cv)
-                    for cv in zip(label_colors, model.labels)))
+                '<td style="background-color: {}">{}</td>'.format(*cv)
+                for cv in zip(label_colors, model.labels)))
             self.report_raw("</tr>")
             for i in range(dim):
                 self.report_raw("<tr>")
@@ -375,3 +376,10 @@ class OWDistanceMatrix(widget.OWWidget):
                             for j in range(dim)) +
                     "</tr>")
             self.report_raw("</table>")
+
+
+if __name__ == "__main__":  # pragma: no cover
+    import Orange.distance
+    data = Orange.data.Table("iris")
+    dist = Orange.distance.Euclidean(data[:50])
+    WidgetPreview(OWDistanceMatrix).run(dist)

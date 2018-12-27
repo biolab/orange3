@@ -389,8 +389,9 @@ class MessageWidget(QWidget):
 #                     icon=QIcon(self.style().standardIcon(
 #                                QStyle.SP_TitleBarCloseButton)))
                 button = SimpleButton(
-                    icon=QIcon(self.style().standardIcon(
-                               QStyle.SP_TitleBarCloseButton)))
+                    icon=QIcon(
+                        self.style().standardIcon(
+                            QStyle.SP_TitleBarCloseButton)))
             elif button == MessageWidget.Help:
                 role = MessageWidget.HelpRole
                 button = QPushButton("Help", default=False, autoDefault=False)

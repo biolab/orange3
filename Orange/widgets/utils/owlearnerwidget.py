@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-import itertools
 import numpy as np
 
 from AnyQt.QtCore import QTimer, Qt

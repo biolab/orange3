@@ -1,13 +1,12 @@
 import random
 import re
-
 from math import isnan
 from numbers import Real
 
-from Orange.util import Reprable
 import numpy as np
 import bottleneck as bn
 
+from Orange.util import Reprable
 from Orange.data import Instance, Storage, Variable
 from Orange.util import Enum
 
@@ -168,21 +167,21 @@ class SameValue(Filter):
             if self.negate:
                 retain = np.fromiter(
                     (inst[column] != value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
             else:
                 retain = np.fromiter(
                     (inst[column] == value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
         else:
             column = -1 - column
             if self.negate:
                 retain = np.fromiter(
                     (inst._metas[column] != value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
             else:
                 retain = np.fromiter(
                     (inst._metas[column] == value for inst in data),
-                     bool, len(data))
+                    bool, len(data))
         return data[retain]
 
 

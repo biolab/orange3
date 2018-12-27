@@ -1,11 +1,10 @@
-import sys
 import copy
 import logging
 import enum
 import concurrent.futures
-from concurrent.futures import Future  # pylint: disable=unused-import
+from concurrent.futures import Future
 from collections import namedtuple, OrderedDict
-from typing import List, Any, Dict, Tuple, Type, Optional # pylint: disable=unused-import
+from typing import List, Any, Dict, Tuple, Type, Optional
 
 import numpy as np
 
@@ -14,7 +13,7 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QStackedWidget, QComboBox,
     QButtonGroup, QStyledItemDelegate, QListView, QDoubleSpinBox
 )
-from AnyQt.QtCore import Qt, QThread, QModelIndex  # pylint: disable=unused-import
+from AnyQt.QtCore import Qt, QThread, QModelIndex
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
@@ -24,6 +23,7 @@ from Orange.widgets import gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils import concurrent as qconcurrent
 from Orange.widgets.utils.sql import check_sql_input
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.classification import SimpleTreeLearner
 
@@ -234,9 +234,9 @@ class OWImpute(OWWidget):
         method_layout.addStretch(2)
 
         reset_button = QPushButton(
-                "Restore All to Default", checked=False, checkable=False,
-                clicked=self.reset_variable_state, default=False,
-                autoDefault=False)
+            "Restore All to Default", checked=False, checkable=False,
+            clicked=self.reset_variable_state, default=False,
+            autoDefault=False)
         method_layout.addWidget(reset_button)
 
         self.variable_button_group = button_group
@@ -632,30 +632,5 @@ class OWImpute(OWWidget):
         super().storeSpecificSettings()
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig()
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "brown-selected"
-
-    w = OWImpute()
-    w.show()
-    w.raise_()
-
-    data = Orange.data.Table(filename)
-    w.set_data(data)
-    w.handleNewSignals()
-    app.exec_()
-    w.set_data(None)
-    w.set_learner(None)
-    w.handleNewSignals()
-    w.onDeleteWidget()
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWImpute).run(Orange.data.Table("brown-selected"))

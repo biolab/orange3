@@ -1,10 +1,12 @@
 pip>=9.0
-numpy>=1.9.0
+numpy>=1.13.0
 scipy>=0.16.1
-scikit-learn>=0.18.1
+scikit-learn>=0.20.0
 bottleneck>=1.0.0
 # Reading Excel files
 xlrd>=0.9.2
+# Writing Excel Files
+xlsxwriter
 # Encoding detection
 chardet>=3.0.2
 # Multiprocessing abstraction
@@ -16,3 +18,4 @@ serverfiles		# for Data Sets synchronization
 networkx
 python-louvain
 requests
+fastTSNE==0.2.13

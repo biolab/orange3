@@ -3,7 +3,6 @@ Test widget discovery
 
 """
 
-import os
 import logging
 
 import unittest

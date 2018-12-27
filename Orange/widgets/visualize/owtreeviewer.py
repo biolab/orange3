@@ -2,7 +2,7 @@
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsView, QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
+    QGraphicsRectItem, QGraphicsTextItem, QSizePolicy, QStyle,
     QLabel, QComboBox
 )
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
@@ -10,6 +10,7 @@ from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
 from Orange.base import TreeModel, SklModel
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
@@ -357,28 +358,26 @@ class OWTreeGraph(OWTreeViewer2D):
         else:
             modus = np.argmax(distr)
             tabs = distr[modus]
-            text = self.domain.class_vars[0].values[int(modus)] + "<br/>"
+            text = f"{self.domain.class_vars[0].values[int(modus)]}<br/>"
         if tabs > 0.999:
-            text += "100%, {}/{}".format(total, total)
+            text += f"100%, {total}/{total}"
         else:
-            text += "{:2.1f}%, {}/{}".format(100 * tabs,
-                                             int(total * tabs), total)
+            text += f"{100 * tabs:2.1f}%, {int(total * tabs)}/{total}"
 
         text = self._update_node_info_attr_name(node, text)
-        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">'
-                     '{}</p>'.
-                     format(text))
+        node.setHtml(
+            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
 
     def update_node_info_reg(self, node):
         """Update the printed contents of the node for regression trees"""
         node_inst = node.node_inst
         mean, var = self.tree_adapter.get_distribution(node_inst)[0]
         insts = self.tree_adapter.num_samples(node_inst)
-        text = "{:.1f} ± {:.1f}<br/>".format(mean, var)
-        text += "{} instances".format(insts)
+        text = f"{mean:.1f} ± {var:.1f}<br/>"
+        text += f"{insts} instances"
         text = self._update_node_info_attr_name(node, text)
-        node.setHtml('<p style="line-height: 120%; margin-bottom: 0">{}</p>'.
-                     format(text))
+        node.setHtml(
+            f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
 
     def toggle_node_color_cls(self):
         """Update the node color for classification trees"""
@@ -436,22 +435,9 @@ class OWTreeGraph(OWTreeViewer2D):
         return TreeAdapter(model)
 
 
-def main():
-    """Standalone test"""
-    import sys
-    from AnyQt.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
     from Orange.modelling.tree import TreeLearner
-    a = QApplication(sys.argv)
-    ow = OWTreeGraph()
-    data = Table(sys.argv[1] if len(sys.argv) > 1 else "titanic")
+    data = Table("titanic")
     clf = TreeLearner()(data)
     clf.instances = data
-
-    ow.ctree(clf)
-    ow.show()
-    ow.raise_()
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+    WidgetPreview(OWTreeGraph).run(clf)

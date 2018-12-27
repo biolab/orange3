@@ -33,7 +33,10 @@ from Orange.widgets.settings import (DomainContextHandler, Setting,
                                      ContextSetting)
 from Orange.widgets.utils.itemmodels import PyTableModel
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets.widget import OWWidget, Msg, Input, Output
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.widget import (
+    OWWidget, Msg, Input, Output, AttributeList
+)
 
 
 log = logging.getLogger(__name__)
@@ -180,6 +183,7 @@ class OWRank(OWWidget):
     class Outputs:
         reduced_data = Output("Reduced Data", Table, default=True)
         scores = Output("Scores", Table)
+        features = Output("Features", AttributeList, dynamic=False)
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)
 
@@ -526,12 +530,14 @@ class OWRank(OWWidget):
                               for i in self.selected_rows]
         if not selected_attrs:
             self.Outputs.reduced_data.send(None)
+            self.Outputs.features.send(None)
             self.out_domain_desc = None
         else:
             reduced_domain = Domain(
                 selected_attrs, self.data.domain.class_var, self.data.domain.metas)
             data = self.data.transform(reduced_domain)
             self.Outputs.reduced_data.send(data)
+            self.Outputs.features.send(AttributeList(selected_attrs))
             self.out_domain_desc = report.describe_domain(data.domain)
 
     def create_scores_table(self, labels):
@@ -581,13 +587,16 @@ class OWRank(OWWidget):
             context.values['selected_rows'] = []
 
 
-if __name__ == "__main__":
-    from AnyQt.QtWidgets import QApplication
+if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import RandomForestLearner
-    a = QApplication([])
-    ow = OWRank()
-    ow.set_learner(RandomForestLearner(), (3, 'Learner', None))
-    ow.setData(Table("heart_disease.tab"))
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+    previewer = WidgetPreview(OWRank)
+    previewer.run(Table("heart_disease.tab"), no_exit=True)
+    previewer.send_signals(
+        set_learner=(RandomForestLearner(), (3, 'Learner', None)))
+    previewer.run()
+
+    """
+    WidgetPreview(OWRank).run(
+        set_learner=(RandomForestLearner(), (3, 'Learner', None)),
+        set_data=Table("heart_disease.tab"))
+"""

@@ -10,6 +10,7 @@ from Orange.regression.linear import (
 )
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
@@ -133,8 +134,8 @@ class OWLinearRegression(OWBaseLearner):
         coef_table = None
         if self.model is not None:
             domain = Domain(
-                    [ContinuousVariable("coef", number_of_decimals=7)],
-                    metas=[StringVariable("name")])
+                [ContinuousVariable("coef", number_of_decimals=7)],
+                metas=[StringVariable("name")])
             coefs = [self.model.intercept] + list(self.model.coefficients)
             names = ["intercept"] + \
                     [attr.name for attr in self.model.domain.attributes]
@@ -159,14 +160,5 @@ class OWLinearRegression(OWBaseLearner):
         return ("Regularization", regularization),
 
 
-if __name__ == "__main__":
-    import sys
-    from AnyQt.QtWidgets import QApplication
-
-    a = QApplication(sys.argv)
-    ow = OWLinearRegression()
-    d = Table('housing')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWLinearRegression).run(Table("housing"))

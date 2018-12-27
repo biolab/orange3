@@ -22,7 +22,7 @@ done < <(echo "$images")
 echo -e 'all ok\n'
 
 # build Orange inplace (needed for docs to build)
-python setup.py build_ext --inplace
+python setup.py egg_info build_ext --inplace
 
 cd $TRAVIS_BUILD_DIR/doc/development
 make html
@@ -38,4 +38,4 @@ XVFBARGS="-screen 0 1280x1024x24"
 catchsegv xvfb-run -a -s "$XVFBARGS" \
     python $TRAVIS_BUILD_DIR/scripts/create_widget_catalog.py \
         --output build/html/ \
-        --url-prefix "http://docs.orange.biolab.si/3/visual-programming/"
+        --url-prefix "http://docs.biolab.si/3/visual-programming/"

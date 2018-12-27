@@ -1,13 +1,42 @@
 import unittest
 from unittest.mock import patch
 
+import keyring
+import keyring.errors
+import keyring.backend
+
 from Orange.widgets.credentials import CredentialManager
+
+
+# minimal in-memory keyring implementation so the test is not dependent on
+# the system config/services.
+class Keyring(keyring.backend.KeyringBackend):
+    priority = 0
+
+    def __init__(self):
+        self.__store = {}
+
+    def set_password(self, service, username, password=None):
+        self.__store[(service, username)] = password
+
+    def get_password(self, service, username):
+        return self.__store.get((service, username), None)
+
+    def delete_password(self, service, username):
+        try:
+            del self.__store[service, username]
+        except KeyError:
+            raise keyring.errors.PasswordDeleteError()
 
 
 class TestCredentialManager(unittest.TestCase):
     def setUp(self):
+        self._ring = keyring.get_keyring()
+        keyring.set_keyring(Keyring())
         self.cm = CredentialManager('Orange')
-        self.cm.key = "Foo"
+
+    def tearDown(self):
+        keyring.set_keyring(self._ring)
 
     def test_credential_manager(self):
         cm = CredentialManager('Orange')

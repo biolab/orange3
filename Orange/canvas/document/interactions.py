@@ -14,6 +14,7 @@ All interactions are subclasses of :class:`UserInteraction`.
 """
 
 import logging
+from functools import reduce
 
 from AnyQt.QtWidgets import QApplication, QGraphicsRectItem, QUndoCommand
 from AnyQt.QtGui import QPen, QBrush, QColor, QFontMetrics
@@ -31,7 +32,6 @@ from ..canvas.items import controlpoints
 from ..gui.quickhelp import QuickHelpTipEvent
 from . import commands
 from .editlinksdialog import EditLinksDialog
-from functools import reduce
 
 log = logging.getLogger(__name__)
 
@@ -331,8 +331,8 @@ class NewLinkAction(UserInteraction):
                         'an empty spot to create a new node.</p>'
                         '<p>Hold Shift when releasing the mouse button to '
                         'edit connections.</p>'
-#                        '<a href="help://orange-canvas/create-new-links">'
-#                        'More ...</a>'
+                        # '<a href="help://orange-canvas/create-new-links">'
+                        # 'More ...</a>'
                         )
             )
             QCoreApplication.postEvent(self.document, helpevent)
@@ -562,11 +562,10 @@ class NewLinkAction(UserInteraction):
                     raise UserCanceledError
             else:
                 # links_to_add now needs to be a list of actual SchemeLinks
-                links_to_add = [scheme.SchemeLink(
-                                    source_node, source_channel,
-                                    sink_node, sink_channel)
-                                for source_channel, sink_channel
-                                in links_to_add]
+                links_to_add = [
+                    scheme.SchemeLink(source_node, source_channel,
+                                      sink_node, sink_channel)
+                    for source_channel, sink_channel in links_to_add]
 
                 links_to_add, links_to_remove = \
                     add_links_plan(self.scheme, links_to_add)
@@ -625,20 +624,21 @@ class NewLinkAction(UserInteraction):
             )
 
         if status == EditLinksDialog.Accepted:
-            links_to_add = [scheme.SchemeLink(
-                                source_node, source_channel,
-                                sink_node, sink_channel)
-                            for source_channel, sink_channel in links_to_add]
+            links_to_add = [
+                scheme.SchemeLink(source_node, source_channel,
+                                  sink_node, sink_channel)
+                for source_channel, sink_channel in links_to_add]
 
-            links_to_remove = [self.scheme.find_links(
-                                   source_node, source_channel,
-                                   sink_node, sink_channel)
-                               for source_channel, sink_channel
-                               in links_to_remove]
+            links_to_remove = [
+                self.scheme.find_links(source_node, source_channel,
+                                       sink_node, sink_channel)
+                for source_channel, sink_channel in links_to_remove]
 
             links_to_remove = reduce(list.__add__, links_to_remove, [])
-            conflicting = [_f for _f in [conflicting_single_link(self.scheme, link)
-                                  for link in links_to_add] if _f]
+            conflicting = [_f
+                           for _f in [conflicting_single_link(self.scheme, link)
+                                      for link in links_to_add]
+                           if _f]
             for link in conflicting:
                 if link not in links_to_remove:
                     links_to_remove.append(link)
@@ -1069,8 +1069,8 @@ class NewArrowAnnotation(UserInteraction):
             self.tr("Click and drag to create a new arrow"),
             self.tr('<h3>New arrow annotation</h3>'
                     '<p>Click and drag to create a new arrow annotation.</p>'
-#                    '<a href="help://orange-canvas/arrow-annotations>'
-#                    'More ...</a>'
+                    # '<a href="help://orange-canvas/arrow-annotations>'
+                    #'More ...</a>'
                     )
         )
         QCoreApplication.postEvent(self.document, helpevent)
@@ -1173,8 +1173,8 @@ class NewTextAnnotation(UserInteraction):
             self.tr('<h3>New text annotation</h3>'
                     '<p>Click (and drag to resize) on the canvas to create '
                     'a new text annotation item.</p>'
-#                    '<a href="help://orange-canvas/text-annotations">'
-#                    'More ...</a>'
+                    # '<a href="help://orange-canvas/text-annotations">'
+                    # 'More ...</a>'
                     )
         )
         QCoreApplication.postEvent(self.document, helpevent)

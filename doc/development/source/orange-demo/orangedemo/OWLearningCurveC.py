@@ -1,4 +1,3 @@
-import sys
 import logging
 from collections import OrderedDict
 from functools import reduce, partial
@@ -24,6 +23,9 @@ from Orange.widgets.utils.concurrent import (
 
 
 # [start-snippet-2]
+from Orange.widgets.utils.widgetpreview import WidgetPreview
+
+
 class Task:
     """
     A class that will hold the state for an learner evaluation.
@@ -131,8 +133,7 @@ class OWLearningCurveC(widget.OWWidget):
         gui.spin(box, self, 'folds', 2, 100, step=1,
                  label='Cross validation folds:  ', keyboardTracking=False,
                  callback=lambda:
-                    self._invalidate_results() if self.commitOnChange else None
-        )
+                 self._invalidate_results() if self.commitOnChange else None)
         gui.spin(box, self, 'steps', 2, 100, step=1,
                  label='Learning curve points:  ', keyboardTracking=False,
                  callback=[self.updateCurvePoints,
@@ -395,6 +396,28 @@ class OWLearningCurveC(widget.OWWidget):
     def updateCurvePoints(self):
         self.curvePoints = [(x + 1.)/self.steps for x in range(self.steps)]
 
+    def test_run_signals(self):
+        data = Orange.data.Table("iris")
+        indices = numpy.random.permutation(len(data))
+
+        traindata = data[indices[:-20]]
+        testdata = data[indices[-20:]]
+
+        self.set_dataset(traindata)
+        self.set_testdataset(testdata)
+
+        l1 = Orange.classification.NaiveBayesLearner()
+        l1.name = 'Naive Bayes'
+        self.set_learner(l1, 1)
+
+        l2 = Orange.classification.LogisticRegressionLearner()
+        l2.name = 'Logistic Regression'
+        self.set_learner(l2, 2)
+
+        l4 = Orange.classification.SklTreeLearner()
+        l4.name = "Decision Tree"
+        self.set_learner(l4, 3)
+
 
 def learning_curve(learners, data, folds=10, proportions=None,
                    random_state=None, callback=None):
@@ -419,10 +442,8 @@ def learning_curve(learners, data, folds=10, proportions=None,
     results = [
         Orange.evaluation.CrossValidation(
             data, learners, k=folds,
-            preprocessor=lambda data, p=p:
-                select_proportion_preproc(data, p),
-            callback=callback_wrapped(i)
-        )
+            preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
+            callback=callback_wrapped(i))
         for i, p in enumerate(proportions)
     ]
     return results
@@ -450,13 +471,11 @@ def learning_curve_with_test_data(learners, traindata, testdata, times=10,
 
     results = [
         [Orange.evaluation.TestOnTestData(
-             traindata, testdata, learners,
-             preprocessor=lambda data, p=p:
-                 select_proportion_preproc(data, p),
-             callback=callback_wrapped(i * times + t))
+            traindata, testdata, learners,
+            preprocessor=lambda data, p=p: select_proportion_preproc(data, p),
+            callback=callback_wrapped(i * times + t))
          for t in range(times)]
-        for i, p in enumerate(proportions)
-    ]
+        for i, p in enumerate(proportions)]
     results = [reduce(results_add, res, Orange.evaluation.Results())
                for res in results]
     return results
@@ -516,53 +535,5 @@ def results_add(x, y):
     return res
 
 
-def main(argv=None):
-    from AnyQt.QtWidgets import QApplication
-    logging.basicConfig()
-    app = QApplication(list(argv) if argv else [])
-    argv = app.arguments()
-    if len(argv) > 1:
-        filename = argv[1]
-    else:
-        filename = "iris"
-
-    data = Orange.data.Table(filename)
-    indices = numpy.random.permutation(len(data))
-
-    traindata = data[indices[:-20]]
-    testdata = data[indices[-20:]]
-
-    ow = OWLearningCurveC()
-    ow.show()
-    ow.raise_()
-
-    ow.set_dataset(traindata)
-    ow.set_testdataset(testdata)
-
-    l1 = Orange.classification.NaiveBayesLearner()
-    l1.name = 'Naive Bayes'
-    ow.set_learner(l1, 1)
-
-    l2 = Orange.classification.LogisticRegressionLearner()
-    l2.name = 'Logistic Regression'
-    ow.set_learner(l2, 2)
-
-    l4 = Orange.classification.SklTreeLearner()
-    l4.name = "Decision Tree"
-    ow.set_learner(l4, 3)
-
-    ow.handleNewSignals()
-
-    app.exec_()
-
-    ow.set_dataset(None)
-    ow.set_testdataset(None)
-    ow.set_learner(None, 1)
-    ow.set_learner(None, 2)
-    ow.set_learner(None, 3)
-    ow.handleNewSignals()
-    ow.onDeleteWidget()
-    return 0
-
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    WidgetPreview(OWLearningCurveC).run()

@@ -5,7 +5,6 @@ from itertools import chain
 from operator import attrgetter
 from xml.sax.saxutils import escape
 from collections import OrderedDict
-# pylint: disable=unused-import
 from typing import (
     NamedTuple, Tuple, List, Dict, Iterable, Union, Optional, Hashable
 )
@@ -48,10 +47,13 @@ def image_data(pm):
 
 class Severity(enum.IntEnum):
     """
-    Message severity level.
+    An enum defining a severity level.
     """
+    #: General informative message.
     Information = QMessageBox.Information
+    #: A warning message severity.
     Warning = QMessageBox.Warning
+    #: An error message severity.
     Error = QMessageBox.Critical
 
 
@@ -70,8 +72,8 @@ class Message(
 
     Parameters
     ----------
-    severity : Message.Severity
-        Severity level (default: Information).
+    severity : `Severity`
+        Severity level (default: :attr:`Severity.Information`).
     icon : QIcon
         Associated icon. If empty the `QStyle.standardIcon` will be used based
         on severity.
@@ -86,14 +88,19 @@ class Message(
         `detailedText` will be rendered as html instead of plain text.
 
     """
+    #: Alias for :class:`.Severity`
     Severity = Severity
-    Warning = Severity.Warning
+
+    #: Alias for :attr:`Severity.Information`
     Information = Severity.Information
+    #: Alias for :attr:`Severity.Warning`
+    Warning = Severity.Warning
+    #: Alias for :attr:`Severity.Error`
     Error = Severity.Error
 
     def __new__(cls, severity=Severity.Information, icon=QIcon(), text="",
                 informativeText="", detailedText="", textFormat=Qt.PlainText):
-        return super().__new__(cls, Severity(severity), icon, text,
+        return super().__new__(cls, Severity(severity), QIcon(icon), text,
                                informativeText, detailedText, textFormat)
 
     def asHtml(self):
@@ -107,27 +114,31 @@ class Message(
             render = lambda t: ('<span style="white-space: pre">{}</span>'
                                 .format(escape(t)))
 
-        def iconsrc(message):
+        def iconsrc(message, size=12):
             # type: (Message) -> str
             """
             Return an image src url for message icon.
             """
             icon = message_icon(message)
-            pm = icon.pixmap(12, 12)
+            pm = icon.pixmap(size, size)
             return image_data(pm)
 
+        imgsize = 12
         parts = [
-            ('<div style="white-space:pre" class="message {}">'
+            ('<div class="message {}">'
              .format(self.severity.name.lower())),
             ('<div class="field-text">'
-             '<img src="{iconurl}" width="12" height="12" />{text}</div>'
-             .format(iconurl=iconsrc(self), text=render(self.text)))
+             '<img src="{iconurl}" width="{imgsize}" height="{imgsize}" />'
+             '{text}'
+             '</div>'
+             .format(iconurl=iconsrc(self, size=imgsize * 2), imgsize=imgsize,
+                     text=render(self.text)))
         ]
         if self.informativeText:
             parts += ['<div class="field-informative-text">{}</div>'
                       .format(render(self.informativeText))]
         if self.detailedText:
-            parts += ['<blockquote class="field-detailed-text">{}</blockquote>'
+            parts += ['<div class="field-detailed-text">{}</div>'
                       .format(render(self.detailedText))]
         parts += ['</div>']
         return "\n".join(parts)
@@ -139,6 +150,20 @@ class Message(
         """
         return (not self.text and self.icon.isNull() and
                 not self.informativeText and not self.detailedText)
+    @property
+    def icon(self):
+        return QIcon(super().icon)
+
+    def __eq__(self, other):
+        if isinstance(other, Message):
+            return (self.severity == other.severity and
+                    self.icon.cacheKey() == other.icon.cacheKey() and
+                    self.text == other.text and
+                    self.informativeText == other.informativeText and
+                    self.detailedText == other.detailedText and
+                    self.textFormat == other.textFormat)
+        else:
+            return False
 
 
 def standard_pixmap(severity):
@@ -293,7 +318,8 @@ class MessagesWidget(QWidget):
 
     Message = Message
 
-    def __init__(self, parent=None, openExternalLinks=False, **kwargs):
+    def __init__(self, parent=None, openExternalLinks=False,
+                 defaultStyleSheet="", **kwargs):
         kwargs.setdefault(
             "sizePolicy",
             QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -335,28 +361,74 @@ class MessagesWidget(QWidget):
         self.layout().addWidget(self.__textlabel)
         self.layout().addWidget(self.__popupicon)
         self.__textlabel.setAttribute(Qt.WA_MacSmallSize)
+        self.__defaultStyleSheet = defaultStyleSheet
 
     def sizeHint(self):
         sh = super().sizeHint()
         h = self.style().pixelMetric(QStyle.PM_SmallIconSize)
+        if all(m.isEmpty() for m in self.messages()):
+            sh.setWidth(0)
         return sh.expandedTo(QSize(0, h + 2))
 
-    def openExternalLinks(self):
-        # type: () -> bool
-        """
-        If True then linkActivated signal will be emitted when the user
-        clicks on an html link in a message, otherwise links are opened
-        using `QDesktopServices.openUrl`
-        """
-        return self.__openExternalLinks
+    def minimumSizeHint(self):
+        msh = super().minimumSizeHint()
+        h = self.style().pixelMetric(QStyle.PM_SmallIconSize)
+        if all(m.isEmpty() for m in self.messages()):
+            msh.setWidth(0)
+        else:
+            msh.setWidth(h + 2)
+        return msh.expandedTo(QSize(0, h + 2))
 
     def setOpenExternalLinks(self, state):
         # type: (bool) -> None
         """
+        If `True` then `linkActivated` signal will be emitted when the user
+        clicks on an html link in a message, otherwise links are opened
+        using `QDesktopServices.openUrl`
         """
         # TODO: update popup if open
         self.__openExternalLinks = state
         self.__textlabel.setOpenExternalLinks(state)
+
+    def openExternalLinks(self):
+        # type: () -> bool
+        """
+        """
+        return self.__openExternalLinks
+
+    def setDefaultStyleSheet(self, css):
+        # type: (str) -> None
+        """
+        Set a default css to apply to the rendered text.
+
+        Parameters
+        ----------
+        css : str
+            A css style sheet as supported by Qt's Rich Text support.
+
+        Note
+        ----
+        Not to be confused with `QWidget.styleSheet`
+
+        See Also
+        --------
+        `Supported HTML Subset`_
+
+        .. _`Supported HTML Subset`:
+            http://doc.qt.io/qt-5/richtext-html-subset.html
+        """
+        if self.__defaultStyleSheet != css:
+            self.__defaultStyleSheet = css
+            self.__update()
+
+    def defaultStyleSheet(self):
+        """
+        Returns
+        -------
+        css : str
+            The current style sheet
+        """
+        return self.__defaultStyleSheet
 
     def setMessage(self, message_id, message):
         # type: (Hashable, Message) -> None
@@ -405,6 +477,13 @@ class MessagesWidget(QWidget):
 
     def messages(self):
         # type: () -> List[Message]
+        """
+        Return all set messages.
+
+        Returns
+        -------
+        messages: `List[Message]`
+        """
         return list(self.__messages.values())
 
     def summarize(self):
@@ -418,6 +497,14 @@ class MessagesWidget(QWidget):
         else:
             return Message()
 
+    @staticmethod
+    def __styled(css, html):
+        # Prepend css style sheet before a html fragment.
+        if css.strip():
+            return "<style>\n" + escape(css) + "\n</style>\n" + html
+        else:
+            return html
+
     def __update(self):
         """
         Update the current display state.
@@ -429,6 +516,7 @@ class MessagesWidget(QWidget):
         self.__iconwidget.setVisible(not (summary.isEmpty() or icon.isNull()))
         self.__textlabel.setTextFormat(summary.textFormat)
         self.__textlabel.setText(summary.text)
+        self.__textlabel.setVisible(bool(summary.text))
         messages = [m for m in self.__messages.values() if not m.isEmpty()]
         if messages:
             messages = sorted(messages, key=attrgetter("severity"),
@@ -437,7 +525,7 @@ class MessagesWidget(QWidget):
         else:
             fulltext = ""
         self.__fulltext = fulltext
-        self.setToolTip(fulltext)
+        self.setToolTip(self.__styled(self.__defaultStyleSheet, fulltext))
 
         def is_short(m):
             return not (m.informativeText or m.detailedText)
@@ -456,8 +544,10 @@ class MessagesWidget(QWidget):
                 label = QLabel(
                     self, textInteractionFlags=Qt.TextBrowserInteraction,
                     openExternalLinks=self.__openExternalLinks,
-                    text=self.__popuptext
                 )
+                label.setText(self.__styled(self.__defaultStyleSheet,
+                                            self.__popuptext))
+
                 label.linkActivated.connect(self.linkActivated)
                 label.linkHovered.connect(self.linkHovered)
                 action = QWidgetAction(popup)

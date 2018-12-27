@@ -17,11 +17,14 @@ class TestFreeviz(unittest.TestCase):
         cls.zoo = Table("zoo")
 
     def test_basic(self):
-        table = Table("iris")
+        table = self.iris.copy()
         table[3, 3] = np.nan
         freeviz = FreeViz()
         model = freeviz(table)
-        model(table)
+        proj = model(table)
+        self.assertEqual(len(proj), len(table))
+        self.assertTrue(np.isnan(proj.X).any())
+        np.testing.assert_array_equal(proj[:100], model(table[:100]))
 
     def test_regression(self):
         table = Table("housing")[::10]
@@ -30,16 +33,6 @@ class TestFreeviz(unittest.TestCase):
 
         freeviz = FreeViz(p=2)
         freeviz(table)
-
-    def test_prepare_freeviz_data(self):
-        table = Table("iris")
-        FreeViz.prepare_freeviz_data(table)
-
-        table.X = table.X * np.nan
-        self.assertEqual(FreeViz.prepare_freeviz_data(table), (None, None, None))
-
-        table.X = None
-        FreeViz.prepare_freeviz_data(table)
 
     @unittest.skip("Test weights is too slow.")
     def test_weights(self):
@@ -54,8 +47,6 @@ class TestFreeviz(unittest.TestCase):
 
     def test_raising_errors(self):
         table = Table("iris")
-        freeviz = FreeViz(initial=(2, 4))
-        self.assertRaises(ValueError, freeviz, table)
 
         scale = np.array([0.5, 0.4, 0.6])
         freeviz = FreeViz(scale=scale)
@@ -66,6 +57,10 @@ class TestFreeviz(unittest.TestCase):
 
         weights = np.random.rand(100, 1).flatten()
         freeviz = FreeViz(weights=weights)
+        self.assertRaises(ValueError, freeviz, table)
+
+        table = Table("titanic")[::10]
+        freeviz = FreeViz()
         self.assertRaises(ValueError, freeviz, table)
 
     def test_initial(self):

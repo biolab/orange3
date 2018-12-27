@@ -1,16 +1,16 @@
 import random
-import Orange
-import numpy as np
-from Orange.util import Reprable
-from scipy.sparse import issparse
-
 from itertools import takewhile
 from operator import itemgetter
 
-from Orange.preprocess.preprocess import Preprocess
-from Orange.preprocess.score import ANOVA, GainRatio, UnivariateLinearRegression
+import numpy as np
 
-__all__ = ["SelectBestFeatures", "RemoveNaNColumns", "SelectRandomFeatures"]
+
+import Orange
+from Orange.util import Reprable
+from Orange.preprocess.score import ANOVA, GainRatio, \
+    UnivariateLinearRegression
+
+__all__ = ["SelectBestFeatures", "SelectRandomFeatures"]
 
 
 class SelectBestFeatures(Reprable):
@@ -119,33 +119,4 @@ class SelectRandomFeatures(Reprable):
             random.sample(data.domain.attributes,
                           min(self.k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
-        return data.transform(domain)
-
-
-class RemoveNaNColumns(Preprocess):
-    """
-    Remove features from the data domain if they contain
-    `threshold` or more unknown values.
-
-    `threshold` can be an integer or a float in the range (0, 1) representing
-    the fraction of the data size. When not provided, columns with only missing
-    values are removed (default).
-    """
-    def __init__(self, threshold=None):
-        self.threshold = threshold
-
-    def __call__(self, data, threshold=None):
-        # missing entries in sparse data are treated as zeros so we skip removing NaNs
-        if issparse(data.X):
-            return data
-
-        if threshold is None:
-            threshold = data.X.shape[0] if self.threshold is None else \
-                        self.threshold
-        if isinstance(threshold, float):
-            threshold = threshold * data.X.shape[0]
-        nans = np.sum(np.isnan(data.X), axis=0)
-        att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
-        domain = Orange.data.Domain(att, data.domain.class_vars,
-                                    data.domain.metas)
         return data.transform(domain)

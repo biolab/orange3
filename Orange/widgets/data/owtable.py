@@ -6,7 +6,7 @@ import itertools
 import concurrent.futures
 
 from collections import OrderedDict, namedtuple
-from typing import List, Tuple, Iterable  # pylint: disable=unused-import
+from typing import List, Tuple, Iterable
 
 from math import isnan
 
@@ -14,15 +14,14 @@ import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QAction, QApplication,
-    QStyleOptionHeader, QStyle, QStylePainter, QStyledItemDelegate
+    QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
+    QStyle, QStylePainter, QStyledItemDelegate
 )
-from AnyQt.QtGui import QColor, QKeySequence, QClipboard
+from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QByteArray, QMimeData, QObject, QMetaObject,
     QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
-    QItemSelectionModel, QItemSelection, QItemSelectionRange,
-    QT_VERSION
+    QItemSelectionModel, QItemSelection, QItemSelectionRange
 )
 from AnyQt.QtCore import pyqtSlot as Slot
 
@@ -33,8 +32,8 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import widget, gui
-from Orange.widgets.settings import (Setting, ContextSetting,
-                                     DomainContextHandler)
+from Orange.widgets.settings import Setting, DomainContextHandler
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
@@ -390,13 +389,18 @@ class OWDataTable(widget.OWWidget):
     color_by_class = Setting(True)
     settingsHandler = DomainContextHandler(
         match_values=DomainContextHandler.MATCH_VALUES_ALL)
-    selected_rows = ContextSetting([])
-    selected_cols = ContextSetting([])
+    selected_rows = Setting([], schema_only=True)
+    selected_cols = Setting([], schema_only=True)
 
     def __init__(self):
         super().__init__()
 
         self._inputs = OrderedDict()
+
+        self.__pending_selected_rows = self.selected_rows
+        self.selected_rows = None
+        self.__pending_selected_cols = self.selected_cols
+        self.selected_cols = None
 
         self.dist_color = QColor(*self.dist_color_RGB)
 
@@ -514,9 +518,20 @@ class OWDataTable(widget.OWWidget):
                 self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
-        self.selected_rows = []
-        self.selected_cols = []
         self.openContext(data)
+
+        if self.__pending_selected_rows is not None:
+            self.selected_rows = self.__pending_selected_rows
+            self.__pending_selected_rows = None
+        else:
+            self.selected_rows = []
+
+        if self.__pending_selected_cols is not None:
+            self.selected_cols = self.__pending_selected_cols
+            self.__pending_selected_cols = None
+        else:
+            self.selected_cols = []
+
         self.set_selection()
         self.commit()
 
@@ -897,6 +912,7 @@ class OWDataTable(widget.OWWidget):
         self.report_data_brief(model.source)
         self.report_table(view)
 
+
 # Table Summary
 
 # Basic statistics for X/Y/metas arrays
@@ -1037,25 +1053,6 @@ def is_sortable(table):
         return False
 
 
-def test_main():
-    a = QApplication(sys.argv)
-    ow = OWDataTable()
-
-    iris = Table("iris")
-    brown = Table("brown-selected")
-    housing = Table("housing")
-    ow.show()
-    ow.raise_()
-
-    ow.set_dataset(iris, iris.name)
-    ow.set_dataset(brown, brown.name)
-    ow.set_dataset(housing, housing.name)
-
-    rval = a.exec()
-#     ow.saveSettings()
-    return rval
-
-
 def test_model():
     app = QApplication([])
     view = QTableView(
@@ -1070,5 +1067,9 @@ def test_model():
     view.raise_()
     return app.exec()
 
-if __name__ == "__main__":
-    sys.exit(test_main())
+
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWDataTable).run(
+        [(Table("iris"), "iris"),
+         (Table("brown-selected"), "brown-selected"),
+         (Table("housing"), "housing")])

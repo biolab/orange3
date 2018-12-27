@@ -2,10 +2,12 @@ from functools import partial
 import copy
 import logging
 import re
-import sys
 import concurrent.futures
+from itertools import chain
 
-from AnyQt.QtWidgets import QApplication
+import numpy as np
+
+from AnyQt.QtWidgets import QFormLayout, QLabel
 from AnyQt.QtCore import Qt, QThread, QObject
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
@@ -16,6 +18,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureWatcher
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class Task(QObject):
@@ -77,34 +80,69 @@ class OWNNLearner(OWBaseLearner):
     hidden_layers_input = Setting("100,")
     activation_index = Setting(3)
     solver_index = Setting(2)
-    alpha = Setting(0.0001)
     max_iterations = Setting(200)
+    alpha_index = Setting(0)
+    settings_version = 1
+
+    alphas = list(chain([x / 10000 for x in range(1, 10)],
+                        [x / 1000 for x in range(1, 10)],
+                        [x / 100 for x in range(1, 10)],
+                        [x / 10 for x in range(1, 10)],
+                        range(1, 10),
+                        range(10, 100, 5),
+                        range(100, 200, 10),
+                        range(100, 1001, 50)))
 
     def add_main_layout(self):
-        box = gui.vBox(self.controlArea, "Network")
-        self.hidden_layers_edit = gui.lineEdit(
-            box, self, "hidden_layers_input", label="Neurons per hidden layer:",
-            orientation=Qt.Horizontal, callback=self.settings_changed,
-            tooltip="A list of integers defining neurons. Length of list "
-                    "defines the number of layers. E.g. 4, 2, 2, 3.",
-            placeholderText="e.g. 100,")
-        self.activation_combo = gui.comboBox(
-            box, self, "activation_index", orientation=Qt.Horizontal,
-            label="Activation:", items=[i for i in self.act_lbl],
-            callback=self.settings_changed)
-        self.solver_combo = gui.comboBox(
-            box, self, "solver_index", orientation=Qt.Horizontal,
-            label="Solver:", items=[i for i in self.solv_lbl],
-            callback=self.settings_changed)
-        self.alpha_spin = gui.doubleSpin(
-            box, self, "alpha", 1e-5, 1.0, 1e-2,
-            label="Alpha:", decimals=5, alignment=Qt.AlignRight,
-            callback=self.settings_changed, controlWidth=80)
-        self.max_iter_spin = gui.spin(
-            box, self, "max_iterations", 10, 10000, step=10,
-            label="Max iterations:", orientation=Qt.Horizontal,
-            alignment=Qt.AlignRight, callback=self.settings_changed,
-            controlWidth=80)
+        form = QFormLayout()
+        form.setFieldGrowthPolicy(form.AllNonFixedFieldsGrow)
+        form.setVerticalSpacing(25)
+        gui.widgetBox(self.controlArea, True, orientation=form)
+        form.addRow(
+            "Neurons in hidden layers:",
+            gui.lineEdit(
+                None, self, "hidden_layers_input",
+                orientation=Qt.Horizontal, callback=self.settings_changed,
+                tooltip="A list of integers defining neurons. Length of list "
+                        "defines the number of layers. E.g. 4, 2, 2, 3.",
+                placeholderText="e.g. 100,"))
+        form.addRow(
+            "Activation:",
+            gui.comboBox(
+                None, self, "activation_index", orientation=Qt.Horizontal,
+                label="Activation:", items=[i for i in self.act_lbl],
+                callback=self.settings_changed))
+
+        form.addRow(" ", gui.separator(None, 16))
+        form.addRow(
+            "Solver:",
+            gui.comboBox(
+                None, self, "solver_index", orientation=Qt.Horizontal,
+                label="Solver:", items=[i for i in self.solv_lbl],
+                callback=self.settings_changed))
+        self.reg_label = QLabel()
+        slider = gui.hSlider(
+            None, self, "alpha_index",
+            minValue=0, maxValue=len(self.alphas) - 1,
+            callback=lambda: (self.set_alpha(), self.settings_changed()),
+            createLabel=False)
+        form.addRow(self.reg_label, slider)
+        self.set_alpha()
+
+        form.addRow(
+            "Maximal number of iterations:",
+            gui.spin(
+                None, self, "max_iterations", 10, 10000, step=10,
+                label="Max iterations:", orientation=Qt.Horizontal,
+                alignment=Qt.AlignRight, callback=self.settings_changed))
+
+    def set_alpha(self):
+        self.strength_C = self.alphas[self.alpha_index]
+        self.reg_label.setText("Regularization, α={}:".format(self.strength_C))
+
+    @property
+    def alpha(self):
+        return self.alphas[self.alpha_index]
 
     def setup_layout(self):
         super().setup_layout()
@@ -113,7 +151,7 @@ class OWNNLearner(OWBaseLearner):
         self._executor = ThreadExecutor()
 
         # just a test cancel button
-        gui.button(self.controlArea, self, "Cancel", callback=self.cancel)
+        gui.button(self.apply_button, self, "Cancel", callback=self.cancel)
 
     def create_learner(self):
         return self.LEARNER(
@@ -135,7 +173,7 @@ class OWNNLearner(OWBaseLearner):
         layers = tuple(map(int, re.findall(r'\d+', self.hidden_layers_input)))
         if not layers:
             layers = (100,)
-            self.hidden_layers_edit.setText("100,")
+            self.hidden_layers_input = "100,"
         return layers
 
     def update_model(self):
@@ -245,12 +283,14 @@ class OWNNLearner(OWBaseLearner):
         self.cancel()
         super().onDeleteWidget()
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if not version:
+            alpha = settings.pop("alpha", None)
+            if alpha is not None:
+                settings["alpha_index"] = \
+                    np.argmin(np.abs(np.array(cls.alphas) - alpha))
 
-if __name__ == "__main__":
-    a = QApplication(sys.argv)
-    ow = OWNNLearner()
-    d = Table(sys.argv[1] if len(sys.argv) > 1 else 'iris')
-    ow.set_data(d)
-    ow.show()
-    a.exec_()
-    ow.saveSettings()
+
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWNNLearner).run(Table("iris"))

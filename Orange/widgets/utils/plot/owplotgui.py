@@ -26,24 +26,25 @@ This module contains functions and classes for creating GUI elements commonly us
 '''
 
 import os
-
 import unicodedata
-from functools import reduce
-from operator import itemgetter
 
-from Orange.data import ContinuousVariable, DiscreteVariable, Variable
+from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction,\
+    QDialog, QSizePolicy, QPushButton, QListView, QLabel
+from AnyQt.QtGui import QIcon, QKeySequence
+from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize, QObject
+
+from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.listfilter import variables_filter
 from Orange.widgets.utils.itemmodels import DomainModel
 
-from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction,\
-    QDialog, QSizePolicy, QPushButton, QListView, QLabel
-from AnyQt.QtGui import QIcon, QKeySequence
-from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize
-
 from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
     SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
+
+__all__ = ["AddVariablesDialog", "VariablesSelection",
+           "OrientedWidget", "OWToolbar", "StateButtonContainer",
+           "OWAction", "OWButton", "OWPlotGUI"]
 
 
 SIZE_POLICY_ADAPTING = (QSizePolicy.Expanding, QSizePolicy.Ignored)
@@ -51,6 +52,8 @@ SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)
 
 
 class AddVariablesDialog(QDialog):
+    add = pyqtSignal()
+
     def __init__(self, master, model):
         QDialog.__init__(self)
 
@@ -133,10 +136,16 @@ class AddVariablesDialog(QDialog):
             del model[i]
 
         self.master.model_selected.extend(variables)
+        self.add.emit()
 
 
-class VariablesSelection:
-    def __init__(self, master, model_selected, model_other, widget=None):
+class VariablesSelection(QObject):
+    added = pyqtSignal()
+    removed = pyqtSignal()
+
+    def __init__(self, master, model_selected, model_other,
+                 widget=None, parent=None):
+        super().__init__(parent)
         self.master = master
         self.model_selected = model_selected
         self.model_other = model_other
@@ -196,9 +205,11 @@ class VariablesSelection:
             del model[i]
 
         self.model_other.extend(variables)
+        self.removed.emit()
 
     def _action_add(self):
         self.add_variables_dialog = AddVariablesDialog(self, self.model_other)
+        self.add_variables_dialog.add.connect(lambda: self.added.emit())
 
 
 class OrientedWidget(QWidget):
@@ -427,21 +438,18 @@ class OWPlotGUI:
 
     JITTER_SIZES = [0, 0.1, 0.5, 1, 2, 3, 4, 5, 7, 10]
 
-
-    def __init__(self, plot):
-        self._plot = plot
-        self.color_model = DomainModel(placeholder="(Same color)",
-                                       valid_types=DomainModel.PRIMITIVE)
-        self.shape_model = DomainModel(placeholder="(Same shape)",
-                                       valid_types=DiscreteVariable)
-        self.size_model = DomainModel(placeholder="(Same size)",
-                                      order=(self.SizeByOverlap,) + DomainModel.SEPARATED,
-                                      valid_types=ContinuousVariable)
+    def __init__(self, master):
+        self._master = master
+        self._plot = master.graph
+        self.color_model = DomainModel(
+            placeholder="(Same color)", valid_types=DomainModel.PRIMITIVE)
+        self.shape_model = DomainModel(
+            placeholder="(Same shape)", valid_types=DiscreteVariable)
+        self.size_model = DomainModel(
+            placeholder="(Same size)", valid_types=ContinuousVariable)
         self.label_model = DomainModel(placeholder="(No labels)")
         self.points_models = [self.color_model, self.shape_model,
                               self.size_model, self.label_model]
-
-    SizeByOverlap = "Overlap"
 
     Spacing = 0
 
@@ -591,17 +599,17 @@ class OWPlotGUI:
 
     def tooltip_shows_all_check_box(self, widget):
         gui.checkBox(
-            widget=widget, master=self._plot.master, value="tooltip_shows_all",
+            widget=widget, master=self._master, value="tooltip_shows_all",
             label='Show all data on mouse hover')
 
     def class_density_check_box(self, widget):
-        self._plot.master.cb_class_density = \
+        self._master.cb_class_density = \
             self._check_box(widget=widget, value="class_density",
                             label="Show color regions",
                             cb_name=self._plot.update_density)
 
     def regression_line_check_box(self, widget):
-        self._plot.master.cb_reg_line = \
+        self._master.cb_reg_line = \
             self._check_box(widget=widget, value="show_reg_line",
                             label="Show regression line",
                             cb_name=self._plot.update_regression_line)
@@ -635,7 +643,7 @@ class OWPlotGUI:
             widget.addWidget(element, row, 1)
             return element
         else:
-            return control(widget,  label=label, **args)
+            return control(widget, label=label, **args)
 
     def _slider(self, widget, value, label, min_value, max_value, step, cb_name,
                 show_number=False):
@@ -643,7 +651,7 @@ class OWPlotGUI:
             widget, gui.hSlider, label,
             master=self._plot, value=value, minValue=min_value,
             maxValue=max_value, step=step, createLabel=show_number,
-            callback=self._get_callback(cb_name, self._plot.master))
+            callback=self._get_callback(cb_name, self._master))
 
     def point_size_slider(self, widget, label="Symbol size:   "):
         '''
@@ -660,8 +668,8 @@ class OWPlotGUI:
     def _combo(self, widget, value, label, cb_name, items=(), model=None):
         return self.add_control(
             widget, gui.comboBox, label,
-            master=self._plot.master, value=value, items=items, model=model,
-            callback=self._get_callback(cb_name, self._plot.master),
+            master=self._master, value=value, items=items, model=model,
+            callback=self._get_callback(cb_name, self._master),
             orientation=Qt.Horizontal, valueType=str,
             sendSelectedValue=True, contentsLength=12,
             labelWidth=50)
@@ -877,3 +885,19 @@ class OWPlotGUI:
         c.addItem('Light')
         c.addItem('Dark')
         return c
+
+    def box_zoom_select(self, parent):
+        box_zoom_select = gui.vBox(parent, "Zoom/Select")
+        zoom_select_toolbar = self.zoom_select_toolbar(
+            box_zoom_select, nomargin=True,
+            buttons=[self.StateButtonsBegin,
+                     self.SimpleSelect, self.Pan, self.Zoom,
+                     self.StateButtonsEnd,
+                     self.ZoomReset]
+        )
+        buttons = zoom_select_toolbar.buttons
+        buttons[self.Zoom].clicked.connect(self._plot.zoom_button_clicked)
+        buttons[self.Pan].clicked.connect(self._plot.pan_button_clicked)
+        buttons[self.SimpleSelect].clicked.connect(self._plot.select_button_clicked)
+        buttons[self.ZoomReset].clicked.connect(self._plot.reset_button_clicked)
+        return box_zoom_select

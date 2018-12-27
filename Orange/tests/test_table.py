@@ -5,9 +5,9 @@ import copy
 import os
 import random
 import unittest
+from unittest.mock import Mock, MagicMock, patch
 from itertools import chain
 from math import isnan
-from unittest.mock import Mock, MagicMock, patch
 
 import numpy as np
 import scipy.sparse as sp
@@ -817,8 +817,6 @@ class TableTestCase(unittest.TestCase):
             os.remove("iris.pickle")
 
     def test_from_numpy(self):
-        import random
-
         a = np.arange(20, dtype="d").reshape((4, 5))
         a[:, -1] = [0, 0, 0, 1]
         dom = data.Domain([data.ContinuousVariable(x) for x in "abcd"],
@@ -1387,11 +1385,14 @@ class CreateTableWithUrl(TableTests):
     class _MockUrlOpen(MagicMock):
         headers = {'content-disposition': 'attachment; filename="Something-FormResponses.tsv"; '
                                           'filename*=UTF-8''Something%20%28Responses%29.tsv'}
-        def __enter__(self): return self
+        def __enter__(self):
+            return self
 
-        def __exit__(self, *args, **kwargs): pass
+        def __exit__(self, *args, **kwargs):
+            pass
 
-        def read(self): return b'''\
+        def read(self):
+            return b'''\
 a\tb\tc
 1\t2\t3
 2\t3\t4'''
@@ -2245,6 +2246,32 @@ class InterfaceTest(unittest.TestCase):
         self.assertIsInstance(data_url, _ExtendedTable)
 
 
+class TestTableStats(TableTests):
+    def test_get_nan_frequency(self):
+        domain = self.create_domain(self.attributes, self.class_vars)
+        table = data.Table(domain, self.data, self.class_data)
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+        table.X[1, 2] = table.X[4, 5] = np.nan
+        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+        table.Y[3:6] = np.nan
+        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
+        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+
+        table.X[1, 2] = table.X[4, 5] = 0
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+
+    def test_get_nan_frequency_empty_table(self):
+        domain = self.create_domain(self.attributes, self.class_vars)
+        table = data.Table(domain)
+        self.assertEqual(table.get_nan_frequency_attribute(), 0)
+        self.assertEqual(table.get_nan_frequency_class(), 0)
+
+
 class TestRowInstance(unittest.TestCase):
     def test_assignment(self):
         table = data.Table("zoo")
@@ -2807,4 +2834,3 @@ class TestTableSparseDense(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

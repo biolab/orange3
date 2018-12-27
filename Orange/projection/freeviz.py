@@ -2,66 +2,27 @@
 import numpy as np
 import scipy.spatial
 
-from Orange.data import ContinuousVariable, Domain
-from Orange.data.util import SharedComputeValue
-from Orange.projection import Projector, Projection, LinearCombinationSql
+from Orange.preprocess.preprocess import RemoveNaNRows, Continuize, Scale
+from Orange.projection import LinearProjector, DomainProjection
 
 __all__ = ["FreeViz"]
 
 
-class FreeVizProjector(SharedComputeValue):
-    """Transform into a given FreeViz component."""
-
-    def __init__(self, projection, feature, freeviz_transform):
-        super().__init__(freeviz_transform)
-        self.projection = projection
-        self.feature = feature
-        self.transformed = None
-
-    def compute(self, data, freeviz_space):
-        return freeviz_space[:, self.feature]
+class FreeVizModel(DomainProjection):
+    var_prefix = "freeviz"
 
 
-class _FreeVizTransformDomain:
-    """Computation common for all FreeViz variables."""
-
-    def __init__(self, freeviz):
-        self.freeviz = freeviz
-
-    def __call__(self, data):
-        if data.domain != self.freeviz.pre_domain:
-            data = data.transform(self.freeviz.pre_domain)
-        return self.freeviz.transform(data.X)
-
-
-class FreeVizModel(Projection):
-    name = "FreeVizModel"
-
-    def __init__(self, proj, domain):
-        freeviz_transform = _FreeVizTransformDomain(self)
-
-        def freeviz_variable(i):
-            v = ContinuousVariable(
-                "FreeViz Component {}".format(i + 1),
-                compute_value=FreeVizProjector(self, i, freeviz_transform))
-            v.to_sql = LinearCombinationSql(
-                domain.attributes, self.components_[i, :],
-                getattr(self, 'mean_', None))
-            return v
-
-        super().__init__(proj=proj)
-        self.orig_domain = domain
-        self.domain = Domain(
-            [freeviz_variable(i) for i in range(proj.dim)],
-            domain.class_vars, domain.metas)
-
-
-class FreeViz(Projector):
+class FreeViz(LinearProjector):
     name = 'FreeViz'
     supports_sparse = False
+    preprocessors = [RemoveNaNRows(),
+                     Continuize(multinomial_treatment=Continuize.FirstAsBase),
+                     Scale(scale=Scale.Span)]
+    projection = FreeVizModel
 
     def __init__(self, weights=None, center=True, scale=True, dim=2, p=1,
-                 initial=None, maxiter=500, alpha=0.1, atol=1e-5, preprocessors=None):
+                 initial=None, maxiter=500, alpha=0.1,
+                 atol=1e-5, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.weights = weights
         self.center = center
@@ -73,47 +34,23 @@ class FreeViz(Projector):
         self.alpha = alpha
         self.atol = atol
         self.is_class_discrete = False
+        self.components_ = None
 
     def __call__(self, data):
         if data is not None:
             self.is_class_discrete = data.domain.class_var.is_discrete
+            if len([attr for attr in data.domain.attributes
+                    if attr.is_discrete and len(attr.values) > 2]):
+                raise ValueError("Can not handle discrete variables"
+                                 " with more than two values")
         return super().__call__(data)
 
-    def fit(self, X, Y=None):
-        X, Y, _ = self.prepare_freeviz_data(X=X, Y=Y)
-        if X is not None:
-            _, a, _, _ = self.freeviz(X, Y, weights=self.weights, center=self.center,
-                                      scale=self.scale, dim=self.dim, p=self.p,
-                                      initial=self.initial, maxiter=self.maxiter, alpha=self.alpha,
-                                      atol=self.atol, is_class_discrete=self.is_class_discrete)
-            self.components_ = a
-            return FreeVizModel(self, self.domain)
-
-    def transform(self, X):
-        EX = np.dot(X, self.components_)
-        return EX
-
-    @classmethod
-    def prepare_freeviz_data(cls, data=None, X=None, Y=None):
-        if data is not None:
-            X = data.X
-            Y = data.Y
-        if X is None or Y is None:
-            return None, None, None
-        mask = np.bitwise_or.reduce(np.isnan(X), axis=1)
-        mask |= np.isnan(Y)
-        validmask = ~mask
-        X = X[validmask, :]
-        Y = Y[validmask]
-
-        if not len(X):
-            return None, None, None
-
-        X = (X - np.mean(X, axis=0))
-        span = np.ptp(X, axis=0)
-        X[:, span > 0] /= span[span > 0].reshape(1, -1)
-
-        return X, Y, validmask
+    def get_components(self, X, Y):
+        return self.freeviz(
+            X, Y, weights=self.weights, center=self.center, scale=self.scale,
+            dim=self.dim, p=self.p, initial=self.initial,
+            maxiter=self.maxiter, alpha=self.alpha, atol=self.atol,
+            is_class_discrete=self.is_class_discrete)[1].T
 
     @classmethod
     def squareform(cls, d):

@@ -1,5 +1,4 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QApplication
 
@@ -72,8 +71,9 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
 
         # select the last rule (TRUE)
         selection_model = self.widget.view.selectionModel()
-        selection_model.select(self.widget.proxy_model.index(
-            len(self.classifier.rule_list) - 1, 0),
+        selection_model.select(
+            self.widget.proxy_model.index(
+                len(self.classifier.rule_list) - 1, 0),
             selection_model.Select | selection_model.Rows)
 
         # the number of output data instances (filtered)
@@ -92,8 +92,9 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
 
         # select the last rule (TRUE)
         selection_model = self.widget.view.selectionModel()
-        selection_model.select(self.widget.proxy_model.index(
-            len(self.classifier.rule_list) - 1, 0),
+        selection_model.select(
+            self.widget.proxy_model.index(
+                len(self.classifier.rule_list) - 1, 0),
             selection_model.Select | selection_model.Rows)
 
         # copy the selection and test if correct

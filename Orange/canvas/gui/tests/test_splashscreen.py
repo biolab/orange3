@@ -17,9 +17,9 @@ from ..test import QAppTestCase
 class TestSplashScreen(QAppTestCase):
     def test_splashscreen(self):
         splash = pkg_resources.resource_filename(
-                     "Orange.canvas",
-                     "icons/orange-splash-screen.png"
-                 )
+            "Orange.canvas",
+            "icons/orange-splash-screen.png"
+        )
 
         w = SplashScreen()
         w.setPixmap(QPixmap(splash))

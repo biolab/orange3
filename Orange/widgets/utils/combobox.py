@@ -1,4 +1,3 @@
-# pylint: disable=unused-import
 from typing import Optional
 
 from AnyQt.QtCore import (

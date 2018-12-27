@@ -1,9 +1,8 @@
 
 import os
-import sys
 import unicodedata
 import itertools
-from functools import partial
+from functools import partial, singledispatch
 from collections import namedtuple
 
 import numpy as np
@@ -29,6 +28,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, colorpalette
 
 from Orange.util import scale, namegen
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -71,13 +71,6 @@ def stack_on_condition(a, b, condition):
 # ###########################
 # Data manipulation operators
 # ###########################
-
-if sys.version_info < (3, 4):
-    # use singledispatch backports from pypi
-    from singledispatch import singledispatch
-else:
-    from functools import singledispatch
-
 
 # Base commands
 Append = namedtuple("Append", ["points"])
@@ -724,7 +717,7 @@ class ColoredListModel(itemmodels.PyListModel):
 
 
 def _icon(name, icon_path="icons/paintdata",
-        widg_path=os.path.dirname(os.path.abspath(__file__))):
+          widg_path=os.path.dirname(os.path.abspath(__file__))):
     return os.path.join(widg_path, icon_path, name)
 
 
@@ -1308,23 +1301,6 @@ class OWPaintData(OWWidget):
         self.report_items("Painted data", settings)
         self.report_plot()
 
-def main():
-    from AnyQt.QtWidgets import QApplication
-    import gc
-    import sip
-    app = QApplication([])
-    ow = OWPaintData()
-    ow.show()
-    ow.raise_()
-    rval = app.exec_()
-    ow.saveSettings()
-    ow.onDeleteWidget()
-    sip.delete(ow)
-    del ow
-    gc.collect()
-    app.processEvents()
-    return rval
 
-
-if __name__ == "__main__":
-    sys.exit(main())
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWPaintData).run()

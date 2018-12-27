@@ -4,7 +4,7 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtCore import Qt, QSize, Signal
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
@@ -15,10 +15,11 @@ from Orange.preprocess.discretize import EqualFreq
 from Orange.statistics.contingency import get_contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
-from Orange.widgets.utils import to_html as to_html
+from Orange.widgets.utils import to_html
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
 from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
@@ -38,6 +39,7 @@ class ChiSqStats:
             return
         self.observed = get_contingency(data, attr1, attr2)
         self.n = np.sum(self.observed)
+        # pylint: disable=unexpected-keyword-arg
         self.probs_x = self.observed.sum(axis=0) / self.n
         self.probs_y = self.observed.sum(axis=1) / self.n
         self.expected = np.outer(self.probs_y, self.probs_x) * self.n
@@ -92,6 +94,8 @@ class OWSieveDiagram(OWWidget):
     attr_y = ContextSetting(None)
     selection = ContextSetting(set())
 
+    xy_changed_manually = Signal(Variable, Variable)
+
     def __init__(self):
         # pylint: disable=missing-docstring
         super().__init__()
@@ -106,7 +110,7 @@ class OWSieveDiagram(OWWidget):
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
             widget=self.attr_box, master=self, contentsLength=12,
-            callback=self.update_attr, sendSelectedValue=True, valueType=str,
+            callback=self.attr_changed, sendSelectedValue=True, valueType=str,
             model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
@@ -193,6 +197,10 @@ class OWSieveDiagram(OWWidget):
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y
         self.update_attr()
+
+    def attr_changed(self):
+        self.update_attr()
+        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
 
     def update_attr(self):
         """Update the graph and selection."""
@@ -501,22 +509,11 @@ class OWSieveDiagram(OWWidget):
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
+        return None
 
     def send_report(self):
         self.report_plot()
 
 
-def main():
-    # pylint: disable=missing-docstring
-    import sys
-    from AnyQt.QtWidgets import QApplication
-    a = QApplication(sys.argv)
-    ow = OWSieveDiagram()
-    ow.show()
-    data = Table(r"zoo.tab")
-    ow.set_data(data)
-    a.exec_()
-    ow.saveSettings()
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    WidgetPreview(OWSieveDiagram).run(Table("zoo"))
