@@ -3,18 +3,17 @@ Create Class
 
 Create class attribute from a string attribute.
 
-Inputs
-    Data
-        input dataset
+**Inputs**
 
-Outputs
-    Data
-        dataset with a new class variable
+- Data: input dataset
 
+**Outputs**
+
+- Data: dataset with a new class variable
 
 **Create Class** creates a new class attribute from an existing discrete or string attribute. The widget matches the string value of the selected attribute and constructs a new user-defined value for matching instances.
 
-.. figure:: images/CreateClass-stamped.png
+![](images/CreateClass-stamped.png)
 
 1. The attribute the new class is constructed from.
 2. Matching:
@@ -34,6 +33,6 @@ Here is a simple example with the *auto-mpg* dataset. Pass the data to **Create 
 
 We named our new class column *car_brand* and we matched at the beginning of the string.
 
-.. figure:: images/CreateClass-example.png
+![](images/CreateClass-example.png)
 
-Finally, we can observe the new column in a :doc:`Data Table <../data/datatable>` or use the value as color in the :doc:`Scatterplot <../visualize/scatterplot>`.
+Finally, we can observe the new column in a [Data Table](../data/datatable.md) or use the value as color in the [Scatter Plot](../visualize/scatterplot.md).
