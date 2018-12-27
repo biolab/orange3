@@ -785,8 +785,8 @@ class ChannelAnchor(QGraphicsRectItem):
         QGraphicsRectItem.paint(self, painter, option, widget)
         # if disabled, draw X over box
         if not self.isEnabled():
-            painter.drawLine(0, 0, int(self.rect().width()), int(self.rect().height()))
-            painter.drawLine(int(self.rect().width()), 0, 0, int(self.rect().height()))
+            painter.drawLine(self.rect().topLeft(), self.rect().bottomRight())
+            painter.drawLine(self.rect().topRight(), self.rect().bottomLeft())
 
     def hoverEnterEvent(self, event):
         self.setPen(self.__hover_pen)
