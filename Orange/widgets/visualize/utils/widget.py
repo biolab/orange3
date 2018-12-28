@@ -363,6 +363,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
     class Warning(OWProjectionWidgetBase.Warning):
         too_many_labels = Msg(
             "Too many labels to show (zoom in or label only selected)")
+        subset_not_subset = Msg(
+            "Subset data contains some instances that do not appear in "
+            "input data")
+        subset_independent = Msg(
+            "None of subset data instance appear in input data")
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
@@ -463,10 +468,19 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.commit()
 
     def get_subset_mask(self):
-        if self.subset_indices:
-            return np.array([ex.id in self.subset_indices
-                             for ex in self.data[self.valid_data]])
-        return None
+        self.Warning.subset_independent.clear()
+        self.Warning.subset_not_subset.clear()
+        if not self.subset_indices:
+            return None
+        valid_data = self.data[self.valid_data]
+        mask = np.fromiter((ex.id in self.subset_indices for ex in valid_data),
+                           dtype=np.bool, count=len(valid_data))
+        in_mask = mask.sum()
+        if not in_mask:
+            self.Warning.subset_independent()
+        elif in_mask < len(self.subset_indices):
+            self.Warning.subset_not_subset()
+        return mask
 
     # Plot
     def get_embedding(self):
