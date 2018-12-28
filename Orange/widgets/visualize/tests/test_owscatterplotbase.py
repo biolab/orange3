@@ -1,4 +1,5 @@
 # pylint: disable=missing-docstring,too-many-lines,too-many-public-methods
+# pylint: disable=protected-access
 from unittest.mock import patch, Mock
 import numpy as np
 
@@ -728,6 +729,200 @@ class TestOWScatterPlotBase(WidgetTest):
             self.assertIn(ind, selected)
             self.assertEqual(label.x(), x[ind])
             self.assertEqual(label.y(), y[ind])
+
+    def test_label_mask_all_visible(self):
+        graph = self.graph
+
+        x, y = np.arange(10) / 10, np.arange(10) / 10
+        sel = np.array(
+            [True, True, False, False, False, True, True, True, False, False])
+        subset = np.array(
+            [True, False, True, True, False, True, True, False, False, False])
+        trues = np.ones(10, dtype=bool)
+
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        # Selection present, subset is None
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(graph._label_mask(x, y), sel)
+
+        # Selection and subset present
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(graph._label_mask(x, y), np.array(
+            [True, True, True, True, False, True, True, True, False, False]
+        ))
+
+        # No selection, subset present
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(graph._label_mask(x, y), subset)
+
+        # No selection, no subset
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        self.assertIsNone(graph._label_mask(x, y))
+
+    def test_label_mask_with_invisible(self):
+        graph = self.graph
+
+        x, y = np.arange(5, 10) / 10, np.arange(5, 10) / 10
+        sel = np.array(
+            [True, True, False, False, False,  # these 5 are not in the sample
+             True, True, True, False, False])
+        subset = np.array(
+            [True, False, True, True, False,  # these 5 are not in the sample
+             True, True, False, False, True])
+        graph.sample_indices = np.arange(5, 10, dtype=int)
+        trues = np.ones(5, dtype=bool)
+
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        # Selection present, subset is None
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(graph._label_mask(x, y), sel[5:])
+
+        # Selection and subset present
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(
+            graph._label_mask(x, y),
+            np.array([True, True, True, False, True]))
+
+        # No selection, subset present
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(graph._label_mask(x, y), subset[5:])
+
+        # No selection, no subset
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), trues)
+
+        graph.label_only_selected = True
+        self.assertIsNone(graph._label_mask(x, y))
+
+    def test_label_mask_with_invisible_and_view(self):
+        graph = self.graph
+
+        x, y = np.arange(5, 10) / 10, np.arange(5) / 10
+        sel = np.array(
+            [True, True, False, False, False,  # these 5 are not in the sample
+             True, True, True, False, False])  # first and last out of the view
+        subset = np.array(
+            [True, False, True, True, False,  # these 5 are not in the sample
+             True, True, False, True, True])  # first and last out of the view
+        graph.sample_indices = np.arange(5, 10, dtype=int)
+        graph.view_box.viewRange = lambda: ((0.6, 1), (0, 0.3))
+        viewed = np.array([False, True, True, True, False])
+
+        np.testing.assert_equal(graph._label_mask(x, y), viewed)
+
+        # Selection present, subset is None
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), viewed)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(
+            graph._label_mask(x, y),
+            np.array([False, True, True, False, False]))
+
+        # Selection and subset present
+        graph.selection = sel
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), viewed)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(
+            graph._label_mask(x, y),
+            np.array([False, True, True, True, False]))
+
+        # No selection, subset present
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: subset
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), viewed)
+
+        graph.label_only_selected = True
+        np.testing.assert_equal(
+            graph._label_mask(x, y),
+            np.array([False, True, False, True, False]))
+
+        # No selection, no subset
+        graph.selection = None
+        graph.master.get_subset_mask = lambda: None
+
+        graph.label_only_selected = False
+        np.testing.assert_equal(graph._label_mask(x, y), viewed)
+
+        graph.label_only_selected = True
+        self.assertIsNone(graph._label_mask(x, y))
+
+    def test_labels_observes_mask(self):
+        graph = self.graph
+        get_label_data = graph.master.get_label_data
+        graph.reset_graph()
+
+        self.assertEqual(graph.labels, [])
+
+        get_label_data.reset_mock()
+        graph._label_mask = lambda *_: None
+        graph.update_labels()
+        get_label_data.assert_not_called()
+
+        self.master.get_label_data = lambda: \
+            np.array([str(x) for x in range(10)], dtype=object)
+        graph._label_mask = \
+            lambda *_: np.array([False, True, True] + [False] * 7)
+        graph.update_labels()
+        self.assertEqual(
+            [label.textItem.toPlainText() for label in graph.labels],
+            ["1", "2"])
 
     def test_labels_update_coordinates(self):
         graph = self.graph
