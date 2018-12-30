@@ -37,7 +37,7 @@ from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.listfilter import variables_filter
-from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 
 from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
     SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
@@ -58,6 +58,7 @@ class AddVariablesDialog(QDialog):
         QDialog.__init__(self)
 
         self.master = master
+        self.model = model
 
         self.setWindowFlags(Qt.Tool)
         self.setLayout(QVBoxLayout())
@@ -126,16 +127,11 @@ class AddVariablesDialog(QDialog):
         return [model.mapToSource(r) for r in rows]
 
     def add_variables(self):
-        view = self.view_other
-        model = self.master.model_other
-
-        indices = self.selected_rows(view)
-        variables = [model.data(ind, Qt.EditRole) for ind in indices]
-
+        indices = self.selected_rows(self.view_other)
         for i in sorted((ind.row() for ind in indices), reverse=True):
-            del model[i]
-
-        self.master.model_selected.extend(variables)
+            del self.model[i]
+        self.master.model_selected.extend(
+            self.model.data(ind, Qt.EditRole) for ind in indices)
         self.add.emit()
 
 
@@ -143,12 +139,10 @@ class VariablesSelection(QObject):
     added = pyqtSignal()
     removed = pyqtSignal()
 
-    def __init__(self, master, model_selected, model_other,
-                 widget=None, parent=None):
+    def __init__(self, master, model_selected, widget=None, parent=None):
         super().__init__(parent)
         self.master = master
         self.model_selected = model_selected
-        self.model_other = model_other
 
         params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
                        "selectionMode": QListView.ExtendedSelection,
@@ -189,6 +183,9 @@ class VariablesSelection(QObject):
         self.add_remove = add_remove
         self.box = add_remove.buttons[1]
 
+    def set_available(self, all_variables):
+        self.all_variables = all_variables
+
     def set_enabled(self, is_enabled):
         self.view_selected.setEnabled(is_enabled)
         for btn in self.add_remove.buttons:
@@ -197,18 +194,16 @@ class VariablesSelection(QObject):
     def __deactivate_selection(self):
         view = self.view_selected
         model = self.model_selected
-        indices = view.selectionModel().selectedRows()
-
-        variables = [model.data(ind, Qt.EditRole) for ind in indices]
-
-        for i in sorted((ind.row() for ind in indices), reverse=True):
+        indices = (ind.row() for ind in view.selectionModel().selectedRows())
+        for i in sorted(indices, reverse=True):
             del model[i]
-
-        self.model_other.extend(variables)
         self.removed.emit()
 
     def _action_add(self):
-        self.add_variables_dialog = AddVariablesDialog(self, self.model_other)
+        available = VariableListModel(
+            (var for var in self.all_variables if var not in self.model_selected
+             ), enable_dnd=True)
+        self.add_variables_dialog = AddVariablesDialog(self, available)
         self.add_variables_dialog.add.connect(lambda: self.added.emit())
 
 

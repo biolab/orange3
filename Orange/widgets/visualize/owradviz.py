@@ -47,7 +47,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
         self.master = master
         self.n_neighbors = 10
-        max_n_attrs = len(master.model_selected) + len(master.model_other) - 1
+        max_n_attrs = 0
 
         box = gui.hBox(self)
         self.n_attrs_spin = gui.spin(
@@ -73,7 +73,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         used by VizRank to evaluate attributes
         """
         master = self.master
-        attrs = [v for v in chain(master.model_selected[:], master.model_other[:])
+        attrs = [v for v in master.primitive_variables
                  if v is not self.attr_color]
         data = self.master.data.transform(Domain(attributes=attrs, class_vars=self.attr_color))
         self.data = data
@@ -288,9 +288,10 @@ class OWRadviz(OWAnchorProjectionWidget):
                                   " two values are not shown.")
 
     def __init__(self):
+        self.selected_vars = self.selected_vars[:]
         self.model_selected = VariableListModel(enable_dnd=True)
+        self.model_selected.wrap(self.selected_vars)
         self.model_selected.removed.connect(self.__model_selected_changed)
-        self.model_other = VariableListModel(enable_dnd=True)
 
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
             None, self, "Suggest features", self.vizrank_set_attrs
@@ -299,8 +300,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def _add_controls(self):
         self.variables_selection = VariablesSelection(
-            self, self.model_selected, self.model_other, self.controlArea
-        )
+            self, self.model_selected, self.controlArea)
         self.variables_selection.added.connect(self.__model_selected_changed)
         self.variables_selection.removed.connect(self.__model_selected_changed)
         self.variables_selection.add_remove.layout().addWidget(
@@ -326,13 +326,9 @@ class OWRadviz(OWAnchorProjectionWidget):
         if not attrs:
             return
         self.model_selected[:] = attrs[:]
-        self.model_other[:] = [var for var in self.primitive_variables
-                               if var not in attrs]
         self.__model_selected_changed()
 
     def __model_selected_changed(self):
-        self.selected_vars = [(var.name, vartype(var)) for var
-                              in self.model_selected]
         self.init_projection()
         self.setup_plot()
         self.commit()
@@ -347,20 +343,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.init_projection()
 
     def use_context(self):
-        self.model_selected.clear()
-        self.model_other.clear()
-        if self.data is not None and len(self.selected_vars):
-            d, selected = self.data.domain, [v[0] for v in self.selected_vars]
-            self.model_selected[:] = [d[name] for name in selected]
-            self.model_other[:] = [d[attr.name] for attr in
-                                   self.primitive_variables
-                                   if attr.name not in selected]
-        elif self.data is not None:
-            d, variables = self.data.domain, self.primitive_variables
-            class_var = [variables.pop(variables.index(d.class_var))] \
-                if d.class_var in variables else []
-            self.model_selected[:] = variables[:5]
-            self.model_other[:] = variables[5:] + class_var
+        self.model_selected.wrap(self.selected_vars)
 
     def _init_vizrank(self):
         is_enabled = self.data is not None and \
@@ -385,7 +368,8 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def init_attr_values(self):
         super().init_attr_values()
-        self.selected_vars = []
+        self.variables_selection.set_available(self.primitive_variables)
+        self.model_selected[:] = self.primitive_variables[:5]
 
     def _manual_move(self, anchor_idx, x, y):
         angle = np.arctan2(y, x)
