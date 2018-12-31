@@ -20,9 +20,8 @@ from Orange.projection import RadViz
 from Orange.widgets import widget, gui
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
-from Orange.widgets.utils import vartype
-from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel, \
+    variables_selection
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
@@ -289,7 +288,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def __init__(self):
         self.selected_vars = self.selected_vars[:]
-        self.model_selected = VariableListModel(enable_dnd=True)
+        self.model_selected = VariableSelectionModel()
         self.model_selected.wrap(self.selected_vars)
         self.model_selected.removed.connect(self.__model_selected_changed)
 
@@ -299,13 +298,10 @@ class OWRadviz(OWAnchorProjectionWidget):
         super().__init__()
 
     def _add_controls(self):
-        self.variables_selection = VariablesSelection(
-            self, self.model_selected, self.controlArea)
-        self.variables_selection.added.connect(self.__model_selected_changed)
-        self.variables_selection.removed.connect(self.__model_selected_changed)
-        self.variables_selection.add_remove.layout().addWidget(
-            self.btn_vizrank
-        )
+        variables_selection(self.controlArea, self, self.model_selected)
+        self.model_selected.selection_changed.connect(
+            self.__model_selected_changed)
+        self.controlArea.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
         self.controlArea.layout().removeWidget(self.control_area_stretch)
         self.control_area_stretch.setParent(None)
@@ -320,7 +316,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     @property
     def effective_variables(self):
-        return self.model_selected[:]
+        return self.model_selected[:self.model_selected.nselected]
 
     def vizrank_set_attrs(self, *attrs):
         if not attrs:
@@ -343,6 +339,7 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.init_projection()
 
     def use_context(self):
+        return
         self.model_selected.wrap(self.selected_vars)
 
     def _init_vizrank(self):
@@ -368,8 +365,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def init_attr_values(self):
         super().init_attr_values()
-        self.variables_selection.set_available(self.primitive_variables)
-        self.model_selected[:] = self.primitive_variables[:5]
+        self.model_selected[:] = self.primitive_variables
 
     def _manual_move(self, anchor_idx, x, y):
         angle = np.arctan2(y, x)
@@ -433,5 +429,5 @@ class MoveIndicator(pg.GraphicsObject):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("heart_disease")
+    data = Table("brown-selected")
     WidgetPreview(OWRadviz).run(set_data=data, set_subset_data=data[::10])

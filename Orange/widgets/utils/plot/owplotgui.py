@@ -26,23 +26,27 @@ This module contains functions and classes for creating GUI elements commonly us
 '''
 
 import os
-import unicodedata
 
-from AnyQt.QtWidgets import QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu, QAction,\
-    QDialog, QSizePolicy, QPushButton, QListView, QLabel
-from AnyQt.QtGui import QIcon, QKeySequence
-from AnyQt.QtCore import Qt, pyqtSignal, QPoint, QSize, QObject
+from AnyQt.QtWidgets import (
+    QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu,
+    QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle
+)
+from AnyQt.QtGui import QIcon, QColor
+from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect
 
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
-from Orange.widgets.utils import itemmodels
-from Orange.widgets.utils.listfilter import variables_filter
+from Orange.widgets.gui import OrangeUserRole
+from Orange.widgets.utils.listfilter import (
+    variables_filter, VariablesListItemView
+)
 from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 
-from .owconstants import NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
-    SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE
+from .owconstants import (
+    NOTHING, ZOOMING, SELECT, SELECT_POLYGON, PANNING, SELECTION_ADD,\
+    SELECTION_REMOVE, SELECTION_TOGGLE, SELECTION_REPLACE)
 
-__all__ = ["AddVariablesDialog", "VariablesSelection",
+__all__ = ["variables_selection",
            "OrientedWidget", "OWToolbar", "StateButtonContainer",
            "OWAction", "OWButton", "OWPlotGUI"]
 
@@ -51,160 +55,79 @@ SIZE_POLICY_ADAPTING = (QSizePolicy.Expanding, QSizePolicy.Ignored)
 SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)
 
 
-class AddVariablesDialog(QDialog):
-    add = pyqtSignal()
+class VariableSelectionModel(VariableListModel):
+    IsSelected = next(OrangeUserRole)
+    selection_changed = pyqtSignal()
 
-    def __init__(self, master, model):
-        QDialog.__init__(self)
+    def __init__(self):
+        super().__init__(enable_dnd=True)
+        self.nselected = 3
 
-        self.master = master
-        self.model = model
-
-        self.setWindowFlags(Qt.Tool)
-        self.setLayout(QVBoxLayout())
-        self.setWindowTitle("Hidden Axes")
-
-        btns_area = gui.widgetBox(
-            self, addSpace=0, spacing=9, orientation=Qt.Horizontal,
-            sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
-        )
-        self.btn_add = QPushButton(
-            "Add", autoDefault=False, sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
-        )
-        self.btn_add.clicked.connect(self._add)
-        self.btn_cancel = QPushButton(
-            "Cancel", autoDefault=False, sizePolicy=QSizePolicy(*SIZE_POLICY_FIXED)
-        )
-        self.btn_cancel.clicked.connect(self._cancel)
-
-        btns_area.layout().addWidget(self.btn_add)
-        btns_area.layout().addWidget(self.btn_cancel)
-
-        filter_edit, view = variables_filter(model=model)
-        self.view_other = view
-        view.setMinimumSize(QSize(30, 60))
-        view.setSizePolicy(*SIZE_POLICY_ADAPTING)
-        view.viewport().setAcceptDrops(True)
-
-        self.layout().addWidget(filter_edit)
-        self.layout().addWidget(view)
-        self.layout().addWidget(btns_area)
-
-        master = self.master
-        box = master.box
-        master.master.setEnabled(False)
-        self.move(box.mapToGlobal(QPoint(0, box.pos().y() + box.height())))
-        self.setFixedWidth(master.master.controlArea.width())
-        self.setMinimumHeight(300)
-        self.show()
-        self.raise_()
-        self.activateWindow()
-
-    def _cancel(self):
-        self.closeEvent(None)
-
-    def _add(self):
-        self.add_variables()
-        self.closeEvent(None)
-
-    def closeEvent(self, QCloseEvent):
-        self.master.master.setEnabled(True)
-        super().closeEvent(QCloseEvent)
-
-    def keyPressEvent(self, e):
-        if e.key() == Qt.Key_Escape:
-            self.closeEvent(None)
-        elif e.key() in [Qt.Key_Return, Qt.Key_Enter]:
-            self._add()
+    def data(self, index, role):
+        if role == self.IsSelected:
+            return index.row() < self.nselected
         else:
-            super().keyPressEvent(e)
+            return super().data(index, role)
 
-    def selected_rows(self, view):
-        """ Return the selected rows in the view.
-        """
-        rows = view.selectionModel().selectedRows()
-        model = view.model()
-        return [model.mapToSource(r) for r in rows]
-
-    def add_variables(self):
-        indices = self.selected_rows(self.view_other)
-        for i in sorted((ind.row() for ind in indices), reverse=True):
-            del self.model[i]
-        self.master.model_selected.extend(
-            self.model.data(ind, Qt.EditRole) for ind in indices)
-        self.add.emit()
+    def toggle_item(self, index):
+        if index.data(self.IsSelected):
+            self.nselected -= 1
+            self.insert(self.nselected, self.pop(index.row()))
+        else:
+            self.insert(self.nselected, self.pop(index.row()))
+            self.nselected += 1
+        self.selection_changed.emit()
 
 
-class VariablesSelection(QObject):
-    added = pyqtSignal()
-    removed = pyqtSignal()
+class VariablesDelegate(QStyledItemDelegate):
+    def paint(self, painter, option, index):
+        rect = QRect(option.rect)
 
-    def __init__(self, master, model_selected, widget=None, parent=None):
-        super().__init__(parent)
-        self.master = master
-        self.model_selected = model_selected
+        is_selected = index.data(VariableSelectionModel.IsSelected)
+        if not is_selected:
+            painter.fillRect(rect, QColor("#ddd"))
+        if option.state & QStyle.State_MouseOver:
+            txt = [" Add ", " Remove "][is_selected]
+            txtw = painter.fontMetrics().width(txt)
+            painter.save()
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor("#ccc"))
+            brect = QRect(rect.x() + rect.width() - 8 - txtw, rect.y(),
+                          txtw, rect.height())
+            painter.drawRoundedRect(brect, 4, 4)
+            painter.restore()
+            painter.drawText(brect, Qt.AlignCenter, txt)
 
-        params_view = {"sizePolicy": QSizePolicy(*SIZE_POLICY_ADAPTING),
-                       "selectionMode": QListView.ExtendedSelection,
-                       "dragEnabled": True,
-                       "defaultDropAction": Qt.MoveAction,
-                       "dragDropOverwriteMode": False,
-                       "dragDropMode": QListView.DragDrop}
+        super().paint(painter, option, index)
 
-        self.view_selected = view = gui.listView(
-            widget or master.controlArea, master,
-            box=True, **params_view
-        )
-        view.box.setMinimumHeight(120)
-        view.viewport().setAcceptDrops(True)
 
-        delete = QAction(
-            "Delete", view,
-            shortcut=QKeySequence(Qt.Key_Delete),
-            triggered=self.__deactivate_selection
-        )
-        view.addAction(delete)
-        view.setModel(self.model_selected)
+class VariableSelectionView(VariablesListItemView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setMouseTracking(True)
+        self.setAttribute(Qt.WA_Hover)
 
-        addClassLabel = QAction("+", master,
-                                toolTip="Add new class label",
-                                triggered=self._action_add)
-        removeClassLabel = QAction(unicodedata.lookup("MINUS SIGN"), master,
-                                   toolTip="Remove selected class label",
-                                   triggered=self.__deactivate_selection)
+    def sizeHint(self):
+        return QSize(1, 50)
 
-        add_remove = itemmodels.ModelActionsWidget(
-            [addClassLabel, removeClassLabel], master)
-        add_remove.layout().addStretch(10)
-        add_remove.layout().setSpacing(1)
-        add_remove.setSizePolicy(*SIZE_POLICY_FIXED)
-        view.box.layout().addWidget(add_remove)
+    def mouseMoveEvent(self, e):
+        super().mouseMoveEvent(e)
+        self.update()
 
-        self.add_remove = add_remove
-        self.box = add_remove.buttons[1]
+    def leaveEvent(self, e):
+        super().leaveEvent(e)
+        self.update()
 
-    def set_available(self, all_variables):
-        self.all_variables = all_variables
 
-    def set_enabled(self, is_enabled):
-        self.view_selected.setEnabled(is_enabled)
-        for btn in self.add_remove.buttons:
-            btn.setEnabled(is_enabled)
-
-    def __deactivate_selection(self):
-        view = self.view_selected
-        model = self.model_selected
-        indices = (ind.row() for ind in view.selectionModel().selectedRows())
-        for i in sorted(indices, reverse=True):
-            del model[i]
-        self.removed.emit()
-
-    def _action_add(self):
-        available = VariableListModel(
-            (var for var in self.all_variables if var not in self.model_selected
-             ), enable_dnd=True)
-        self.add_variables_dialog = AddVariablesDialog(self, available)
-        self.add_variables_dialog.add.connect(lambda: self.added.emit())
+def variables_selection(widget, master, model):
+        filter, view = variables_filter(
+            model=model, parent=master, view_type=VariableSelectionView)
+        view.setMinimumHeight(10)
+        view.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding))
+        view.setItemDelegate(VariablesDelegate())
+        view.clicked.connect(lambda index: model.toggle_item(view.model().mapToSource(index)))
+        widget.layout().addWidget(filter)
+        widget.layout().addWidget(view)
 
 
 class OrientedWidget(QWidget):
