@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -198,6 +198,23 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
                            (widget.Inputs.data_subset, None)])
         self.assertFalse(widget.Warning.subset_independent.is_shown())
         self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+    def test_get_coordinates_data(self):
+        self.widget.get_embedding = Mock(return_value=np.ones((10, 2)))
+        self.widget.valid_data = np.ones((10,), dtype=bool)
+        self.widget.valid_data[0] = False
+        self.assertIsNotNone(self.widget.get_coordinates_data())
+        self.assertEqual(len(self.widget.get_coordinates_data()[0]), 9)
+        self.widget.valid_data = np.zeros((10,), dtype=bool)
+        self.assertIsNone(self.widget.get_coordinates_data()[0])
+
+    def test_sparse_data_reload(self):
+        table = Table("heart_disease").to_sparse()
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

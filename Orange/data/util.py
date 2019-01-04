@@ -97,6 +97,22 @@ def hstack(arrays):
         return np.hstack(arrays)
 
 
+def array_equal(a1, a2):
+    """array_equal that supports sparse and dense arrays with missing values"""
+    if a1.shape != a2.shape:
+        return False
+
+    if not (sp.issparse(a1) or sp.issparse(a2)):  # Both dense: just compare
+        return np.allclose(a1, a2, equal_nan=True)
+
+    v1 = np.vstack(sp.find(a1)).T
+    v2 = np.vstack(sp.find(a2)).T
+    if not (sp.issparse(a1) and sp.issparse(a2)):  # Any dense: order indices
+        v1.sort(axis=0)
+        v2.sort(axis=0)
+    return np.allclose(v1, v2, equal_nan=True)
+
+
 def assure_array_dense(a):
     if sp.issparse(a):
         a = a.toarray()
