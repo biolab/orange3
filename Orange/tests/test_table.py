@@ -5,19 +5,36 @@ import copy
 import os
 import random
 import unittest
-from unittest import skip
 from unittest.mock import Mock, MagicMock, patch
+from distutils.version import LooseVersion
 from itertools import chain
 from math import isnan
 
 import numpy as np
 import scipy.sparse as sp
 
+import Orange
 from Orange import data
 from Orange.data import (filter, Unknown, Variable, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.tests import test_dirname, assert_array_nanequal
 from Orange.data.table import _optimize_indices
+
+
+if LooseVersion(Orange.__version__) < LooseVersion("3.24"):
+    def skip_deprecated_length(f):
+        return unittest.skip(
+            f"Method {f.__name__} will be deprecated; tests are "
+            "skipped because it already fails on Python 3.7 on travis")(f)
+else:
+    def skip_deprecated_length(f):
+        def raise_deprecation(_):
+            raise RuntimeError(
+                f"We reached 3.24 and method {f.__name__} is now deprecated. "
+                f"Remove the method the corresponding tests.")
+        # Also don't forget to remove this function and imports of LooseVersion
+        # and Orange
+        return raise_deprecation
 
 
 class TableTestCase(unittest.TestCase):
@@ -203,7 +220,7 @@ class TableTestCase(unittest.TestCase):
             d[0][np.int_(0)] = 0
             self.assertEqual(d[0, "b"], 0)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_indexing_del_example(self):
         import warnings
 
@@ -340,7 +357,7 @@ class TableTestCase(unittest.TestCase):
             d[2:5, "a"] = "A"
             self.assertEqual([e["a"] for e in d], list("ABAAACCDE"))
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_del_slice_example(self):
         import warnings
 
@@ -360,7 +377,7 @@ class TableTestCase(unittest.TestCase):
             del d[:]
             self.assertEqual(len(d), 0)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_del_slice_ids(self):
         # __del__ updates `ids` member
         d = data.Table("test2")
@@ -368,7 +385,7 @@ class TableTestCase(unittest.TestCase):
         del d[2:4]
         np.testing.assert_array_equal(d.ids, np.delete(ids, slice(2, 4)))
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_set_slice_example(self):
         import warnings
 
@@ -419,7 +436,7 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual([e[d.domain[0]] for e in d],
                              [0, 42, 42, None, "?", "", 2.26, 3.333, None])
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_del_multiple_indices_example(self):
         import warnings
 
@@ -451,7 +468,7 @@ class TableTestCase(unittest.TestCase):
             vals[1] = vals[2] = vals[5] = 42
             self.assertEqual([e[0] for e in d], vals)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_views(self):
         d = data.Table("zoo")
         crc = d.checksum(True)
@@ -569,7 +586,7 @@ class TableTestCase(unittest.TestCase):
                 return False
         return True
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_append(self):
         d = data.Table("test3")
         d.append([None] * 3)
@@ -585,7 +602,7 @@ class TableTestCase(unittest.TestCase):
             np.array([[v.Unknown for v in d.domain.metas]] * 2,
                      dtype=object))
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_append2(self):
         d = data.Table("iris")
         d.shuffle()
@@ -603,7 +620,7 @@ class TableTestCase(unittest.TestCase):
         x.append(d[50])
         self.assertEqual(x[50], d[50])
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_extend(self):
         d = data.Table("iris")
         d.shuffle()
@@ -620,7 +637,7 @@ class TableTestCase(unittest.TestCase):
         np.testing.assert_almost_equal(x[-2:, 1].X, y.X)
         self.assertEqual(np.isnan(x).sum(), 8)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_extend2(self):
         d = data.Table("test3")
         d.extend([[None] * 3,
@@ -690,7 +707,7 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(sp.issparse(new.metas), "Concatenated metas is not dense.")
         self.assertEqual(len(new.ids), 300)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_convert_through_append(self):
         d = data.Table("iris")
         dom2 = data.Domain([d.domain[0], d.domain[2], d.domain[4]])
@@ -2194,14 +2211,14 @@ class InterfaceTest(unittest.TestCase):
                 self.table[i, j] = new_value
                 self.assertEqual(self.table[i, j], new_value)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_append_rows(self):
         new_value = 2
         new_row = [new_value] * len(self.data[0])
         self.table.append(new_row)
         self.assertEqual(list(self.table[-1]), new_row)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_insert_rows(self):
         new_value = 2
         new_row = [new_value] * len(self.data[0])
@@ -2210,7 +2227,7 @@ class InterfaceTest(unittest.TestCase):
         for row, expected in zip(self.table[1:], self.data):
             self.assertEqual(tuple(row), expected)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_insert_view(self):
         new_row = [1] * len(self.data[0])
         tab = self.table[:2]
@@ -2220,14 +2237,14 @@ class InterfaceTest(unittest.TestCase):
         self.assertFalse(tab.X.flags.c_contiguous)
         tab.insert(0, new_row)
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_delete_rows(self):
         for i in range(self.nrows):
             del self.table[0]
             for j in range(len(self.table)):
                 self.assertEqual(tuple(self.table[j]), self.data[i + j + 1])
 
-    @skip("method will be deprecated; it fails on Python 3.7 on travis")
+    @skip_deprecated_length
     def test_clear(self):
         self.table.clear()
         self.assertEqual(len(self.table), 0)
