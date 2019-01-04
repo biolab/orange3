@@ -7,17 +7,19 @@ from unittest import mock
 from Orange.data import Table
 from Orange.widgets.data.owsql import OWSql
 from Orange.widgets.tests.base import WidgetTest
-from Orange.tests.sql.base import create_iris, parse_uri, sql_test
+from Orange.tests.sql.base import DataBaseTest as dbt
 
 
-@sql_test
-class TestOWSqlConnected(WidgetTest):
-    def setUp(self):
+class TestOWSqlConnected(WidgetTest, dbt):
+    def setUpDB(self):
         self.widget = self.create_widget(OWSql)
-        params, _ = create_iris()
-        self.params = parse_uri(params)
+        self.params, _ = self.create_iris_sql_tabel()
         self.iris = Table("iris")
 
+    def tearDownDB(self):
+        self.drop_iris_sql_tabel()
+
+    @dbt.run_on(["postgres"])
     def test_connection(self):
         """Test if a connection to the database can be established"""
         self.set_connection_params()
@@ -28,6 +30,7 @@ class TestOWSqlConnected(WidgetTest):
         tables = ["Select a table", "Custom SQL"]
         self.assertTrue(set(self.widget.tables).issuperset(set(tables)))
 
+    @dbt.run_on(["postgres"])
     def test_output_iris(self):
         """Test if iris data can be fetched from database"""
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
