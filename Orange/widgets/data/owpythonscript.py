@@ -9,7 +9,7 @@ from unittest.mock import patch
 from AnyQt.QtWidgets import (
     QPlainTextEdit, QListView, QSizePolicy, QMenu, QSplitter, QLineEdit,
     QAction, QToolButton, QFileDialog, QStyledItemDelegate,
-    QStyleOptionViewItem, QPlainTextDocumentLayout, QPushButton
+    QStyleOptionViewItem, QPlainTextDocumentLayout
 )
 from AnyQt.QtGui import (
     QColor, QBrush, QPalette, QFont, QTextDocument,
@@ -479,8 +479,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        self.execute_button = QPushButton(self, text='Run', clicked=self.commit)
-        self.controlArea.layout().addWidget(self.execute_button)
+        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
