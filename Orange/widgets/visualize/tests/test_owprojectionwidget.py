@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
 from unittest.mock import patch
 
 import numpy as np
@@ -164,3 +165,39 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
 
         self.widget.graph.too_many_labels.emit(False)
         self.assertFalse(w.is_shown())
+
+    def test_invalid_subset(self):
+        widget = self.widget
+
+        data = Table("iris")
+        self.send_signal(widget.Inputs.data_subset, data[40:60])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:70])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:50])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertTrue(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[20:30])
+        self.assertTrue(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:70])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:50])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertTrue(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signals([(widget.Inputs.data, Table("titanic")),
+                           (widget.Inputs.data_subset, None)])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+if __name__ == "__main__":
+    unittest.main()
