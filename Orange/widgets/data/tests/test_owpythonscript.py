@@ -43,7 +43,6 @@ class TestOWPythonScript(WidgetTest):
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
-        self.widget.autobox.setCheckState(False)
         self.widget.text.setPlainText("temp = 42\nprint(temp)")
         self.widget.execute_button.click()
         self.assertIn("42", self.widget.console.toPlainText())
@@ -57,7 +56,6 @@ class TestOWPythonScript(WidgetTest):
         Error is shown when output variables are filled with wrong variable
         types and also output variable is set to None. (GH-2308)
         """
-        self.widget.autobox.setCheckState(False)
         self.assertEqual(len(self.widget.Error.active), 0)
         for signal, data in (
                 ("Data", self.iris),
@@ -80,7 +78,6 @@ class TestOWPythonScript(WidgetTest):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
     def test_multiple_signals(self):
-        self.widget.autobox.setCheckState(False)
         click = self.widget.execute_button.click
         console_locals = self.widget.console.locals
 
