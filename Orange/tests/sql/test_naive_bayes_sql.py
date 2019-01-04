@@ -23,7 +23,8 @@ class NaiveBayesTest(unittest.TestCase, dbt):
                          type_hints=Domain([], DiscreteVariable("iris",
                                 values=['Iris-setosa', 'Iris-virginica',
                                         'Iris-versicolor'])))
-        table = preprocess.Discretize(table)
+        disc = preprocess.Discretize()
+        table = disc(table)
         bayes = nb.NaiveBayesLearner()
         clf = bayes(table)
         # Single instance prediction
