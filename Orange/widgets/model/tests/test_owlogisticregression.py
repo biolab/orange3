@@ -104,10 +104,10 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         GH-2392
         """
         table = Table("iris")
-        table.Y[5:10] = np.NaN
+        table.Y[:5] = np.NaN
         self.send_signal("Data", table)
         coef1 = self.get_output("Coefficients")
-        del table[5:10]
+        table = table[5:]
         self.send_signal("Data", table)
         coef2 = self.get_output("Coefficients")
         self.assertTrue(np.array_equal(coef1, coef2))

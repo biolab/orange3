@@ -558,6 +558,7 @@ class Table(MutableSequence, Storage):
                 self.metas[i, j] = var.to_val(val)
         if weights is not None:
             self.W = np.array(weights)
+        self.attributes = {}
         return self
 
     @classmethod
@@ -934,19 +935,52 @@ class Table(MutableSequence, Storage):
                 self._resize_all(old_length)
                 raise
 
-    @staticmethod
-    def concatenate(tables, axis=1):
+    @classmethod
+    def concatenate(cls, tables, axis=1):
         """Return concatenation of `tables` by `axis`."""
+        def vstack(arrs):
+            return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
+
+        def merge1d(arrs):
+            arrs = list(arrs)
+            ydims = {arr.ndim for arr in arrs}
+            if ydims == {1}:
+                return np.hstack(arrs)
+            else:
+                return vstack([
+                    arr if arr.ndim == 2 else np.atleast_2d(arr).T
+                    for arr in arrs
+                ])
+
+        def collect(attr):
+            return [getattr(arr, attr) for arr in tables]
+
         if not tables:
             raise ValueError('need at least one table to concatenate')
         if len(tables) == 1:
             return tables[0].copy()
         CONCAT_ROWS, CONCAT_COLS = 0, 1
         if axis == CONCAT_ROWS:
-            table = tables[0].copy()
-            for t in tables[1:]:
-                table.extend(t)
-            return table
+            domain = tables[0].domain
+            if any(table.domain != domain for table in tables):
+                raise ValueError('concatenated tables must have the same domain')
+
+            conc = cls.from_numpy(
+                domain,
+                vstack(collect("X")),
+                merge1d(collect("Y")),
+                vstack(collect("metas")),
+                merge1d(collect("W"))
+            )
+            conc.ids = np.hstack(map(operator.attrgetter("ids"), tables))
+            names = [table.name for table in tables if table.name != "untitled"]
+            if names:
+                conc.name = names[0]
+            # TODO: Add attributes = {} to __init__
+            conc.attributes = getattr(conc, "attributes", {})
+            for table in reversed(tables):
+                conc.attributes.update(table.attributes)
+            return conc
         elif axis == CONCAT_COLS:
             if reduce(operator.iand,
                       (set(map(operator.attrgetter('name'),
