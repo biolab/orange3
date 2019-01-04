@@ -48,6 +48,13 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertTrue(self.widget.group_view.isEnabled())
 
+    def test_primitive_metas(self):
+        new_domain = Domain(attributes=[], class_vars=[], metas=(
+            self.data.domain.attributes + self.data.domain.class_vars))
+        attrs_as_metas = Table(new_domain, self.data)
+        self.send_signal(self.widget.Inputs.data, attrs_as_metas)
+        self.assertTrue(self.widget.display_box.isEnabled())
+
     def test_input_data_missings_cont_group_var(self):
         """Check widget with continuous data with missing values and group variable"""
         data = self.iris.copy()
