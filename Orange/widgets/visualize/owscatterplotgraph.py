@@ -1024,25 +1024,22 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         for label in self.labels:
             self.plot_widget.removeItem(label)
         self.labels = []
-        if self.scatterplot_item is None \
-                or self.label_only_selected and self.selection is None:
-            self._signal_too_many_labels(False)
+
+        mask = None
+        if self.scatterplot_item is not None:
+            x, y = self.scatterplot_item.getData()
+            mask = self._label_mask(x, y)
+
+        if mask is not None:
+            labels = self.get_labels()
+            if labels is None:
+                mask = None
+
+        self._signal_too_many_labels(
+            mask is not None and mask.sum() > self.MAX_VISIBLE_LABELS)
+        if self._too_many_labels or mask is None or not np.any(mask):
             return
-        labels = self.get_labels()
-        if labels is None:
-            self._signal_too_many_labels(False)
-            return
-        (x0, x1), (y0, y1) = self.view_box.viewRange()
-        x, y = self.scatterplot_item.getData()
-        mask = np.logical_and(
-            np.logical_and(x >= x0, x <= x1),
-            np.logical_and(y >= y0, y <= y1))
-        if self.label_only_selected:
-            mask = np.logical_and(
-                mask, self._filter_visible(self.selection) != 0)
-        if mask.sum() > self.MAX_VISIBLE_LABELS:
-            self._signal_too_many_labels(True)
-            return
+
         black = pg.mkColor(0, 0, 0)
         labels = labels[mask]
         x = x[mask]
@@ -1052,12 +1049,30 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             ti.setPos(xp, yp)
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
-        self._signal_too_many_labels(False)
 
     def _signal_too_many_labels(self, too_many):
         if self._too_many_labels != too_many:
             self._too_many_labels = too_many
             self.too_many_labels.emit(too_many)
+
+    def _label_mask(self, x, y):
+        (x0, x1), (y0, y1) = self.view_box.viewRange()
+        mask = np.logical_and(
+            np.logical_and(x >= x0, x <= x1),
+            np.logical_and(y >= y0, y <= y1))
+        if self.label_only_selected:
+            sub_mask = self._filter_visible(self.master.get_subset_mask())
+            if self.selection is None:
+                if sub_mask is None:
+                    return None
+                else:
+                    sel_mask = sub_mask
+            else:
+                sel_mask = self._filter_visible(self.selection) != 0
+                if sub_mask is not None:
+                    sel_mask = np.logical_or(sel_mask, sub_mask)
+            mask = np.logical_and(mask, sel_mask)
+        return mask
 
     # Shapes
     def get_shapes(self):
