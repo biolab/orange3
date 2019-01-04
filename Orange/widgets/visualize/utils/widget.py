@@ -367,7 +367,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
             "Subset data contains some instances that do not appear in "
             "input data")
         subset_independent = Msg(
-            "None of subset data instance appear in input data")
+            "No subset data instances appear in input data")
 
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
@@ -456,11 +456,21 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
     @check_sql_input
     def set_subset_data(self, subset):
         self.subset_data = subset
-        self.subset_indices = {e.id for e in subset} \
-            if subset is not None else {}
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
+        self.Warning.subset_independent.clear()
+        self.Warning.subset_not_subset.clear()
+        if self.data is None or self.subset_data is None:
+            self.subset_indices = set()
+        else:
+            self.subset_indices = set(self.subset_data.ids)
+            ids = set(self.data.ids)
+            if not self.subset_indices & ids:
+                self.Warning.subset_independent()
+            elif self.subset_indices - ids:
+                self.Warning.subset_not_subset()
+
         if self._invalidated:
             self._invalidated = False
             self.setup_plot()
@@ -469,19 +479,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.commit()
 
     def get_subset_mask(self):
-        self.Warning.subset_independent.clear()
-        self.Warning.subset_not_subset.clear()
         if not self.subset_indices:
             return None
         valid_data = self.data[self.valid_data]
-        mask = np.fromiter((ex.id in self.subset_indices for ex in valid_data),
+        return np.fromiter((ex.id in self.subset_indices for ex in valid_data),
                            dtype=np.bool, count=len(valid_data))
-        in_mask = mask.sum()
-        if not in_mask:
-            self.Warning.subset_independent()
-        elif in_mask < len(self.subset_indices):
-            self.Warning.subset_not_subset()
-        return mask
 
     # Plot
     def get_embedding(self):
