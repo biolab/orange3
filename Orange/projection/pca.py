@@ -73,8 +73,7 @@ class PCAModel(DomainProjection, metaclass=WrapperMeta):
 
     def _get_var_names(self, n):
         names = [f"{self.var_prefix}{postfix}" for postfix in range(1, n + 1)]
-        domain = self.orig_domain.variables + self.orig_domain.metas
-        return get_unique_names([v.name for v in domain], names)
+        return get_unique_names(self.orig_domain, names)
 
 
 class IncrementalPCA(SklProjector):

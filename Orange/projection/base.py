@@ -143,8 +143,7 @@ class DomainProjection(Projection):
     def _get_var_names(self, n):
         postfixes = ["x", "y"] if n == 2 else [str(i) for i in range(1, n + 1)]
         names = [f"{self.var_prefix}-{postfix}" for postfix in postfixes]
-        domain = self.orig_domain.variables + self.orig_domain.metas
-        return get_unique_names([v.name for v in domain], names)
+        return get_unique_names(self.orig_domain, names)
 
 
 class LinearProjector(Projector):
