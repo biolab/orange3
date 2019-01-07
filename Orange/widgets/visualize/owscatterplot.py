@@ -100,15 +100,19 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
-        self.reg_line_item = None
+        self.reg_line_items = []
 
     def clear(self):
         super().clear()
-        self.reg_line_item = None
+        self.reg_line_items.clear()
 
     def update_coordinates(self):
         super().update_coordinates()
         self.update_axes()
+        self.update_regression_line()
+
+    def update_colors(self):
+        super().update_colors()
         self.update_regression_line()
 
     def update_axes(self):
@@ -117,33 +121,44 @@ class OWScatterPlotGraph(OWScatterPlotBase):
             if title is None:
                 self.plot_widget.hideAxis(axis)
 
+    def _add_line(self, x, y, color, width):
+        min_x, max_x = np.min(x), np.max(x)
+        slope, intercept, rvalue, _, _ = linregress(x, y)
+        start_y = min_x * slope + intercept
+        angle = np.degrees(np.arctan(slope))
+        rotate = 135 < angle % 360 < 315
+        l_opts = dict(color=color, position=abs(rotate - 0.85),
+                      rotateAxis=(1, 0), movable=True)
+        reg_line_item = pg.InfiniteLine(
+            pos=QPointF(min_x, start_y), angle=angle,
+            pen=pg.mkPen(color=color, width=width),
+            label=f"r = {rvalue:.2f}", labelOpts=l_opts
+        )
+        if rotate:
+            reg_line_item.label.angle = 180
+            reg_line_item.label.updateTransform()
+        self.plot_widget.addItem(reg_line_item)
+        self.reg_line_items.append(reg_line_item)
+
     def update_regression_line(self):
-        if self.reg_line_item is not None:
-            self.plot_widget.removeItem(self.reg_line_item)
-            self.reg_line_item = None
+        for line in self.reg_line_items:
+            self.plot_widget.removeItem(line)
+        self.reg_line_items.clear()
         if not self.show_reg_line:
             return
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        min_x, max_x = np.min(x), np.max(x)
-        slope, intercept, rvalue, _, _ = linregress(x, y)
-        start_y = min_x * slope + intercept
-        end_y = max_x * slope + intercept
-        angle = np.degrees(np.arctan((end_y - start_y) / (max_x - min_x)))
-        rotate = ((angle + 45) % 180) - 45 > 90
-        color = QColor("#505050")
-        l_opts = dict(color=color, position=abs(int(rotate) - 0.85),
-                      rotateAxis=(1, 0), movable=True)
-        self.reg_line_item = pg.InfiniteLine(
-            pos=QPointF(min_x, start_y), angle=angle,
-            pen=pg.mkPen(color=color, width=1),
-            label="r = {:.2f}".format(rvalue), labelOpts=l_opts
-        )
-        if rotate:
-            self.reg_line_item.label.angle = 180
-            self.reg_line_item.label.updateTransform()
-        self.plot_widget.addItem(self.reg_line_item)
+        self._add_line(x, y, QColor("#505050"), width=1)
+        if self.master.is_continuous_color() or self.palette is None:
+            return
+        c_data = self.master.get_color_data().astype(int)
+        if c_data is None:
+            return
+        for val in range(c_data.max() + 1):
+            mask = c_data == val
+            if mask.sum() > 1:
+                self._add_line(x[mask], y[mask], self.palette[val], width=3)
 
 
 class OWScatterPlot(OWDataProjectionWidget):
