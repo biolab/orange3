@@ -310,7 +310,21 @@ class LinksEditWidget(QGraphicsWidget):
                     target_pos = self.mapFromItem(maybe_anchor, target_pos)
                     line.setP2(target_pos)
                 else:
-                    line.setP2(event.pos())
+                    # Clamp end of line-drag to node widgets to avoid scroll bug
+                    clamped_pos = event.pos()
+
+                    source_widget_geometry = self.sourceNodeWidget.geometry()
+                    sink_widget_geometry = self.sinkNodeWidget.geometry()
+                    if clamped_pos.x() < source_widget_geometry.left():
+                        clamped_pos.setX(source_widget_geometry.left())
+                    elif clamped_pos.x() > sink_widget_geometry.right():
+                        clamped_pos.setX(sink_widget_geometry.right())
+                    if clamped_pos.y() < source_widget_geometry.top():
+                        clamped_pos.setY(source_widget_geometry.top())
+                    elif clamped_pos.y() > source_widget_geometry.bottom():
+                        clamped_pos.setY(source_widget_geometry.bottom())
+
+                    line.setP2(clamped_pos)
 
                 self.__tmpLine.setLine(line)
 
