@@ -8,7 +8,6 @@ import inspect
 import numpy as np
 
 from Orange.data import Table
-from Orange.data.sql.backend import PymssqlBackend, Psycopg2Backend
 
 
 def parse_uri(uri):
@@ -203,6 +202,7 @@ class PostgresTestConnection(DBTestConnection):
                 curs.execute("DROP TABLE {}".format(table_name))
 
     def _get_backend(self):
+        from Orange.data.sql.backend import Psycopg2Backend
         return Psycopg2Backend(self.params)
 
 
@@ -275,6 +275,7 @@ class MicrosoftTestConnection(DBTestConnection):
             conn.commit()
 
     def _get_backend(self):
+        from Orange.data.sql.backend import PymssqlBackend
         return PymssqlBackend(self.params)
 
 
