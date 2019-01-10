@@ -431,8 +431,8 @@ class FileFormat(metaclass=FileFormatMeta):
         raise IOError('No readers for file "{}"'.format(filename))
 
     @classmethod
-    def write(cls, filename, data):
-        return cls.write_file(filename, data)
+    def write(cls, filename, data, with_annotations=True):
+        return cls.write_file(filename, data, with_annotations)
 
     @classmethod
     def write_table_metadata(cls, filename, data):
@@ -798,11 +798,12 @@ class FileFormat(metaclass=FileFormatMeta):
                                                   zip(repeat('meta'), data.domain.metas)))))
 
     @classmethod
-    def write_headers(cls, write, data):
+    def write_headers(cls, write, data, with_annotations):
         """`write` is a callback that accepts an iterable"""
         write(cls.header_names(data))
-        write(cls.header_types(data))
-        write(cls.header_flags(data))
+        if with_annotations:
+            write(cls.header_types(data))
+            write(cls.header_flags(data))
 
     @classmethod
     def formatter(cls, var):
@@ -915,16 +916,13 @@ class CSVReader(FileFormat):
         raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=True):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
-            cls.write_headers(writer.writerow, data)
+            cls.write_headers(writer.writerow, data, with_annotations)
             cls.write_data(writer.writerow, data)
-        cls.write_table_metadata(filename, data)
-
-    @classmethod
-    def write_headers(cls, write, data):
-        write(cls.header_names(data))
+        if with_annotations:
+            cls.write_table_metadata(filename, data)
 
 
 class TabReader(CSVReader):
@@ -951,7 +949,7 @@ class PickleReader(FileFormat):
                 return table
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=True):
         with cls.open(filename, 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
@@ -1062,7 +1060,7 @@ class DotReader(FileFormat):
         tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
 
     @classmethod
-    def write(cls, filename, tree):
+    def write(cls, filename, tree, with_annotations):
         if type(tree) == dict:
             tree = tree['tree']
         cls.write_graph(filename, tree)
