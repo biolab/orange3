@@ -1026,7 +1026,7 @@ class ExcelReader(FileFormat):
         return table
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=True):
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
                           data.domain.attributes,
                           data.domain.class_vars,

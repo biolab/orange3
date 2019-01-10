@@ -190,7 +190,7 @@ class OWSave(widget.OWWidget):
     def update_extension(self):
         self.type_ext = [ext for name, ext, _ in FILE_TYPES if name == self.filetype][0]
         self.annotations_cb.setEnabled(True)
-        if self.type_ext == '.pkl':
+        if self.type_ext in ['.pkl', '.xlsx']:
             self.annotations_cb.setEnabled(False)
         self.compress_ext = dict(COMPRESSIONS)[self.compression] if self.compress else ''
 
