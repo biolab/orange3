@@ -281,8 +281,8 @@ class LinksEditWidget(QGraphicsWidget):
                 start = self.mapFromItem(self.__dragStartItem, start)
 
                 eventPos = event.pos()
-                line.setLine(start.x(), start.y(),
-                             eventPos.x(), eventPos.y())
+                # False positive; pylint: disable=too-many-function-args
+                line.setLine(start.x(), start.y(), eventPos.x(), eventPos.y())
 
                 pen = QPen(self.palette().color(QPalette.Foreground), 4)
                 pen.setCapStyle(Qt.RoundCap)
@@ -344,6 +344,7 @@ class LinksEditWidget(QGraphicsWidget):
 
                 # Make sure the drag was from input to output (or reversed) and
                 # not between input -> input or output -> output
+                # pylint: disable=unidiomatic-typecheck
                 if type(startChannel) != type(endChannel):
                     if isinstance(startChannel, InputSignal):
                         startChannel, endChannel = endChannel, startChannel
@@ -392,8 +393,8 @@ class LinksEditWidget(QGraphicsWidget):
 
         sink_pos = sink_anchor.boundingRect().center()
         sink_pos = self.mapFromItem(sink_anchor, sink_pos)
-        line.setLine(source_pos.x(), source_pos.y(),
-                     sink_pos.x(), sink_pos.y())
+        # False positive; pylint: disable=too-many-function-args
+        line.setLine(source_pos.x(), source_pos.y(), sink_pos.x(), sink_pos.y())
 
         self.__links.append(_Link(output, input, line))
 
