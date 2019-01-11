@@ -28,6 +28,9 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.main_area = gui.vBox(self, spacing=0)
 
+    def get_parameters(self):
+        return self.parameters
+
     def __parameter_changed(self, update_parameter, parameter_name):
         update_parameter(parameter_name)
         self.parent_callback()
@@ -133,6 +136,11 @@ class MDSParametersEditor(ManifoldParametersEditor):
         self.random_state_radio = self._create_radio_parameter(
             "init_type", "Initialization")
 
+    def get_parameters(self):
+        par = super().get_parameters()
+        if self.init_type_index == 0:
+            par = {"n_init": 1, **par}
+        return par
 
 class IsomapParametersEditor(ManifoldParametersEditor):
     n_neighbors = Setting(5)
@@ -330,7 +338,7 @@ class OWManifoldLearning(OWWidget):
 
     def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components)
-        parameters.update(self.params_widget.parameters)
+        parameters.update(self.params_widget.get_parameters())
         return parameters
 
     def send_report(self):
