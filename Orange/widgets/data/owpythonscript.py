@@ -392,6 +392,7 @@ class OWPythonScript(widget.OWWidget):
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
     currentScriptIndex = Setting(0)
+    scriptText = Setting(None, schema_only=True)
     splitterState = Setting(None)
 
     class Error(OWWidget.Error):
@@ -516,6 +517,9 @@ class OWPythonScript(widget.OWWidget):
 
         select_row(self.libraryView, self.currentScriptIndex)
 
+        self.restoreScriptText()
+        self.text.textChanged.connect(self.saveScriptText)  # after restoring
+
         self.splitCanvas.setSizes([2, 1])
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
@@ -523,6 +527,16 @@ class OWPythonScript(widget.OWWidget):
         self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
+
+    def restoreScriptText(self):
+        if self.scriptText is not None:
+            current = self.text.toPlainText()
+            # do not mark scripts as modified
+            if self.scriptText != current:
+                self.text.document().setPlainText(self.scriptText)
+
+    def saveScriptText(self):
+        self.scriptText = self.text.toPlainText()
 
     def handle_input(self, obj, id, signal):
         id = id[0]

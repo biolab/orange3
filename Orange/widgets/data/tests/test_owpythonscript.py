@@ -124,3 +124,13 @@ class TestOWPythonScript(WidgetTest):
         self.widget.restoreSaved()
         script = self.widget.text.toPlainText()
         self.assertEqual(before, script)
+
+    def test_store_current_script(self):
+        self.widget.text.setPlainText("42")
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        self.widget = self.create_widget(OWPythonScript)
+        script = self.widget.text.toPlainText()
+        self.assertNotEqual("42", script)
+        self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
+        script = self.widget.text.toPlainText()
+        self.assertEqual("42", script)
