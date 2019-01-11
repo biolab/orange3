@@ -1,5 +1,6 @@
 import operator
 import os
+import warnings
 import zlib
 from collections import MutableSequence, Iterable, Sequence, Sized
 from functools import reduce
@@ -42,6 +43,11 @@ chaining of domain conversions also works with caching even with descendants
 of Table."""
 _conversion_cache = None
 _conversion_cache_lock = RLock()
+
+
+def pending_deprecation_resize(name):
+    warnings.warn(f"Method Table.{name} will be removed in Orange 3.24",
+                  PendingDeprecationWarning)
 
 
 class DomainTransformationError(Exception):
@@ -829,6 +835,7 @@ class Table(MutableSequence, Storage):
                 self.metas[row_idx, meta_cols] = value
 
     def __delitem__(self, key):
+        pending_deprecation_resize("__delitem__(key)")
         if not self._check_all_dense():
             raise ValueError("Rows of sparse data cannot be deleted")
         if key is ...:
@@ -857,6 +864,7 @@ class Table(MutableSequence, Storage):
 
     def clear(self):
         """Remove all rows from the table."""
+        pending_deprecation_resize("clear()")
         if not self._check_all_dense():
             raise ValueError("Tables with sparse data cannot be cleared")
         del self[...]
@@ -868,6 +876,7 @@ class Table(MutableSequence, Storage):
         :param instance: a data instance
         :type instance: Orange.data.Instance or a sequence of values
         """
+        pending_deprecation_resize("append(inst)")
         self.insert(len(self), instance)
 
     def insert(self, row, instance):
@@ -879,6 +888,7 @@ class Table(MutableSequence, Storage):
         :param instance: a data instance
         :type instance: Orange.data.Instance or a sequence of values
         """
+        pending_deprecation_resize("insert(i, inst)")
         if row < 0:
             row += len(self)
         if row < 0 or row > len(self):
@@ -915,6 +925,7 @@ class Table(MutableSequence, Storage):
         :param instances: additional instances
         :type instances: Orange.data.Table or a sequence of instances
         """
+        pending_deprecation_resize("extend(insts)")
         if isinstance(instances, Table) and instances.domain == self.domain:
             self.X = vstack((self.X, instances.X))
             self._Y = vstack((self._Y, instances._Y))
@@ -982,6 +993,7 @@ class Table(MutableSequence, Storage):
                 conc.attributes.update(table.attributes)
             return conc
         elif axis == CONCAT_COLS:
+            pending_deprecation_resize("concatenate with axis=1")
             if reduce(operator.iand,
                       (set(map(operator.attrgetter('name'),
                                chain(t.domain.variables, t.domain.metas)))
