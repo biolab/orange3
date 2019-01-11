@@ -556,9 +556,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         elif output in (np.inf, -np.inf):
             output = '%s∞' % ['', '-'][output < 0]
         elif isinstance(output, int):
-            output = locale.format('%d', output, grouping=True)
+            output = locale.format_string('%d', output, grouping=True)
         elif isinstance(output, float):
-            output = locale.format('%.2f', output, grouping=True)
+            output = locale.format_string('%.2f', output, grouping=True)
 
         return output
 
