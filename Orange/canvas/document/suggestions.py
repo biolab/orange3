@@ -6,6 +6,8 @@ import logging
 from Orange.canvas import config
 from .interactions import NewLinkAction
 
+from .default_suggestion_weights import default_suggestions
+
 log = logging.getLogger(__name__)
 
 
@@ -20,40 +22,42 @@ class Suggestions:
 
             self.__scheme = None
             self.__direction = None
-            self.link_frequencies = defaultdict(int)
-            self.source_probability = defaultdict(lambda: defaultdict(float))
-            self.sink_probability = defaultdict(lambda: defaultdict(float))
+            self.__link_frequencies = defaultdict(int)
+            self.__source_probability = defaultdict(lambda: defaultdict(float))
+            self.__sink_probability = defaultdict(lambda: defaultdict(float))
 
-            if not self.load_link_frequency():
-                self.default_link_frequency()
+            try:
+                self.__load_default_suggestions()
+            except OSError:
+                log.warning("Failed to load default suggestions from file.")
+            self.__load_link_frequencies()
 
-        def load_link_frequency(self):
+        def __load_link_frequencies(self):
             if not os.path.isfile(self.__frequencies_path):
-                return False
+                return
 
             try:
                 with open(self.__frequencies_path, "rb") as f:
                     imported_freq = pickle.load(f)
             except OSError:
                 log.warning("Failed to open widget link frequencies.")
-                return False
+                return
 
             for k, v in imported_freq.items():
                 imported_freq[k] = self.__import_factor * v
 
-            self.link_frequencies = imported_freq
-            self.overwrite_probabilities_with_frequencies()
-            return True
+            self.__link_frequencies = imported_freq
+            for link, count in self.__link_frequencies.items():
+                self.__increment_probability(link[0], link[1], link[2], count)
 
-        def default_link_frequency(self):
-            self.link_frequencies[("File", "Data Table", NewLinkAction.FROM_SOURCE)] = 3
-            self.overwrite_probabilities_with_frequencies()
+        def __load_default_suggestions(self):
+            for link in default_suggestions:
+                self.__increment_probability(link["Source"],
+                                             link["Sink"],
+                                             link["Direction"],
+                                             link["Value"])
 
-        def overwrite_probabilities_with_frequencies(self):
-            for link, count in self.link_frequencies.items():
-                self.increment_probability(link[0], link[1], link[2], count)
-
-        def new_link(self, link):
+        def log_new_link(self, link):
             # direction is none when a widget was not added+linked via quick menu
             if self.__direction is None:
                 return
@@ -62,25 +66,23 @@ class Suggestions:
             sink_id = link.sink_node.description.name
 
             link_key = (source_id, sink_id, self.__direction)
-            self.link_frequencies[link_key] += 1
+            self.__link_frequencies[link_key] += 1
 
-            self.increment_probability(source_id, sink_id, self.__direction, 1)
-            self.write_link_frequency()
+            self.__increment_probability(source_id, sink_id, self.__direction, 1)
+            self.__save_link_frequency()
 
             self.__direction = None
 
-        def increment_probability(self, source_id, sink_id, direction, factor):
+        def __increment_probability(self, source_id, sink_id, direction, factor):
             if direction == NewLinkAction.FROM_SOURCE:
-                self.source_probability[source_id][sink_id] += factor
-                self.sink_probability[sink_id][source_id] += factor * 0.5
+                self.__source_probability[source_id][sink_id] += factor
             else:  # FROM_SINK
-                self.source_probability[source_id][sink_id] += factor * 0.5
-                self.sink_probability[sink_id][source_id] += factor
+                self.__sink_probability[sink_id][source_id] += factor
 
-        def write_link_frequency(self):
+        def __save_link_frequency(self):
             try:
                 with open(self.__frequencies_path, "wb") as f:
-                    pickle.dump(self.link_frequencies, f)
+                    pickle.dump(self.__link_frequencies, f)
             except OSError:
                 log.warning("Failed to write widget link frequencies.")
                 return
@@ -94,16 +96,16 @@ class Suggestions:
 
         def set_scheme(self, scheme):
             self.__scheme = scheme
-            scheme.onNewLink(self.new_link)
+            scheme.onNewLink(self.log_new_link)
 
         def get_sink_suggestions(self, source_id):
-            return self.source_probability[source_id]
+            return self.__source_probability[source_id]
 
         def get_source_suggestions(self, sink_id):
-            return self.sink_probability[sink_id]
+            return self.__sink_probability[sink_id]
 
         def get_default_suggestions(self):
-            return self.source_probability
+            return self.__source_probability
 
     instance = None
 
