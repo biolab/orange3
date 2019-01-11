@@ -477,6 +477,10 @@ class OWReport(OWWidget):
                 return window
         return None
 
+    def copy_to_clipboard(self):
+        selection = self.report_view.selectedText()
+        QApplication.clipboard().setText(selection)
+
 
 if __name__ == "__main__":
     import sys
