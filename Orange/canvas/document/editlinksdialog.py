@@ -306,7 +306,7 @@ class LinksEditWidget(QGraphicsWidget):
                 maybe_anchor = find_item_at(self.scene(), event.scenePos(),
                                             type=ChannelAnchor)
                 # If hovering over anchor
-                if maybe_anchor is not None:
+                if maybe_anchor is not None and maybe_anchor.isEnabled():
                     target_pos = maybe_anchor.boundingRect().center()
                     target_pos = self.mapFromItem(maybe_anchor, target_pos)
                     line.setP2(target_pos)
