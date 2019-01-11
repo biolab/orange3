@@ -630,14 +630,6 @@ class OWPythonScript(widget.OWWidget):
     def onSpliterMoved(self, pos, ind):
         self.splitterState = bytes(self.splitCanvas.saveState())
 
-    def updateSelecetdScriptState(self):
-        index = self.selectedScriptIndex()
-        if index is not None:
-            script = self.libraryList[index]
-            self.libraryList[index] = Script(script.name,
-                                             self.text.toPlainText(),
-                                             0)
-
     def saveScript(self):
         index = self.selectedScriptIndex()
         if index is not None:
