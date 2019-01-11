@@ -111,3 +111,9 @@ class TestOWPythonScript(WidgetTest):
         click()
         self.assertIsNone(console_locals["in_data"])
         self.assertEqual(console_locals["in_datas"], [])
+
+    def test_store_new_script(self):
+        self.widget.text.setPlainText("42")
+        self.widget.onAddScript()
+        script = self.widget.text.toPlainText()
+        self.assertEqual("42", script)

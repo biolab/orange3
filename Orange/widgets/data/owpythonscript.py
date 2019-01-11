@@ -560,7 +560,7 @@ class OWPythonScript(widget.OWWidget):
         select_row(self.libraryView, index)
 
     def onAddScript(self, *args):
-        self.libraryList.append(Script("New script", "", 0))
+        self.libraryList.append(Script("New script", self.text.toPlainText(), 0))
         self.setSelectedScript(len(self.libraryList) - 1)
 
     def onAddScriptFromFile(self, *args):
