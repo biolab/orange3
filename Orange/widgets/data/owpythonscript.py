@@ -111,11 +111,10 @@ class PythonScriptEditor(QPlainTextEdit):
         return text
 
     def keyPressEvent(self, event):
-        self.widget.enable_execute()
         if event.key() == Qt.Key_Return:
             if event.modifiers() & (
                     Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
-                self.widget.unconditional_commit()
+                self.widget.commit()
                 return
             text = self.lastLine()
             indent = len(text) - len(text.lstrip())
@@ -199,6 +198,7 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
     def new_prompt(self, prompt):
         self.write(prompt)
         self.newPromptPos = self.textCursor().position()
+        self.repaint()
 
     def write(self, data):
         cursor = QTextCursor(self.document())
@@ -393,7 +393,6 @@ class OWPythonScript(widget.OWWidget):
         Setting([Script("Hello world", "print('Hello world')\n")])
     currentScriptIndex = Setting(0)
     splitterState = Setting(None)
-    auto_execute = Setting(True)
 
     class Error(OWWidget.Error):
         pass
@@ -480,9 +479,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        auto = gui.auto_commit(self.controlArea, self, "auto_execute", "Run",
-                               checkbox_label="Autorun on new data")
-        self.execute_button, self.autobox = auto.button, auto.checkbox
+        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -524,9 +521,6 @@ class OWPythonScript(widget.OWWidget):
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
 
-    def enable_execute(self):
-        self.execute_button.setEnabled(True)
-
     def handle_input(self, obj, id, signal):
         id = id[0]
         dic = getattr(self, signal)
@@ -553,12 +547,12 @@ class OWPythonScript(widget.OWWidget):
         self.handle_input(data, id, "object")
 
     def handleNewSignals(self):
-        self.unconditional_commit()
+        self.commit()
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
         if rows:
-            return  [i.row() for i in rows][0]
+            return [i.row() for i in rows][0]
         else:
             return None
 
@@ -681,8 +675,6 @@ class OWPythonScript(widget.OWWidget):
         return d
 
     def commit(self):
-        if self.auto_execute:
-            self.execute_button.setEnabled(False)
         self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()
