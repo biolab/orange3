@@ -8,7 +8,6 @@ An Dialog to edit links between two nodes in the scheme.
 """
 
 from collections import namedtuple
-from typing import overload
 
 from xml.sax.saxutils import escape
 
@@ -17,11 +16,14 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsLineItem, QGraphicsTextItem, QGraphicsLayoutItem,
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
-    QGraphicsDropShadowEffect, QSizePolicy, QGraphicsItem)
-from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon, QColor, QPainterPathStroker
-
+    QGraphicsDropShadowEffect, QSizePolicy, QGraphicsItem
+)
+from AnyQt.QtGui import (
+    QPalette, QPen, QPainter, QIcon, QColor, QPainterPathStroker
+)
 from AnyQt.QtCore import (
-    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION, QLineF)
+    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION,
+)
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..scheme import compatible_channels
@@ -282,7 +284,6 @@ class LinksEditWidget(QGraphicsWidget):
                 start = self.mapFromItem(self.__dragStartItem, start)
 
                 eventPos = event.pos()
-                # False positive; pylint: disable=too-many-function-args
                 line.setLine(start.x(), start.y(), eventPos.x(), eventPos.y())
 
                 pen = QPen(self.palette().color(QPalette.Foreground), 4)
@@ -381,7 +382,6 @@ class LinksEditWidget(QGraphicsWidget):
 
         sink_pos = sink_anchor.boundingRect().center()
         sink_pos = self.mapFromItem(sink_anchor, sink_pos)
-        # False positive; pylint: disable=too-many-function-args
         line.setLine(source_pos.x(), source_pos.y(), sink_pos.x(), sink_pos.y())
 
         self.__links.append(_Link(output, input, line))
@@ -895,23 +895,8 @@ class LinkLineItem(QGraphicsLineItem):
         self.prepareGeometryChange()
         self.__shadow.setEnabled(False)
 
-    @overload
-    def setLine(self, line: QLineF) -> None:
-        pass
-
-    @overload
-    def setLine(self, x1: float, y1: float, x2: float, y2: float) -> None:
-        pass
-
-    def setLine(self, x1, y1=None, x2=None, y2=None):
-        if isinstance(x1, QLineF):
-            line = x1
-            x1 = line.x1()
-            y1 = line.y1()
-            x2 = line.x2()
-            y2 = line.y2()
-
-        QGraphicsLineItem.setLine(self, x1, y1, x2, y2)
+    def setLine(self, *args, **kwargs):
+        super().setLine(*args, **kwargs)
 
         # extends mouse hit area
         stroke_path = QPainterPathStroker()
