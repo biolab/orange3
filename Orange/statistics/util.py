@@ -353,30 +353,30 @@ def stats(X, weights=None, compute_variance=False):
 
 
 def _nan_min_max(x, func, axis=0):
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*",
-                                RuntimeWarning)
-        if not sp.issparse(x):
+    if not sp.issparse(x):
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*",
+                                    RuntimeWarning)
             return func(x, axis=axis)
-        if axis is None:
-            extreme = func(x.data, axis=axis) if x.nnz else float('nan')
-            if sparse_has_implicit_zeros(x):
-                extreme = func([0, extreme])
-            return extreme
-        if axis == 0:
-            x = x.T
-        else:
-            assert axis == 1
+    if axis is None:
+        extreme = func(x.data, axis=axis) if x.nnz else float('nan')
+        if sparse_has_implicit_zeros(x):
+            extreme = func([0, extreme])
+        return extreme
+    if axis == 0:
+        x = x.T
+    else:
+        assert axis == 1
 
-        # TODO check & transform to correct format
-        r = []
-        for row in x:
-            values = row.data
-            extreme = func(values) if values.size else float('nan')
-            if sparse_has_implicit_zeros(row):
-                extreme = func([0, extreme])
-            r.append(extreme)
-        return np.array(r)
+    # TODO check & transform to correct format
+    r = []
+    for row in x:
+        values = row.data
+        extreme = func(values) if values.size else float('nan')
+        if sparse_has_implicit_zeros(row):
+            extreme = func([0, extreme])
+        r.append(extreme)
+    return np.array(r)
 
 
 def nanmin(x, axis=None):
@@ -427,19 +427,12 @@ def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     def nanmean_sparse(x):
         n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        if not n_values:
+            warnings.warn(RuntimeWarning, "Mean of empty slice")
+            return np.nan
         return np.nansum(x.data) / n_values
 
-    if not x.size:
-        res = np.nan if np.min(x.shape) == 0 else 0
-        if axis is None:
-            return res
-        else:
-            return np.full(x.shape[:axis] + x.shape[axis + 1:], res)
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", ".*Mean of empty slice.*",
-                                RuntimeWarning)
-        return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
+    return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
 
 
 def nanvar(x, axis=None):

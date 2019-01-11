@@ -142,17 +142,17 @@ class TableModel(PyTableModel):
 
     def setExtremesFrom(self, column, values):
         """Set extremes for columnn's ratio bars from values"""
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*",
-                                    RuntimeWarning)
-            try:
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", ".*All-NaN slice encountered.*", RuntimeWarning)
                 vmin = np.nanmin(values)
-                if np.isnan(vmin):
-                    raise TypeError
-            except TypeError:
-                vmin, vmax = -np.inf, np.inf
-            else:
-                vmax = np.nanmax(values)
+            if np.isnan(vmin):
+                raise TypeError
+        except TypeError:
+            vmin, vmax = -np.inf, np.inf
+        else:
+            vmax = np.nanmax(values)
         self._extremes[column] = (vmin, vmax)
 
     def resetSorting(self, yes_reset=False):
@@ -373,24 +373,21 @@ class OWRank(OWWidget):
     def get_method_scores(self, method):
         # These errors often happen, but they result in nans, which
         # are handled correctly by the widget
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', '.*true_divide.*')
-            warnings.filterwarnings('ignore', '.*double_scalars.*')
-            estimator = method.scorer()
-            data = self.data
+        estimator = method.scorer()
+        data = self.data
+        try:
+            scores = np.asarray(estimator(data))
+        except ValueError:
             try:
-                scores = np.asarray(estimator(data))
+                scores = np.array([estimator(data, attr)
+                                   for attr in data.domain.attributes])
             except ValueError:
-                try:
-                    scores = np.array([estimator(data, attr)
-                                       for attr in data.domain.attributes])
-                except ValueError:
-                    log.error("%s doesn't work on this data", method.name)
-                    scores = np.full(len(data.domain.attributes), np.nan)
-                else:
-                    log.warning("%s had to be computed separately for each "
-                                "variable", method.name)
-            return scores
+                log.error("%s doesn't work on this data", method.name)
+                scores = np.full(len(data.domain.attributes), np.nan)
+            else:
+                log.warning("%s had to be computed separately for each "
+                            "variable", method.name)
+        return scores
 
     @memoize_method()
     def get_scorer_scores(self, scorer):
