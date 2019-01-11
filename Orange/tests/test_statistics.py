@@ -192,6 +192,14 @@ class TestUtil(unittest.TestCase):
                     np.var(data, axis=axis)
                 )
 
+    def test_var_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.var(x, axis=axis, ddof=10),
+                var(csr_matrix(x), axis=axis, ddof=10),
+            )
+
     @dense_sparse
     def test_nanvar(self, array):
         for X in self.data:
@@ -199,6 +207,15 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanvar(X_sparse),
                 np.nanvar(X))
+
+    def test_nanvar_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        np.fill_diagonal(x, np.nan)
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.nanvar(x, axis=axis, ddof=10),
+                nanvar(csr_matrix(x), axis=axis, ddof=10),
+            )
 
     def test_std(self):
         for data in self.data:
@@ -209,6 +226,14 @@ class TestUtil(unittest.TestCase):
                     np.std(data, axis=axis)
                 )
 
+    def test_std_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.std(x, axis=axis, ddof=10),
+                std(csr_matrix(x), axis=axis, ddof=10),
+            )
+
     @dense_sparse
     def test_nanstd(self, array):
         for X in self.data:
@@ -216,6 +241,14 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanstd(X_sparse),
                 np.nanstd(X))
+
+    def test_nanstd_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.nanstd(x, axis=axis, ddof=10),
+                nanstd(csr_matrix(x), axis=axis, ddof=10),
+            )
 
 
 class TestDigitize(unittest.TestCase):
