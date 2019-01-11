@@ -118,6 +118,7 @@ class EditLinksDialog(QDialog):
         left, top, right, bottom = self.getContentsMargins()
         self.view.setFixedSize(size.toSize() + \
                                QSize(left + right + 4, top + bottom + 4))
+        self.view.setSceneRect(self.scene.editWidget.geometry())
 
 
 def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
@@ -310,21 +311,8 @@ class LinksEditWidget(QGraphicsWidget):
                     target_pos = self.mapFromItem(maybe_anchor, target_pos)
                     line.setP2(target_pos)
                 else:
-                    # Clamp end of line-drag to node widgets to avoid scroll bug
-                    clamped_pos = event.pos()
-
-                    source_widget_geometry = self.sourceNodeWidget.geometry()
-                    sink_widget_geometry = self.sinkNodeWidget.geometry()
-                    if clamped_pos.x() < source_widget_geometry.left():
-                        clamped_pos.setX(source_widget_geometry.left())
-                    elif clamped_pos.x() > sink_widget_geometry.right():
-                        clamped_pos.setX(sink_widget_geometry.right())
-                    if clamped_pos.y() < source_widget_geometry.top():
-                        clamped_pos.setY(source_widget_geometry.top())
-                    elif clamped_pos.y() > source_widget_geometry.bottom():
-                        clamped_pos.setY(source_widget_geometry.bottom())
-
-                    line.setP2(clamped_pos)
+                    target_pos = event.pos()
+                    line.setP2(target_pos)
 
                 self.__tmpLine.setLine(line)
 
