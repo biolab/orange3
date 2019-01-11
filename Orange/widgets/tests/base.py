@@ -959,7 +959,7 @@ class ProjectionWidgetTestMixin:
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
-        self.assertEqual(len(self.widget.subset_indices), 5)
+        self.assertEqual(len(self.widget.subset_data), 5)
 
     def test_invalidated_embedding(self, timeout=DEFAULT_TIMEOUT):
         """Check if graph has been replotted when sending same data"""
@@ -1016,7 +1016,7 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
-        self.assertEqual(len(self.widget.subset_indices), 5)
+        self.assertEqual(len(self.widget.subset_data), 5)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.sparse_data.is_shown())
 
