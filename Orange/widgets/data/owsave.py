@@ -91,7 +91,7 @@ class OWSave(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.annotations_cb = gui.checkBox(
-            self.controlArea, self, "with_annotations", label="Save with Orange annotations",
+            self.controlArea, self, "with_annotations", label="Add type annotations",
         )
 
         self.save = gui.auto_commit(
@@ -176,12 +176,21 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         else:
             try:
-                self.get_writer_selected().write(
-                    os.path.join(
-                        self.last_dir,
-                        self.basename + self.type_ext + self.compress_ext),
-                    self.data, self.with_annotations,
-                    )
+                if self.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+                    self.get_writer_selected().write(
+                        os.path.join(
+                            self.last_dir,
+                            self.basename + self.type_ext + self.compress_ext),
+                        self.data, self.with_annotations,
+                        )
+                else:
+                    self.get_writer_selected().write(
+                        os.path.join(
+                            self.last_dir,
+                            self.basename + self.type_ext + self.compress_ext),
+                        self.data,
+                        )
+
             except Exception as err_value:
                 self.error(str(err_value))
             else:
@@ -189,9 +198,9 @@ class OWSave(widget.OWWidget):
 
     def update_extension(self):
         self.type_ext = [ext for name, ext, _ in FILE_TYPES if name == self.filetype][0]
-        self.annotations_cb.setEnabled(True)
-        if self.type_ext in ['.pkl', '.xlsx']:
-            self.annotations_cb.setEnabled(False)
+        self.annotations_cb.setEnabled(False)
+        if self.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+            self.annotations_cb.setEnabled(True)
         self.compress_ext = dict(COMPRESSIONS)[self.compression] if self.compress else ''
 
     def _update_text(self):

@@ -377,6 +377,7 @@ class FileFormat(metaclass=FileFormatMeta):
     # Priority when multiple formats support the same extension. Also
     # the sort order in file open/save combo boxes. Lower is better.
     PRIORITY = 10000
+    OPTIONAL_TYPE_ANNOTATIONS = False
 
     def __init__(self, filename):
         """
@@ -798,7 +799,7 @@ class FileFormat(metaclass=FileFormatMeta):
                                                   zip(repeat('meta'), data.domain.metas)))))
 
     @classmethod
-    def write_headers(cls, write, data, with_annotations):
+    def write_headers(cls, write, data, with_annotations=True):
         """`write` is a callback that accepts an iterable"""
         write(cls.header_names(data))
         if with_annotations:
@@ -857,6 +858,7 @@ class CSVReader(FileFormat):
     SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
     PRIORITY = 20
+    OPTIONAL_TYPE_ANNOTATIONS = True
 
     def read(self):
         for encoding in (lambda: ('us-ascii', None),                 # fast
@@ -1060,7 +1062,7 @@ class DotReader(FileFormat):
         tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
 
     @classmethod
-    def write(cls, filename, tree, with_annotations):
+    def write(cls, filename, tree, with_annotations=True):
         if type(tree) == dict:
             tree = tree['tree']
         cls.write_graph(filename, tree)
