@@ -117,3 +117,10 @@ class TestOWPythonScript(WidgetTest):
         self.widget.onAddScript()
         script = self.widget.text.toPlainText()
         self.assertEqual("42", script)
+
+    def test_restore_from_library(self):
+        before = self.widget.text.toPlainText()
+        self.widget.text.setPlainText("42")
+        self.widget.restoreSaved()
+        script = self.widget.text.toPlainText()
+        self.assertEqual(before, script)

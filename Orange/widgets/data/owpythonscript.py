@@ -463,14 +463,17 @@ class OWPythonScript(widget.OWWidget):
 
         new_from_file = QAction("Import Script from File", self)
         save_to_file = QAction("Save Selected Script to File", self)
+        restore_saved = QAction("Undo Changes to Selected Script", self)
         save_to_file.setShortcut(QKeySequence(QKeySequence.SaveAs))
 
         new_from_file.triggered.connect(self.onAddScriptFromFile)
         save_to_file.triggered.connect(self.saveScript)
+        restore_saved.triggered.connect(self.restoreSaved)
 
         menu = QMenu(w)
         menu.addAction(new_from_file)
         menu.addAction(save_to_file)
+        menu.addAction(restore_saved)
         action.setMenu(menu)
         button = w.addAction(action)
         button.setPopupMode(QToolButton.InstantPopup)
@@ -602,7 +605,6 @@ class OWPythonScript(widget.OWWidget):
     def documentForScript(self, script=0):
         if type(script) != Script:
             script = self.libraryList[script]
-
         if script not in self._cachedDocuments:
             doc = QTextDocument(self)
             doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
@@ -629,6 +631,12 @@ class OWPythonScript(widget.OWWidget):
 
     def onSpliterMoved(self, pos, ind):
         self.splitterState = bytes(self.splitCanvas.saveState())
+
+    def restoreSaved(self):
+        index = self.selectedScriptIndex()
+        if index is not None:
+            self.text.document().setPlainText(self.libraryList[index].script)
+            self.text.document().setModified(False)
 
     def saveScript(self):
         index = self.selectedScriptIndex()
