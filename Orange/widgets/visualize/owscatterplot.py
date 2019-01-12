@@ -97,6 +97,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
+    orthonormal_regression = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -109,7 +110,8 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_coordinates(self):
         super().update_coordinates()
         self.update_axes()
-        self.update_regression_line()
+        # Don't update_regression line here: update_coordinates is always
+        # followed by update_point_props, which calls update_colors
 
     def update_colors(self):
         super().update_colors()
@@ -121,24 +123,59 @@ class OWScatterPlotGraph(OWScatterPlotBase):
             if title is None:
                 self.plot_widget.hideAxis(axis)
 
-    def _add_line(self, x, y, color, width):
+    @staticmethod
+    def _orthonormal_line(x, y, color, width):
+        # https://en.wikipedia.org/wiki/Deming_regression, with δ=0.
+        pen = pg.mkPen(color=color, width=width)
+        xm = np.mean(x)
+        ym = np.mean(y)
+        sxx, sxy, _, syy = np.cov(x, y, ddof=1).flatten()
+
+        if sxy != 0:  # also covers sxx != 0 and syy != 0
+            slope = (syy - sxx + np.sqrt((syy - sxx) ** 2 + 4 * sxy ** 2)) \
+                    / (2 * sxy)
+            intercept = ym - slope * xm
+            xmin = x.min()
+            return pg.InfiniteLine(
+                QPointF(xmin, xmin * slope + intercept),
+                np.degrees(np.arctan(slope)),
+                pen)
+        elif (sxx == 0) == (syy == 0):  # both zero or non-zero -> can't draw
+            return None
+        elif sxx != 0:
+            return pg.InfiniteLine(QPointF(x.min(), ym), 0, pen)
+        else:
+            return pg.InfiniteLine(QPointF(xm, y.min()), 90, pen)
+
+    @staticmethod
+    def _regression_line(x, y, color, width):
         min_x, max_x = np.min(x), np.max(x)
+        if min_x == max_x:
+            return None
         slope, intercept, rvalue, _, _ = linregress(x, y)
-        start_y = min_x * slope + intercept
         angle = np.degrees(np.arctan(slope))
+        start_y = min_x * slope + intercept
         rotate = 135 < angle % 360 < 315
         l_opts = dict(color=color, position=abs(rotate - 0.85),
                       rotateAxis=(1, 0), movable=True)
         reg_line_item = pg.InfiniteLine(
             pos=QPointF(min_x, start_y), angle=angle,
             pen=pg.mkPen(color=color, width=width),
-            label=f"r = {rvalue:.2f}", labelOpts=l_opts
-        )
+            label=f"r = {rvalue:.2f}", labelOpts=l_opts)
         if rotate:
             reg_line_item.label.angle = 180
             reg_line_item.label.updateTransform()
-        self.plot_widget.addItem(reg_line_item)
-        self.reg_line_items.append(reg_line_item)
+        return reg_line_item
+
+    def _add_line(self, x, y, color, width):
+        if self.orthonormal_regression:
+            line = self._orthonormal_line(x, y, color, width)
+        else:
+            line = self._regression_line(x, y, color, width)
+        if line is None:
+            return
+        self.plot_widget.addItem(line)
+        self.reg_line_items.append(line)
 
     def update_regression_line(self):
         for line in self.reg_line_items:
@@ -149,16 +186,17 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        self._add_line(x, y, QColor("#505050"), width=1)
+        self._add_line(x, y, QColor("#505050"), width=2)
         if self.master.is_continuous_color() or self.palette is None:
             return
-        c_data = self.master.get_color_data().astype(int)
+        c_data = self.master.get_color_data()
         if c_data is None:
             return
+        c_data = c_data.astype(int)
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_line(x[mask], y[mask], self.palette[val], width=3)
+                self._add_line(x[mask], y[mask], self.palette[val], width=2)
 
 
 class OWScatterPlot(OWDataProjectionWidget):
@@ -223,6 +261,14 @@ class OWScatterPlot(OWDataProjectionWidget):
              self.gui.ToolTipShowsAll,
              self.gui.RegressionLine],
             self._plot_box)
+        gui.checkBox(
+            gui.indentedBox(self._plot_box), self,
+            value="graph.orthonormal_regression",
+            label="Treat variables as independent",
+            callback=self.graph.update_regression_line,
+            tooltip=
+            "If checked, fit line to group (minimize distance from points);\n"
+            "otherwise fit y as a function of x (minimize vertical distances)")
 
     def _add_controls_axis(self):
         common_options = dict(
