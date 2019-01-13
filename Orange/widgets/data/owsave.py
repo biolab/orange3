@@ -48,7 +48,7 @@ class OWSave(widget.OWWidget):
     filetype = Setting(FILE_TYPES[0][0])
     compression = Setting(COMPRESSIONS[0][0])
     compress = Setting(False)
-    with_annotations = Setting(True)
+    add_type_annotations = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -91,7 +91,7 @@ class OWSave(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.annotations_cb = gui.checkBox(
-            self.controlArea, self, "with_annotations", label="Add type annotations",
+            self.controlArea, self, "add_type_annotations", label="Add type annotations",
         )
 
         self.save = gui.auto_commit(
@@ -176,19 +176,11 @@ class OWSave(widget.OWWidget):
             self.save_file_as()
         else:
             try:
-                if self.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
-                    self.get_writer_selected().write(
+                self.get_writer_selected().write(
                         os.path.join(
                             self.last_dir,
                             self.basename + self.type_ext + self.compress_ext),
-                        self.data, self.with_annotations,
-                        )
-                else:
-                    self.get_writer_selected().write(
-                        os.path.join(
-                            self.last_dir,
-                            self.basename + self.type_ext + self.compress_ext),
-                        self.data,
+                        self.data, self.add_type_annotations,
                         )
 
             except Exception as err_value:

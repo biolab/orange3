@@ -433,7 +433,10 @@ class FileFormat(metaclass=FileFormatMeta):
 
     @classmethod
     def write(cls, filename, data, with_annotations=True):
-        return cls.write_file(filename, data, with_annotations)
+        if cls.OPTIONAL_TYPE_ANNOTATIONS:
+            return cls.write_file(filename, data, with_annotations)
+        else:
+            return cls.write_file(filename, data)
 
     @classmethod
     def write_table_metadata(cls, filename, data):
@@ -951,7 +954,7 @@ class PickleReader(FileFormat):
                 return table
 
     @classmethod
-    def write_file(cls, filename, data, with_annotations=True):
+    def write_file(cls, filename, data):
         with cls.open(filename, 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
@@ -1028,7 +1031,7 @@ class ExcelReader(FileFormat):
         return table
 
     @classmethod
-    def write_file(cls, filename, data, with_annotations=True):
+    def write_file(cls, filename, data):
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
                           data.domain.attributes,
                           data.domain.class_vars,
@@ -1062,7 +1065,7 @@ class DotReader(FileFormat):
         tree.export_graphviz(graph, out_file=cls.open(filename, 'wt'))
 
     @classmethod
-    def write(cls, filename, tree, with_annotations=True):
+    def write(cls, filename, tree):
         if type(tree) == dict:
             tree = tree['tree']
         cls.write_graph(filename, tree)
