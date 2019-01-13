@@ -177,11 +177,10 @@ class OWSave(widget.OWWidget):
         else:
             try:
                 self.get_writer_selected().write(
-                        os.path.join(
-                            self.last_dir,
-                            self.basename + self.type_ext + self.compress_ext),
-                        self.data, self.add_type_annotations,
-                        )
+                    os.path.join(
+                        self.last_dir,
+                        self.basename + self.type_ext + self.compress_ext),
+                    self.data, self.add_type_annotations)
 
             except Exception as err_value:
                 self.error(str(err_value))
