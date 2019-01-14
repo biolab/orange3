@@ -1,7 +1,7 @@
 language: python
 
 sudo: false
-dist: trusty
+dist: xenial
 
 matrix:
     include:
@@ -15,7 +15,6 @@ matrix:
           env: UPLOAD_COVERAGE=true
         - python: '3.7'
           sudo: true
-          dist: xenial
     fast_finish: true
 
 cache:
