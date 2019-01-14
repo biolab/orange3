@@ -21,7 +21,7 @@ from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingsHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
@@ -364,6 +364,14 @@ def select_row(view, row):
                     QItemSelectionModel.ClearAndSelect)
 
 
+class PrepareSavingSettingsHandler(SettingsHandler):
+    """Calls storeSpecificSettings, which is currently not called from non-context handlers."""
+
+    def pack_data(self, widget):
+        widget.storeSpecificSettings()
+        return super().pack_data(widget)
+
+
 class OWPythonScript(widget.OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -388,6 +396,8 @@ class OWPythonScript(widget.OWWidget):
         object = Output("Object", object, replaces=["out_object"])
 
     signal_names = ("data", "learner", "classifier", "object")
+
+    settingsHandler = PrepareSavingSettingsHandler()
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
@@ -518,7 +528,6 @@ class OWPythonScript(widget.OWWidget):
         select_row(self.libraryView, self.currentScriptIndex)
 
         self.restoreScriptText()
-        self.text.textChanged.connect(self.saveScriptText)  # after restoring
 
         self.splitCanvas.setSizes([2, 1])
         if self.splitterState is not None:
@@ -527,6 +536,9 @@ class OWPythonScript(widget.OWWidget):
         self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
+
+    def storeSpecificSettings(self):
+        self.saveScriptText()
 
     def restoreScriptText(self):
         if self.scriptText is not None:
