@@ -17,7 +17,10 @@ except ImportError:
 
 
 try:
+    # need sphinx and recommonmark for build_htmlhelp command
     from sphinx.setup_command import BuildDoc
+    # pylint: disable=unused-import
+    import recommonmark
     have_sphinx = True
 except ImportError:
     have_sphinx = False
