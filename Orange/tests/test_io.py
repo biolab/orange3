@@ -7,12 +7,10 @@ import os
 import tempfile
 import shutil
 import io
-import csv
 
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
 from Orange.data.table import get_sample_datasets_dir
 from Orange.data import Table
-
 
 
 class WildcardReader(FileFormat):
@@ -86,11 +84,11 @@ class TestLocate(unittest.TestCase):
         fn = os.path.join(tempdir, "t.wild8")
         with open(fn, "wt") as f:
             f.write("\n")
-        l = FileFormat.locate("t.wild8", search_dirs=[tempdir])
-        self.assertEqual(l, fn)
+        location = FileFormat.locate("t.wild8", search_dirs=[tempdir])
+        self.assertEqual(location, fn)
         # test extension adding
-        l = FileFormat.locate("t", search_dirs=[tempdir])
-        self.assertEqual(l, fn)
+        location = FileFormat.locate("t", search_dirs=[tempdir])
+        self.assertEqual(location, fn)
         shutil.rmtree(tempdir)
 
 
@@ -141,8 +139,8 @@ class TestReader(unittest.TestCase):
     @patch('csv.DictWriter.writerow')
     def test_header_call(self, writer):
         CSVReader.write_headers(writer, Table("iris"), False)
-        self.assertEquals(len(writer.call_args_list), 1)
+        self.assertEqual(len(writer.call_args_list), 1)
 
         writer.reset_mock()
         CSVReader.write_headers(writer, Table("iris"), True)
-        self.assertEquals(len(writer.call_args_list), 3)
+        self.assertEqual(len(writer.call_args_list), 3)

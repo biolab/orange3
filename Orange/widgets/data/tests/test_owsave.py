@@ -76,7 +76,7 @@ class TestOWSave(WidgetTest):
         widget.update_extension()
 
         widget.add_type_annotations = False
-        widget.unconditional_save_file() 
+        widget.unconditional_save_file()
         write.assert_called()
         self.assertFalse(write.call_args[0][2])
 
@@ -87,9 +87,9 @@ class TestOWSave(WidgetTest):
     def test_disable_checkbox(self):
         widget = self.widget
         for type_ in FILE_TYPES:
-            widget.filetype=type_[0]
+            widget.filetype = type_[0]
             widget.update_extension()
-            if  widget.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+            if widget.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
                 self.assertTrue(widget.annotations_cb.isEnabled())
             else:
                 self.assertFalse(widget.annotations_cb.isEnabled())
