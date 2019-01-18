@@ -5,12 +5,12 @@ and once used from the bottlechest package (fork of bottleneck).
 It also patches bottleneck to contain these functions.
 """
 from warnings import warn
+from distutils.version import StrictVersion
 
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 from scipy import sparse as sp
 import scipy.stats.stats
-from distutils.version import StrictVersion
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
