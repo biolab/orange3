@@ -48,6 +48,7 @@ class OWSave(widget.OWWidget):
     filetype = Setting(FILE_TYPES[0][0])
     compression = Setting(COMPRESSIONS[0][0])
     compress = Setting(False)
+    add_type_annotations = Setting(True)
 
     def __init__(self):
         super().__init__()
@@ -88,6 +89,11 @@ class OWSave(widget.OWWidget):
         form.addRow(self.controls.compress, self.controls.compression)
 
         box.layout().addLayout(form)
+
+        self.annotations_cb = gui.checkBox(
+            None, self, "add_type_annotations", label="Add type annotations",
+        )
+        form.addRow(self.annotations_cb, None)
 
         self.save = gui.auto_commit(
             self.controlArea, self, "auto_save", "Save", box=False,
@@ -175,7 +181,8 @@ class OWSave(widget.OWWidget):
                     os.path.join(
                         self.last_dir,
                         self.basename + self.type_ext + self.compress_ext),
-                    self.data)
+                    self.data, self.add_type_annotations)
+
             except Exception as err_value:
                 self.error(str(err_value))
             else:
@@ -183,6 +190,9 @@ class OWSave(widget.OWWidget):
 
     def update_extension(self):
         self.type_ext = [ext for name, ext, _ in FILE_TYPES if name == self.filetype][0]
+        self.annotations_cb.setEnabled(False)
+        if self.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+            self.annotations_cb.setEnabled(True)
         self.compress_ext = dict(COMPRESSIONS)[self.compression] if self.compress else ''
 
     def _update_text(self):

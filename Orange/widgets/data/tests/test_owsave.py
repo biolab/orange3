@@ -66,6 +66,34 @@ class TestOWSave(WidgetTest):
                     self.widget.save_file_as()
                 self.assertEqual(len(Table(filename)), 150)
 
+    @patch('Orange.data.io.FileFormat.write')
+    def test_annotations(self, write):
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, Table("iris"))
+        widget.filetype = FILE_TYPES[1][0]
+        widget.filename = 'foo.csv'
+        widget.update_extension()
+
+        widget.add_type_annotations = False
+        widget.unconditional_save_file()
+        write.assert_called()
+        self.assertFalse(write.call_args[0][2])
+
+        widget.add_type_annotations = True
+        widget.unconditional_save_file()
+        self.assertTrue(write.call_args[0][2])
+
+    def test_disable_checkbox(self):
+        widget = self.widget
+        for type_ in FILE_TYPES:
+            widget.filetype = type_[0]
+            widget.update_extension()
+            if widget.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+                self.assertTrue(widget.annotations_cb.isEnabled())
+            else:
+                self.assertFalse(widget.annotations_cb.isEnabled())
+
     def test_compression(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
 
