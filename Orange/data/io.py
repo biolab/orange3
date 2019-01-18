@@ -987,7 +987,7 @@ class ExcelReader(FileFormat):
     """Reader for excel files"""
     EXTENSIONS = ('.xlsx',)
     DESCRIPTION = 'Microsoft Excel spreadsheet'
-    SUPPORT_COMPRESSED = True
+    SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
