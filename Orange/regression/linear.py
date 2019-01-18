@@ -84,7 +84,7 @@ class SGDRegressionLearner(LinearRegressionLearner):
     preprocessors = SklLearner.preprocessors + [Normalize()]
 
     def __init__(self, loss='squared_loss', penalty='l2', alpha=0.0001,
-                 l1_ratio=0.15, fit_intercept=True, max_iter=5, tol=None,
+                 l1_ratio=0.15, fit_intercept=True, max_iter=5, tol=1e-3,
                  shuffle=True, epsilon=0.1, n_jobs=1, random_state=None,
                  learning_rate='invscaling', eta0=0.01, power_t=0.25,
                  class_weight=None, warm_start=False, average=False,

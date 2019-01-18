@@ -79,12 +79,12 @@ class TestOWConcatenate(WidgetTest):
         # test adding source
         self.widget.controls.append_source_column.toggle()
         source = get_source()
-        self.assertEquals(source.name, "Source ID")
+        self.assertEqual(source.name, "Source ID")
         # test name changing
         self.widget.controls.source_attr_name.setText("Source")
         self.widget.controls.source_attr_name.callback()
         source = get_source()
-        self.assertEquals(source.name, "Source")
+        self.assertEqual(source.name, "Source")
         # test source_column role
         places = ["class_vars", "attributes", "metas"]
         for i, place in enumerate(places):

@@ -150,7 +150,8 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def test_add_variables(self):
         w = self.widget
-        w.variables_selection.add_remove.buttons[1].click()
+        with self.no_show_on_desktop():
+            w.variables_selection.add_remove.buttons[1].click()
 
     def test_set_radius_no_data(self):
         """

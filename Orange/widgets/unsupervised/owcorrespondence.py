@@ -365,7 +365,8 @@ def correspondence(A):
     row_sum = np.sum(corr_mat, axis=1, keepdims=True)
     E = row_sum * col_sum
 
-    D_r, D_c = row_sum.ravel() ** -1, col_sum.ravel() ** -1
+    with np.errstate(divide="ignore"):
+        D_r, D_c = row_sum.ravel() ** -1, col_sum.ravel() ** -1
     D_r, D_c = np.nan_to_num(D_r), np.nan_to_num(D_c)
 
     def gsvd(M, wu, wv):

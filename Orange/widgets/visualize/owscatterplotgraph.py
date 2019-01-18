@@ -864,12 +864,15 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
-        self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
-        c_data -= self.scale.offset
-        c_data /= self.scale.width
-        c_data = np.floor(c_data) + 0.5
-        c_data /= self.scale.bins
-        c_data = np.clip(c_data, 0, 1)
+        if np.isnan(c_data).all():
+            self.scale = None
+        else:
+            self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
+            c_data -= self.scale.offset
+            c_data /= self.scale.width
+            c_data = np.floor(c_data) + 0.5
+            c_data /= self.scale.bins
+            c_data = np.clip(c_data, 0, 1)
         pen = self.palette.getRGB(c_data)
         brush = np.hstack(
             [pen, np.full((len(pen), 1), self.alpha_value, dtype=int)])

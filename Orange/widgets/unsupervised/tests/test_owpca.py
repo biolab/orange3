@@ -22,7 +22,10 @@ class TestOWPCA(WidgetTest):
     def test_constant_data(self):
         data = Table("iris")[::5]
         data.X[:, :] = 1.0
-        self.send_signal(self.widget.Inputs.data, data)
+        # Ignore the warning: the test checks whether the widget shows
+        # Warning.trivial_components when this happens
+        with np.errstate(invalid="ignore"):
+            self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.trivial_components.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
         self.assertIsNone(self.get_output(self.widget.Outputs.components))

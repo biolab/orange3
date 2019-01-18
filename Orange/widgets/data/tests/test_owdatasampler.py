@@ -64,7 +64,7 @@ class TestOWDataSampler(WidgetTest):
     def test_no_intersection_in_outputs(self):
         """ Check whether outputs intersect and whether length of outputs sums
         to length of original data """
-        self.send_signal("Data", self.zoo)
+        self.send_signal("Data", self.iris)
         w = self.widget
         sampling_types = [w.FixedProportion, w.FixedSize, w.CrossValidation]
 
@@ -78,7 +78,7 @@ class TestOWDataSampler(WidgetTest):
 
                     sample = self.get_output("Data Sample")
                     other = self.get_output("Remaining Data")
-                    self.assertEqual(len(self.zoo), len(sample) + len(other))
+                    self.assertEqual(len(self.iris), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
 
     def test_bigger_size_with_replacement(self):
@@ -114,5 +114,4 @@ class TestOWDataSampler(WidgetTest):
         return self.widget.sampleSizeSpin.value()
 
     def assertNoIntersection(self, sample, other):
-        for inst in sample:
-            self.assertNotIn(inst, other)
+        self.assertFalse(bool(set(sample.ids) & set(other.ids)))

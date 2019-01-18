@@ -77,10 +77,11 @@ class SettingHandlerTestCase(unittest.TestCase):
         with named_file("") as f:
             handler._get_settings_filename = lambda: f
 
-            with patch('Orange.widgets.settings.open', create=True) as mocked_open:
-                mocked_open.side_effect = PermissionError()
-
+            with patch("Orange.widgets.settings.log.error") as log, \
+                patch('Orange.widgets.settings.open', create=True,
+                       side_effect=PermissionError):
                 handler.write_defaults()
+                log.assert_called()
 
     def test_write_defaults_handles_writing_errors(self):
         handler = SettingsHandler()
@@ -90,10 +91,11 @@ class SettingHandlerTestCase(unittest.TestCase):
             f.close()  # so it can be opened on windows
             handler._get_settings_filename = lambda x=f: x.name
 
-            with patch.object(handler, "write_defaults_file") as mocked_write:
-                mocked_write.side_effect = error()
-
+            with patch("Orange.widgets.settings.log.error") as log, \
+                    patch.object(handler, "write_defaults_file",
+                                 side_effect=error):
                 handler.write_defaults()
+                log.assert_called()
 
             # Corrupt setting files should be removed
             self.assertFalse(os.path.exists(f.name))

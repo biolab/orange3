@@ -263,7 +263,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.model = model
         self.target_class_index = 0
         if model is None:
-            self.info.setText('No tree.')
+            self.infolabel.setText('No tree.')
             self.root_node = None
             self.dataset = None
             self.tree_adapter = None
@@ -291,7 +291,7 @@ class OWTreeGraph(OWTreeViewer2D):
             self.openContext(self.domain.class_var)
             # self.root_node = self.walkcreate(model.root, None)
             self.root_node = self.walkcreate(self.tree_adapter.root)
-            self.info.setText('{} nodes, {} leaves'.format(
+            self.infolabel.setText('{} nodes, {} leaves'.format(
                 self.tree_adapter.num_nodes,
                 len(self.tree_adapter.leaves(self.tree_adapter.root))))
         self.setup_scene()
@@ -328,7 +328,7 @@ class OWTreeGraph(OWTreeViewer2D):
     def send_report(self):
         if not self.model:
             return
-        items = [("Tree size", self.info.text()),
+        items = [("Tree size", self.infolabel.text()),
                  ("Edge widths",
                   ("Fixed", "Relative to root", "Relative to parent")[
                       # pylint: disable=invalid-sequence-index

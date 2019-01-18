@@ -4,6 +4,7 @@ and once used from the bottlechest package (fork of bottleneck).
 
 It also patches bottleneck to contain these functions.
 """
+import warnings
 from warnings import warn
 from distutils.version import StrictVersion
 
@@ -425,6 +426,9 @@ def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     def nanmean_sparse(x):
         n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        if not n_values:
+            warnings.warn(RuntimeWarning, "Mean of empty slice")
+            return np.nan
         return np.nansum(x.data) / n_values
 
     return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)

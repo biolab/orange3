@@ -15,7 +15,7 @@ class SGDClassificationLearner(SklLearner):
 
     def __init__(self, loss='hinge', penalty='l2', alpha=0.0001,
                  l1_ratio=0.15, fit_intercept=True, max_iter=5,
-                 tol=None, shuffle=True, epsilon=0.1, random_state=None,
+                 tol=1e-3, shuffle=True, epsilon=0.1, random_state=None,
                  learning_rate='invscaling', eta0=0.01, power_t=0.25,
                  warm_start=False, average=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)

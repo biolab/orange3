@@ -2,6 +2,9 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import warnings
+
+from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table
 from Orange.classification import NNClassificationLearner
@@ -16,6 +19,11 @@ class TestNNLearner(unittest.TestCase):
         cls.iris = Table('iris')
         cls.housing = Table('housing')
         cls.learner = NNLearner()
+
+    def setUp(self):
+        # Convergence warnings are irrelevant for these tests
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
+        super().setUp()
 
     def test_NN_classification(self):
         results = CrossValidation(self.iris, [NNClassificationLearner()], k=3)

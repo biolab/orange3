@@ -460,7 +460,9 @@ class OWConfusionMatrix(widget.OWWidget):
                 formatstr = "{:2.1f} %"
             div[div == 0] = 1
             colors /= div
-            colors[diag] = normalized[diag] / normalized[diag].max()
+            maxval = normalized[diag].max()
+            if maxval > 0:
+                colors[diag] = normalized[diag] / maxval
 
             for i in range(n):
                 for j in range(n):

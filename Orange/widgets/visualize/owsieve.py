@@ -43,8 +43,9 @@ class ChiSqStats:
         self.probs_x = self.observed.sum(axis=0) / self.n
         self.probs_y = self.observed.sum(axis=1) / self.n
         self.expected = np.outer(self.probs_y, self.probs_x) * self.n
-        self.residuals = \
-            (self.observed - self.expected) / np.sqrt(self.expected)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            self.residuals = \
+                (self.observed - self.expected) / np.sqrt(self.expected)
         self.residuals = np.nan_to_num(self.residuals)
         self.chisqs = self.residuals ** 2
         self.chisq = float(np.sum(self.chisqs))

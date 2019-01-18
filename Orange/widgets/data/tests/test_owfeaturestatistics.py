@@ -1,4 +1,5 @@
 import datetime
+import warnings
 from collections import namedtuple
 from functools import wraps, partial
 from itertools import chain
@@ -16,7 +17,6 @@ from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
-
 
 # Continuous variable variations
 continuous_full = VarDataPair(
@@ -192,6 +192,9 @@ class TestVariousDataSets(WidgetTest):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
         )
+        # scipy.sparse uses matrix; this filter can be removed when it stops
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
 
     def force_render_table(self):
         """Some fields e.g. histograms are only initialized when they actually

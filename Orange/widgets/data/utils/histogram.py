@@ -366,7 +366,11 @@ class Histogram(QGraphicsWidget):
 
             colors = []
             for bin_idx in range(self.n_bins):
-                mean = ut.nanmean(self.y[mask[bin_idx]], axis=0) / self.y.max()
+                biny = self.y[mask[bin_idx]]
+                if np.isfinite(biny).any():
+                    mean = ut.nanmean(biny) / ut.nanmax(self.y)
+                else:
+                    mean = 0  # bin is empty, color does not matter
                 colors.append([palette[mean]])
 
         else:

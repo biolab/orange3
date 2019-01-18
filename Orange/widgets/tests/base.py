@@ -1,9 +1,10 @@
+import warnings
 from contextlib import contextmanager
 import os
 import pickle
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 # pylint: disable=unused-import
 from typing import List, Optional, TypeVar
 try:
@@ -105,6 +106,9 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
+        if not (os.environ.get("TRAVIS") or os.environ.get("APPVEYOR")):
+            report.show = Mock()
+
         Variable._clear_all_caches()
 
     def tearDown(self):
@@ -143,6 +147,17 @@ class WidgetTest(GuiTest):
         self.process_events()
         self.widgets.append(widget)
         return widget
+
+    @contextmanager
+    def no_show_on_desktop(self):
+        # disabling show on travis and appveyor causes timeouts?!
+        if os.environ.get("TRAVIS") or os.environ.get("APPVEYOR"):
+            yield
+        else:
+            for widget in self.widgets:
+                widget.show = Mock()
+            with patch("AnyQt.QtWidgets.QWidget.show"):
+                yield
 
     @staticmethod
     def reset_default_settings(widget):
@@ -952,6 +967,10 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
+        # scipy.sparse uses matrix; this filter can be removed when it stops
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
+
         table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
