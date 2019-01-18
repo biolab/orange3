@@ -21,7 +21,7 @@ from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.settings import Setting, SettingsHandler
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
@@ -364,14 +364,6 @@ def select_row(view, row):
                     QItemSelectionModel.ClearAndSelect)
 
 
-class PrepareSavingSettingsHandler(SettingsHandler):
-    """Calls storeSpecificSettings, which is currently not called from non-context handlers."""
-
-    def pack_data(self, widget):
-        widget.storeSpecificSettings()
-        return super().pack_data(widget)
-
-
 class OWPythonScript(widget.OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -396,8 +388,6 @@ class OWPythonScript(widget.OWWidget):
         object = Output("Object", object, replaces=["out_object"])
 
     signal_names = ("data", "learner", "classifier", "object")
-
-    settingsHandler = PrepareSavingSettingsHandler()
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
