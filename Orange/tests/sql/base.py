@@ -11,6 +11,8 @@ from Orange.data import Table
 
 
 def parse_uri(uri):
+    if uri == "":
+        return "", dict()
     parsed_uri = parse.urlparse(uri)
     database = parsed_uri.path.strip('/')
     if "/" in database:
@@ -40,6 +42,7 @@ class TestParseUri(unittest.TestCase):
         parameters = parse_uri(
             "sql://user:password@host:7678/database/table")
 
+        self.assertEqual("sql", parameters[0])
         self.assertDictContainsSubset(dict(
             host="host",
             user="user",
@@ -47,15 +50,25 @@ class TestParseUri(unittest.TestCase):
             port=7678,
             database="database",
             table="table"
-        ), parameters)
+        ), parameters[1])
 
     def test_parse_minimal_connection_uri(self):
         parameters = parse_uri(
             "sql://host/database/table")
 
+        self.assertEqual("sql", parameters[0])
         self.assertDictContainsSubset(
             dict(host="host", database="database", table="table"),
-            parameters
+            parameters[1]
+        )
+
+    def test_parse_empty(self):
+        parameters = parse_uri("")
+
+        self.assertEqual("", parameters[0])
+        self.assertDictContainsSubset(
+            dict(),
+            parameters[1]
         )
 
     def assertDictContainsSubset(self, subset, dictionary, msg=None):
@@ -91,7 +104,7 @@ class TestParseUri(unittest.TestCase):
 
 
 def connection_params():
-    dburi = os.environ.get('ORANGE_TEST_DB_URI', 'postgres://localhost/test')
+    dburi = os.environ.get('ORANGE_TEST_DB_URI', "")
     return dict(parse_uri(uri) for uri in dburi.split("|"))
 
 
@@ -279,24 +292,24 @@ class MicrosoftTestConnection(DBTestConnection):
         return PymssqlBackend(self.params)
 
 
-def dbs():
-    
-    test_connections = {
-        PostgresTestConnection.uri_name: PostgresTestConnection,
-        MicrosoftTestConnection.uri_name: MicrosoftTestConnection
-    }
+test_connections = {
+    PostgresTestConnection.uri_name: PostgresTestConnection,
+    MicrosoftTestConnection.uri_name: MicrosoftTestConnection
+}
 
+
+def dbs():
     params = connection_params()
 
     db_conn = {}
     for c in params:
-        db_conn[c] = test_connections[c](params[c])
+        if c and c in test_connections:
+            db_conn[c] = test_connections[c](params[c])
 
     return db_conn
 
 
 class DataBaseTest:
-
     db_conn = dbs()
     
     @classmethod
@@ -329,6 +342,9 @@ class DataBaseTest:
             elif not cls.db_conn[db].is_active:
                 raise unittest.SkipTest("Database is not running")
         else:
+            if db in test_connections.keys():
+                raise unittest.SkipTest("No connection provided for {}".format(db))
+            else:
                 raise Exception("Unsupported database")
 
         return db
