@@ -354,10 +354,7 @@ def stats(X, weights=None, compute_variance=False):
 
 def _nan_min_max(x, func, axis=0):
     if not sp.issparse(x):
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", ".*All-NaN slice encountered.*",
-                                    RuntimeWarning)
-            return func(x, axis=axis)
+        return func(x, axis=axis)
     if axis is None:
         extreme = func(x.data, axis=axis) if x.nnz else float('nan')
         if sparse_has_implicit_zeros(x):
