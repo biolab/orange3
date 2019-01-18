@@ -10,7 +10,7 @@ from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
@@ -187,7 +187,7 @@ def table_dense_sparse(test_case):
     return _wrapper
 
 
-class TestVariableTypes(WidgetTest):
+class TestVariousDataSets(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
@@ -207,49 +207,81 @@ class TestVariableTypes(WidgetTest):
 
     @table_dense_sparse
     def test_runs_on_iris(self, prepare_table):
-        self.send_signal('Data', prepare_table(Table('iris')))
+        self.send_signal(self.widget.Inputs.data, prepare_table(Table('iris')))
 
     def test_does_not_crash_on_data_removal(self):
-        self.send_signal('Data', make_table(discrete))
-        self.send_signal('Data', None)
+        self.send_signal(self.widget.Inputs.data, make_table(discrete))
+        self.send_signal(self.widget.Inputs.data, None)
 
     # No missing values
     @table_dense_sparse
     def test_on_data_with_no_missing_values(self, prepare_table):
         data = make_table([continuous_full, rgb_full, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_no_missing_values_full_domain(self, prepare_table):
         data = make_table([continuous_full, time_full], [ints_full], [rgb_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     # With missing values
     @table_dense_sparse
     def test_on_data_with_missing_continuous_values(self, prepare_table):
         data = make_table([continuous_full, continuous_missing, rgb_full, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_missing_discrete_values(self, prepare_table):
         data = make_table([continuous_full, rgb_full, rgb_missing, ints_full, time_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_discrete_values_all_the_same(self, prepare_table):
         data = make_table([continuous_full], [ints_same, rgb_same])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
 
     @table_dense_sparse
     def test_on_data_with_continuous_values_all_the_same(self, prepare_table):
         data = make_table([ints_full, ints_same], [continuous_same, continuous_full])
-        self.send_signal('Data', prepare_table(data))
+        self.send_signal(self.widget.Inputs.data, prepare_table(data))
         self.run_through_variables()
+
+    def test_switching_to_dataset_with_no_target_var(self):
+        """Switching from data set with target variable to a data set with
+        no target variable should not result in crash."""
+        data1 = make_table([continuous_full, ints_full], [ints_same, rgb_same])
+        data2 = make_table([rgb_full, ints_full])
+
+        self.send_signal(self.widget.Inputs.data, data1)
+        self.force_render_table()
+
+        self.send_signal(self.widget.Inputs.data, data2)
+        self.force_render_table()
+
+    def test_switching_to_dataset_with_target_var(self):
+        """Switching from data set with no target variable to a data set with
+        a target variable should not result in crash."""
+        data1 = make_table([rgb_full, ints_full])
+        data2 = make_table([continuous_full, ints_full], [ints_same, rgb_same])
+
+        self.send_signal(self.widget.Inputs.data, data1)
+        self.force_render_table()
+
+        self.send_signal(self.widget.Inputs.data, data2)
+        self.force_render_table()
+
+    def test_on_edge_case_datasets(self):
+        for data in datasets.datasets():
+            try:
+                self.send_signal(self.widget.Inputs.data, data)
+                self.force_render_table()
+            except Exception as e:
+                raise AssertionError(f"Failed on `{data.name}`") from e
 
 
 def select_rows(rows: List[int], widget: OWFeatureStatistics):

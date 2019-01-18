@@ -245,7 +245,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         def __mode(x, *args, **kwargs):
             if sp.issparse(x):
                 x = x.todense(order="C")
-            return ss.mode(x, *args, **kwargs)[0]
+            # return ss.mode(x, *args, **kwargs)[0]
+            return ut.nanmode(x, *args, **kwargs)[0]  # Temporary replacement for scipy < 1.2.0
 
         self._center = self.__compute_stat(
             matrices,
@@ -787,6 +788,7 @@ class OWFeatureStatistics(widget.OWWidget):
 
         if data is not None:
             self.color_var_model.set_domain(data.domain)
+            self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:

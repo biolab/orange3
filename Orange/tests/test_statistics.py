@@ -7,7 +7,7 @@ from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
 
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar
+    unique, var, nanstd, nanvar, nanmode
 
 
 def dense_sparse(test_case):
@@ -163,6 +163,16 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanmean(X_sparse),
                 np.nanmean(X))
+
+    def test_nanmode(self):
+        X = np.array([[np.nan, np.nan, 1, 1],
+                      [2, np.nan, 1, 1]])
+        mode, count = nanmode(X, 0)
+        np.testing.assert_array_equal(mode, [[2, np.nan, 1, 1]])
+        np.testing.assert_array_equal(count, [[1, np.nan, 2, 2]])
+        mode, count = nanmode(X, 1)
+        np.testing.assert_array_equal(mode, [[1], [1]])
+        np.testing.assert_array_equal(count, [[2], [2]])
 
     @dense_sparse
     def test_nanmedian(self, array):

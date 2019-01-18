@@ -5,10 +5,12 @@ and once used from the bottlechest package (fork of bottleneck).
 It also patches bottleneck to contain these functions.
 """
 from warnings import warn
+from distutils.version import StrictVersion
 
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 from scipy import sparse as sp
+import scipy.stats.stats
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
@@ -460,6 +462,16 @@ def nanmedian(x, axis=None):
             return np.nanmedian(x.toarray())
 
     return _apply_func(x, np.nanmedian, nanmedian_sparse, axis=axis)
+
+
+def nanmode(x, axis=0):
+    """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
+    if StrictVersion(scipy.__version__) >= StrictVersion("1.2.0"):
+        warn("Use scipy.stats.mode in scipy >= 1.2.0", DeprecationWarning)
+    nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
+    res = scipy.stats.stats.mode(x, axis)
+    return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
+                                        np.where(nans, np.nan, res.count))
 
 
 def unique(x, return_counts=False):
