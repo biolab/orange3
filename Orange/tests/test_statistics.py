@@ -569,3 +569,16 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
+
+
+class TestNanModeAppVeyor(unittest.TestCase):
+    def test_appveyour_still_not_onscipy_1_2_0(self):
+        import scipy
+        from distutils.version import StrictVersion
+        import os
+
+        if os.getenv("APPVEYOR") and \
+                StrictVersion(scipy.__version__) >= StrictVersion("1.2.0"):
+            self.fail("Appveyor now uses Scipy 1.2.0; revert changes in "
+                      "the last three commits (bde2cbe, 7163448, ab0f31d) "
+                      "of gh-3480. Then, remove this test.")
