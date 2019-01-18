@@ -22,6 +22,9 @@ class SimpleWidget:
     migrate_settings = Mock()
     migrate_context = Mock()
 
+    def __init__(self):
+        self.storeSpecificSettings = Mock()
+
 
 class DummyContext(Context):
     id = 0
@@ -174,7 +177,6 @@ class TestContextHandler(TestCase):
     def test_pack_settings_stores_version(self):
         handler = ContextHandler()
         handler.bind(SimpleWidget)
-
         widget = SimpleWidget()
         handler.initialize(widget)
         widget.context_setting = [DummyContext() for _ in range(3)]
@@ -183,6 +185,14 @@ class TestContextHandler(TestCase):
         self.assertIn("context_settings", settings)
         for c in settings["context_settings"]:
             self.assertIn(VERSION_KEY, c.values)
+
+    def test_pack_settings_storeSpecificSettings(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        handler.pack_data(widget)
+        self.assertEqual(1, widget.storeSpecificSettings.call_count)
 
     def test_write_defaults_stores_version(self):
         handler = ContextHandler()
@@ -202,11 +212,18 @@ class TestContextHandler(TestCase):
             for c in contexts:
                 self.assertEqual(c.values.get("__version__", 0xBAD), 1)
 
+    def test_update_defaults_storeSpecificSettings(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        handler.update_defaults(widget)
+        self.assertEqual(1, widget.storeSpecificSettings.call_count)
+
     def test_close_context(self):
         handler = ContextHandler()
         handler.bind(SimpleWidget)
         widget = SimpleWidget()
-        widget.storeSpecificSettings = Mock()
         handler.initialize(widget)
         widget.schema_only_setting = 0xD06F00D
         widget.current_context = handler.new_context()

@@ -342,6 +342,22 @@ class SettingHandlerTestCase(unittest.TestCase):
         if os.path.isfile(filename):
             os.remove(filename)
 
+    def test_pack_settings_storeSpecificSettings(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        handler.pack_data(widget)
+        self.assertEqual(1, widget.storeSpecificSettings.call_count)
+
+    def test_update_defaults_storeSpecificSettings(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        handler.update_defaults(widget)
+        self.assertEqual(1, widget.storeSpecificSettings.call_count)
+
 
 class Component:
     int_setting = Setting(42)
@@ -360,6 +376,7 @@ class SimpleWidget:
 
     def __init__(self):
         self.component = Component()
+        self.storeSpecificSettings = Mock()
 
     migrate_settings = Mock()
     migrate_context = Mock()

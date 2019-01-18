@@ -875,8 +875,8 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         """
         Store data that is not registered as setting.
 
-        This method is called by
-        `Orange.widgets.settings.ContextHandler.settings_from_widget`.
+        This method is called before a widget storing data (by `pack_data`
+        or `update_defaults` from `Orange.widgets.settings.SettingHandler`).
         Widgets may define it to store any data that is not stored in widget
         attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
         example.
