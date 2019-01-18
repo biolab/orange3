@@ -2,13 +2,17 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import Mock, patch
 import os
 import tempfile
 import shutil
 import io
+import csv
 
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
 from Orange.data.table import get_sample_datasets_dir
+from Orange.data import Table
+
 
 
 class WildcardReader(FileFormat):
@@ -115,3 +119,30 @@ class TestReader(unittest.TestCase):
         self.assertEqual(len(table.domain.attributes), 2)
         self.assertEqual(cm.warning.args[0],
                          "Columns with no headers were removed.")
+
+    def test_type_annotations(self):
+        class FooFormat(FileFormat):
+            write_file = Mock()
+
+        FooFormat.write('test_file', None)
+        FooFormat.write_file.assert_called_with('test_file', None)
+
+        FooFormat.OPTIONAL_TYPE_ANNOTATIONS = True
+        FooFormat.write('test_file', None)
+        FooFormat.write_file.assert_called_with('test_file', None, True)
+
+        FooFormat.write('test_file', None, False)
+        FooFormat.write_file.assert_called_with('test_file', None, False)
+
+        FooFormat.OPTIONAL_TYPE_ANNOTATIONS = False
+        FooFormat.write('test_file', None)
+        FooFormat.write_file.assert_called_with('test_file', None)
+
+    @patch('csv.DictWriter.writerow')
+    def test_header_call(self, writer):
+        CSVReader.write_headers(writer, Table("iris"), False)
+        self.assertEquals(len(writer.call_args_list), 1)
+
+        writer.reset_mock()
+        CSVReader.write_headers(writer, Table("iris"), True)
+        self.assertEquals(len(writer.call_args_list), 3)

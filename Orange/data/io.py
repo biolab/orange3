@@ -926,7 +926,6 @@ class CSVReader(FileFormat):
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
             cls.write_headers(writer.writerow, data, with_annotations)
             cls.write_data(writer.writerow, data)
-        if with_annotations:
             cls.write_table_metadata(filename, data)
 
 

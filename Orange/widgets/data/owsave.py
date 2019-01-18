@@ -91,8 +91,9 @@ class OWSave(widget.OWWidget):
         box.layout().addLayout(form)
 
         self.annotations_cb = gui.checkBox(
-            self.controlArea, self, "add_type_annotations", label="Add type annotations",
+            None, self, "add_type_annotations", label="Add type annotations",
         )
+        form.addRow(self.annotations_cb, None)
 
         self.save = gui.auto_commit(
             self.controlArea, self, "auto_save", "Save", box=False,
