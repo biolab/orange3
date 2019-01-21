@@ -73,7 +73,7 @@ class Louvain:
             k_neighbors=30,
             metric="l2",
             resolution=1.0,
-            random_state=None,
+            random_state=0,
             preprocessors=None,
     ):
         """Louvain clustering for community detection in graphs.
