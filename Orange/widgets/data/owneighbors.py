@@ -43,6 +43,9 @@ class OWNeighbors(OWWidget):
         all_data_as_reference = \
             Msg("Every data instance is same as some reference")
 
+    class Error(OWWidget.Error):
+        diff_domains = Msg("Data and reference have different domains.")
+
     n_neighbors = Setting(10)
     distance_index = Setting(0)
     exclude_reference = Setting(True)
@@ -107,10 +110,16 @@ class OWNeighbors(OWWidget):
         self.apply()
 
     def compute_distances(self):
+        self.Error.diff_domains.clear()
         if self.data is None or len(self.data) == 0 \
                 or self.reference is None or len(self.reference) == 0:
             self.distances = None
             return
+        if self.reference.domain != self.data.domain:
+            self.Error.diff_domains()
+            self.distances = None
+            return
+
         distance = METRICS[self.distance_index][1]
         n_ref = len(self.reference)
         all_data = Table.concatenate([self.reference, self.data], 0)
