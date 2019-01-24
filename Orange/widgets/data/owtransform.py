@@ -45,10 +45,9 @@ class OWTransform(OWWidget):
         self.set_preprocessor_label_text()
 
         self.retain_all_data_cb = gui.checkBox(
-                self.controlArea, self, "retain_all_data", label="Retain all data",
-                callback=self.apply
-                )
-
+            self.controlArea, self, "retain_all_data", label="Retain all data",
+            callback=self.apply
+            )
 
     def set_input_label_text(self):
         text = "No data on input."
