@@ -356,6 +356,16 @@ class TestOWNeighbors(WidgetTest):
         reference = Table(
             domain_ref, np.random.rand(1, len(domain_ref)))
 
+        # no error if one or both of the signals is missing
+        self.send_signal(w.Inputs.data, data)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        self.send_signal(w.Inputs.data, None)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        self.send_signal(w.Inputs.reference, data[:1])
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
         # same domain - no error
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, data[:1])
@@ -370,9 +380,21 @@ class TestOWNeighbors(WidgetTest):
         domain_ref = Domain([ContinuousVariable("a"), ContinuousVariable("b")])
         reference = Table(domain_ref, np.random.rand(1, len(domain_ref)))
 
+        # error disappears when data is set to None
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
         self.assertTrue(w.Error.diff_domains.is_shown())
+
+        self.send_signal(w.Inputs.data, None)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        # error disappears when reference is set to None
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, reference)
+        self.assertTrue(w.Error.diff_domains.is_shown())
+
+        self.send_signal(w.Inputs.reference, None)
+        self.assertFalse(w.Error.diff_domains.is_shown())
 
 
 if __name__ == "__main__":
