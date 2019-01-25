@@ -706,6 +706,7 @@ class ContextHandler(SettingsHandler):
         widget.current_context, is_new = \
             self.find_or_create_context(widget, *args)
         if is_new:
+            widget.storeSpecificSettings()
             try:
                 self.settings_from_widget(widget, *args)
             except TypeError:
@@ -818,6 +819,7 @@ class ContextHandler(SettingsHandler):
         if widget.current_context is None:
             return
 
+        widget.storeSpecificSettings()
         self.settings_from_widget(widget)
         widget.current_context = None
 
