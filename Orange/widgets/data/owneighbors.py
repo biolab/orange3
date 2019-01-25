@@ -44,7 +44,7 @@ class OWNeighbors(OWWidget):
             Msg("Every data instance is same as some reference")
 
     class Error(OWWidget.Error):
-        diff_domains = Msg("Data and reference have different domains.")
+        diff_domains = Msg("Data and reference have different features")
 
     n_neighbors = Setting(10)
     distance_index = Setting(0)
