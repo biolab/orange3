@@ -1,8 +1,8 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
 import pickle
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 from sklearn import __version__ as sklearn_version
@@ -10,7 +10,7 @@ from sklearn.utils import check_random_state
 
 from Orange.data import Table, Domain
 from Orange.preprocess import Continuize, Normalize
-from Orange.projection import PCA, SparsePCA, IncrementalPCA, TruncatedSVD
+from Orange.projection import pca, PCA, SparsePCA, IncrementalPCA, TruncatedSVD
 
 
 class TestPCA(unittest.TestCase):
@@ -64,6 +64,19 @@ class TestPCA(unittest.TestCase):
         self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
         np.testing.assert_almost_equal(pca_model(data).X, proj)
+
+    def test_improved_randomized_pca_properly_called(self):
+        # It doesn't matter what we put into the matrix
+        x_ = np.random.normal(0, 1, (100, 20))
+        x = Table.from_numpy(Domain.from_numpy(x_), x_)
+
+        pca.randomized_pca = MagicMock(wraps=pca.randomized_pca)
+        PCA(10, svd_solver="randomized", random_state=42)(x)
+        pca.randomized_pca.assert_called_once()
+
+        pca.randomized_pca.reset_mock()
+        PCA(10, svd_solver="arpack", random_state=42)(x)
+        pca.randomized_pca.assert_not_called()
 
     def test_improved_randomized_pca_dense_data(self):
         """Randomized PCA should work well on dense data."""
