@@ -239,7 +239,7 @@
     "bupa": {
         "features": {
             "continuous": 6,
-            "discrete": 0,
+            "discrete": 1,
             "meta": 0
         },
         "location": "bupa.tab",
@@ -247,8 +247,8 @@
         "name": "bupa",
         "rows": 345,
         "target": {
-            "type": "discrete",
-            "values": 2
+            "type": false,
+            "values": null
         }
     },
     "car": {
