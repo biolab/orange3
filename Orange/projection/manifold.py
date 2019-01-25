@@ -8,9 +8,9 @@ from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
 import sklearn.manifold as skl_manifold
 
-import fastTSNE
-import fastTSNE.affinity
-import fastTSNE.initialization
+import openTSNE
+import openTSNE.affinity
+import openTSNE.initialization
 
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
@@ -22,8 +22,8 @@ __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
 
 # Disable t-SNE user warnings
-fastTSNE.tsne.log.setLevel(logging.ERROR)
-fastTSNE.affinity.log.setLevel(logging.ERROR)
+openTSNE.tsne.log.setLevel(logging.ERROR)
+openTSNE.affinity.log.setLevel(logging.ERROR)
 
 
 def torgerson(distances, n_components=2, eigen_solver="auto"):
@@ -204,7 +204,7 @@ class TSNEModel(Projection):
     pre_domain : Domain
         Original data domain
     """
-    def __init__(self, embedding: fastTSNE.TSNEEmbedding, table: Table,
+    def __init__(self, embedding: openTSNE.TSNEEmbedding, table: Table,
                  pre_domain: Domain):
         transformer = TransformDomain(self)
 
@@ -221,13 +221,13 @@ class TSNEModel(Projection):
             class_vars=table.domain.class_vars,
             metas=table.domain.metas)
 
-    def transform(self, X: np.ndarray, **kwargs) -> fastTSNE.PartialTSNEEmbedding:
+    def transform(self, X: np.ndarray, learning_rate=1, **kwargs) -> openTSNE.PartialTSNEEmbedding:
         if sp.issparse(X):
             raise TypeError(
                 "A sparse matrix was passed, but dense data is required. Use "
                 "X.toarray() to convert to a dense numpy array."
             )
-        if isinstance(self.embedding_.affinities, fastTSNE.affinity.Multiscale):
+        if isinstance(self.embedding_.affinities, openTSNE.affinity.Multiscale):
             perplexity = kwargs.pop("perplexity", False)
             if perplexity:
                 if not isinstance(self.perplexity, Iterable):
@@ -242,7 +242,7 @@ class TSNEModel(Projection):
 
         embedding = self.embedding_.prepare_partial(X, **perplexity_params,
                                                     **kwargs)
-        embedding.optimize(100, inplace=True, momentum=0.4)
+        embedding.optimize(100, inplace=True, momentum=0.4, learning_rate=learning_rate)
         return embedding
 
     def __call__(self, data: Table, **kwargs) -> Table:
@@ -400,7 +400,7 @@ class TSNE(Projector):
         self.callbacks_every_iters = callbacks_every_iters
         self.random_state = random_state
 
-    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> fastTSNE.TSNEEmbedding:
+    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> openTSNE.TSNEEmbedding:
         # Sparse data are not supported
         if sp.issparse(X):
             raise TypeError(
@@ -416,7 +416,7 @@ class TSNE(Projector):
                 raise ValueError(
                     "Perplexity should be an instance of `Iterable`, `%s` "
                     "given." % type(self.perplexity).__name__)
-            affinities = fastTSNE.affinity.Multiscale(
+            affinities = openTSNE.affinity.Multiscale(
                 X, perplexities=self.perplexity, metric=self.metric,
                 method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
         else:
@@ -424,7 +424,7 @@ class TSNE(Projector):
                 raise ValueError(
                     "Perplexity should be an instance of `float`, `%s` "
                     "given." % type(self.perplexity).__name__)
-            affinities = fastTSNE.affinity.PerplexityBasedNN(
+            affinities = openTSNE.affinity.PerplexityBasedNN(
                 X, perplexity=self.perplexity, metric=self.metric,
                 method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
 
@@ -432,17 +432,17 @@ class TSNE(Projector):
         if isinstance(self.initialization, np.ndarray):
             initialization = self.initialization
         elif self.initialization == "pca":
-            initialization = fastTSNE.initialization.pca(
+            initialization = openTSNE.initialization.pca(
                 X, self.n_components, random_state=self.random_state)
         elif self.initialization == "random":
-            initialization = fastTSNE.initialization.random(
-                X.shape[0], self.n_components, random_state=self.random_state)
+            initialization = openTSNE.initialization.random(
+                X, self.n_components, random_state=self.random_state)
         else:
             raise ValueError(
                 "Invalid initialization `%s`. Please use either `pca` or "
                 "`random` or provide a numpy array." % self.initialization)
 
-        embedding = fastTSNE.TSNEEmbedding(
+        embedding = openTSNE.TSNEEmbedding(
             initialization, affinities, learning_rate=self.learning_rate,
             theta=self.theta, min_num_intervals=self.min_num_intervals,
             ints_in_interval=self.ints_in_interval, n_jobs=self.n_jobs,
@@ -486,5 +486,5 @@ class TSNE(Projector):
 
     @staticmethod
     def default_initialization(data, n_components=2, random_state=None):
-        return fastTSNE.initialization.pca(
+        return openTSNE.initialization.pca(
             data, n_components, random_state=random_state)
