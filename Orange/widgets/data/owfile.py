@@ -434,6 +434,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         return text
 
     def storeSpecificSettings(self):
+        if self.current_context is None:
+            return
         self.current_context.modified_variables = self.variables[:]
 
     def retrieveSpecificSettings(self):
