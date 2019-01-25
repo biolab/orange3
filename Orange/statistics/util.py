@@ -434,20 +434,20 @@ def nanmean(x, axis=None):
     return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
 
 
-def nanvar(x, axis=None):
+def nanvar(x, axis=None, ddof=0):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):
         n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
         n_zeros = np.prod(x.shape) - len(x.data)
         mean = np.nansum(x.data) / n_vals
-        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / n_vals
+        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / (n_vals - ddof)
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
 
-def nanstd(x, axis=None):
+def nanstd(x, axis=None, ddof=0):
     """ Equivalent of np.nanstd that supports sparse and dense matrices. """
-    return np.sqrt(nanvar(x, axis=axis))
+    return np.sqrt(nanvar(x, axis=axis, ddof=ddof))
 
 
 def nanmedian(x, axis=None):
@@ -571,16 +571,21 @@ def digitize(x, bins, right=False):
     return r
 
 
-def var(x, axis=None):
+def var(x, axis=None, ddof=0):
     """ Equivalent of np.var that supports sparse and dense matrices. """
     if not sp.issparse(x):
-        return np.var(x, axis)
+        return np.var(x, axis, ddof=ddof)
 
     result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
     result = np.squeeze(np.asarray(result))
+
+    # Apply correction for degrees of freedom
+    n = np.prod(x.shape) if axis is None else x.shape[axis]
+    result *= n / (n - ddof)
+
     return result
 
 
-def std(x, axis=None):
+def std(x, axis=None, ddof=0):
     """ Equivalent of np.std that supports sparse and dense matrices. """
-    return np.sqrt(var(x, axis=axis))
+    return np.sqrt(var(x, axis=axis, ddof=ddof))
