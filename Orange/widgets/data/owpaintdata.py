@@ -929,7 +929,7 @@ class OWPaintData(OWWidget):
             tBox, self, "Reset to Input Data", self.reset_to_input)
         self.btResetToInput.setDisabled(True)
 
-        gui.auto_commit(self.left_side, self, "autocommit",
+        gui.auto_commit(self.controlArea, self, "autocommit",
                         "Send")
 
         # main area GUI
@@ -975,11 +975,11 @@ class OWPaintData(OWWidget):
         if self.hasAttr2:
             self.plot.setYRange(0, 1, padding=0.01)
             self.plot.showAxis('left')
-            self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Minimum)
+            self.plotview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         else:
             self.plot.setYRange(-.5, .5, padding=0.01)
             self.plot.hideAxis('left')
-            self.plotview.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Maximum)
+            self.plotview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self._replot()
         for button, tool in self.toolButtons:
             if tool.only2d:
