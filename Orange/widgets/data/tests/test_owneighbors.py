@@ -396,6 +396,63 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(w.Inputs.reference, None)
         self.assertFalse(w.Error.diff_domains.is_shown())
 
+    def test_different_metas(self):
+        """
+        Test weather widget do not show error when data and a reference have
+        domain that differ only in metas
+        """
+        w = self.widget
+
+        domain = Domain([ContinuousVariable("a"), ContinuousVariable("b")],
+                        metas=[ContinuousVariable("c")])
+        data = Table(
+            domain, np.random.rand(2, len(domain.attributes)),
+            metas=np.random.rand(2, len(domain.metas)))
+
+        # same domain with same metas no error
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, data[:1])
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        # same domain with different metas no error
+        domain_ref = Domain(domain.attributes,
+                            metas=[ContinuousVariable("d")])
+        reference = Table(
+            domain_ref, np.random.rand(1, len(domain_ref.attributes)),
+            metas=np.random.rand(1, len(domain.metas)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, reference)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        # same domain with different order - no error
+        domain_ref = Domain(domain.attributes[::-1])
+        reference = Table(
+            domain_ref, np.random.rand(1, len(domain_ref.attributes)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, reference)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        # same domain with different number of metas no error
+        domain_ref = Domain(
+            domain.attributes,
+            metas=[ContinuousVariable("d"), ContinuousVariable("e")])
+        reference = Table(
+            domain_ref, np.random.rand(1, len(domain_ref.attributes)),
+            metas=np.random.rand(1, len(domain_ref.metas)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, reference)
+        self.assertFalse(w.Error.diff_domains.is_shown())
+
+        # different domain with same metas - error shown
+        domain_ref = Domain(domain.attributes + (ContinuousVariable("e"),),
+                            metas=[ContinuousVariable("c")])
+        reference = Table(
+            domain_ref, np.random.rand(1, len(domain_ref.attributes)),
+            metas=np.random.rand(1, len(domain_ref.metas)))
+        self.send_signal(w.Inputs.data, data)
+        self.send_signal(w.Inputs.reference, reference)
+        self.assertTrue(w.Error.diff_domains.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()
