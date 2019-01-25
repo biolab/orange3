@@ -115,14 +115,21 @@ class OWNeighbors(OWWidget):
                 or self.reference is None or len(self.reference) == 0:
             self.distances = None
             return
-        if self.reference.domain != self.data.domain:
+        if set(self.reference.domain.attributes) != \
+                set(self.data.domain.attributes):
             self.Error.diff_domains()
             self.distances = None
             return
 
         distance = METRICS[self.distance_index][1]
         n_ref = len(self.reference)
-        all_data = Table.concatenate([self.reference, self.data], 0)
+
+        # comparing only attributes, no metas and class-vars
+        new_domain = Domain(self.data.domain.attributes)
+        reference = self.reference.transform(new_domain)
+        data = self.data.transform(new_domain)
+
+        all_data = Table.concatenate([reference, data], 0)
         pp_all_data = Impute()(RemoveNaNColumns()(all_data))
         pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
         self.distances = distance(pp_data, pp_reference).min(axis=1)
