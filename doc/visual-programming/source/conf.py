@@ -15,7 +15,7 @@
 
 import sys
 import os
-import shlex
+from recommonmark.parser import CommonMarkParser
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -39,15 +39,17 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.imgmath',
     'sphinx.ext.ifconfig',
-    'sphinx.ext.viewcode',
+    'sphinx.ext.viewcode'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+source_parsers = {'.md': CommonMarkParser}
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = ['.rst']
+source_suffix = ['.md', '.rst']
 
 # The encoding of source files.
 #source_encoding = 'utf-8-sig'
@@ -214,7 +216,7 @@ htmlhelp_basename = 'OrangeVisualProgrammingdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_elements = {
+# latex_elements = {
 # The paper size ('letterpaper' or 'a4paper').
 #'papersize': 'letterpaper',
 
@@ -226,14 +228,15 @@ latex_elements = {
 
 # Latex figure (float) alignment
 #'figure_align': 'htbp',
-}
+# }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'OrangeVisualProgramming.tex', 'Orange Visual Programming Documentation',
-   'Orange Data Mining', 'manual'),
+    (master_doc, 'OrangeVisualProgramming.tex',
+     'Orange Visual Programming Documentation',
+     'Orange Data Mining', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -262,7 +265,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'orangevisualprogramming', 'Orange Visual Programming Documentation',
+    (master_doc, 'orangevisualprogramming',
+     'Orange Visual Programming Documentation',
      [author], 1)
 ]
 
@@ -276,9 +280,10 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'OrangeVisualProgramming', 'Orange Visual Programming Documentation',
-   author, 'OrangeVisualProgramming', 'One line description of project.',
-   'Miscellaneous'),
+    (master_doc, 'OrangeVisualProgramming',
+     'Orange Visual Programming Documentation', author,
+     'OrangeVisualProgramming', 'One line description of project.',
+     'Miscellaneous'),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -366,7 +371,3 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-
-def setup(app):
-    app.add_stylesheet('style.css')
