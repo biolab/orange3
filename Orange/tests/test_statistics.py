@@ -1,9 +1,11 @@
 import unittest
+import warnings
 from itertools import chain
 from functools import partial, wraps
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
+from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
+    SparseEfficiencyWarning
 
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
@@ -23,7 +25,11 @@ def dense_sparse(test_case):
 
             zero_indices = np.argwhere(np_array == 0)
             if zero_indices.size:
-                sp_array[tuple(zero_indices[0])] = 0
+                with warnings.catch_warnings():
+                    # this is just inefficiency in tests, not the tested code
+                    warnings.filterwarnings("ignore", ".*",
+                                            SparseEfficiencyWarning)
+                    sp_array[tuple(zero_indices[0])] = 0
 
             return sp_array
 
@@ -120,6 +126,7 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 1, 2]])
 
     def test_nanmin_nanmax(self):
+        warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
         for X in self.data:
             X_sparse = csr_matrix(X)
             for axis in [None, 0, 1]:
@@ -148,6 +155,8 @@ class TestUtil(unittest.TestCase):
                 np.nansum(X))
 
     def test_mean(self):
+        # This warning is not unexpected and it's correct
+        warnings.filterwarnings("ignore", r".*mean\(\) resulted in nan.*")
         for X in self.data:
             X_sparse = csr_matrix(X)
             np.testing.assert_array_equal(
