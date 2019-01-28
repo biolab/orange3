@@ -48,10 +48,10 @@ class NaiveBayesModel(Model):
         self.class_prob = class_prob
 
     def predict_storage(self, data):
+        if isinstance(data, Instance):
+            data = Table(np.atleast_2d(data.x))
         if type(data) is Table:  # pylint: disable=unidiomatic-typecheck
             return self.predict(data.X)
-        if isinstance(data, Instance):
-            return Table(np.atleast_2d(data.x))
 
         if not len(data) or not len(data[0]):
             probs = np.tile(self.class_prob, (len(data), 1))

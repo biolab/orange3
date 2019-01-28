@@ -74,7 +74,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         predict.reset_mock()
 
         self.model.predict_storage(data[0])
-        predict.assert_not_called()
+        predict.assert_called()
 
     def test_compare_results_of_storage_and_predict_storage(self):
         data2 = NotATable("titanic")
