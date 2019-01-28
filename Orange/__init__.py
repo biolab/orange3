@@ -1,5 +1,5 @@
 # This module is a mixture of imports and code, so we allow import anywhere
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,wrong-import-order
 
 from Orange import data
 
@@ -46,3 +46,10 @@ except:  # pylint: disable=bare-except
     pass
 finally:
     del ctypes
+
+
+# scipy.sparse uses matrix
+# we can't do anything about it, so we silence it until scipy is fixed
+import warnings
+warnings.filterwarnings(
+    "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
