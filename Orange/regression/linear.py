@@ -73,7 +73,7 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
                  fit_intercept=True, normalize=False, precompute='auto',
-                 max_iter=1000, tol=0.0001, cv=None, copy_X=True,
+                 max_iter=1000, tol=0.0001, cv=5, copy_X=True,
                  verbose=0, n_jobs=1, positive=False, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()

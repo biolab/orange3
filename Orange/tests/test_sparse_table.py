@@ -1,8 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import warnings
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, SparseEfficiencyWarning
 
 from Orange import data
 from Orange.data import Table
@@ -45,9 +46,15 @@ class InterfaceTest(tabletests.InterfaceTest):
             super().test_clear()
 
     def test_row_assignment(self):
+        # This warning will appear in actual code that assigns rows of
+        # sparse matrix, which is OK, but We don't need it in test outputs
+        warnings.filterwarnings("ignore", ".*", SparseEfficiencyWarning)
         super().test_row_assignment()
 
     def test_value_assignment(self):
+        # This warning will appear in actual code that assigns rows of
+        # sparse matrix, which is OK, but We don't need it in test outputs
+        warnings.filterwarnings("ignore", ".*", SparseEfficiencyWarning)
         super().test_value_assignment()
 
     def test_str(self):

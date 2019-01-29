@@ -5,8 +5,6 @@ and once used from the bottlechest package (fork of bottleneck).
 It also patches bottleneck to contain these functions.
 """
 import warnings
-from warnings import warn
-from distutils.version import StrictVersion
 
 import numpy as np
 import bottleneck as bn
@@ -394,8 +392,8 @@ def mean(x):
          if sp.issparse(x) else
          np.mean(x))
     if np.isnan(m):
-        warn('mean() resulted in nan. If input can contain nan values, perhaps '
-             'you meant nanmean?', stacklevel=2)
+        warnings.warn('mean() resulted in nan. If input can contain nan values,'
+                      ' perhaps you meant nanmean?', stacklevel=2)
     return m
 
 
@@ -470,8 +468,6 @@ def nanmedian(x, axis=None):
 
 def nanmode(x, axis=0):
     """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
-    if StrictVersion(scipy.__version__) >= StrictVersion("1.2.0"):
-        warn("Use scipy.stats.mode in scipy >= 1.2.0", DeprecationWarning)
     nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
     res = scipy.stats.stats.mode(x, axis)
     return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
