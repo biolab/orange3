@@ -489,6 +489,12 @@ class SettingsHandler:
         new_data.update(data)
         return new_data
 
+    def _prepare_defaults(self, widget):
+        self.defaults = self.provider.pack(widget)
+        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
+            if setting.schema_only:
+                data.pop(setting.name, None)
+
     def pack_data(self, widget):
         """
         Pack the settings for the given widget. This method is used when
@@ -504,6 +510,7 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
+        widget.settingsAboutToBePacked.emit()
         packed_settings = self.provider.pack(widget)
         packed_settings[VERSION_KEY] = self.widget_class.settings_version
         return packed_settings
@@ -517,10 +524,8 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
-        self.defaults = self.provider.pack(widget)
-        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
-            if setting.schema_only:
-                data.pop(setting.name, None)
+        widget.settingsAboutToBePacked.emit()
+        self._prepare_defaults(widget)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
@@ -675,6 +680,7 @@ class ContextHandler(SettingsHandler):
         Merge the widgets local contexts into the global contexts and persist
         the settings (including the contexts) to disk.
         """
+        widget.settingsAboutToBePacked.emit()
         self.settings_from_widget(widget)
         globs = self.global_contexts
         assert widget.context_settings is not globs
@@ -683,7 +689,10 @@ class ContextHandler(SettingsHandler):
         globs.sort(key=lambda c: -c.time)
         del globs[self.MAX_SAVED_CONTEXTS:]
 
-        super().update_defaults(widget)
+        # Save non-context settings. Do not call super().update_defaults, so that
+        # settingsAboutToBePacked is emitted once.
+        self._prepare_defaults(widget)
+        self.write_defaults()
 
     def new_context(self, *args):
         """Create a new context."""

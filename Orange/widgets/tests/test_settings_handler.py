@@ -8,6 +8,8 @@ import unittest
 from unittest.mock import patch, Mock
 import warnings
 
+from AnyQt.QtCore import pyqtSignal as Signal, QObject
+
 from Orange.tests import named_file
 from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider,\
     VERSION_KEY, rename_setting, Context, migrate_str_to_variable
@@ -342,13 +344,25 @@ class SettingHandlerTestCase(unittest.TestCase):
         if os.path.isfile(filename):
             os.remove(filename)
 
+    def test_about_pack_settings_signal(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        fn = Mock()
+        widget.settingsAboutToBePacked.connect(fn)
+        handler.pack_data(widget)
+        self.assertEqual(1, fn.call_count)
+        handler.update_defaults(widget)
+        self.assertEqual(2, fn.call_count)
+
 
 class Component:
     int_setting = Setting(42)
     schema_only_setting = Setting("only", schema_only=True)
 
 
-class SimpleWidget:
+class SimpleWidget(QObject):
     settings_version = 1
 
     setting = Setting(42)
@@ -357,8 +371,10 @@ class SimpleWidget:
     non_setting = 5
 
     component = SettingProvider(Component)
+    settingsAboutToBePacked = Signal()
 
     def __init__(self):
+        super().__init__()
         self.component = Component()
 
     migrate_settings = Mock()

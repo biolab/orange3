@@ -177,6 +177,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
+    settingsAboutToBePacked = Signal()
     contextAboutToBeOpened = Signal(object)
     contextOpened = Signal()
     contextClosed = Signal()
