@@ -193,11 +193,11 @@ class TestNaiveBayesLearner(unittest.TestCase):
         # Test prediction on instances
         for inst, exp_prob in zip(test_data, exp_probs):
             np.testing.assert_almost_equal(
-                model(inst, ret=model.Probs)[0],
+                model(inst, ret=model.Probs),
                 exp_prob)
             self.assertEqual(model(inst), np.argmax(exp_prob))
             value, prob = model(inst, ret=model.ValueProbs)
-            np.testing.assert_almost_equal(prob[0], exp_prob)
+            np.testing.assert_almost_equal(prob, exp_prob)
             self.assertEqual(value, np.argmax(exp_prob))
 
         # Test prediction by directly calling predict. This is needed to test
