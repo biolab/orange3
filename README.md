@@ -21,8 +21,28 @@ available ([binaries] and [sources]).
 
 Installing
 ----------
-Orange requires Python 3.4 or newer. To build it and install
-it in a development environment, run:
+
+Orange requires Python 3.6 or newer.
+
+First, install [Anaconda] for your OS. Create virtual environment for Orange:
+
+    conda create python=3 --name orange3
+
+In your Anaconda Prompt add conda-forge to your channels:
+
+    conda config --add channels conda-forge
+
+This will enable access to the latest Orange release. Then install Orange3:
+
+    conda install orange3
+
+[Anaconda]: https://www.continuum.io/downloads
+
+
+Installing with pip
+-------------------
+
+To install Orange with pip, run the following.
 
     # Install some build requirements via your system's package manager
     sudo apt install virtualenv git build-essential python3-dev
@@ -38,9 +58,7 @@ it in a development environment, run:
 
     # Install Qt dependencies for the GUI
     pip install PyQt5
-    # Of if Python <= 3.4 and/or with package manager
-    # sudo apt install python3-pyqt4
-    
+
     # Install other minimum required dependencies
     pip install -r requirements-core.txt  # For Orange Python library
     pip install -r requirements-gui.txt   # For Orange GUI
@@ -58,46 +76,16 @@ the [wiki].
 
 [wiki]: https://github.com/biolab/orange3/wiki
 
-Anaconda Installation
----------------------
-
-First, install [Anaconda] for your OS (Python version 3.5+). Create virtual environment for Orange:
-
-    conda create python=3 --name orange3 
-
-In your Anaconda Prompt add conda-forge to your channels:
-
-    conda config --add channels conda-forge
-
-This will enable access to the latest Orange release. Then install Orange3:
-
-    conda install orange3
-
-[Anaconda]: https://www.continuum.io/downloads
-
 Starting Orange GUI
 -------------------
 
-Orange GUI requires PyQt, which is not pip-installable in Python 3. You
-have to download and install it system-wide. Make sure that the virtual
-environment for orange is created with `--system-site-packages`, so it will
-have access to the installed PyQt4.
-
-To start Orange GUI from the command line, assuming it was successfully
-installed, run:
+To start Orange GUI from the command line, run:
 
     orange-canvas
     # or
     python3 -m Orange.canvas
 
 Append `--help` for a list of program options.
-
-If you're running Orange with PyQt5 or if you have multiple PyQt versions
-available, set the environmental variable `QT_API` to the PyQt version to use,
-e.g.:
-
-    export QT_API=pyqt5
-    orange-canvas
 
 
 Compiling on Windows
