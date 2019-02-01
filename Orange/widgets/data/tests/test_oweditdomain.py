@@ -17,8 +17,8 @@ from Orange.widgets.data.oweditdomain import (
     OWEditDomain,
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
-    Rename, Annotate, CategoriesMapping, report_transform,
-    apply_transform
+    Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
+    apply_transform,
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -52,6 +52,12 @@ class TestReport(TestCase):
         self.assertIn("aa", r)
         self.assertIn("b", r)
         self.assertIn("<s>", r)
+
+    def test_change_ordered(self):
+        var = Categorical("C", ("a", "b"), None, ())
+        tr = ChangeOrdered(True)
+        r = report_transform(var, [tr])
+        self.assertIn("ordered", r)
 
 
 class TestOWEditDomain(WidgetTest):
@@ -166,6 +172,21 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
 
+    def test_change_ordered(self):
+        """Test categorical ordered flag change"""
+        table = Table(Domain(
+            [DiscreteVariable("A", values=["a", "b"], ordered=True)]))
+        self.send_signal(self.widget.Inputs.data, table)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertTrue(output.domain[0].ordered)
+
+        editor = self.widget.findChild(DiscreteVariableEditor)
+        assert isinstance(editor, DiscreteVariableEditor)
+        editor.ordered_cb.setChecked(False)
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertFalse(output.domain[0].ordered)
+
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
@@ -217,6 +238,7 @@ class TestEditors(GuiTest):
         w.set_data(v)
 
         self.assertEqual(w.name_edit.text(), v.name)
+        self.assertFalse(w.ordered_cb.isChecked())
         self.assertEqual(w.labels_model.get_dict(), dict(v.annotations))
         self.assertEqual(w.get_data(), (v, []))
         w.set_data(None)
@@ -233,6 +255,11 @@ class TestEditors(GuiTest):
         w.grab()  # run delegate paint method
         self.assertEqual(w.get_data(), (v, [CategoriesMapping(mapping)]))
 
+        w.set_data(v, [CategoriesMapping(mapping), ChangeOrdered(True)])
+        self.assertTrue(w.ordered_cb.isChecked())
+        self.assertEqual(
+            w.get_data()[1], [CategoriesMapping(mapping), ChangeOrdered(True)]
+        )
         # test selection/deselection in the view
         w.set_data(v)
         view = w.values_edit
@@ -298,6 +325,11 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([2, 3, 1, 0]))
         )
+
+    def test_ordered_change(self):
+        D = DiscreteVariable("D", values=("a", "b"), ordered=True)
+        Do = apply_transform(D, [ChangeOrdered(False)])
+        self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
         D = DiscreteVariable("D", values=("2", "3", "1", "0"), base_value=1)

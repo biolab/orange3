@@ -43,7 +43,6 @@ class TestOWPythonScript(WidgetTest):
 
     def test_local_variable(self):
         """Check if variable remains in locals after removed from script"""
-        self.widget.autobox.setCheckState(False)
         self.widget.text.setPlainText("temp = 42\nprint(temp)")
         self.widget.execute_button.click()
         self.assertIn("42", self.widget.console.toPlainText())
@@ -57,7 +56,6 @@ class TestOWPythonScript(WidgetTest):
         Error is shown when output variables are filled with wrong variable
         types and also output variable is set to None. (GH-2308)
         """
-        self.widget.autobox.setCheckState(False)
         self.assertEqual(len(self.widget.Error.active), 0)
         for signal, data in (
                 ("Data", self.iris),
@@ -80,7 +78,6 @@ class TestOWPythonScript(WidgetTest):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
     def test_multiple_signals(self):
-        self.widget.autobox.setCheckState(False)
         click = self.widget.execute_button.click
         console_locals = self.widget.console.locals
 
@@ -114,3 +111,26 @@ class TestOWPythonScript(WidgetTest):
         click()
         self.assertIsNone(console_locals["in_data"])
         self.assertEqual(console_locals["in_datas"], [])
+
+    def test_store_new_script(self):
+        self.widget.text.setPlainText("42")
+        self.widget.onAddScript()
+        script = self.widget.text.toPlainText()
+        self.assertEqual("42", script)
+
+    def test_restore_from_library(self):
+        before = self.widget.text.toPlainText()
+        self.widget.text.setPlainText("42")
+        self.widget.restoreSaved()
+        script = self.widget.text.toPlainText()
+        self.assertEqual(before, script)
+
+    def test_store_current_script(self):
+        self.widget.text.setPlainText("42")
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        self.widget = self.create_widget(OWPythonScript)
+        script = self.widget.text.toPlainText()
+        self.assertNotEqual("42", script)
+        self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
+        script = self.widget.text.toPlainText()
+        self.assertEqual("42", script)

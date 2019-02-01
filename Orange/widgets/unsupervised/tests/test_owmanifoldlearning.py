@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import warnings
 from unittest import skip
 from unittest.mock import patch, Mock
 
@@ -21,6 +22,9 @@ class TestOWManifoldLearning(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWManifoldLearning, stored_settings={"auto_apply": False})  # type: OWManifoldLearning
+        # scipy.sparse uses matrix; this filter can be removed when it's fixed
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
 
     def test_input_data(self):
         """Check widget's data"""

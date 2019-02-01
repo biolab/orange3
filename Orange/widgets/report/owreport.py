@@ -477,6 +477,9 @@ class OWReport(OWWidget):
                 return window
         return None
 
+    def copy_to_clipboard(self):
+        self.report_view.triggerPageAction(self.report_view.page().Copy)
+
 
 if __name__ == "__main__":
     import sys

@@ -201,7 +201,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_combo.activated.connect(self._url_set)
 
         box = gui.vBox(self.controlArea, "Info")
-        self.info = gui.widgetLabel(box, 'No data loaded.')
+        self.infolabel = gui.widgetLabel(box, 'No data loaded.')
         self.warnings = gui.widgetLabel(box, '')
 
         box = gui.widgetBox(self.controlArea, "Columns (Double click to edit)")
@@ -304,7 +304,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             self.data = None
             self.sheet_box.hide()
             self.Outputs.data.send(None)
-            self.info.setText("No data.")
+            self.infolabel.setText("No data.")
 
     def _try_load(self):
         # pylint: disable=broad-except
@@ -335,7 +335,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             if warnings:
                 self.Warning.load_warning(warnings[-1].message.args[0])
 
-        self.info.setText(self._describe(data))
+        self.infolabel.setText(self._describe(data))
 
         self.loaded_file = self.last_path()
         add_origin(data, self.loaded_file)

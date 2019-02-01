@@ -16,11 +16,12 @@ from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
+from Orange.data.util import get_unique_names
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, report
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
-from Orange.widgets.utils.annotated_data import get_next_name, add_columns, \
+from Orange.widgets.utils.annotated_data import add_columns, \
     ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import FutureWatcher
 from Orange.widgets.utils.signals import Input, Output
@@ -211,7 +212,7 @@ class OWLouvainClustering(widget.OWWidget):
 
         # Preprocess the dataset
         if self.preprocessed_data is None:
-            louvain = Louvain()
+            louvain = Louvain(random_state=0)
             self.preprocessed_data = louvain.preprocess(self.data)
 
         state = TaskState(self)
@@ -358,7 +359,7 @@ class OWLouvainClustering(widget.OWWidget):
         new_partition = list(map(index_map.get, self.partition))
 
         cluster_var = DiscreteVariable(
-            get_next_name(domain, 'Cluster'),
+            get_unique_names(domain, 'Cluster'),
             values=['C%d' % (i + 1) for i, _ in enumerate(np.unique(new_partition))]
         )
 
@@ -590,7 +591,7 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
     if state.is_interuption_requested():
         return res
 
-    louvain = Louvain(resolution=resolution)
+    louvain = Louvain(resolution=resolution, random_state=0)
     res.partition = louvain.fit_predict(graph)
     state.set_partial_results(("partition", res.partition))
     return res
@@ -603,7 +604,7 @@ def run_on_graph(graph, resolution, state):
     """
     state = state  # type: TaskState
     res = Results(resolution=resolution)
-    louvain = Louvain(resolution=resolution)
+    louvain = Louvain(resolution=resolution, random_state=0)
     state.set_status("Detecting communities...")
     if state.is_interuption_requested():
         return res

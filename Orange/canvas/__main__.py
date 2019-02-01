@@ -75,6 +75,62 @@ def fix_osx_10_9_private_font():
             pass
 
 
+def fix_macos_nswindow_tabbing():
+    """
+    Disable automatic NSWindow tabbing on macOS Sierra and higher.
+
+    See QTBUG-61707
+    """
+    import ctypes
+    import ctypes.util
+    import platform
+
+    if sys.platform != "darwin":
+        return
+    ver, _, _ = platform.mac_ver()
+    ver = tuple(map(int, ver.split(".")[:2]))
+    if ver < (10, 12):
+        return
+
+    c_char_p, c_void_p = ctypes.c_char_p, ctypes.c_void_p
+    id = Sel = Class = c_void_p
+
+    def annotate(func, restype, argtypes):
+        func.restype = restype
+        func.argtypes = argtypes
+        return func
+    try:
+        libobjc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("libobjc"))
+        # Load AppKit.framework which contains NSWindow class
+        # pylint: disable=unused-variable
+        AppKit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
+        objc_getClass = annotate(
+            libobjc.objc_getClass, Class, [c_char_p])
+        objc_msgSend = annotate(
+            libobjc.objc_msgSend, id, [id, Sel])
+        sel_registerName = annotate(
+            libobjc.sel_registerName, Sel, [c_char_p])
+        class_getClassMethod = annotate(
+            libobjc.class_getClassMethod, c_void_p, [Class, Sel])
+    except (OSError, AttributeError):
+        return
+
+    NSWindow = objc_getClass(b"NSWindow")
+    if NSWindow is None:
+        return
+    setAllowsAutomaticWindowTabbing = sel_registerName(
+        b'setAllowsAutomaticWindowTabbing:'
+    )
+    # class_respondsToSelector does not work (for class methods)
+    if class_getClassMethod(NSWindow, setAllowsAutomaticWindowTabbing):
+        # [NSWindow setAllowsAutomaticWindowTabbing: NO]
+        objc_msgSend(
+            NSWindow,
+            setAllowsAutomaticWindowTabbing,
+            ctypes.c_bool(False),
+        )
+
+
 def fix_win_pythonw_std_stream():
     """
     On windows when running without a console (using pythonw.exe) the
@@ -267,6 +323,9 @@ def main(argv=None):
 
     # Try to fix fonts on OSX Mavericks
     fix_osx_10_9_private_font()
+
+    # Try to fix macOS automatic window tabbing (Sierra and later)
+    fix_macos_nswindow_tabbing()
 
     # File handler should always be at least INFO level so we need
     # the application root level to be at least at INFO.

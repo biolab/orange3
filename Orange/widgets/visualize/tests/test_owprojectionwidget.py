@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest.mock import patch
+import unittest
+from unittest.mock import patch, Mock
 
 import numpy as np
 
@@ -154,3 +155,66 @@ class TestOWDataProjectionWidget(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
+
+    def test_too_many_labels(self):
+        w = self.widget.Warning.too_many_labels
+        self.assertFalse(w.is_shown())
+
+        self.widget.graph.too_many_labels.emit(True)
+        self.assertTrue(w.is_shown())
+
+        self.widget.graph.too_many_labels.emit(False)
+        self.assertFalse(w.is_shown())
+
+    def test_invalid_subset(self):
+        widget = self.widget
+
+        data = Table("iris")
+        self.send_signal(widget.Inputs.data_subset, data[40:60])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:70])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:50])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertTrue(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[20:30])
+        self.assertTrue(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:70])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signal(widget.Inputs.data, data[30:50])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertTrue(widget.Warning.subset_not_subset.is_shown())
+
+        self.send_signals([(widget.Inputs.data, Table("titanic")),
+                           (widget.Inputs.data_subset, None)])
+        self.assertFalse(widget.Warning.subset_independent.is_shown())
+        self.assertFalse(widget.Warning.subset_not_subset.is_shown())
+
+    def test_get_coordinates_data(self):
+        self.widget.get_embedding = Mock(return_value=np.ones((10, 2)))
+        self.widget.valid_data = np.ones((10,), dtype=bool)
+        self.widget.valid_data[0] = False
+        self.assertIsNotNone(self.widget.get_coordinates_data())
+        self.assertEqual(len(self.widget.get_coordinates_data()[0]), 9)
+        self.widget.valid_data = np.zeros((10,), dtype=bool)
+        self.assertIsNone(self.widget.get_coordinates_data()[0])
+
+    def test_sparse_data_reload(self):
+        table = Table("heart_disease").to_sparse()
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

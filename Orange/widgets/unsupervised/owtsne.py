@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from AnyQt.QtCore import Qt, QTimer
@@ -5,7 +7,8 @@ from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
-from Orange.projection import PCA, TSNE
+from Orange.projection import PCA, TSNE, TruncatedSVD
+from Orange.projection.manifold import TSNEModel
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -14,15 +17,43 @@ from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Output
 
 
-def compute_tsne(data, perplexity, iter, init):
-    negative_gradient_method = 'fft' if len(data.X) > 10000 else 'bh'
-    neighbor_method = 'approx' if len(data.X) > 10000 else 'exact'
-    tsne = TSNE(
-        perplexity=perplexity, n_iter=iter, initialization=init, theta=.8,
-        early_exaggeration_iter=0, negative_gradient_method=negative_gradient_method,
-        neighbors=neighbor_method, random_state=0
-    )
-    return tsne(data)
+class TSNERunner:
+    def __init__(self, tsne: TSNEModel, step_size=50):
+        self.embedding = tsne
+        self.iterations_done = 0
+        self.step_size = step_size
+
+        # Larger data sets need a larger number of iterations
+        if self.n_samples > 100_000:
+            self.early_exagg_iter, self.n_iter = 500, 1000
+        else:
+            self.early_exagg_iter, self.n_iter = 250, 750
+
+    @property
+    def n_samples(self):
+        return self.embedding.embedding_.shape[0]
+
+    def run_optimization(self):
+        total_iterations = self.early_exagg_iter + self.n_iter
+
+        # Default values of early exaggeration phase
+        exaggeration, momentum = 12, 0.5
+
+        current_iter = self.iterations_done
+        while not current_iter >= total_iterations:
+            # Switch to normal regime if early exaggeration phase is over
+            if current_iter >= self.early_exagg_iter:
+                exaggeration, momentum = 1, 0.8
+
+            # Resume optimization for some number of steps
+            self.embedding.optimize(
+                self.step_size, inplace=True, exaggeration=exaggeration,
+                momentum=momentum,
+            )
+
+            current_iter += self.step_size
+
+            yield self.embedding, current_iter / total_iterations
 
 
 class OWtSNEGraph(OWScatterPlotBase):
@@ -42,6 +73,8 @@ class OWtSNE(OWDataProjectionWidget):
     settings_version = 3
     max_iter = Setting(300)
     perplexity = Setting(30)
+    multiscale = Setting(True)
+    exaggeration = Setting(1)
     pca_components = Setting(20)
 
     GRAPH_CLASS = OWtSNEGraph
@@ -49,7 +82,7 @@ class OWtSNE(OWDataProjectionWidget):
     embedding_variables_names = ("t-SNE-x", "t-SNE-y")
 
     #: Runtime state
-    Running, Finished, Waiting = 1, 2, 3
+    Running, Finished, Waiting, Paused = 1, 2, 3, 4
 
     class Outputs(OWDataProjectionWidget.Outputs):
         preprocessor = Output("Preprocessor", Preprocess)
@@ -66,6 +99,8 @@ class OWtSNE(OWDataProjectionWidget):
         super().__init__()
         self.pca_data = None
         self.projection = None
+        self.tsne_runner = None
+        self.tsne_iterator = None
         self.__update_loop = None
         # timer for scheduling updates
         self.__timer = QTimer(self, singleShot=True, interval=1,
@@ -77,13 +112,6 @@ class OWtSNE(OWDataProjectionWidget):
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
-        # Because sc data frequently has many genes,
-        # showing all attributes in combo boxes can cause problems
-        # QUICKFIX: Remove a separator and attributes from order
-        # (leaving just the class and metas)
-        self.models = self.gui.points_models
-        for model in self.models:
-            model.order = model.order[:-2]
 
     def _add_controls_start_box(self):
         box = gui.vBox(self.controlArea, True)
@@ -91,25 +119,46 @@ class OWtSNE(OWDataProjectionWidget):
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            verticalSpacing=10
+            verticalSpacing=10,
         )
 
-        form.addRow(
-            "Max iterations:",
-            gui.spin(box, self, "max_iter", 1, 2000, step=50))
+        self.perplexity_spin = gui.spin(
+            box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight,
+            callback=self._params_changed
+        )
+        form.addRow("Perplexity:", self.perplexity_spin)
+        self.perplexity_spin.setEnabled(not self.multiscale)
+        form.addRow(gui.checkBox(
+            box, self, "multiscale", label="Preserve global structure",
+            callback=self._multiscale_changed
+        ))
 
-        form.addRow(
-            "Perplexity:",
-            gui.spin(box, self, "perplexity", 1, 100, step=1))
+        sbe = gui.hBox(self.controlArea, False, addToLayout=False)
+        gui.hSlider(
+            sbe, self, "exaggeration", minValue=1, maxValue=4, step=1,
+            callback=self._params_changed
+        )
+        form.addRow("Exaggeration:", sbe)
+
+        sbp = gui.hBox(self.controlArea, False, addToLayout=False)
+        gui.hSlider(
+            sbp, self, "pca_components", minValue=2, maxValue=50, step=1,
+            callback=self._params_changed
+        )
+        form.addRow("PCA components:", sbp)
 
         box.layout().addLayout(form)
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
 
-        gui.separator(box, 10)
-        gui.hSlider(box, self, "pca_components", label="PCA components:",
-                    minValue=2, maxValue=50, step=1)
+    def _params_changed(self):
+        self.__state = OWtSNE.Finished
+        self.__set_update_loop(None)
+
+    def _multiscale_changed(self):
+        self.perplexity_spin.setEnabled(not self.multiscale)
+        self._params_changed()
 
     def check_data(self):
         def error(err):
@@ -122,12 +171,16 @@ class OWtSNE(OWDataProjectionWidget):
                 error(self.Error.not_enough_rows)
             elif not self.data.domain.attributes:
                 error(self.Error.no_attributes)
-            elif not self.data.is_sparse() and \
-                    np.allclose(self.data.X - self.data.X[0], 0):
-                error(self.Error.constant_data)
-            elif not self.data.is_sparse() and \
-                    np.all(~np.isfinite(self.data.X)):
-                error(self.Error.no_valid_data)
+            elif not self.data.is_sparse():
+                if np.all(~np.isfinite(self.data.X)):
+                    error(self.Error.no_valid_data)
+                else:
+                    with warnings.catch_warnings():
+                        warnings.filterwarnings(
+                            "ignore", "Degrees of freedom .*", RuntimeWarning)
+                        if np.nan_to_num(np.nanstd(self.data.X, axis=0)).sum() \
+                                == 0:
+                            error(self.Error.constant_data)
 
     def get_embedding(self):
         if self.data is None:
@@ -144,6 +197,8 @@ class OWtSNE(OWDataProjectionWidget):
         if self.__state == OWtSNE.Running:
             self.stop()
             self.commit()
+        elif self.__state == OWtSNE.Paused:
+            self.resume()
         else:
             self.start()
 
@@ -154,46 +209,59 @@ class OWtSNE(OWDataProjectionWidget):
             self.__start()
 
     def stop(self):
-        if self.__state == OWtSNE.Running:
-            self.__set_update_loop(None)
+        self.__state = OWtSNE.Paused
+        self.__set_update_loop(None)
+
+    def resume(self):
+        self.__set_update_loop(self.tsne_iterator)
 
     def pca_preprocessing(self):
         if self.pca_data is not None and \
                 self.pca_data.X.shape[1] == self.pca_components:
             return
-        pca = PCA(n_components=self.pca_components, random_state=0)
-        model = pca(self.data)
+        cls = TruncatedSVD if self.data.is_sparse() else PCA
+        projector = cls(n_components=self.pca_components, random_state=0)
+        model = projector(self.data)
         self.pca_data = model(self.data)
 
     def __start(self):
         self.pca_preprocessing()
-        initial = 'random' if self.projection is None \
-            else self.projection.embedding.X
-        step_size = 50
 
-        def update_loop(data, max_iter, step, embedding):
-            # NOTE: this code MUST NOT call into QApplication.processEvents
-            done = False
-            iterations_done = 0
+        # We call PCA through fastTSNE because it involves scaling. Instead of
+        # worrying about this ourselves, we'll let the library worry for us.
+        initialization = TSNE.default_initialization(
+            self.pca_data.X, n_components=2, random_state=0)
 
-            while not done:
-                step_iter = min(max_iter - iterations_done, step)
-                projection = compute_tsne(
-                    data, self.perplexity, step_iter, embedding)
-                embedding = projection.embedding.X
-                iterations_done += step_iter
-                if iterations_done >= max_iter:
-                    done = True
+        # Compute perplexity settings for multiscale
+        n_samples = self.pca_data.X.shape[0]
+        if self.multiscale:
+            perplexity = min((n_samples - 1) / 3, 50), min((n_samples - 1) / 3, 500)
+        else:
+            perplexity = self.perplexity
 
-                yield projection, iterations_done / max_iter
+        # Determine whether to use settings for large data sets
+        if n_samples > 10_000:
+            neighbor_method, gradient_method = "approx", "fft"
+        else:
+            neighbor_method, gradient_method = "exact", "bh"
 
-        self.__set_update_loop(update_loop(
-            self.pca_data, self.max_iter, step_size, initial))
+        # Set number of iterations to 0 - these will be run subsequently
+        self.projection = TSNE(
+            n_components=2, perplexity=perplexity, multiscale=self.multiscale,
+            early_exaggeration_iter=0, n_iter=0, initialization=initialization,
+            exaggeration=self.exaggeration, neighbors=neighbor_method,
+            negative_gradient_method=gradient_method, random_state=0
+        )(self.pca_data)
+
+        self.tsne_runner = TSNERunner(self.projection, step_size=50)
+        self.tsne_iterator = self.tsne_runner.run_optimization()
+        self.__set_update_loop(self.tsne_iterator)
         self.progressBarInit(processEvents=None)
 
     def __set_update_loop(self, loop):
         if self.__update_loop is not None:
-            self.__update_loop.close()
+            if self.__state in (OWtSNE.Finished, OWtSNE.Waiting):
+                self.__update_loop.close()
             self.__update_loop = None
             self.progressBarFinished(processEvents=None)
 
@@ -209,8 +277,10 @@ class OWtSNE(OWDataProjectionWidget):
         else:
             self.setBlocking(False)
             self.setStatusMessage("")
-            self.runbutton.setText("Start")
-            self.__state = OWtSNE.Finished
+            if self.__state in (OWtSNE.Finished, OWtSNE.Waiting):
+                self.runbutton.setText("Start")
+            if self.__state == OWtSNE.Paused:
+                self.runbutton.setText("Resume")
             self.__timer.stop()
 
     def __next_step(self):
@@ -227,13 +297,16 @@ class OWtSNE(OWDataProjectionWidget):
             projection, progress = next(self.__update_loop)
             assert self.__update_loop is loop
         except StopIteration:
+            self.__state = OWtSNE.Finished
             self.__set_update_loop(None)
             self.unconditional_commit()
         except MemoryError:
             self.Error.out_of_memory()
+            self.__state = OWtSNE.Finished
             self.__set_update_loop(None)
         except Exception as exc:
             self.Error.optimization_error(str(exc))
+            self.__state = OWtSNE.Finished
             self.__set_update_loop(None)
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
@@ -275,8 +348,8 @@ class OWtSNE(OWDataProjectionWidget):
 
     def clear(self):
         super().clear()
-        self.__set_update_loop(None)
         self.__state = OWtSNE.Waiting
+        self.__set_update_loop(None)
         self.pca_data = None
         self.projection = None
 

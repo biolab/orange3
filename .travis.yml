@@ -1,7 +1,6 @@
 language: python
 
-sudo: false
-dist: trusty
+dist: xenial
 
 matrix:
     include:
@@ -13,6 +12,7 @@ matrix:
           script: source $TRAVIS_BUILD_DIR/.travis/build_doc.sh
         - python: '3.6'
           env: UPLOAD_COVERAGE=true
+        - python: '3.7'
     fast_finish: true
 
 cache:

@@ -150,8 +150,11 @@ class OWCalibrationPlot(widget.OWWidget):
         if probs.size:
             xmin, xmax = probs.min(), probs.max()
             x = np.linspace(xmin, xmax, 100)
-            f = gaussian_smoother(probs, ytrue, sigma=0.15 * (xmax - xmin))
-            observed = f(x)
+            if xmax != xmin:
+                f = gaussian_smoother(probs, ytrue, sigma=0.15 * (xmax - xmin))
+                observed = f(x)
+            else:
+                observed = np.full(100, xmax)
         else:
             x = np.array([])
             observed = np.array([])

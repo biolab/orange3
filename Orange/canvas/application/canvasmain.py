@@ -230,7 +230,7 @@ class CanvasMainWindow(QMainWindow):
         frame.setWidget(self.scheme_widget)
 
         # Window 'title'
-        self.setWindowFilePath(self.scheme_widget.path())
+        self.setWindowFilePath(self.scheme_widget.path() or " ")
         self.scheme_widget.pathChanged.connect(self.setWindowFilePath)
         self.scheme_widget.modificationChanged.connect(self.setWindowModified)
 

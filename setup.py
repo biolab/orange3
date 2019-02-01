@@ -17,7 +17,10 @@ except ImportError:
 
 
 try:
+    # need sphinx and recommonmark for build_htmlhelp command
     from sphinx.setup_command import BuildDoc
+    # pylint: disable=unused-import
+    import recommonmark
     have_sphinx = True
 except ImportError:
     have_sphinx = False
@@ -28,7 +31,7 @@ from distutils.command import install_data, sdist, config, build
 
 NAME = 'Orange3'
 
-VERSION = '3.19.0'
+VERSION = '3.20.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)

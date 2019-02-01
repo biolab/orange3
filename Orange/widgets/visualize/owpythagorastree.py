@@ -91,7 +91,7 @@ class OWPythagorasTree(OWWidget):
         # CONTROL AREA
         # Tree info area
         box_info = gui.widgetBox(self.controlArea, 'Tree Info')
-        self.info = gui.widgetLabel(box_info)
+        self.infolabel = gui.widgetLabel(box_info)
 
         # Display settings area
         box_display = gui.widgetBox(self.controlArea, 'Display Settings')
@@ -251,7 +251,7 @@ class OWPythagorasTree(OWWidget):
         self._update_legend_visibility()
 
     def _update_info_box(self):
-        self.info.setText('Nodes: {}\nDepth: {}'.format(
+        self.infolabel.setText('Nodes: {}\nDepth: {}'.format(
             self.tree_adapter.num_nodes,
             self.tree_adapter.max_depth
         ))
@@ -271,7 +271,7 @@ class OWPythagorasTree(OWWidget):
             self.SIZE_CALCULATION[self.size_calc_idx][0] == 'Logarithmic')
 
     def _clear_info_box(self):
-        self.info.setText('No tree on input')
+        self.infolabel.setText('No tree on input')
 
     def _clear_depth_slider(self):
         self.depth_slider.parent().setEnabled(False)
@@ -403,12 +403,10 @@ class TreeGraphicsView(
 ):
     """QGraphicsView that contains all functionality we will use to display
     tree."""
-    pass
 
 
 class TreeGraphicsScene(UpdateItemsOnSelectGraphicsScene):
     """QGraphicsScene that the tree uses."""
-    pass
 
 
 if __name__ == "__main__":  # pragma: no cover

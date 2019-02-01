@@ -232,18 +232,19 @@ class DistanceModel:
 
         x1 = _orange_to_numpy(e1)
         x2 = _orange_to_numpy(e2)
-        dist = self.compute_distances(x1, x2)
-        if self.impute and np.isnan(dist).any():
-            dist = np.nan_to_num(dist)
-        if isinstance(e1, (Table, RowInstance)):
-            dist = DistMatrix(dist, e1, e2, self.axis)
-        else:
-            dist = DistMatrix(dist)
-        return dist
+        with np.errstate(invalid="ignore"):  # nans are handled below
+            dist = self.compute_distances(x1, x2)
+            if self.impute and np.isnan(dist).any():
+                dist = np.nan_to_num(dist)
+            if isinstance(e1, (Table, RowInstance)):
+                dist = DistMatrix(dist, e1, e2, self.axis)
+            else:
+                dist = DistMatrix(dist)
+            return dist
 
     def compute_distances(self, x1, x2):
         """
-        Abstract method for computation of distances between rows or colums of
+        Abstract method for computation of distances between rows or columns of
         `x1`, or between rows of `x1` and `x2`. Do not call directly."""
         pass
 

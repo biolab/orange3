@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import Mock
 import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel
@@ -149,7 +150,8 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def test_add_variables(self):
         w = self.widget
-        w.variables_selection.add_remove.buttons[1].click()
+        with self.no_show_on_desktop():
+            w.variables_selection.add_remove.buttons[1].click()
 
     def test_set_radius_no_data(self):
         """
@@ -158,6 +160,28 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         w = self.widget
         self.send_signal(w.Inputs.data, None)
         w.controls.graph.hide_radius.setSliderPosition(3)
+
+    def test_invalidated_model_selected(self):
+        self.widget.setup_plot = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.widget.model_selected[:] = self.data.domain[2:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
+        self.widget.setup_plot.assert_not_called()
+
+        self.widget.model_selected[:] = self.data.domain[3:]
+        self.widget.variables_selection.removed.emit()
+        self.widget.setup_plot.assert_called_once()
+
+        self.widget.setup_plot.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.setup_plot.assert_called_once()
 
 
 class LinProjVizRankTests(WidgetTest):

@@ -2,6 +2,8 @@
 Data-manipulation utilities.
 """
 import re
+from itertools import chain
+
 import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
@@ -95,6 +97,22 @@ def hstack(arrays):
         return np.hstack(arrays)
 
 
+def array_equal(a1, a2):
+    """array_equal that supports sparse and dense arrays with missing values"""
+    if a1.shape != a2.shape:
+        return False
+
+    if not (sp.issparse(a1) or sp.issparse(a2)):  # Both dense: just compare
+        return np.allclose(a1, a2, equal_nan=True)
+
+    v1 = np.vstack(sp.find(a1)).T
+    v2 = np.vstack(sp.find(a2)).T
+    if not (sp.issparse(a1) and sp.issparse(a2)):  # Any dense: order indices
+        v1.sort(axis=0)
+        v2.sort(axis=0)
+    return np.allclose(v1, v2, equal_nan=True)
+
+
 def assure_array_dense(a):
     if sp.issparse(a):
         a = a.toarray()
@@ -139,15 +157,42 @@ def get_indices(names, name):
 
 def get_unique_names(names, proposed):
     """
-    Returns unique names of variables. Variables which are duplicate get appended by
-    unique index which is the same in all proposed variable names in a list.
-    :param names: list of strings
-    :param proposed: list of strings
-    :return: list of strings
+    Returns unique names for variables
+
+    Proposed is a list of names (or a string with a single name). If any name
+    already appears in `names`, the function appends an index in parentheses,
+    which is one higher than the highest index at these variables. Also, if
+    `names` contains any of the names with index in parentheses, this counts
+    as an occurence of the name. For instance, if `names` does not contain
+    `x` but it contains `x (3)`, `get_unique_names` will replace `x` with
+    `x (4)`.
+
+    If argument `names` is domain, the method observes all variables and metas.
+
+    Function returns a string if `proposed` is a string, and a list if it's a
+    list.
+
+    The method is used in widgets like MDS, which adds two variables (`x` and
+    `y`). It is desired that they have the same index. If `x`, `x (1)` and
+    `x (2)` and `y` (but no other `y`'s already exist in the domain, MDS
+    should append `x (3)` and `y (3)`, not `x (3)` and y (1)`.
+
+    Args:
+        names (Domain or list of str): used names
+        proposed (str or list of str): proposed name
+
+    Return:
+        str or list of str
     """
-    if len([name for name in proposed if name in names]):
-        max_index = max([max(get_indices(names, name),
-                             default=1) for name in proposed], default=1)
-        for i, name in enumerate(proposed):
-            proposed[i] = "{} ({})".format(name, max_index + 1)
-    return proposed
+    from Orange.data import Domain  # prevent cyclic import
+    if isinstance(names, Domain):
+        names = [var.name for var in chain(names.variables, names.metas)]
+    if isinstance(proposed, str):
+        return get_unique_names(names, [proposed])[0]
+    indicess = [indices
+                for indices in (get_indices(names, name) for name in proposed)
+                if indices]
+    if not (set(proposed) & set(names) or indicess):
+        return proposed
+    max_index = max(map(max, indicess), default=0) + 1
+    return [f"{name} ({max_index})" for name in proposed]

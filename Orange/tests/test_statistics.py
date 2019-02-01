@@ -1,13 +1,15 @@
 import unittest
+import warnings
 from itertools import chain
 from functools import partial, wraps
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix
+from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
+    SparseEfficiencyWarning
 
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar
+    unique, var, nanstd, nanvar, nanmode
 
 
 def dense_sparse(test_case):
@@ -23,7 +25,11 @@ def dense_sparse(test_case):
 
             zero_indices = np.argwhere(np_array == 0)
             if zero_indices.size:
-                sp_array[tuple(zero_indices[0])] = 0
+                with warnings.catch_warnings():
+                    # this is just inefficiency in tests, not the tested code
+                    warnings.filterwarnings("ignore", ".*",
+                                            SparseEfficiencyWarning)
+                    sp_array[tuple(zero_indices[0])] = 0
 
             return sp_array
 
@@ -120,6 +126,7 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 1, 2]])
 
     def test_nanmin_nanmax(self):
+        warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
         for X in self.data:
             X_sparse = csr_matrix(X)
             for axis in [None, 0, 1]:
@@ -148,6 +155,8 @@ class TestUtil(unittest.TestCase):
                 np.nansum(X))
 
     def test_mean(self):
+        # This warning is not unexpected and it's correct
+        warnings.filterwarnings("ignore", r".*mean\(\) resulted in nan.*")
         for X in self.data:
             X_sparse = csr_matrix(X)
             np.testing.assert_array_equal(
@@ -163,6 +172,16 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanmean(X_sparse),
                 np.nanmean(X))
+
+    def test_nanmode(self):
+        X = np.array([[np.nan, np.nan, 1, 1],
+                      [2, np.nan, 1, 1]])
+        mode, count = nanmode(X, 0)
+        np.testing.assert_array_equal(mode, [[2, np.nan, 1, 1]])
+        np.testing.assert_array_equal(count, [[1, np.nan, 2, 2]])
+        mode, count = nanmode(X, 1)
+        np.testing.assert_array_equal(mode, [[1], [1]])
+        np.testing.assert_array_equal(count, [[2], [2]])
 
     @dense_sparse
     def test_nanmedian(self, array):
@@ -192,6 +211,14 @@ class TestUtil(unittest.TestCase):
                     np.var(data, axis=axis)
                 )
 
+    def test_var_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.var(x, axis=axis, ddof=10),
+                var(csr_matrix(x), axis=axis, ddof=10),
+            )
+
     @dense_sparse
     def test_nanvar(self, array):
         for X in self.data:
@@ -199,6 +226,15 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanvar(X_sparse),
                 np.nanvar(X))
+
+    def test_nanvar_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        np.fill_diagonal(x, np.nan)
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.nanvar(x, axis=axis, ddof=10),
+                nanvar(csr_matrix(x), axis=axis, ddof=10),
+            )
 
     def test_std(self):
         for data in self.data:
@@ -209,6 +245,14 @@ class TestUtil(unittest.TestCase):
                     np.std(data, axis=axis)
                 )
 
+    def test_std_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.std(x, axis=axis, ddof=10),
+                std(csr_matrix(x), axis=axis, ddof=10),
+            )
+
     @dense_sparse
     def test_nanstd(self, array):
         for X in self.data:
@@ -216,6 +260,14 @@ class TestUtil(unittest.TestCase):
             np.testing.assert_array_equal(
                 nanstd(X_sparse),
                 np.nanstd(X))
+
+    def test_nanstd_with_ddof(self):
+        x = np.random.uniform(0, 10, (20, 100))
+        for axis in [None, 0, 1]:
+            np.testing.assert_almost_equal(
+                np.nanstd(x, axis=axis, ddof=10),
+                nanstd(csr_matrix(x), axis=axis, ddof=10),
+            )
 
 
 class TestDigitize(unittest.TestCase):
@@ -517,3 +569,16 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
+
+
+class TestNanModeAppVeyor(unittest.TestCase):
+    def test_appveyour_still_not_onscipy_1_2_0(self):
+        import scipy
+        from distutils.version import StrictVersion
+        import os
+
+        if os.getenv("APPVEYOR") and \
+                StrictVersion(scipy.__version__) >= StrictVersion("1.2.0"):
+            self.fail("Appveyor now uses Scipy 1.2.0; revert changes in "
+                      "the last three commits (bde2cbe, 7163448, ab0f31d) "
+                      "of gh-3480. Then, remove this test.")

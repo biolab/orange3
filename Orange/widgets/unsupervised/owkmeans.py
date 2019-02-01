@@ -10,9 +10,10 @@ from AnyQt.QtWidgets import QGridLayout, QTableView
 from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data.util import get_unique_names
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils.annotated_data import get_next_name, \
+from Orange.widgets.utils.annotated_data import \
     ANNOTATED_DATA_SIGNAL_NAME, add_columns
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureSetWatcher
 from Orange.widgets.utils.sql import check_sql_input
@@ -463,11 +464,12 @@ class OWKMeans(widget.OWWidget):
 
         domain = self.data.domain
         cluster_var = DiscreteVariable(
-            get_next_name(domain, "Cluster"),
+            get_unique_names(domain, "Cluster"),
             values=["C%d" % (x + 1) for x in range(km.k)]
         )
         clust_ids = km(self.data)
-        silhouette_var = ContinuousVariable(get_next_name(domain, "Silhouette"))
+        silhouette_var = ContinuousVariable(
+            get_unique_names(domain, "Silhouette"))
         if km.silhouette_samples is not None:
             self.Warning.no_silhouettes.clear()
             scores = np.arctan(km.silhouette_samples) / np.pi + 0.5

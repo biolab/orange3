@@ -8,7 +8,7 @@ from AnyQt.QtWidgets import QApplication
 from Orange.data import (
     Table, ContinuousVariable, Domain, Variable, StringVariable
 )
-from Orange.data.util import get_unique_names
+from Orange.data.util import get_unique_names, array_equal
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.statistics.util import bincount
@@ -360,6 +360,15 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    class Warning(OWProjectionWidgetBase.Warning):
+        too_many_labels = Msg(
+            "Too many labels to show (zoom in or label only selected)")
+        subset_not_subset = Msg(
+            "Subset data contains some instances that do not appear in "
+            "input data")
+        subset_independent = Msg(
+            "No subset data instances appear in input data")
+
     settingsHandler = DomainContextHandler()
     selection = Setting(None, schema_only=True)
     auto_commit = Setting(True)
@@ -374,7 +383,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.subset_data = None
         self.subset_indices = None
         self.__pending_selection = self.selection
-        self.__invalidated = True
+        self._invalidated = True
         self.setup_gui()
 
     # GUI
@@ -386,6 +395,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         box = gui.vBox(self.mainArea, True, margin=0)
         self.graph = self.GRAPH_CLASS(self, box)
         box.layout().addWidget(self.graph.plot_widget)
+        self.graph.too_many_labels.connect(
+            lambda too_many: self.Warning.too_many_labels(shown=too_many))
 
     def _add_controls(self):
         self.gui = OWPlotGUI(self)
@@ -424,14 +435,12 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
             self.init_attr_values()
         self.openContext(self.data)
         self.use_context()
-        self.__invalidated = not (
+        self._invalidated = not (
             data_existed and self.data is not None and
-            effective_data.X.shape == self.effective_data.X.shape and
-            np.allclose(effective_data.X,
-                        self.effective_data.X, equal_nan=True))
-        if self.__invalidated:
+            array_equal(effective_data.X, self.effective_data.X))
+        if self._invalidated:
             self.clear()
-        self.cb_class_density.setEnabled(self.can_draw_density())
+        self.enable_controls()
 
     def check_data(self):
         self.valid_data = None
@@ -440,27 +449,41 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
     def use_context(self):
         pass
 
+    def enable_controls(self):
+        self.cb_class_density.setEnabled(self.can_draw_density())
+
     @Inputs.data_subset
     @check_sql_input
     def set_subset_data(self, subset):
         self.subset_data = subset
-        self.subset_indices = {e.id for e in subset} \
-            if subset is not None else {}
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
-        if self.__invalidated:
-            self.__invalidated = False
+        self.Warning.subset_independent.clear()
+        self.Warning.subset_not_subset.clear()
+        if self.data is None or self.subset_data is None:
+            self.subset_indices = set()
+        else:
+            self.subset_indices = set(self.subset_data.ids)
+            ids = set(self.data.ids)
+            if not self.subset_indices & ids:
+                self.Warning.subset_independent()
+            elif self.subset_indices - ids:
+                self.Warning.subset_not_subset()
+
+        if self._invalidated:
+            self._invalidated = False
             self.setup_plot()
         else:
             self.graph.update_point_props()
         self.commit()
 
     def get_subset_mask(self):
-        if self.subset_indices:
-            return np.array([ex.id in self.subset_indices
-                             for ex in self.data[self.valid_data]])
-        return None
+        if not self.subset_indices:
+            return None
+        valid_data = self.data[self.valid_data]
+        return np.fromiter((ex.id in self.subset_indices for ex in valid_data),
+                           dtype=np.bool, count=len(valid_data))
 
     # Plot
     def get_embedding(self):
@@ -480,8 +503,9 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     def get_coordinates_data(self):
         embedding = self.get_embedding()
-        return embedding[self.valid_data].T[:2] if embedding is not None \
-            else (None, None)
+        if embedding is not None and len(embedding[self.valid_data]):
+            return embedding[self.valid_data].T
+        return None, None
 
     def setup_plot(self):
         self.graph.reset_graph()
@@ -490,11 +514,10 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     # Selection
     def apply_selection(self):
-        if self.data is not None and self.__pending_selection is not None \
-                and self.graph.n_valid:
-            index_group = [(index, group) for index, group in
-                           self.__pending_selection if index < len(self.data)]
-            index_group = np.array(index_group).T
+        pending = self.__pending_selection
+        if self.data is not None and pending is not None and len(pending) \
+                and max(i for i, _ in pending) < self.graph.n_valid:
+            index_group = np.array(pending).T
             selection = np.zeros(self.graph.n_valid, dtype=np.uint8)
             selection[index_group[0]] = index_group[1]
 
@@ -536,11 +559,8 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         return data
 
     def _get_projection_variables(self):
-        domain = self.data.domain
         names = get_unique_names(
-            [v.name for v in domain.variables + domain.metas],
-            self.embedding_variables_names
-        )
+            self.data.domain, self.embedding_variables_names)
         return ContinuousVariable(names[0]), ContinuousVariable(names[1])
 
     @staticmethod

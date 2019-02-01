@@ -8,8 +8,9 @@ import scipy.sparse as sp
 from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, \
     OrangeDeprecationWarning
 from Orange.data import Table
-from Orange.data.util import vstack, hstack
+from Orange.data.util import vstack, hstack, array_equal
 from Orange.statistics.util import stats
+from Orange.tests.test_statistics import dense_sparse
 
 SOMETHING = 0xf00babe
 
@@ -118,3 +119,42 @@ class TestUtil(unittest.TestCase):
         data = Table("iris")
         sparse_x = sp.csr_matrix(data.X)
         self.assertTrue(stats(data.X).all() == stats(sparse_x).all())
+
+    @dense_sparse
+    def test_array_equal(self, array):
+        a1 = array([[0., 2.], [3., np.nan]])
+        a2 = array([[0., 2.], [3., np.nan]])
+        self.assertTrue(array_equal(a1, a2))
+
+        a3 = np.array([[0., 2.], [3., np.nan]])
+        self.assertTrue(array_equal(a1, a3))
+        self.assertTrue(array_equal(a3, a1))
+
+    @dense_sparse
+    def test_array_not_equal(self, array):
+        a1 = array([[0., 2.], [3., np.nan]])
+        a2 = array([[0., 2.], [4., np.nan]])
+        self.assertFalse(array_equal(a1, a2))
+
+        a3 = array([[0., 2.], [3., np.nan], [4., 5.]])
+        self.assertFalse(array_equal(a1, a3))
+
+    def test_csc_array_equal(self):
+        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csc_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
+        a2[0, 1] = 0  # explicitly setting to 0
+        self.assertTrue(array_equal(a1, a2))
+
+    def test_csc_scr_equal(self):
+        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))
+
+        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))
+
+    def test_csc_unordered_array_equal(self):
+        a1 = sp.csc_matrix(([1, 4, 5], [0, 0, 1], [0, 1, 1, 3]), shape=(2, 3))
+        a2 = sp.csc_matrix(([1, 5, 4], [0, 1, 0], [0, 1, 1, 3]), shape=(2, 3))
+        self.assertTrue(array_equal(a1, a2))

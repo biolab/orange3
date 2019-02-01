@@ -130,6 +130,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         n_neighbors = min(self.minK, len(ec) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
         ind = knn.kneighbors(return_distance=False)
+        # pylint: disable=invalid-unary-operand-type
         if self.attr_color.is_discrete:
             return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
         return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(data))
@@ -358,6 +359,13 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     def set_data(self, data):
         super().set_data(data)
+        self._check_options()
+        self._init_vizrank()
+        self.init_projection()
+
+    def use_context(self):
+        self.model_selected.clear()
+        self.model_other.clear()
         if self.data is not None and len(self.selected_vars):
             d, selected = self.data.domain, [v[0] for v in self.selected_vars]
             self.model_selected[:] = [d[attr] for attr in selected]
@@ -367,10 +375,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         elif self.data is not None:
             self.model_selected[:] = self.continuous_variables[:3]
             self.model_other[:] = self.continuous_variables[3:]
-
-        self._check_options()
-        self._init_vizrank()
-        self.init_projection()
 
     def _check_options(self):
         buttons = self.radio_placement.buttons
@@ -462,13 +466,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             ("Size", self._get_caption_var_name(self.attr_size)),
             ("Jittering", self.graph.jitter_size != 0 and
              "{} %".format(self.graph.jitter_size))))
-
-    def clear(self):
-        if self.model_selected:
-            self.model_selected.clear()
-        if self.model_other:
-            self.model_other.clear()
-        super().clear()
 
     @classmethod
     def migrate_settings(cls, settings_, version):

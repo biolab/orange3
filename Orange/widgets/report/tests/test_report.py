@@ -1,5 +1,5 @@
 import unittest
-from unittest import mock
+from unittest.mock import patch
 from importlib import import_module
 import os
 import warnings
@@ -125,15 +125,17 @@ class TestReport(WidgetTest):
         GH-2147
         """
         rep = OWReport.get_instance()
-        patch_target_1 = "Orange.widgets.report.owreport.open"
-        patch_target_2 = "AnyQt.QtWidgets.QFileDialog.getSaveFileName"
-        patch_target_3 = "AnyQt.QtWidgets.QMessageBox.exec_"
         filenames = ["f.report", "f.html"]
         for filename in filenames:
-            with unittest.mock.patch(patch_target_1, create=True, side_effect=PermissionError),\
-                    unittest.mock.patch(patch_target_2, return_value=(filename, 'HTML (*.html)')),\
-                    unittest.mock.patch(patch_target_3, return_value=True):
+            with patch("Orange.widgets.report.owreport.open",
+                       create=True, side_effect=PermissionError),\
+                    patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName",
+                          return_value=(filename, 'HTML (*.html)')),\
+                    patch("AnyQt.QtWidgets.QMessageBox.exec_",
+                          return_value=True), \
+                    patch("Orange.widgets.report.owreport.log.error") as log:
                 rep.save_report()
+                log.assert_called()
 
     def test_save_report(self):
         rep = OWReport.get_instance()
@@ -143,10 +145,10 @@ class TestReport(WidgetTest):
         temp_dir = tempfile.mkdtemp()
         temp_name = os.path.join(temp_dir, "f.report")
         try:
-            with mock.patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName",
-                            return_value=(temp_name, 'Report (*.report)')), \
-                    mock.patch("AnyQt.QtWidgets.QMessageBox.exec_",
-                               return_value=True):
+            with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName",
+                       return_value=(temp_name, 'Report (*.report)')), \
+                    patch("AnyQt.QtWidgets.QMessageBox.exec_",
+                          return_value=True):
                 rep.save_report()
         finally:
             os.remove(temp_name)
@@ -199,7 +201,8 @@ class TestReportWidgets(WidgetTest):
         widgets = self.eval_widgets
         results = CrossValidation(data,
                                   [LogisticRegressionLearner()],
-                                  store_data=True)
+                                  store_data=True,
+                                  k=3)
         results.learner_names = ["LR l2"]
 
         w = self.create_widget(OWTestLearners)

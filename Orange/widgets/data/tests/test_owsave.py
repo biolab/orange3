@@ -4,7 +4,8 @@ from unittest.mock import patch, Mock
 import itertools
 
 from Orange.data import Table
-from Orange.data.io import Compression, FileFormat, TabReader, CSVReader, PickleReader
+from Orange.data.io import Compression, CSVReader, TabReader, PickleReader, \
+    ExcelReader, FileFormat
 from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.filedialogs import format_filter
@@ -14,7 +15,7 @@ FILE_TYPES = [
     ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
      w.EXTENSIONS[0],
      w.SUPPORT_SPARSE_DATA)
-    for w in (TabReader, CSVReader, PickleReader)
+    for w in (TabReader, CSVReader, PickleReader, ExcelReader)
 ]
 
 COMPRESSIONS = [
@@ -47,7 +48,8 @@ class TestOWSave(WidgetTest):
             self.widget.compress = d
             self.widget.filetype = t
             self.widget.update_extension()
-            self.assertEqual(len(self.widget.get_writer_selected().EXTENSIONS), 1)
+            self.assertEqual(
+                len(self.widget.get_writer_selected().EXTENSIONS), 1)
 
     def test_ordinary_save(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))
@@ -63,6 +65,34 @@ class TestOWSave(WidgetTest):
                 with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", choose_file):
                     self.widget.save_file_as()
                 self.assertEqual(len(Table(filename)), 150)
+
+    @patch('Orange.data.io.FileFormat.write')
+    def test_annotations(self, write):
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, Table("iris"))
+        widget.filetype = FILE_TYPES[1][0]
+        widget.filename = 'foo.csv'
+        widget.update_extension()
+
+        widget.add_type_annotations = False
+        widget.unconditional_save_file()
+        write.assert_called()
+        self.assertFalse(write.call_args[0][2])
+
+        widget.add_type_annotations = True
+        widget.unconditional_save_file()
+        self.assertTrue(write.call_args[0][2])
+
+    def test_disable_checkbox(self):
+        widget = self.widget
+        for type_ in FILE_TYPES:
+            widget.filetype = type_[0]
+            widget.update_extension()
+            if widget.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
+                self.assertTrue(widget.annotations_cb.isEnabled())
+            else:
+                self.assertFalse(widget.annotations_cb.isEnabled())
 
     def test_compression(self):
         self.send_signal(self.widget.Inputs.data, Table("iris"))

@@ -5,19 +5,9 @@ import numpy as np
 
 from Orange.data import Table, Variable
 from Orange.data.filter import SameValue
-from Orange.data.util import get_unique_names
 from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, get_next_name,
-    create_groups_table, ANNOTATED_DATA_FEATURE_NAME
+    create_annotated_table, create_groups_table, ANNOTATED_DATA_FEATURE_NAME
 )
-
-
-class TestGetNextName(unittest.TestCase):
-    def test_get_var_name(self):
-        self.assertEqual(get_next_name(["a"], "XX"), "XX")
-        self.assertEqual(get_next_name(["a", "XX"], "XX"), "XX (1)")
-        self.assertEqual(get_next_name(["a", "XX (4)"], "XX"), "XX (5)")
-        self.assertEqual(get_next_name(["a", "XX", "XX (4)"], "XX"), "XX (5)")
 
 
 class TestAnnotatedData(unittest.TestCase):
@@ -112,12 +102,6 @@ class TestAnnotatedData(unittest.TestCase):
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 3))
         self.assertEqual(data.domain.metas[1].name,
                          "{} ({})".format(ANNOTATED_DATA_FEATURE_NAME, 4))
-
-    def test_get_unique_names(self):
-        names = ["charlie", "bravo", "charlie (2)", "charlie (3)", "bravo (2)", "charlie (4)",
-                 "bravo (3)"]
-        self.assertEqual(get_unique_names(names, ["bravo", "charlie"]),
-                         ["bravo (5)", "charlie (5)"])
 
     def test_create_groups_table_include_unselected(self):
         group_indices = random.sample(range(0, len(self.zoo)), 20)

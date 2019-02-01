@@ -1,4 +1,8 @@
 # pylint: disable=missing-docstring
+import warnings
+
+from sklearn.exceptions import ConvergenceWarning
+
 from Orange.widgets.model.owsgd import OWSGD
 from Orange.widgets.tests.base import (
     WidgetTest,
@@ -9,6 +13,8 @@ from Orange.widgets.tests.base import (
 
 class TestOWSGD(WidgetTest, WidgetLearnerTestMixin):
     def setUp(self):
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
+
         self.widget = self.create_widget(
             OWSGD, stored_settings={"auto_apply": False})
         self.init()

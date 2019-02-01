@@ -161,3 +161,20 @@ class TestOWLouvain(WidgetTest):
         self.widget.commit()
         self.get_output(self.widget.Outputs.annotated_data)
         self.assertFalse(self.widget.Information.modified.is_shown())
+
+    def test_deterministic_clustering(self):
+        # Compute clustering on iris
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.commit_and_wait()
+        result1 = self.get_output(self.widget.Outputs.annotated_data)
+
+        # Reset widget state
+        self.send_signal(self.widget.Inputs.data, None)
+
+        # Compute clustering on iris again
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.commit_and_wait()
+        result2 = self.get_output(self.widget.Outputs.annotated_data)
+
+        # Ensure that clustering was the same in both instances
+        np.testing.assert_equal(result1.metas, result2.metas)

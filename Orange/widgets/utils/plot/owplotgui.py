@@ -616,7 +616,7 @@ class OWPlotGUI:
 
     def label_only_selected_check_box(self, widget):
         self._check_box(widget=widget, value="label_only_selected",
-                        label="Label only selected points",
+                        label="Label only selection and subset",
                         cb_name=self._plot.update_labels)
 
     def filled_symbols_check_box(self, widget):

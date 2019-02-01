@@ -1,5 +1,4 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import time
 import unittest
 from unittest.mock import patch
@@ -129,6 +128,21 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.annotated_data)
         np.testing.assert_array_equal(output.X, self.data[:1].X)
 
+    @patch('Orange.widgets.visualize.owmosaic.MosaicVizRank.on_manual_change')
+    def test_vizrank_receives_manual_change(self, on_manual_change):
+        # Recreate the widget so the patch kicks in
+        self.widget = self.create_widget(OWMosaicDisplay)
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.variable1 = data.domain[0]
+        self.widget.variable2 = data.domain[1]
+        simulate.combobox_activate_index(self.widget.controls.variable2, 3)
+        self.assertEqual(self.widget.variable2, data.domain[2])
+        call_args = on_manual_change.call_args[0][0]
+        self.assertEqual(len(call_args), 2)
+        self.assertEqual(call_args[0].name, data.domain[0].name)
+        self.assertEqual(call_args[1].name, data.domain[2].name)
+
 
 # Derive from WidgetTest to simplify creation of the Mosaic widget, although
 # we are actually testing the MosaicVizRank dialog and not the widget
@@ -154,7 +168,6 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_count(self):
         """MosaicVizrank correctly computes the number of combinations"""
-        widget = self.widget
         vizrank = self.vizrank
 
         data = self.iris
@@ -395,6 +408,23 @@ class MosaicVizRankTests(WidgetTest):
         self.assertTrue(self.widget.Warning.incompatible_subset.is_shown())
         self.send_signal(self.widget.Inputs.data_subset, self.iris)
         self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
+
+    def test_on_manual_change(self):
+        data = Table("iris.tab")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.vizrank.toggle()
+        self.process_events(until=lambda: not self.vizrank.keep_running)
+
+        model = self.vizrank.rank_model
+        attrs = model.data(model.index(3, 0), self.vizrank._AttrRole)
+        self.vizrank.on_manual_change(attrs)
+        selection = self.vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 1)
+        self.assertEqual(selection[0].row(), 3)
+
+        self.vizrank.on_manual_change(attrs[::-1])
+        selection = self.vizrank.rank_table.selectedIndexes()
+        self.assertEqual(len(selection), 0)
 
 
 if __name__ == "__main__":

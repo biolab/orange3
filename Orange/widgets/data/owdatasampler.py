@@ -378,7 +378,7 @@ class SampleRandomN(Reprable):
     def __call__(self, table):
         if self.replace:
             rgen = np.random.RandomState(self.random_state)
-            sample = rgen.random_integers(0, len(table) - 1, self.n)
+            sample = rgen.randint(0, len(table), self.n)
             o = np.ones(len(table))
             o[sample] = 0
             others = np.nonzero(o)[0]

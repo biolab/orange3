@@ -4,7 +4,7 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from AnyQt.QtCore import Qt, QSize
+from AnyQt.QtCore import Qt, QSize, Signal
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
@@ -39,11 +39,13 @@ class ChiSqStats:
             return
         self.observed = get_contingency(data, attr1, attr2)
         self.n = np.sum(self.observed)
+        # pylint: disable=unexpected-keyword-arg
         self.probs_x = self.observed.sum(axis=0) / self.n
         self.probs_y = self.observed.sum(axis=1) / self.n
         self.expected = np.outer(self.probs_y, self.probs_x) * self.n
-        self.residuals = \
-            (self.observed - self.expected) / np.sqrt(self.expected)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            self.residuals = \
+                (self.observed - self.expected) / np.sqrt(self.expected)
         self.residuals = np.nan_to_num(self.residuals)
         self.chisqs = self.residuals ** 2
         self.chisq = float(np.sum(self.chisqs))
@@ -93,6 +95,8 @@ class OWSieveDiagram(OWWidget):
     attr_y = ContextSetting(None)
     selection = ContextSetting(set())
 
+    xy_changed_manually = Signal(Variable, Variable)
+
     def __init__(self):
         # pylint: disable=missing-docstring
         super().__init__()
@@ -107,7 +111,7 @@ class OWSieveDiagram(OWWidget):
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
         combo_args = dict(
             widget=self.attr_box, master=self, contentsLength=12,
-            callback=self.update_attr, sendSelectedValue=True, valueType=str,
+            callback=self.attr_changed, sendSelectedValue=True, valueType=str,
             model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
@@ -194,6 +198,10 @@ class OWSieveDiagram(OWWidget):
     def set_attr(self, attr_x, attr_y):
         self.attr_x, self.attr_y = attr_x, attr_y
         self.update_attr()
+
+    def attr_changed(self):
+        self.update_attr()
+        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
 
     def update_attr(self):
         """Update the graph and selection."""
@@ -502,6 +510,7 @@ class OWSieveDiagram(OWWidget):
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
+        return None
 
     def send_report(self):
         self.report_plot()

@@ -7,7 +7,11 @@ import pkgutil
 import unittest
 
 import traceback
+import warnings
+
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
+
 from Orange.base import SklLearner
 
 import Orange.classification
@@ -269,6 +273,9 @@ class LearnerAccessibility(unittest.TestCase):
 
     def setUp(self):
         Variable._clear_all_caches()
+        # Convergence warnings are irrelevant for these tests
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
+
 
     def all_learners(self):
         classification_modules = pkgutil.walk_packages(

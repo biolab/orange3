@@ -1,6 +1,7 @@
 import sys
 import logging
 import gc
+import signal
 
 from AnyQt.QtWidgets import QApplication
 
@@ -18,6 +19,8 @@ class WidgetPreview:
         self.widget_cls = widget_cls
         self.widget = None
         logging.basicConfig()
+        # Allow termination with CTRL + C
+        signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     def run(self, input_data=None, *, no_exec=False, no_exit=False, **kwargs):
         """

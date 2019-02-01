@@ -6,6 +6,39 @@ Change Log
 * ...
 
 
+[3.20.0] - 2019-02-01
+--------------------
+##### Enhancements
+* Naive Bayes: Implement predict, fix predict_storage ([#3540](../../pull/3540))
+* OWTransform: add option to keep original data #3526 ([#3549](../../pull/3549))
+* Implement better randomized PCA ([#3532](../../pull/3532))
+* Scatterplot: Draw separate regression lines for colors; add orthonormal regression ([#3518](../../pull/3518))
+* Edit Domain: Add support for ordered categorical variables ([#3535](../../pull/3535))
+* Warn when data subset is unrelated to data ([#3507](../../pull/3507))
+* Label subset ([#3506](../../pull/3506))
+* OWLouvain: Ensure deterministic clustering ([#3492](../../pull/3492))
+* t-SNE: Updates 2. ([#3475](../../pull/3475))
+* Save Data: Support saving to Excel ([#3453](../../pull/3453))
+* OWLinePlot: Move from prototypes to core ([#3440](../../pull/3440))
+
+##### Bugfixes
+* Warning about a window title without a placeholder ([#3554](../../pull/3554))
+* PaintData: Fix control area width ([#3560](../../pull/3560))
+* OWWidget: Remove wheelEvent reimplementation ([#3557](../../pull/3557))
+* Data sets: Remove class from 'bupa' ([#3556](../../pull/3556))
+* Neighbours: Show error when data and reference have different domain. ([#3547](../../pull/3547))
+* Feature statistics fixes ([#3480](../../pull/3480))
+* Removed header types and flags from .csv and .tab ([#3427](../../pull/3427))
+* Python script widget: prevent data loss  ([#3529](../../pull/3529))
+* setup.cfg: Change the default for with-htmlhelp config option ([#3536](../../pull/3536))
+* Don't add miniconda to path and register as system python ([#3525](../../pull/3525))
+* OWDataProjectionWidget: check validity, fix sparse data reloading ([#3485](../../pull/3485))
+* OWMergeData removes table meta attributes ([#3474](../../pull/3474))
+* [MNT] Remove segfault in tests for building documentation ([#3491](../../pull/3491))
+* OWFeatureStatistics: Fix scipy.stats.mode crash on sparse data ([#3488](../../pull/3488))
+* OWDataProjectionWidget: Fix applying selection ([#3466](../../pull/3466))
+
+
 [3.19.0] - 2018-12-11
 --------------------
 ##### Enhancements
@@ -995,7 +1028,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.19.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.20.0...HEAD
+[3.20.0]: https://github.com/biolab/orange3/compare/3.19.0...3.20.0
 [3.19.0]: https://github.com/biolab/orange3/compare/3.18.0...3.19.0
 [3.18.0]: https://github.com/biolab/orange3/compare/3.17.0...3.18.0
 [3.17.0]: https://github.com/biolab/orange3/compare/3.16.0...3.17.0

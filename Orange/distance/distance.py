@@ -1,14 +1,17 @@
+import warnings
+from unittest.mock import patch
+
 import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
+from sklearn.metrics import pairwise_distances
 
 from Orange.distance import _distance
 from Orange.statistics import util
 
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
                    SklDistance, _orange_to_numpy)
-
 
 class EuclideanRowsModel(FittedDistanceModel):
     """
@@ -56,7 +59,8 @@ class EuclideanRowsModel(FittedDistanceModel):
             distances *= -2
             distances += xx
             distances += yy
-            np.maximum(distances, 0, out=distances)
+            with np.errstate(invalid="ignore"):  # Nans are fixed below
+                np.maximum(distances, 0, out=distances)
             if x2 is None:
                 distances.flat[::distances.shape[0] + 1] = 0.0
             fixer = _distance.fix_euclidean_rows_normalized if self.normalize \
@@ -111,7 +115,8 @@ class EuclideanColumnsModel(FittedDistanceModel):
         distances *= -2
         distances += xx
         distances += xx.T
-        np.maximum(distances, 0, out=distances)
+        with np.errstate(invalid="ignore"):  # Nans are fixed below
+            np.maximum(distances, 0, out=distances)
         distances.flat[::distances.shape[0] + 1] = 0.0
 
         fixer = _distance.fix_euclidean_cols_normalized if self.normalize \
@@ -153,11 +158,24 @@ class Euclidean(FittedDistance):
         Return `EuclideanColumnsModel` with stored means and variances
         for normalization and imputation.
         """
+        def nowarn(msg, cat, *args, **kwargs):
+            if cat is RuntimeWarning and (
+                    msg == "Mean of empty slice"
+                    or msg == "Degrees of freedom <= 0 for slice"):
+                if self.normalize:
+                    raise ValueError("some columns have no defined values")
+            else:
+                orig_warn(msg, cat, *args, **kwargs)
+
         self.check_no_discrete(n_vals)
-        means = np.nanmean(x, axis=0)
-        vars = np.nanvar(x, axis=0)
-        if self.normalize and (np.isnan(vars).any() or not vars.all()):
-            raise ValueError("some columns are constant or have no values")
+        # catch_warnings resets the registry for "once", while avoiding this
+        # warning would be annoying and slow, hence patching
+        orig_warn = warnings.warn
+        with patch("warnings.warn", new=nowarn):
+            means = np.nanmean(x, axis=0)
+            vars = np.nanvar(x, axis=0)
+        if self.normalize and not vars.all():
+            raise ValueError("some columns are constant")
         return EuclideanColumnsModel(
             attributes, self.impute, self.normalize, means, vars)
 
@@ -277,8 +295,12 @@ class Manhattan(FittedDistance):
         for normalization and imputation.
         """
         self.check_no_discrete(n_vals)
-        medians = np.nanmedian(x, axis=0)
-        mads = np.nanmedian(np.abs(x - medians), axis=0)
+        if x.size == 0:
+            medians = np.zeros(len(x))
+            mads = np.zeros(len(x))
+        else:
+            medians = np.nanmedian(x, axis=0)
+            mads = np.nanmedian(np.abs(x - medians), axis=0)
         if self.normalize and (np.isnan(mads).any() or not mads.all()):
             raise ValueError(
                 "some columns have zero absolute distance from median, "
@@ -433,7 +455,9 @@ class SpearmanModel(CorrelationDistanceModel):
     def compute_correlation(self, x1, x2):
         if x2 is None:
             n1 = x1.shape[1 - self.axis]
-            if n1 == 2:
+            if n1 == 1:
+                rho = 1.0
+            elif n1 == 2:
                 # Special case to properly fill degenerate self correlations
                 # (nan, inf on the diagonals)
                 rho = stats.spearmanr(x1, x1, axis=self.axis)[0]
@@ -636,3 +660,48 @@ class MahalanobisDistance:
         if data is None:
             return cls
         return Mahalanobis(axis=axis).fit(data)
+
+class Hamming(Distance):
+    supports_sparse = True
+    supports_missing = False
+    supports_normalization = False
+    supports_discrete = True
+
+    def fit(self, data):
+        x = _orange_to_numpy(data)
+        if self.axis == 0:
+            return HammingColumnsModel(self.axis, self.impute, x)
+        else:
+            return HammingRowsModel(self.axis, self.impute, x)
+
+class HammingColumnsModel(DistanceModel):
+    """
+    Model for computation of Hamming distances between columns.
+    """
+    def __init__(self, axis, impute, x):
+        super().__init__(axis, impute)
+        self.x = x
+
+    def __call__(self, e1, e2=None, impute=None):
+        if impute is not None:
+            self.impute = impute
+        return super().__call__(e1, e2)
+
+    def compute_distances(self, x1, x2=None):
+        return pairwise_distances(x1.T, metric='hamming')
+
+class HammingRowsModel(DistanceModel):
+    """
+    Model for computation of Hamming distances between rows.
+    """
+    def __init__(self, axis, impute, x):
+        super().__init__(axis, impute)
+        self.x = x
+
+    def __call__(self, e1, e2=None, impute=None):
+        if impute is not None:
+            self.impute = impute
+        return super().__call__(e1, e2)
+
+    def compute_distances(self, x1, x2=None):
+        return pairwise_distances(x1, metric='hamming')

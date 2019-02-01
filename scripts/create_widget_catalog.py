@@ -2,12 +2,9 @@ from copy import copy
 import json
 from os import path, makedirs
 
-import numpy as np
-
-from AnyQt import QtGui
-from AnyQt.QtCore import QRectF, Qt, QTimer
-from AnyQt.QtGui import QImage
+from AnyQt.QtGui import QImage, QPainter
 from AnyQt.QtWidgets import QGraphicsScene, QApplication, QWidget, QGraphicsView, QHBoxLayout
+from AnyQt.QtCore import QRectF, Qt, QTimer
 
 from Orange.canvas import config
 from Orange.canvas.canvas.items import NodeItem
@@ -20,9 +17,10 @@ class WidgetCatalog:
         self.output_dir = output_dir
         self.image_url_prefix = image_url_prefix
 
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+        QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
         self.app = QApplication([])
-        self.app.setAttribute(Qt.AA_EnableHighDpiScaling)
-        self.app.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
         print("Generating widget repository")
         self.registry = self.__get_widget_registry()
@@ -127,16 +125,17 @@ class IconWidget(QWidget):
 
     def render_as_png(self, filename):
         png = self.__transparent_png()
-        painter = QtGui.QPainter(png)
-        painter.setRenderHint(QtGui.QPainter.Antialiasing, 1)
+        painter = QPainter(png)
+        painter.setRenderHint(QPainter.Antialiasing, 1)
         self.scene.render(painter, QRectF(0, 0, 50, 50), QRectF(-25, -25, 50, 50))
         painter.end()
         png.save(filename)
 
     def __transparent_png(self):
         # PyQt is stupid and does not increment reference count on bg
-        self.__bg = bg = np.zeros((50, 50, 4), dtype=np.ubyte)
-        return QImage(bg.ctypes.data, bg.shape[1], bg.shape[0], QtGui.QImage.Format_ARGB32)
+        w = h = 50
+        self.__bg = bg = b"\xff\xff\x00" * w * h * 4
+        return QImage(bg, w, h, QImage.Format_ARGB32)
 
 
 if __name__ == '__main__':

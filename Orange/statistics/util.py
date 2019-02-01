@@ -4,11 +4,12 @@ and once used from the bottlechest package (fork of bottleneck).
 
 It also patches bottleneck to contain these functions.
 """
-from warnings import warn
+import warnings
 
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 from scipy import sparse as sp
+import scipy.stats.stats
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
@@ -391,8 +392,8 @@ def mean(x):
          if sp.issparse(x) else
          np.mean(x))
     if np.isnan(m):
-        warn('mean() resulted in nan. If input can contain nan values, perhaps '
-             'you meant nanmean?', stacklevel=2)
+        warnings.warn('mean() resulted in nan. If input can contain nan values,'
+                      ' perhaps you meant nanmean?', stacklevel=2)
     return m
 
 
@@ -423,25 +424,28 @@ def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
     def nanmean_sparse(x):
         n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
+        if not n_values:
+            warnings.warn(RuntimeWarning, "Mean of empty slice")
+            return np.nan
         return np.nansum(x.data) / n_values
 
     return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
 
 
-def nanvar(x, axis=None):
+def nanvar(x, axis=None, ddof=0):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):
         n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
         n_zeros = np.prod(x.shape) - len(x.data)
         mean = np.nansum(x.data) / n_vals
-        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / n_vals
+        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / (n_vals - ddof)
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
 
-def nanstd(x, axis=None):
+def nanstd(x, axis=None, ddof=0):
     """ Equivalent of np.nanstd that supports sparse and dense matrices. """
-    return np.sqrt(nanvar(x, axis=axis))
+    return np.sqrt(nanvar(x, axis=axis, ddof=ddof))
 
 
 def nanmedian(x, axis=None):
@@ -460,6 +464,14 @@ def nanmedian(x, axis=None):
             return np.nanmedian(x.toarray())
 
     return _apply_func(x, np.nanmedian, nanmedian_sparse, axis=axis)
+
+
+def nanmode(x, axis=0):
+    """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
+    nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
+    res = scipy.stats.stats.mode(x, axis)
+    return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
+                                        np.where(nans, np.nan, res.count))
 
 
 def unique(x, return_counts=False):
@@ -555,16 +567,21 @@ def digitize(x, bins, right=False):
     return r
 
 
-def var(x, axis=None):
+def var(x, axis=None, ddof=0):
     """ Equivalent of np.var that supports sparse and dense matrices. """
     if not sp.issparse(x):
-        return np.var(x, axis)
+        return np.var(x, axis, ddof=ddof)
 
     result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
     result = np.squeeze(np.asarray(result))
+
+    # Apply correction for degrees of freedom
+    n = np.prod(x.shape) if axis is None else x.shape[axis]
+    result *= n / (n - ddof)
+
     return result
 
 
-def std(x, axis=None):
+def std(x, axis=None, ddof=0):
     """ Equivalent of np.std that supports sparse and dense matrices. """
-    return np.sqrt(var(x, axis=axis))
+    return np.sqrt(var(x, axis=axis, ddof=ddof))

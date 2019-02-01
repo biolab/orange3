@@ -396,7 +396,7 @@ Section "Miniconda ${MINICONDA_VERSION} (Python ${PYTHON_VERSION} ${BITS}-bit)" 
         # Why does executing "${TEMPDIR}\${PYINSTALLER}" directly hang the
         # Miniconda installer?
         ${If} ${Silent}
-            StrCpy $0 "/S"
+            StrCpy $0 "/S /AddToPath=0 /RegisterPython=0"
         ${Else}
             StrCpy $0 ""
         ${EndIf}

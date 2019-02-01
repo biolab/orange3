@@ -5,6 +5,7 @@ TODO:
     or quartile coefficient of dispersion (Q3 - Q1) / (Q3 + Q1)
   - Standard deviation for nominal: try out Variation ratio (1 - n_mode/N)
 """
+
 import datetime
 import locale
 from enum import IntEnum
@@ -12,6 +13,7 @@ from typing import Any, Optional, Tuple, List
 
 import numpy as np
 import scipy.stats as ss
+import scipy.sparse as sp
 from AnyQt.QtCore import Qt, QSize, QRectF, QVariant, QModelIndex, pyqtSlot, \
     QRegExp, QItemSelection, QItemSelectionRange, QItemSelectionModel
 from AnyQt.QtGui import QPainter, QColor
@@ -236,9 +238,19 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             continuous_f=lambda x: ut.nanmax(x, axis=0),
             time_f=lambda x: ut.nanmax(x, axis=0),
         )
+
+        # Since scipy apparently can't do mode on sparse matrices, cast it to
+        # dense. This can be very inefficient for large matrices, and should
+        # be changed
+        def __mode(x, *args, **kwargs):
+            if sp.issparse(x):
+                x = x.todense(order="C")
+            # return ss.mode(x, *args, **kwargs)[0]
+            return ut.nanmode(x, *args, **kwargs)[0]  # Temporary replacement for scipy < 1.2.0
+
         self._center = self.__compute_stat(
             matrices,
-            discrete_f=lambda x: ss.mode(x)[0],
+            discrete_f=lambda x: __mode(x, axis=0),
             continuous_f=lambda x: ut.nanmean(x, axis=0),
             time_f=lambda x: ut.nanmean(x, axis=0),
         )
@@ -545,9 +557,9 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         elif output in (np.inf, -np.inf):
             output = '%s∞' % ['', '-'][output < 0]
         elif isinstance(output, int):
-            output = locale.format('%d', output, grouping=True)
+            output = locale.format_string('%d', output, grouping=True)
         elif isinstance(output, float):
-            output = locale.format('%.2f', output, grouping=True)
+            output = locale.format_string('%.2f', output, grouping=True)
 
         return output
 
@@ -776,6 +788,7 @@ class OWFeatureStatistics(widget.OWWidget):
 
         if data is not None:
             self.color_var_model.set_domain(data.domain)
+            self.color_var = None
             if self.data.domain.class_vars:
                 self.color_var = self.data.domain.class_vars[0]
         else:

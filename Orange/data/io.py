@@ -24,6 +24,9 @@ from glob import glob
 import numpy as np
 from chardet.universaldetector import UniversalDetector
 
+import xlrd
+import xlsxwriter
+
 from Orange.data import (
     _io, is_discrete_values, MISSING_VALUES, Table, Domain, Variable,
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
@@ -374,6 +377,7 @@ class FileFormat(metaclass=FileFormatMeta):
     # Priority when multiple formats support the same extension. Also
     # the sort order in file open/save combo boxes. Lower is better.
     PRIORITY = 10000
+    OPTIONAL_TYPE_ANNOTATIONS = False
 
     def __init__(self, filename):
         """
@@ -428,8 +432,11 @@ class FileFormat(metaclass=FileFormatMeta):
         raise IOError('No readers for file "{}"'.format(filename))
 
     @classmethod
-    def write(cls, filename, data):
-        return cls.write_file(filename, data)
+    def write(cls, filename, data, with_annotations=True):
+        if cls.OPTIONAL_TYPE_ANNOTATIONS:
+            return cls.write_file(filename, data, with_annotations)
+        else:
+            return cls.write_file(filename, data)
 
     @classmethod
     def write_table_metadata(cls, filename, data):
@@ -795,11 +802,28 @@ class FileFormat(metaclass=FileFormatMeta):
                                                   zip(repeat('meta'), data.domain.metas)))))
 
     @classmethod
-    def write_headers(cls, write, data):
+    def write_headers(cls, write, data, with_annotations=True):
         """`write` is a callback that accepts an iterable"""
         write(cls.header_names(data))
-        write(cls.header_types(data))
-        write(cls.header_flags(data))
+        if with_annotations:
+            write(cls.header_types(data))
+            write(cls.header_flags(data))
+
+    @classmethod
+    def formatter(cls, var):
+        # type: (Variable) -> Callable[[Variable], Any]
+        # Return a column 'formatter' function. The function must return
+        # something that `write` knows how to write
+        if var.is_time:
+            return var.repr_val
+        elif var.is_continuous:
+            return lambda value: "" if isnan(value) else value
+        elif var.is_discrete:
+            return lambda value: "" if isnan(value) else var.values[int(value)]
+        elif var.is_string:
+            return lambda value: value
+        else:
+            return var.repr_val
 
     @classmethod
     def write_data(cls, write, data):
@@ -809,22 +833,7 @@ class FileFormat(metaclass=FileFormatMeta):
                           data.domain.class_vars,
                           data.domain.metas))
 
-        def formatter(var):
-            # type: (Variable) -> Callable[[Variable], Any]
-            # Return a column 'formatter' function. The function must return
-            # something that `write` knows how to write
-            if var.is_time:
-                return var.repr_val
-            elif var.is_continuous:
-                return lambda value: "" if isnan(value) else value
-            elif var.is_discrete:
-                return lambda value: "" if isnan(value) else var.values[int(value)]
-            elif var.is_string:
-                return lambda value: value
-            else:
-                return var.repr_val
-
-        formatters = [formatter(v) for v in vars]
+        formatters = [cls.formatter(v) for v in vars]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
                        data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
@@ -852,6 +861,7 @@ class CSVReader(FileFormat):
     SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
     PRIORITY = 20
+    OPTIONAL_TYPE_ANNOTATIONS = True
 
     def read(self):
         for encoding in (lambda: ('us-ascii', None),                 # fast
@@ -911,12 +921,12 @@ class CSVReader(FileFormat):
         raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=True):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
-            cls.write_headers(writer.writerow, data)
+            cls.write_headers(writer.writerow, data, with_annotations)
             cls.write_data(writer.writerow, data)
-        cls.write_table_metadata(filename, data)
+            cls.write_table_metadata(filename, data)
 
 
 class TabReader(CSVReader):
@@ -975,28 +985,34 @@ class BasketReader(FileFormat):
 
 class ExcelReader(FileFormat):
     """Reader for excel files"""
-    EXTENSIONS = ('.xls', '.xlsx')
-    DESCRIPTION = 'Mircosoft Excel spreadsheet'
+    EXTENSIONS = ('.xlsx',)
+    DESCRIPTION = 'Microsoft Excel spreadsheet'
+    SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):
-        super().__init__(filename)
+        super().__init__(filename=filename)
+        self._workbook = None
 
-        from xlrd import open_workbook
-        self.workbook = open_workbook(self.filename)
+    @property
+    def workbook(self):
+        if not self._workbook:
+            self._workbook = xlrd.open_workbook(self.filename, on_demand=True)
+        return self._workbook
 
     @property
     @lru_cache(1)
     def sheets(self):
-        return self.workbook.sheet_names()
+        if self.workbook:
+            return self.workbook.sheet_names()
+        else:
+            return ()
 
     def read(self):
-        import xlrd
-        wb = xlrd.open_workbook(self.filename, on_demand=True)
         if self.sheet:
-            ss = wb.sheet_by_name(self.sheet)
+            ss = self.workbook.sheet_by_name(self.sheet)
         else:
-            ss = wb.sheet_by_index(0)
+            ss = self.workbook.sheet_by_index(0)
         try:
             first_row = next(i for i in range(ss.nrows) if any(ss.row_values(i)))
             first_col = next(i for i in range(ss.ncols) if ss.cell_value(first_row, i))
@@ -1012,6 +1028,27 @@ class ExcelReader(FileFormat):
         except Exception:
             raise IOError("Couldn't load spreadsheet from " + self.filename)
         return table
+
+    @classmethod
+    def write_file(cls, filename, data):
+        vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
+        headers = cls.header_names(data)
+        workbook = xlsxwriter.Workbook(filename)
+        sheet = workbook.add_worksheet()
+        for c, header in enumerate(headers):
+            sheet.write(0, c, header)
+        for i, row in enumerate(zipped_list_data, 1):
+            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                sheet.write(i, j, fmt(v))
+        workbook.close()
 
 
 class DotReader(FileFormat):

@@ -366,6 +366,7 @@ class OWSilhouettePlot(widget.OWWidget):
                 column, _ = self.data.get_column_view(annot_var)
                 if self._mask is not None:
                     assert column.shape == self._mask.shape
+                    # pylint: disable=invalid-unary-operand-type
                     column = column[~self._mask]
                 self._silplot.setRowNames(
                     [annot_var.str_val(value) for value in column])
@@ -386,12 +387,14 @@ class OWSilhouettePlot(widget.OWWidget):
                 indices = self._silplot.selection()
                 assert (np.diff(indices) > 0).all(), "strictly increasing"
                 if self._mask is not None:
+                    # pylint: disable=invalid-unary-operand-type
                     indices = np.flatnonzero(~self._mask)[indices]
                 selectedmask[indices] = True
 
             if self._mask is not None:
                 scores = np.full(shape=selectedmask.shape,
                                  fill_value=np.nan)
+                # pylint: disable=invalid-unary-operand-type
                 scores[~self._mask] = self._silhouette
             else:
                 scores = self._silhouette

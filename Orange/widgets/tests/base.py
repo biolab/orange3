@@ -1,9 +1,10 @@
+import warnings
 from contextlib import contextmanager
 import os
 import pickle
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 # pylint: disable=unused-import
 from typing import List, Optional, TypeVar
 try:
@@ -105,6 +106,9 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
+        if not (os.environ.get("TRAVIS") or os.environ.get("APPVEYOR")):
+            report.show = Mock()
+
         Variable._clear_all_caches()
 
     def tearDown(self):
@@ -143,6 +147,17 @@ class WidgetTest(GuiTest):
         self.process_events()
         self.widgets.append(widget)
         return widget
+
+    @contextmanager
+    def no_show_on_desktop(self):
+        # disabling show on travis and appveyor causes timeouts?!
+        if os.environ.get("TRAVIS") or os.environ.get("APPVEYOR"):
+            yield
+        else:
+            for widget in self.widgets:
+                widget.show = Mock()
+            with patch("AnyQt.QtWidgets.QWidget.show"):
+                yield
 
     @staticmethod
     def reset_default_settings(widget):
@@ -223,8 +238,32 @@ class WidgetTest(GuiTest):
         wait : int
             The amount of time to wait for the widget to complete.
         """
+        return self.send_signals([(input, value)], *args,
+                                 widget=widget, wait=wait)
+
+    def send_signals(self, signals, *args, widget=None, wait=-1):
+        """ Send signals to widget by calling appropriate triggers.
+        After all the signals are send, widget's handleNewSignals() in invoked.
+
+        Parameters
+        ----------
+        signals : list of (str, Object)
+        widget : Optional[OWWidget]
+            widget to send signals to. If not set, self.widget is used
+        wait : int
+            The amount of time to wait for the widget to complete.
+        """
         if widget is None:
             widget = self.widget
+        for input, value in signals:
+            self._send_signal(widget, input, value, *args)
+        widget.handleNewSignals()
+        if wait >= 0 and widget.isBlocking():
+            spy = QSignalSpy(widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout=wait))
+
+    @staticmethod
+    def _send_signal(widget, input, value, *args):
         if isinstance(input, str):
             for input_signal in widget.get_signals("inputs"):
                 if input_signal.name == input:
@@ -243,10 +282,6 @@ class WidgetTest(GuiTest):
             '{} should be {}'.format(value.__class__.__mro__, input.type)
 
         handler(value, *args)
-        widget.handleNewSignals()
-        if wait >= 0 and widget.isBlocking():
-            spy = QSignalSpy(widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout=wait))
 
     def wait_until_stop_blocking(self, widget=None, wait=DEFAULT_TIMEOUT):
         """Wait until the widget stops blocking i.e. finishes computation.
@@ -932,15 +967,18 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
-        table = Table("iris")
-        table.X = sp.csr_matrix(table.X)
+        # scipy.sparse uses matrix; this filter can be removed when it stops
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
+
+        table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
-        self.assertEqual(len(self.widget.subset_indices), 5)
+        self.assertEqual(len(self.widget.subset_data), 5)
 
     def test_invalidated_embedding(self, timeout=DEFAULT_TIMEOUT):
         """Check if graph has been replotted when sending same data"""
@@ -997,7 +1035,7 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())
         self.send_signal(self.widget.Inputs.data_subset, table[::30])
-        self.assertEqual(len(self.widget.subset_indices), 5)
+        self.assertEqual(len(self.widget.subset_data), 5)
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.sparse_data.is_shown())
 

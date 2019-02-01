@@ -1,6 +1,8 @@
 import copy
+import warnings
 
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 
 import Orange.data
 import Orange.evaluation
@@ -26,6 +28,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
     def setUp(self):
         super().setUp()
         self.widget = self.create_widget(OWCalibrationPlot)  # type: OWCalibrationPlot
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
 
     def test_basic(self):
         self.send_signal(self.widget.Inputs.evaluation_results, self.res)

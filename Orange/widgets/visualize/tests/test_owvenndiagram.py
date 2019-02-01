@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import warnings
 from collections import defaultdict
 
 import numpy as np
@@ -67,6 +68,7 @@ class TestVennDiagram(unittest.TestCase):
         cv = np.random.randint(len(class_var.values), size=(3, len(sources)))
 
         tables = []
+        # pylint: disable=consider-using-enumerate
         for i in range(len(sources)):
             temp_table = Table.from_table(table.domain, table,
                                           [0 + i, 1 + i, 2 + i])
@@ -205,6 +207,9 @@ class GroupTableIndicesTest(unittest.TestCase):
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])
 
+        # scipy.sparse uses matrix; this filter can be removed when it's fixed
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
         data = Table.from_numpy(X=sp.csr_matrix(X), domain=domain, metas=M)
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])

@@ -21,7 +21,7 @@ from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingsHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
@@ -111,11 +111,10 @@ class PythonScriptEditor(QPlainTextEdit):
         return text
 
     def keyPressEvent(self, event):
-        self.widget.enable_execute()
         if event.key() == Qt.Key_Return:
             if event.modifiers() & (
                     Qt.ShiftModifier | Qt.ControlModifier | Qt.MetaModifier):
-                self.widget.unconditional_commit()
+                self.widget.commit()
                 return
             text = self.lastLine()
             indent = len(text) - len(text.lstrip())
@@ -199,6 +198,7 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
     def new_prompt(self, prompt):
         self.write(prompt)
         self.newPromptPos = self.textCursor().position()
+        self.repaint()
 
     def write(self, data):
         cursor = QTextCursor(self.document())
@@ -364,6 +364,14 @@ def select_row(view, row):
                     QItemSelectionModel.ClearAndSelect)
 
 
+class PrepareSavingSettingsHandler(SettingsHandler):
+    """Calls storeSpecificSettings, which is currently not called from non-context handlers."""
+
+    def pack_data(self, widget):
+        widget.storeSpecificSettings()
+        return super().pack_data(widget)
+
+
 class OWPythonScript(widget.OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
@@ -389,11 +397,13 @@ class OWPythonScript(widget.OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
+    settingsHandler = PrepareSavingSettingsHandler()
+
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
     currentScriptIndex = Setting(0)
+    scriptText = Setting(None, schema_only=True)
     splitterState = Setting(None)
-    auto_execute = Setting(True)
 
     class Error(OWWidget.Error):
         pass
@@ -464,14 +474,17 @@ class OWPythonScript(widget.OWWidget):
 
         new_from_file = QAction("Import Script from File", self)
         save_to_file = QAction("Save Selected Script to File", self)
+        restore_saved = QAction("Undo Changes to Selected Script", self)
         save_to_file.setShortcut(QKeySequence(QKeySequence.SaveAs))
 
         new_from_file.triggered.connect(self.onAddScriptFromFile)
         save_to_file.triggered.connect(self.saveScript)
+        restore_saved.triggered.connect(self.restoreSaved)
 
         menu = QMenu(w)
         menu.addAction(new_from_file)
         menu.addAction(save_to_file)
+        menu.addAction(restore_saved)
         action.setMenu(menu)
         button = w.addAction(action)
         button.setPopupMode(QToolButton.InstantPopup)
@@ -480,9 +493,7 @@ class OWPythonScript(widget.OWWidget):
 
         self.controlBox.layout().addWidget(w)
 
-        auto = gui.auto_commit(self.controlArea, self, "auto_execute", "Run",
-                               checkbox_label="Autorun on new data")
-        self.execute_button, self.autobox = auto.button, auto.checkbox
+        self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
@@ -516,6 +527,8 @@ class OWPythonScript(widget.OWWidget):
 
         select_row(self.libraryView, self.currentScriptIndex)
 
+        self.restoreScriptText()
+
         self.splitCanvas.setSizes([2, 1])
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
@@ -524,8 +537,18 @@ class OWPythonScript(widget.OWWidget):
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
 
-    def enable_execute(self):
-        self.execute_button.setEnabled(True)
+    def storeSpecificSettings(self):
+        self.saveScriptText()
+
+    def restoreScriptText(self):
+        if self.scriptText is not None:
+            current = self.text.toPlainText()
+            # do not mark scripts as modified
+            if self.scriptText != current:
+                self.text.document().setPlainText(self.scriptText)
+
+    def saveScriptText(self):
+        self.scriptText = self.text.toPlainText()
 
     def handle_input(self, obj, id, signal):
         id = id[0]
@@ -553,12 +576,12 @@ class OWPythonScript(widget.OWWidget):
         self.handle_input(data, id, "object")
 
     def handleNewSignals(self):
-        self.unconditional_commit()
+        self.commit()
 
     def selectedScriptIndex(self):
         rows = self.libraryView.selectionModel().selectedRows()
         if rows:
-            return  [i.row() for i in rows][0]
+            return [i.row() for i in rows][0]
         else:
             return None
 
@@ -566,7 +589,7 @@ class OWPythonScript(widget.OWWidget):
         select_row(self.libraryView, index)
 
     def onAddScript(self, *args):
-        self.libraryList.append(Script("New script", "", 0))
+        self.libraryList.append(Script("New script", self.text.toPlainText(), 0))
         self.setSelectedScript(len(self.libraryList) - 1)
 
     def onAddScriptFromFile(self, *args):
@@ -608,7 +631,6 @@ class OWPythonScript(widget.OWWidget):
     def documentForScript(self, script=0):
         if type(script) != Script:
             script = self.libraryList[script]
-
         if script not in self._cachedDocuments:
             doc = QTextDocument(self)
             doc.setDocumentLayout(QPlainTextDocumentLayout(doc))
@@ -636,13 +658,11 @@ class OWPythonScript(widget.OWWidget):
     def onSpliterMoved(self, pos, ind):
         self.splitterState = bytes(self.splitCanvas.saveState())
 
-    def updateSelecetdScriptState(self):
+    def restoreSaved(self):
         index = self.selectedScriptIndex()
         if index is not None:
-            script = self.libraryList[index]
-            self.libraryList[index] = Script(script.name,
-                                             self.text.toPlainText(),
-                                             0)
+            self.text.document().setPlainText(self.libraryList[index].script)
+            self.text.document().setModified(False)
 
     def saveScript(self):
         index = self.selectedScriptIndex()
@@ -681,8 +701,6 @@ class OWPythonScript(widget.OWWidget):
         return d
 
     def commit(self):
-        if self.auto_execute:
-            self.execute_button.setEnabled(False)
         self.Error.clear()
         self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()

@@ -200,7 +200,6 @@ class OWBoxPlot(widget.OWWidget):
 
         self.label_txts = self.mean_labels = self.boxes = self.labels = \
             self.label_txts_all = self.attr_labels = self.order = []
-        self.p = -1.0
         self.scale_x = self.scene_min_x = self.scene_width = 0
         self.label_width = 0
 
@@ -303,7 +302,8 @@ class OWBoxPlot(widget.OWWidget):
     @Inputs.data
     def set_data(self, dataset):
         if dataset is not None and (
-                not bool(dataset) or not len(dataset.domain)):
+                not bool(dataset) or not len(dataset.domain) and not
+                any(var.is_primitive() for var in dataset.domain.metas)):
             dataset = None
         self.closeContext()
         self.dataset = dataset
@@ -483,7 +483,8 @@ class OWBoxPlot(widget.OWWidget):
             return
 
         if not self.is_continuous:
-            return self.display_changed_disc()
+            self.display_changed_disc()
+            return
 
         self.mean_labels = [self.mean_label(stat, attr, lab)
                             for stat, lab in zip(self.stats, self.label_txts)]
@@ -502,7 +503,8 @@ class OWBoxPlot(widget.OWWidget):
             return
 
         if not self.is_continuous:
-            return self.display_changed_disc()
+            self.display_changed_disc()
+            return
 
         self.order = list(range(len(self.stats)))
         criterion = self._sorting_criteria_attrs[self.compare]
@@ -578,6 +580,7 @@ class OWBoxPlot(widget.OWWidget):
             self.conts = self.conts[np.sum(np.array(self.conts), axis=1) > 0]
 
             if self.sort_freqs:
+                # pylint: disable=invalid-unary-operand-type
                 self.order = sorted(self.order, key=(-np.sum(self.conts, axis=1)).__getitem__)
         else:
             self.boxes = [self.strudel(self.dist)]
@@ -676,16 +679,19 @@ class OWBoxPlot(widget.OWWidget):
         # The t-test and ANOVA are implemented here since they efficiently use
         # the widget-specific data in self.stats.
         # The non-parametric tests can't do this, so we use statistics.tests
+
+        # pylint: disable=comparison-with-itself
         def stat_ttest():
             d1, d2 = self.stats
-            if d1.n == 0 or d2.n == 0:
+            if d1.n < 2 or d2.n < 2:
                 return np.nan, np.nan
             pooled_var = d1.var / d1.n + d2.var / d2.n
+            # pylint: disable=comparison-with-itself
+            if pooled_var == 0 or np.isnan(pooled_var):
+                return np.nan, np.nan
             df = pooled_var ** 2 / \
                 ((d1.var / d1.n) ** 2 / (d1.n - 1) +
                  (d2.var / d2.n) ** 2 / (d2.n - 1))
-            if pooled_var == 0:
-                return np.nan, np.nan
             t = abs(d1.mean - d2.mean) / math.sqrt(pooled_var)
             p = 2 * (1 - scipy.special.stdtr(df, t))
             return t, p
@@ -703,6 +709,8 @@ class OWBoxPlot(widget.OWWidget):
 
             var_within = sum(stat.n * stat.var for stat in self.stats)
             df_within = n - len(self.stats)
+            if var_within == 0 or df_within == 0 or df_between == 0:
+                return np.nan, np.nan
             F = (var_between / df_between) / (var_within / df_within)
             p = 1 - scipy.special.fdtr(df_between, df_within, F)
             return F, p
@@ -715,20 +723,20 @@ class OWBoxPlot(widget.OWWidget):
         elif len(self.stats) == 2:
             if self.compare == OWBoxPlot.CompareMedians:
                 t = ""
-                # z, self.p = tests.wilcoxon_rank_sum(
+                # z, p = tests.wilcoxon_rank_sum(
                 #    self.stats[0].dist, self.stats[1].dist)
-                # t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, self.p)
+                # t = "Mann-Whitney's z: %.1f (p=%.3f)" % (z, p)
             else:
-                t, self.p = stat_ttest()
-                t = "Student's t: %.3f (p=%.3f)" % (t, self.p)
+                t, p = stat_ttest()
+                t = "" if np.isnan(t) else f"Student's t: {t:.3f} (p={p:.3f})"
         else:
             if self.compare == OWBoxPlot.CompareMedians:
                 t = ""
-                # U, self.p = -1, -1
-                # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, self.p)
+                # U, p = -1, -1
+                # t = "Kruskal Wallis's U: %.1f (p=%.3f)" % (U, p)
             else:
-                F, self.p = stat_ANOVA()
-                t = "ANOVA: %.3f (p=%.3f)" % (F, self.p)
+                F, p = stat_ANOVA()
+                t = "" if np.isnan(F) else f"ANOVA: {F:.3f} (p={p:.3f})"
         self.infot1.setText("<center>%s</center>" % t)
 
     def mean_label(self, stat, attr, val_name):
@@ -1043,7 +1051,7 @@ class OWBoxPlot(widget.OWWidget):
                 if xs[to] - frm_x > 1.5:
                     to -= 1
                     break
-            if last_to == to or frm == to:
+            if to in (last_to, frm):
                 continue
             for rowi, used in enumerate(used_to):
                 if used < frm:
@@ -1059,8 +1067,7 @@ class OWBoxPlot(widget.OWWidget):
             last_to = to
 
     def get_widget_name_extension(self):
-        if self.attribute:
-            return self.attribute.name
+        return self.attribute.name if self.attribute else None
 
     def send_report(self):
         self.report_plot()

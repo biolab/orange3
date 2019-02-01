@@ -6,7 +6,7 @@ from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtCore import Qt, QTimer, QPointF
+from AnyQt.QtCore import Qt, QTimer, QPointF, Signal
 from AnyQt.QtGui import QColor
 
 import pyqtgraph as pg
@@ -60,6 +60,7 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
         yield from super().iterate_states(initial_state)
 
     def compute_score(self, state):
+        # pylint: disable=invalid-unary-operand-type
         attrs = [self.attrs[i] for i in state]
         data = self.master.data
         data = data.transform(Domain(attrs, self.attr_color))
@@ -96,49 +97,106 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
+    orthonormal_regression = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
-        self.reg_line_item = None
+        self.reg_line_items = []
 
     def clear(self):
         super().clear()
-        self.reg_line_item = None
-
-    def set_axis_title(self, axis, title):
-        self.plot_widget.setLabel(axis=axis, text=title)
+        self.reg_line_items.clear()
 
     def update_coordinates(self):
         super().update_coordinates()
+        self.update_axes()
+        # Don't update_regression line here: update_coordinates is always
+        # followed by update_point_props, which calls update_colors
+
+    def update_colors(self):
+        super().update_colors()
         self.update_regression_line()
 
+    def update_axes(self):
+        for axis, title in self.master.get_axes().items():
+            self.plot_widget.setLabel(axis=axis, text=title or "")
+            if title is None:
+                self.plot_widget.hideAxis(axis)
+
+    @staticmethod
+    def _orthonormal_line(x, y, color, width):
+        # https://en.wikipedia.org/wiki/Deming_regression, with δ=0.
+        pen = pg.mkPen(color=color, width=width)
+        xm = np.mean(x)
+        ym = np.mean(y)
+        sxx, sxy, _, syy = np.cov(x, y, ddof=1).flatten()
+
+        if sxy != 0:  # also covers sxx != 0 and syy != 0
+            slope = (syy - sxx + np.sqrt((syy - sxx) ** 2 + 4 * sxy ** 2)) \
+                    / (2 * sxy)
+            intercept = ym - slope * xm
+            xmin = x.min()
+            return pg.InfiniteLine(
+                QPointF(xmin, xmin * slope + intercept),
+                np.degrees(np.arctan(slope)),
+                pen)
+        elif (sxx == 0) == (syy == 0):  # both zero or non-zero -> can't draw
+            return None
+        elif sxx != 0:
+            return pg.InfiniteLine(QPointF(x.min(), ym), 0, pen)
+        else:
+            return pg.InfiniteLine(QPointF(xm, y.min()), 90, pen)
+
+    @staticmethod
+    def _regression_line(x, y, color, width):
+        min_x, max_x = np.min(x), np.max(x)
+        if min_x == max_x:
+            return None
+        slope, intercept, rvalue, _, _ = linregress(x, y)
+        angle = np.degrees(np.arctan(slope))
+        start_y = min_x * slope + intercept
+        rotate = 135 < angle % 360 < 315
+        l_opts = dict(color=color, position=abs(rotate - 0.85),
+                      rotateAxis=(1, 0), movable=True)
+        reg_line_item = pg.InfiniteLine(
+            pos=QPointF(min_x, start_y), angle=angle,
+            pen=pg.mkPen(color=color, width=width),
+            label=f"r = {rvalue:.2f}", labelOpts=l_opts)
+        if rotate:
+            reg_line_item.label.angle = 180
+            reg_line_item.label.updateTransform()
+        return reg_line_item
+
+    def _add_line(self, x, y, color, width):
+        if self.orthonormal_regression:
+            line = self._orthonormal_line(x, y, color, width)
+        else:
+            line = self._regression_line(x, y, color, width)
+        if line is None:
+            return
+        self.plot_widget.addItem(line)
+        self.reg_line_items.append(line)
+
     def update_regression_line(self):
-        if self.reg_line_item is not None:
-            self.plot_widget.removeItem(self.reg_line_item)
-            self.reg_line_item = None
+        for line in self.reg_line_items:
+            self.plot_widget.removeItem(line)
+        self.reg_line_items.clear()
         if not self.show_reg_line:
             return
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        min_x, max_x = np.min(x), np.max(x)
-        slope, intercept, rvalue, _, _ = linregress(x, y)
-        start_y = min_x * slope + intercept
-        end_y = max_x * slope + intercept
-        angle = np.degrees(np.arctan((end_y - start_y) / (max_x - min_x)))
-        rotate = ((angle + 45) % 180) - 45 > 90
-        color = QColor("#505050")
-        l_opts = dict(color=color, position=abs(int(rotate) - 0.85),
-                      rotateAxis=(1, 0), movable=True)
-        self.reg_line_item = pg.InfiniteLine(
-            pos=QPointF(min_x, start_y), angle=angle,
-            pen=pg.mkPen(color=color, width=1),
-            label="r = {:.2f}".format(rvalue), labelOpts=l_opts
-        )
-        if rotate:
-            self.reg_line_item.label.angle = 180
-            self.reg_line_item.label.updateTransform()
-        self.plot_widget.addItem(self.reg_line_item)
+        self._add_line(x, y, QColor("#505050"), width=2)
+        if self.master.is_continuous_color() or self.palette is None:
+            return
+        c_data = self.master.get_color_data()
+        if c_data is None:
+            return
+        c_data = c_data.astype(int)
+        for val in range(c_data.max() + 1):
+            mask = c_data == val
+            if mask.sum() > 1:
+                self._add_line(x[mask], y[mask], self.palette[val], width=2)
 
 
 class OWScatterPlot(OWDataProjectionWidget):
@@ -167,6 +225,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     GRAPH_CLASS = OWScatterPlotGraph
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
+
+    xy_changed_manually = Signal(Variable, Variable)
 
     class Warning(OWDataProjectionWidget.Warning):
         missing_coords = Msg(
@@ -201,6 +261,14 @@ class OWScatterPlot(OWDataProjectionWidget):
              self.gui.ToolTipShowsAll,
              self.gui.RegressionLine],
             self._plot_box)
+        gui.checkBox(
+            gui.indentedBox(self._plot_box), self,
+            value="graph.orthonormal_regression",
+            label="Treat variables as independent",
+            callback=self.graph.update_regression_line,
+            tooltip=
+            "If checked, fit line to group (minimize distance from points);\n"
+            "otherwise fit y as a function of x (minimize vertical distances)")
 
     def _add_controls_axis(self):
         common_options = dict(
@@ -211,10 +279,12 @@ class OWScatterPlot(OWDataProjectionWidget):
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=ContinuousVariable)
         self.cb_attr_x = gui.comboBox(
-            box, self, "attr_x", label="Axis x:", callback=self.attr_changed,
+            box, self, "attr_x", label="Axis x:",
+            callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
         self.cb_attr_y = gui.comboBox(
-            box, self, "attr_y", label="Axis y:", callback=self.attr_changed,
+            box, self, "attr_y", label="Axis y:",
+            callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options)
         vizrank_box = gui.hBox(box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
@@ -371,16 +441,17 @@ class OWScatterPlot(OWDataProjectionWidget):
                 all(attr in self.data.domain for attr
                         in self.attribute_selection_list):
             self.attr_x, self.attr_y = self.attribute_selection_list[:2]
-            self.attr_changed()
             self.attribute_selection_list = None
-        else:
-            super().handleNewSignals()
+        super().handleNewSignals()
         self._vizrank_color_change()
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
+            self._invalidated = self._invalidated \
+                or self.attr_x != attributes[0] \
+                or self.attr_y != attributes[1]
         else:
             self.attribute_selection_list = None
 
@@ -389,14 +460,16 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_x, self.attr_y = attr_x, attr_y
             self.attr_changed()
 
+    def set_attr_from_combo(self):
+        self.attr_changed()
+        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
+
     def attr_changed(self):
         self.setup_plot()
         self.commit()
 
-    def setup_plot(self):
-        super().setup_plot()
-        self.graph.set_axis_title("bottom", self.attr_x)
-        self.graph.set_axis_title("left", self.attr_y)
+    def get_axes(self):
+        return {"bottom": self.attr_x, "left": self.attr_y}
 
     def colors_changed(self):
         super().colors_changed()

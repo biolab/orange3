@@ -16,18 +16,18 @@ from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsLineItem, QGraphicsTextItem, QGraphicsLayoutItem,
     QGraphicsLinearLayout, QGraphicsGridLayout, QGraphicsPixmapItem,
-    QGraphicsDropShadowEffect, QSizePolicy
+    QGraphicsDropShadowEffect, QSizePolicy, QGraphicsItem
 )
-from AnyQt.QtGui import QPalette, QPen, QPainter, QIcon
-
+from AnyQt.QtGui import (
+    QPalette, QPen, QPainter, QIcon, QColor, QPainterPathStroker
+)
 from AnyQt.QtCore import (
-    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION
+    Qt, QObject, QSize, QSizeF, QPointF, QRectF, QT_VERSION,
 )
 from AnyQt.QtCore import pyqtSignal as Signal
 
 from ..scheme import compatible_channels
-# 'Unused' imports are used in docstrings
-from ..registry import InputSignal, OutputSignal  # pylint: disable=unused-import
+from ..registry import InputSignal, OutputSignal
 
 from ..resources import icon_loader
 
@@ -120,6 +120,7 @@ class EditLinksDialog(QDialog):
         left, top, right, bottom = self.getContentsMargins()
         self.view.setFixedSize(size.toSize() + \
                                QSize(left + right + 4, top + bottom + 4))
+        self.view.setSceneRect(self.scene.editWidget.geometry())
 
 
 def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
@@ -141,8 +142,7 @@ def find_item_at(scene, pos, order=Qt.DescendingOrder, type=None,
                 item.objectName() != name:
             continue
         return item
-    else:
-        return None
+    return None
 
 
 class LinksEditScene(QGraphicsScene):
@@ -251,10 +251,11 @@ class LinksEditWidget(QGraphicsWidget):
         if event.button() == Qt.LeftButton:
             startItem = find_item_at(self.scene(), event.pos(),
                                      type=ChannelAnchor)
-            if startItem is not None:
+            if startItem is not None and startItem.isEnabled():
                 # Start a connection line drag.
                 self.__dragStartItem = startItem
                 self.__tmpLine = None
+
                 event.accept()
                 return
 
@@ -278,11 +279,12 @@ class LinksEditWidget(QGraphicsWidget):
                     (downPos - event.pos()).manhattanLength() > \
                         QApplication.instance().startDragDistance():
                 # Start a line drag
-                line = QGraphicsLineItem(self)
+                line = LinkLineItem(self)
                 start = self.__dragStartItem.boundingRect().center()
                 start = self.mapFromItem(self.__dragStartItem, start)
-                line.setLine(start.x(), start.y(),
-                             event.pos().x(), event.pos().y())
+
+                eventPos = event.pos()
+                line.setLine(start.x(), start.y(), eventPos.x(), eventPos.y())
 
                 pen = QPen(self.palette().color(QPalette.Foreground), 4)
                 pen.setCapStyle(Qt.RoundCap)
@@ -291,16 +293,35 @@ class LinksEditWidget(QGraphicsWidget):
 
                 self.__tmpLine = line
 
+                if self.__dragStartItem in self.sourceNodeWidget.channelAnchors:
+                    for anchor in self.sinkNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [self.__dragStartItem])
+                else:
+                    for anchor in self.sourceNodeWidget.channelAnchors:
+                        self.__updateAnchorState(anchor, [self.__dragStartItem])
+
             if self.__tmpLine:
                 # Update the temp line
                 line = self.__tmpLine.line()
-                line.setP2(event.pos())
+
+                maybe_anchor = find_item_at(self.scene(), event.scenePos(),
+                                            type=ChannelAnchor)
+                # If hovering over anchor
+                if maybe_anchor is not None and maybe_anchor.isEnabled():
+                    target_pos = maybe_anchor.boundingRect().center()
+                    target_pos = self.mapFromItem(maybe_anchor, target_pos)
+                    line.setP2(target_pos)
+                else:
+                    target_pos = event.pos()
+                    line.setP2(target_pos)
+
                 self.__tmpLine.setLine(line)
 
         QGraphicsWidget.mouseMoveEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.__tmpLine:
+            self.__resetAnchorStates()
             endItem = find_item_at(self.scene(), event.scenePos(),
                                    type=ChannelAnchor)
 
@@ -312,6 +333,7 @@ class LinksEditWidget(QGraphicsWidget):
 
                 # Make sure the drag was from input to output (or reversed) and
                 # not between input -> input or output -> output
+                # pylint: disable=unidiomatic-typecheck
                 if type(startChannel) != type(endChannel):
                     if isinstance(startChannel, InputSignal):
                         startChannel, endChannel = endChannel, startChannel
@@ -350,7 +372,7 @@ class LinksEditWidget(QGraphicsWidget):
                 if s2 == input:
                     self.removeLink(s1, s2)
 
-        line = QGraphicsLineItem(self)
+        line = LinkLineItem(self)
 
         source_anchor = self.sourceNodeWidget.anchor(output)
         sink_anchor = self.sinkNodeWidget.anchor(input)
@@ -360,11 +382,7 @@ class LinksEditWidget(QGraphicsWidget):
 
         sink_pos = sink_anchor.boundingRect().center()
         sink_pos = self.mapFromItem(sink_anchor, sink_pos)
-        line.setLine(source_pos.x(), source_pos.y(),
-                     sink_pos.x(), sink_pos.y())
-        pen = QPen(self.palette().color(QPalette.Foreground), 4)
-        pen.setCapStyle(Qt.RoundCap)
-        line.setPen(pen)
+        line.setLine(source_pos.x(), source_pos.y(), sink_pos.x(), sink_pos.y())
 
         self.__links.append(_Link(output, input, line))
 
@@ -450,6 +468,61 @@ class LinksEditWidget(QGraphicsWidget):
         self.sourceNodeTitle = left_title
         self.sinkNodeTitle = right_title
 
+        self.__resetAnchorStates()
+
+        # AnchorHover hover over anchor before hovering over line
+        class AnchorHover(QGraphicsRectItem):
+            def __init__(self, anchor, parent=None):
+                QGraphicsRectItem.__init__(self, parent=parent)
+                self.setAcceptHoverEvents(True)
+
+                self.anchor = anchor
+                self.setRect(anchor.boundingRect())
+
+                self.setPos(self.mapFromScene(anchor.scenePos()))
+                self.setFlag(QGraphicsItem.ItemHasNoContents, True)
+
+            def hoverEnterEvent(self, event):
+                if self.anchor.isEnabled():
+                    self.anchor.hoverEnterEvent(event)
+                else:
+                    event.ignore()
+
+            def hoverLeaveEvent(self, event):
+                if self.anchor.isEnabled():
+                    self.anchor.hoverLeaveEvent(event)
+                else:
+                    event.ignore()
+
+        for anchor in left_node.channelAnchors + right_node.channelAnchors:
+            anchor_hover = AnchorHover(anchor, parent=self)
+            anchor_hover.setZValue(2.0)
+
+    def __resetAnchorStates(self):
+        source_anchors = self.sourceNodeWidget.channelAnchors
+        sink_anchors = self.sinkNodeWidget.channelAnchors
+        for anchor in source_anchors:
+            self.__updateAnchorState(anchor, sink_anchors)
+        for anchor in sink_anchors:
+            self.__updateAnchorState(anchor, source_anchors)
+
+    def __updateAnchorState(self, anchor, opposite_anchors):
+        first_channel = anchor.channel()
+        for opposite_anchor in opposite_anchors:
+            second_channel = opposite_anchor.channel()
+            if isinstance(first_channel, OutputSignal) and \
+               compatible_channels(first_channel, second_channel) or \
+               isinstance(first_channel, InputSignal) and \
+               compatible_channels(second_channel, first_channel):
+                anchor.setEnabled(True)
+                anchor.setToolTip("Click and drag to connect widgets!")
+                return
+        if isinstance(first_channel, OutputSignal):
+            anchor.setToolTip("No compatible input channel.")
+        else:
+            anchor.setToolTip("No compatible output channel.")
+        anchor.setEnabled(False)
+
     if QT_VERSION < 0x40700:
         geometryChanged = Signal()
 
@@ -490,7 +563,7 @@ class EditLinksNode(QGraphicsWidget):
         self.__iconLayoutItem = GraphicsItemLayoutItem(item=self.__iconItem)
 
         self.__channelLayout = QGraphicsGridLayout()
-        self.__channelAnchors = []
+        self.channelAnchors = []
 
         if self.__direction == Qt.LeftToRight:
             self.layout().addItem(self.__iconLayoutItem)
@@ -576,7 +649,7 @@ class EditLinksNode(QGraphicsWidget):
             label_row = 1
             anchor_row = 0
 
-        self.__channelAnchors = []
+        self.channelAnchors = []
         grid = self.__channelLayout
 
         for i, channel in enumerate(channels):
@@ -595,20 +668,17 @@ class EditLinksNode(QGraphicsWidget):
             anchor = ChannelAnchor(self, channel=channel,
                                    rect=QRectF(0, 0, 20, 20))
 
-            anchor.setBrush(self.palette().brush(QPalette.Mid))
-
             layout_item = GraphicsItemLayoutItem(grid, item=anchor)
             grid.addItem(layout_item, i, anchor_row,
                          alignment=anchor_alignment)
-            anchor.setToolTip(escape(channel.type))
 
-            self.__channelAnchors.append(anchor)
+            self.channelAnchors.append(anchor)
 
     def anchor(self, channel):
         """
         Return the anchor item for the `channel` name.
         """
-        for anchor in self.__channelAnchors:
+        for anchor in self.channelAnchors:
             if anchor.channel() == channel:
                 return anchor
 
@@ -672,9 +742,11 @@ class ChannelAnchor(QGraphicsRectItem):
     """
     def __init__(self, parent=None, channel=None, rect=None, **kwargs):
         QGraphicsRectItem.__init__(self, **kwargs)
-        self.setAcceptHoverEvents(True)
         self.setAcceptedMouseButtons(Qt.NoButton)
         self.__channel = None
+
+        # AnchorHover handles hover events
+        # self.setAcceptHoverEvents(True)
 
         if rect is None:
             rect = QRectF(0, 0, 20, 20)
@@ -684,10 +756,13 @@ class ChannelAnchor(QGraphicsRectItem):
         if channel:
             self.setChannel(channel)
 
-        self.__shadow = QGraphicsDropShadowEffect(blurRadius=5,
-                                                  offset=QPointF(0, 0))
-        self.setGraphicsEffect(self.__shadow)
-        self.__shadow.setEnabled(False)
+        self.__default_pen = QPen(QColor('#000000'), 1)
+        self.__hover_pen = QPen(QColor('#000000'), 2)
+        self.setPen(self.__default_pen)
+
+        self.enabledBrush = QColor('#FFFFFF')
+        self.disabledBrush = QColor('#BBBBBB')
+        self.setBrush(self.enabledBrush)
 
     def setChannel(self, channel):
         """
@@ -696,23 +771,32 @@ class ChannelAnchor(QGraphicsRectItem):
         if channel != self.__channel:
             self.__channel = channel
 
-            if hasattr(channel, "description"):
-                self.setToolTip(channel.description)
-            # TODO: Should also include name, type, flags, dynamic in the
-            #       tool tip as well as add visual clues to the anchor
-
     def channel(self):
         """
         Return the channel description.
         """
         return self.__channel
 
+    def setEnabled(self, enabled):
+        QGraphicsRectItem.setEnabled(self, enabled)
+        if enabled:
+            self.setBrush(self.enabledBrush)
+        else:
+            self.setBrush(self.disabledBrush)
+
+    def paint(self, painter, option, widget=None):
+        QGraphicsRectItem.paint(self, painter, option, widget)
+        # if disabled, draw X over box
+        if not self.isEnabled():
+            painter.drawLine(self.rect().topLeft(), self.rect().bottomRight())
+            painter.drawLine(self.rect().topRight(), self.rect().bottomLeft())
+
     def hoverEnterEvent(self, event):
-        self.__shadow.setEnabled(True)
+        self.setPen(self.__hover_pen)
         QGraphicsRectItem.hoverEnterEvent(self, event)
 
     def hoverLeaveEvent(self, event):
-        self.__shadow.setEnabled(False)
+        self.setPen(self.__default_pen)
         QGraphicsRectItem.hoverLeaveEvent(self, event)
 
 
@@ -783,3 +867,59 @@ class GraphicsTextWidget(QGraphicsWidget):
     def _onDocumentSizeChanged(self, size):
         """The doc size has changed"""
         self.updateGeometry()
+
+
+class LinkLineItem(QGraphicsLineItem):
+    """
+    A line connecting two Channel Anchors.
+    """
+
+    def __init__(self, parent=None):
+        QGraphicsLineItem.__init__(self, parent)
+        self.setAcceptHoverEvents(True)
+
+        self.__shape = None
+
+        self.__default_pen = QPen(QColor('#383838'), 4)
+        self.__default_pen.setCapStyle(Qt.RoundCap)
+        self.__hover_pen = QPen(QColor('#000000'), 4)
+        self.__hover_pen.setCapStyle(Qt.RoundCap)
+        self.setPen(self.__default_pen)
+
+        self.__shadow = QGraphicsDropShadowEffect(
+            blurRadius=10, color=QColor('#9CACB4'),
+            offset=QPointF(0, 0)
+        )
+
+        self.setGraphicsEffect(self.__shadow)
+        self.prepareGeometryChange()
+        self.__shadow.setEnabled(False)
+
+    def setLine(self, *args, **kwargs):
+        super().setLine(*args, **kwargs)
+
+        # extends mouse hit area
+        stroke_path = QPainterPathStroker()
+        stroke_path.setCapStyle(Qt.RoundCap)
+
+        stroke_path.setWidth(10)
+        self.__shape = stroke_path.createStroke(super().shape())
+
+    def shape(self):
+        if self.__shape is None:
+            return QGraphicsLineItem.shape(self)
+        return self.__shape
+
+    def hoverEnterEvent(self, event):
+        self.prepareGeometryChange()
+        self.__shadow.setEnabled(True)
+        self.setPen(self.__hover_pen)
+        self.setZValue(1.0)
+        QGraphicsLineItem.hoverEnterEvent(self, event)
+
+    def hoverLeaveEvent(self, event):
+        self.prepareGeometryChange()
+        self.__shadow.setEnabled(False)
+        self.setPen(self.__default_pen)
+        self.setZValue(0.0)
+        QGraphicsLineItem.hoverLeaveEvent(self, event)
