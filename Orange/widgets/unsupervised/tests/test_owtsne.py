@@ -1,10 +1,9 @@
 import unittest
+from unittest.mock import patch
 import numpy as np
 
-from AnyQt.QtTest import QSignalSpy
-
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
-from Orange.preprocess import Preprocess
+from Orange.preprocess import Preprocess, Normalize
 from Orange.projection.manifold import TSNE
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
@@ -50,9 +49,9 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
         self.empty_domain = Domain([], class_vars=self.class_var)
 
     def tearDown(self):
-        self.reset_tsne()
+        self.restore_mocked_functions()
 
-    def reset_tsne(self):
+    def restore_mocked_functions(self):
         owtsne.TSNE.fit = self._fit
         owtsne.TSNEModel.transform = self._transform
         owtsne.TSNEModel.optimize = self._optimize
@@ -113,21 +112,26 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
                 self.assertIn(var, controls.attr_shape.model())
 
     def test_output_preprocessor(self):
-        self.reset_tsne()
+        # To test the validity of the preprocessor, we'll have to actually
+        # compute the projections
+        self.restore_mocked_functions()
+
         self.send_signal(self.widget.Inputs.data, self.data)
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(20000))
+        self.wait_until_stop_blocking(wait=20000)
+        output_data = self.get_output(self.widget.Outputs.annotated_data)
+
+        # We send the same data to the widget, we expect the point locations to
+        # be fairly close to their original ones
         pp = self.get_output(self.widget.Outputs.preprocessor)
         self.assertIsInstance(pp, Preprocess)
-        transformed = pp(self.data)
-        self.assertIsInstance(transformed, Table)
-        self.assertEqual(transformed.X.shape, (len(self.data), 2))
-        output = self.get_output(self.widget.Outputs.annotated_data)
-        np.testing.assert_allclose(transformed.X, output.metas[:, :2],
-                                   rtol=1, atol=1)
-        self.assertEqual([a.name for a in transformed.domain.attributes],
-                         [m.name for m in output.domain.metas[:2]])
+
+        transformed_data = pp(self.data)
+        self.assertIsInstance(transformed_data, Table)
+        self.assertEqual(transformed_data.X.shape, (len(self.data), 2))
+        np.testing.assert_allclose(transformed_data.X, output_data.metas[:, :2],
+                                   rtol=1, atol=3)
+        self.assertEqual([a.name for a in transformed_data.domain.attributes],
+                         [m.name for m in output_data.domain.metas[:2]])
 
     def test_multiscale_changed(self):
         self.assertFalse(self.widget.controls.multiscale.isChecked())
@@ -139,6 +143,32 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
         w = self.create_widget(OWtSNE, stored_settings=settings)
         self.assertTrue(w.controls.multiscale.isChecked())
         self.assertFalse(w.perplexity_spin.isEnabled())
+
+    def test_normalize_data(self):
+        # Normalization should be checked by default
+        self.assertTrue(self.widget.controls.normalize.isChecked())
+        with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, self.data)
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_called_once()
+
+        # Disable checkbox
+        self.widget.controls.normalize.setChecked(False)
+        self.assertFalse(self.widget.controls.normalize.isChecked())
+        with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, self.data)
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_not_called()
+
+        # Normalization shouldn't work on sparse data
+        self.widget.controls.normalize.setChecked(True)
+        self.assertTrue(self.widget.controls.normalize.isChecked())
+
+        sparse_data = self.data.to_sparse()
+        with patch("Orange.preprocess.preprocess.Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, sparse_data)
+            self.assertFalse(self.widget.controls.normalize.isEnabled())
+            normalize.assert_not_called()
 
 
 if __name__ == '__main__':

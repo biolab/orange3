@@ -6,7 +6,7 @@ from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
-from Orange.preprocess.preprocess import Preprocess, ApplyDomain
+from Orange.preprocess import preprocess
 from Orange.projection import PCA, TSNE
 from Orange.projection.manifold import TSNEModel
 from Orange.widgets import gui
@@ -76,6 +76,7 @@ class OWtSNE(OWDataProjectionWidget):
     multiscale = Setting(True)
     exaggeration = Setting(1)
     pca_components = Setting(20)
+    normalize = Setting(True)
 
     GRAPH_CLASS = OWtSNEGraph
     graph = SettingProvider(OWtSNEGraph)
@@ -85,7 +86,7 @@ class OWtSNE(OWDataProjectionWidget):
     Running, Finished, Waiting, Paused = 1, 2, 3, 4
 
     class Outputs(OWDataProjectionWidget.Outputs):
-        preprocessor = Output("Preprocessor", Preprocess)
+        preprocessor = Output("Preprocessor", preprocess.Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -143,14 +144,24 @@ class OWtSNE(OWDataProjectionWidget):
         sbp = gui.hBox(self.controlArea, False, addToLayout=False)
         gui.hSlider(
             sbp, self, "pca_components", minValue=2, maxValue=50, step=1,
-            callback=self._params_changed
+            callback=self._invalidate_pca_projection
         )
         form.addRow("PCA components:", sbp)
+
+        self.normalize_cbx = gui.checkBox(
+            box, self, "normalize", "Normalize data",
+            callback=self._invalidate_pca_projection,
+        )
+        form.addRow(self.normalize_cbx)
 
         box.layout().addLayout(form)
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
+
+    def _invalidate_pca_projection(self):
+        self.pca_data = None
+        self._params_changed()
 
     def _params_changed(self):
         self.__state = OWtSNE.Finished
@@ -215,10 +226,32 @@ class OWtSNE(OWDataProjectionWidget):
     def resume(self):
         self.__set_update_loop(self.tsne_iterator)
 
+    def set_data(self, data: Table):
+        super().set_data(data)
+
+        if data is not None:
+            # PCA doesn't support normalization on sparse data, as this would
+            # require centering and normalizing the matrix
+            self.normalize_cbx.setDisabled(data.is_sparse())
+            if data.is_sparse():
+                self.normalize = False
+                self.normalize_cbx.setToolTip(
+                    "Data normalization is not supported on sparse matrices."
+                )
+            else:
+                self.normalize_cbx.setToolTip("")
+
     def pca_preprocessing(self):
-        if self.pca_data is not None and self.pca_data.X.shape[1] == self.pca_components:
+        """Perform PCA preprocessing before passing off the data to t-SNE."""
+        if self.pca_data is not None:
             return
+
         projector = PCA(n_components=self.pca_components, random_state=0)
+        # If the normalization box is ticked, we'll add the `Normalize`
+        # preprocessor to PCA
+        if self.normalize:
+            projector.preprocessors += (preprocess.Normalize(),)
+
         model = projector(self.data)
         self.pca_data = model(self.data)
 
@@ -341,7 +374,7 @@ class OWtSNE(OWDataProjectionWidget):
     def send_preprocessor(self):
         prep = None
         if self.data is not None and self.projection is not None:
-            prep = ApplyDomain(self.projection.domain, self.projection.name)
+            prep = preprocess.ApplyDomain(self.projection.domain, self.projection.name)
         self.Outputs.preprocessor.send(prep)
 
     def clear(self):
