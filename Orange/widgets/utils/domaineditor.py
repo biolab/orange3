@@ -357,6 +357,10 @@ class DomainEditor(QTableView):
         self.variables = self.parse_domain(domain)
         self.model().set_orig_variables(self.variables)
 
+    def reset_domain(self):
+        self.model().reset_variables()
+        self.variables = self.model().variables
+
     @staticmethod
     def parse_domain(domain):
         """Convert domain into variable representation used by

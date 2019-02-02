@@ -215,6 +215,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
 
+        gui.button(
+            box, self, "Reset", callback=self.reset_domain_edit)
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
         self.apply_button.setEnabled(False)
@@ -439,6 +441,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def retrieveSpecificSettings(self):
         if hasattr(self.current_context, "modified_variables"):
             self.variables[:] = self.current_context.modified_variables
+
+    def reset_domain_edit(self):
+        self.domain_editor.reset_domain()
+        self.apply_domain_edit()
 
     def apply_domain_edit(self):
         if self.data is None:
