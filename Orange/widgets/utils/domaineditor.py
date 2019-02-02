@@ -1,10 +1,11 @@
 from itertools import chain
+from copy import deepcopy
 
 import numpy as np
 import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QAbstractTableModel
-from AnyQt.QtGui import QColor
+from AnyQt.QtGui import QColor, QFont
 from AnyQt.QtWidgets import QComboBox, QTableView, QSizePolicy
 
 from Orange.data import DiscreteVariable, ContinuousVariable, StringVariable, \
@@ -43,6 +44,13 @@ class VarTableModel(QAbstractTableModel):
     def __init__(self, variables, *args):
         super().__init__(*args)
         self.variables = variables
+        self.set_orig_variables(variables)
+
+    def set_orig_variables(self, variables):
+        self.orig_variables = deepcopy(variables)
+
+    def reset_variables(self):
+        self.set_variables(deepcopy(self.orig_variables))
 
     def set_variables(self, variables):
         self.modelAboutToBeReset.emit()
@@ -76,6 +84,11 @@ class VarTableModel(QAbstractTableModel):
             place = self.variables[row][Column.place]
             mapping = [Place.meta, Place.feature, Place.class_var, None]
             return TableModel.ColorForRole.get(mapping[place], None)
+        if role == Qt.FontRole:
+            if self.variables[row] != self.orig_variables[row]:
+                font = QFont()
+                font.setBold(True)
+                return font
 
     def setData(self, index, value, role):
         row, col = index.row(), index.column()
@@ -342,6 +355,7 @@ class DomainEditor(QTableView):
 
     def set_domain(self, domain):
         self.variables = self.parse_domain(domain)
+        self.model().set_orig_variables(self.variables)
 
     @staticmethod
     def parse_domain(domain):
