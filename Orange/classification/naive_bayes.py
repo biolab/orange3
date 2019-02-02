@@ -33,11 +33,23 @@ class NaiveBayesLearner(Learner):
         cont = contingency.get_contingencies(table)
         class_freq = np.array(np.diag(
             contingency.get_contingency(table, table.domain.class_var)))
-        class_prob = (class_freq + 1) / (np.sum(class_freq) + len(class_freq))
+        nclss = (class_freq != 0).sum()
+        if not nclss:
+            raise ValueError("Data has no defined target values")
+
+        # Laplacian smoothing considers only classes that appear in the data,
+        # in part to avoid cases where the probabilities are affected by empty
+        # (or completely spurious) classes that appear because of Orange's reuse
+        # of variables. See GH-2943.
+        # The corresponding elements of class_probs are set to zero only after
+        # mock non-zero values are used in computation of log_cont_prob to
+        # prevent division by zero.
+        class_prob = (class_freq + 1) / (np.sum(class_freq) + nclss)
         log_cont_prob = [np.log(
-            (np.array(c) + 1) / (np.sum(np.array(c), axis=0)[None, :] +
-                                 c.shape[0]) / class_prob[:, None])
+            (np.array(c) + 1) / (np.sum(np.array(c), axis=0)[None, :] + nclss)
+            / class_prob[:, None])
                          for c in cont]
+        class_prob[class_freq == 0] = 0
         return NaiveBayesModel(log_cont_prob, class_prob, table.domain)
 
 
@@ -58,35 +70,30 @@ class NaiveBayesModel(Model):
         else:
             isnan = np.isnan
             zeros = np.zeros_like(self.class_prob)
-            probs = np.atleast_2d(np.exp(
-                np.log(self.class_prob) +
-                np.array([
-                    zeros if isnan(ins.x).all() else
-                    sum(attr_prob[:, int(attr_val)]
-                        for attr_val, attr_prob in zip(ins, self.log_cont_prob)
-                        if not isnan(attr_val))
-                    for ins in data])))
+            probs = self.class_prob * np.exp(np.array([
+                zeros if isnan(ins.x).all() else
+                sum(attr_prob[:, int(attr_val)]
+                    for attr_val, attr_prob in zip(ins, self.log_cont_prob)
+                    if not isnan(attr_val))
+                for ins in data]))
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs
 
     def predict(self, X):
-        if not self.log_cont_prob:
-            probs = self._priors(X)
-        elif sp.issparse(X):
-            probs = self._sparse_probs(X)
-        else:
-            probs = self._dense_probs(X)
-        probs = np.exp(probs)
+        probs = np.zeros((X.shape[0], self.class_prob.shape[0]))
+        if self.log_cont_prob is not None:
+            if sp.issparse(X):
+                self._sparse_probs(X, probs)
+            else:
+                self._dense_probs(X, probs)
+        np.exp(probs, probs)
+        probs *= self.class_prob
         probs /= probs.sum(axis=1)[:, None]
         values = probs.argmax(axis=1)
         return values, probs
 
-    def _priors(self, data):
-        return np.tile(np.log(self.class_prob), (data.shape[0], 1))
-
-    def _dense_probs(self, data):
-        probs = self._priors(data)
+    def _dense_probs(self, data, probs):
         zeros = np.zeros((1, probs.shape[1]))
         for col, attr_prob in zip(data.T, self.log_cont_prob):
             col = col.copy()
@@ -96,9 +103,7 @@ class NaiveBayesModel(Model):
             probs += probs0[col]
         return probs
 
-    def _sparse_probs(self, data):
-        probs = self._priors(data)
-
+    def _sparse_probs(self, data, probs):
         n_vals = max(p.shape[1] for p in self.log_cont_prob) + 1
         log_prob = np.zeros((len(self.log_cont_prob),
                              n_vals,
