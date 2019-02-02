@@ -76,7 +76,6 @@ class OWLouvainClustering(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         empty_dataset = Msg("No features in data")
-        general_error = Msg("Error occured during clustering\n{}")
 
     def __init__(self):
         super().__init__()
@@ -283,13 +282,9 @@ class OWLouvainClustering(widget.OWWidget):
         task.deleteLater()
 
         self.__set_state_ready()
-        try:
-            result = future.result()
-        except Exception as err:  # pylint: disable=broad-except
-            self.Error.general_error(str(err), exc_info=True)
-            self.info_label.setText("An error occurred during clustering.")
-        else:
-            self.__set_results(result)
+
+        result = future.result()
+        self.__set_results(result)
 
     @Slot(str)
     def setStatusMessage(self, text):
