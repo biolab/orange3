@@ -99,8 +99,8 @@ def create_coef_table(classifier):
         values = [classifier.domain.class_var.values[int(i)] for i in classifier.used_vals[0]]
     else:
         values = [classifier.domain.class_var.values[int(classifier.used_vals[0][1])]]
-    domain = Domain([ContinuousVariable(value, number_of_decimals=7)
-                     for value in values], metas=[StringVariable("name")])
+    domain = Domain([ContinuousVariable(value) for value in values],
+                    metas=[StringVariable("name")])
     coefs = np.vstack((i.reshape(1, len(i)), c.T))
     names = [[attr.name] for attr in classifier.domain.attributes]
     names = [["intercept"]] + names
