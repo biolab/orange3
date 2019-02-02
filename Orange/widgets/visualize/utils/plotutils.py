@@ -148,6 +148,24 @@ class InteractiveViewBox(pg.ViewBox):
     def _dragtip_pos(self):
         return 10, 10
 
+    def updateScaleBox(self, p1, p2):
+        """
+        Overload to use ViewBox.mapToView instead of mapRectFromParent
+        mapRectFromParent (from Qt) uses QTransform.invert() which has
+        floating-point issues and can't invert the matrix with large
+        coefficients. ViewBox.mapToView uses invertQTransform from pyqtgraph.
+
+        This code, except for first three lines, are copied from the overloaded
+        method.
+        """
+        p1 = self.mapToView(p1)
+        p2 = self.mapToView(p2)
+        r = QRectF(p1, p2)
+        self.rbScaleBox.setPos(r.topLeft())
+        self.rbScaleBox.resetTransform()
+        self.rbScaleBox.scale(r.width(), r.height())
+        self.rbScaleBox.show()
+
     def safe_update_scale_box(self, buttonDownPos, currentPos):
         x, y = currentPos
         if buttonDownPos[0] == x:
@@ -168,8 +186,10 @@ class InteractiveViewBox(pg.ViewBox):
                 if ev.isFinish():
                     dragtip.hide()
                     self.rbScaleBox.hide()
-                    pixel_rect = QRectF(ev.buttonDownPos(ev.button()), pos)
-                    value_rect = self.childGroup.mapRectFromParent(pixel_rect)
+                    p1, p2 = ev.buttonDownPos(ev.button()), pos
+                    p1 = self.mapToView(p1)
+                    p2 = self.mapToView(p2)
+                    value_rect = QRectF(p1, p2)
                     self.graph.select_by_rectangle(value_rect)
                 else:
                     dragtip.setPos(*self._dragtip_pos())
