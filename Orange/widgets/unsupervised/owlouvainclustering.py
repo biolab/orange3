@@ -12,7 +12,7 @@ import networkx as nx
 from AnyQt.QtCore import (
     Qt, QObject, QTimer, pyqtSignal as Signal, pyqtSlot as Slot
 )
-from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget
+from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget, QLabel
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
@@ -97,6 +97,10 @@ class OWLouvainClustering(widget.OWWidget):
         # coalescing commit timer
         self.__commit_timer = QTimer(self, singleShot=True)
         self.__commit_timer.timeout.connect(self.commit)
+
+        # Set up UI
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.info_label = gui.widgetLabel(info_box, "No data on input.")  # type: QLabel
 
         pca_box = gui.vBox(self.controlArea, "PCA Preprocessing")
         self.apply_pca_cbx = gui.checkBox(
@@ -248,6 +252,7 @@ class OWLouvainClustering(widget.OWWidget):
                 run_on_graph, graph, resolution=self.resolution, state=state
             )
 
+        self.info_label.setText("Running...")
         self.__set_state_busy()
         self.__start_task(task, state)
 
@@ -282,6 +287,7 @@ class OWLouvainClustering(widget.OWWidget):
             result = future.result()
         except Exception as err:  # pylint: disable=broad-except
             self.Error.general_error(str(err), exc_info=True)
+            self.info_label.setText("An error occurred during clustering.")
         else:
             self.__set_results(result)
 
@@ -346,6 +352,11 @@ class OWLouvainClustering(widget.OWWidget):
             assert results.resolution == self.resolution
             assert self.partition is results.partition
             self.partition = results.partition
+
+        # Display the number of found clusters in the UI
+        num_clusters = len(np.unique(self.partition))
+        self.info_label.setText("%d clusters found." % num_clusters)
+
         self._send_data()
 
     def _send_data(self):
@@ -406,6 +417,8 @@ class OWLouvainClustering(widget.OWWidget):
         self.k_neighbors_spin.setMaximum(min(_MAX_K_NEIGBOURS, len(data) - 1))
         self.k_neighbors_spin.setValue(min(_DEFAULT_K_NEIGHBORS, len(data) - 1))
 
+        self.info_label.setText("Clustering not yet run.")
+
         self.commit()
 
     def clear(self):
@@ -416,6 +429,7 @@ class OWLouvainClustering(widget.OWWidget):
         self.partition = None
         self.Error.clear()
         self.Information.modified.clear()
+        self.info_label.setText("No data on input.")
 
     def onDeleteWidget(self):
         self.__cancel_task(wait=True)
