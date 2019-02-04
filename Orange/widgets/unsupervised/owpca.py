@@ -395,10 +395,6 @@ class OWPCA(widget.OWWidget):
         self._pca_projector.component = self.ncomponents
         self._pca_preprocessors = PCA.preprocessors
 
-    def _update_decomposition(self):
-        self._init_projector()
-        self._update_normalize()
-
     def _nselected_components(self):
         """Return the number of selected components."""
         if self._pca is None:
