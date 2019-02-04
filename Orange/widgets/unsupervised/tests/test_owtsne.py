@@ -4,7 +4,6 @@ import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.preprocess import Preprocess, Normalize
-from Orange.projection.manifold import TSNE
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
@@ -30,8 +29,9 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
         def transform(*args, **_):
             return np.ones((len(args[1]), 2), float)
 
-        def optimize(*_, **__):
-            return TSNE()()
+        def optimize(tsne_model, *_, **__):
+            # Optimize needs to return a valid `TSNEModel` instance
+            return tsne_model
 
         self._fit = owtsne.TSNE.fit
         self._transform = owtsne.TSNEModel.transform

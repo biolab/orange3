@@ -94,7 +94,6 @@ class OWtSNE(OWDataProjectionWidget):
         constant_data = Msg("Input data is constant")
         no_attributes = Msg("Data has no attributes")
         out_of_memory = Msg("Out of memory")
-        optimization_error = Msg("Error during optimization\n{}")
         no_valid_data = Msg("No projection due to no valid data")
 
     def __init__(self):
@@ -338,7 +337,6 @@ class OWtSNE(OWDataProjectionWidget):
 
         loop = self.__update_loop
         self.Error.out_of_memory.clear()
-        self.Error.optimization_error.clear()
         try:
             projection, progress = next(self.__update_loop)
             assert self.__update_loop is loop
@@ -350,10 +348,10 @@ class OWtSNE(OWDataProjectionWidget):
             self.Error.out_of_memory()
             self.__state = OWtSNE.Finished
             self.__set_update_loop(None)
-        except Exception as exc:
-            self.Error.optimization_error(str(exc))
+        except Exception:
             self.__state = OWtSNE.Finished
             self.__set_update_loop(None)
+            raise
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.projection = projection
