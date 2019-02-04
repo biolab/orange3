@@ -110,7 +110,7 @@ class OWLouvainClustering(widget.OWWidget):
         )  # type: QCheckBox
         self.apply_pca_cbx = gui.checkBox(
             preprocessing_box, self, "apply_pca", label="Apply PCA preprocessing",
-            callback=self._invalidate_graph,
+            callback=self._apply_pca_changed,
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
             preprocessing_box, self, "pca_components", label="PCA Components: ", minValue=2,
@@ -144,6 +144,10 @@ class OWLouvainClustering(widget.OWWidget):
             commit=lambda: self.commit(),
             callback=lambda: self._on_auto_commit_changed(),
         )  # type: QWidget
+
+    def _apply_pca_changed(self):
+        self.controls.pca_components.setEnabled(self.apply_pca)
+        self._invalidate_graph()
 
     def _invalidate_preprocessed_data(self):
         self.preprocessed_data = None
@@ -399,12 +403,13 @@ class OWLouvainClustering(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
-        # pylint: disable=too-many-branches
         self.closeContext()
         self.Error.clear()
 
         prev_data, self.data = self.data, data
         self.openContext(self.data)
+        # Make sure to properly enable/disable slider based on `apply_pca` setting
+        self.controls.pca_components.setEnabled(self.apply_pca)
 
         # If X hasn't changed, there's no reason to recompute clusters
         if prev_data and self.data and np.array_equal(self.data.X, prev_data.X):
