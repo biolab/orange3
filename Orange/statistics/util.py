@@ -10,6 +10,7 @@ import numpy as np
 import bottleneck as bn
 from scipy import sparse as sp
 import scipy.stats.stats
+from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
@@ -422,14 +423,15 @@ def nansum(x, axis=None):
 
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
-    def nanmean_sparse(x):
-        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
-        if not n_values:
-            warnings.warn(RuntimeWarning, "Mean of empty slice")
-            return np.nan
-        return np.nansum(x.data) / n_values
+    if not sp.issparse(x):
+        means = np.nanmean(x, axis=axis)
+    elif axis is None:
+        means, _ = mean_variance_axis(x, axis=0)
+        means = np.nanmean(means)
+    else:
+        means, _ = mean_variance_axis(x, axis=axis)
 
-    return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
+    return means
 
 
 def nanvar(x, axis=None, ddof=0):
