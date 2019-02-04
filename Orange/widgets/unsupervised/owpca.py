@@ -9,9 +9,8 @@ import pyqtgraph as pg
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
-from Orange.preprocess import Normalize
-from Orange.preprocess.preprocess import Preprocess, ApplyDomain
-from Orange.projection import PCA, TruncatedSVD
+from Orange.preprocess import preprocess
+from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -25,11 +24,6 @@ except ImportError:
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
-
-DECOMPOSITIONS = [
-    PCA,
-    TruncatedSVD
-]
 
 
 class OWPCA(widget.OWWidget):
@@ -46,7 +40,7 @@ class OWPCA(widget.OWWidget):
         transformed_data = Output("Transformed data", Table)
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
-        preprocessor = Output("Preprocessor", Preprocess)
+        preprocessor = Output("Preprocessor", preprocess.Preprocess)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -57,7 +51,6 @@ class OWPCA(widget.OWWidget):
     auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
     normalize = settings.ContextSetting(True)
-    decomposition_idx = settings.ContextSetting(0)
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
@@ -71,7 +64,6 @@ class OWPCA(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         no_features = widget.Msg("At least 1 feature is required")
         no_instances = widget.Msg("At least 1 data instance is required")
-        sparse_data = widget.Msg("Sparse data is not supported")
 
     def __init__(self):
         super().__init__()
@@ -134,13 +126,6 @@ class OWPCA(widget.OWWidget):
 
         self.sampling_box.setVisible(remotely)
 
-        # Decomposition
-        self.decomposition_box = gui.radioButtons(
-            self.controlArea, self,
-            "decomposition_idx", [d.name for d in DECOMPOSITIONS],
-            box="Decomposition", callback=self._update_decomposition
-        )
-
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
@@ -182,23 +167,6 @@ class OWPCA(widget.OWWidget):
             self.__timer.start(2000)
         else:
             self.__timer.stop()
-
-    def update_buttons(self, sparse_data=False):
-        if sparse_data:
-            self.normalize = False
-
-        buttons = self.decomposition_box.buttons
-        for cls, button in zip(DECOMPOSITIONS, buttons):
-            button.setDisabled(sparse_data and not cls.supports_sparse)
-
-        if not buttons[self.decomposition_idx].isEnabled():
-            # Set decomposition index to first sparse-enabled decomposition
-            for i, cls in enumerate(DECOMPOSITIONS):
-                if cls.supports_sparse:
-                    self.decomposition_idx = i
-                    break
-
-        self._init_projector()
 
     def start(self):
         if 'Abort' in self.start_button.text():
@@ -248,9 +216,7 @@ class OWPCA(widget.OWWidget):
                 return
 
         self.openContext(data)
-        sparse_data = data is not None and data.is_sparse()
-        self.normalize_box.setDisabled(sparse_data)
-        self.update_buttons(sparse_data=sparse_data)
+        self._init_projector()
 
         self.data = data
         self.fit()
@@ -260,9 +226,15 @@ class OWPCA(widget.OWWidget):
         self.Warning.trivial_components.clear()
         if self.data is None:
             return
+
         data = self.data
-        self._pca_projector.preprocessors = \
-            self._pca_preprocessors + ([Normalize()] if self.normalize else [])
+
+        if self.normalize:
+            self._pca_projector.preprocessors = \
+                self._pca_preprocessors + [preprocess.Normalize(center=False)]
+        else:
+            self._pca_projector.preprocessors = self._pca_preprocessors
+
         if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
             variance_ratio = pca.explained_variance_ratio_
@@ -419,10 +391,9 @@ class OWPCA(widget.OWWidget):
             self._invalidate_selection()
 
     def _init_projector(self):
-        cls = DECOMPOSITIONS[self.decomposition_idx]
-        self._pca_projector = cls(n_components=MAX_COMPONENTS)
+        self._pca_projector = PCA(n_components=MAX_COMPONENTS)
         self._pca_projector.component = self.ncomponents
-        self._pca_preprocessors = cls.preprocessors
+        self._pca_preprocessors = PCA.preprocessors
 
     def _update_decomposition(self):
         self._init_projector()
@@ -483,7 +454,7 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
-            pp = ApplyDomain(domain, "PCA")
+            pp = preprocess.ApplyDomain(domain, "PCA")
 
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
@@ -495,7 +466,6 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         self.report_items((
-            ("Decomposition", DECOMPOSITIONS[self.decomposition_idx].name),
             ("Normalize data", str(self.normalize)),
             ("Selected components", self.ncomponents),
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
@@ -516,6 +486,9 @@ class OWPCA(widget.OWWidget):
                 settings["variance_covered"] = vc
         if settings.get("ncomponents", 0) > MAX_COMPONENTS:
             settings["ncomponents"] = MAX_COMPONENTS
+
+        # Remove old `decomposition_idx` when SVD was still included
+        settings.pop("decomposition_idx", None)
 
 
 if __name__ == "__main__":  # pragma: no cover
