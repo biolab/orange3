@@ -272,6 +272,16 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, towns_data)
         self.assertIn(towns_data.domain["label"], attr_label.model())
 
+    def test_matrix_columns_tooltip(self):
+        dist = Euclidean(self.data, axis=0)
+        self.send_signal(self.widget.Inputs.distances, dist)
+        self.assertIn("sepal length", self.widget.get_tooltip([0]))
+
+    def test_matrix_columns_labels(self):
+        dist = Euclidean(self.data, axis=0)
+        self.send_signal(self.widget.Inputs.distances, dist)
+        simulate.combobox_activate_index(self.widget.controls.attr_label, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 
-from Orange.data import ContinuousVariable, Domain, Table
+from Orange.data import ContinuousVariable, Domain, Table, StringVariable
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
@@ -269,8 +269,11 @@ class OWMDS(OWDataProjectionWidget):
 
         if self.matrix is not None:
             self.effective_matrix = self.matrix
-            if self.matrix.axis == 0 and self.data is self.matrix_data:
-                self.data = None
+            if self.matrix.axis == 0 and self.data is not None \
+                    and self.data is self.matrix_data:
+                names = [[attr.name] for attr in self.data.domain.attributes]
+                domain = Domain([], metas=[StringVariable("labels")])
+                self.data = Table(domain, names)
         elif self.data.domain.attributes:
             preprocessed_data = MDS().preprocess(self.data)
             self.effective_matrix = Euclidean(preprocessed_data)
