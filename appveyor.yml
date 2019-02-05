@@ -20,8 +20,8 @@ environment:
     BUILD_GLOBAL_OPTIONS: build -j1
     BUILD_ENV: wheel==0.29.0 pip==9.0.1 numpy==1.9.3 -r requirements-doc.txt
     # SIP 4.19.4+ with PyQt5==5.9.1+ segfault our tests (GH-2756)
-    TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy~=1.14.0 scipy~=1.0.0 scikit-learn pandas==0.21.1
-    ORANGE_TEST_DB_URI: 'mssql://sa:Password12!@0.0.0.0:1433'
+    TEST_ENV: sip==4.19.6 PyQt5==5.9.2 numpy~=1.14.0 scipy~=1.0.0 scikit-learn pandas==0.21.1 pymssql
+    ORANGE_TEST_DB_URI: 'mssql://sa:Password12!@localhost:1433'
 
   matrix:
     - PYTHON: C:\Python36-x64
