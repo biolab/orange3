@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+# pylint: disable=abstract-method
 
 import unittest
 
@@ -214,7 +215,7 @@ class TestValuesSql(unittest.TestCase, dbt):
     @dbt.run_on(["postgres", "mssql"])
     def test_values_filter_with_no_conditions(self):
         with self.assertRaises(ValueError):
-            filtered_data = filter.Values([])(self.table)
+            filter.Values([])(self.table)
 
     @dbt.run_on(["postgres", "mssql"])
     def test_discrete_value_filter(self):

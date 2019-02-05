@@ -126,7 +126,7 @@ class DBTestConnection:
     def try_connection(self):
         raise NotImplementedError()
 
-    def _create_sql_table(self, data, sql_column_types=None):
+    def create_sql_table(self, data, sql_column_types=None):
         raise NotImplementedError()
 
     @staticmethod
@@ -141,7 +141,10 @@ class DBTestConnection:
 
         return column_size
 
-    def _drop_sql_table(self, table_name):
+    def drop_sql_table(self, table_name):
+        raise NotImplementedError
+
+    def get_backend(self):
         raise NotImplementedError
 
 
@@ -159,8 +162,8 @@ class PostgresTestConnection(DBTestConnection):
         except:
             pass
 
-    def _create_sql_table(self, data, sql_column_types=None,
-                          sql_column_names=None, table_name=None):
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
         data = list(data)
 
         if table_name is None:
@@ -208,13 +211,13 @@ class PostgresTestConnection(DBTestConnection):
 
         return self.params, table_name
 
-    def _drop_sql_table(self, table_name):
+    def drop_sql_table(self, table_name):
         import psycopg2
         with psycopg2.connect(**self.params) as conn:
             with conn.cursor() as curs:
                 curs.execute("DROP TABLE {}".format(table_name))
 
-    def _get_backend(self):
+    def get_backend(self):
         from Orange.data.sql.backend import Psycopg2Backend
         return Psycopg2Backend(self.params)
 
@@ -232,8 +235,8 @@ class MicrosoftTestConnection(DBTestConnection):
         except:
             pass
 
-    def _create_sql_table(self, data, sql_column_types=None,
-                          sql_column_names=None, table_name=None):
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
         data = list(data)
 
         if table_name is None:
@@ -280,14 +283,14 @@ class MicrosoftTestConnection(DBTestConnection):
 
         return self.params, table_name
 
-    def _drop_sql_table(self, table_name):
+    def drop_sql_table(self, table_name):
         import pymssql
         with pymssql.connect(**self.params) as conn:
             with conn.cursor() as cursor:
                 cursor.execute("DROP TABLE {}".format(table_name))
             conn.commit()
 
-    def _get_backend(self):
+    def get_backend(self):
         from Orange.data.sql.backend import PymssqlBackend
         return PymssqlBackend(self.params)
 
@@ -311,7 +314,7 @@ def dbs():
 
 class DataBaseTest:
     db_conn = dbs()
-    
+
     @classmethod
     def _check_db(cls, db):
         if ">" in db:
@@ -320,7 +323,7 @@ class DataBaseTest:
                     cls.db_conn[db[:i]].version <= int(db[i + 1:]):
                 raise unittest.SkipTest(
                     "This test is only run database version higher then {}"
-                        .format(db[i + 1:]))
+                    .format(db[i + 1:]))
             else:
                 db = db[:i]
         elif "<" in db:
@@ -329,7 +332,7 @@ class DataBaseTest:
                     cls.db_conn[db[:i]].version >= int(db[i + 1:]):
                 raise unittest.SkipTest(
                     "This test is only run on database version lower then {}"
-                        .format(db[i + 1:]))
+                    .format(db[i + 1:]))
             else:
                 db = db[:i]
 
@@ -355,10 +358,10 @@ class DataBaseTest:
         def new_test(test_self, *args):
             new_db = cls._check_db(db)
 
-            test_self.create_sql_table = cls.db_conn[new_db]._create_sql_table
-            test_self.drop_sql_table = cls.db_conn[new_db]._drop_sql_table
-            test_self.backend = cls.db_conn[new_db]._get_backend()
-            
+            test_self.create_sql_table = cls.db_conn[new_db].create_sql_table
+            test_self.drop_sql_table = cls.db_conn[new_db].drop_sql_table
+            test_self.backend = cls.db_conn[new_db].get_backend()
+
             error = None
             if hasattr(test_self, "setUpDB"):
                 test_self.setUpDB()
@@ -369,10 +372,10 @@ class DataBaseTest:
             finally:
                 if hasattr(test_self, "tearDownDB"):
                     test_self.tearDownDB()
-            
+
             if error is not None:
                 raise error
-            
+
         return new_test
 
     @classmethod
@@ -400,7 +403,7 @@ class DataBaseTest:
         return decorator
 
     def create_sql_table(self, data, sql_column_types=None,
-                          sql_column_names=None, table_name=None):
+                         sql_column_names=None, table_name=None):
         raise NotImplementedError
 
     def drop_sql_table(self, table_name):

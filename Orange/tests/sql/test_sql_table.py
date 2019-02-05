@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+# pylint: disable=abstract-method
 
 import pickle
 import contextlib

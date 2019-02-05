@@ -1,3 +1,5 @@
+# pylint: disable=abstract-method
+
 import unittest
 from unittest.mock import patch, MagicMock
 
@@ -17,10 +19,11 @@ class PCATest(unittest.TestCase, dbt):
     @dbt.run_on(["postgres"])
     @patch("Orange.projection.pca.save_state", MagicMock())
     def test_PCA(self):
+        iris_v = ['Iris-setosa', 'Iris-virginica', 'Iris-versicolor']
         table = SqlTable(self.conn, self.iris,
-                         type_hints=Domain([], DiscreteVariable("iris",
-                                values=['Iris-setosa', 'Iris-virginica',
-                                        'Iris-versicolor'])))
+                         type_hints=Domain([],
+                                           DiscreteVariable("iris",
+                                                            values=iris_v)))
         for batch_size in (50, 500):
             rpca = RemotePCA(table, batch_size, 20)
             self.assertEqual(rpca.components_.shape, (4, 4))

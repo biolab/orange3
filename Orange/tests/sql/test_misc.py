@@ -2,6 +2,8 @@
 
 Please note that such use is deprecated.
 """
+# pylint: disable=abstract-method
+
 import unittest
 
 from Orange.data.sql.table import SqlTable

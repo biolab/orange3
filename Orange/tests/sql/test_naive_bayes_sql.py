@@ -1,3 +1,5 @@
+# pylint: disable=abstract-method
+
 import unittest
 
 from numpy import array
@@ -19,10 +21,11 @@ class NaiveBayesTest(unittest.TestCase, dbt):
 
     @dbt.run_on(["postgres"])
     def test_NaiveBayes(self):
+        iris_v = ['Iris-setosa', 'Iris-virginica', 'Iris-versicolor']
         table = SqlTable(self.conn, self.iris,
-                         type_hints=Domain([], DiscreteVariable("iris",
-                                values=['Iris-setosa', 'Iris-virginica',
-                                        'Iris-versicolor'])))
+                         type_hints=Domain([],
+                                           DiscreteVariable("iris",
+                                                            values=iris_v)))
         disc = preprocess.Discretize()
         table = disc(table)
         bayes = nb.NaiveBayesLearner()
