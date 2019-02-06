@@ -3,9 +3,11 @@
 import time
 from unittest.mock import patch, Mock
 
+from AnyQt.QtCore import Qt
+
 from Orange.data import Table
 from Orange.widgets.data.owcorrelations import (
-    OWCorrelations, KMeansCorrelationHeuristic
+    OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank
 )
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
@@ -30,7 +32,7 @@ class TestOWCorrelations(WidgetTest):
         time.sleep(0.1)
         n_attrs = len(self.data_cont.domain.attributes)
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 2)
+        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
                          n_attrs * (n_attrs - 1) / 2)
         self.send_signal(self.widget.Inputs.data, None)
@@ -52,7 +54,7 @@ class TestOWCorrelations(WidgetTest):
         n_attrs = len([a for a in domain.attributes if a.is_continuous])
         time.sleep(0.1)
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 2)
+        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
                          n_attrs * (n_attrs - 1) / 2)
 
@@ -185,3 +187,13 @@ class TestOWCorrelations(WidgetTest):
         self.widget.report_button.click()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
+
+
+class TestCorrelationRank(WidgetTest):
+    def test_row_for_state(self):
+        attrs = Table("iris").domain.attributes
+        vizrank = CorrelationRank(None)
+        vizrank.attrs = attrs
+        row = vizrank.row_for_state((-0.2, 0.2), (1, 0))
+        self.assertEqual(row[1].data(Qt.DisplayRole), attrs[0].name)
+        self.assertEqual(row[2].data(Qt.DisplayRole), attrs[1].name)

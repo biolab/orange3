@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, \
     QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtWidgets import QHeaderView
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.preprocess import SklImpute, Normalize
@@ -101,7 +102,6 @@ class CorrelationRank(VizRankDialogAttrPair):
         data = self.master.cont_data
         self.attrs = data and data.domain.attributes
         self.model_proxy.setFilterKeyColumn(-1)
-        self.rank_table.horizontalHeader().setStretchLastSection(False)
         self.heuristic = None
         self.use_heuristic = False
         if data:
@@ -122,16 +122,19 @@ class CorrelationRank(VizRankDialogAttrPair):
 
     def row_for_state(self, score, state):
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
-        attrs_item = QStandardItem(
-            "{}, {}".format(attrs[0].name, attrs[1].name))
-        attrs_item.setData(attrs, self._AttrRole)
-        attrs_item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+        attr_items = []
+        for attr in attrs:
+            item = QStandardItem(attr.name)
+            item.setData(attrs, self._AttrRole)
+            item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+            item.setToolTip(attr.name)
+            attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
         correlation_item.setData(attrs, self._AttrRole)
         correlation_item.setData(
             self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
             gui.TableBarItem.BarColorRole)
-        return [correlation_item, attrs_item]
+        return [correlation_item] + attr_items
 
     def check_preconditions(self):
         return self.master.cont_data is not None
@@ -157,6 +160,8 @@ class CorrelationRank(VizRankDialogAttrPair):
 
     def stopped(self):
         self.threadStopped.emit()
+        header = self.rank_table.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
 
 
 class OWCorrelations(OWWidget):
@@ -234,7 +239,8 @@ class OWCorrelations(OWWidget):
                     row = i
                     break
         if model.rowCount():
-            selection.select(model.index(row, 0), model.index(row, 1))
+            selection.select(model.index(row, 0),
+                             model.index(row, model.columnCount() - 1))
             self.vizrank.rank_table.selectionModel().select(
                 selection, QItemSelectionModel.ClearAndSelect)
 
@@ -264,8 +270,6 @@ class OWCorrelations(OWWidget):
         if self.cont_data is not None:
             # this triggers self.commit() by changing vizrank selection
             self.vizrank.toggle()
-            header = self.vizrank.rank_table.horizontalHeader()
-            header.setStretchLastSection(True)
         else:
             self.commit()
 
