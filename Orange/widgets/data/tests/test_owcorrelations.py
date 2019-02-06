@@ -3,11 +3,15 @@
 import time
 from unittest.mock import patch, Mock
 
+import numpy as np
+import numpy.testing as npt
+
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table
 from Orange.widgets.data.owcorrelations import (
-    OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank
+    OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank,
+    CorrelationType
 )
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
@@ -99,8 +103,12 @@ class TestOWCorrelations(WidgetTest):
         correlations = self.get_output(self.widget.Outputs.correlations)
         self.assertIsInstance(correlations, Table)
         self.assertEqual(len(correlations), 6)
-        self.assertEqual(len(correlations.domain.attributes), 1)
         self.assertEqual(len(correlations.domain.metas), 2)
+        self.assertListEqual(["Correlation", "FDR"],
+                             [m.name for m in correlations.domain.attributes])
+        array = np.array([[0.963, 0], [0.872, 0], [0.818, 0], [-0.421, 0],
+                          [-0.357, 0.000009], [-0.109, 0.1827652]])
+        npt.assert_almost_equal(correlations.X, array)
 
     def test_input_changed(self):
         """Check whether changing input emits commit"""
@@ -190,10 +198,21 @@ class TestOWCorrelations(WidgetTest):
 
 
 class TestCorrelationRank(WidgetTest):
+    def test_compute_score(self):
+        data = Table("iris")
+        vizrank = CorrelationRank(None)
+        vizrank.master = Mock()
+        vizrank.master.cont_data = data
+        vizrank.master.correlation_type = CorrelationType.PEARSON
+        npt.assert_almost_equal(vizrank.compute_score((1, 0)),
+                                [-0.1094, -0.1094, 0.1828], 4)
+
     def test_row_for_state(self):
         attrs = Table("iris").domain.attributes
         vizrank = CorrelationRank(None)
         vizrank.attrs = attrs
-        row = vizrank.row_for_state((-0.2, 0.2), (1, 0))
+        row = vizrank.row_for_state((-0.2, 0.2, 0.1), (1, 0))
+        self.assertEqual(row[0].data(Qt.DisplayRole), "+0.200")
+        self.assertEqual(row[0].data(CorrelationRank.pValRole), 0.1)
         self.assertEqual(row[1].data(Qt.DisplayRole), attrs[0].name)
         self.assertEqual(row[2].data(Qt.DisplayRole), attrs[1].name)

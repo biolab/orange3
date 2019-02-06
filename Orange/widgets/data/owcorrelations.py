@@ -16,6 +16,7 @@ from AnyQt.QtWidgets import QHeaderView
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.preprocess import SklImpute, Normalize
+from Orange.statistics.util import FDR
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
@@ -91,6 +92,7 @@ class CorrelationRank(VizRankDialogAttrPair):
     POSITIVE_COLOR = QColor(170, 242, 43)
 
     threadStopped = Signal()
+    pValRole = next(gui.OrangeUserRole)
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -117,8 +119,8 @@ class CorrelationRank(VizRankDialogAttrPair):
         (attr1, attr2), corr_type = state, self.master.correlation_type
         data = self.master.cont_data.X
         corr = pearsonr if corr_type == CorrelationType.PEARSON else spearmanr
-        result = corr(data[:, attr1], data[:, attr2])[0]
-        return -abs(result) if not np.isnan(result) else NAN, result
+        r, p_value = corr(data[:, attr1], data[:, attr2])
+        return -abs(r) if not np.isnan(r) else NAN, r, p_value
 
     def row_for_state(self, score, state):
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
@@ -130,6 +132,7 @@ class CorrelationRank(VizRankDialogAttrPair):
             item.setToolTip(attr.name)
             attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
+        correlation_item.setData(score[2], self.pValRole)
         correlation_item.setData(attrs, self._AttrRole)
         correlation_item.setData(
             self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
@@ -280,11 +283,14 @@ class OWCorrelations(OWWidget):
             self.Outputs.correlations.send(None)
             return
 
+        attrs = [ContinuousVariable("Correlation"), ContinuousVariable("FDR")]
         metas = [StringVariable("Feature 1"), StringVariable("Feature 2")]
-        domain = Domain([ContinuousVariable("Correlation")], metas=metas)
+        domain = Domain(attrs, metas=metas)
         model = self.vizrank.rank_model
-        x = np.array([[float(model.data(model.index(row, 0)))] for row
-                      in range(model.rowCount())])
+        x = np.array([[float(model.data(model.index(row, 0), role))
+                       for role in (Qt.DisplayRole, CorrelationRank.pValRole)]
+                      for row in range(model.rowCount())])
+        x[:, 1] = FDR(list(x[:, 1]))
         # pylint: disable=protected-access
         m = np.array([[a.name for a in model.data(model.index(row, 0),
                                                   CorrelationRank._AttrRole)]

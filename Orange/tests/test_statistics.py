@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
 
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode, array_equal
+    unique, var, nanstd, nanvar, nanmode, array_equal, FDR
 from sklearn.utils import check_random_state
 
 
@@ -262,6 +262,12 @@ class TestUtil(unittest.TestCase):
                 np.nanstd(x, axis=axis, ddof=10),
                 nanstd(csr_matrix(x), axis=axis, ddof=10),
             )
+
+    def test_FDR(self):
+        p_values = [0.00001, 0.0001, 0.0002, 0.0003, 0.0004]
+        np.testing.assert_almost_equal(
+            np.array([0.00005, 0.00025, 0.00033, 0.00038, 0.0004]),
+            FDR(p_values), decimal=5)
 
 
 class TestNanmean(unittest.TestCase):
