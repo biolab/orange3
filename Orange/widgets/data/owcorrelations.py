@@ -9,7 +9,8 @@ import numpy as np
 from scipy.stats import spearmanr, pearsonr
 from sklearn.cluster import KMeans
 
-from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, QSize
+from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, \
+    QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QStandardItem, QColor
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -88,6 +89,8 @@ class CorrelationRank(VizRankDialogAttrPair):
     NEGATIVE_COLOR = QColor(70, 190, 250)
     POSITIVE_COLOR = QColor(170, 242, 43)
 
+    threadStopped = Signal()
+
     def __init__(self, *args):
         super().__init__(*args)
         self.heuristic = None
@@ -152,6 +155,9 @@ class CorrelationRank(VizRankDialogAttrPair):
     def bar_length(score):
         return abs(score[1])
 
+    def stopped(self):
+        self.threadStopped.emit()
+
 
 class OWCorrelations(OWWidget):
     name = "Correlations"
@@ -192,6 +198,7 @@ class OWCorrelations(OWWidget):
             None, self, None, self._vizrank_selection_changed)
         self.vizrank.progressBar = self.progressBar
         self.vizrank.button.setEnabled(False)
+        self.vizrank.threadStopped.connect(self._vizrank_stopped)
 
         gui.separator(box)
         box.layout().addWidget(self.vizrank.filter)
@@ -210,18 +217,26 @@ class OWCorrelations(OWWidget):
         self.selection = args
         self.commit()
 
+    def _vizrank_stopped(self):
+        self._vizrank_select()
+
     def _vizrank_select(self):
         model = self.vizrank.rank_table.model()
         selection = QItemSelection()
-        names = sorted(x.name for x in self.selection)
-        for i in range(model.rowCount()):
-            # pylint: disable=protected-access
-            if sorted(x.name for x in model.data(
-                    model.index(i, 0), CorrelationRank._AttrRole)) == names:
-                selection.select(model.index(i, 0), model.index(i, 1))
-                self.vizrank.rank_table.selectionModel().select(
-                    selection, QItemSelectionModel.ClearAndSelect)
-                break
+        row = 0
+        if self.selection:
+            sel_names = sorted(x.name for x in self.selection)
+            for i in range(model.rowCount()):
+                # pylint: disable=protected-access
+                names = sorted(x.name for x in model.data(
+                    model.index(i, 0), CorrelationRank._AttrRole))
+                if names == sel_names:
+                    row = i
+                    break
+        if model.rowCount():
+            selection.select(model.index(row, 0), model.index(row, 1))
+            self.vizrank.rank_table.selectionModel().select(
+                selection, QItemSelectionModel.ClearAndSelect)
 
     @Inputs.data
     def set_data(self, data):
@@ -240,10 +255,9 @@ class OWCorrelations(OWWidget):
                 domain = data.domain
                 cont_dom = Domain(cont_attrs, domain.class_vars, domain.metas)
                 self.cont_data = SklImpute()(Table.from_table(cont_dom, data))
-        self.apply()
         self.openContext(self.data)
-        self._vizrank_select()
-        self.vizrank.button.setEnabled(self.data is not None)
+        self.apply()
+        self.vizrank.button.setEnabled(self.cont_data is not None)
 
     def apply(self):
         self.vizrank.initialize()

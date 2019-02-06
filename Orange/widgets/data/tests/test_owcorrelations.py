@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
 import time
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from Orange.data import Table
 from Orange.widgets.data.owcorrelations import (
@@ -77,7 +77,6 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(self.data_cont, output)
 
@@ -86,8 +85,6 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        attrs = self.widget.cont_data.domain.attributes
-        self.widget._vizrank_selection_changed(attrs[0], attrs[1])
         features = self.get_output(self.widget.Outputs.features)
         self.assertIsInstance(features, AttributeList)
         self.assertEqual(len(features), 2)
@@ -97,12 +94,41 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        self.widget.commit()
         correlations = self.get_output(self.widget.Outputs.correlations)
         self.assertIsInstance(correlations, Table)
         self.assertEqual(len(correlations), 6)
         self.assertEqual(len(correlations.domain.attributes), 1)
         self.assertEqual(len(correlations.domain.metas), 2)
+
+    def test_input_changed(self):
+        """Check whether changing input emits commit"""
+        self.widget.commit = Mock()
+        self.send_signal(self.widget.Inputs.data, self.data_cont)
+        time.sleep(0.1)
+        self.process_events()
+        self.widget.commit.assert_called_once()
+
+        self.widget.commit.reset_mock()
+        self.send_signal(self.widget.Inputs.data, self.data_mixed)
+        time.sleep(0.1)
+        self.process_events()
+        self.widget.commit.assert_called_once()
+
+    def test_saved_selection(self):
+        """Select row from settings"""
+        self.send_signal(self.widget.Inputs.data, self.data_cont)
+        time.sleep(0.1)
+        self.process_events()
+        attrs = self.widget.cont_data.domain.attributes
+        self.widget._vizrank_selection_changed(attrs[3], attrs[1])
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+
+        w = self.create_widget(OWCorrelations, stored_settings=settings)
+        self.send_signal(self.widget.Inputs.data, self.data_cont, widget=w)
+        time.sleep(0.1)
+        self.process_events()
+        sel_row = w.vizrank.rank_table.selectionModel().selectedRows()[0].row()
+        self.assertEqual(sel_row, 4)
 
     def test_scatterplot_input_features(self):
         """Check if attributes have been set after sent to scatterplot"""
@@ -137,13 +163,11 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        self.widget.commit()
         pearson_corr = self.get_output(self.widget.Outputs.correlations)
 
         simulate.combobox_activate_item(c_type, "Spearman correlation")
         time.sleep(0.1)
         self.process_events()
-        self.widget.commit()
         sperman_corr = self.get_output(self.widget.Outputs.correlations)
         self.assertFalse((pearson_corr.X == sperman_corr.X).all())
 
@@ -154,7 +178,6 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        self.widget.commit()
 
     def test_send_report(self):
         """Test report """
