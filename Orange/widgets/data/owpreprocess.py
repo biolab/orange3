@@ -354,7 +354,7 @@ class UnivariateFeatureSelect(QWidget):
 
         self.layout().addWidget(box)
 
-        box = QGroupBox(title="Strategy", flat=True)
+        box = QGroupBox(title="Number of features", flat=True)
         self.__group = group = QButtonGroup(self, exclusive=True)
         self.__spins = {}
 
@@ -381,9 +381,6 @@ class UnivariateFeatureSelect(QWidget):
         pspin.valueChanged[float].connect(self.setP)
         pspin.editingFinished.connect(self.edited)
         self.__spins[UnivariateFeatureSelect.Percentile] = pspin
-        # Percentile controls disabled for now.
-        pspin.setEnabled(False)
-        percrb.setEnabled(False)
         form.addRow(percrb, pspin)
 
 #         form.addRow(QRadioButton("FDR"), QDoubleSpinBox())
@@ -508,10 +505,12 @@ class FeatureSelectEditor(BaseEditor):
         score = FeatureSelectEditor.MEASURES[score][1]
         strategy = params.get("strategy", UnivariateFeatureSelect.Fixed)
         k = params.get("k", 10)
+        p = params.get("p", 75.0)
         if strategy == UnivariateFeatureSelect.Fixed:
             return preprocess.fss.SelectBestFeatures(score, k=k)
+        elif strategy == UnivariateFeatureSelect.Percentile:
+            return preprocess.fss.SelectBestFeatures(score, k=p/100)
         else:
-            # TODO: implement top percentile selection
             raise NotImplementedError
 
     def __repr__(self):
@@ -534,7 +533,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         self.__k = 10
         self.__p = 75.0
 
-        box = QGroupBox(title="Strategy", flat=True)
+        box = QGroupBox(title="Number of features", flat=True)
         self.__group = group = QButtonGroup(self, exclusive=True)
         self.__spins = {}
 

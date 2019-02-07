@@ -16,9 +16,10 @@ __all__ = ["SelectBestFeatures", "SelectRandomFeatures"]
 class SelectBestFeatures(Reprable):
     """
     A feature selector that builds a new dataset consisting of either the top
-    `k` features or all those that exceed a given `threshold`. Features are
-    scored using the provided feature scoring `method`. By default it is
-    assumed that feature importance diminishes with decreasing scores.
+    `k` features (`k` can also represent a percentile value between 0.0 and 1.0)
+    or all those that exceed a given `threshold`. Features are scored using the
+    provided feature scoring `method`. By default it is assumed that feature
+    importance diminishes with decreasing scores.
 
     If both `k` and `threshold` are set, only features satisfying both
     conditions will be selected.
@@ -32,8 +33,8 @@ class SelectBestFeatures(Reprable):
     method : Orange.preprocess.score.ClassificationScorer, Orange.preprocess.score.SklScorer
         Univariate feature scoring method.
 
-    k : int
-        The number of top features to select.
+    k : int or float
+        The number of top features to select or percentile, above which features are selected.
 
     threshold : float
         A threshold that a feature should meet according to the provided method.
@@ -50,6 +51,12 @@ class SelectBestFeatures(Reprable):
         self.decreasing = decreasing
 
     def __call__(self, data):
+        n_attrs = len(data.domain.attributes)
+        if type(self.k) == float:
+            idx_attr = np.ceil(self.k * n_attrs).astype(int)
+            # edge case: 0th percentile would result in selection of `(n_attrs + 1)` attrs
+            self.k = min(n_attrs - idx_attr + 1, n_attrs)
+
         method = self.method
         # select default method according to the provided data
         if method is None:
