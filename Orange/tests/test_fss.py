@@ -27,6 +27,24 @@ class TestFSS(unittest.TestCase):
         best = max((gini(self.titanic, f), f) for f in self.titanic.domain.attributes)[1]
         self.assertEqual(data2.domain.attributes[0], best)
 
+    def test_select_2(self):
+        gini = Gini()
+        # 100th percentile = selection of top1 attribute
+        sel1 = SelectBestFeatures(method=gini, k=1.0)
+        data2 = sel1(self.titanic)
+        best = max((gini(self.titanic, f), f) for f in self.titanic.domain.attributes)[1]
+        self.assertEqual(data2.domain.attributes[0], best)
+
+        # 0th percentile = selection of all top3 (all) attributes
+        sel2 = SelectBestFeatures(method=gini, k=0.0)
+        data2 = sel2(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), len(self.titanic.domain.attributes))
+
+        # 35th percentile = selection of top2 (out of 3) attributes
+        sel3 = SelectBestFeatures(method=gini, k=0.35)
+        data2 = sel3(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), 2)
+
     def test_select_threshold(self):
         anova = ANOVA()
         t = 30
