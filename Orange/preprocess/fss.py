@@ -52,7 +52,7 @@ class SelectBestFeatures(Reprable):
 
     def __call__(self, data):
         n_attrs = len(data.domain.attributes)
-        if type(self.k) == float:
+        if isinstance(self.k, float):
             idx_attr = np.ceil(self.k * n_attrs).astype(int)
             # edge case: 0th percentile would result in selection of `(n_attrs + 1)` attrs
             self.k = min(n_attrs - idx_attr + 1, n_attrs)
@@ -120,7 +120,7 @@ class SelectRandomFeatures(Reprable):
         self.k = k
 
     def __call__(self, data):
-        if type(self.k) == float:
+        if isinstance(self.k, float):
             self.k = int(len(data.domain.attributes) * self.k)
         domain = Orange.data.Domain(
             random.sample(data.domain.attributes,
