@@ -145,6 +145,14 @@ class OWLouvainClustering(widget.OWWidget):
             callback=lambda: self._on_auto_commit_changed(),
         )  # type: QWidget
 
+    def _preprocess_data(self):
+        if self.preprocessed_data is None:
+            if self.normalize:
+                normalizer = preprocess.Normalize(center=False)
+                self.preprocessed_data = normalizer(self.data)
+            else:
+                self.preprocessed_data = self.data
+
     def _apply_pca_changed(self):
         self.controls.pca_components.setEnabled(self.apply_pca)
         self._invalidate_graph()
@@ -208,11 +216,9 @@ class OWLouvainClustering(widget.OWWidget):
         self.__set_state_ready()
 
     def commit(self):
-        # pylint: disable=too-many-branches
         self.__commit_timer.stop()
         self.__invalidated = False
         self._set_modified(False)
-        self.Error.clear()
 
         # Cancel current running task
         self.__cancel_task(wait=False)
@@ -221,24 +227,14 @@ class OWLouvainClustering(widget.OWWidget):
             self.__set_state_ready()
             return
 
-        # Make sure the dataset is ok
-        if len(self.data.domain.attributes) < 1:
-            self.Error.empty_dataset()
-            self.__set_state_ready()
-            return
+        self.Error.clear()
 
         if self.partition is not None:
             self.__set_state_ready()
             self._send_data()
             return
 
-        # Preprocess the dataset
-        if self.preprocessed_data is None:
-            if self.normalize:
-                normalizer = preprocess.Normalize(center=False)
-                self.preprocessed_data = normalizer(self.data)
-            else:
-                self.preprocessed_data = self.data
+        self._preprocess_data()
 
         state = TaskState(self)
 
@@ -425,6 +421,12 @@ class OWLouvainClustering(widget.OWWidget):
         # Clear internal state
         self.clear()
         self._invalidate_pca_projection()
+
+        # Make sure the dataset is ok
+        if self.data is not None and len(self.data.domain.attributes) < 1:
+            self.Error.empty_dataset()
+            self.data = None
+
         if self.data is None:
             return
 
