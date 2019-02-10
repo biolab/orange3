@@ -269,11 +269,11 @@ class Normalize(Preprocess):
     Parameters
     ----------
     zero_based : bool (default=True)
+        Only used when `norm_type=NormalizeBySpan`.
+
         Determines the value used as the “low” value of the variable.
         It determines the interval for normalized continuous variables
         (either [-1, 1] or [0, 1]).
-
-        This has no effect when `norm_type` is set to `NormalizeBySD`.
 
     norm_type : NormTypes (default: Normalize.NormalizeBySD)
         Normalization type. If Normalize.NormalizeBySD, the values are
@@ -289,6 +289,8 @@ class Normalize(Preprocess):
         If True the class is normalized as well.
 
     center : bool (default=True)
+        Only used when `norm_type=NormalizeBySD`.
+
         Whether or not to center the data so it has mean zero.
 
     Examples
