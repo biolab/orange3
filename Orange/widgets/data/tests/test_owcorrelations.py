@@ -181,6 +181,29 @@ class TestOWCorrelations(WidgetTest):
         sperman_corr = self.get_output(self.widget.Outputs.correlations)
         self.assertFalse((pearson_corr.X == sperman_corr.X).all())
 
+    def test_feature_combo(self):
+        """Check content of feature selection combobox"""
+        feature_combo = self.widget.controls.feature
+        self.send_signal(self.widget.Inputs.data, self.data_mixed)
+        cont_attributes = [attr for attr in self.data_mixed.domain.attributes
+                           if attr.is_continuous]
+        self.assertEqual(len(feature_combo.model()), len(cont_attributes) + 1)
+
+    def test_select_feature(self):
+        """Check number of possible states"""
+        feature_combo = self.widget.controls.feature
+        self.send_signal(self.widget.Inputs.data, self.data_cont)
+
+        simulate.combobox_activate_index(feature_combo, 2)
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
+
+        simulate.combobox_activate_index(feature_combo, 0)
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
+
     @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
     @patch("Orange.widgets.data.owcorrelations."
            "KMeansCorrelationHeuristic.n_clusters", 2)
@@ -188,6 +211,20 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
+                         len(self.widget.cont_data.domain.attributes) - 1)
+
+    @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
+    @patch("Orange.widgets.data.owcorrelations."
+           "KMeansCorrelationHeuristic.n_clusters", 1)
+    def test_select_feature_against_heuristic(self):
+        """Never use heuristic if feature is selected"""
+        feature_combo = self.widget.controls.feature
+        self.send_signal(self.widget.Inputs.data, self.data_cont)
+        simulate.combobox_activate_index(feature_combo, 2)
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
 
     def test_send_report(self):
         """Test report """
@@ -198,21 +235,31 @@ class TestOWCorrelations(WidgetTest):
 
 
 class TestCorrelationRank(WidgetTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = Table("iris")
+        cls.attrs = cls.iris.domain.attributes
+
+    def setUp(self):
+        self.vizrank = CorrelationRank(None)
+        self.vizrank.attrs = self.attrs
+
     def test_compute_score(self):
-        data = Table("iris")
-        vizrank = CorrelationRank(None)
-        vizrank.master = Mock()
-        vizrank.master.cont_data = data
-        vizrank.master.correlation_type = CorrelationType.PEARSON
-        npt.assert_almost_equal(vizrank.compute_score((1, 0)),
+        self.vizrank.master = Mock()
+        self.vizrank.master.cont_data = self.iris
+        self.vizrank.master.correlation_type = CorrelationType.PEARSON
+        npt.assert_almost_equal(self.vizrank.compute_score((1, 0)),
                                 [-0.1094, -0.1094, 0.1828], 4)
 
     def test_row_for_state(self):
-        attrs = Table("iris").domain.attributes
-        vizrank = CorrelationRank(None)
-        vizrank.attrs = attrs
-        row = vizrank.row_for_state((-0.2, 0.2, 0.1), (1, 0))
+        row = self.vizrank.row_for_state((-0.2, 0.2, 0.1), (1, 0))
         self.assertEqual(row[0].data(Qt.DisplayRole), "+0.200")
         self.assertEqual(row[0].data(CorrelationRank.pValRole), 0.1)
-        self.assertEqual(row[1].data(Qt.DisplayRole), attrs[0].name)
-        self.assertEqual(row[2].data(Qt.DisplayRole), attrs[1].name)
+        self.assertEqual(row[1].data(Qt.DisplayRole), self.attrs[0].name)
+        self.assertEqual(row[2].data(Qt.DisplayRole), self.attrs[1].name)
+
+    def test_iterate_states_by_feature(self):
+        self.vizrank.sel_feature_index = 2
+        states = self.vizrank.iterate_states_by_feature()
+        self.assertListEqual([(2, 0), (2, 1), (2, 3)], list(states))

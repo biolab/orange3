@@ -20,6 +20,7 @@ from Orange.statistics.util import FDR
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
@@ -98,6 +99,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         super().__init__(*args)
         self.heuristic = None
         self.use_heuristic = False
+        self.sel_feature_index = None
 
     def initialize(self):
         super().initialize()
@@ -106,12 +108,17 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.model_proxy.setFilterKeyColumn(-1)
         self.heuristic = None
         self.use_heuristic = False
+        if self.master.feature is not None:
+            self.sel_feature_index = data.domain.index(self.master.feature)
+        else:
+            self.sel_feature_index = None
         if data:
             # use heuristic if data is too big
             n_attrs = len(self.attrs)
             use_heuristic = n_attrs > KMeansCorrelationHeuristic.n_clusters
             self.use_heuristic = use_heuristic and \
-                len(data) * n_attrs ** 2 > SIZE_LIMIT
+                len(data) * n_attrs ** 2 > SIZE_LIMIT and \
+                self.sel_feature_index is None
             if self.use_heuristic:
                 self.heuristic = KMeansCorrelationHeuristic(data)
 
@@ -143,10 +150,17 @@ class CorrelationRank(VizRankDialogAttrPair):
         return self.master.cont_data is not None
 
     def iterate_states(self, initial_state):
-        if self.use_heuristic:
+        if self.sel_feature_index is not None:
+            return self.iterate_states_by_feature()
+        elif self.use_heuristic:
             return self.heuristic.get_states(initial_state)
         else:
             return super().iterate_states(initial_state)
+
+    def iterate_states_by_feature(self):
+        for j in range(len(self.attrs)):
+            if j != self.sel_feature_index:
+                yield self.sel_feature_index, j
 
     def state_count(self):
         if self.use_heuristic:
@@ -185,6 +199,7 @@ class OWCorrelations(OWWidget):
 
     settingsHandler = DomainContextHandler()
     selection = ContextSetting(())
+    feature = ContextSetting(None)
     correlation_type = Setting(0)
 
     class Information(OWWidget.Information):
@@ -200,7 +215,17 @@ class OWCorrelations(OWWidget):
         box = gui.vBox(self.mainArea)
         self.correlation_combo = gui.comboBox(
             box, self, "correlation_type", items=CorrelationType.items(),
-            orientation=Qt.Horizontal, callback=self._correlation_combo_changed)
+            orientation=Qt.Horizontal, callback=self._correlation_combo_changed
+        )
+
+        self.feature_model = DomainModel(
+            separators=False, placeholder="(All combinations)",
+            valid_types=ContinuousVariable,
+        )
+        gui.comboBox(
+            box, self, "feature", callback=self._feature_combo_changed,
+            model=self.feature_model
+        )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
@@ -219,6 +244,9 @@ class OWCorrelations(OWWidget):
         return QSize(350, 400)
 
     def _correlation_combo_changed(self):
+        self.apply()
+
+    def _feature_combo_changed(self):
         self.apply()
 
     def _vizrank_selection_changed(self, *args):
@@ -264,9 +292,14 @@ class OWCorrelations(OWWidget):
                 domain = data.domain
                 cont_dom = Domain(cont_attrs, domain.class_vars, domain.metas)
                 self.cont_data = SklImpute()(Table.from_table(cont_dom, data))
-        self.openContext(self.data)
+        self.set_feature_model()
+        self.openContext(self.cont_data)
         self.apply()
         self.vizrank.button.setEnabled(self.cont_data is not None)
+
+    def set_feature_model(self):
+        self.feature_model.set_domain(self.cont_data and self.cont_data.domain)
+        self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
