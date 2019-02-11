@@ -176,9 +176,14 @@ class InteractiveViewBox(pg.ViewBox):
 
     # noinspection PyPep8Naming,PyMethodOverriding
     def mouseDragEvent(self, ev, axis=None):
-        if self.graph.state == SELECT and axis is None:
+        def get_mapped_rect():
+            p1, p2 = ev.buttonDownPos(ev.button()), ev.pos()
+            p1 = self.mapToView(p1)
+            p2 = self.mapToView(p2)
+            return QRectF(p1, p2)
+
+        def select():
             ev.accept()
-            pos = ev.pos()
             if ev.button() == Qt.LeftButton:
                 self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
                 scene = self.scene()
@@ -186,18 +191,36 @@ class InteractiveViewBox(pg.ViewBox):
                 if ev.isFinish():
                     dragtip.hide()
                     self.rbScaleBox.hide()
-                    p1, p2 = ev.buttonDownPos(ev.button()), pos
-                    p1 = self.mapToView(p1)
-                    p2 = self.mapToView(p2)
-                    value_rect = QRectF(p1, p2)
+                    value_rect = get_mapped_rect()
                     self.graph.select_by_rectangle(value_rect)
                 else:
                     dragtip.setPos(*self._dragtip_pos())
                     dragtip.show()  # although possibly already shown
                     self.safe_update_scale_box(ev.buttonDownPos(), ev.pos())
+
+        def zoom():
+            # A fixed version of the code from the inherited mouseDragEvent
+            # Use mapToView instead of mapRectFromParent
+            ev.accept()
+            self.rbScaleBox.hide()
+            ax = get_mapped_rect()
+            self.showAxRect(ax)
+            self.axHistoryPointer += 1
+            self.axHistory = self.axHistory[:self.axHistoryPointer] + [ax]
+
+        if self.graph.state == SELECT and axis is None:
+            select()
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
-            ev.ignore()
-            super().mouseDragEvent(ev, axis=axis)
+            # Inherited mouseDragEvent doesn't work for large zooms because it
+            # uses mapRectFromParent. We don't want to copy the parts of the
+            # method that work, hence we only use our code under the following
+            # conditions.
+            if ev.button() & (Qt.LeftButton | Qt.MidButton) \
+                    and self.state['mouseMode'] == pg.ViewBox.RectMode \
+                    and ev.isFinish():
+                zoom()
+            else:
+                super().mouseDragEvent(ev, axis=axis)
         else:
             ev.ignore()
 
