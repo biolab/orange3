@@ -170,6 +170,31 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
             self.assertFalse(self.widget.controls.normalize.isEnabled())
             normalize.assert_not_called()
 
+    @patch("Orange.projection.manifold.TSNEModel.optimize")
+    def test_exaggeration_is_passed_through_properly(self, optimize):
+        def _check_exaggeration(call, exaggeration):
+            # Check the last call to `optimize`, so we catch one during the
+            # regular regime
+            _, _, kwargs = call.mock_calls[-1]
+            self.assertIn("exaggeration", kwargs)
+            self.assertEqual(kwargs["exaggeration"], exaggeration)
+
+        # Set value to 1
+        self.widget.controls.exaggeration.setValue(1)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.commit_and_wait()
+        _check_exaggeration(optimize, 1)
+
+        # Reset and clear state
+        optimize.reset_mock()
+        self.send_signal(self.widget.Inputs.data, None)
+
+        # Change to 3
+        self.widget.controls.exaggeration.setValue(3)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.commit_and_wait()
+        _check_exaggeration(optimize, 3)
+
 
 if __name__ == '__main__':
     unittest.main()

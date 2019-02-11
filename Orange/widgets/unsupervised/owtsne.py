@@ -18,10 +18,11 @@ from Orange.widgets.widget import Msg, Output
 
 
 class TSNERunner:
-    def __init__(self, tsne: TSNEModel, step_size=50):
+    def __init__(self, tsne: TSNEModel, step_size=50, exaggeration=1):
         self.embedding = tsne
         self.iterations_done = 0
         self.step_size = step_size
+        self.exaggeration = exaggeration
 
         # Larger data sets need a larger number of iterations
         if self.n_samples > 100_000:
@@ -43,7 +44,7 @@ class TSNERunner:
         while not current_iter >= total_iterations:
             # Switch to normal regime if early exaggeration phase is over
             if current_iter >= self.early_exagg_iter:
-                exaggeration, momentum = 1, 0.8
+                exaggeration, momentum = self.exaggeration, 0.8
 
             # Resume optimization for some number of steps
             self.embedding.optimize(
@@ -294,7 +295,9 @@ class OWtSNE(OWDataProjectionWidget):
             theta=0.8,
         )(self.pca_data)
 
-        self.tsne_runner = TSNERunner(self.projection, step_size=20)
+        self.tsne_runner = TSNERunner(
+            self.projection, step_size=20, exaggeration=self.exaggeration
+        )
         self.tsne_iterator = self.tsne_runner.run_optimization()
         self.__set_update_loop(self.tsne_iterator)
         self.progressBarInit(processEvents=None)
