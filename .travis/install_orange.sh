@@ -7,6 +7,9 @@ if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then pip install pandas==0.20.3; fi
 
 pip install numba==0.41.0 llvmlite==0.26.0
 
+# Temporary fix until platform plugin issues are solved on 5.12
+pip install PyQt5==5.11.3
+
 # Install dependencies sequentially
 cat requirements-core.txt \
     requirements-gui.txt \
