@@ -110,6 +110,13 @@ class OWtSNE(OWDataProjectionWidget):
         self.__in_next_step = False
         self.__draw_similar_pairs = False
 
+        def reset_needs_to_draw():
+            self.needs_to_draw = True
+
+        self.needs_to_draw = True
+        self.__timer_draw = QTimer(self, interval=2000,
+                                   timeout=reset_needs_to_draw)
+
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
@@ -258,7 +265,6 @@ class OWtSNE(OWDataProjectionWidget):
     def __start(self):
         self.pca_preprocessing()
 
-        # Dirty flag indicating whether the embedding has been drawn at least once
         self.needs_to_draw = True
 
         # We call PCA through fastTSNE because it involves scaling. Instead of
@@ -309,6 +315,7 @@ class OWtSNE(OWDataProjectionWidget):
             self.runbutton.setText("Stop")
             self.__state = OWtSNE.Running
             self.__timer.start()
+            self.__timer_draw.start()
         else:
             self.setBlocking(False)
             self.setStatusMessage("")
@@ -317,6 +324,7 @@ class OWtSNE(OWDataProjectionWidget):
             if self.__state == OWtSNE.Paused:
                 self.runbutton.setText("Resume")
             self.__timer.stop()
+            self.__timer_draw.stop()
 
     def __next_step(self):
         if self.__update_loop is None:
