@@ -37,6 +37,7 @@ from Orange.widgets.visualize.utils.plotutils import (
 
 
 SELECTION_WIDTH = 5
+MAX_N_VALID_SIZE_ANIMATE = 1000
 
 
 class PaletteItemSample(ItemSample):
@@ -766,7 +767,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     widget.scatterplot_item.setSize(size)
                     widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
 
-            if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
+            if self.n_valid <= MAX_N_VALID_SIZE_ANIMATE and \
+                    np.all(current_size_data > 0) and np.any(diff != 0):
                 # If encountered any strange behaviour when updating sizes,
                 # implement it with threads
                 self.timer = QTimer(self.scatterplot_item, interval=50)
