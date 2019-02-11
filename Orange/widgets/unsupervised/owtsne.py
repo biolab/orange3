@@ -73,7 +73,7 @@ class OWtSNE(OWDataProjectionWidget):
     settings_version = 3
     max_iter = Setting(300)
     perplexity = Setting(30)
-    multiscale = Setting(True)
+    multiscale = Setting(False)
     exaggeration = Setting(1)
     pca_components = Setting(20)
     normalize = Setting(True)
