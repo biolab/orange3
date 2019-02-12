@@ -55,7 +55,9 @@ class SelectBestFeatures(Reprable):
         if isinstance(self.k, float):
             idx_attr = np.ceil(self.k * n_attrs).astype(int)
             # edge case: 0th percentile would result in selection of `(n_attrs + 1)` attrs
-            self.k = min(n_attrs - idx_attr + 1, n_attrs)
+            effective_k = min(n_attrs - idx_attr + 1, n_attrs)
+        else:
+            effective_k = self.k
 
         method = self.method
         # select default method according to the provided data
@@ -79,8 +81,8 @@ class SelectBestFeatures(Reprable):
             scores = self.score_only_nice_features(data, method)
         best = sorted(zip(scores, features), key=itemgetter(0),
                       reverse=self.decreasing)
-        if self.k:
-            best = best[:self.k]
+        if effective_k:
+            best = best[:effective_k]
         if self.threshold:
             pred = ((lambda x: x[0] >= self.threshold) if self.decreasing else
                     (lambda x: x[0] <= self.threshold))
@@ -121,9 +123,12 @@ class SelectRandomFeatures(Reprable):
 
     def __call__(self, data):
         if isinstance(self.k, float):
-            self.k = int(len(data.domain.attributes) * self.k)
+            effective_k = int(len(data.domain.attributes) * self.k)
+        else:
+            effective_k = self.k
+
         domain = Orange.data.Domain(
             random.sample(data.domain.attributes,
-                          min(self.k, len(data.domain.attributes))),
+                          min(effective_k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
         return data.transform(domain)
