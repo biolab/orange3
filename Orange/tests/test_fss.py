@@ -45,6 +45,10 @@ class TestFSS(unittest.TestCase):
         data2 = sel3(self.titanic)
         self.assertEqual(len(data2.domain.attributes), 2)
 
+        # number of selected attrs should be relative to number of current input attrs
+        data2 = sel3(self.wine)
+        self.assertEqual(len(data2.domain.attributes), 9)
+
     def test_select_threshold(self):
         anova = ANOVA()
         t = 30
