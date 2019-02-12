@@ -12,7 +12,7 @@ import networkx as nx
 from AnyQt.QtCore import (
     Qt, QObject, QTimer, pyqtSignal as Signal, pyqtSlot as Slot
 )
-from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget
+from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget, QLabel
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
@@ -40,13 +40,13 @@ _MAX_K_NEIGBOURS = 200
 _DEFAULT_K_NEIGHBORS = 30
 
 
-METRICS = [('Euclidean', 'l2'), ('Manhattan', 'l1')]
+METRICS = [("Euclidean", "l2"), ("Manhattan", "l1")]
 
 
 class OWLouvainClustering(widget.OWWidget):
-    name = 'Louvain Clustering'
-    description = 'Detects communities in a network of nearest neighbors.'
-    icon = 'icons/LouvainClustering.svg'
+    name = "Louvain Clustering"
+    description = "Detects communities in a network of nearest neighbors."
+    icon = "icons/LouvainClustering.svg"
     priority = 2110
 
     want_main_area = False
@@ -54,12 +54,12 @@ class OWLouvainClustering(widget.OWWidget):
     settingsHandler = DomainContextHandler()
 
     class Inputs:
-        data = Input('Data', Table, default=True)
+        data = Input("Data", Table, default=True)
 
     if Graph is not None:
         class Outputs:
             annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
-            graph = Output('Network', Graph)
+            graph = Output("Network", Graph)
     else:
         class Outputs:
             annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
@@ -75,8 +75,7 @@ class OWLouvainClustering(widget.OWWidget):
         modified = Msg("Press commit to recompute clusters and send new data")
 
     class Error(widget.OWWidget.Error):
-        empty_dataset = Msg('No features in data')
-        general_error = Msg('Error occured during clustering\n{}')
+        empty_dataset = Msg("No features in data")
 
     def __init__(self):
         super().__init__()
@@ -98,40 +97,44 @@ class OWLouvainClustering(widget.OWWidget):
         self.__commit_timer = QTimer(self, singleShot=True)
         self.__commit_timer.timeout.connect(self.commit)
 
-        pca_box = gui.vBox(self.controlArea, 'PCA Preprocessing')
+        # Set up UI
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.info_label = gui.widgetLabel(info_box, "No data on input.")  # type: QLabel
+
+        pca_box = gui.vBox(self.controlArea, "PCA Preprocessing")
         self.apply_pca_cbx = gui.checkBox(
-            pca_box, self, 'apply_pca', label='Apply PCA preprocessing',
+            pca_box, self, "apply_pca", label="Apply PCA preprocessing",
             callback=self._invalidate_graph,
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
-            pca_box, self, 'pca_components', label='Components: ', minValue=2,
+            pca_box, self, "pca_components", label="Components: ", minValue=2,
             maxValue=_MAX_PCA_COMPONENTS,
             callback=self._invalidate_pca_projection, tracking=False
         )  # type: QSlider
 
-        graph_box = gui.vBox(self.controlArea, 'Graph parameters')
+        graph_box = gui.vBox(self.controlArea, "Graph parameters")
         self.metric_combo = gui.comboBox(
-            graph_box, self, 'metric_idx', label='Distance metric',
+            graph_box, self, "metric_idx", label="Distance metric",
             items=[m[0] for m in METRICS], callback=self._invalidate_graph,
             orientation=Qt.Horizontal,
         )  # type: gui.OrangeComboBox
         self.k_neighbors_spin = gui.spin(
-            graph_box, self, 'k_neighbors', minv=1, maxv=_MAX_K_NEIGBOURS,
-            label='k neighbors', controlWidth=80, alignment=Qt.AlignRight,
+            graph_box, self, "k_neighbors", minv=1, maxv=_MAX_K_NEIGBOURS,
+            label="k neighbors", controlWidth=80, alignment=Qt.AlignRight,
             callback=self._invalidate_graph,
         )  # type: gui.SpinBoxWFocusOut
         self.resolution_spin = gui.hSlider(
-            graph_box, self, 'resolution', minValue=0, maxValue=5., step=1e-1,
-            label='Resolution', intOnly=False, labelFormat='%.1f',
+            graph_box, self, "resolution", minValue=0, maxValue=5., step=1e-1,
+            label="Resolution", intOnly=False, labelFormat="%.1f",
             callback=self._invalidate_partition, tracking=False,
         )  # type: QSlider
         self.resolution_spin.parent().setToolTip(
-            'The resolution parameter affects the number of clusters to find. '
-            'Smaller values tend to produce more clusters and larger values '
-            'retrieve less clusters.'
+            "The resolution parameter affects the number of clusters to find. "
+            "Smaller values tend to produce more clusters and larger values "
+            "retrieve less clusters."
         )
         self.apply_button = gui.auto_commit(
-            self.controlArea, self, 'auto_commit', 'Apply', box=None,
+            self.controlArea, self, "auto_commit", "Apply", box=None,
             commit=lambda: self.commit(),
             callback=lambda: self._on_auto_commit_changed(),
         )  # type: QWidget
@@ -248,6 +251,7 @@ class OWLouvainClustering(widget.OWWidget):
                 run_on_graph, graph, resolution=self.resolution, state=state
             )
 
+        self.info_label.setText("Running...")
         self.__set_state_busy()
         self.__start_task(task, state)
 
@@ -269,7 +273,7 @@ class OWLouvainClustering(widget.OWWidget):
 
     @Slot(object)
     def __on_done(self, future):
-        # type: (Future['Results']) -> None
+        # type: (Future["Results"]) -> None
         assert future.done()
         assert self.__task is not None
         assert self.__task.future is future
@@ -278,12 +282,9 @@ class OWLouvainClustering(widget.OWWidget):
         task.deleteLater()
 
         self.__set_state_ready()
-        try:
-            result = future.result()
-        except Exception as err:  # pylint: disable=broad-except
-            self.Error.general_error(str(err), exc_info=True)
-        else:
-            self.__set_results(result)
+
+        result = future.result()
+        self.__set_results(result)
 
     @Slot(str)
     def setStatusMessage(self, text):
@@ -330,7 +331,7 @@ class OWLouvainClustering(widget.OWWidget):
                 w.done.connect(state.deleteLater)
 
     def __set_results(self, results):
-        # type: ('Results') -> None
+        # type: ("Results") -> None
         # NOTE: All of these have already been set by __set_partial_results,
         # we double check that they are aliases
         if results.pca_projection is not None:
@@ -346,6 +347,11 @@ class OWLouvainClustering(widget.OWWidget):
             assert results.resolution == self.resolution
             assert self.partition is results.partition
             self.partition = results.partition
+
+        # Display the number of found clusters in the UI
+        num_clusters = len(np.unique(self.partition))
+        self.info_label.setText("%d clusters found." % num_clusters)
+
         self._send_data()
 
     def _send_data(self):
@@ -359,8 +365,8 @@ class OWLouvainClustering(widget.OWWidget):
         new_partition = list(map(index_map.get, self.partition))
 
         cluster_var = DiscreteVariable(
-            get_unique_names(domain, 'Cluster'),
-            values=['C%d' % (i + 1) for i, _ in enumerate(np.unique(new_partition))]
+            get_unique_names(domain, "Cluster"),
+            values=["C%d" % (i + 1) for i, _ in enumerate(np.unique(new_partition))]
         )
 
         new_domain = add_columns(domain, metas=[cluster_var])
@@ -406,6 +412,8 @@ class OWLouvainClustering(widget.OWWidget):
         self.k_neighbors_spin.setMaximum(min(_MAX_K_NEIGBOURS, len(data) - 1))
         self.k_neighbors_spin.setValue(min(_DEFAULT_K_NEIGHBORS, len(data) - 1))
 
+        self.info_label.setText("Clustering not yet run.")
+
         self.commit()
 
     def clear(self):
@@ -416,6 +424,7 @@ class OWLouvainClustering(widget.OWWidget):
         self.partition = None
         self.Error.clear()
         self.Information.modified.clear()
+        self.info_label.setText("No data on input.")
 
     def onDeleteWidget(self):
         self.__cancel_task(wait=True)
@@ -427,13 +436,13 @@ class OWLouvainClustering(widget.OWWidget):
     def send_report(self):
         pca = report.bool_str(self.apply_pca)
         if self.apply_pca:
-            pca += report.plural(', {number} component{s}', self.pca_components)
+            pca += report.plural(", {number} component{s}", self.pca_components)
 
         self.report_items((
-            ('PCA preprocessing', pca),
-            ('Metric', METRICS[self.metric_idx][0]),
-            ('k neighbors', self.k_neighbors),
-            ('Resolution', self.resolution),
+            ("PCA preprocessing", pca),
+            ("Metric", METRICS[self.metric_idx][0]),
+            ("k neighbors", self.k_neighbors),
+            ("Resolution", self.resolution),
         ))
 
 
@@ -614,5 +623,5 @@ def run_on_graph(graph, resolution, state):
     return res
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWLouvainClustering).run(Table("iris"))

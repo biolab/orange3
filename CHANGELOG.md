@@ -6,6 +6,17 @@ Change Log
 * ...
 
 
+[3.20.1] - 2019-02-12
+--------------------
+##### Enhancements
+* t-SNE: Add Normalize data checkbox ([#3570](../../pull/3570))
+* Louvain show number of clusters ([#3572](../../pull/3572))
+
+##### Bugfixes
+* t-SNE speed-ups ([#3592](../../pull/3592))
+* setup.py: Specify python-louvain version constraint ([#3587](../../pull/3587))
+
+
 [3.20.0] - 2019-02-01
 --------------------
 ##### Enhancements
@@ -1028,7 +1039,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.20.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.20.1...HEAD
+[3.20.1]: https://github.com/biolab/orange3/compare/3.20.0...3.20.1
 [3.20.0]: https://github.com/biolab/orange3/compare/3.19.0...3.20.0
 [3.19.0]: https://github.com/biolab/orange3/compare/3.18.0...3.19.0
 [3.18.0]: https://github.com/biolab/orange3/compare/3.17.0...3.18.0

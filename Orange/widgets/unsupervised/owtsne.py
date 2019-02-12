@@ -6,8 +6,8 @@ from AnyQt.QtCore import Qt, QTimer
 from AnyQt.QtWidgets import QFormLayout
 
 from Orange.data import Table, Domain
-from Orange.preprocess.preprocess import Preprocess, ApplyDomain
-from Orange.projection import PCA, TSNE, TruncatedSVD
+from Orange.preprocess import preprocess
+from Orange.projection import PCA, TSNE
 from Orange.projection.manifold import TSNEModel
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
@@ -18,10 +18,11 @@ from Orange.widgets.widget import Msg, Output
 
 
 class TSNERunner:
-    def __init__(self, tsne: TSNEModel, step_size=50):
+    def __init__(self, tsne: TSNEModel, step_size=50, exaggeration=1):
         self.embedding = tsne
         self.iterations_done = 0
         self.step_size = step_size
+        self.exaggeration = exaggeration
 
         # Larger data sets need a larger number of iterations
         if self.n_samples > 100_000:
@@ -43,7 +44,7 @@ class TSNERunner:
         while not current_iter >= total_iterations:
             # Switch to normal regime if early exaggeration phase is over
             if current_iter >= self.early_exagg_iter:
-                exaggeration, momentum = 1, 0.8
+                exaggeration, momentum = self.exaggeration, 0.8
 
             # Resume optimization for some number of steps
             self.embedding.optimize(
@@ -73,9 +74,10 @@ class OWtSNE(OWDataProjectionWidget):
     settings_version = 3
     max_iter = Setting(300)
     perplexity = Setting(30)
-    multiscale = Setting(True)
+    multiscale = Setting(False)
     exaggeration = Setting(1)
     pca_components = Setting(20)
+    normalize = Setting(True)
 
     GRAPH_CLASS = OWtSNEGraph
     graph = SettingProvider(OWtSNEGraph)
@@ -85,7 +87,7 @@ class OWtSNE(OWDataProjectionWidget):
     Running, Finished, Waiting, Paused = 1, 2, 3, 4
 
     class Outputs(OWDataProjectionWidget.Outputs):
-        preprocessor = Output("Preprocessor", Preprocess)
+        preprocessor = Output("Preprocessor", preprocess.Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -108,6 +110,13 @@ class OWtSNE(OWDataProjectionWidget):
         self.__state = OWtSNE.Waiting
         self.__in_next_step = False
         self.__draw_similar_pairs = False
+
+        def reset_needs_to_draw():
+            self.needs_to_draw = True
+
+        self.needs_to_draw = True
+        self.__timer_draw = QTimer(self, interval=2000,
+                                   timeout=reset_needs_to_draw)
 
     def _add_controls(self):
         self._add_controls_start_box()
@@ -143,14 +152,24 @@ class OWtSNE(OWDataProjectionWidget):
         sbp = gui.hBox(self.controlArea, False, addToLayout=False)
         gui.hSlider(
             sbp, self, "pca_components", minValue=2, maxValue=50, step=1,
-            callback=self._params_changed
+            callback=self._invalidate_pca_projection
         )
         form.addRow("PCA components:", sbp)
+
+        self.normalize_cbx = gui.checkBox(
+            box, self, "normalize", "Normalize data",
+            callback=self._invalidate_pca_projection,
+        )
+        form.addRow(self.normalize_cbx)
 
         box.layout().addLayout(form)
 
         gui.separator(box, 10)
         self.runbutton = gui.button(box, self, "Run", callback=self._toggle_run)
+
+    def _invalidate_pca_projection(self):
+        self.pca_data = None
+        self._params_changed()
 
     def _params_changed(self):
         self.__state = OWtSNE.Finished
@@ -215,17 +234,39 @@ class OWtSNE(OWDataProjectionWidget):
     def resume(self):
         self.__set_update_loop(self.tsne_iterator)
 
+    def set_data(self, data: Table):
+        super().set_data(data)
+
+        if data is not None:
+            # PCA doesn't support normalization on sparse data, as this would
+            # require centering and normalizing the matrix
+            self.normalize_cbx.setDisabled(data.is_sparse())
+            if data.is_sparse():
+                self.normalize = False
+                self.normalize_cbx.setToolTip(
+                    "Data normalization is not supported on sparse matrices."
+                )
+            else:
+                self.normalize_cbx.setToolTip("")
+
     def pca_preprocessing(self):
-        if self.pca_data is not None and \
-                self.pca_data.X.shape[1] == self.pca_components:
+        """Perform PCA preprocessing before passing off the data to t-SNE."""
+        if self.pca_data is not None:
             return
-        cls = TruncatedSVD if self.data.is_sparse() else PCA
-        projector = cls(n_components=self.pca_components, random_state=0)
+
+        projector = PCA(n_components=self.pca_components, random_state=0)
+        # If the normalization box is ticked, we'll add the `Normalize`
+        # preprocessor to PCA
+        if self.normalize:
+            projector.preprocessors += (preprocess.Normalize(),)
+
         model = projector(self.data)
         self.pca_data = model(self.data)
 
     def __start(self):
         self.pca_preprocessing()
+
+        self.needs_to_draw = True
 
         # We call PCA through fastTSNE because it involves scaling. Instead of
         # worrying about this ourselves, we'll let the library worry for us.
@@ -250,10 +291,13 @@ class OWtSNE(OWDataProjectionWidget):
             n_components=2, perplexity=perplexity, multiscale=self.multiscale,
             early_exaggeration_iter=0, n_iter=0, initialization=initialization,
             exaggeration=self.exaggeration, neighbors=neighbor_method,
-            negative_gradient_method=gradient_method, random_state=0
+            negative_gradient_method=gradient_method, random_state=0,
+            theta=0.8,
         )(self.pca_data)
 
-        self.tsne_runner = TSNERunner(self.projection, step_size=50)
+        self.tsne_runner = TSNERunner(
+            self.projection, step_size=20, exaggeration=self.exaggeration
+        )
         self.tsne_iterator = self.tsne_runner.run_optimization()
         self.__set_update_loop(self.tsne_iterator)
         self.progressBarInit(processEvents=None)
@@ -274,6 +318,7 @@ class OWtSNE(OWDataProjectionWidget):
             self.runbutton.setText("Stop")
             self.__state = OWtSNE.Running
             self.__timer.start()
+            self.__timer_draw.start()
         else:
             self.setBlocking(False)
             self.setStatusMessage("")
@@ -282,6 +327,7 @@ class OWtSNE(OWDataProjectionWidget):
             if self.__state == OWtSNE.Paused:
                 self.runbutton.setText("Resume")
             self.__timer.stop()
+            self.__timer_draw.stop()
 
     def __next_step(self):
         if self.__update_loop is None:
@@ -311,8 +357,10 @@ class OWtSNE(OWDataProjectionWidget):
         else:
             self.progressBarSet(100.0 * progress, processEvents=None)
             self.projection = projection
-            self.graph.update_coordinates()
-            self.graph.update_density()
+            if progress == 1 or self.needs_to_draw:
+                self.graph.update_coordinates()
+                self.graph.update_density()
+                self.needs_to_draw = False
             # schedule next update
             self.__timer.start()
 
@@ -329,21 +377,22 @@ class OWtSNE(OWDataProjectionWidget):
     def _get_projection_data(self):
         if self.data is None:
             return None
-        if self.projection is None:
-            variables = self._get_projection_variables()
-        else:
-            variables = self.projection.domain.attributes
         data = self.data.transform(
             Domain(self.data.domain.attributes,
                    self.data.domain.class_vars,
-                   self.data.domain.metas + variables))
+                   self.data.domain.metas + self._get_projection_variables()))
         data.metas[:, -2:] = self.get_embedding()
+        if self.projection is not None:
+            data.domain = Domain(
+                self.data.domain.attributes,
+                self.data.domain.class_vars,
+                self.data.domain.metas + self.projection.domain.attributes)
         return data
 
     def send_preprocessor(self):
         prep = None
         if self.data is not None and self.projection is not None:
-            prep = ApplyDomain(self.projection.domain, self.projection.name)
+            prep = preprocess.ApplyDomain(self.projection.domain, self.projection.name)
         self.Outputs.preprocessor.send(prep)
 
     def clear(self):
