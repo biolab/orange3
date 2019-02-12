@@ -293,6 +293,12 @@ class OWMDS(OWDataProjectionWidget):
             self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
 
+    def init_attr_values(self):
+        super().init_attr_values()
+        if self.matrix is not None and self.matrix.axis == 0 and \
+                self.data is not None and len(self.data):
+            self.attr_label = self.data.domain["labels"]
+
     def _toggle_run(self):
         if self.__state == OWMDS.Running:
             self.stop()

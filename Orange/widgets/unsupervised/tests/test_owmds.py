@@ -282,6 +282,12 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.distances, dist)
         simulate.combobox_activate_index(self.widget.controls.attr_label, 2)
 
+    def test_matrix_columns_default_label(self):
+        dist = Euclidean(self.data, axis=0)
+        self.send_signal(self.widget.Inputs.distances, dist)
+        label_text = self.widget.controls.attr_label.currentText()
+        self.assertEqual(label_text, "labels")
+
 
 if __name__ == "__main__":
     unittest.main()
