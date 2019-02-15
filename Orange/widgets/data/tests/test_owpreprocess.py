@@ -8,7 +8,8 @@ from Orange.preprocess import (
 )
 from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
-from Orange.widgets.data.owpreprocess import OWPreprocess
+from Orange.widgets.data.owpreprocess import OWPreprocess, \
+    UnivariateFeatureSelect
 from Orange.widgets.tests.base import WidgetTest, datasets
 
 
@@ -48,6 +49,27 @@ class TestOWPreprocess(WidgetTest):
 
         np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
         np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
+
+    def test_select_features(self):
+        data = Table("iris")
+        saved = {"preprocessors": [("orange.preprocess.fss",
+                                    {"strategy": UnivariateFeatureSelect.Fixed,
+                                     "k": 2})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertEqual(len(output.domain.attributes), 2)
+
+        saved = {"preprocessors": [
+            ("orange.preprocess.fss",
+             {"strategy": UnivariateFeatureSelect.Proportion,
+              "p": 75})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertEqual(len(output.domain.attributes), 3)
 
     def test_data_column_nans(self):
         """
@@ -126,7 +148,7 @@ class TestFeatureSelectEditor(WidgetTest):
         widget = owpreprocess.FeatureSelectEditor()
         p = widget.createinstance(widget.parameters())
         self.assertIsInstance(p, fss.SelectBestFeatures)
-        self.assertEqual(p.method, score.InfoGain)
+        self.assertIsInstance(p.method, score.InfoGain)
         self.assertEqual(p.k, 10)
 
 

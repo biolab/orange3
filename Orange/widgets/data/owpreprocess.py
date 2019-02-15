@@ -507,9 +507,9 @@ class FeatureSelectEditor(BaseEditor):
         k = params.get("k", 10)
         p = params.get("p", 75.0)
         if strategy == UnivariateFeatureSelect.Fixed:
-            return preprocess.fss.SelectBestFeatures(score, k=k)
+            return preprocess.fss.SelectBestFeatures(score(), k=k)
         elif strategy == UnivariateFeatureSelect.Proportion:
-            return preprocess.fss.SelectBestFeatures(score, k=p / 100)
+            return preprocess.fss.SelectBestFeatures(score(), k=p / 100)
         else:
             raise NotImplementedError
 
