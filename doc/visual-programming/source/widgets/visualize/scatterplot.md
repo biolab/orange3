@@ -43,7 +43,11 @@ Here is an example of the **Scatter Plot** widget if the *Show class density* an
 Intelligent Data Visualization
 ------------------------------
 
-If a dataset has many attributes, it is impossible to manually scan through all the pairs to find interesting or useful scatter plots. Orange implements intelligent data visualization with the **Find Informative Projections** option in the widget. The goal of optimization is to find scatter plot projections where instances are well separated.
+If a dataset has many attributes, it is impossible to manually scan through all the pairs to find interesting or useful scatter plots. Orange implements intelligent data visualization with the **Find Informative Projections** option in the widget.
+
+If a categorical variable is selected in the Color section, the [score](http://eprints.fri.uni-lj.si/210/) is computed as follows. For each data instance, the method finds 10 nearest neighbors in the projected 2D space, that is, on the combination of attribute pairs. It then checks how many of them have the same color. The total score of the projection is then the average number of same-colored neighbors.
+
+Computation for continuous colors is similar, except that the [coefficient of determination](https://en.wikipedia.org/wiki/Coefficient_of_determination) is used for measuring the local homogeneity of the projection.
 
 To use this method, go to the *Find Informative Projections* option in the widget, open the subwindow and press *Start Evaluation*. The feature will return a list of attribute pairs by average classification accuracy score.
 
@@ -75,3 +79,8 @@ Example
 The **Scatter Plot** can be combined with any widget that outputs a list of selected data instances. In the example below, we combine [Tree](../model/tree.md) and **Scatter Plot** to display instances taken from a chosen decision tree node (clicking on any node of the tree will send a set of selected data instances to the scatterplot and mark selected instances with filled symbols).
 
 ![](images/ScatterPlotExample-Classification.png)
+
+References
+----------
+
+Gregor Leban and Blaz Zupan and Gaj Vidmar and Ivan Bratko (2006) VizRank: Data Visualization Guided by Machine Learning. Data Mining and Knowledge Discovery, 13 (2). pp. 119-136. Available [here](http://eprints.fri.uni-lj.si/210/).
