@@ -63,7 +63,8 @@ class OWSave(widget.OWWidget):
             0, 1)
         grid.addWidget(
             gui.checkBox(None, self, "auto_save",
-                         "Autosave when receiving new data"),
+                         "Autosave when receiving new data",
+                         callback=self._update_controls),
             1, 0, 1, 2)
         grid.addWidget(QWidget(), 2, 0, 1, 2)
 
@@ -142,7 +143,7 @@ class OWSave(widget.OWWidget):
                 f"Save as {os.path.split(self._fullname())[1]}")
         else:
             self.bt_save.setText("Save")
-        self.Error.no_file_name(shown=not self.filename)
+        self.Error.no_file_name(shown=not self.filename and self.auto_save)
 
         self.Error.unsupported_sparse(
             shown=self.data is not None and self.data.is_sparse()
