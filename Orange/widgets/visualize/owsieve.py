@@ -406,22 +406,22 @@ class OWSieveDiagram(OWWidget):
                 return " " if txt[0] in "<≥" else " in "
 
             xt, yt = ["<b>{attr}{eq}{val_name}</b>: {obs}/{n} ({p:.0f} %)".format(
-                        attr=to_html(attr.name),
-                        eq=_oper(attr, val_name),
-                        val_name=to_html(val_name),
-                        obs=fmt(prob * n),
-                        n=int(n),
-                        p=100 * prob)
+                attr=to_html(attr.name),
+                eq=_oper(attr, val_name),
+                val_name=to_html(val_name),
+                obs=fmt(prob * n),
+                n=int(n),
+                p=100 * prob)
                       for attr, val_name, prob in [(attr_x, xval_name, chi.probs_x[x]),
                                                    (attr_y, yval_name, chi.probs_y[y])]]
 
             ct = """<b>combination of values: </b><br/>
                    &nbsp;&nbsp;&nbsp;expected {exp} ({p_exp:.0f} %)<br/>
                    &nbsp;&nbsp;&nbsp;observed {obs} ({p_obs:.0f} %)""".format(
-                exp=fmt(chi.expected[y, x]),
-                p_exp=100 * chi.expected[y, x] / n,
-                obs=fmt(chi.observed[y, x]),
-                p_obs=100 * chi.observed[y, x] / n)
+                       exp=fmt(chi.expected[y, x]),
+                       p_exp=100 * chi.expected[y, x] / n,
+                       obs=fmt(chi.observed[y, x]),
+                       p_obs=100 * chi.observed[y, x] / n)
 
             return f"{xt}<br/>{yt}<hr/>{ct}"
 
