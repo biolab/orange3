@@ -1707,11 +1707,10 @@ class CanvasMainWindow(QMainWindow):
 
     def reset_widget_settings(self):
         res = message_question(
-            "Clear all widget settings on next restart",
+            "A restart of the application is necessary for the " +
+            "changes to take effect.",
             title="Clear settings",
-            informative_text=(
-                "A restart of the application is necessary " +
-                "for the changes to take effect"),
+            informative_text="Press OK to restart.",
             buttons=QMessageBox.Ok | QMessageBox.Cancel,
             default_button=QMessageBox.Ok,
             parent=self
