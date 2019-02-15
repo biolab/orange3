@@ -1235,10 +1235,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self.scatterplot_item is not None:
             self.select(points)
 
-    def select_by_rectangle(self, value_rect):
+    def select_by_rectangle(self, rect):
         if self.scatterplot_item is not None:
-            x0, y0 = value_rect.topLeft().x(), value_rect.topLeft().y()
-            x1, y1 = value_rect.bottomRight().x(), value_rect.bottomRight().y()
+            x0, x1 = sorted((rect.topLeft().x(), rect.bottomRight().x()))
+            y0, y1 = sorted((rect.topLeft().y(), rect.bottomRight().y()))
             x, y = self.master.get_coordinates_data()
             indices = np.flatnonzero(
                 (x0 <= x) & (x <= x1) & (y0 <= y) & (y <= y1))
