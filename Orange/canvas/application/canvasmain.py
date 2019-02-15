@@ -1706,11 +1706,10 @@ class CanvasMainWindow(QMainWindow):
         return dlg.exec_()
 
     def reset_widget_settings(self):
-        res = message_question(
-            "A restart of the application is necessary for the " +
-            "changes to take effect.",
+        res = message_information(
+            "Orange needs to be restarted for the changes to take effect.",
             title="Clear settings",
-            informative_text="Press OK to restart.",
+            informative_text="Press OK to close Orange now.",
             buttons=QMessageBox.Ok | QMessageBox.Cancel,
             default_button=QMessageBox.Ok,
             parent=self
