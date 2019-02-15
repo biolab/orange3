@@ -394,11 +394,11 @@ class TestTreeModel(unittest.TestCase):
 
     def test_print(self):
         model = TreeModel(self.data, self.root)
-        self.assertEqual(model.print_tree(), """             [ 1 42] v1 ≤ 13.000
+        self.assertEqual(model.print_tree(), """             [ 1 42] v1 ≤ 13
              [ 2 42]     v2 a
              [ 3 42]     v2 b
              [ 4 42]     v2 c
-             [ 5 42] v1 > 13.000
+             [ 5 42] v1 > 13
              [ 6 42]     v3 f
              [ 7 42]     v3 d or e
 """)

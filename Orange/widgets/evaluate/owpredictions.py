@@ -430,8 +430,7 @@ class OWPredictions(OWWidget):
         return delegate
 
     def _setup_delegate_continuous(self, delegate):
-        delegate.setFormat(
-            "{{value:.{}f}}".format(self.class_var.number_of_decimals))
+        delegate.setFormat("{{value:{}}}".format(self.class_var.format_str[1:]))
 
     def _update_spliter(self):
         if self.data is None:

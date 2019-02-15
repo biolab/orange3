@@ -2393,10 +2393,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "4.000"}
-        att[1].attributes = {"cls": "3.000"}
-        att[2].attributes = {"cls": "2.000"}
-        att[3].attributes = {"cls": "1.000"}
+        att[0].attributes = {"cls": "4"}
+        att[1].attributes = {"cls": "3"}
+        att[2].attributes = {"cls": "2"}
+        att[3].attributes = {"cls": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2419,9 +2419,9 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[1].attributes = {"cls": "3.000"}
-        att[2].attributes = {"cls": "2.000"}
-        att[3].attributes = {"cls": "1.000"}
+        att[1].attributes = {"cls": "3"}
+        att[2].attributes = {"cls": "2"}
+        att[3].attributes = {"cls": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2445,10 +2445,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls1": "0.000", "cls2": "1.000"}
-        att[1].attributes = {"cls1": "2.000", "cls2": "3.000"}
-        att[2].attributes = {"cls1": "4.000", "cls2": "5.000"}
-        att[3].attributes = {"cls1": "6.000", "cls2": "7.000"}
+        att[0].attributes = {"cls1": "0", "cls2": "1"}
+        att[1].attributes = {"cls1": "2", "cls2": "3"}
+        att[2].attributes = {"cls1": "4", "cls2": "5"}
+        att[3].attributes = {"cls1": "6", "cls2": "7"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2529,10 +2529,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"m1": "0.000"}
-        att[1].attributes = {"m1": "1.000"}
-        att[2].attributes = {"m1": "0.000"}
-        att[3].attributes = {"m1": "1.000"}
+        att[0].attributes = {"m1": "0"}
+        att[1].attributes = {"m1": "1"}
+        att[2].attributes = {"m1": "0"}
+        att[3].attributes = {"m1": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2613,10 +2613,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "1.000", "m1": "aa", "m2": "aaa"}
-        att[1].attributes = {"cls": "2.000", "m1": "bb", "m2": "bbb"}
-        att[2].attributes = {"cls": "3.000", "m1": "cc", "m2": "ccc"}
-        att[3].attributes = {"cls": "4.000", "m1": "dd", "m2": "ddd"}
+        att[0].attributes = {"cls": "1", "m1": "aa", "m2": "aaa"}
+        att[1].attributes = {"cls": "2", "m1": "bb", "m2": "bbb"}
+        att[2].attributes = {"cls": "3", "m1": "cc", "m2": "ccc"}
+        att[3].attributes = {"cls": "4", "m1": "dd", "m2": "ddd"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2660,8 +2660,8 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_attributes_of_attributes_continuous(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        attrs[0].attributes = {"attr1": "1.100", "attr2": "1.300"}
-        attrs[1].attributes = {"attr1": "2.200", "attr2": "2.300"}
+        attrs[0].attributes = {"attr1": "1.1", "attr2": "1.3"}
+        attrs[1].attributes = {"attr1": "2.2", "attr2": "2.3"}
         domain = Domain(attrs)
         data = Table(domain, np.arange(8).reshape((4, 2)))
 
@@ -2683,7 +2683,7 @@ class TestTableTranspose(unittest.TestCase):
 
         # original should not change
         self.assertDictEqual(data.domain.attributes[0].attributes,
-                             {"attr1": "1.100", "attr2": "1.300"})
+                             {"attr1": "1.1", "attr2": "1.3"})
 
     def test_transpose_attributes_of_attributes_missings(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
@@ -2724,10 +2724,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "1.000", "m1": "aa", "m2": "aaa"}
-        att[1].attributes = {"cls": "2.000", "m1": "bb", "m2": "bbb"}
-        att[2].attributes = {"cls": "3.000", "m1": "cc", "m2": "ccc"}
-        att[3].attributes = {"cls": "4.000", "m1": "dd", "m2": "ddd"}
+        att[0].attributes = {"cls": "1", "m1": "aa", "m2": "aaa"}
+        att[1].attributes = {"cls": "2", "m1": "bb", "m2": "bbb"}
+        att[2].attributes = {"cls": "3", "m1": "cc", "m2": "ccc"}
+        att[3].attributes = {"cls": "4", "m1": "dd", "m2": "ddd"}
         metas = [StringVariable("Feature name"),
                  DiscreteVariable("attr1", values=("a1", "b1")),
                  DiscreteVariable("attr2", values=("aa1", "bb1"))]
