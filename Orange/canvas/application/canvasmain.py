@@ -635,7 +635,7 @@ class CanvasMainWindow(QMainWindow):
                     shortcut=QKeySequence("Shift+F"),
                     objectName="signal-freeze-action",
                     checkable=True,
-                    toolTip=self.tr("Freeze signal propagation. (Shift+F)"),
+                    toolTip=self.tr("Freeze signal propagation (Shift+F)"),
                     toggled=self.set_signal_freeze,
                     icon=canvas_icons("Pause.svg")
                     )
