@@ -1,26 +1,31 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from unittest.mock import patch
+
 import numpy as np
-import scipy.sparse as sp
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
-from Orange.preprocess.preprocess import Preprocess
+from Orange.preprocess import preprocess
+from Orange.preprocess.preprocess import Preprocess, Normalize
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.unsupervised.owpca import OWPCA, DECOMPOSITIONS
+from Orange.widgets.tests.utils import table_dense_sparse
+from Orange.widgets.unsupervised.owpca import OWPCA
+from sklearn.utils import check_random_state
+from sklearn.utils.extmath import svd_flip
 
 
 class TestOWPCA(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWPCA)  # type: OWPCA
+        self.iris = Table("iris")  # type: Table
 
     def test_set_variance100(self):
-        iris = Table("iris")[:5]
-        self.widget.set_data(iris)
+        self.widget.set_data(self.iris)
         self.widget.variance_covered = 100
         self.widget._update_selection_variance_spin()
 
     def test_constant_data(self):
-        data = Table("iris")[::5]
+        data = self.iris[::5]
         data.X[:, :] = 1.0
         # Ignore the warning: the test checks whether the widget shows
         # Warning.trivial_components when this happens
@@ -32,12 +37,11 @@ class TestOWPCA(WidgetTest):
 
     def test_empty_data(self):
         """ Check widget for dataset with no rows and for dataset with no attributes """
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data[:0])
+        self.send_signal(self.widget.Inputs.data, self.iris[:0])
         self.assertTrue(self.widget.Error.no_instances.is_shown())
 
-        domain = Domain([], None, data.domain.variables)
-        new_data = Table.from_table(domain, data)
+        domain = Domain([], None, self.iris.domain.variables)
+        new_data = Table.from_table(domain, self.iris)
         self.send_signal(self.widget.Inputs.data, new_data)
         self.assertTrue(self.widget.Error.no_features.is_shown())
         self.assertFalse(self.widget.Error.no_instances.is_shown())
@@ -74,8 +78,7 @@ class TestOWPCA(WidgetTest):
         self.assertEqual(settings["variance_covered"], 100)
 
     def test_variance_shown(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.maxp = 2
         self.widget._setup_plot()
         var2 = self.widget.variance_covered
@@ -85,22 +88,27 @@ class TestOWPCA(WidgetTest):
         self.assertGreater(var3, var2)
 
     def test_sparse_data(self):
-        data = Table("iris")
-        data.X = sp.csr_matrix(data.X)
-        self.widget.set_data(data)
-        decomposition = DECOMPOSITIONS[self.widget.decomposition_idx]
-        self.assertTrue(decomposition.supports_sparse)
-        self.assertFalse(self.widget.normalize_box.isEnabled())
+        """Check that PCA returns the same results for both dense and sparse data."""
+        dense_data, sparse_data = self.iris, self.iris.to_sparse()
 
-        buttons = self.widget.decomposition_box.group.box.buttons
-        for i, decomposition in enumerate(DECOMPOSITIONS):
-            if not decomposition.supports_sparse:
-                self.assertFalse(buttons[i].isEnabled())
+        def _compute_projection(data):
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            result = self.get_output(self.widget.Outputs.transformed_data)
+            self.send_signal(self.widget.Inputs.data, None)
+            return result
 
-        data = Table("iris")
-        self.widget.set_data(data)
-        self.assertTrue(all([b.isEnabled() for b in buttons]))
-        self.assertTrue(self.widget.normalize_box.isEnabled())
+        # Disable normalization
+        self.widget.controls.normalize.setChecked(False)
+        dense_pca = _compute_projection(dense_data)
+        sparse_pca = _compute_projection(sparse_data)
+        np.testing.assert_almost_equal(dense_pca.X, sparse_pca.X)
+
+        # Enable normalization
+        self.widget.controls.normalize.setChecked(True)
+        dense_pca = _compute_projection(dense_data)
+        sparse_pca = _compute_projection(sparse_data)
+        np.testing.assert_almost_equal(dense_pca.X, sparse_pca.X)
 
     def test_all_components_continuous(self):
         data = Table("banking-crises.tab")
@@ -117,16 +125,75 @@ class TestOWPCA(WidgetTest):
                             for a in components.domain.attributes),
                         "Some variables aren't of type ContinuousVariable")
 
-    def test_normalization(self):
-        data = Table("iris.tab")
+    @table_dense_sparse
+    def test_normalize_data(self, prepare_table):
+        """Check that normalization is called at the proper times."""
+        data = prepare_table(self.iris)
+
+        # Enable checkbox
+        self.widget.controls.normalize.setChecked(True)
+        self.assertTrue(self.widget.controls.normalize.isChecked())
+        with patch.object(preprocess, "Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_called_once()
+
+        # Disable checkbox
+        self.widget.controls.normalize.setChecked(False)
+        self.assertFalse(self.widget.controls.normalize.isChecked())
+        with patch.object(preprocess, "Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_not_called()
+
+    @table_dense_sparse
+    def test_normalization_variance(self, prepare_table):
+        data = prepare_table(self.iris)
         self.widget.ncomponents = 2
+
+        # Enable normalization
+        self.widget.controls.normalize.setChecked(True)
         self.assertTrue(self.widget.normalize)
-        self.widget.set_data(data)
-        varnorm = self.widget.variance_covered
-        self.widget.controls.normalize.toggle()
-        varnonnorm = self.widget.variance_covered
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_stop_blocking()
+        variance_normalized = self.widget.variance_covered
+
+        # Disable normalization
+        self.widget.controls.normalize.setChecked(False)
+        self.assertFalse(self.widget.normalize)
+        self.wait_until_stop_blocking()
+        variance_unnormalized = self.widget.variance_covered
+
         # normalized data will have lower covered variance
-        self.assertLess(varnorm, varnonnorm)
+        self.assertLess(variance_normalized, variance_unnormalized)
+
+    @table_dense_sparse
+    def test_normalized_gives_correct_result(self, prepare_table):
+        """Make sure that normalization through widget gives correct result."""
+        # Randomly set some values to zero
+        random_state = check_random_state(42)
+        mask = random_state.beta(1, 2, size=self.iris.X.shape) > 0.5
+        self.iris.X[mask] = 0
+
+        data = prepare_table(self.iris)
+
+        # Enable normalization and run data through widget
+        self.widget.controls.normalize.setChecked(True)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_stop_blocking()
+        widget_result = self.get_output(self.widget.Outputs.transformed_data)
+
+        # Compute the correct embedding
+        x = self.iris.X
+        x = (x - x.mean(0)) / x.std(0)
+        U, S, Va = np.linalg.svd(x)
+        U, S, Va = U[:, :2], S[:2], Va[:2]
+        U, Va = svd_flip(U, Va)
+        pca_embedding = U * S
+
+        np.testing.assert_almost_equal(widget_result.X, pca_embedding)
 
     def test_do_not_mask_features(self):
         # the widget used to replace cached variables when creating the
@@ -137,11 +204,10 @@ class TestOWPCA(WidgetTest):
         self.assertEqual(data.domain[0], ndata.domain[0])
 
     def test_output_preprocessor(self):
-        data = Table("iris")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.iris)
         pp = self.get_output(self.widget.Outputs.preprocessor)
         self.assertIsInstance(pp, Preprocess)
-        transformed_data = pp(data[::10])
+        transformed_data = pp(self.iris[::10])
         self.assertIsInstance(transformed_data, Table)
         self.assertEqual(transformed_data.X.shape, (15, 2))
         output = self.get_output(self.widget.Outputs.transformed_data)
