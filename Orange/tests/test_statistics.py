@@ -9,7 +9,7 @@ from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
 
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode
+    unique, var, nanstd, nanvar, nanmode, array_equal
 from sklearn.utils import check_random_state
 
 
@@ -588,6 +588,25 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
+
+
+class TestArrayEqual(unittest.TestCase):
+    @dense_sparse
+    def test_same_matrices(self, array):
+        x = array([0, 1, 0, 0, 2])
+        self.assertTrue(array_equal(x, x))
+
+    @dense_sparse
+    def test_with_different_shapes(self, array):
+        x = array(np.eye(4))
+        y = array(np.eye(5))
+        self.assertFalse(array_equal(x, y))
+
+    @dense_sparse
+    def test_with_different_values(self, array):
+        x = array([0, 1, 0, 0, 2])
+        y = array([0, 3, 0, 0, 2])
+        self.assertFalse(array_equal(x, y))
 
 
 class TestNanModeAppVeyor(unittest.TestCase):
