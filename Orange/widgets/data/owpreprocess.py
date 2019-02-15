@@ -334,7 +334,7 @@ class UnivariateFeatureSelect(QWidget):
     edited = Signal()
 
     #: Strategy
-    Fixed, Percentile, FDR, FPR, FWE = 1, 2, 3, 4, 5
+    Fixed, Proportion, FDR, FPR, FWE = 1, 2, 3, 4, 5
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -370,17 +370,17 @@ class UnivariateFeatureSelect(QWidget):
         self.__spins[UnivariateFeatureSelect.Fixed] = kspin
         form.addRow(fixedrb, kspin)
 
-        percrb = QRadioButton("Percentile:")
-        group.addButton(percrb, UnivariateFeatureSelect.Percentile)
+        percrb = QRadioButton("Proportion:")
+        group.addButton(percrb, UnivariateFeatureSelect.Proportion)
         pspin = QDoubleSpinBox(
-            minimum=0.0, maximum=100.0, singleStep=0.5,
+            minimum=1.0, maximum=100.0, singleStep=0.5,
             value=self.__p, suffix="%",
-            enabled=self.__strategy == UnivariateFeatureSelect.Percentile
+            enabled=self.__strategy == UnivariateFeatureSelect.Proportion
         )
 
         pspin.valueChanged[float].connect(self.setP)
         pspin.editingFinished.connect(self.edited)
-        self.__spins[UnivariateFeatureSelect.Percentile] = pspin
+        self.__spins[UnivariateFeatureSelect.Proportion] = pspin
         form.addRow(percrb, pspin)
 
 #         form.addRow(QRadioButton("FDR"), QDoubleSpinBox())
@@ -420,9 +420,9 @@ class UnivariateFeatureSelect(QWidget):
     def setP(self, p):
         if self.__p != p:
             self.__p = p
-            spin = self.__spins[UnivariateFeatureSelect.Percentile]
+            spin = self.__spins[UnivariateFeatureSelect.Proportion]
             spin.setValue(p)
-            if self.__strategy == UnivariateFeatureSelect.Percentile:
+            if self.__strategy == UnivariateFeatureSelect.Proportion:
                 self.changed.emit()
 
     def setItems(self, itemlist):
@@ -508,8 +508,8 @@ class FeatureSelectEditor(BaseEditor):
         p = params.get("p", 75.0)
         if strategy == UnivariateFeatureSelect.Fixed:
             return preprocess.fss.SelectBestFeatures(score, k=k)
-        elif strategy == UnivariateFeatureSelect.Percentile:
-            return preprocess.fss.SelectBestFeatures(score, k=p/100)
+        elif strategy == UnivariateFeatureSelect.Proportion:
+            return preprocess.fss.SelectBestFeatures(score, k=p / 100)
         else:
             raise NotImplementedError
 
