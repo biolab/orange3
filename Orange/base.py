@@ -271,10 +271,7 @@ class Model(Reprable):
             if not isinstance(data[0], (list, tuple)):
                 data = [data]
                 one_d = True
-            data = Table(
-                self.original_domain,
-                data,
-                np.zeros((len(data), len(self.original_domain.class_vars))))
+            data = Table.from_list(self.original_domain, data)
             data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         else:
