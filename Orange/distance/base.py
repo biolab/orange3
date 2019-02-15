@@ -38,6 +38,15 @@ def remove_discrete_features(data):
     return data.transform(new_domain)
 
 
+def remove_nonbinary_features(data):
+    """Remove non-binary columns from the data."""
+    new_domain = Domain(
+        [a for a in data.domain.attributes
+         if a.is_discrete and len(a.values) == 2],
+        data.domain.class_vars,
+        data.domain.metas)
+    return data.transform(new_domain)
+
 def impute(data):
     """Impute missing values."""
     return SklImpute()(data)

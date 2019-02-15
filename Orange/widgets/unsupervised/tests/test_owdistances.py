@@ -4,7 +4,8 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, Domain
+from Orange import distance
 from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS
 from Orange.widgets.tests.base import WidgetTest
 
@@ -32,8 +33,9 @@ class TestOWDistances(WidgetTest):
             else:
                 expected = metric(self.iris)
 
-            np.testing.assert_array_equal(
-                expected, self.get_output(self.widget.Outputs.distances))
+            if metric is not distance.Jaccard:
+                np.testing.assert_array_equal(
+                    expected, self.get_output(self.widget.Outputs.distances))
 
     def test_error_message(self):
         """Check if error message appears and then disappears when
@@ -45,6 +47,40 @@ class TestOWDistances(WidgetTest):
         self.assertTrue(self.widget.Error.no_continuous_features.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
+
+    def test_jaccard_messages(self):
+        for self.widget.metric_idx, (name, _) in enumerate(METRICS):
+            if name == "Jaccard":
+                break
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.assertTrue(self.widget.Error.no_binary_features.is_shown())
+        self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertTrue(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self.titanic)
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertTrue(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        dom = self.titanic.domain
+        dom = Domain(dom.attributes[1:], dom.class_var)
+        self.send_signal(self.widget.Inputs.data, self.titanic.transform(dom))
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertFalse(self.widget.Warning.ignoring_nonbinary.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
+        self.assertFalse(self.widget.Error.no_binary_features.is_shown())
+        self.assertFalse(self.widget.Warning.ignoring_discrete.is_shown())
 
     def test_too_big_array(self):
         """
