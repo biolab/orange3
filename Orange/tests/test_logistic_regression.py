@@ -115,7 +115,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         m = lr(self.zoo)
         probs = m(self.zoo[50], m.Probs)
         probs2 = m(self.zoo[50, :], m.Probs)
-        np.testing.assert_almost_equal(probs, probs2)
+        np.testing.assert_almost_equal(probs, probs2[0])
 
     def test_single_class(self):
         t = self.iris[60:90]

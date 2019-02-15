@@ -99,7 +99,7 @@ class TestSimpleTreeLearner(unittest.TestCase):
         for ins in data[::20]:
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
-            self.assertEqual(sum(prob[0]), 1)
+            self.assertEqual(sum(prob), 1)
 
     def test_SimpleTree_to_string_classification(self):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
