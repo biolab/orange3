@@ -1,6 +1,13 @@
 # This module is a mixture of imports and code, so we allow import anywhere
 # pylint: disable=wrong-import-position,wrong-import-order
 
+try:
+    from Orange.data import _variable
+except ImportError:
+    raise ImportError("Compiled libraries cannot be found.\n"
+                      "Try reinstalling the package with:\n"
+                      "pip install --no-binary Orange3") from None
+
 from Orange import data
 
 from .misc.lazy_module import _LazyModule
