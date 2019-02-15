@@ -1,4 +1,6 @@
 import sys
+from functools import wraps
+
 import warnings
 import contextlib
 
@@ -317,3 +319,24 @@ def mouseMove(widget, pos=QPoint(), delay=-1):  # pragma: no-cover
         QTest.qWait(delay)
 
     QApplication.sendEvent(widget, me)
+
+
+def table_dense_sparse(test_case):
+    # type: (Callable) -> Callable
+    """Run a single test case on both dense and sparse Orange tables.
+
+    Examples
+    --------
+    >>> @table_dense_sparse
+    ... def test_something(self, prepare_table):
+    ...     data: Table  # The table you want to test on
+    ...     data = prepare_table(data)  # This converts the table to dense/sparse
+
+    """
+
+    @wraps(test_case)
+    def _wrapper(self):
+        test_case(self, lambda table: table.to_dense())
+        test_case(self, lambda table: table.to_sparse())
+
+    return _wrapper

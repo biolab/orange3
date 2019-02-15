@@ -17,7 +17,9 @@ from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget, QLabel
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
 from Orange.data.util import get_unique_names
+from Orange import preprocess
 from Orange.projection import PCA
+from Orange.statistics import util as ut
 from Orange.widgets import widget, gui, report
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
@@ -66,6 +68,7 @@ class OWLouvainClustering(widget.OWWidget):
 
     apply_pca = ContextSetting(True)
     pca_components = ContextSetting(_DEFAULT_PCA_COMPONENTS)
+    normalize = ContextSetting(True)
     metric_idx = ContextSetting(0)
     k_neighbors = ContextSetting(_DEFAULT_K_NEIGHBORS)
     resolution = ContextSetting(1.)
@@ -101,13 +104,17 @@ class OWLouvainClustering(widget.OWWidget):
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(info_box, "No data on input.")  # type: QLabel
 
-        pca_box = gui.vBox(self.controlArea, "PCA Preprocessing")
+        preprocessing_box = gui.vBox(self.controlArea, "Preprocessing")
+        self.normalize_cbx = gui.checkBox(
+            preprocessing_box, self, "normalize", label="Normalize data",
+            callback=self._invalidate_preprocessed_data,
+        )  # type: QCheckBox
         self.apply_pca_cbx = gui.checkBox(
-            pca_box, self, "apply_pca", label="Apply PCA preprocessing",
-            callback=self._invalidate_graph,
+            preprocessing_box, self, "apply_pca", label="Apply PCA preprocessing",
+            callback=self._apply_pca_changed,
         )  # type: QCheckBox
         self.pca_components_slider = gui.hSlider(
-            pca_box, self, "pca_components", label="Components: ", minValue=2,
+            preprocessing_box, self, "pca_components", label="PCA Components: ", minValue=2,
             maxValue=_MAX_PCA_COMPONENTS,
             callback=self._invalidate_pca_projection, tracking=False
         )  # type: QSlider
@@ -138,6 +145,26 @@ class OWLouvainClustering(widget.OWWidget):
             commit=lambda: self.commit(),
             callback=lambda: self._on_auto_commit_changed(),
         )  # type: QWidget
+
+    def _preprocess_data(self):
+        if self.preprocessed_data is None:
+            if self.normalize:
+                normalizer = preprocess.Normalize(center=False)
+                self.preprocessed_data = normalizer(self.data)
+            else:
+                self.preprocessed_data = self.data
+
+    def _apply_pca_changed(self):
+        self.controls.pca_components.setEnabled(self.apply_pca)
+        self._invalidate_graph()
+
+    def _invalidate_preprocessed_data(self):
+        self.preprocessed_data = None
+        self._invalidate_pca_projection()
+        # If we don't apply PCA, this still invalidates the graph, otherwise
+        # this change won't be propagated further
+        if not self.apply_pca:
+            self._invalidate_graph()
 
     def _invalidate_pca_projection(self):
         self.pca_projection = None
@@ -193,7 +220,6 @@ class OWLouvainClustering(widget.OWWidget):
         self.__commit_timer.stop()
         self.__invalidated = False
         self._set_modified(False)
-        self.Error.clear()
 
         # Cancel current running task
         self.__cancel_task(wait=False)
@@ -202,21 +228,14 @@ class OWLouvainClustering(widget.OWWidget):
             self.__set_state_ready()
             return
 
-        # Make sure the dataset is ok
-        if len(self.data.domain.attributes) < 1:
-            self.Error.empty_dataset()
-            self.__set_state_ready()
-            return
+        self.Error.clear()
 
         if self.partition is not None:
             self.__set_state_ready()
             self._send_data()
             return
 
-        # Preprocess the dataset
-        if self.preprocessed_data is None:
-            louvain = Louvain(random_state=0)
-            self.preprocessed_data = louvain.preprocess(self.data)
+        self._preprocess_data()
 
         state = TaskState(self)
 
@@ -243,8 +262,8 @@ class OWLouvainClustering(widget.OWWidget):
         if graph is None:
             task = partial(
                 run_on_data, data, pca_components=pca_components,
-                k_neighbors=k_neighbors, metric=metric,
-                resolution=self.resolution, state=state
+                normalize=self.normalize, k_neighbors=k_neighbors,
+                metric=metric, resolution=self.resolution, state=state,
             )
         else:
             task = partial(
@@ -386,9 +405,10 @@ class OWLouvainClustering(widget.OWWidget):
 
         prev_data, self.data = self.data, data
         self.openContext(self.data)
+        # Make sure to properly enable/disable slider based on `apply_pca` setting
+        self.controls.pca_components.setEnabled(self.apply_pca)
 
-        # If X hasn't changed, there's no reason to recompute clusters
-        if prev_data and self.data and np.array_equal(self.data.X, prev_data.X):
+        if prev_data and self.data and ut.array_equal(prev_data.X, self.data.X):
             if self.auto_commit:
                 self._send_data()
             return
@@ -401,6 +421,12 @@ class OWLouvainClustering(widget.OWWidget):
         # Clear internal state
         self.clear()
         self._invalidate_pca_projection()
+
+        # Make sure the dataset is ok
+        if self.data is not None and len(self.data.domain.attributes) < 1:
+            self.Error.empty_dataset()
+            self.data = None
+
         if self.data is None:
             return
 
@@ -439,6 +465,7 @@ class OWLouvainClustering(widget.OWWidget):
             pca += report.plural(", {number} component{s}", self.pca_components)
 
         self.report_items((
+            ("Normalize data", report.bool_str(self.normalize)),
             ("PCA preprocessing", pca),
             ("Metric", METRICS[self.metric_idx][0]),
             ("k neighbors", self.k_neighbors),
@@ -520,6 +547,7 @@ class InteruptRequested(BaseException):
 class Results(namespace):
     pca_projection = None    # type: Optional[Table]
     pca_components = None    # type: Optional[int]
+    normalize = None         # type: Optional[bool]
     k_neighbors = None       # type: Optional[int]
     metric = None            # type: Optional[str]
     graph = None             # type: Optional[nx.Graph]
@@ -527,8 +555,8 @@ class Results(namespace):
     partition = None         # type: Optional[np.ndarray]
 
 
-def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
-    # type: (Table, Optional[int], int, str, float, TaskState) -> Results
+def run_on_data(data, normalize, pca_components, k_neighbors, metric, resolution, state):
+    # type: (Table, Optional[int], int, str, float, bool, TaskState) -> Results
     """
     Run the louvain clustering on `data`.
 
@@ -539,6 +567,8 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
     ----------
     data : Table
         Data table
+    normalize : bool
+        If `True`, the data is first normalized before computing PCA.
     pca_components : Optional[int]
         If not `None` then the data is first projected onto first
         `pca_components` principal components.
@@ -556,16 +586,18 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
     """
     state = state  # type: TaskState
     res = Results(
-        pca_components=pca_components, k_neighbors=k_neighbors, metric=metric,
-        resolution=resolution,
+        normalize=normalize, pca_components=pca_components,
+        k_neighbors=k_neighbors, metric=metric, resolution=resolution,
     )
     step = 0
     if state.is_interuption_requested():
         return res
+
     if pca_components is not None:
         steps = 3
         state.set_status("Computing PCA...")
         pca = PCA(n_components=pca_components, random_state=0)
+
         data = res.pca_projection = pca(data)(data)
         assert isinstance(data, Table)
         state.set_partial_results(("pca_projection", res.pca_projection))
@@ -578,6 +610,13 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
 
     state.set_progress_value(100. * step / steps)
     state.set_status("Building graph...")
+
+    # Apply Louvain preprocessing before converting the table into a graph
+    louvain = Louvain(resolution=resolution, random_state=0)
+    data = louvain.preprocess(data)
+
+    if state.is_interuption_requested():
+        return res
 
     def pcallback(val):
         state.set_progress_value((100. * step + 100 * val) / steps)
@@ -600,7 +639,6 @@ def run_on_data(data, pca_components, k_neighbors, metric, resolution, state):
     if state.is_interuption_requested():
         return res
 
-    louvain = Louvain(resolution=resolution, random_state=0)
     res.partition = louvain.fit_predict(graph)
     state.set_partial_results(("partition", res.partition))
     return res

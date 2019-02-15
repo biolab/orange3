@@ -13,6 +13,23 @@ import scipy.stats.stats
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
 
+def sparse_array_equal(x1, x2):
+    """Check if two sparse arrays are equal."""
+    if not sp.issparse(x1):
+        raise TypeError("`x1` must be sparse.")
+    if not sp.issparse(x2):
+        raise TypeError("`x2` must be sparse.")
+
+    return x1.shape == x2.shape and (x1 != x2).nnz == 0
+
+
+def array_equal(x1, x2):
+    """Equivalent of np.array_equal that properly handles sparse matrices."""
+    if sp.issparse(x1) and sp.issparse(x2):
+        return sparse_array_equal(x1, x2)
+    return np.array_equal(x1, x2)
+
+
 def _count_nans_per_row_sparse(X, weights, dtype=None):
     """ Count the number of nans (undefined) values per row. """
     if weights is not None:

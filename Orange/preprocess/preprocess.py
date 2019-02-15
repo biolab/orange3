@@ -269,6 +269,8 @@ class Normalize(Preprocess):
     Parameters
     ----------
     zero_based : bool (default=True)
+        Only used when `norm_type=NormalizeBySpan`.
+
         Determines the value used as the “low” value of the variable.
         It determines the interval for normalized continuous variables
         (either [-1, 1] or [0, 1]).
@@ -286,6 +288,11 @@ class Normalize(Preprocess):
     transform_class : bool (default=False)
         If True the class is normalized as well.
 
+    center : bool (default=True)
+        Only used when `norm_type=NormalizeBySD`.
+
+        Whether or not to center the data so it has mean zero.
+
     Examples
     --------
     >>> from Orange.data import Table
@@ -301,10 +308,12 @@ class Normalize(Preprocess):
     def __init__(self,
                  zero_based=True,
                  norm_type=NormalizeBySD,
-                 transform_class=False):
+                 transform_class=False,
+                 center=True):
         self.zero_based = zero_based
         self.norm_type = norm_type
         self.transform_class = transform_class
+        self.center = center
 
     def __call__(self, data):
         """
@@ -334,7 +343,9 @@ class Normalize(Preprocess):
         normalizer = normalize.Normalizer(
             zero_based=self.zero_based,
             norm_type=self.norm_type,
-            transform_class=self.transform_class)
+            transform_class=self.transform_class,
+            center=self.center,
+        )
         return normalizer(data)
 
 
