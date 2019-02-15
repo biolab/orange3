@@ -10,6 +10,7 @@ from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
     unique, var, nanstd, nanvar, nanmode
+from sklearn.utils import check_random_state
 
 
 def dense_sparse(test_case):
@@ -166,13 +167,6 @@ class TestUtil(unittest.TestCase):
         with self.assertWarns(UserWarning):
             mean([1, np.nan, 0])
 
-    def test_nanmean(self):
-        for X in self.data:
-            X_sparse = csr_matrix(X)
-            np.testing.assert_array_equal(
-                nanmean(X_sparse),
-                np.nanmean(X))
-
     def test_nanmode(self):
         X = np.array([[np.nan, np.nan, 1, 1],
                       [2, np.nan, 1, 1]])
@@ -268,6 +262,31 @@ class TestUtil(unittest.TestCase):
                 np.nanstd(x, axis=axis, ddof=10),
                 nanstd(csr_matrix(x), axis=axis, ddof=10),
             )
+
+
+class TestNanmean(unittest.TestCase):
+    def setUp(self):
+        self.random_state = check_random_state(42)
+        self.x = self.random_state.uniform(size=(10, 5))
+        np.fill_diagonal(self.x, np.nan)
+
+    @dense_sparse
+    def test_axis_none(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x), nanmean(array(self.x))
+        )
+
+    @dense_sparse
+    def test_axis_0(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x, axis=0), nanmean(array(self.x), axis=0)
+        )
+
+    @dense_sparse
+    def test_axis_1(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x, axis=1), nanmean(array(self.x), axis=1)
+        )
 
 
 class TestDigitize(unittest.TestCase):

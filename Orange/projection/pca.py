@@ -1,9 +1,9 @@
 import numbers
-
 import six
 import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import lu, qr, svd
+
 from sklearn import decomposition as skl_decomposition
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
@@ -45,10 +45,13 @@ def randomized_pca(A, n_components, n_oversamples=10, n_iter="auto",
 
     n_samples, n_features = A.shape
 
-    c = np.atleast_2d(A.mean(axis=0))
+    c = np.atleast_2d(ut.nanmean(A, axis=0))
 
     if n_samples >= n_features:
         Q = random_state.normal(size=(n_features, n_components + n_oversamples))
+        if A.dtype.kind == "f":
+            Q = Q.astype(A.dtype, copy=False)
+
         Q = safe_sparse_dot(A, Q) - safe_sparse_dot(c, Q)
 
         # Normalized power iterations
@@ -66,6 +69,9 @@ def randomized_pca(A, n_components, n_oversamples=10, n_iter="auto",
 
     else:  # n_features > n_samples
         Q = random_state.normal(size=(n_samples, n_components + n_oversamples))
+        if A.dtype.kind == "f":
+            Q = Q.astype(A.dtype, copy=False)
+
         Q = safe_sparse_dot(A.T, Q) - safe_sparse_dot(c.T, Q.sum(axis=0)[None, :])
 
         # Normalized power iterations
