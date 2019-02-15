@@ -401,34 +401,30 @@ class OWSieveDiagram(OWWidget):
             the enclosing scope."""
             # pylint: disable=undefined-loop-variable
             def _oper(attr, txt):
-                if self.data.domain[attr.name] is ddomain[attr.name]:
-                    return "="
+                if self.data.domain[attr.name] == ddomain[attr.name]:
+                    return " = "
                 return " " if txt[0] in "<≥" else " in "
 
-            return (
-                "<b>{attr_x}{xeq}{xval_name}</b>: {obs_x}/{n} ({p_x:.0f} %)".
-                format(attr_x=to_html(attr_x.name),
-                       xeq=_oper(attr_x, xval_name),
-                       xval_name=to_html(xval_name),
-                       obs_x=fmt(chi.probs_x[x] * n),
-                       n=int(n),
-                       p_x=100 * chi.probs_x[x]) +
-                "<br/>" +
-                "<b>{attr_y}{yeq}{yval_name}</b>: {obs_y}/{n} ({p_y:.0f} %)".
-                format(attr_y=to_html(attr_y.name),
-                       yeq=_oper(attr_y, yval_name),
-                       yval_name=to_html(yval_name),
-                       obs_y=fmt(chi.probs_y[y] * n),
-                       n=int(n),
-                       p_y=100 * chi.probs_y[y]) +
-                "<hr/>" +
-                """<b>combination of values: </b><br/>
+            xt, yt = ["<b>{attr}{eq}{val_name}</b>: {obs}/{n} ({p:.0f} %)".format(
+                        attr=to_html(attr.name),
+                        eq=_oper(attr, val_name),
+                        val_name=to_html(val_name),
+                        obs=fmt(prob * n),
+                        n=int(n),
+                        p=100 * prob)
+                      for attr, val_name, prob in [(attr_x, xval_name, chi.probs_x[x]),
+                                                   (attr_y, yval_name, chi.probs_y[y])]]
+
+            ct = """<b>combination of values: </b><br/>
                    &nbsp;&nbsp;&nbsp;expected {exp} ({p_exp:.0f} %)<br/>
-                   &nbsp;&nbsp;&nbsp;observed {obs} ({p_obs:.0f} %)""".
-                format(exp=fmt(chi.expected[y, x]),
-                       p_exp=100 * chi.expected[y, x] / n,
-                       obs=fmt(chi.observed[y, x]),
-                       p_obs=100 * chi.observed[y, x] / n))
+                   &nbsp;&nbsp;&nbsp;observed {obs} ({p_obs:.0f} %)""".format(
+                exp=fmt(chi.expected[y, x]),
+                p_exp=100 * chi.expected[y, x] / n,
+                obs=fmt(chi.observed[y, x]),
+                p_obs=100 * chi.observed[y, x] / n)
+
+            return f"{xt}<br/>{yt}<hr/>{ct}"
+
 
         for item in self.canvas.items():
             self.canvas.removeItem(item)
