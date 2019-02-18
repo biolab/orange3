@@ -190,19 +190,31 @@ class TestOWCorrelations(WidgetTest):
         self.assertEqual(len(feature_combo.model()), len(cont_attributes) + 1)
 
     def test_select_feature(self):
-        """Check number of possible states"""
+        """Test feature selection"""
         feature_combo = self.widget.controls.feature
         self.send_signal(self.widget.Inputs.data, self.data_cont)
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
+        self.assertListEqual(["petal length", "petal width"],
+                             [a.name for a in self.get_output(
+                                 self.widget.Outputs.features)])
 
-        simulate.combobox_activate_index(feature_combo, 2)
+        simulate.combobox_activate_index(feature_combo, 1)
         time.sleep(0.1)
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 3)
+        self.assertListEqual(["petal length", "sepal length"],
+                             [a.name for a in self.get_output(
+                                 self.widget.Outputs.features)])
 
         simulate.combobox_activate_index(feature_combo, 0)
         time.sleep(0.1)
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
+        self.assertListEqual(["petal length", "sepal length"],
+                             [a.name for a in self.get_output(
+                                 self.widget.Outputs.features)])
 
     @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
     @patch("Orange.widgets.data.owcorrelations."
@@ -255,7 +267,7 @@ class TestCorrelationRank(WidgetTest):
     def test_row_for_state(self):
         row = self.vizrank.row_for_state((-0.2, 0.2, 0.1), (1, 0))
         self.assertEqual(row[0].data(Qt.DisplayRole), "+0.200")
-        self.assertEqual(row[0].data(CorrelationRank.pValRole), 0.1)
+        self.assertEqual(row[0].data(CorrelationRank.PValRole), 0.1)
         self.assertEqual(row[1].data(Qt.DisplayRole), self.attrs[0].name)
         self.assertEqual(row[2].data(Qt.DisplayRole), self.attrs[1].name)
 

@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 
 from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, \
     QSize, pyqtSignal as Signal
-from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtGui import QStandardItem
 from AnyQt.QtWidgets import QHeaderView
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
@@ -89,11 +89,8 @@ class CorrelationRank(VizRankDialogAttrPair):
     """
     Correlations rank widget.
     """
-    NEGATIVE_COLOR = QColor(70, 190, 250)
-    POSITIVE_COLOR = QColor(170, 242, 43)
-
     threadStopped = Signal()
-    pValRole = next(gui.OrangeUserRole)
+    PValRole = next(gui.OrangeUserRole)
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -139,7 +136,7 @@ class CorrelationRank(VizRankDialogAttrPair):
             item.setToolTip(attr.name)
             attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
-        correlation_item.setData(score[2], self.pValRole)
+        correlation_item.setData(score[2], self.PValRole)
         correlation_item.setData(attrs, self._AttrRole)
         correlation_item.setData(
             self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
@@ -163,7 +160,9 @@ class CorrelationRank(VizRankDialogAttrPair):
                 yield self.sel_feature_index, j
 
     def state_count(self):
-        if self.use_heuristic:
+        if self.sel_feature_index is not None:
+            return len(self.attrs) - 1
+        elif self.use_heuristic:
             n_clusters = KMeansCorrelationHeuristic.n_clusters
             n_avg_attrs = len(self.attrs) / n_clusters
             return n_clusters * n_avg_attrs * (n_avg_attrs - 1) / 2
@@ -258,8 +257,13 @@ class OWCorrelations(OWWidget):
 
     def _vizrank_select(self):
         model = self.vizrank.rank_table.model()
+        if not model.rowCount():
+            return
         selection = QItemSelection()
-        row = 0
+
+        # This flag is needed because data in the model could be
+        # filtered by a feature and therefore selection could not be found
+        selection_in_model = False
         if self.selection:
             sel_names = sorted(x.name for x in self.selection)
             for i in range(model.rowCount()):
@@ -267,13 +271,15 @@ class OWCorrelations(OWWidget):
                 names = sorted(x.name for x in model.data(
                     model.index(i, 0), CorrelationRank._AttrRole))
                 if names == sel_names:
-                    row = i
+                    selection.select(model.index(i, 0),
+                                     model.index(i, model.columnCount() - 1))
+                    selection_in_model = True
                     break
-        if model.rowCount():
-            selection.select(model.index(row, 0),
-                             model.index(row, model.columnCount() - 1))
-            self.vizrank.rank_table.selectionModel().select(
-                selection, QItemSelectionModel.ClearAndSelect)
+        if not selection_in_model:
+            selection.select(model.index(0, 0),
+                             model.index(0, model.columnCount() - 1))
+        self.vizrank.rank_table.selectionModel().select(
+            selection, QItemSelectionModel.ClearAndSelect)
 
     @Inputs.data
     def set_data(self, data):
@@ -321,7 +327,7 @@ class OWCorrelations(OWWidget):
         domain = Domain(attrs, metas=metas)
         model = self.vizrank.rank_model
         x = np.array([[float(model.data(model.index(row, 0), role))
-                       for role in (Qt.DisplayRole, CorrelationRank.pValRole)]
+                       for role in (Qt.DisplayRole, CorrelationRank.PValRole)]
                       for row in range(model.rowCount())])
         x[:, 1] = FDR(list(x[:, 1]))
         # pylint: disable=protected-access

@@ -75,6 +75,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
     captionTitle = ""
 
+    NEGATIVE_COLOR = QColor(70, 190, 250)
+    POSITIVE_COLOR = QColor(170, 242, 43)
+
     processingStateChanged = Signal(int)
     progressBarValueChanged = Signal(float)
     messageActivated = Signal(Msg)
