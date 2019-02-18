@@ -20,6 +20,7 @@ from Orange.statistics.util import FDR
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
+from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -196,6 +197,7 @@ class OWCorrelations(OWWidget):
 
     want_control_area = False
 
+    settings_version = 2
     settingsHandler = DomainContextHandler()
     selection = ContextSetting(())
     feature = ContextSetting(None)
@@ -249,7 +251,7 @@ class OWCorrelations(OWWidget):
         self.apply()
 
     def _vizrank_selection_changed(self, *args):
-        self.selection = args
+        self.selection = [(var.name, vartype(var)) for var in args]
         self.commit()
 
     def _vizrank_stopped(self):
@@ -265,7 +267,7 @@ class OWCorrelations(OWWidget):
         # filtered by a feature and therefore selection could not be found
         selection_in_model = False
         if self.selection:
-            sel_names = sorted(x.name for x in self.selection)
+            sel_names = sorted(name for name, _ in self.selection)
             for i in range(model.rowCount()):
                 # pylint: disable=protected-access
                 names = sorted(x.name for x in model.data(
@@ -339,13 +341,20 @@ class OWCorrelations(OWWidget):
 
         self.Outputs.data.send(self.data)
         # data has been imputed; send original attributes
-        self.Outputs.features.send(AttributeList([attr.compute_value.variable
-                                                  for attr in self.selection]))
+        self.Outputs.features.send(AttributeList(
+            [self.data.domain[name] for name, _ in self.selection]))
         self.Outputs.correlations.send(corr_table)
 
     def send_report(self):
         self.report_table(CorrelationType.items()[self.correlation_type],
                           self.vizrank.rank_table)
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            sel = context.values["selection"]
+            context.values["selection"] = ([(var.name, vartype(var))
+                                            for var in sel[0]], sel[1])
 
 
 if __name__ == "__main__":  # pragma: no cover
