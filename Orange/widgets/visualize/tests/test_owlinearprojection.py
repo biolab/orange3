@@ -183,6 +183,11 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.setup_plot.assert_called_once()
 
+    def test_two_classes_dataset(self):
+        self.widget.radio_placement.buttons[1].click()
+        self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
+        self.assertFalse(self.widget.radio_placement.buttons[1].isEnabled())
+
 
 class LinProjVizRankTests(WidgetTest):
     """
