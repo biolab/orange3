@@ -608,6 +608,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
+        self.deleteLater()
         self.graph.plot_widget.getViewBox().deleteLater()
         self.graph.plot_widget.clear()
         self.graph.clear()
