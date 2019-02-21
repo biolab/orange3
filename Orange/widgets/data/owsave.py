@@ -9,6 +9,10 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
 
+class FileDialog(QFileDialog):
+    def changeEvent(self, e):
+        print(e)
+        super().selectFile(e)
 
 class OWSave(widget.OWWidget):
     name = "Save Data"
@@ -20,7 +24,7 @@ class OWSave(widget.OWWidget):
     settings_version = 2
 
     writers = [TabReader, CSVReader, PickleReader, ExcelReader]
-    filters = [f"{w.DESCRIPTION} (*{w.EXTENSIONS[0]})" for w in writers]
+    filters = [f"{w.DESCRIPTION} (*.*)" for w in writers]
     filt_ext = {filter: w.EXTENSIONS[0] for filter, w in zip(filters, writers)}
     userhome = os.path.expanduser(f"~{os.sep}")
 
@@ -108,8 +112,22 @@ class OWSave(widget.OWWidget):
                 data_name += self.filt_ext[self.filter]
             start_dir = os.path.join(self.last_dir or self.userhome, data_name)
 
-        filename, selected_filter = QFileDialog.getSaveFileName(
-            self, "Save data", start_dir, ";;".join(self.filters), self.filter)
+        dlg = FileDialog(None, "Set File", start_dir, ";;".join(self.filters))
+        dlg.setLabelText(dlg.Accept, "Select")
+        dlg.setAcceptMode(dlg.AcceptSave)
+        dlg.setSupportedSchemes(["file"])
+        dlg.selectNameFilter(self.filter)
+        dlg.setOption(QFileDialog.HideNameFilterDetails)
+        dlg.currentChanged.connect(print)
+        if dlg.exec() == dlg.Rejected:
+            return
+
+        filename = dlg.selectedFiles()[0]
+        selected_filter = dlg.selectedNameFilter()
+
+#        filename, selected_filter = QFileDialog.getSaveFileName(
+ #           self, "Save data", start_dir, ";;".join(self.filters), self.filter,
+  #          QFileDialog.HideNameFilterDetails)
         if not filename:
             return
 
@@ -186,8 +204,9 @@ class OWSave(widget.OWWidget):
 
     @classmethod
     def migrate_settings(cls, settings, version=0):
-        if version < 2:
-            settings["filter"] = settings.pop("filetype")
+        settings.filter = next(iter(cls.filt_ext))
+#        if version < 2:
+ #           settings["filter"] = settings.pop("filetype")
 
 
 if __name__ == "__main__":  # pragma: no cover
