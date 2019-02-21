@@ -947,6 +947,21 @@ class ProjectionWidgetTestMixin:
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
+    def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.send_signal(self.widget.Inputs.data_subset, self.data[:10])
+        subset = [brush.color().name() == "#46befa" for brush in
+                  self.widget.graph.scatterplot_item.data['brush'][:10]]
+        other = [brush.color().name() == "#000000" for brush in
+                 self.widget.graph.scatterplot_item.data['brush'][10:]]
+        self.assertTrue(all(subset))
+        self.assertTrue(all(other))
+
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
         self.send_signal(self.widget.Inputs.data, self.data)
