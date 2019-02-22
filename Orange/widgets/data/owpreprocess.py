@@ -637,15 +637,15 @@ def enum_to_index(enum, key):
     return list(enum).index(key)
 
 class Scale(BaseEditor):
-    NormalizeBySD, CenterByMean, NormalizeSpan_NonZeroBased, \
-        NormalizeBySpan_ZeroBased, OnlyScale = 0, 1, 2, 3, 4
+    CenterByMean, ScaleBySD, NormalizeBySD, NormalizeBySpan_ZeroBased, \
+        NormalizeSpan_NonZeroBased = 0, 1, 2, 3, 4
 
     Names = {
-        NormalizeBySD: "Standardize (mean = 0, std = 1)",
-        CenterByMean: "Center only (mean = 0)",
-        NormalizeSpan_NonZeroBased: "Normalize to [-1, 1]",
-        NormalizeBySpan_ZeroBased: "Normalize to [0, 1]",
-        OnlyScale: "Scale only (std = 1)"
+        NormalizeBySD: "Standardize to μ=0, σ²=1",
+        CenterByMean: "Center to μ=0",
+        ScaleBySD: "Scale to σ²=1",
+        NormalizeSpan_NonZeroBased: "Normalize to interval [-1, 1]",
+        NormalizeBySpan_ZeroBased: "Normalize to interval [0, 1]",
     }
 
     def __init__(self, parent=None, **kwargs):
@@ -656,7 +656,7 @@ class Scale(BaseEditor):
         self.__group = group = QButtonGroup(self, exclusive=True)
         group.buttonClicked.connect(self.__on_buttonClicked)
 
-        for methodid in [self.NormalizeBySD, self.CenterByMean, self.OnlyScale,
+        for methodid in [self.NormalizeBySD, self.CenterByMean, self.ScaleBySD,
                          self.NormalizeSpan_NonZeroBased,
                          self.NormalizeBySpan_ZeroBased]:
             text = self.Names[methodid]
@@ -685,18 +685,20 @@ class Scale(BaseEditor):
 
     @staticmethod
     def createinstance(params):
-        params = dict(params)
-        method = params.pop("method", Scale.NormalizeBySD)
+        method = params.get("method", Scale.NormalizeBySD)
         if method == Scale.CenterByMean:
-            return _Scale(_Scale.CenteringType.Mean, _Scale.ScalingType.NoScaling)
-        elif method == Scale.OnlyScale:
-            return _Scale(_Scale.CenteringType.NoCentering, _Scale.ScalingType.Std)
+            return _Scale(_Scale.CenteringType.Mean,
+                          _Scale.ScalingType.NoScaling)
+        elif method == Scale.ScaleBySD:
+            return _Scale(_Scale.CenteringType.NoCentering,
+                          _Scale.ScalingType.Std)
         elif method == Scale.NormalizeBySD:
             return Normalize(norm_type=Normalize.NormalizeBySD)
         elif method == Scale.NormalizeBySpan_ZeroBased:
             return Normalize(norm_type=Normalize.NormalizeBySpan)
         else:  # method == Scale.NormalizeSpan_NonZeroBased
-            return Normalize(norm_type=Normalize.NormalizeBySpan, zero_based=False)
+            return Normalize(norm_type=Normalize.NormalizeBySpan,
+                             zero_based=False)
 
     def __repr__(self):
         return self.Names[self.__method]
@@ -960,6 +962,8 @@ class OWPreprocess(widget.OWWidget):
     icon = "icons/Preprocess.svg"
     priority = 2105
     keywords = ["process"]
+
+    settings_version = 2
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -1227,6 +1231,25 @@ class OWPreprocess(widget.OWWidget):
         """Reimplemented."""
         self.storedsettings = self.save(self.preprocessormodel)
         super().saveSettings()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            for action, params in settings["storedsettings"]["preprocessors"]:
+                if action == "orange.preprocess.scale":
+                    scale = center = None
+                    if "center" in params:
+                        center = params.pop("center").name
+                    if "scale" in params:
+                        scale = params.pop("scale").name
+                    migratable = {
+                        ("Mean", "NoScaling"): Scale.CenterByMean,
+                        ("NoCentering", "Std"): Scale.ScaleBySD,
+                        ("Mean", "Std"): Scale.NormalizeBySD,
+                        ("NoCentering", "Span"): Scale.NormalizeBySpan_ZeroBased
+                    }
+                    params["method"] = \
+                        migratable.get((center, scale), Scale.NormalizeBySD)
 
     def onDeleteWidget(self):
         self.data = None
