@@ -11,6 +11,7 @@ from Orange.data import Table
 
 
 def parse_uri(uri):
+    """Parse uri to db type and dictionary of connection parameters."""
     if uri == "":
         return "", dict()
     parsed_uri = parse.urlparse(uri)
@@ -104,6 +105,10 @@ class TestParseUri(unittest.TestCase):
 
 
 def connection_params():
+    """
+    Get environment variable that holds db connection parameters.
+    You can assign multiple connections by concatenating them with '|'.
+    """
     dburi = os.environ.get('ORANGE_TEST_DB_URI', "")
     return dict(parse_uri(uri) for uri in dburi.split("|"))
 
@@ -124,9 +129,15 @@ class DBTestConnection:
         return self._params.copy()
 
     def try_connection(self):
+        """
+        Test if db specific connection module is installed and if you can
+        connect to db.
+        """
         raise NotImplementedError()
 
-    def create_sql_table(self, data, sql_column_types=None):
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        """This creates a new sql table in the specific db."""
         raise NotImplementedError()
 
     @staticmethod
@@ -142,9 +153,11 @@ class DBTestConnection:
         return column_size
 
     def drop_sql_table(self, table_name):
+        """This drops given sql table in the specific db."""
         raise NotImplementedError
 
     def get_backend(self):
+        """This returns the db specific Orange Backend."""
         raise NotImplementedError
 
 
@@ -302,6 +315,7 @@ test_connections = {
 
 
 def dbs():
+    """Parse env variable and initialize connection to given dbs."""
     params = connection_params()
 
     db_conn = {}
@@ -380,7 +394,16 @@ class DataBaseTest:
 
     @classmethod
     def run_on(cls, dbs):
-        """Decorator used to create new test for every given database"""
+        """
+        Decorator used to create new test for every given database.
+
+        For every db in the list of dbs create a new test that:
+            * changes create_sql_table, drop_sql_table and backend to those
+              implemented in the db subclass of DBTestConnection
+            * runs setUpDB if exists
+            * runs original test
+            * runs tearDownDB if exists
+        """
         def decorator(function):
             if function.__name__.startswith("test_db_"):
                 return function
