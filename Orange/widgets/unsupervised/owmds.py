@@ -158,7 +158,6 @@ class OWMDS(OWDataProjectionWidget):
         #: Input data table
         self.signal_data = None
 
-        self.__invalidated = True
         self.embedding = None
         self.effective_matrix = None
 
@@ -243,7 +242,7 @@ class OWMDS(OWDataProjectionWidget):
     def _initialize(self):
         matrix_existed = self.effective_matrix is not None
         effective_matrix = self.effective_matrix
-        self.__invalidated = True
+        self._invalidated = True
         self.data = None
         self.effective_matrix = None
         self.closeContext()
@@ -285,11 +284,11 @@ class OWMDS(OWDataProjectionWidget):
 
         self.init_attr_values()
         self.openContext(self.data)
-        self.__invalidated = not (matrix_existed and
-                                  self.effective_matrix is not None and
-                                  np.array_equal(effective_matrix,
-                                                 self.effective_matrix))
-        if self.__invalidated:
+        self._invalidated = not (matrix_existed and
+                                 self.effective_matrix is not None and
+                                 np.array_equal(effective_matrix,
+                                                self.effective_matrix))
+        if self._invalidated:
             self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
 
@@ -444,12 +443,15 @@ class OWMDS(OWDataProjectionWidget):
 
     def do_PCA(self):
         self.__invalidate_embedding(self.PCA)
+        self.setup_plot()
 
     def do_random(self):
         self.__invalidate_embedding(self.Random)
+        self.setup_plot()
 
     def do_jitter(self):
         self.__invalidate_embedding(self.Jitter)
+        self.setup_plot()
 
     def __invalidate_embedding(self, initialization=PCA):
         def jitter_coord(part):
@@ -476,8 +478,6 @@ class OWMDS(OWDataProjectionWidget):
             jitter_coord(self.embedding[:, 0])
             jitter_coord(self.embedding[:, 1])
 
-        self.setup_plot()
-
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
             self.__start()
@@ -496,15 +496,12 @@ class OWMDS(OWDataProjectionWidget):
 
     def handleNewSignals(self):
         self._initialize()
-        if self.__invalidated:
+        if self._invalidated:
             self.graph.pause_drawing_pairs()
-            self.__invalidated = False
             self.__invalidate_embedding()
-            self.cb_class_density.setEnabled(self.can_draw_density())
+            self.enable_controls()
             self.start()
-        else:
-            self.graph.update_point_props()
-        self.commit()
+        super().handleNewSignals()
 
     def _invalidate_output(self):
         self.commit()
