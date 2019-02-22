@@ -29,7 +29,7 @@ from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-
+from Orange.preprocess import Normalize
 from Orange.widgets.data.utils.preprocess import (
     BaseEditor, blocked, StandardItemModel, DescriptionRole,
     ParametersRole, Controller, SequenceFlow
@@ -636,55 +636,70 @@ def enum_to_index(enum, key):
     enum key to its int position"""
     return list(enum).index(key)
 
-
 class Scale(BaseEditor):
-    NoCentering, CenterMean, CenterMedian = 0, 1, 2
-    NoScaling, ScaleBySD, ScaleBySpan = 0, 1, 2
+    NormalizeBySD, CenterByMean, NormalizeSpan_NonZeroBased, \
+        NormalizeBySpan_ZeroBased, OnlyScale = 0, 1, 2, 3, 4
+
+    Names = {
+        NormalizeBySD: "Standardize (mean = 0, std = 1)",
+        CenterByMean: "Center only (mean = 0)",
+        NormalizeSpan_NonZeroBased: "Normalize to [-1, 1]",
+        NormalizeBySpan_ZeroBased: "Normalize to [0, 1]",
+        OnlyScale: "Scale only (std = 1)"
+    }
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.setLayout(QVBoxLayout())
 
-        form = QFormLayout()
-        self.__centercb = QComboBox()
-        self.__centercb.addItems(["No Centering", "Center by Mean",
-                                  "Center by Median"])
+        self.__method = Scale.NormalizeBySD
+        self.__group = group = QButtonGroup(self, exclusive=True)
+        group.buttonClicked.connect(self.__on_buttonClicked)
 
-        self.__scalecb = QComboBox()
-        self.__scalecb.addItems(["No scaling", "Scale by SD",
-                                 "Scale by span"])
+        for methodid in [self.NormalizeBySD, self.CenterByMean, self.OnlyScale,
+                         self.NormalizeSpan_NonZeroBased,
+                         self.NormalizeBySpan_ZeroBased]:
+            text = self.Names[methodid]
+            rb = QRadioButton(text=text, checked=self.__method == methodid)
+            group.addButton(rb, methodid)
+            self.layout().addWidget(rb)
 
-        form.addRow("Center:", self.__centercb)
-        form.addRow("Scale:", self.__scalecb)
-        self.layout().addLayout(form)
-        self.__centercb.currentIndexChanged.connect(self.changed)
-        self.__scalecb.currentIndexChanged.connect(self.changed)
-        self.__centercb.activated.connect(self.edited)
-        self.__scalecb.activated.connect(self.edited)
+    def setMethod(self, method):
+        b = self.__group.button(method)
+        if b is not None:
+            b.setChecked(True)
+            self.__method = method
+            self.changed.emit()
 
     def setParameters(self, params):
-        center = params.get("center", _Scale.CenteringType.Mean)
-        scale = params.get("scale", _Scale.ScalingType.Std)
-        self.__centercb.setCurrentIndex(
-            enum_to_index(_Scale.CenteringType, center))
-        self.__scalecb.setCurrentIndex(
-            enum_to_index(_Scale.ScalingType, scale))
+        method = params.get("method", Scale.NormalizeBySD)
+        self.setMethod(method)
 
     def parameters(self):
-        return {"center": index_to_enum(_Scale.CenteringType,
-                                        self.__centercb.currentIndex()),
-                "scale": index_to_enum(_Scale.ScalingType,
-                                       self.__scalecb.currentIndex())}
+        return {"method": self.__method}
+
+    def __on_buttonClicked(self):
+        self.__method = self.__group.checkedId()
+        self.changed.emit()
+        self.edited.emit()
 
     @staticmethod
     def createinstance(params):
-        center = params.get("center", _Scale.CenteringType.Mean)
-        scale = params.get("scale", _Scale.ScalingType.Std)
-        return _Scale(center=center, scale=scale)
+        params = dict(params)
+        method = params.pop("method", Scale.NormalizeBySD)
+        if method == Scale.CenterByMean:
+            return _Scale(_Scale.CenteringType.Mean, _Scale.ScalingType.NoScaling)
+        elif method == Scale.OnlyScale:
+            return _Scale(_Scale.CenteringType.NoCentering, _Scale.ScalingType.Std)
+        elif method == Scale.NormalizeBySD:
+            return Normalize(norm_type=Normalize.NormalizeBySD)
+        elif method == Scale.NormalizeBySpan_ZeroBased:
+            return Normalize(norm_type=Normalize.NormalizeBySpan)
+        else:  # method == Scale.NormalizeSpan_NonZeroBased
+            return Normalize(norm_type=Normalize.NormalizeBySpan, zero_based=False)
 
     def __repr__(self):
-        return "{}, {}".format(self.__centercb.currentText(),
-                               self.__scalecb.currentText())
+        return self.Names[self.__method]
 
 
 class Randomize(BaseEditor):
@@ -1238,7 +1253,6 @@ class OWPreprocess(widget.OWWidget):
               for i, w in enumerate(self.controler.view.widgets())]
         if len(pp):
             self.report_items("Settings", pp)
-
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWPreprocess).run(Orange.data.Table("brown-selected"))

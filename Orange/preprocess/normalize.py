@@ -44,7 +44,6 @@ class Normalizer(Reprable):
         avg, sd = (dist.mean(), dist.standard_deviation()) if dist.size else (0, 1)
         if sd == 0:
             sd = 1
-
         if self.center:
             compute_val = Norm(var, avg, 1 / sd)
         else:
