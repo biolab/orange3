@@ -668,9 +668,11 @@ class ContextHandler(SettingsHandler):
         """Call the inherited method, then add local contexts to the dict."""
         data = super().pack_data(widget)
         self.settings_from_widget(widget)
-        for context in widget.context_settings:
+        context_settings = [copy.copy(context) for context in
+                            widget.context_settings]
+        for context in context_settings:
             context.values[VERSION_KEY] = self.widget_class.settings_version
-        data["context_settings"] = widget.context_settings
+        data["context_settings"] = context_settings
         return data
 
     def update_defaults(self, widget):
