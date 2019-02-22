@@ -12,10 +12,10 @@ from Orange.tests.sql.base import DataBaseTest as dbt
 
 class NaiveBayesTest(unittest.TestCase, dbt):
     def setUpDB(self):
-        self.conn, self.iris = self.create_iris_sql_tabel()
+        self.conn, self.iris = self.create_iris_sql_table()
 
     def tearDownDB(self):
-        self.drop_iris_sql_tabel()
+        self.drop_iris_sql_table()
 
     @dbt.run_on(["postgres"])
     def test_NaiveBayes(self):

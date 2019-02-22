@@ -411,7 +411,7 @@ class DataBaseTest:
         """This is reassigned according to the db currently being tested"""
         return {}, ""
 
-    def create_iris_sql_tabel(self):
+    def create_iris_sql_table(self):
         iris = Table("iris")
         cn = ["sepal length", "sepal width", "petal length", "petal width",
               "iris"]
@@ -421,5 +421,5 @@ class DataBaseTest:
         return self.create_sql_table(data, table_name="iris",
                                      sql_column_names=cn, sql_column_types=ct)
 
-    def drop_iris_sql_tabel(self):
+    def drop_iris_sql_table(self):
         self.drop_sql_table("iris")

@@ -22,10 +22,10 @@ from Orange.tests.sql.base import DataBaseTest as dbt
 
 class TestSqlTable(unittest.TestCase, dbt):
     def setUpDB(self):
-        self.conn, self.iris = self.create_iris_sql_tabel()
+        self.conn, self.iris = self.create_iris_sql_table()
 
     def tearDownDB(self):
-        self.drop_iris_sql_tabel()
+        self.drop_iris_sql_table()
 
     def float_variable(self, size):
         return [i * .1 for i in range(size)]

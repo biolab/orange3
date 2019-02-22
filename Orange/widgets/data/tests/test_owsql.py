@@ -13,11 +13,11 @@ from Orange.tests.sql.base import DataBaseTest as dbt
 class TestOWSqlConnected(WidgetTest, dbt):
     def setUpDB(self):
         self.widget = self.create_widget(OWSql)
-        self.params, _ = self.create_iris_sql_tabel()
+        self.params, _ = self.create_iris_sql_table()
         self.iris = Table("iris")
 
     def tearDownDB(self):
-        self.drop_iris_sql_tabel()
+        self.drop_iris_sql_table()
 
     @dbt.run_on(["postgres"])
     def test_connection(self):
