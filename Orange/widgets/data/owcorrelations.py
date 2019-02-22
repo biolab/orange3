@@ -9,14 +9,19 @@ import numpy as np
 from scipy.stats import spearmanr, pearsonr
 from sklearn.cluster import KMeans
 
-from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, QSize
-from AnyQt.QtGui import QStandardItem, QColor
+from AnyQt.QtCore import Qt, QItemSelectionModel, QItemSelection, \
+    QSize, pyqtSignal as Signal
+from AnyQt.QtGui import QStandardItem
+from AnyQt.QtWidgets import QHeaderView
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.preprocess import SklImpute, Normalize
+from Orange.statistics.util import FDR
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, \
     DomainContextHandler
+from Orange.widgets.utils import vartype
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialogAttrPair
@@ -85,28 +90,33 @@ class CorrelationRank(VizRankDialogAttrPair):
     """
     Correlations rank widget.
     """
-    NEGATIVE_COLOR = QColor(70, 190, 250)
-    POSITIVE_COLOR = QColor(170, 242, 43)
+    threadStopped = Signal()
+    PValRole = next(gui.OrangeUserRole)
 
     def __init__(self, *args):
         super().__init__(*args)
         self.heuristic = None
         self.use_heuristic = False
+        self.sel_feature_index = None
 
     def initialize(self):
         super().initialize()
         data = self.master.cont_data
         self.attrs = data and data.domain.attributes
         self.model_proxy.setFilterKeyColumn(-1)
-        self.rank_table.horizontalHeader().setStretchLastSection(False)
         self.heuristic = None
         self.use_heuristic = False
+        if self.master.feature is not None:
+            self.sel_feature_index = data.domain.index(self.master.feature)
+        else:
+            self.sel_feature_index = None
         if data:
             # use heuristic if data is too big
             n_attrs = len(self.attrs)
             use_heuristic = n_attrs > KMeansCorrelationHeuristic.n_clusters
             self.use_heuristic = use_heuristic and \
-                len(data) * n_attrs ** 2 > SIZE_LIMIT
+                len(data) * n_attrs ** 2 > SIZE_LIMIT and \
+                self.sel_feature_index is None
             if self.use_heuristic:
                 self.heuristic = KMeansCorrelationHeuristic(data)
 
@@ -114,33 +124,46 @@ class CorrelationRank(VizRankDialogAttrPair):
         (attr1, attr2), corr_type = state, self.master.correlation_type
         data = self.master.cont_data.X
         corr = pearsonr if corr_type == CorrelationType.PEARSON else spearmanr
-        result = corr(data[:, attr1], data[:, attr2])[0]
-        return -abs(result) if not np.isnan(result) else NAN, result
+        r, p_value = corr(data[:, attr1], data[:, attr2])
+        return -abs(r) if not np.isnan(r) else NAN, r, p_value
 
     def row_for_state(self, score, state):
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
-        attrs_item = QStandardItem(
-            "{}, {}".format(attrs[0].name, attrs[1].name))
-        attrs_item.setData(attrs, self._AttrRole)
-        attrs_item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+        attr_items = []
+        for attr in attrs:
+            item = QStandardItem(attr.name)
+            item.setData(attrs, self._AttrRole)
+            item.setData(Qt.AlignLeft + Qt.AlignTop, Qt.TextAlignmentRole)
+            item.setToolTip(attr.name)
+            attr_items.append(item)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
+        correlation_item.setData(score[2], self.PValRole)
         correlation_item.setData(attrs, self._AttrRole)
         correlation_item.setData(
             self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
             gui.TableBarItem.BarColorRole)
-        return [correlation_item, attrs_item]
+        return [correlation_item] + attr_items
 
     def check_preconditions(self):
         return self.master.cont_data is not None
 
     def iterate_states(self, initial_state):
-        if self.use_heuristic:
+        if self.sel_feature_index is not None:
+            return self.iterate_states_by_feature()
+        elif self.use_heuristic:
             return self.heuristic.get_states(initial_state)
         else:
             return super().iterate_states(initial_state)
 
+    def iterate_states_by_feature(self):
+        for j in range(len(self.attrs)):
+            if j != self.sel_feature_index:
+                yield self.sel_feature_index, j
+
     def state_count(self):
-        if self.use_heuristic:
+        if self.sel_feature_index is not None:
+            return len(self.attrs) - 1
+        elif self.use_heuristic:
             n_clusters = KMeansCorrelationHeuristic.n_clusters
             n_avg_attrs = len(self.attrs) / n_clusters
             return n_clusters * n_avg_attrs * (n_avg_attrs - 1) / 2
@@ -151,6 +174,11 @@ class CorrelationRank(VizRankDialogAttrPair):
     @staticmethod
     def bar_length(score):
         return abs(score[1])
+
+    def stopped(self):
+        self.threadStopped.emit()
+        header = self.rank_table.horizontalHeader()
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
 
 
 class OWCorrelations(OWWidget):
@@ -169,8 +197,10 @@ class OWCorrelations(OWWidget):
 
     want_control_area = False
 
+    settings_version = 2
     settingsHandler = DomainContextHandler()
     selection = ContextSetting(())
+    feature = ContextSetting(None)
     correlation_type = Setting(0)
 
     class Information(OWWidget.Information):
@@ -186,12 +216,23 @@ class OWCorrelations(OWWidget):
         box = gui.vBox(self.mainArea)
         self.correlation_combo = gui.comboBox(
             box, self, "correlation_type", items=CorrelationType.items(),
-            orientation=Qt.Horizontal, callback=self._correlation_combo_changed)
+            orientation=Qt.Horizontal, callback=self._correlation_combo_changed
+        )
+
+        self.feature_model = DomainModel(
+            separators=False, placeholder="(All combinations)",
+            valid_types=ContinuousVariable,
+        )
+        gui.comboBox(
+            box, self, "feature", callback=self._feature_combo_changed,
+            model=self.feature_model
+        )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
             None, self, None, self._vizrank_selection_changed)
         self.vizrank.progressBar = self.progressBar
         self.vizrank.button.setEnabled(False)
+        self.vizrank.threadStopped.connect(self._vizrank_stopped)
 
         gui.separator(box)
         box.layout().addWidget(self.vizrank.filter)
@@ -206,22 +247,41 @@ class OWCorrelations(OWWidget):
     def _correlation_combo_changed(self):
         self.apply()
 
+    def _feature_combo_changed(self):
+        self.apply()
+
     def _vizrank_selection_changed(self, *args):
-        self.selection = args
+        self.selection = [(var.name, vartype(var)) for var in args]
         self.commit()
+
+    def _vizrank_stopped(self):
+        self._vizrank_select()
 
     def _vizrank_select(self):
         model = self.vizrank.rank_table.model()
+        if not model.rowCount():
+            return
         selection = QItemSelection()
-        names = sorted(x.name for x in self.selection)
-        for i in range(model.rowCount()):
-            # pylint: disable=protected-access
-            if sorted(x.name for x in model.data(
-                    model.index(i, 0), CorrelationRank._AttrRole)) == names:
-                selection.select(model.index(i, 0), model.index(i, 1))
-                self.vizrank.rank_table.selectionModel().select(
-                    selection, QItemSelectionModel.ClearAndSelect)
-                break
+
+        # This flag is needed because data in the model could be
+        # filtered by a feature and therefore selection could not be found
+        selection_in_model = False
+        if self.selection:
+            sel_names = sorted(name for name, _ in self.selection)
+            for i in range(model.rowCount()):
+                # pylint: disable=protected-access
+                names = sorted(x.name for x in model.data(
+                    model.index(i, 0), CorrelationRank._AttrRole))
+                if names == sel_names:
+                    selection.select(model.index(i, 0),
+                                     model.index(i, model.columnCount() - 1))
+                    selection_in_model = True
+                    break
+        if not selection_in_model:
+            selection.select(model.index(0, 0),
+                             model.index(0, model.columnCount() - 1))
+        self.vizrank.rank_table.selectionModel().select(
+            selection, QItemSelectionModel.ClearAndSelect)
 
     @Inputs.data
     def set_data(self, data):
@@ -240,18 +300,20 @@ class OWCorrelations(OWWidget):
                 domain = data.domain
                 cont_dom = Domain(cont_attrs, domain.class_vars, domain.metas)
                 self.cont_data = SklImpute()(Table.from_table(cont_dom, data))
+        self.set_feature_model()
+        self.openContext(self.cont_data)
         self.apply()
-        self.openContext(self.data)
-        self._vizrank_select()
-        self.vizrank.button.setEnabled(self.data is not None)
+        self.vizrank.button.setEnabled(self.cont_data is not None)
+
+    def set_feature_model(self):
+        self.feature_model.set_domain(self.cont_data and self.cont_data.domain)
+        self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
         if self.cont_data is not None:
             # this triggers self.commit() by changing vizrank selection
             self.vizrank.toggle()
-            header = self.vizrank.rank_table.horizontalHeader()
-            header.setStretchLastSection(True)
         else:
             self.commit()
 
@@ -262,11 +324,14 @@ class OWCorrelations(OWWidget):
             self.Outputs.correlations.send(None)
             return
 
+        attrs = [ContinuousVariable("Correlation"), ContinuousVariable("FDR")]
         metas = [StringVariable("Feature 1"), StringVariable("Feature 2")]
-        domain = Domain([ContinuousVariable("Correlation")], metas=metas)
+        domain = Domain(attrs, metas=metas)
         model = self.vizrank.rank_model
-        x = np.array([[float(model.data(model.index(row, 0)))] for row
-                      in range(model.rowCount())])
+        x = np.array([[float(model.data(model.index(row, 0), role))
+                       for role in (Qt.DisplayRole, CorrelationRank.PValRole)]
+                      for row in range(model.rowCount())])
+        x[:, 1] = FDR(list(x[:, 1]))
         # pylint: disable=protected-access
         m = np.array([[a.name for a in model.data(model.index(row, 0),
                                                   CorrelationRank._AttrRole)]
@@ -276,13 +341,20 @@ class OWCorrelations(OWWidget):
 
         self.Outputs.data.send(self.data)
         # data has been imputed; send original attributes
-        self.Outputs.features.send(AttributeList([attr.compute_value.variable
-                                                  for attr in self.selection]))
+        self.Outputs.features.send(AttributeList(
+            [self.data.domain[name] for name, _ in self.selection]))
         self.Outputs.correlations.send(corr_table)
 
     def send_report(self):
         self.report_table(CorrelationType.items()[self.correlation_type],
                           self.vizrank.rank_table)
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 2:
+            sel = context.values["selection"]
+            context.values["selection"] = ([(var.name, vartype(var))
+                                            for var in sel[0]], sel[1])
 
 
 if __name__ == "__main__":  # pragma: no cover
