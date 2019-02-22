@@ -1277,6 +1277,14 @@ class TableTestCase(unittest.TestCase):
         table.X = sp.csr_matrix(table.X)
         repr(table)     # make sure repr does not crash
 
+    def test_inf(self):
+        a = np.array([[2,   0,      0,      0],
+                      [0,   np.nan, np.nan, 1],
+                      [0,   0,      np.inf, 0]])
+        with self.assertWarns(Warning):
+            tab = data.Table(a)
+        self.assertEqual(tab.get_nan_frequency_attribute(), 3/12)
+
 
 def column_sizes(table):
     return (len(table.domain.attributes),

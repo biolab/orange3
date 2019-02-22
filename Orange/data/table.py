@@ -1779,7 +1779,8 @@ def _check_arrays(*arrays, dtype=None):
             has_inf = _check_inf(array)
 
         if has_inf:
-            raise ValueError("Array contains infinity.")
+            array[np.isinf(array)] = np.nan
+            warnings.warn("Array contains infinity.", RuntimeWarning)
         checked.append(array)
 
     return checked
