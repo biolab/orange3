@@ -372,9 +372,7 @@ class DataBaseTest:
         def new_test(test_self, *args):
             new_db = cls._check_db(db)
 
-            test_self.create_sql_table = cls.db_conn[new_db].create_sql_table
-            test_self.drop_sql_table = cls.db_conn[new_db].drop_sql_table
-            test_self.backend = cls.db_conn[new_db].get_backend()
+            test_self.current_db = new_db
 
             error = None
             if hasattr(test_self, "setUpDB"):
@@ -425,14 +423,23 @@ class DataBaseTest:
 
         return decorator
 
+    @property
+    def backend(self):
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db].get_backend()
+
     def create_sql_table(self, data, sql_column_types=None,
                          sql_column_names=None, table_name=None):
-        """This is reassigned according to the db currently being tested"""
-        return {}, ""
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db]\
+            .create_sql_table(data, sql_column_types=sql_column_types,
+                              sql_column_names=sql_column_names,
+                              table_name=table_name)
 
     def drop_sql_table(self, table_name):
-        """This is reassigned according to the db currently being tested"""
-        return {}, ""
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db]\
+            .drop_sql_table(table_name=table_name)
 
     def create_iris_sql_table(self):
         iris = Table("iris")
