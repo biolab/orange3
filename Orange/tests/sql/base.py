@@ -404,10 +404,12 @@ class DataBaseTest:
 
     def create_sql_table(self, data, sql_column_types=None,
                          sql_column_names=None, table_name=None):
-        raise NotImplementedError
+        """This is reassigned according to the db currently being tested"""
+        return {}, ""
 
     def drop_sql_table(self, table_name):
-        raise NotImplementedError
+        """This is reassigned according to the db currently being tested"""
+        return {}, ""
 
     def create_iris_sql_tabel(self):
         iris = Table("iris")

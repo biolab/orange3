@@ -1,5 +1,3 @@
-# pylint: disable=abstract-method
-
 import unittest
 
 from numpy import array
