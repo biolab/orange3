@@ -2,6 +2,9 @@ language: python
 
 dist: xenial
 
+services:
+  - docker
+
 matrix:
     include:
         - env: RUN_PYLINT=true

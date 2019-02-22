@@ -1,15 +1,15 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+import unittest
+
 from Orange.data.sql.table import SqlTable, SqlRowInstance
 from Orange.data import filter, domain
+from Orange.tests.sql.base import DataBaseTest as dbt
 
-from Orange.tests.sql.base import PostgresTest, sql_test
 
-
-@sql_test
-class TestIsDefinedSql(PostgresTest):
-    def setUp(self):
+class TestIsDefinedSql(unittest.TestCase, dbt):
+    def setUpDB(self):
         self.data = [
             [1, 2, 3, None, 'm'],
             [2, 3, 1, 4, 'f'],
@@ -19,9 +19,10 @@ class TestIsDefinedSql(PostgresTest):
         conn, self.table_name = self.create_sql_table(self.data)
         self.table = SqlTable(conn, self.table_name, inspect_values=True)
 
-    def tearDown(self):
+    def tearDownDB(self):
         self.drop_sql_table(self.table_name)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_all_columns(self):
         filtered_data = filter.IsDefined()(self.table)
         correct_data = [row for row in self.data if all(row)]
@@ -29,6 +30,7 @@ class TestIsDefinedSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_selected_columns(self):
         filtered_data = filter.IsDefined(columns=[0])(self.table)
         correct_data = [row for row in self.data if row[0]]
@@ -36,6 +38,7 @@ class TestIsDefinedSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_all_columns_negated(self):
         filtered_data = filter.IsDefined(negate=True)(self.table)
         correct_data = [row for row in self.data if not all(row)]
@@ -43,6 +46,7 @@ class TestIsDefinedSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_selected_columns_negated(self):
         filtered_data = \
             filter.IsDefined(negate=True, columns=[4])(self.table)
@@ -51,6 +55,7 @@ class TestIsDefinedSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_can_inherit_is_defined_filter(self):
         filtered_data = filter.IsDefined(columns=[1])(self.table)
         filtered_data = filtered_data[:, 4]
@@ -60,9 +65,8 @@ class TestIsDefinedSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
-class TestHasClass(PostgresTest):
-    def setUp(self):
+class TestHasClass(unittest.TestCase, dbt):
+    def setUpDB(self):
         self.data = [
             [1, 2, 3, None, 'm'],
             [2, 3, 1, 4, 'f'],
@@ -76,9 +80,10 @@ class TestHasClass(PostgresTest):
         new_table.domain = domain.Domain(variables[:-1], variables[-1:])
         self.table = new_table
 
-    def tearDown(self):
+    def tearDownDB(self):
         self.drop_sql_table(self.table_name)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_has_class(self):
         filtered_data = filter.HasClass()(self.table)
         correct_data = [row for row in self.data if row[-1]]
@@ -86,6 +91,7 @@ class TestHasClass(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_negated(self):
         filtered_data = filter.HasClass(negate=True)(self.table)
         correct_data = [row for row in self.data if not row[-1]]
@@ -94,9 +100,8 @@ class TestHasClass(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
-class TestSameValueSql(PostgresTest):
-    def setUp(self):
+class TestSameValueSql(unittest.TestCase, dbt):
+    def setUpDB(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
             [2, None, 1, 'a', 'f'],
@@ -106,9 +111,10 @@ class TestSameValueSql(PostgresTest):
         self.conn, self.table_name = self.create_sql_table(self.data)
         self.table = SqlTable(self.conn, self.table_name, inspect_values=True)
 
-    def tearDown(self):
+    def tearDownDB(self):
         self.drop_sql_table(self.table_name)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_continuous_attribute(self):
         filtered_data = filter.SameValue(0, 1)(self.table)
         correct_data = [row for row in self.data if row[0] == 1]
@@ -116,6 +122,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_continuous_attribute_with_unknowns(self):
         filtered_data = filter.SameValue(1, 2)(self.table)
         correct_data = [row for row in self.data if row[1] == 2]
@@ -123,6 +130,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_continuous_attribute_with_unknown_value(self):
         filtered_data = filter.SameValue(1, None)(self.table)
         correct_data = [row for row in self.data if row[1] is None]
@@ -130,6 +138,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_on_continuous_attribute_negated(self):
         filtered_data = filter.SameValue(0, 1, negate=True)(self.table)
         correct_data = [row for row in self.data if not row[0] == 1]
@@ -137,6 +146,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute(self):
         filtered_data = filter.SameValue(3, 'a')(self.table)
         correct_data = [row for row in self.data if row[3] == 'a']
@@ -144,6 +154,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute_with_unknown_value(self):
         filtered_data = filter.SameValue(4, None)(self.table)
         correct_data = [row for row in self.data if row[4] is None]
@@ -151,6 +162,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute_with_unknowns(self):
         filtered_data = filter.SameValue(4, 'm')(self.table)
         correct_data = [row for row in self.data if row[4] == 'm']
@@ -158,6 +170,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute_negated(self):
         filtered_data = filter.SameValue(3, 'a', negate=True)(self.table)
         correct_data = [row for row in self.data if not row[3] == 'a']
@@ -165,6 +178,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute_value_passed_as_int(self):
         values = self.table.domain[3].values
         filtered_data = filter.SameValue(3, 0, negate=True)(self.table)
@@ -173,6 +187,7 @@ class TestSameValueSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_on_discrete_attribute_value_passed_as_float(self):
         values = self.table.domain[3].values
         filtered_data = filter.SameValue(3, 0., negate=True)(self.table)
@@ -182,9 +197,8 @@ class TestSameValueSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
-class TestValuesSql(PostgresTest):
-    def setUp(self):
+class TestValuesSql(unittest.TestCase, dbt):
+    def setUpDB(self):
         self.data = [
             [1, 2, 3, 'a', 'm'],
             [2, None, 1, 'a', 'f'],
@@ -194,13 +208,15 @@ class TestValuesSql(PostgresTest):
         conn, self.table_name = self.create_sql_table(self.data)
         self.table = SqlTable(conn, self.table_name, inspect_values=True)
 
-    def tearDown(self):
+    def tearDownDB(self):
         self.drop_sql_table(self.table_name)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_values_filter_with_no_conditions(self):
         with self.assertRaises(ValueError):
-            filtered_data = filter.Values([])(self.table)
+            filter.Values([])(self.table)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_discrete_value_filter(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterDiscrete(3, ['a'])
@@ -210,6 +226,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_discrete_value_filter_with_multiple_values(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterDiscrete(3, ['a', 'b'])
@@ -219,6 +236,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_discrete_value_filter_with_None(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterDiscrete(3, None)
@@ -228,6 +246,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_continuous_value_filter_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Equal, 1)
@@ -237,6 +256,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_not_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.NotEqual, 1)
@@ -246,6 +266,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_continuous_value_filter_less(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Less, 2)
@@ -256,6 +277,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_less_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.LessEqual, 2)
@@ -266,6 +288,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_greater(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Greater, 1)
@@ -276,6 +299,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_greater_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.GreaterEqual, 1)
@@ -286,6 +310,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_between(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Between, 1, 2)
@@ -296,6 +321,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_continuous_value_filter_outside(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(0, filter.FilterContinuous.Outside, 2, 3)
@@ -306,6 +332,7 @@ class TestValuesSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_continuous_value_filter_isdefined(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterContinuous(1, filter.FilterContinuous.IsDefined)
@@ -316,9 +343,8 @@ class TestValuesSql(PostgresTest):
         self.assertSequenceEqual(filtered_data, correct_data)
 
 
-@sql_test
-class TestFilterStringSql(PostgresTest):
-    def setUp(self):
+class TestFilterStringSql(unittest.TestCase, dbt):
+    def setUpDB(self):
         self.data = [
             [w] for w in "Lorem ipsum dolor sit amet, consectetur adipiscing"
             "elit. Vestibulum vel dolor nulla. Etiam elit lectus, mollis nec"
@@ -334,9 +360,10 @@ class TestFilterStringSql(PostgresTest):
         self.conn, self.table_name = self.create_sql_table(self.data)
         self.table = SqlTable(self.conn, self.table_name)
 
-    def tearDown(self):
+    def tearDownDB(self):
         self.drop_sql_table(self.table_name)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_is_defined(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.IsDefined)
@@ -347,6 +374,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_filter_string_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Equal, 'in')
@@ -357,6 +385,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_equal_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Equal, 'In',
@@ -368,6 +397,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_equal_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Equal, 'donec',
@@ -379,6 +409,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_not_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.NotEqual, 'in')
@@ -389,6 +420,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_not_equal_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.NotEqual, 'In',
@@ -400,6 +432,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_not_equal_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.NotEqual, 'donec',
@@ -411,6 +444,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_filter_string_less(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Less, 'A')
@@ -422,6 +456,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_less_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Less, 'In',
@@ -434,6 +469,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_less_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Less, 'donec',
@@ -446,6 +482,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_filter_string_less_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.LessEqual, 'A')
@@ -457,6 +494,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_less_equal_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.LessEqual, 'In',
@@ -469,6 +507,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_less_equal_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.LessEqual, 'donec',
@@ -481,6 +520,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_filter_string_greater(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Greater, 'volutpat')
@@ -492,6 +532,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_greater_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Greater, 'In',
@@ -504,6 +545,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_greater_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Greater, 'donec',
@@ -516,6 +558,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_greater_equal(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'volutpat')
@@ -527,6 +570,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_greater_equal_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'In',
@@ -539,6 +583,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_greater_equal_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.GreaterEqual, 'donec',
@@ -551,6 +596,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_between(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Between, 'a', 'c')
@@ -562,6 +608,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_between_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Between, 'I', 'O',
@@ -574,6 +621,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_between_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Between, 'i', 'O',
@@ -586,6 +634,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_contains(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Contains, 'et')
@@ -597,6 +646,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_contains_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Contains, 'eT',
@@ -609,6 +659,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_contains_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Contains, 'do',
@@ -621,6 +672,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_outside(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Outside, 'am', 'di')
@@ -632,6 +684,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_outside_case_insensitive(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.Outside, 'd', 'k',
@@ -644,6 +697,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_starts_with(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.StartsWith, 'D')
@@ -655,6 +709,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_starts_with_case_insensitive(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.StartsWith, 'D',
@@ -668,6 +723,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_ends_with(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.EndsWith, 's')
@@ -679,6 +735,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_ends_with_case_insensitive(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterString(-1, filter.FilterString.EndsWith, 'S',
@@ -692,6 +749,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_list(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['et', 'in'])
@@ -702,6 +760,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres"])
     def test_filter_string_list_case_insensitive_value(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['Et', 'In'], case_sensitive=False)
@@ -712,6 +771,7 @@ class TestFilterStringSql(PostgresTest):
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
 
+    @dbt.run_on(["postgres", "mssql"])
     def test_filter_string_list_case_insensitive_data(self):
         filtered_data = filter.Values(conditions=[
             filter.FilterStringList(-1, ['donec'], case_sensitive=False)
@@ -721,3 +781,7 @@ class TestFilterStringSql(PostgresTest):
 
         self.assertEqual(len(filtered_data), len(correct_data))
         self.assertSequenceEqual(filtered_data, correct_data)
+
+
+if __name__ == '__main__':
+    unittest.main()
