@@ -264,10 +264,35 @@ class TestUtil(unittest.TestCase):
             )
 
     def test_FDR(self):
-        p_values = [0.00001, 0.0001, 0.0002, 0.0003, 0.0004]
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
         np.testing.assert_almost_equal(
-            np.array([0.00005, 0.00025, 0.00033, 0.00038, 0.0004]),
+            np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
             FDR(p_values), decimal=5)
+
+    def test_FDR_dependent(self):
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
+        np.testing.assert_almost_equal(
+            np.array([0.00076, 0.00091, 0.00011, 0.00086, 0.00057]),
+            FDR(p_values, dependent=True), decimal=5)
+
+    def test_FDR_m(self):
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
+        np.testing.assert_almost_equal(
+            np.array([0.0002, 0.00024, 0.00003, 0.000225, 0.00015]),
+            FDR(p_values, m=3), decimal=5)
+
+    def test_FDR_no_values(self):
+        self.assertIsNone(FDR(None))
+        self.assertIsNone(FDR([]))
+        self.assertIsNone(FDR([0.0002, 0.0004], m=0))
+
+    def test_FDR_list(self):
+        p_values = [0.0002, 0.0004, 0.00001, 0.0003, 0.0001]
+        result = FDR(p_values)
+        self.assertIsInstance(result, list)
+        np.testing.assert_almost_equal(
+            np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
+            result, decimal=5)
 
 
 class TestNanmean(unittest.TestCase):
