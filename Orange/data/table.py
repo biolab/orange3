@@ -785,18 +785,18 @@ class Table(MutableSequence, Storage):
                     raise ValueError("Invalid number of values")
             else:
                 col_idx, values = [col_idx], [value]
-            for value, col_idx in zip(values, col_idx):
-                if not isinstance(value, Integral):
-                    value = self.domain[col_idx].to_val(value)
+            for val, col_idx in zip(values, col_idx):
+                if not isinstance(val, Integral):
+                    val = self.domain[col_idx].to_val(val)
                 if not isinstance(col_idx, Integral):
                     col_idx = self.domain.index(col_idx)
                 if col_idx >= 0:
                     if col_idx < self.X.shape[1]:
-                        self.X[row_idx, col_idx] = value
+                        self.X[row_idx, col_idx] = val
                     else:
-                        self._Y[row_idx, col_idx - self.X.shape[1]] = value
+                        self._Y[row_idx, col_idx - self.X.shape[1]] = val
                 else:
-                    self.metas[row_idx, -1 - col_idx] = value
+                    self.metas[row_idx, -1 - col_idx] = val
 
         # multiple rows, multiple columns
         attributes, col_indices = self.domain._compute_col_indices(col_idx)

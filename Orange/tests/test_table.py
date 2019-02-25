@@ -284,9 +284,6 @@ class TableTestCase(unittest.TestCase):
             warnings.simplefilter("ignore")
             d = data.Table("test2")
 
-            vara = d.domain["a"]
-            metaa = d.domain.index(vara)
-
             self.assertFalse(isnan(d[0, "a"]))
             d[0] = ["3.14", "1", "f"]
             almost_equal_list(d[0].values(), [3.14, "1", "f"])
@@ -879,7 +876,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(e), 50)
         e = filter.Random(50, negate=True)(d)
         self.assertEqual(len(e), 100)
-        for i in range(5):
+        for _ in range(5):
             e = filter.Random(0.2)(d)
             self.assertEqual(len(e), 30)
             bc = np.bincount(np.array(e.Y[:], dtype=int))
@@ -1278,9 +1275,9 @@ class TableTestCase(unittest.TestCase):
         repr(table)     # make sure repr does not crash
 
     def test_inf(self):
-        a = np.array([[2,   0,      0,      0],
-                      [0,   np.nan, np.nan, 1],
-                      [0,   0,      np.inf, 0]])
+        a = np.array([[2, 0, 0, 0],
+                      [0, np.nan, np.nan, 1],
+                      [0, 0, np.inf, 0]])
         with self.assertWarns(Warning):
             tab = data.Table(a)
         self.assertEqual(tab.get_nan_frequency_attribute(), 3/12)
@@ -1706,11 +1703,11 @@ class CreateTableWithData(TableTests):
                                           self.meta_data, self.weight_data)
 
     def test_from_numpy_reconstructable(self):
-        def assert_equal(T1, T2):
-            np.testing.assert_array_equal(T1.X, T2.X)
-            np.testing.assert_array_equal(T1.Y, T2.Y)
-            np.testing.assert_array_equal(T1.metas, T2.metas)
-            np.testing.assert_array_equal(T1.W, T2.W)
+        def assert_equal(t1, t2):
+            np.testing.assert_array_equal(t1.X, t2.X)
+            np.testing.assert_array_equal(t1.Y, t2.Y)
+            np.testing.assert_array_equal(t1.metas, t2.metas)
+            np.testing.assert_array_equal(t1.W, t2.W)
 
         nullcol = np.empty((self.nrows, 0))
         domain = self.create_domain(self.attributes)
