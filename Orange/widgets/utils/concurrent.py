@@ -3,6 +3,7 @@ General helper functions and classes for PyQt concurrent programming
 """
 # TODO: Rename the module to something that does not conflict with stdlib
 # concurrent
+from typing import Callable, Any
 import os
 import threading
 import atexit
@@ -11,17 +12,14 @@ import warnings
 import weakref
 from functools import partial
 import concurrent.futures
-
 from concurrent.futures import Future, TimeoutError
 from contextlib import contextmanager
-from typing import Callable, Optional, Any, List
 
 from AnyQt.QtCore import (
     Qt, QObject, QMetaObject, QThreadPool, QThread, QRunnable, QSemaphore,
-    QEventLoop, QCoreApplication, QEvent, Q_ARG
+    QEventLoop, QCoreApplication, QEvent, Q_ARG,
+    pyqtSignal as Signal, pyqtSlot as Slot
 )
-
-from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 _log = logging.getLogger(__name__)
 
@@ -784,3 +782,210 @@ class methodinvoke(object):
         args = [Q_ARG(atype, arg) for atype, arg in zip(self.arg_types, args)]
         return QMetaObject.invokeMethod(
             self.obj, self.method, self.conntype, *args)
+
+
+class TaskState(QObject):
+
+    status_changed = Signal(str)
+    _p_status_changed = Signal(str)
+
+    progress_changed = Signal(float)
+    _p_progress_changed = Signal(float)
+
+    partial_result_ready = Signal(object)
+    _p_partial_result_ready = Signal(object)
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.__future = None
+        self.watcher = FutureWatcher()
+        self.__interruption_requested = False
+        self.__progress = 0
+        # Helpers to route the signal emits via a this object's queue.
+        # This ensures 'atomic' disconnect from signals for targets/slots
+        # in the same thread. Requires that the event loop is running in this
+        # object's thread.
+        self._p_status_changed.connect(
+            self.status_changed, Qt.QueuedConnection)
+        self._p_progress_changed.connect(
+            self.progress_changed, Qt.QueuedConnection)
+        self._p_partial_result_ready.connect(
+            self.partial_result_ready, Qt.QueuedConnection)
+
+    @property
+    def future(self) -> Future:
+        return self.__future
+
+    def set_status(self, text: str):
+        self._p_status_changed.emit(text)
+
+    def set_progress_value(self, value: float):
+        if round(value, 1) > round(self.__progress, 1):
+            # Only emit progress when it has changed sufficiently
+            self._p_progress_changed.emit(value)
+            self.__progress = value
+
+    def set_partial_result(self, value: Any):
+        self._p_partial_result_ready.emit(value)
+
+    def is_interruption_requested(self) -> bool:
+        return self.__interruption_requested
+
+    def start(self, executor: concurrent.futures.Executor,
+              func: Callable[[], Any] = None) -> Future:
+        assert self.future is None
+        assert not self.__interruption_requested
+        self.__future = executor.submit(func)
+        self.watcher.setFuture(self.future)
+        return self.future
+
+    def cancel(self) -> bool:
+        assert not self.__interruption_requested
+        self.__interruption_requested = True
+        if self.future is not None:
+            rval = self.future.cancel()
+        else:
+            # not even scheduled yet
+            rval = True
+        return rval
+
+
+class ConcurrentMixin:
+    """
+    A base class for concurrent mixins. The class provides methods for running
+    tasks in a separate thread.
+
+    Widgets should use `ConcurrentWidgetMixin` rather than this class.
+    """
+    def __init__(self):
+        self.__executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        self.__task = None  # type: Optional[TaskState]
+
+    @property
+    def task(self) -> TaskState:
+        return self.__task
+
+    def on_partial_result(self, result: Any) -> None:
+        """ Invoked from runner (by state) to send the partial results
+        The method should handle partial results, i.e. show them in the plot.
+
+        :param result: any data structure to hold final result
+        """
+        raise NotImplementedError
+
+    def on_done(self, result: Any) -> None:
+        """ Invoked when task is done.
+        The method should re-set the result (to double check it) and
+        perform operations with obtained results, eg. send data to the output.
+
+        :param result: any data structure to hold temporary result
+        """
+        raise NotImplementedError
+
+    def on_exception(self, ex: Exception):
+        """ Invoked when an exception occurs during the calculation.
+        Override in order to handle exceptions, eg. show an error
+        message in the widget.
+
+        :param ex: exception
+        """
+        raise ex
+
+    def start(self, task: Callable, *args, **kwargs):
+        """ Call from derived class to start the task.
+        :param task: runner - a method to run in a thread - should accept
+        `state` parameter
+        """
+        self.__cancel_task(wait=False)
+        assert callable(task), "`task` must be callable!"
+        state = TaskState(self)
+        task = partial(task, *(args + (state,)), **kwargs)
+        self.__start_task(task, state)
+
+    def cancel(self):
+        """ Call from derived class to stop the task. """
+        self.__cancel_task(wait=False)
+
+    def shutdown(self):
+        """ Call from derived class when the widget is deleted
+         (in onDeleteWidget).
+        """
+        self.__cancel_task(wait=True)
+        self.__executor.shutdown(True)
+
+    def __start_task(self, task: Callable[[], Any], state: TaskState):
+        assert self.__task is None
+        self._connect_signals(state)
+        state.start(self.__executor, task)
+        state.setParent(self)
+        self.__task = state
+
+    def __cancel_task(self, wait: bool = True):
+        if self.__task is not None:
+            state, self.__task = self.__task, None
+            state.cancel()
+            self._disconnect_signals(state)
+            if wait:
+                concurrent.futures.wait([state.future])
+                state.deleteLater()
+            else:
+                w = FutureWatcher(state.future, parent=state)
+                w.done.connect(state.deleteLater)
+
+    def _connect_signals(self, state: TaskState):
+        state.partial_result_ready.connect(self.on_partial_result)
+        state.watcher.done.connect(self._on_task_done)
+
+    def _disconnect_signals(self, state: TaskState):
+        state.partial_result_ready.disconnect(self.on_partial_result)
+        state.watcher.done.disconnect(self._on_task_done)
+
+    def _on_task_done(self, future: Future):
+        assert future.done()
+        assert self.__task is not None
+        assert self.__task.future is future
+        assert self.__task.watcher.future() is future
+        self.__task, task = None, self.__task
+        task.deleteLater()
+        ex = future.exception()
+        if ex is not None:
+            self.on_exception(ex)
+        else:
+            self.on_done(future.result())
+
+
+class ConcurrentWidgetMixin(ConcurrentMixin):
+    """
+    A concurrent mixin to be used along with OWWidget.
+    """
+    def __set_state_ready(self):
+        self.progressBarFinished()
+        self.setBlocking(False)
+        self.setStatusMessage("")
+
+    def __set_state_busy(self):
+        self.progressBarInit()
+        self.setBlocking(True)
+
+    def start(self, task: Callable, *args, **kwargs):
+        self.__set_state_ready()
+        super().start(task, *args, **kwargs)
+        self.__set_state_busy()
+
+    def cancel(self):
+        super().cancel()
+        self.__set_state_ready()
+
+    def _connect_signals(self, state: TaskState):
+        super()._connect_signals(state)
+        state.status_changed.connect(self.setStatusMessage)
+        state.progress_changed.connect(self.progressBarSet)
+
+    def _disconnect_signals(self, state: TaskState):
+        super()._disconnect_signals(state)
+        state.status_changed.disconnect(self.setStatusMessage)
+        state.progress_changed.disconnect(self.progressBarSet)
+
+    def _on_task_done(self, future: Future):
+        super()._on_task_done(future)
+        self.__set_state_ready()
