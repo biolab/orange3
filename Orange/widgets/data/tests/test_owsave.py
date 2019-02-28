@@ -290,34 +290,6 @@ class TestOWSave(WidgetTest):
         widget._update_messages()
         self.assertFalse(err.is_shown())
 
-    def test_ignored_annotation_warning(self):
-        widget = self.widget
-
-        widget.writer = ExcelReader
-        widget.add_type_annotations = True
-        widget._update_messages()
-        self.assertFalse(widget.Warning.type_annotation_ignored.is_shown())
-
-        widget.filename = "test.xlsx"
-        widget._update_messages()
-        self.assertFalse(widget.Warning.type_annotation_ignored.is_shown())
-
-        self.send_signal(widget.Inputs.data, self.iris)
-        widget._update_messages()
-        self.assertTrue(widget.Warning.type_annotation_ignored.is_shown())
-
-        widget.add_type_annotations = False
-        widget._update_messages()
-        self.assertFalse(widget.Warning.type_annotation_ignored.is_shown())
-
-        widget.add_type_annotations = True
-        widget._update_messages()
-        self.assertTrue(widget.Warning.type_annotation_ignored.is_shown())
-
-        widget.writer = TabReader
-        widget._update_messages()
-        self.assertFalse(widget.Warning.type_annotation_ignored.is_shown())
-
     def test_send_report(self):
         widget = self.widget
 

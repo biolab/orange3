@@ -38,10 +38,6 @@ class OWSave(widget.OWWidget):
         no_file_name = widget.Msg("File name is not set.")
         general_error = widget.Msg("{}")
 
-    class Warning(widget.OWWidget.Warning):
-        type_annotation_ignored = widget.Msg(
-            "Type annotation setting is ignored for this format.")
-
     want_main_area = False
     resizing_enabled = False
 
@@ -60,7 +56,11 @@ class OWSave(widget.OWWidget):
         grid.addWidget(
             gui.checkBox(
                 None, self, "add_type_annotations",
-                "Save with type annotations", callback=self._update_messages),
+                "Add type annotations to header",
+                tooltip=
+                "Some formats (Tab-delimited, Comma-separated) can include \n"
+                "additional information about variables types in header rows.",
+                callback=self._update_messages),
             0, 0, 1, 2)
         grid.setRowMinimumHeight(1, 8)
         grid.addWidget(
@@ -125,10 +125,6 @@ class OWSave(widget.OWWidget):
         self.Error.unsupported_sparse(
             shown=self.data is not None and self.data.is_sparse()
             and self.filename and not self.writer.SUPPORT_SPARSE_DATA)
-        self.Warning.type_annotation_ignored(
-            shown=self.data is not None and self.filename
-            and self.add_type_annotations
-            and not self.writer.OPTIONAL_TYPE_ANNOTATIONS)
 
     def _update_status(self):
         if self.data is None:
@@ -177,8 +173,6 @@ class OWSave(widget.OWWidget):
 
         if version < 2:
             migrate_to_version_2()
-
-
 
     def _initial_start_dir(self):
         if self.filename and os.path.exists(os.path.split(self.filename)[0]):
