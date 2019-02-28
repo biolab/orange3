@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch, Mock
 import os
 import sys
+import re
 
 import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
@@ -60,8 +61,8 @@ class TestOWSave(WidgetTest):
         self.send_signal(datasig, None)
         insum.assert_called_with(widget.info.NoInput)
 
-    @unittest.skipUnless(sys.platform == "linux", "Test Qt's non-native dialog")
-    def test_get_save_filename_non_native(self):
+    @unittest.skipUnless(sys.platform == "linux", "Test for dialog on Linux")
+    def test_get_save_filename_linux(self):
         widget = self.widget
         widget._initial_start_dir = lambda: "baz"
         widget.filters = dict.fromkeys("abc")
@@ -78,8 +79,8 @@ class TestOWSave(WidgetTest):
         instance.exec.return_value = QFileDialog.Rejected
         self.assertEqual(widget.get_save_filename(), ("", ""))
 
-    @unittest.skipUnless(sys.platform == "linux", "Test Qt's non-native dialog")
-    def test_save_file_dialog_enforces_extension(self):
+    @unittest.skipUnless(sys.platform == "linux", "Test for dialog on Linux")
+    def test_save_file_dialog_enforces_extension_linux(self):
         dialog = OWSave.SaveFileDialog(
             None, "Save File", "high.txt",
             "Bar files (*.bar);;Low files (*.low)")
@@ -101,6 +102,98 @@ class TestOWSave(WidgetTest):
 
         dialog.selectFile("high.txt")
         self.assertTrue(dialog.selectedFiles()[0].endswith("/high.low"))
+
+    @unittest.skipUnless(sys.platform == "darwin", "Test for dialog for macOS")
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    def test_get_save_filename_darwin(self, dlg):
+        widget = self.widget
+        widget._initial_start_dir = lambda: "baz"
+        widget.filters = dict.fromkeys(("a (*.a)", "b (*.b)", "c (*.c)"))
+        widget.filter = "b (*.b)"
+        instance = dlg.return_value
+        instance.exec.return_value = dlg.Accepted = QFileDialog.Accepted
+        instance.selectedFiles.return_value = ["foo"]
+        instance.selectedNameFilter.return_value = "a (*.*)"
+        self.assertEqual(widget.get_save_filename(), ("foo.a", "a (*.a)"))
+        self.assertEqual(dlg.call_args[0][2], "baz")
+        self.assertEqual(dlg.call_args[0][3], "a (*.*);;b (*.*);;c (*.*)")
+        instance.selectNameFilter.assert_called_with("b (*.*)")
+
+        instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
+        self.assertEqual(widget.get_save_filename(), ("", ""))
+
+    @staticmethod
+    def _mac_filter(filt):
+        return re.sub(r"\(\*\..*\)", "(*.*)", filt)
+
+    @unittest.skipUnless(sys.platform == "darwin", "Test for dialog for macOS")
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    def test_save_file_dialog_enforces_extension_darwin(self, dlg):
+        widget = self.widget
+        for filter1 in widget.filters:
+            if OWSave._extension_from_filter(filter1) == ".tab":
+                break
+        for filter2 in widget.filters:
+            if OWSave._extension_from_filter(filter2) == ".csv.gz":
+                break
+
+        widget.filter = filter1
+        instance = dlg.return_value
+        instance.exec.return_value = QFileDialog.Accepted
+
+        instance.selectedNameFilter.return_value = self._mac_filter(filter1)
+        instance.selectedFiles.return_value = ["foo"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.pkl"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.tab.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.csv.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.bar"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.bar.tab")
+
+        instance.selectedNameFilter.return_value = self._mac_filter(filter2)
+        instance.selectedFiles.return_value = ["foo"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.pkl"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.tab.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.csv.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.bar"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.bar.csv.gz")
+
+    @unittest.skipUnless(sys.platform == "darwin", "Test for dialog for macOS")
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    @patch("os.path.exists", new=lambda x: x == "old.tab")
+    @patch("Orange.widgets.data.owsave.QMessageBox")
+    def test_save_file_dialog_asks_for_overwrite_darwin(self, msgbox, dlg):
+        def selected_files():
+            nonlocal attempts
+            attempts += 1
+            return [["old.tab", "new.tab"][attempts]]
+
+        widget = self.widget
+        widget._initial_start_dir = lambda: "baz"
+        for filter1 in widget.filters:
+            if OWSave._extension_from_filter(filter1) == ".tab":
+                break
+
+        widget.filter = filter1
+        instance = dlg.return_value
+        instance.exec.return_value = QFileDialog.Accepted
+        instance.selectedFiles = selected_files
+        instance.selectedNameFilter.return_value = self._mac_filter(filter1)
+
+        attempts = -1
+        msgbox.question.return_value = msgbox.Yes = 1
+        self.assertEqual(widget.get_save_filename()[0], "old.tab")
+
+        attempts = -1
+        msgbox.question.return_value = msgbox.No = 0
+        self.assertEqual(widget.get_save_filename()[0], "new.tab")
 
     def test_initial_start_dir(self):
         widget = self.widget
