@@ -402,20 +402,23 @@ class TestFunctionalOWSave(WidgetTest):
 class TestOWSaveUtils(unittest.TestCase):
     def test_replace_extension(self):
         replace = OWSave._replace_extension
-        fname = "/bing.bada.boom/foo.bar.baz"
-        self.assertEqual(replace(fname, ".baz"), fname)
-        self.assertEqual(replace(fname, ".bar.baz"), fname)
-        self.assertEqual(replace(fname, ".txt"), "/bing.bada.boom/foo.txt")
+        fname = "/bing.bada.boom/foo.1942.tab"
+        self.assertEqual(
+            replace(fname, ".tab"), "/bing.bada.boom/foo.1942.tab")
+        self.assertEqual(
+            replace(fname, ".tab.gz"), "/bing.bada.boom/foo.1942.tab.gz")
+        self.assertEqual(
+            replace(fname, ".xlsx"), "/bing.bada.boom/foo.1942.xlsx")
 
-        fname = "foo.bar.baz"
-        self.assertEqual(replace(fname, ".baz"), fname)
-        self.assertEqual(replace(fname, ".bar.baz"), fname)
-        self.assertEqual(replace(fname, ".txt"), "foo.txt")
-        self.assertEqual(replace(fname, ".bar.txt"), "foo.bar.txt")
+        fname = "foo.tab.gz"
+        self.assertEqual(replace(fname, ".tab"), "foo.tab")
+        self.assertEqual(replace(fname, ".tab.gz"), "foo.tab.gz")
+        self.assertEqual(replace(fname, ".csv"), "foo.csv")
+        self.assertEqual(replace(fname, ".csv.gz"), "foo.csv.gz")
 
         fname = "/bing.bada.boom/foo"
-        self.assertEqual(replace(fname, ".baz"), fname + ".baz")
-        self.assertEqual(replace(fname, ".bar.baz"), fname + ".bar.baz")
+        self.assertEqual(replace(fname, ".tab"), fname + ".tab")
+        self.assertEqual(replace(fname, ".tab.gz"), fname + ".tab.gz")
 
     def test_extension_from_filter(self):
         self.assertEqual(

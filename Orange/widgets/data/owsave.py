@@ -185,11 +185,11 @@ class OWSave(widget.OWWidget):
 
     @staticmethod
     def _replace_extension(filename, extension):
-        if filename.endswith(extension):  # it may contain dots before extension
-            return filename
-        last_fn = None
-        while last_fn != filename:
-            last_fn, filename = filename, os.path.splitext(filename)[0]
+        known_extensions = map(OWSave._extension_from_filter, OWSave.filters)
+        for known_ext in sorted(known_extensions, key=len, reverse=True):
+            if filename.endswith(known_ext):
+                filename = filename[:-len(known_ext)]
+                break
         return filename + extension
 
     @staticmethod
