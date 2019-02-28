@@ -196,6 +196,23 @@ class OWSave(widget.OWWidget):
     def _extension_from_filter(selected_filter):
         return re.search(r".*\(\*?(\..*)\)$", selected_filter).group(1)
 
+    def _valid_filters(self):
+        if self.data is None or not self.data.is_sparse():
+            return self.filters
+        else:
+            return {filt: writer for filt, writer in self.filters.items()
+                    if writer.SUPPORT_SPARSE_DATA}
+
+    def _default_valid_filter(self):
+        if self.data is None or not self.data.is_sparse() \
+                or self.filters[self.filter].SUPPORT_SPARSE_DATA:
+            return self.filter
+        for filt, writer in self.filters.items():
+            if writer.SUPPORT_SPARSE_DATA:
+                return filt
+        # This shouldn't happen and it will trigger an error in tests
+        return None   # pragma: no cover
+
     # As of Qt 5.9, QFileDialog.setDefaultSuffix does not support double
     # suffixes, not even in non-native dialogs. We handle each OS separately.
     if sys.platform == "darwin":
@@ -210,13 +227,13 @@ class OWSave(widget.OWWidget):
             def no_suffix(filt):
                 return filt.split("(")[0] + "(*.*)"
 
-            mac_filters = {no_suffix(f): f for f in self.filters}
+            mac_filters = {no_suffix(f): f for f in self._valid_filters()}
             filename = self._initial_start_dir()
             while True:
                 dlg = QFileDialog(
                     None, "Save File", filename, ";;".join(mac_filters))
                 dlg.setAcceptMode(dlg.AcceptSave)
-                dlg.selectNameFilter(no_suffix(self.filter))
+                dlg.selectNameFilter(no_suffix(self._default_valid_filter()))
                 dlg.setOption(QFileDialog.HideNameFilterDetails)
                 dlg.setOption(QFileDialog.DontConfirmOverwrite)
                 if dlg.exec() == QFileDialog.Rejected:
@@ -232,13 +249,13 @@ class OWSave(widget.OWWidget):
                     return filename, selected_filter
 
     elif sys.platform == "win32":
-        # TODO: This is not tested!!!
+        # TODO: Behaviour of getSaveFileName on Windows is not tested!!!
         # Windows native dialog may work correctly; if not, we may do the same
         # as for macOS?
         def get_save_filename(self):  # pragma: no cover
             return QFileDialog.getSaveFileName(
                 self, "Save File", self._initial_start_dir(),
-                ";;".join(self.filters), self.filter)
+                ";;".join(self._valid_filters()), self._default_valid_filter())
 
     else:  # Linux and any unknown platforms
         # Qt does not use a native dialog on Linux, so we can connect to
@@ -271,8 +288,8 @@ class OWSave(widget.OWWidget):
         def get_save_filename(self):
             dlg = self.SaveFileDialog(
                 None, "Save File", self._initial_start_dir(),
-                ";;".join(self.filters))
-            dlg.selectNameFilter(self.filter)
+                ";;".join(self._valid_filters()))
+            dlg.selectNameFilter(self._default_valid_filter())
             if dlg.exec() == QFileDialog.Rejected:
                 return "", ""
             else:
