@@ -662,7 +662,7 @@ class MahalanobisDistance:
         return Mahalanobis(axis=axis).fit(data)
 
 class Hamming(Distance):
-    supports_sparse = True
+    supports_sparse = False
     supports_missing = False
     supports_normalization = False
     supports_discrete = True

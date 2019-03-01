@@ -3,6 +3,7 @@ from unittest.mock import patch
 from math import sqrt
 
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange import distance
@@ -23,6 +24,14 @@ class CommonTests:
         np.testing.assert_almost_equal(
             self.Distance(Table(self.domain), self.data),
             np.zeros((0, n)))
+
+    def test_sparse(self):
+        """Test sparse support in distances."""
+        sparse_iris = csr_matrix(Table('iris').X)
+        if not self.Distance.supports_sparse:
+            self.assertRaises(TypeError, self.Distance, sparse_iris)
+        else:
+            self.Distance(sparse_iris)
 
 
 class CommonFittedTests(CommonTests):
