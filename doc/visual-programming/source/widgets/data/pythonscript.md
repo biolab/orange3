@@ -34,8 +34,8 @@ Note: You should not modify the input objects in place.
 ![](images/PythonScript-stamped.png)
 
 1. Info box contains names of basic operators for Orange Python script.
-2. The *Library* control can be used to manage multiple scripts. Pressing "+" will add a new entry and open it in the *Python script* editor. When the script is modified, its entry in the *Library* will change to indicate it has unsaved changes. Pressing *Update* will save the script (keyboard shortcut ctrl + s). A script can be removed by selecting it and pressing the "-" button.
-3. Pressing *Execute* in the *Run* box executes the script (using ``exec``). Any script output (from ``print``) is captured and displayed in the *Console* below the script. If *Auto execute* is checked, the script is run any time inputs to the widget change.
+2. The *Library* control can be used to manage multiple scripts. Pressing "+" will add a new entry and open it in the *Python script* editor. When the script is modified, its entry in the *Library* will change to indicate it has unsaved changes. Pressing *Update* will save the script (keyboard shortcut "Ctrl+S"). A script can be removed by selecting it and pressing the "-" button.
+3. Pressing *Execute* in the *Run* box executes the script (keyboard shortcut "Ctrl+R"). Any script output (from ``print``) is captured and displayed in the *Console* below the script.
 4. The *Python script* editor on the left can be used to edit a script (it supports some rudimentary syntax highlighting).
 5. Console displays the output of the script.
 

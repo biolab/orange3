@@ -485,6 +485,10 @@ class OWPythonScript(widget.OWWidget):
 
         self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
+        run = QAction("Run script", self, triggered=self.commit,
+                      shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
+        self.addAction(run)
+
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
 
