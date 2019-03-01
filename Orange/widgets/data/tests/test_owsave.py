@@ -3,7 +3,6 @@ import unittest
 from unittest.mock import patch, Mock
 import os
 import sys
-import re
 
 import scipy.sparse as sp
 from AnyQt.QtWidgets import QFileDialog
@@ -410,27 +409,26 @@ class TestOWSaveLinuxDialog(TestOWSaveBase):
 
     def test_save_file_dialog_enforces_extension_linux(self):
         dialog = OWSave.SaveFileDialog(
-            None, "Save File", "high.txt",
-            "Bar files (*.bar);;Low files (*.low)")
+            None, "Save File", "foo.bar",
+            "Bar files (*.tab);;Low files (*.csv)")
 
-        dialog.selectNameFilter("Low files (*.low)")
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.low"))
+        dialog.selectNameFilter("Low files (*.csv)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/foo.csv"))
 
-        dialog.selectFile("high.txt")
-        print(dialog.selectedFiles()[0])
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.txt.low"))
+        dialog.selectFile("high.bar")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.bar.csv"))
 
-        dialog.selectNameFilter("Bar files (*.bar)")
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.bar"))
+        dialog.selectNameFilter("Bar files (*.tab)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.bar.tab"))
 
         dialog.selectFile("middle.pkl")
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.bar"))
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.tab"))
 
-        dialog.filterSelected.emit("Low files (*.low)")
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.low"))
+        dialog.filterSelected.emit("Low files (*.csv)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.csv"))
 
         dialog.selectFile("high.tab.gz")
-        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.low"))
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.csv"))
 
     def test_save_file_dialog_uses_valid_filters_linux(self):
         widget = self.widget
@@ -444,26 +442,35 @@ class TestOWSaveLinuxDialog(TestOWSaveBase):
         instance.selectNameFilter.assert_called_with("a (*.a)")
 
 
-@unittest.skipUnless(sys.platform == "darwin", "Test for dialog for macOS")
+@unittest.skipUnless(sys.platform in ("darwin", "win32"),
+                     "Test for native dialog on Windows and macOS")
 class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
-    @staticmethod
-    def _mac_filter(filt):
-        return re.sub(r"\(\*\..*\)", "(*.*)", filt)
+    if sys.platform == "darwin":
+        @staticmethod
+        def remove_star(filt):
+            return filt.replace(" (*.", " (.")
+    else:
+        @staticmethod
+        def remove_star(filt):
+            return filt
 
     @patch("Orange.widgets.data.owsave.QFileDialog")
     def test_get_save_filename_darwin(self, dlg):
         widget = self.widget
         widget._initial_start_dir = lambda: "baz"
-        widget.filters = dict.fromkeys(("a (*.a)", "b (*.b)", "c (*.c)"))
-        widget.filter = "b (*.b)"
+        widget.filters = dict.fromkeys(("aa (*.a)", "bb (*.b)", "cc (*.c)"))
+        widget.filter = "bb (*.b)"
         instance = dlg.return_value
         instance.exec.return_value = dlg.Accepted = QFileDialog.Accepted
         instance.selectedFiles.return_value = ["foo"]
-        instance.selectedNameFilter.return_value = "a (*.*)"
-        self.assertEqual(widget.get_save_filename(), ("foo.a", "a (*.a)"))
+        instance.selectedNameFilter.return_value = self.remove_star("aa (*.a)")
+        self.assertEqual(widget.get_save_filename(), ("foo.a", "aa (*.a)"))
         self.assertEqual(dlg.call_args[0][2], "baz")
-        self.assertEqual(dlg.call_args[0][3], "a (*.*);;b (*.*);;c (*.*)")
-        instance.selectNameFilter.assert_called_with("b (*.*)")
+        self.assertEqual(
+            dlg.call_args[0][3],
+            self.remove_star("aa (*.a);;bb (*.b);;cc (*.c)"))
+        instance.selectNameFilter.assert_called_with(
+            self.remove_star("bb (*.b)"))
 
         instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
         self.assertEqual(widget.get_save_filename(), ("", ""))
@@ -482,7 +489,7 @@ class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
         instance = dlg.return_value
         instance.exec.return_value = QFileDialog.Accepted
 
-        instance.selectedNameFilter.return_value = self._mac_filter(filter1)
+        instance.selectedNameFilter.return_value = self.remove_star(filter1)
         instance.selectedFiles.return_value = ["foo"]
         self.assertEqual(widget.get_save_filename()[0], "foo.tab")
         instance.selectedFiles.return_value = ["foo.pkl"]
@@ -494,7 +501,7 @@ class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
         instance.selectedFiles.return_value = ["foo.bar"]
         self.assertEqual(widget.get_save_filename()[0], "foo.bar.tab")
 
-        instance.selectedNameFilter.return_value = self._mac_filter(filter2)
+        instance.selectedNameFilter.return_value = self.remove_star(filter2)
         instance.selectedFiles.return_value = ["foo"]
         self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
         instance.selectedFiles.return_value = ["foo.pkl"]
@@ -525,7 +532,7 @@ class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
         instance = dlg.return_value
         instance.exec.return_value = QFileDialog.Accepted
         instance.selectedFiles = selected_files
-        instance.selectedNameFilter.return_value = self._mac_filter(filter1)
+        instance.selectedNameFilter.return_value = self.remove_star(filter1)
 
         attempts = -1
         msgbox.question.return_value = msgbox.Yes = 1
@@ -538,26 +545,15 @@ class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
     @patch("Orange.widgets.data.owsave.QFileDialog")
     def test_save_file_dialog_uses_valid_filters_darwin(self, dlg):
         widget = self.widget
-        widget._valid_filters = lambda: ["a (*.a)", "b (*.b)"]
-        widget._default_valid_filter = lambda: "a (*.a)"
+        widget._valid_filters = lambda: ["aa (*.a)", "bb (*.b)"]
+        widget._default_valid_filter = lambda: "aa (*.a)"
         instance = dlg.return_value
         instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
         widget.get_save_filename()
-        self.assertEqual(dlg.call_args[0][3], "a (*.*);;b (*.*)")
-        instance.selectNameFilter.assert_called_with("a (*.*)")
-
-
-@unittest.skipUnless(sys.platform == "win32", "Test for dialog for Windows")
-class TestOWSaveWindowsDialog(TestOWSaveBase):  # pragma: no cover
-    @patch("Orange.widgets.data.owsave.QFileDialog.getSaveFileName")
-    def test_save_file_dialog_uses_valid_filters_windows(self, dlg):
-        widget = self.widget
-        widget._valid_filters = lambda: ["a (*.a)", "b (*.b)"]
-        widget._default_valid_filter = lambda: "a (*.a)"
-        widget.get_save_filename()
-        call_args = dlg.call_args
-        self.assertEqual(call_args[0][3], "a (*.a);;b (*.b)")
-        self.assertEqual(call_args[0][4], "a (*.a)")
+        self.assertEqual(
+            dlg.call_args[0][3], self.remove_star("aa (*.a);;bb (*.b)"))
+        instance.selectNameFilter.assert_called_with(
+            self.remove_star("aa (*.a)"))
 
 
 class TestOWSaveUtils(unittest.TestCase):
@@ -590,7 +586,6 @@ class TestOWSaveUtils(unittest.TestCase):
             OWSave._extension_from_filter("Description (.ext)"), ".ext")
         self.assertEqual(
             OWSave._extension_from_filter("Description (.foo.bar)"), ".foo.bar")
-
 
 
 if __name__ == "__main__":

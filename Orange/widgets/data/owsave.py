@@ -215,31 +215,33 @@ class OWSave(widget.OWWidget):
 
     # As of Qt 5.9, QFileDialog.setDefaultSuffix does not support double
     # suffixes, not even in non-native dialogs. We handle each OS separately.
-    if sys.platform == "darwin":
-        # On macOS, is double suffixes are passed to the dialog, they are
-        # appended multiple times even if already present (QTBUG-44227).
-        # The only known workaround with native dialog is to use suffix *.*.
-        # We add the correct suffix after closing the dialog and only then check
+    if sys.platform in ("darwin", "win32"):
+        # macOS and Windows native dialogs do not correctly handle double
+        # extensions. We thus don't pass any suffixes to the dialog and add
+        # the correct suffix after closing the dialog and only then check
         # if the file exists and ask whether to override.
         # It is a bit confusing that the user does not see the final name in the
         # dialog, but I see no better solution.
         def get_save_filename(self):  # pragma: no cover
-            def no_suffix(filt):
-                return filt.split("(")[0] + "(*.*)"
+            if sys.platform == "darwin":
+                def remove_star(filt):
+                    return filt.replace(" (*.", " (.")
+            else:
+                def remove_star(filt):
+                    return filt
 
-            mac_filters = {no_suffix(f): f for f in self._valid_filters()}
+            no_ext_filters = {remove_star(f): f for f in self._valid_filters()}
             filename = self._initial_start_dir()
             while True:
                 dlg = QFileDialog(
-                    None, "Save File", filename, ";;".join(mac_filters))
+                    None, "Save File", filename, ";;".join(no_ext_filters))
                 dlg.setAcceptMode(dlg.AcceptSave)
-                dlg.selectNameFilter(no_suffix(self._default_valid_filter()))
-                dlg.setOption(QFileDialog.HideNameFilterDetails)
+                dlg.selectNameFilter(remove_star(self._default_valid_filter()))
                 dlg.setOption(QFileDialog.DontConfirmOverwrite)
                 if dlg.exec() == QFileDialog.Rejected:
                     return "", ""
                 filename = dlg.selectedFiles()[0]
-                selected_filter = mac_filters[dlg.selectedNameFilter()]
+                selected_filter = no_ext_filters[dlg.selectedNameFilter()]
                 filename = self._replace_extension(
                     filename, self._extension_from_filter(selected_filter))
                 if not os.path.exists(filename) or QMessageBox.question(
@@ -247,15 +249,6 @@ class OWSave(widget.OWWidget):
                         f"File {os.path.split(filename)[1]} already exists.\n"
                         "Overwrite?") == QMessageBox.Yes:
                     return filename, selected_filter
-
-    elif sys.platform == "win32":
-        # TODO: Behaviour of getSaveFileName on Windows is not tested!!!
-        # Windows native dialog may work correctly; if not, we may do the same
-        # as for macOS?
-        def get_save_filename(self):  # pragma: no cover
-            return QFileDialog.getSaveFileName(
-                self, "Save File", self._initial_start_dir(),
-                ";;".join(self._valid_filters()), self._default_valid_filter())
 
     else:  # Linux and any unknown platforms
         # Qt does not use a native dialog on Linux, so we can connect to
@@ -279,7 +272,7 @@ class OWSave(widget.OWWidget):
                 self.suffix = OWSave._extension_from_filter(selected_filter)
                 files = self.selectedFiles()
                 if files and not os.path.isdir(files[0]):
-                    self.selectFile(files[0].split(".")[0])
+                    self.selectFile(files[0])
 
             def selectFile(self, filename):
                 filename = OWSave._replace_extension(filename, self.suffix)
