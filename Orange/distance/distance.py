@@ -11,7 +11,7 @@ from Orange.distance import _distance
 from Orange.statistics import util
 
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
-                   SklDistance, _orange_to_numpy)
+                   SklDistance, _orange_to_numpy, SparseJaccard)
 
 class EuclideanRowsModel(FittedDistanceModel):
     """
@@ -416,9 +416,9 @@ class JaccardModel(FittedDistanceModel):
 
 
 class Jaccard(FittedDistance):
-    supports_sparse = False
+    supports_sparse = True
     supports_discrete = True
-    fallback = SklDistance('jaccard')
+    fallback = SparseJaccard()
     ModelType = JaccardModel
 
     def fit_rows(self, attributes, x, n_vals):
