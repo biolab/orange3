@@ -857,10 +857,13 @@ class ProjectionWidgetTestMixin:
         annotated_vars = annotated.domain.variables
         self.assertLessEqual(set(selected_vars), set(annotated_vars))
 
-    def test_setup_graph(self):
+    def test_setup_graph(self, timeout=DEFAULT_TIMEOUT):
         """Plot should exist after data has been sent in order to be
         properly set/updated"""
         self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
         self.assertIsNotNone(self.widget.graph.scatterplot_item)
 
     def test_default_attrs(self, timeout=DEFAULT_TIMEOUT):
