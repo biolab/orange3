@@ -17,6 +17,7 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel
 
+from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.widgets import widget, gui
@@ -33,6 +34,20 @@ def text_format(foreground=Qt.black, weight=QFont.Normal):
     fmt.setForeground(QBrush(foreground))
     fmt.setFontWeight(weight)
     return fmt
+
+
+def to_local_file(url):
+    return OSX_NSURL_toLocalFile(url) or url.toLocalFile()
+
+
+def read_file_content(url, limit=None):
+    filename = to_local_file(url)
+    try:
+        with open(filename, encoding="utf-8", errors='strict') as f:
+            text = f.read(limit)
+            return text
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 class PythonSyntaxHighlighter(QSyntaxHighlighter):
@@ -137,6 +152,24 @@ class PythonScriptEditor(QPlainTextEdit):
 
         else:
             super().keyPressEvent(event)
+
+    def insertFromMimeData(self, source):
+        """
+        Reimplemented from QPlainTextEdit.insertFromMimeData.
+        """
+        urls = source.urls()
+        if urls:
+            self.pasteFile(urls[0])
+        else:
+            super().insertFromMimeData(source)
+
+    def pasteFile(self, url):
+        new = read_file_content(url)
+        if new:
+            # inserting text like this allows undo
+            cursor = QTextCursor(self.document())
+            cursor.select(QTextCursor.Document)
+            cursor.insertText(new)
 
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
@@ -524,6 +557,8 @@ class OWPythonScript(widget.OWWidget):
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
+        self.setAcceptDrops(True)
+
         self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
@@ -707,6 +742,20 @@ class OWPythonScript(widget.OWWidget):
                 getattr(self.Error, signal)()
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls:
+            # try reading the file as text
+            c = read_file_content(urls[0], limit=1000)
+            if c is not None:
+                event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Handle file drops"""
+        urls = event.mimeData().urls()
+        if urls:
+            self.text.pasteFile(urls[0])
 
 
 if __name__ == "__main__":  # pragma: no cover
