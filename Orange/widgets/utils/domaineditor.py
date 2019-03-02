@@ -44,6 +44,7 @@ class VarTableModel(QAbstractTableModel):
     def __init__(self, variables, *args):
         super().__init__(*args)
         self.variables = variables
+        self.orig_variables = None
         self.set_orig_variables(variables)
 
     def set_orig_variables(self, variables):
