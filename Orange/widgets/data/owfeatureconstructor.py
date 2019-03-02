@@ -28,7 +28,7 @@ from AnyQt.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
     QPushButton, QMenu, QListView, QFrame
 )
-from AnyQt.QtGui import QIcon, QKeySequence
+from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
 import Orange
@@ -160,7 +160,7 @@ class FeatureEditor(QFrame):
         self._modified = False
 
     def setModified(self, modified):
-        if not type(modified) is bool:
+        if not isinstance(modified, bool):
             raise TypeError
 
         if self._modified != modified:
@@ -280,14 +280,12 @@ _VarMap = {
 @functools.lru_cache(20)
 def variable_icon(dtype):
     vtype = _VarMap.get(dtype, dtype)
-    try:
-        return gui.attributeIconDict[vtype]
-    except Exception:
-        return QIcon()
+    return gui.attributeIconDict[vtype]
 
 
 class FeatureItemDelegate(QStyledItemDelegate):
-    def displayText(self, value, locale):
+    @staticmethod
+    def displayText(value, _):
         return value.name + " := " + value.expression
 
 
@@ -303,18 +301,20 @@ class DescriptorModel(itemmodels.PyListModel):
 class FeatureConstructorHandler(DomainContextHandler):
     """Context handler that filters descriptors"""
 
-    def is_valid_item(self, setting, descriptor, attrs, metas):
-        """Check if descriptor can be used with given domain.
+    def is_valid_item(self, setting, item, attrs, metas):
+        """Check if descriptor `item` can be used with given domain.
 
         Return True if descriptor's expression contains only
         available variables and descriptors name does not clash with
         existing variables.
         """
-        if descriptor.name in attrs or descriptor.name in metas:
+        if item.name in attrs or item.name in metas:
             return False
 
         try:
-            exp_ast = ast.parse(descriptor.expression, mode="eval")
+            exp_ast = ast.parse(item.expression, mode="eval")
+        # ast.parse can return arbitrary errors, not only SyntaxError
+        # pylint: disable=broad-except
         except Exception:
             return False
 
@@ -550,9 +550,9 @@ class OWFeatureConstructor(OWWidget):
         index = selected_row(self.featureview)
         if index is not None:
             self.setCurrentIndex(index)
-        elif index is None and len(self.featuremodel) > 0:
+        elif index is None and self.featuremodel.rowCount():
             # Deleting the last item clears selection
-            self.setCurrentIndex(len(self.featuremodel) - 1)
+            self.setCurrentIndex(self.featuremodel.rowCount() - 1)
 
     def removeSelectedFeature(self):
         if self.currentIndex >= 0:
@@ -562,7 +562,8 @@ class OWFeatureConstructor(OWWidget):
         desc = self.featuremodel[self.currentIndex]
         self.addFeature(copy.deepcopy(desc))
 
-    def check_attrs_values(self, attr, data):
+    @staticmethod
+    def check_attrs_values(attr, data):
         for i in range(len(data)):
             for var in attr:
                 if not math.isnan(data[i, var]) \
@@ -575,6 +576,8 @@ class OWFeatureConstructor(OWWidget):
         def validate(source):
             try:
                 return validate_exp(ast.parse(source, mode="eval"))
+            # ast.parse can return arbitrary errors, not only SyntaxError
+            # pylint: disable=broad-except
             except Exception:
                 return False
 
@@ -613,6 +616,8 @@ class OWFeatureConstructor(OWWidget):
 
         try:
             data = self.data.transform(new_domain)
+        # user's expression can contain arbitrary errors
+        # pylint: disable=broad-except
         except Exception as err:
             log = logging.getLogger(__name__)
             log.error("", exc_info=True)
@@ -661,6 +666,7 @@ def freevars(exp, env):
     ast
 
     """
+    # pylint: disable=too-many-return-statements,too-many-branches
     etype = type(exp)
     if etype in [ast.Expr, ast.Expression]:
         return freevars(exp.body, env)
@@ -765,6 +771,7 @@ def validate_exp(exp):
         A parsed abstract syntax tree
 
     """
+    # pylint: disable=too-many-branches
     if not isinstance(exp, ast.AST):
         raise TypeError("exp is not a 'ast.AST' instance")
 
@@ -859,7 +866,7 @@ def bind_variable(descriptor, env):
     return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
 
 
-def make_lambda(expression, args, env={}):
+def make_lambda(expression, args, env=None):
     # type: (ast.Expression, List[str], Dict[str, Any]) -> types.FunctionType
     """
     Create an lambda function from a expression AST.
@@ -870,7 +877,7 @@ def make_lambda(expression, args, env={}):
         The body of the lambda.
     args : List[str]
         A list of positional argument names
-    env : Dict[str, Any]
+    env : Optional[Dict[str, Any]]
         Extra environment to capture in the lambda's closure.
 
     Returns
@@ -894,7 +901,7 @@ def make_lambda(expression, args, env={}):
     # lambda **{env}** : lambda *{args}*: EXPRESSION
     outer = ast.Lambda(
         args=ast.arguments(
-            args=[ast.arg(arg=name, annotation=None) for name in env],
+            args=[ast.arg(arg=name, annotation=None) for name in (env or {})],
             varargs=None,
             varargannotation=None,
             kwonlyargs=[],
@@ -909,6 +916,7 @@ def make_lambda(expression, args, env={}):
     ast.fix_missing_locations(exp)
     GLOBALS = __GLOBALS.copy()
     GLOBALS["__builtins__"] = {}
+    # pylint: disable=eval-used
     fouter = eval(compile(exp, "<lambda>", "eval"), GLOBALS)
     assert isinstance(fouter, types.FunctionType)
     finner = fouter(**env)
@@ -980,14 +988,14 @@ class FeatureFunc:
         a variable as used in `expression`, and `variable` is the variable
         instance used to extract the corresponding column/value from a
         Table/Instance.
-    extra_env : Dict[str, Any]
+    extra_env : Optional[Dict[str, Any]]
         Extra environment specifying constant values to be made available
         in expression. It must not shadow names in `args`
     """
-    def __init__(self, expression, args, extra_env={}):
+    def __init__(self, expression, args, extra_env=None):
         self.expression = expression
         self.args = args
-        self.extra_env = dict(extra_env)
+        self.extra_env = dict(extra_env or {})
         self.func = make_lambda(ast.parse(expression, mode="eval"),
                                 [name for name, _ in args], self.extra_env)
 
