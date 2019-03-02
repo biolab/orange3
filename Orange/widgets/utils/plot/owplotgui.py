@@ -31,7 +31,7 @@ from AnyQt.QtWidgets import (
     QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu,
     QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle
 )
-from AnyQt.QtGui import QIcon, QColor
+from AnyQt.QtGui import QIcon, QColor, QFont
 from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect
 
 from Orange.data import ContinuousVariable, DiscreteVariable
@@ -66,6 +66,10 @@ class VariableSelectionModel(VariableListModel):
     def data(self, index, role):
         if role == self.IsSelected:
             return index.row() < self.nselected
+        elif role == Qt.FontRole:
+            font = QFont()
+            font.setBold(index.row() < self.nselected)
+            return font
         else:
             return super().data(index, role)
 
@@ -84,8 +88,6 @@ class VariablesDelegate(QStyledItemDelegate):
         rect = QRect(option.rect)
 
         is_selected = index.data(VariableSelectionModel.IsSelected)
-        if not is_selected:
-            painter.fillRect(rect, QColor("#ddd"))
         if option.state & QStyle.State_MouseOver:
             txt = [" Add ", " Remove "][is_selected]
             txtw = painter.fontMetrics().width(txt)
@@ -97,6 +99,12 @@ class VariablesDelegate(QStyledItemDelegate):
             painter.drawRoundedRect(brect, 4, 4)
             painter.restore()
             painter.drawText(brect, Qt.AlignCenter, txt)
+
+        if is_selected:
+            next = index.sibling(index.row() + 1, index.column())
+            if next.isValid() \
+                    and not next.data(VariableSelectionModel.IsSelected):
+                painter.drawLine(rect.bottomLeft(), rect.bottomRight())
 
         super().paint(painter, option, index)
 
@@ -116,7 +124,7 @@ class VariableSelectionView(VariablesListItemView):
 
     def leaveEvent(self, e):
         super().leaveEvent(e)
-        self.update()
+        self.update()  # BUG: This update has no effect, at least not on macOs
 
 
 def variables_selection(widget, master, model):
