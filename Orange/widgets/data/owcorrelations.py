@@ -197,6 +197,8 @@ class OWCorrelations(OWWidget):
 
     want_control_area = False
 
+    correlation_type: int
+
     settings_version = 2
     settingsHandler = DomainContextHandler()
     selection = ContextSetting(())
@@ -241,7 +243,8 @@ class OWCorrelations(OWWidget):
         button_box = gui.hBox(self.mainArea)
         button_box.layout().addWidget(self.vizrank.button)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(350, 400)
 
     def _correlation_combo_changed(self):
