@@ -2,7 +2,7 @@ from collections import OrderedDict
 import threading
 import textwrap
 
-from AnyQt import QtWidgets
+from AnyQt.QtWidgets import QLayout
 
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -52,7 +52,7 @@ class OWDataInfo(widget.OWWidget):
         # override any minimum/fixed size set on `self`).
         self.targets = ""
         self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
-        self.layout().setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        self.layout().setSizeConstraint(QLayout.SetFixedSize)
 
 
     @Inputs.data
@@ -76,6 +76,8 @@ class OWDataInfo(widget.OWWidget):
         return sum(isinstance(x, tpe) for x in s)
 
     def _set_fields(self, data):
+        # Attributes are defined in a function called from __init__
+        # pylint: disable=attribute-defined-outside-init
         def n_or_none(n):
             return n or "-"
 
@@ -152,6 +154,8 @@ class OWDataInfo(widget.OWWidget):
             self.data_attributes = ""
 
     def _set_report(self, data):
+        # Attributes are defined in a function called from __init__
+        # pylint: disable=attribute-defined-outside-init
         domain = data.domain
         count = self._count
 
