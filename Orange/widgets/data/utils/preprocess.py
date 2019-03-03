@@ -43,13 +43,13 @@ class BaseEditor(QWidget):
     #: user interaction.
     edited = Signal()
 
-    def setParameters(self, parameters):
+    def setParameters(self, params):
         """
         Set parameters.
 
         Parameters
         ----------
-        parameters : dict
+        params : dict
             Parameters as a dictionary. It is up to subclasses to
             properly parse the contents.
 
