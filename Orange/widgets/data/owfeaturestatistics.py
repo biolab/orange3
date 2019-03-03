@@ -141,6 +141,12 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
         self.__attributes = self.__class_vars = self.__metas = None
         self.__distributions_cache = {}
+
+        no_data = np.array([])
+        self._variable_types = self._variable_names = no_data
+        self._min = self._max = self._center = no_data
+        self._dispersion = no_data
+        self._missing = no_data
         # Clear model initially to set default values
         self.clear()
 
@@ -279,7 +285,8 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             return np.atleast_2d([])
 
         # If a list of variables is given, select only corresponding stats
-        if variables is not None and len(variables):
+        # variables can be a list or array, pylint: disable=len-as-condition
+        if variables is not None and len(variables) != 0:
             indices = [self.domain.index(var) for var in variables]
         else:
             indices = ...
@@ -304,7 +311,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         """Apply functions to appropriate variable types. The default value is
         returned if there is no function defined for specific variable types.
         """
-        if not len(matrices):
+        if not matrices:
             return np.array([])
 
         def _to_float(data):
@@ -642,7 +649,7 @@ class FeatureStatisticsTableView(QTableView):
         effective_height = min(effective_height, self.MAXIMUM_HISTOGRAM_HEIGHT)
         self.verticalHeader().setDefaultSectionSize(effective_height)
 
-    def keep_row_centered(self, logical_index, old_size, new_size):
+    def keep_row_centered(self, logical_index, _1, _2):
         """When resizing the widget when scrolled further down, the
         positions of rows changes. Obviously, the user resized in order to
         better see the row of interest. This keeps that row centered."""
@@ -760,7 +767,8 @@ class OWFeatureStatistics(widget.OWWidget):
 
         self.mainArea.layout().addWidget(self.table_view)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(1050, 500)
 
     def _filter_table_variables(self):
@@ -809,6 +817,8 @@ class OWFeatureStatistics(widget.OWWidget):
         """Restore the selection on the table view from saved settings."""
         selection_model = self.table_view.selectionModel()
         selection = QItemSelection()
+        # self.selected_rows can be list or numpy.array, thus
+        # pylint: disable=len-as-condition
         if len(self.selected_rows):
             for row in self.model.mapFromSourceRows(self.selected_rows):
                 selection.append(QItemSelectionRange(
@@ -899,6 +909,8 @@ class OWFeatureStatistics(widget.OWWidget):
         self.commit()
 
     def commit(self):
+        # self.selected_rows can be list or numpy.array, thus
+        # pylint: disable=len-as-condition
         if not len(self.selected_rows):
             self.Outputs.reduced_data.send(None)
             self.Outputs.statistics.send(None)
