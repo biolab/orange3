@@ -135,7 +135,7 @@ class OWPurgeDomain(widget.OWWidget):
         meta_flags = sum([Remove.RemoveConstant * self.removeMetaAttributes,
                           Remove.RemoveUnusedValues * self.removeMetaAttributeValues])
         remover = Remove(attr_flags, class_flags, meta_flags)
-        data = remover(self.data)
+        cleaned = remover(self.data)
         attr_res, class_res, meta_res = \
             remover.attr_results, remover.class_results, remover.meta_results
 
@@ -150,7 +150,7 @@ class OWPurgeDomain(widget.OWWidget):
         self.removedMetas = meta_res['removed']
         self.reducedMetas = meta_res['reduced']
 
-        self.Outputs.data.send(data)
+        self.Outputs.data.send(cleaned)
 
     def send_report(self):
         def list_opts(opts):
