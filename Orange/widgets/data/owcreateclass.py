@@ -383,7 +383,7 @@ class OWCreateClass(widget.OWWidget):
                 total_matching = _matcher(data, pattern)
                 yield matching, total_matching
                 remaining = remaining[~matching]
-                if len(remaining) == 0:
+                if not remaining.size:
                     break
 
         def _discrete_counts():
@@ -458,11 +458,11 @@ class OWCreateClass(widget.OWWidget):
             self.Outputs.data.send(None)
             return
         domain = self.data.domain
-        if not len(self.class_name):
+        if not self.class_name:
             self.Error.class_name_empty()
         if self.class_name in domain:
             self.Error.class_name_duplicated()
-        if not len(self.class_name) or self.class_name in domain:
+        if not self.class_name or self.class_name in domain:
             self.Outputs.data.send(None)
             return
         rules = self.active_rules
@@ -486,6 +486,9 @@ class OWCreateClass(widget.OWWidget):
         self.Outputs.data.send(new_data)
 
     def send_report(self):
+        # Pylint gives false positives: these functions are always called from
+        # within the loop
+        # pylint: disable=undefined-loop-variable
         def _cond_part():
             rule = "<b>{}</b> ".format(class_name)
             if patt:
