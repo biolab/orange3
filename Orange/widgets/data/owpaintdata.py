@@ -216,6 +216,7 @@ class DataTool(QObject):
             self._cursor = QCursor(cursor)
             self.cursorChanged.emit()
 
+    # pylint: disable=unused-argument,no-self-use,unnecessary-pass
     def mousePressEvent(self, event):
         return False
 
@@ -278,19 +279,19 @@ class PenTool(DataTool):
             self.editingStarted.emit()
             self.__handleEvent(event)
             return True
-        return super().mousePressEvent()
+        return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.__handleEvent(event)
             return True
-        return super().mouseMoveEvent()
+        return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self.editingFinished.emit()
             return True
-        return super().mouseReleaseEvent()
+        return super().mouseReleaseEvent(event)
 
     def __handleEvent(self, event):
         pos = self.mapToPlot(event.pos())
@@ -339,6 +340,7 @@ class AirBrushTool(DataTool):
 
 
 def random_state(rstate):
+    # pylint gives false positive for RandomState, pylint: disable=no-member
     if isinstance(rstate, np.random.RandomState):
         return rstate
     return np.random.RandomState(rstate)
@@ -524,10 +526,10 @@ class SelectTool(DataTool):
         self._plot.addAction(self._delete_action)
 
     def deactivate(self):
-        self._reset()
+        self.reset()
         self._plot.removeAction(self._delete_action)
 
-    def _reset(self):
+    def reset(self):
         self.setSelectionRect(QRectF())
         self._item.setVisible(False)
         self._mouse_dragging = False
@@ -535,7 +537,7 @@ class SelectTool(DataTool):
     def delete(self):
         if not self._mouse_dragging and self._item.isVisible():
             self.issueCommand.emit(DeleteSelection())
-            self._reset()
+            self.reset()
 
     def _on_region_changed(self):
         if not self._mouse_dragging:
@@ -594,6 +596,8 @@ class UndoCommand(QUndoCommand):
         self._model.execute(self._undo)
 
     def mergeWith(self, other):
+        # other is another instance of the same class, thus
+        # pylint: disable=protected-access
         if self.id() != other.id():
             return False
 
@@ -615,7 +619,8 @@ class UndoCommand(QUndoCommand):
         self._undo = merged_undo
         return True
 
-    def id(self):
+    @staticmethod
+    def id():  # pylint: disable=invalid-name
         return 1
 
 
@@ -1137,7 +1142,6 @@ class OWPaintData(OWWidget):
             self.tools_cache[tool] = newtool
             newtool.issueCommand.connect(self._add_command)
 
-        self._selected_region = QRectF()
         self.current_tool = tool = self.tools_cache[tool]
         self.plot.getViewBox().tool = tool
         tool.editingStarted.connect(self._on_editing_started)
@@ -1154,20 +1158,20 @@ class OWPaintData(OWWidget):
         self.undo_stack.endMacro()
 
     def execute(self, command):
-        if isinstance(command, (Append, DeleteIndices, Insert, Move)):
-            if isinstance(command, (DeleteIndices, Insert)):
-                self._selected_indices = None
+        assert isinstance(command, (Append, DeleteIndices, Insert, Move)), \
+            "Non normalized command"
+        if isinstance(command, (DeleteIndices, Insert)):
+            self._selected_indices = None
 
-                if isinstance(self.current_tool, SelectTool):
-                    self.current_tool._reset()
+            if isinstance(self.current_tool, SelectTool):
+                self.current_tool.reset()
 
-            self.__buffer, undo = transform(command, self.__buffer)
-            self._replot()
-            return undo
-        else:
-            assert False, "Non normalized command"
+        self.__buffer, undo = transform(command, self.__buffer)
+        self._replot()
+        return undo
 
     def _add_command(self, cmd):
+        # pylint: disable=too-many-branches
         name = "Name"
 
         if (not self.hasAttr2 and
