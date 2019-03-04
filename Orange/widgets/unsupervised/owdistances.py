@@ -132,14 +132,18 @@ class OWDistances(OWWidget):
         def _fix_nonbinary():
             nonlocal data
             if metric is distance.Jaccard:
-                nbinary = sum(a.is_discrete and len(a.values) == 2
-                              for a in data.domain.attributes)
-                if not nbinary:
-                    self.Error.no_binary_features()
-                    return False
-                elif nbinary < len(data.domain.attributes):
-                    self.Warning.ignoring_nonbinary()
-                    data = distance.remove_nonbinary_features(data)
+                if issparse(data.X):
+                    # do not remove non-binary
+                    return True
+                else:
+                    nbinary = sum(a.is_discrete and len(a.values) == 2
+                                  for a in data.domain.attributes)
+                    if not nbinary:
+                        self.Error.no_binary_features()
+                        return False
+                    elif nbinary < len(data.domain.attributes):
+                        self.Warning.ignoring_nonbinary()
+                        data = distance.remove_nonbinary_features(data)
             return True
 
         def _fix_missing():
