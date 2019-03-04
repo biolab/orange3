@@ -33,7 +33,7 @@ MAX_CATEGORIES = 11  # maximum number of colors or shapes (including Other)
 MAX_POINTS_IN_TOOLTIP = 5
 
 
-class OWProjectionWidgetBase(OWWidget):
+class OWProjectionWidgetBase(OWWidget, openclass=True):
     """
     Base widget for widgets that use attribute data to set the colors, labels,
     shapes and sizes of points.
@@ -343,7 +343,7 @@ class OWProjectionWidgetBase(OWWidget):
         self.graph.update_tooltip(event.modifiers())
 
 
-class OWDataProjectionWidget(OWProjectionWidgetBase):
+class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     """
     Base widget for widgets that get Data and Data Subset (both
     Orange.data.Table) on the input, and output Selected Data and Data
@@ -615,7 +615,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.graph.clear()
 
 
-class OWAnchorProjectionWidget(OWDataProjectionWidget):
+class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     """ Base widget for widgets with graphs with anchors. """
     SAMPLE_SIZE = 100
 
