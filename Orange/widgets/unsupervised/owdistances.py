@@ -119,7 +119,9 @@ class OWDistances(OWWidget):
         def _fix_discrete():
             nonlocal data
             if data.domain.has_discrete_attributes() and (
-                    issparse(data.X) and getattr(metric, "fallback", None)
+                    issparse(data.X) and getattr(metric, "fallback",
+                                                 None) and metric is not
+                                distance.Jaccard
                     or not metric.supports_discrete
                     or self.axis == 1 and metric is not distance.Jaccard):
                 if not data.domain.has_continuous_attributes():
