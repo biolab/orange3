@@ -10,12 +10,13 @@ import numpy as np
 from Orange.data import Table
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
+from Orange.projection.manifold import torgerson
 from Orange.widgets.settings import Context
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.unsupervised.owmds import OWMDS
+from Orange.widgets.unsupervised.owmds import OWMDS, run_mds, Result
 
 
 class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
@@ -123,7 +124,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
 
     def test_run(self):
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.runbutton.click()
+        self.widget.run_button.click()
         self.widget.initialization = 0
         self.widget._OWMDS__invalidate_embedding()  # pylint: disable=protected-access
 
@@ -287,6 +288,41 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.distances, dist)
         label_text = self.widget.controls.attr_label.currentText()
         self.assertEqual(label_text, "labels")
+
+
+class TestOWMDSRunner(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table("iris")
+        cls.distances = Euclidean(cls.data)
+        cls.init = torgerson(cls.distances)
+        cls.args = (cls.distances, 300, 25, 0, cls.init)
+
+    def test_Result(self):
+        result = Result(embedding=self.init)
+        self.assertIsInstance(result.embedding, np.ndarray)
+
+    def test_run_mds(self):
+        state = Mock()
+        state.is_interruption_requested.return_value = False
+        result = run_mds(*(self.args + (state,)))
+        array = np.array([[-2.69280967, 0.32544313],
+                          [-2.72409383, -0.21287617],
+                          [-2.9022707, -0.13465859],
+                          [-2.75267253, -0.33899134],
+                          [-2.74108069, 0.35393209]])
+        np.testing.assert_almost_equal(array, result.embedding[:5])
+        state.set_status.assert_called_once_with("Running...")
+        self.assertGreater(state.set_partial_result.call_count, 2)
+        self.assertGreater(state.set_progress_value.call_count, 2)
+
+    def test_run_do_not_modify_model_inplace(self):
+        state = Mock()
+        state.is_interruption_requested.return_value = True
+        result = run_mds(*(self.args + (state,)))
+        state.set_partial_result.assert_called_once()
+        self.assertIsNot(self.init, result.embedding)
+        self.assertTrue((self.init != result.embedding).any())
 
 
 if __name__ == "__main__":
