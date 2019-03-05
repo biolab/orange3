@@ -8,7 +8,7 @@ import numpy.testing as npt
 
 from AnyQt.QtCore import Qt
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.widgets.data.owcorrelations import (
     OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank,
     CorrelationType
@@ -65,6 +65,8 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_one_feature(self):
         """Check correlation table for dataset with one attribute"""
         self.send_signal(self.widget.Inputs.data, self.data_cont[:, [0, 4]])
+        time.sleep(0.1)
+        self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertTrue(self.widget.Information.not_enough_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
@@ -73,10 +75,45 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_one_instance(self):
         """Check correlation table for dataset with one instance"""
         self.send_signal(self.widget.Inputs.data, self.data_cont[:1])
+        time.sleep(0.1)
+        self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
+        self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
         self.assertTrue(self.widget.Information.not_enough_inst.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Information.not_enough_inst.is_shown())
+
+    def test_input_data_with_constant_features(self):
+        """Check correlation table for dataset with a constant columns"""
+        np.random.seed(0)
+        X = np.random.randint(3, size=(4, 3)).astype(float)
+        X[:, 2] = 1
+
+        domain = Domain([ContinuousVariable("c1"), ContinuousVariable("c2"),
+                         DiscreteVariable("d1")])
+        self.send_signal(self.widget.Inputs.data, Table(domain, X))
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 1)
+        self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
+
+        domain = Domain([ContinuousVariable(str(i)) for i in range(3)])
+        self.send_signal(self.widget.Inputs.data, Table(domain, X))
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 1)
+        self.assertTrue(self.widget.Information.removed_cons_feat.is_shown())
+
+        X = np.ones((4, 3), dtype=float)
+        self.send_signal(self.widget.Inputs.data, Table(domain, X))
+        time.sleep(0.1)
+        self.process_events()
+        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
+        self.assertTrue(self.widget.Information.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Information.removed_cons_feat.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
 
     def test_output_data(self):
         """Check dataset on output"""
