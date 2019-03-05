@@ -191,18 +191,18 @@ class DictItemsModel(QStandardItemModel):
     """
     # Implement a proper model with in-place editing.
     # (Maybe it should be a TableModel with 2 columns)
-    def __init__(self, parent=None, dict=None):
+    def __init__(self, parent=None, a_dict=None):
         super().__init__(parent)
         self._dict = {}
         self.setHorizontalHeaderLabels(["Key", "Value"])
-        if dict is not None:
-            self.set_dict(dict)
+        if a_dict is not None:
+            self.set_dict(a_dict)
 
-    def set_dict(self, dict):
+    def set_dict(self, a_dict):
         # type: (Dict[str, str]) -> None
-        self._dict = dict
+        self._dict = a_dict
         self.setRowCount(0)
-        for key, value in sorted(dict.items()):
+        for key, value in sorted(a_dict.items()):
             key_item = QStandardItem(key)
             value_item = QStandardItem(value)
             key_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
@@ -1161,7 +1161,7 @@ class OWEditDomain(widget.OWWidget):
         assert all(v_.name == v.name
                    for v, (v_, _) in zip(input_vars, state))
         for (_, tr), v in zip(state, input_vars):
-            if tr is not None and len(tr) > 0:
+            if tr:
                 var = apply_transform(v, tr)
             else:
                 var = v
