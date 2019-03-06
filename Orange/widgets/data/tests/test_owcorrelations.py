@@ -227,6 +227,9 @@ class TestOWCorrelations(WidgetTest):
                            if attr.is_continuous]
         self.assertEqual(len(feature_combo.model()), len(cont_attributes) + 1)
 
+        self.send_signal(self.widget.Inputs.data, Table("housing"))
+        self.assertEqual(len(feature_combo.model()), 14)
+
     def test_select_feature(self):
         """Test feature selection"""
         feature_combo = self.widget.controls.feature

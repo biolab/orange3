@@ -237,9 +237,8 @@ class OWCorrelations(OWWidget):
         )
 
         self.feature_model = DomainModel(
-            separators=False, placeholder="(All combinations)",
-            valid_types=ContinuousVariable,
-        )
+            order=DomainModel.ATTRIBUTES, separators=False,
+            placeholder="(All combinations)", valid_types=ContinuousVariable)
         gui.comboBox(
             box, self, "feature", callback=self._feature_combo_changed,
             model=self.feature_model
