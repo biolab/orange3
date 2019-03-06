@@ -46,9 +46,9 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_disc(self):
         """Check correlation table for dataset with discrete attributes"""
         self.send_signal(self.widget.Inputs.data, self.data_disc)
-        self.assertTrue(self.widget.Information.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Information.not_enough_vars.is_shown())
+        self.assertFalse(self.widget.Warning.not_enough_vars.is_shown())
 
     def test_input_data_mixed(self):
         """Check correlation table for dataset with continuous and discrete
@@ -68,9 +68,9 @@ class TestOWCorrelations(WidgetTest):
         time.sleep(0.1)
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
-        self.assertTrue(self.widget.Information.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Information.not_enough_vars.is_shown())
+        self.assertFalse(self.widget.Warning.not_enough_vars.is_shown())
 
     def test_input_data_one_instance(self):
         """Check correlation table for dataset with one instance"""
@@ -79,9 +79,9 @@ class TestOWCorrelations(WidgetTest):
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
-        self.assertTrue(self.widget.Information.not_enough_inst.is_shown())
+        self.assertTrue(self.widget.Warning.not_enough_inst.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Information.not_enough_inst.is_shown())
+        self.assertFalse(self.widget.Warning.not_enough_inst.is_shown())
 
     def test_input_data_with_constant_features(self):
         """Check correlation table for dataset with a constant columns"""
@@ -109,7 +109,7 @@ class TestOWCorrelations(WidgetTest):
         time.sleep(0.1)
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
-        self.assertTrue(self.widget.Information.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
         self.assertTrue(self.widget.Information.removed_cons_feat.is_shown())
 
         self.send_signal(self.widget.Inputs.data, None)

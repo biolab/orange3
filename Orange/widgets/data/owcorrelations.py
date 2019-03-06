@@ -206,9 +206,11 @@ class OWCorrelations(OWWidget):
     correlation_type = Setting(0)
 
     class Information(OWWidget.Information):
+        removed_cons_feat = Msg("Constant features have been removed.")
+
+    class Warning(OWWidget.Warning):
         not_enough_vars = Msg("Need at least two continuous features.")
         not_enough_inst = Msg("Need at least two instances.")
-        removed_cons_feat = Msg("Constant features have been removed.")
 
     def __init__(self):
         super().__init__()
@@ -296,7 +298,7 @@ class OWCorrelations(OWWidget):
         self.selection = ()
         if data is not None:
             if len(data) < 2:
-                self.Information.not_enough_inst()
+                self.Warning.not_enough_inst()
             else:
                 domain = data.domain
                 cont_attrs = [a for a in domain.attributes if a.is_continuous]
@@ -307,7 +309,7 @@ class OWCorrelations(OWWidget):
                 if remover.attr_results["removed"]:
                     self.Information.removed_cons_feat()
                 if len(cont_data.domain.attributes) < 2:
-                    self.Information.not_enough_vars()
+                    self.Warning.not_enough_vars()
                 else:
                     self.cont_data = SklImpute()(cont_data)
         self.set_feature_model()
