@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
 import time
+import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
@@ -194,7 +195,7 @@ class TestOWCorrelations(WidgetTest):
         heuristic = KMeansCorrelationHeuristic(self.data_cont)
         heuristic.n_clusters = 2
         self.assertListEqual(list(heuristic.get_states(None)),
-                             [(0, 2), (0, 3), (2, 3)])
+                             [(0, 2), (0, 3), (2, 3), (0, 1), (1, 2), (1, 3)])
 
     def test_heuristic_get_states(self):
         """Check attribute pairs after the widget has been paused"""
@@ -203,7 +204,7 @@ class TestOWCorrelations(WidgetTest):
         states = heuristic.get_states(None)
         _ = next(states)
         self.assertListEqual(list(heuristic.get_states(next(states))),
-                             [(0, 3), (2, 3)])
+                             [(0, 3), (2, 3), (0, 1), (1, 2), (1, 3)])
 
     def test_correlation_type(self):
         c_type = self.widget.controls.correlation_type
@@ -254,18 +255,14 @@ class TestOWCorrelations(WidgetTest):
                                  self.widget.Outputs.features)])
 
     @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
-    @patch("Orange.widgets.data.owcorrelations."
-           "KMeansCorrelationHeuristic.n_clusters", 2)
     def test_vizrank_use_heuristic(self):
         self.send_signal(self.widget.Inputs.data, self.data_cont)
         time.sleep(0.1)
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
-                         len(self.widget.cont_data.domain.attributes) - 1)
+        self.assertTrue(self.widget.vizrank.use_heuristic)
+        self.assertEqual(self.widget.vizrank.rank_model.rowCount(), 6)
 
     @patch("Orange.widgets.data.owcorrelations.SIZE_LIMIT", 2000)
-    @patch("Orange.widgets.data.owcorrelations."
-           "KMeansCorrelationHeuristic.n_clusters", 1)
     def test_select_feature_against_heuristic(self):
         """Never use heuristic if feature is selected"""
         feature_combo = self.widget.controls.feature
@@ -312,3 +309,36 @@ class TestCorrelationRank(WidgetTest):
         self.vizrank.sel_feature_index = 2
         states = self.vizrank.iterate_states_by_feature()
         self.assertListEqual([(2, 0), (2, 1), (2, 3)], list(states))
+
+    def test_state_count(self):
+        self.assertEqual(self.vizrank.state_count(), 6)
+        self.vizrank.sel_feature_index = 2
+        self.assertEqual(self.vizrank.state_count(), 3)
+
+
+class TestKMeansCorrelationHeuristic(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table("wine")
+        cls.heuristic = KMeansCorrelationHeuristic(cls.data)
+
+    def test_n_clusters(self):
+        self.assertEqual(self.heuristic.n_clusters, 3)
+
+    def test_get_clusters_of_attributes(self):
+        clusters = self.heuristic.get_clusters_of_attributes()
+        self.assertListEqual([[5, 6, 8, 10, 11], [1, 2, 3, 7], [0, 4, 9, 12]],
+                             [c.instances for c in clusters])
+
+    def test_get_states(self):
+        n_attrs = len(self.data.domain.attributes)
+        states = set(self.heuristic.get_states(None))
+        self.assertEqual(len(states), n_attrs * (n_attrs - 1) / 2)
+        self.assertSetEqual(set((min(i, j), max(i, j)) for i in
+                                range(n_attrs) for j in range(i)), states)
+
+    def test_get_states_one_cluster(self):
+        heuristic = KMeansCorrelationHeuristic(Table("iris")[:, :2])
+        states = set(heuristic.get_states(None))
+        self.assertEqual(len(states), 1)
+        self.assertSetEqual(states, {(0, 1)})

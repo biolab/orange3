@@ -3,6 +3,7 @@ Correlations widget
 """
 from enum import IntEnum
 from operator import attrgetter
+from types import SimpleNamespace
 from itertools import combinations, groupby, chain
 
 import numpy as np
@@ -45,17 +46,21 @@ class CorrelationType(IntEnum):
         return ["Pearson correlation", "Spearman correlation"]
 
 
+class Cluster(SimpleNamespace):
+    instances = None  # type: Optional[List]
+    centroid = None  # type: Optional[np.ndarray]
+
+
 class KMeansCorrelationHeuristic:
     """
     Heuristic to obtain the most promising attribute pairs, when there are to
     many attributes to calculate correlations for all possible pairs.
     """
-    n_clusters = 10
-
     def __init__(self, data):
         self.n_attributes = len(data.domain.attributes)
         self.data = data
         self.states = None
+        self.n_clusters = int(np.sqrt(self.n_attributes))
 
     def get_clusters_of_attributes(self):
         """
@@ -67,22 +72,39 @@ class KMeansCorrelationHeuristic:
         data = Normalize()(self.data).X.T
         kmeans = KMeans(n_clusters=self.n_clusters, random_state=0).fit(data)
         labels_attrs = sorted([(l, i) for i, l in enumerate(kmeans.labels_)])
-        for _, group in groupby(labels_attrs, key=lambda x: x[0]):
-            group = list(group)
-            if len(group) > 1:
-                yield list(pair[1] for pair in group)
+        return [Cluster(instances=list(pair[1] for pair in group),
+                        centroid=kmeans.cluster_centers_[l])
+                for l, group in groupby(labels_attrs, key=lambda x: x[0])]
 
     def get_states(self, initial_state):
         """
-        Generates the most promising states (attribute pairs).
+        Generates states (attribute pairs) - the most promising first, i.e.
+        states within clusters, following by states among clusters.
 
         :param initial_state: initial state; None if this is the first call
         :return: generator of tuples of states
         """
         if self.states is not None:
             return chain([initial_state], self.states)
-        self.states = chain.from_iterable(combinations(inds, 2) for inds in
-                                          self.get_clusters_of_attributes())
+
+        clusters = self.get_clusters_of_attributes()
+
+        # combinations within clusters
+        self.states = chain.from_iterable(combinations(cluster.instances, 2)
+                                          for cluster in clusters)
+        if self.n_clusters == 1:
+            return self.states
+
+        # combinations among clusters - closest clusters first
+        centroids = [c.centroid for c in clusters]
+        centroids_combs = np.array(list(combinations(centroids, 2)))
+        distances = np.linalg.norm((centroids_combs[:, 0] -
+                                    centroids_combs[:, 1]), axis=1)
+        cluster_combs = list(combinations(range(len(clusters)), 2))
+        states = ((min((c1, c2)), max((c1, c2))) for i in np.argsort(distances)
+                  for c1 in clusters[cluster_combs[i][0]].instances
+                  for c2 in clusters[cluster_combs[i][1]].instances)
+        self.states = chain(self.states, states)
         return self.states
 
 
@@ -112,11 +134,8 @@ class CorrelationRank(VizRankDialogAttrPair):
             self.sel_feature_index = None
         if data:
             # use heuristic if data is too big
-            n_attrs = len(self.attrs)
-            use_heuristic = n_attrs > KMeansCorrelationHeuristic.n_clusters
-            self.use_heuristic = use_heuristic and \
-                len(data) * n_attrs ** 2 > SIZE_LIMIT and \
-                self.sel_feature_index is None
+            self.use_heuristic = len(data) * len(self.attrs) ** 2 > SIZE_LIMIT \
+                and self.sel_feature_index is None
             if self.use_heuristic:
                 self.heuristic = KMeansCorrelationHeuristic(data)
 
@@ -161,15 +180,8 @@ class CorrelationRank(VizRankDialogAttrPair):
                 yield self.sel_feature_index, j
 
     def state_count(self):
-        if self.sel_feature_index is not None:
-            return len(self.attrs) - 1
-        elif self.use_heuristic:
-            n_clusters = KMeansCorrelationHeuristic.n_clusters
-            n_avg_attrs = len(self.attrs) / n_clusters
-            return n_clusters * n_avg_attrs * (n_avg_attrs - 1) / 2
-        else:
-            n_attrs = len(self.attrs)
-            return n_attrs * (n_attrs - 1) / 2
+        n = len(self.attrs)
+        return n * (n - 1) / 2 if self.sel_feature_index is None else n - 1
 
     @staticmethod
     def bar_length(score):
