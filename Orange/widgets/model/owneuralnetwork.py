@@ -83,6 +83,7 @@ class OWNNLearner(OWBaseLearner):
     max_iterations = Setting(200)
     alpha_index = Setting(0)
     settings_version = 1
+    random_state = 1
 
     alphas = list(chain([x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 10)],
@@ -135,6 +136,14 @@ class OWNNLearner(OWBaseLearner):
                 None, self, "max_iterations", 10, 10000, step=10,
                 label="Max iterations:", orientation=Qt.Horizontal,
                 alignment=Qt.AlignRight, callback=self.settings_changed))
+        
+        form.addRow(
+            "Random state:",
+            gui.spin(
+                None, self, "random_state", 0, 100000, step=20,
+                label="Random state:", orientation=Qt.Horizontal,
+                alignment=Qt.AlignRight, callback=self.settings_changed))
+
 
     def set_alpha(self):
         self.strength_C = self.alphas[self.alpha_index]
@@ -154,20 +163,33 @@ class OWNNLearner(OWBaseLearner):
         gui.button(self.apply_button, self, "Cancel", callback=self.cancel)
 
     def create_learner(self):
-        return self.LEARNER(
-            hidden_layer_sizes=self.get_hidden_layers(),
-            activation=self.activation[self.activation_index],
-            solver=self.solver[self.solver_index],
-            alpha=self.alpha,
-            max_iter=self.max_iterations,
-            preprocessors=self.preprocessors)
+        learner = None
+        if (self.random_state > 0):
+            learner = self.LEARNER(
+                hidden_layer_sizes=self.get_hidden_layers(),
+                activation=self.activation[self.activation_index],
+                solver=self.solver[self.solver_index],
+                alpha=self.alpha,
+                max_iter=self.max_iterations,
+                preprocessors=self.preprocessors,
+                random_state=self.random_state)
+        else:
+            learner = self.LEARNER(
+                hidden_layer_sizes=self.get_hidden_layers(),
+                activation=self.activation[self.activation_index],
+                solver=self.solver[self.solver_index],
+                alpha=self.alpha,
+                max_iter=self.max_iterations,
+                preprocessors=self.preprocessors)
+        return learner
 
     def get_learner_parameters(self):
         return (("Hidden layers", ', '.join(map(str, self.get_hidden_layers()))),
                 ("Activation", self.act_lbl[self.activation_index]),
                 ("Solver", self.solv_lbl[self.solver_index]),
                 ("Alpha", self.alpha),
-                ("Max iterations", self.max_iterations))
+                ("Max iterations", self.max_iterations),
+                ("Random state", self.random_state))
 
     def get_hidden_layers(self):
         layers = tuple(map(int, re.findall(r'\d+', self.hidden_layers_input)))
