@@ -1,7 +1,6 @@
 # pylint: disable=protected-access
 
 import gc
-import warnings
 import weakref
 
 from unittest.mock import patch, MagicMock
@@ -198,12 +197,16 @@ class WidgetTestCase(WidgetTest):
             class MySubWidget(MyWidget):
                 pass
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("error", ".*", RuntimeWarning)
+        with patch("warnings.warn") as warn:
+
             class MyWidget2(OWWidget, openclass=True):
                 pass
-            class MySubWidget2(OWWidget):
+
+            class MySubWidget2(MyWidget2):
                 pass
+
+            warn.assert_not_called()
+
 
 class WidgetMsgTestCase(WidgetTest):
 

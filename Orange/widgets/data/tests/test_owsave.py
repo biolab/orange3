@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import QFileDialog
 from Orange.data import Table
 from Orange.data.io import TabReader, PickleReader, ExcelReader
 from Orange.tests import named_file
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, open_widget_classes
 from Orange.widgets.data.owsave import OWSave
 
 
@@ -23,12 +23,13 @@ def _w(s):  # pylint: disable=invalid-name
 
 class TestOWSaveBase(WidgetTest):
     def setUp(self):
-        class OWSaveMockWriter(OWSave):
-            writer = Mock()
-            writer.EXTENSIONS = [".csv"]
-            writer.SUPPORT_COMPRESSED = True
-            writer.SUPPORT_SPARSE_DATA = False
-            writer.OPTIONAL_TYPE_ANNOTATIONS = False
+        with open_widget_classes():
+            class OWSaveMockWriter(OWSave):
+                writer = Mock()
+                writer.EXTENSIONS = [".csv"]
+                writer.SUPPORT_COMPRESSED = True
+                writer.SUPPORT_SPARSE_DATA = False
+                writer.OPTIONAL_TYPE_ANNOTATIONS = False
 
         self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
         self.iris = Table("iris")

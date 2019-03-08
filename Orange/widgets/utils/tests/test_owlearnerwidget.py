@@ -40,7 +40,7 @@ class TestOWBaseLearner(WidgetTest):
         self.assertFalse(self.widget.Error.fitting_failed.is_shown())
 
     def test_subclasses_do_not_share_outputs(self):
-        class WidgetA(OWBaseLearner):
+        class WidgetA(OWBaseLearner, openclass=True):
             name = "A"
             LEARNER = KNNLearner
 
