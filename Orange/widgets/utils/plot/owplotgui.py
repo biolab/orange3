@@ -29,17 +29,15 @@ import os
 
 from AnyQt.QtWidgets import (
     QWidget, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QMenu,
-    QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle
+    QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle, QListView
 )
 from AnyQt.QtGui import QIcon, QColor, QFont
-from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect
+from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect, QPoint, QTimer
 
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
 from Orange.widgets.gui import OrangeUserRole
-from Orange.widgets.utils.listfilter import (
-    variables_filter, VariablesListItemView
-)
+from Orange.widgets.utils.listfilter import variables_filter
 from Orange.widgets.utils.itemmodels import DomainModel, VariableListModel
 
 from .owconstants import (
@@ -82,6 +80,20 @@ class VariableSelectionModel(VariableListModel):
             self.nselected += 1
         self.selection_changed.emit()
 
+    def __setitem__(self, s, value):
+        super().__setitem__(s, value)
+        if isinstance(s, slice):
+            start, stop, step = s.indices(len(self))
+            if start == stop <= self.nselected:
+                self.nselected += 1
+
+    def __delitem__(self, s):
+        super().__delitem__(s)
+        if isinstance(s, slice):
+            start, stop, step = s.indices(len(self))
+            if start + 1 == stop <= self.nselected:
+                self.nselected -= 1
+
 
 class VariablesDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -100,20 +112,47 @@ class VariablesDelegate(QStyledItemDelegate):
             painter.restore()
             painter.drawText(brect, Qt.AlignCenter, txt)
 
+        painter.save()
+        double_pen = painter.pen()
+        double_pen.setWidth(2 * double_pen.width())
         if is_selected:
             next = index.sibling(index.row() + 1, index.column())
-            if next.isValid() \
-                    and not next.data(VariableSelectionModel.IsSelected):
+            if not next.isValid():
+                painter.setPen(double_pen)
                 painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+            elif not next.data(VariableSelectionModel.IsSelected):
+                painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+        elif not index.row():
+            down = QPoint(0, painter.pen().width())
+            painter.setPen(double_pen)
+            painter.drawLine(rect.topLeft() + down, rect.topRight() + down)
+        else:
+            prev = index.sibling(index.row() - 1, index.column())
+            if prev.data(VariableSelectionModel.IsSelected):
+                painter.drawLine(rect.topLeft(), rect.topRight())
+        painter.restore()
 
         super().paint(painter, option, index)
 
 
-class VariableSelectionView(VariablesListItemView):
-    def __init__(self, *args, **kwargs):
+class VariableSelectionView(QListView):
+    dragDropActionDidComplete = pyqtSignal(int)
+
+    def __init__(self, *args, acceptedType=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.setMouseTracking(True)
         self.setAttribute(Qt.WA_Hover)
+
+        self.setSelectionMode(self.SingleSelection)
+        self.setDragEnabled(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(self.InternalMove)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        self.setUniformItemSizes(True)
+
+        #: type | Tuple[type]
+        #self.__acceptedType = acceptedType
 
     def sizeHint(self):
         return QSize(1, 50)
@@ -125,6 +164,11 @@ class VariableSelectionView(VariablesListItemView):
     def leaveEvent(self, e):
         super().leaveEvent(e)
         self.update()  # BUG: This update has no effect, at least not on macOs
+
+    def startDrag(self, supportedActions):
+        super().startDrag(supportedActions)
+        self.selectionModel().clearSelection()
+        self.scrollTo(self.model().index(0, 0))
 
 
 def variables_selection(widget, master, model):
