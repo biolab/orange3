@@ -364,6 +364,26 @@ class WidgetTest(GuiTest):
         finally:
             QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
 
+    def test_minimum_size(self):
+        widget = getattr(self, "widget", None)
+        if widget is None:
+            return
+
+        def invalidate_cached_size_hint(w):
+            # as in OWWidget.setVisible
+            if w.controlArea is not None:
+                w.controlArea.updateGeometry()
+            if w.buttonsArea is not None:
+                w.buttonsArea.updateGeometry()
+            if w.mainArea is not None:
+                w.mainArea.updateGeometry()
+
+        invalidate_cached_size_hint(widget)
+        min_size = widget.minimumSizeHint()
+        # FIXME high-dpi screens
+        self.assertLess(min_size.width(), 800)
+        self.assertLess(min_size.height(), 700)
+
 
 class TestWidgetTest(WidgetTest):
     """Meta tests for widget test helpers"""
