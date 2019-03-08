@@ -24,7 +24,8 @@ import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
     ProjectCUR, Scale as _Scale, Randomize as _Randomize
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -850,13 +851,13 @@ class Description:
     """
     A description of an action/function.
     """
-    def __init__(self, title, icon=None, summary=None, input=None, output=None,
+    def __init__(self, title, icon=None, summary=None, input_=None, output=None,
                  requires=None, note=None, related=None, keywords=None,
                  helptopic=None):
         self.title = title
         self.icon = icon
         self.summary = summary
-        self.input = input
+        self.input = input_
         self.output = output
         self.requires = requires
         self.note = note
@@ -972,8 +973,8 @@ class OWPreprocess(widget.OWWidget):
         preprocessor = Output("Preprocessor", preprocess.preprocess.Preprocess, dynamic=False)
         preprocessed_data = Output("Preprocessed Data", Orange.data.Table)
 
-    storedsettings = settings.Setting({})
-    autocommit = settings.Setting(True)
+    storedsettings = Setting({})
+    autocommit = Setting(True)
     PREPROCESSORS = PREPROCESS_ACTIONS
     CONTROLLER = Controller
 
@@ -1054,10 +1055,7 @@ class OWPreprocess(widget.OWWidget):
                           Qt.ItemIsDragEnabled)
             self.preprocessors.appendRow([item])
 
-        try:
-            model = self.load(self.storedsettings)
-        except Exception:
-            model = self.load({})
+        model = self.load(self.storedsettings)
 
         self.set_model(model)
 
@@ -1074,7 +1072,7 @@ class OWPreprocess(widget.OWWidget):
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
-        def dropMimeData(data, action, row, column, parent):
+        def dropMimeData(data, action, row, _column, _parent):
             if data.hasFormat("application/x-qwidget-ref") and \
                     action == Qt.CopyAction:
                 qname = bytes(data.data("application/x-qwidget-ref")).decode()
@@ -1107,7 +1105,8 @@ class OWPreprocess(widget.OWWidget):
             model.appendRow(item)
         return model
 
-    def save(self, model):
+    @staticmethod
+    def save(model):
         """Save the preprocessor list to a dict."""
         d = {"name": ""}
         preprocessors = []
@@ -1274,7 +1273,7 @@ class OWPreprocess(widget.OWWidget):
     def send_report(self):
         pp = [(self.controler.model().index(i, 0).data(Qt.DisplayRole), w)
               for i, w in enumerate(self.controler.view.widgets())]
-        if len(pp):
+        if pp:
             self.report_items("Settings", pp)
 
 if __name__ == "__main__":  # pragma: no cover
