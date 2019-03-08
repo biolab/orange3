@@ -90,6 +90,24 @@ class Setting:
         return (self.default, )
 
 
+# Pylint ignores type annotations in assignments. For
+#
+#    x: int = Setting(0)
+#
+# it ignores `int` and assumes x is of type `Setting`. Annotations in
+# comments ( # type: int) also don't work. The only way to annotate x is
+#
+#    x: int
+#    x = Setting(0)
+#
+# but we don't want to clutter the code with extra lines of annotations. Hence
+# we disable checking the type of `Setting` by confusing pylint with an extra
+# definition that is never executed.
+if 1 == 0:
+    class Setting:  # pylint: disable=function-redefined
+        pass
+
+
 class SettingProvider:
     """A hierarchical structure keeping track of settings belonging to
     a class and child setting providers.
