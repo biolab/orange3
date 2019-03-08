@@ -526,6 +526,7 @@ class OWTestLearners(OWWidget):
             col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
             header.setSectionHidden(section, col_name not in self.shown_scores)
         self.view.resizeColumnsToContents()
+        self._update_stats_model()  # updates warnings for displayed columns
 
     def _update_stats_model(self):
         # Update the results_model with up to date scores.
@@ -584,13 +585,14 @@ class OWTestLearners(OWWidget):
                 stats = slot.stats
 
             if stats is not None:
-                for stat in stats:
+                for stat, scorer in zip(stats, self.scorers):
                     item = QStandardItem()
                     if stat.success:
                         item.setText("{:.3f}".format(stat.value[0]))
                     else:
                         item.setToolTip(str(stat.exception))
-                        has_missing_scores = True
+                        if scorer.name in self.shown_scores:
+                            has_missing_scores = True
                     row.append(item)
 
             model.appendRow(row)
