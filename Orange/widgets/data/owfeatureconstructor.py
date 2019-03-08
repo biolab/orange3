@@ -5,7 +5,6 @@ A widget for defining (constructing) new features from values
 of other variables.
 
 """
-import sys
 import re
 import copy
 import functools
@@ -714,25 +713,18 @@ def freevars(exp, env):
     elif etype == ast.Compare:
         return sum((freevars(v, env)
                     for v in [exp.left] + exp.comparators), [])
-    elif etype == ast.Call and sys.version_info < (3, 5):
-        return sum((freevars(e, env)
-                    for e in [exp.func] + (exp.args or []) +
-                    ([k.value for k in exp.keywords or []]) +
-                    ([exp.starargs] if exp.starargs else []) +
-                    ([exp.kwargs] if exp.kwargs else [])),
-                   [])
     elif etype == ast.Call:
         return sum(map(lambda e: freevars(e, env),
                        chain([exp.func],
                              exp.args or [],
                              [k.value for k in exp.keywords or []])),
                    [])
-    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+    elif etype == ast.Starred:
         # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
         return freevars(exp.value, env)
     elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes]:
         return []
-    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
+    elif etype == ast.NameConstant:
         return []
     elif etype == ast.Attribute:
         return freevars(exp.value, env)
@@ -795,16 +787,13 @@ def validate_exp(exp):
     elif etype == ast.Call:
         subexp = chain([exp.func], exp.args or [],
                        [k.value for k in exp.keywords or []])
-        if sys.version_info < (3, 5):
-            extra = [exp.starargs, exp.kwargs]
-            subexp = chain(subexp, *filter(None, extra))
         return all(map(validate_exp, subexp))
-    elif sys.version_info >= (3, 5) and etype == ast.Starred:
+    elif etype == ast.Starred:
         assert isinstance(exp.ctx, ast.Load)
         return validate_exp(exp.value)
     elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis]:
         return True
-    elif sys.version_info >= (3, 4) and etype == ast.NameConstant:
+    elif etype == ast.NameConstant:
         return True
     elif etype == ast.Attribute:
         return True
