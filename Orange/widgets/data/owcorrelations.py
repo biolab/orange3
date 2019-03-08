@@ -53,7 +53,7 @@ class Cluster(SimpleNamespace):
 
 class KMeansCorrelationHeuristic:
     """
-    Heuristic to obtain the most promising attribute pairs, when there are to
+    Heuristic to obtain the most promising attribute pairs, when there are too
     many attributes to calculate correlations for all possible pairs.
     """
     def __init__(self, data):
@@ -221,8 +221,8 @@ class OWCorrelations(OWWidget):
         removed_cons_feat = Msg("Constant features have been removed.")
 
     class Warning(OWWidget.Warning):
-        not_enough_vars = Msg("Need at least two continuous features.")
-        not_enough_inst = Msg("Need at least two instances.")
+        not_enough_vars = Msg("At least two continuous features are needed.")
+        not_enough_inst = Msg("At least two instances are needed.")
 
     def __init__(self):
         super().__init__()
