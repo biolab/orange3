@@ -525,6 +525,7 @@ class OWTestLearners(OWWidget):
         for section in range(1, model.columnCount()):
             col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
             header.setSectionHidden(section, col_name not in self.shown_scores)
+        self.view.resizeColumnsToContents()
 
     def _update_stats_model(self):
         # Update the results_model with up to date scores.
