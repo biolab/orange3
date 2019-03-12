@@ -1,0 +1,5 @@
+Name: Brown dataset
+Description: Gene expression of baker's yeast.
+Author: Michael P. S. Brown
+Year: 2000
+Reference: Brown, M.P., Grundy, W.N., Lin, D., Cristianini, N., Sugnet, C., Furey, T.S., Ares, M., Haussler, D. (2000) Knowledge-based analysis of microarray gene expression data by using support vector machines, Proceedings of the National Academy of Sciences, 1 , 262-267.
