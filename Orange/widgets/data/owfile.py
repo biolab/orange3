@@ -107,6 +107,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         RecentPath("", "sample-datasets", "titanic.tab"),
         RecentPath("", "sample-datasets", "housing.tab"),
         RecentPath("", "sample-datasets", "heart_disease.tab"),
+        RecentPath("", "sample-datasets", "brown-selected.tab"),
+        RecentPath("", "sample-datasets", "zoo.tab"),
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
