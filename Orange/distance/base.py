@@ -1,6 +1,5 @@
 import numpy as np
 import sklearn.metrics as skl_metrics
-from scipy.sparse import issparse, csr_matrix
 
 from Orange.data import Table, Domain, Instance, RowInstance
 from Orange.misc import DistMatrix
@@ -507,51 +506,3 @@ class SklDistance:
         else:
             dist_matrix = DistMatrix(dist)
         return dist_matrix
-
-class SparseJaccard:
-    """
-    Fallback for `Jaccard` on sparse data or raw numpy arrays. If data is
-    sparse, data normalized with intersection/union. Sklearn's function can't
-    handle discrete or missing data and normalization.
-    """
-
-    def __call__(self, e1, e2=None, axis=1, impute=False):
-        x1 = _orange_to_numpy(e1)
-        x2 = _orange_to_numpy(e2)
-        if axis == 0:
-            x1 = x1.T
-            if x2 is not None:
-                x2 = x2.T
-        if issparse(x1):
-            dist = self.sparse_jaccard(x1, x2)
-        else:
-            dist = skl_metrics.pairwise.pairwise_distances(x1,
-                                                           x2,
-                                                           metric="jaccard")
-        if impute and np.isnan(dist).any():
-            dist = np.nan_to_num(dist)
-        if isinstance(e1, (Table, RowInstance)):
-            dist_matrix = DistMatrix(dist, e1, e2, axis)
-        else:
-            dist_matrix = DistMatrix(dist)
-        return dist_matrix
-
-    def sparse_jaccard(self, x1, x2=None):
-        symmetric = x2 is None
-        if symmetric:
-            x2 = x1
-        x1 = csr_matrix(x1)
-        x1.eliminate_zeros()
-        x2 = csr_matrix(x2)
-        x2.eliminate_zeros()
-        n, m = x1.shape[0], x2.shape[0]
-        matrix = np.zeros((n, m))
-        for i in range(n):
-            xi_ind = set(x1[i].indices)
-            for j in range(i if symmetric else m):
-                jacc = 1 - len(xi_ind.intersection(x2[j].indices))\
-                           / len(set(x1[i].indices).union(x1[j].indices))
-                matrix[i, j] = jacc
-                if symmetric:
-                    matrix[j, i] = jacc
-        return matrix

@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 from scipy import stats
+from scipy import sparse as sp
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.metrics import pairwise_distances
@@ -11,7 +12,7 @@ from Orange.distance import _distance
 from Orange.statistics import util
 
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
-                   SklDistance, _orange_to_numpy, SparseJaccard)
+                   SklDistance, _orange_to_numpy)
 
 class EuclideanRowsModel(FittedDistanceModel):
     """
@@ -395,6 +396,9 @@ class JaccardModel(FittedDistanceModel):
         compute distances between rows without missing values, and a slower
         loop for those with missing values.
         """
+        if sp.issparse(x1):
+            return self.sparse_jaccard(x1, x2)
+
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
             nans1 = _distance.any_nan_row(x1)
@@ -414,11 +418,30 @@ class JaccardModel(FittedDistanceModel):
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
+    def sparse_jaccard(self, x1, x2=None):
+        symmetric = x2 is None
+        if symmetric:
+            x2 = x1
+        x1 = sp.csr_matrix(x1)
+        x1.eliminate_zeros()
+        x2 = sp.csr_matrix(x2)
+        x2.eliminate_zeros()
+        n, m = x1.shape[0], x2.shape[0]
+        matrix = np.zeros((n, m))
+        for i in range(n):
+            xi_ind = set(x1[i].indices)
+            for j in range(i if symmetric else m):
+                jacc = 1 - len(xi_ind.intersection(x2[j].indices))\
+                           / len(set(x1[i].indices).union(x1[j].indices))
+                matrix[i, j] = jacc
+                if symmetric:
+                    matrix[j, i] = jacc
+        return matrix
+
 
 class Jaccard(FittedDistance):
     supports_sparse = True
     supports_discrete = True
-    fallback = SparseJaccard()
     ModelType = JaccardModel
 
     def fit_rows(self, attributes, x, n_vals):
@@ -426,9 +449,12 @@ class Jaccard(FittedDistance):
         Return a model for computation of Jaccard values. The model stores
         frequencies of non-zero values per each column.
         """
-        ps = np.fromiter(
-            (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
-            dtype=np.double, count=len(n_vals))
+        if sp.issparse(x):
+            ps = None  # wrong!
+        else:
+            ps = np.fromiter(
+                (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
+                dtype=np.double, count=len(n_vals))
         return JaccardModel(attributes, self.axis, self.impute, ps)
 
     fit_cols = fit_rows

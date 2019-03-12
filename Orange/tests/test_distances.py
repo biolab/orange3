@@ -9,7 +9,6 @@ import scipy
 import scipy.spatial
 import scipy.stats
 from scipy.sparse import csr_matrix
-from sklearn.exceptions import DataConversionWarning
 
 from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
@@ -500,27 +499,26 @@ class TestJaccard(TestCase):
                       [0., 0., 0.5]]))
 
     def test_jaccard_distance_numpy(self):
-        with self.assertWarns(DataConversionWarning):
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[0].x, self.titanic[2].x, axis=1),
-                np.array([[0.5]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic.X),
-                np.array([[0., 0., 0.5, 0.5],
-                          [0., 0., 0.5, 0.5],
-                          [0.5, 0.5, 0., 0.],
-                          [0.5, 0.5, 0., 0.]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[2].x, self.titanic[:3].X),
-                np.array([[0.5, 0.5, 0.]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[:2].X, self.titanic[3].x),
-                np.array([[0.5],
-                          [0.5]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[:2].X, self.titanic[:3].X),
-                np.array([[0., 0., 0.5],
-                          [0., 0., 0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[0].x, self.titanic[2].x, axis=1),
+            np.array([[0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic.X),
+            np.array([[0., 0., 0.5, 0.5],
+                      [0., 0., 0.5, 0.5],
+                      [0.5, 0.5, 0., 0.],
+                      [0.5, 0.5, 0., 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[2].x, self.titanic[:3].X),
+            np.array([[0.5, 0.5, 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[:2].X, self.titanic[3].x),
+            np.array([[0.5],
+                      [0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[:2].X, self.titanic[:3].X),
+            np.array([[0., 0., 0.5],
+                      [0., 0., 0.5]]))
 
 
 # noinspection PyTypeChecker

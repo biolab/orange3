@@ -27,13 +27,18 @@ class CommonTests:
 
     def test_sparse(self):
         """Test sparse support in distances."""
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        dense_data = Table.from_list(
+            domain, [[1, 0, 2], [-1, 5, 0], [0, 1, 1], [7, 0, 0]])
+        sparse_data = Table(domain, csr_matrix(dense_data.X))
+
         if not self.Distance.supports_sparse:
-            self.assertRaises(TypeError, self.Distance, self.sparse_data)
+            self.assertRaises(TypeError, self.Distance, sparse_data)
         else:
-            # check the result is the same as for dense
-            dist_numpy = self.Distance(self.dense_X)
-            dist_sparse = self.Distance(self.sparse_data)
-            np.testing.assert_allclose(dist_sparse, dist_numpy)
+            # check the result is the same for sparse and dense
+            dist_dense = self.Distance(dense_data)
+            dist_sparse = self.Distance(sparse_data)
+            np.testing.assert_allclose(dist_sparse, dist_dense)
 
 
 class CommonFittedTests(CommonTests):
@@ -145,12 +150,6 @@ class FittedDistanceTest(unittest.TestCase):
 
         self.mixed_data = self.data = Table.from_numpy(
             self.domain, np.hstack((self.cont_data.X[:3], self.disc_data.X)))
-
-        self.dense_X = np.array([[1, 0, 2],
-                                 [-1, 5, 0],
-                                 [0, 1, 1],
-                                 [7, 0, 0]])
-        self.sparse_data = Table(csr_matrix(self.dense_X))
 
 
 
@@ -845,12 +844,6 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
              [1, 1, 1],
              [1, 0, 1],
              [1, 0, 0]])
-
-        self.dense_X = np.array([[1, 0, 2],
-                      [-1, 5, 0],
-                      [0, 1, 1],
-                      [7, 0, 0]])
-        self.sparse_data = Table(csr_matrix(self.dense_X))
 
     def test_jaccard_rows(self):
         assert_almost_equal = np.testing.assert_almost_equal
