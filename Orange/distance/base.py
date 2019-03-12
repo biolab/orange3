@@ -275,8 +275,9 @@ class FittedDistanceModel(DistanceModel):
         self.attributes = attributes
 
     def __call__(self, e1, e2=None):
-        if e1.domain.attributes != self.attributes or \
-                    e2 is not None and e2.domain.attributes != self.attributes:
+        if self.attributes is not None and (
+                e1.domain.attributes != self.attributes
+                or e2 is not None and e2.domain.attributes != self.attributes):
             raise ValueError("mismatching domains")
         return super().__call__(e1, e2)
 
@@ -350,12 +351,17 @@ class FittedDistance(Distance):
         Prepare the data on attributes, call `fit_cols` or `fit_rows` and
         return the resulting model.
         """
-        attributes = data.domain.attributes
         x = _orange_to_numpy(data)
-        n_vals = np.fromiter(
-            (len(attr.values) if attr.is_discrete else 0
-             for attr in attributes),
-            dtype=np.int32, count=len(attributes))
+        if hasattr(data, "domain"):
+            attributes = data.domain.attributes
+            n_vals = np.fromiter(
+                (len(attr.values) if attr.is_discrete else 0
+                 for attr in attributes),
+                dtype=np.int32, count=len(attributes))
+        else:
+            assert isinstance(x, np.ndarray)
+            attributes = None
+            n_vals = np.zeros(x.shape[1], dtype=np.int32)
         return [self.fit_cols, self.fit_rows][self.axis](attributes, x, n_vals)
 
     def fit_cols(self, attributes, x, n_vals):
