@@ -15,7 +15,7 @@ from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owlinearprojection import (
     OWLinearProjection, LinearProjectionVizRank
 )
-from Orange.widgets.visualize.utils import Worker
+from Orange.widgets.visualize.utils import run_vizrank
 
 
 class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
@@ -205,16 +205,14 @@ class LinProjVizRankTests(WidgetTest):
 
     def test_discrete_class(self):
         self.send_signal(self.widget.Inputs.data, self.data)
-        worker = Worker(self.vizrank)
-        self.vizrank.keep_running = True
-        worker.do_work()
+        run_vizrank(self.vizrank.compute_score,
+                    self.vizrank.iterate_states(None), [], Mock())
 
     def test_continuous_class(self):
         data = Table("housing")[::100]
         self.send_signal(self.widget.Inputs.data, data)
-        worker = Worker(self.vizrank)
-        self.vizrank.keep_running = True
-        worker.do_work()
+        run_vizrank(self.vizrank.compute_score,
+                    self.vizrank.iterate_states(None), [], Mock())
 
     def test_set_attrs(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -230,3 +228,8 @@ class LinProjVizRankTests(WidgetTest):
         self.assertNotEqual(self.widget.model_selected[:], model_selected)
         c2 = self.get_output(self.widget.Outputs.components)
         self.assertNotEqual(c1.domain.attributes, c2.domain.attributes)
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

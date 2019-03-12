@@ -59,7 +59,7 @@ class KMeansCorrelationHeuristic:
     def __init__(self, data):
         self.n_attributes = len(data.domain.attributes)
         self.data = data
-        self.states = None
+        self.clusters = None
         self.n_clusters = int(np.sqrt(self.n_attributes))
 
     def get_clusters_of_attributes(self):
@@ -84,16 +84,15 @@ class KMeansCorrelationHeuristic:
         :param initial_state: initial state; None if this is the first call
         :return: generator of tuples of states
         """
-        if self.states is not None:
-            return chain([initial_state], self.states)
-
-        clusters = self.get_clusters_of_attributes()
+        if self.clusters is None:
+            self.clusters = self.get_clusters_of_attributes()
+        clusters = self.clusters
 
         # combinations within clusters
-        self.states = chain.from_iterable(combinations(cluster.instances, 2)
-                                          for cluster in clusters)
+        states0 = chain.from_iterable(combinations(cluster.instances, 2)
+                                      for cluster in clusters)
         if self.n_clusters == 1:
-            return self.states
+            return states0
 
         # combinations among clusters - closest clusters first
         centroids = [c.centroid for c in clusters]
@@ -104,8 +103,13 @@ class KMeansCorrelationHeuristic:
         states = ((min((c1, c2)), max((c1, c2))) for i in np.argsort(distances)
                   for c1 in clusters[cluster_combs[i][0]].instances
                   for c2 in clusters[cluster_combs[i][1]].instances)
-        self.states = chain(self.states, states)
-        return self.states
+        states = chain(states0, states)
+
+        if initial_state is not None:
+            while next(states) != initial_state:
+                pass
+            return chain([initial_state], states)
+        return states
 
 
 class CorrelationRank(VizRankDialogAttrPair):

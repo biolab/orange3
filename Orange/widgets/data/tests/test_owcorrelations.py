@@ -308,6 +308,14 @@ class TestCorrelationRank(WidgetTest):
         self.assertEqual(row[1].data(Qt.DisplayRole), self.attrs[0].name)
         self.assertEqual(row[2].data(Qt.DisplayRole), self.attrs[1].name)
 
+    def test_iterate_states(self):
+        self.assertListEqual(list(self.vizrank.iterate_states(None)),
+                             [(1, 0), (2, 0), (2, 1), (3, 0), (3, 1), (3, 2)])
+        self.assertListEqual(list(self.vizrank.iterate_states((1, 0))),
+                             [(1, 0), (2, 0), (2, 1), (3, 0), (3, 1), (3, 2)])
+        self.assertListEqual(list(self.vizrank.iterate_states((2, 1))),
+                             [(2, 1), (3, 0), (3, 1), (3, 2)])
+
     def test_iterate_states_by_feature(self):
         self.vizrank.sel_feature_index = 2
         states = self.vizrank.iterate_states_by_feature()
@@ -345,3 +353,7 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
         states = set(heuristic.get_states(None))
         self.assertEqual(len(states), 1)
         self.assertSetEqual(states, {(0, 1)})
+
+
+if __name__ == "__main__":
+    unittest.main()
