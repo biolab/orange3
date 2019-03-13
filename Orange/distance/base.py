@@ -1,3 +1,6 @@
+# This module defines abstract base classes; derived classes are abstract, too
+# pylint: disable=abstract-method
+
 import numpy as np
 import sklearn.metrics as skl_metrics
 
@@ -13,10 +16,11 @@ from Orange.statistics import util
 # TODO this *private* function is called from several widgets to prepare
 # data for calling the below classes. After we (mostly) stopped relying
 # on sklearn.metrics, this is (mostly) unnecessary
-
+# Afterwards, also remove the following line:
+# pylint: disable=redefined-outer-name
 def _preprocess(table, impute=True):
     """Remove categorical attributes and impute missing values."""
-    if not len(table):
+    if not len(table):  # this can be an array, pylint: disable=len-as-condition
         return table
     new_domain = Domain(
         [a for a in table.domain.attributes if a.is_continuous],
@@ -120,6 +124,9 @@ class Distance:
         impute (bool):
             if `True` (default is `False`), nans in the computed distances
             are replaced with zeros, and infs with very large numbers.
+        normalize (bool):
+            if `True`, columns are normalized before computation. This attribute
+            applies only if the distance supports normalization.
 
     The capabilities of the metrics are described with class attributes.
 
@@ -150,6 +157,11 @@ class Distance:
     supports_normalization = False
     supports_missing = True
 
+    # Predefined here to silence pylint, which doesn't look into __new__
+    normalize = False
+    axis = 1
+    impute = False
+
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, **kwargs):
         self = super().__new__(cls)
         self.axis = axis
@@ -168,16 +180,25 @@ class Distance:
                 or hasattr(e1, "is_sparse") and e1.is_sparse()):
             fallback = getattr(self, "fallback", None)
             if fallback is not None:
-                # pylint disable=not-callable
+                # pylint: disable=not-callable
                 return fallback(e1, e2, axis, impute)
 
         # Magic constructor
         model = self.fit(e1)
         return model(e1, e2)
 
-    def fit(self, e1):
-        """Abstract method returning :obj:`DistanceModel` fit to the data"""
-        pass
+    def fit(self, data):
+        """
+        Abstract method returning :obj:`DistanceModel` fit to the data
+
+        Args:
+            e1 (Orange.data.Table, Orange.data.Instance, np.ndarray):
+                data for fitting the distance model
+
+        Returns:
+            model (DistanceModel)
+        """
+        raise NotImplementedError
 
     @staticmethod
     def check_no_discrete(n_vals):
@@ -256,7 +277,7 @@ class DistanceModel:
         """
         Abstract method for computation of distances between rows or columns of
         `x1`, or between rows of `x1` and `x2`. Do not call directly."""
-        pass
+        raise NotImplementedError
 
 
 class FittedDistanceModel(DistanceModel):
@@ -268,10 +289,15 @@ class FittedDistanceModel(DistanceModel):
         attributes (list of `Variable`): attributes on which the model was fit
         discrete (np.ndarray): bool array indicating discrete attributes
         continuous (np.ndarray): bool array indicating continuous attributes
+        normalize (bool):
+            if `True` (default is `False`) continuous columns are normalized
     """
     def __init__(self, attributes, axis=1, impute=False):
         super().__init__(axis, impute)
         self.attributes = attributes
+        self.discrete = None
+        self.continuous = None
+        self.normalize = False
 
     def __call__(self, e1, e2=None):
         if self.attributes is not None and (
@@ -373,7 +399,7 @@ class FittedDistance(Distance):
             x (np.ndarray): data
             n_vals (np.ndarray): number of attribute values, 0 for continuous
         """
-        pass
+        raise NotImplementedError
 
     def fit_rows(self, attributes, x, n_vals):
         """
@@ -440,7 +466,8 @@ class FittedDistance(Distance):
             dist_missing2_cont[:curr_cont],
             dist_missing_disc, dist_missing2_disc)
 
-    def get_discrete_stats(self, column, n_bins):
+    @staticmethod
+    def get_discrete_stats(column, n_bins):
         """
         Return tables used computing distance between missing discrete values.
 
@@ -474,7 +501,7 @@ class FittedDistance(Distance):
             dist_missing2_cont (float): the value used for distance between two
                 missing values in column
         """
-        pass
+        raise NotImplementedError
 
 
 # Fallbacks for distances in sparse data

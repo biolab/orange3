@@ -14,6 +14,7 @@ from Orange.statistics import util
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
                    SklDistance, _orange_to_numpy)
 
+
 class EuclideanRowsModel(FittedDistanceModel):
     """
     Model for computation of Euclidean distances between rows.
@@ -23,14 +24,14 @@ class EuclideanRowsModel(FittedDistanceModel):
     """
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
-                 means, vars, dist_missing2_cont,
+                 means, stdvars, dist_missing2_cont,
                  dist_missing_disc, dist_missing2_disc):
         super().__init__(attributes, 1, impute)
         self.normalize = normalize
         self.continuous = continuous
         self.discrete = discrete
         self.means = means
-        self.vars = vars
+        self.vars = stdvars
         self.dist_missing2_cont = dist_missing2_cont
         self.dist_missing_disc = dist_missing_disc
         self.dist_missing2_disc = dist_missing2_disc
@@ -91,11 +92,11 @@ class EuclideanColumnsModel(FittedDistanceModel):
     Means are used as offsets for normalization, and two deviations are
     used for scaling.
     """
-    def __init__(self, attributes, impute, normalize, means, vars):
+    def __init__(self, attributes, impute, normalize, means, stdvars):
         super().__init__(attributes, 0, impute)
         self.normalize = normalize
         self.means = means
-        self.vars = vars
+        self.vars = stdvars
 
     def compute_distances(self, x1, x2=None):
         """
@@ -134,6 +135,7 @@ class Euclidean(FittedDistance):
     rows_model_type = EuclideanRowsModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        # pylint: disable=arguments-differ
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
@@ -160,9 +162,8 @@ class Euclidean(FittedDistance):
         for normalization and imputation.
         """
         def nowarn(msg, cat, *args, **kwargs):
-            if cat is RuntimeWarning and (
-                    msg == "Mean of empty slice"
-                    or msg == "Degrees of freedom <= 0 for slice"):
+            if cat is RuntimeWarning and msg in (
+                    "Mean of empty slice", "Degrees of freedom <= 0 for slice"):
                 if self.normalize:
                     raise ValueError("some columns have no defined values")
             else:
@@ -174,11 +175,11 @@ class Euclidean(FittedDistance):
         orig_warn = warnings.warn
         with patch("warnings.warn", new=nowarn):
             means = np.nanmean(x, axis=0)
-            vars = np.nanvar(x, axis=0)
-        if self.normalize and not vars.all():
+            stdvars = np.nanvar(x, axis=0)
+        if self.normalize and not stdvars.all():
             raise ValueError("some columns are constant")
         return EuclideanColumnsModel(
-            attributes, self.impute, self.normalize, means, vars)
+            attributes, self.impute, self.normalize, means, stdvars)
 
 
 class ManhattanRowsModel(FittedDistanceModel):
@@ -270,6 +271,7 @@ class Manhattan(FittedDistance):
     rows_model_type = ManhattanRowsModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        # pylint: disable=arguments-differ
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
@@ -337,6 +339,10 @@ class Cosine(FittedDistance):
 
     fit_cols = fit_rows
 
+    def get_continuous_stats(self, column):
+        # Implement an unneeded abstract method to silence pylint
+        return None
+
     class CosineModel(FittedDistanceModel):
         """Model for computation of cosine distances across rows and columns.
         All non-zero discrete values are treated as 1."""
@@ -402,6 +408,7 @@ class JaccardModel(FittedDistanceModel):
         compute distances between rows without missing values, and a slower
         loop for those with missing values.
         """
+        # view is false positive, pylint: disable=no-member
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
             nans1 = _distance.any_nan_row(x1)
@@ -421,7 +428,8 @@ class JaccardModel(FittedDistanceModel):
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
-    def _compute_sparse(self, x1, x2=None):
+    @staticmethod
+    def _compute_sparse(x1, x2=None):
         symmetric = x2 is None
         if symmetric:
             x2 = x1
@@ -461,6 +469,10 @@ class Jaccard(FittedDistance):
         return JaccardModel(attributes, self.axis, self.impute, ps)
 
     fit_cols = fit_rows
+
+    def get_continuous_stats(self, column):
+        # Implement an unneeded abstract method to silence pylint
+        return None
 
 
 class CorrelationDistanceModel(DistanceModel):
@@ -561,7 +573,7 @@ def _corrcoef2(a, b, axis=0):
     numpy.corrcoef
     """
     a, b = np.atleast_2d(a, b)
-    if not (axis == 0 or axis == 1):
+    if axis not in (0, 1):
         raise ValueError("Invalid axis {} (only 0 or 1 accepted)".format(axis))
 
     mean_a = np.mean(a, axis=axis, keepdims=True)
@@ -597,6 +609,7 @@ def _corrcoef2(a, b, axis=0):
 
 
 class CorrelationDistance(Distance):
+    # pylint: disable=abstract-method
     supports_missing = False
 
 
