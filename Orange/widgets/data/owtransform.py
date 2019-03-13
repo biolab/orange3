@@ -1,5 +1,3 @@
-import numpy as np
-
 from Orange.data import Table, Domain
 from Orange.preprocess.preprocess import Preprocess, Discretize
 from Orange.widgets import gui
@@ -44,10 +42,9 @@ class OWTransform(OWWidget):
         self.set_input_label_text()
         self.set_preprocessor_label_text()
 
-        self.retain_all_data_cb = gui.checkBox(
-            self.controlArea, self, "retain_all_data", label="Retain all data",
-            callback=self.apply
-            )
+        box = gui.widgetBox(self.controlArea, "Output")
+        gui.checkBox(box, self, "retain_all_data", "Retain all data",
+                     callback=self.apply)
 
     def set_input_label_text(self):
         text = "No data on input."
@@ -94,28 +91,21 @@ class OWTransform(OWWidget):
             except Exception as ex:   # pylint: disable=broad-except
                 self.Error.pp_error(ex)
 
-        if self.retain_all_data:
-            self.Outputs.transformed_data.send(self.merge_data())
-        else:
-            self.Outputs.transformed_data.send(self.transformed_data)
+        data = self.merged_data() if self.retain_all_data \
+            else self.transformed_data
+        self.Outputs.transformed_data.send(data)
 
         self.set_preprocessor_label_text()
         self.set_output_label_text()
 
-    def merge_data(self):
-        attributes = getattr(self.data.domain, 'attributes')
-        cls_vars = getattr(self.data.domain, 'class_vars')
-        metas_v = getattr(self.data.domain, 'metas')\
-            + getattr(self.transformed_data.domain, 'attributes')
-        domain = Domain(attributes, cls_vars, metas_v)
-        X = self.data.X
-        Y = self.data.Y
-        metas = np.hstack((self.data.metas, self.transformed_data.X))
-        table = Table.from_numpy(domain, X, Y, metas)
-        table.name = getattr(self.data, 'name', '')
-        table.attributes = getattr(self.data, 'attributes', {})
-        table.ids = self.data.ids
-        return table
+    def merged_data(self):
+        domain = self.data.domain
+        metas = domain.metas + self.transformed_data.domain.attributes
+        domain = Domain(domain.attributes, domain.class_vars, metas)
+        data = self.data.transform(domain)
+        n = self.transformed_data.X.shape[1]
+        data.metas[:, -n:] = self.transformed_data.X
+        return data
 
     def send_report(self):
         if self.preprocessor is not None:

@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from Orange.data import Table
-from Orange.preprocess import Discretize
+from Orange.preprocess import Discretize, Continuize
 from Orange.preprocess.preprocess import Preprocess
 from Orange.widgets.data.owtransform import OWTransform
 from Orange.widgets.tests.base import WidgetTest
@@ -33,7 +33,8 @@ class TestOWTransform(WidgetTest):
         self.assertIsNone(output)
         self.assertEqual("Input data with 150 instances and 4 features.",
                          self.widget.input_label.text())
-        self.assertEqual("No preprocessor on input.", self.widget.preprocessor_label.text())
+        self.assertEqual("No preprocessor on input.",
+                         self.widget.preprocessor_label.text())
         self.assertEqual("", self.widget.output_label.text())
 
         # send preprocessor
@@ -76,13 +77,15 @@ class TestOWTransform(WidgetTest):
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.data), 2))
 
-        # test retain data functionality
-        self.widget.retain_all_data = True
-        self.widget.apply()
+    def test_retain_all_data(self):
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.preprocessor, Continuize())
+        self.widget.controls.retain_all_data.click()
         output = self.get_output(self.widget.Outputs.transformed_data)
         self.assertIsInstance(output, Table)
-        self.assertEqual(output.X.shape, (len(self.data), 4))
-        self.assertEqual(output.metas.shape, (len(self.data), 2))
+        self.assertEqual(output.X.shape, (len(data), 16))
+        self.assertEqual(output.metas.shape, (len(data), 37))
 
     def test_error_transforming(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -98,3 +101,8 @@ class TestOWTransform(WidgetTest):
         self.widget.report_button.click()
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()
