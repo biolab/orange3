@@ -129,7 +129,7 @@ class OWContinuize(widget.OWWidget):
 
     def commit(self):
         continuizer = self.constructContinuizer()
-        if self.data is not None and len(self.data):
+        if self.data:
             domain = continuizer(self.data)
             data = self.data.transform(domain)
             self.Outputs.data.send(data)
@@ -262,7 +262,7 @@ def continuize_var(var,
                    continuous_treatment=Continuize.Leave,
                    zero_based=True):
 
-    if var.is_continuous:
+    def continuize_continuous():
         if continuous_treatment == Normalize.NormalizeBySpan:
             return [normalize_by_span(var, data_or_dist, zero_based)]
         elif continuous_treatment == Normalize.NormalizeBySD:
@@ -270,7 +270,7 @@ def continuize_var(var,
         else:
             return [var]
 
-    elif var.is_discrete:
+    def continuize_discrete():
         if len(var.values) > 2 and \
                 multinomial_treatment == Continuize.ReportError:
             raise ValueError("{0.name} is a multinomial variable".format(var))
@@ -285,8 +285,8 @@ def continuize_var(var,
             return [ordinal_to_norm_continuous(var, zero_based)]
         elif multinomial_treatment == Continuize.Indicators:
             return one_hot_coding(var, zero_based)
-        elif multinomial_treatment == Continuize.FirstAsBase or \
-                multinomial_treatment == Continuize.RemoveMultinomial:
+        elif multinomial_treatment in (
+                Continuize.FirstAsBase, Continuize.RemoveMultinomial):
             return dummy_coding(var, zero_based=zero_based)
         elif multinomial_treatment == Continuize.FrequentAsBase:
             dist = _ensure_dist(var, data_or_dist)
@@ -294,8 +294,13 @@ def continuize_var(var,
             return dummy_coding(var, base_value=modus, zero_based=zero_based)
         elif multinomial_treatment == Continuize.Leave:
             return [var]
-        else:
-            raise NotImplementedError  # ValueError??
+        raise ValueError("Invalid value of `multinomial_treatment`")
+
+    if var.is_continuous:
+        return continuize_continuous()
+    elif var.is_discrete:
+        return continuize_discrete()
+    raise TypeError("Non-primitive variables cannot be continuized")
 
 
 def _ensure_dist(var, data_or_dist):
