@@ -369,7 +369,7 @@ class Cosine(FittedDistance):
             data1 = prepare_data(x1)
             data2 = data1 if x2 is None else prepare_data(x2)
             dist = safe_sparse_dot(data1, data2.T)
-            np.clip(dist, 0, 1, out=dist)
+            np.clip(dist, -1, 1, out=dist)
             if x2 is None:
                 diag = np.diag_indices_from(dist)
                 dist[diag] = np.where(np.isnan(dist[diag]), np.nan, 1.0)
