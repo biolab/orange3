@@ -14,7 +14,7 @@ from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
-from Orange.widgets.widget import Msg, Output
+from Orange.widgets.widget import Msg
 
 
 class TSNERunner:
@@ -85,9 +85,6 @@ class OWtSNE(OWDataProjectionWidget):
 
     #: Runtime state
     Running, Finished, Waiting, Paused = 1, 2, 3, 4
-
-    class Outputs(OWDataProjectionWidget.Outputs):
-        preprocessor = Output("Preprocessor", preprocess.Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -370,10 +367,6 @@ class OWtSNE(OWDataProjectionWidget):
         super().setup_plot()
         self.start()
 
-    def commit(self):
-        super().commit()
-        self.send_preprocessor()
-
     def _get_projection_data(self):
         if self.data is None:
             return None
@@ -388,12 +381,6 @@ class OWtSNE(OWDataProjectionWidget):
                 self.data.domain.class_vars,
                 self.data.domain.metas + self.projection.domain.attributes)
         return data
-
-    def send_preprocessor(self):
-        prep = None
-        if self.data is not None and self.projection is not None:
-            prep = preprocess.ApplyDomain(self.projection.domain, self.projection.name)
-        self.Outputs.preprocessor.send(prep)
 
     def clear(self):
         super().clear()
