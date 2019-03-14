@@ -386,6 +386,12 @@ class JaccardModel(FittedDistanceModel):
         self.ps = ps
 
     def compute_distances(self, x1, x2):
+        if sp.issparse(x1):
+            return self._compute_sparse(x1, x2)
+        else:
+            return self._compute_dense(x1, x2)
+
+    def _compute_dense(self, x1, x2):
         """
         The method uses a function implemented in Cython. Data (`x1` and `x2`)
         is accompanied by two tables. One is a 2-d table in which elements of
@@ -396,9 +402,6 @@ class JaccardModel(FittedDistanceModel):
         compute distances between rows without missing values, and a slower
         loop for those with missing values.
         """
-        if sp.issparse(x1):
-            return self.sparse_jaccard(x1, x2)
-
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
             nans1 = _distance.any_nan_row(x1)
@@ -418,7 +421,7 @@ class JaccardModel(FittedDistanceModel):
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
-    def sparse_jaccard(self, x1, x2=None):
+    def _compute_sparse(self, x1, x2=None):
         symmetric = x2 is None
         if symmetric:
             x2 = x1
@@ -450,7 +453,7 @@ class Jaccard(FittedDistance):
         frequencies of non-zero values per each column.
         """
         if sp.issparse(x):
-            ps = None  # wrong!
+            ps = x.getnnz(axis=0)
         else:
             ps = np.fromiter(
                 (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
