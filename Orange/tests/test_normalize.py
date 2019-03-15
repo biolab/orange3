@@ -131,3 +131,14 @@ class TestNormalizer(unittest.TestCase):
         normalizer = Normalize()
         normalized = normalizer(data)
         np.testing.assert_array_equal(data.X, normalized.X)
+
+    def test_datetime_normalization(self):
+        data = Table(test_filename("test10.tab"))
+        normalizer = Normalize(zero_based=False,
+                               norm_type=Normalize.NormalizeBySD,
+                               transform_class=False)
+        data_norm = normalizer(data)
+        solution = [[0., '1995-01-21', 'a', 'a', '?', 'a', 1.225, 'a', 'a', 2],
+                    [0., '2003-07-23', 'a', 'b', -1., '?', 0., 'b', 'b', 0],
+                    [0., '1967-03-12', 'a', 'b', 1., 'b', -1.225, 'c', 'c', 1]]
+        self.compare_tables(data_norm, solution)

@@ -3,7 +3,6 @@ from Orange.statistics import distribution
 from Orange.util import Reprable
 from .preprocess import Normalize
 from .transformation import Normalizer as Norm
-
 __all__ = ["Normalizer"]
 
 
@@ -12,11 +11,13 @@ class Normalizer(Reprable):
                  zero_based=True,
                  norm_type=Normalize.NormalizeBySD,
                  transform_class=False,
-                 center=True):
+                 center=True,
+                 normalize_datetime=False):
         self.zero_based = zero_based
         self.norm_type = norm_type
         self.transform_class = transform_class
         self.center = center
+        self.normalize_datetime = normalize_datetime
 
     def __call__(self, data):
         dists = distribution.get_distributions(data)
@@ -33,7 +34,7 @@ class Normalizer(Reprable):
         return data.transform(domain)
 
     def normalize(self, dist, var):
-        if not var.is_continuous:
+        if not var.is_continuous or (var.is_time and not self.normalize_datetime):
             return var
         elif self.norm_type == Normalize.NormalizeBySD:
             return self.normalize_by_sd(dist, var)

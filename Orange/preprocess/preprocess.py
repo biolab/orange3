@@ -293,6 +293,9 @@ class Normalize(Preprocess):
 
         Whether or not to center the data so it has mean zero.
 
+    normalize_datetime : bool (default=False)
+
+
     Examples
     --------
     >>> from Orange.data import Table
@@ -309,11 +312,13 @@ class Normalize(Preprocess):
                  zero_based=True,
                  norm_type=NormalizeBySD,
                  transform_class=False,
-                 center=True):
+                 center=True,
+                 normalize_datetime=False):
         self.zero_based = zero_based
         self.norm_type = norm_type
         self.transform_class = transform_class
         self.center = center
+        self.normalize_datetime = normalize_datetime
 
     def __call__(self, data):
         """
@@ -340,11 +345,13 @@ class Normalize(Preprocess):
             # matrix, which requires too much memory. For example, this is used for Bag of Words
             # models where normalization is not really needed.
             return data
+
         normalizer = normalize.Normalizer(
             zero_based=self.zero_based,
             norm_type=self.norm_type,
             transform_class=self.transform_class,
             center=self.center,
+            normalize_datetime=self.normalize_datetime
         )
         return normalizer(data)
 

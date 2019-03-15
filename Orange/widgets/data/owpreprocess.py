@@ -36,7 +36,6 @@ from Orange.widgets.data.utils.preprocess import (
     ParametersRole, Controller, SequenceFlow
 )
 
-
 class _NoneDisc(preprocess.discretize.Discretization):
     """Discretize all variables into None.
 
