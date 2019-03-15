@@ -312,7 +312,7 @@ class Normalize(Preprocess):
                  zero_based=True,
                  norm_type=NormalizeBySD,
                  transform_class=False,
-                 center=True, 
+                 center=True,
                  normalize_datetime=False):
         self.zero_based = zero_based
         self.norm_type = norm_type
