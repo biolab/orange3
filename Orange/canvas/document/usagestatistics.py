@@ -122,8 +122,6 @@ class UsageStatistics:
                         json.dump([], f)
                 except (ConnectionError, requests.exceptions.RequestException):
                     log.warning("Connection error while attempting to send usage statistics.")
-                except Exception:
-                    log.warning("Failed to send usage statistics.")
 
     def write_statistics(self):
         if not release:

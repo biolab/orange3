@@ -276,8 +276,12 @@ def send_usage_statistics():
 
     class SendUsageStatistics(QThread):
         def run(self):
-            usage = UsageStatistics()
-            usage.send_statistics()
+            try:
+                usage = UsageStatistics()
+                usage.send_statistics()
+            except Exception:  # pylint: disable=broad-except
+                # exceptions in threads would crash Orange
+                log.warning("Failed to send usage statistics.")
 
     thread = SendUsageStatistics()
     thread.start()
