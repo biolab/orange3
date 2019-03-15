@@ -105,6 +105,24 @@ class UsageStatistics:
     def set_node_type(self, addition_type):
         self.__node_addition_type = addition_type
 
+    def send_statistics(self):
+        if release and config.settings()["error-reporting/send-statistics"]:
+            if os.path.isfile(statistics_path):
+                with open(statistics_path) as f:
+                    data = json.load(f)
+                try:
+                    r = requests.post(server_url, files={'file': json.dumps(data)})
+                    if r.status_code != 200:
+                        log.warning("Error communicating with server while attempting to send "
+                                    "usage statistics.")
+                        return
+                    # success - wipe statistics file
+                    log.info("Usage statistics sent.")
+                    with open(statistics_path, 'w') as f:
+                        json.dump([], f)
+                except (ConnectionError, requests.exceptions.RequestException):
+                    log.warning("Connection error while attempting to send usage statistics.")
+
     def write_statistics(self):
         if not release:
             log.info("Not sending usage statistics (non-release version of Orange detected).")
@@ -134,24 +152,9 @@ class UsageStatistics:
 
         data.append(statistics)
 
-        def store_data(d):
-            with open(statistics_path, 'w') as f:
-                json.dump(d, f)
+        with open(statistics_path, 'w') as f:
+            json.dump(data, f)
 
-        try:
-            r = requests.post(server_url, files={'file': json.dumps(data)})
-            if r.status_code != 200:
-                log.warning("Error communicating with server while attempting to send "
-                            "usage statistics.")
-                store_data(data)
-                return
-            # success - wipe statistics file
-            log.info("Usage statistics sent.")
-            with open(statistics_path, 'w') as f:
-                json.dump([], f)
-        except (ConnectionError, requests.exceptions.RequestException):
-            log.warning("Connection error while attempting to send usage statistics.")
-            store_data(data)
 
     @staticmethod
     def set_last_search_query(query):

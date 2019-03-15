@@ -34,6 +34,7 @@ from Orange.canvas.application.errorreporting import handle_exception
 from Orange.canvas.gui.splashscreen import SplashScreen
 from Orange.canvas.config import cache_dir
 from Orange.canvas import config
+from Orange.canvas.document.usagestatistics import UsageStatistics
 
 from Orange.canvas.registry import qt
 from Orange.canvas.registry import WidgetRegistry, set_global_registry
@@ -271,6 +272,20 @@ def check_for_updates():
         thread.start()
         return thread
 
+def send_usage_statistics():
+
+    class SendUsageStatistics(QThread):
+        def run(self):
+            try:
+                usage = UsageStatistics()
+                usage.send_statistics()
+            except Exception:  # pylint: disable=broad-except
+                # exceptions in threads would crash Orange
+                log.warning("Failed to send usage statistics.")
+
+    thread = SendUsageStatistics()
+    thread.start()
+    return thread
 
 def main(argv=None):
     if argv is None:
@@ -545,6 +560,7 @@ def main(argv=None):
     # local references prevent destruction
     survey = show_survey()
     update_check = check_for_updates()
+    send_stat = send_usage_statistics()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.log_view()
@@ -577,6 +593,7 @@ def main(argv=None):
     del canvas_window
     del survey
     del update_check
+    del send_stat
 
     app.processEvents()
     app.flush()
