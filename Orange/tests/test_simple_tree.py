@@ -10,6 +10,7 @@ import Orange
 from Orange.classification import SimpleTreeLearner as SimpleTreeCls
 from Orange.regression import SimpleTreeLearner as SimpleTreeReg
 from Orange.data import ContinuousVariable, Domain, DiscreteVariable, Table
+from Orange.tests import test_filename
 
 
 class TestSimpleTreeLearner(unittest.TestCase):
@@ -152,11 +153,11 @@ class TestSimpleTreeLearner(unittest.TestCase):
         self.assertEqual(reg_str, res)
 
     def test_SimpleTree_to_string_cls_decimals(self):
-        data = Table("voting")
+        data = Table(test_filename("datasets/lenses.tab"))
         lrn = SimpleTreeReg(min_instances=1)
         cls = lrn(data)
         cls_str = cls.to_string()
-        res = '   adoption-of-the-budget-resolution ([3.7, 249.7])'
+        res = '   astigmatic ([4.0, 3.0, 5.0])'
         self.assertEqual(cls_str.split("\n")[3], res)
 
     def test_SimpleTree_to_string_reg_decimals(self):

@@ -10,6 +10,7 @@ import numpy.testing as npt
 from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.tests import test_filename
 from Orange.widgets.data.owcorrelations import (
     OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank,
     CorrelationType
@@ -331,7 +332,7 @@ class TestCorrelationRank(WidgetTest):
 class TestKMeansCorrelationHeuristic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = Table("wine")
+        cls.data = Table(test_filename("datasets/breast-cancer-wisconsin"))
         cls.heuristic = KMeansCorrelationHeuristic(cls.data)
 
     def test_n_clusters(self):
@@ -339,7 +340,7 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
 
     def test_get_clusters_of_attributes(self):
         clusters = self.heuristic.get_clusters_of_attributes()
-        self.assertListEqual([[5, 6, 8, 10, 11], [1, 2, 3, 7], [0, 4, 9, 12]],
+        self.assertListEqual([[0], [1, 2, 3, 4, 5, 6, 7], [8]],
                              [c.instances for c in clusters])
 
     def test_get_states(self):

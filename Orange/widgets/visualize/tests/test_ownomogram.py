@@ -10,6 +10,7 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
 )
+from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.ownomogram import (
     OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
@@ -25,7 +26,7 @@ class TestOWNomogram(WidgetTest):
         cls.nb_cls = NaiveBayesLearner()(cls.data)
         cls.lr_cls = LogisticRegressionLearner()(cls.data)
         cls.titanic = Table("titanic")
-        cls.lenses = Table("lenses")
+        cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
     def setUp(self):
         self.widget = self.create_widget(OWNomogram)  # type: OWNomogram

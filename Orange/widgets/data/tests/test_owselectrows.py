@@ -15,6 +15,7 @@ from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
+from Orange.tests import test_filename
 
 CFValues = {
     FilterContinuous.Equal: ["5.4"],
@@ -78,7 +79,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.unconditional_commit()
 
     def test_filter_disc(self):
-        lenses = Table("lenses")
+        lenses = Table(test_filename("datasets/lenses.tab"))
         self.widget.auto_commit = False
         self.widget.set_data(lenses)
 

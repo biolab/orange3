@@ -8,6 +8,7 @@ import scipy.sparse as sp
 from Orange.data import Table, Domain, DiscreteVariable, StringVariable
 from Orange.widgets.data.owmergedata import OWMergeData, INSTANCEID, INDEX
 from Orange.widgets.tests.base import WidgetTest
+from Orange.tests import test_filename
 
 
 class TestOWMergeData(WidgetTest):
@@ -425,7 +426,7 @@ class TestOWMergeData(WidgetTest):
         indices = list(range(101))
         indices.pop(26)
         zoo = Table("zoo")[indices]
-        zoo_images = Table("zoo-with-images")
+        zoo_images = Table(test_filename("datasets/zoo-with-images.tab"))
         self.send_signal(self.widget.Inputs.data, zoo)
         self.send_signal(self.widget.Inputs.extra_data, zoo_images)
         self.assertEqual(self.widget.attr_augment_data, zoo.domain[-1])

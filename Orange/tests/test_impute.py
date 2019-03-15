@@ -13,6 +13,8 @@ from Orange.data import Unknown, Table
 
 from Orange.classification import MajorityLearner, SimpleTreeLearner
 from Orange.regression import MeanLearner
+from Orange.tests import test_filename
+
 
 class TestReplaceUnknowns(unittest.TestCase):
     def test_replacement(self):
@@ -324,6 +326,6 @@ class TestRandom(unittest.TestCase):
 
 class TestImputer(unittest.TestCase):
     def test_imputer(self):
-        auto = data.Table('auto-mpg')
+        auto = data.Table(test_filename('datasets/imports-85.tab'))
         auto2 = preprocess.Impute()(auto)
         self.assertFalse(np.isnan(auto2.X).any())

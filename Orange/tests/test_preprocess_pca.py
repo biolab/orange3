@@ -5,12 +5,13 @@ import unittest
 
 from Orange.data import Table
 from Orange.preprocess import ProjectPCA
+from Orange.tests import test_filename
 
 
 class TestPCAProjector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Table("ionosphere")
+        cls.ionosphere = Table(test_filename("datasets/ionosphere.tab"))
 
     def test_project_pca_default(self):
         data = self.ionosphere

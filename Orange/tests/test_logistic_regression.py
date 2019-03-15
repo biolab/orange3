@@ -15,12 +15,12 @@ class TestLogisticRegressionLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.iris = Table('iris')
-        cls.voting = Table('voting')
+        cls.heart_disease = Table('heart_disease.tab')
         cls.zoo = Table('zoo')
 
     def test_LogisticRegression(self):
         learn = LogisticRegressionLearner()
-        results = CrossValidation(self.voting, [learn], k=2)
+        results = CrossValidation(self.heart_disease, [learn], k=2)
         ca = CA(results)
         self.assertGreater(ca, 0.8)
         self.assertLess(ca, 1.0)
@@ -63,16 +63,16 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_learner_scorer(self):
         learner = LogisticRegressionLearner()
-        scores = learner.score_data(self.voting)
-        self.assertEqual('physician-fee-freeze',
-                         self.voting.domain.attributes[np.argmax(scores)].name)
-        self.assertEqual(scores.shape, (1, len(self.voting.domain.attributes)))
+        scores = learner.score_data(self.heart_disease)
+        self.assertEqual('major vessels colored',
+                         self.heart_disease.domain.attributes[np.argmax(scores)].name)
+        self.assertEqual(scores.shape, (1, len(self.heart_disease.domain.attributes)))
 
     def test_learner_scorer_feature(self):
         learner = LogisticRegressionLearner()
-        scores = learner.score_data(self.voting)
-        for i, attr in enumerate(self.voting.domain.attributes):
-            score = learner.score_data(self.voting, attr)
+        scores = learner.score_data(self.heart_disease)
+        for i, attr in enumerate(self.heart_disease.domain.attributes):
+            score = learner.score_data(self.heart_disease, attr)
             np.testing.assert_array_almost_equal(score, scores[:, i])
 
     def test_learner_scorer_previous_transformation(self):
@@ -106,7 +106,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_coefficients(self):
         learn = LogisticRegressionLearner()
-        model = learn(self.voting)
+        model = learn(self.heart_disease)
         coef = model.coefficients
         self.assertEqual(len(coef[0]), len(model.domain.attributes))
 

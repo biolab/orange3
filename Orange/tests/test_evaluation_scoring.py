@@ -11,6 +11,7 @@ from Orange.classification import LogisticRegressionLearner, SklTreeLearner, Nai
 from Orange.evaluation import AUC, CA, Results, Recall, \
     Precision, TestOnTrainingData, scoring, LogLoss, F1, CrossValidation
 from Orange.preprocess import discretize, Discretize
+from Orange.tests import test_filename
 
 
 class TestScoreMetaType(unittest.TestCase):
@@ -291,7 +292,7 @@ class TestAUC(unittest.TestCase):
 
     def test_auc_on_multiclass_data_returns_1d_array(self):
         titanic = Table('titanic')[:100]
-        lenses = Table('lenses')[:100]
+        lenses = Table(test_filename('datasets/lenses.tab'))[:100]
         majority = MajorityLearner()
 
         results = TestOnTrainingData(lenses, [majority])

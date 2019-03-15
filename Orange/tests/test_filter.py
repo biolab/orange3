@@ -11,6 +11,7 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.data.filter import \
     FilterContinuous, FilterDiscrete, FilterString, Values, HasClass, \
     IsDefined, SameValue, Random, ValueFilter, FilterStringList, FilterRegex
+from Orange.tests import test_filename
 
 NIMOCK = MagicMock(side_effect=NotImplementedError())
 
@@ -40,7 +41,7 @@ class TestFilterValues(unittest.TestCase):
 
 class TestIsDefinedFilter(unittest.TestCase):
     def setUp(self):
-        self.table = Table('imports-85')
+        self.table = Table(test_filename('datasets/imports-85.tab'))
         self.n_missing = 46
         self.assertTrue(self.table.has_missing())
 
@@ -75,7 +76,7 @@ class TestIsDefinedFilter(unittest.TestCase):
 
 class TestHasClassFilter(unittest.TestCase):
     def setUp(self):
-        self.table = Table('imports-85')
+        self.table = Table(test_filename('datasets/imports-85.tab'))
         self.n_missing = 4
         self.assertTrue(self.table.has_missing_class())
 

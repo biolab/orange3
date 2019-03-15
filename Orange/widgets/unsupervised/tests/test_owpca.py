@@ -10,6 +10,7 @@ from Orange.preprocess.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.unsupervised.owpca import OWPCA
+from Orange.tests import test_filename
 from sklearn.utils import check_random_state
 from sklearn.utils.extmath import svd_flip
 
@@ -111,7 +112,7 @@ class TestOWPCA(WidgetTest):
         np.testing.assert_almost_equal(dense_pca.X, sparse_pca.X)
 
     def test_all_components_continuous(self):
-        data = Table("banking-crises.tab")
+        data = Table(test_filename("datasets/cyber-security-breaches.tab"))
         # GH-2329 only occurred on TimeVariables when normalize=False
         self.assertTrue(any(isinstance(a, TimeVariable)
                             for a in data.domain.attributes))

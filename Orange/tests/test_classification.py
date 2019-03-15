@@ -285,7 +285,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
         tree([1, 2, None])
 
     def test_missing_class(self):
-        table = Table(test_filename("adult_sample_missing"))
+        table = Table(test_filename("datasets/adult_sample_missing"))
         for learner in LearnerAccessibility().all_learners():
             try:
                 learner = learner()
@@ -372,7 +372,7 @@ class LearnerAccessibility(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
-                table = Table(test_filename("test8.tab"))
+                table = Table(test_filename("datasets/test8.tab"))
                 self.assertRaises(ValueError, learner, table)
             except TypeError:
                 traceback.print_exc()

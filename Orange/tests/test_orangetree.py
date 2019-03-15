@@ -9,6 +9,7 @@ import scipy.sparse as sp
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.classification.tree import \
     TreeModel, Node, DiscreteNode, MappedDiscreteNode, NumericNode
+from Orange.tests import test_filename
 
 
 class TestTree:
@@ -225,8 +226,8 @@ class TestRegressor(TestTree, unittest.TestCase):
         unittest.TestCase.setUpClass()
         TestTree.setUpClass()
 
-        cls.data = Table('housing')
-        imports = Table("imports-85")
+        cls.data = Table("housing")
+        imports = Table(test_filename("datasets/imports-85.tab"))
         new_domain = Domain([attr for attr in imports.domain.attributes
                              if attr.is_continuous or len(attr.values) <= 16],
                             imports.domain.class_var)

@@ -88,13 +88,13 @@ class TestTabReader(unittest.TestCase):
 
     def test_read_nonutf8_encoding(self):
         with self.assertRaises(ValueError) as cm:
-            data = Table(test_filename('binary-blob.tab'))
+            data = Table(test_filename('datasets/binary-blob.tab'))
         self.assertIn('NULL byte', cm.exception.args[0])
 
         with self.assertRaises(ValueError):
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
-                data = Table(test_filename('invalid_characters.tab'))
+                data = Table(test_filename('datasets/invalid_characters.tab'))
 
     def test_noncontinous_marked_continuous(self):
         file = NamedTemporaryFile("wt", delete=False)
@@ -122,7 +122,7 @@ time
 
     def test_csv_sniffer(self):
         # GH-2785
-        reader = CSVReader(test_filename('test_asn_data_working.csv'))
+        reader = CSVReader(test_filename('datasets/test_asn_data_working.csv'))
         data = reader.read()
         self.assertEqual(len(data), 8)
         self.assertEqual(len(data.domain.variables) + len(data.domain.metas), 15)

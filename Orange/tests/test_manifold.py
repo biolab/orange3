@@ -12,6 +12,7 @@ from Orange.distance import Euclidean
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import torgerson
+from Orange.tests import test_filename
 
 
 np.random.seed(42)
@@ -20,7 +21,7 @@ np.random.seed(42)
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Table('ionosphere')
+        cls.ionosphere = Table(test_filename('datasets/ionosphere.tab'))
         cls.iris = Table('iris')
 
     def test_mds(self):

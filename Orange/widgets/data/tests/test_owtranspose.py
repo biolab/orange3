@@ -8,7 +8,7 @@ import numpy as np
 from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose
 from Orange.widgets.tests.base import WidgetTest
-
+from Orange.tests import test_filename
 
 class TestOWTranspose(WidgetTest):
     def setUp(self):
@@ -30,8 +30,9 @@ class TestOWTranspose(WidgetTest):
 
     def test_feature_type(self):
         widget = self.widget
-        data = Table("conferences.tab")
+        data = Table(test_filename("datasets/test_asn_data_working.csv"))
         metas = data.domain.metas
+
         widget.feature_type = widget.GENERIC
         self.send_signal(widget.Inputs.data, data)
 
@@ -44,12 +45,12 @@ class TestOWTranspose(WidgetTest):
             [metas[0].to_val(m) for m in data.metas[:, 0]])
 
         # Test that the widget takes the correct column
-        widget.feature_names_column = metas[1]
+        widget.feature_names_column = metas[4]
         widget.apply()
         output = self.get_output(widget.Outputs.data)
         self.assertTrue(
             all(a.name.startswith(metas[1].to_val(m))
-                for a, m in zip(output.domain.attributes, data.metas[:, 1])))
+                for a, m in zip(output.domain.attributes, data.metas[:, 4])))
 
         # Switch to generic
         self.assertEqual(widget.DEFAULT_PREFIX, "Feature")

@@ -15,6 +15,9 @@ from Orange.evaluation import CrossValidation, CA
 
 # This class is used to force predict_storage to fall back to the slower
 # procedure instead of calling `predict`
+from Orange.tests import test_filename
+
+
 class NotATable(Table):  # pylint: disable=too-many-ancestors,abstract-method
     pass
 
@@ -53,7 +56,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
 
     def test_allnan_cv(self):
         # GH 2740
-        data = Table('voting')
+        data = Table(test_filename('datasets/lenses.tab'))
         results = CrossValidation(data, [self.learner])
         self.assertFalse(any(results.failed))
 
