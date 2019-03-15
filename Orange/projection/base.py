@@ -1,3 +1,4 @@
+import copy
 import inspect
 import threading
 
@@ -135,6 +136,7 @@ class DomainProjection(Projection):
 
         super().__init__(proj=proj)
         self.orig_domain = domain
+        self.n_components = n_components
         var_names = self._get_var_names(n_components)
         self.domain = Orange.data.Domain(
             [proj_variable(i, var_names[i]) for i in range(n_components)],
@@ -144,6 +146,13 @@ class DomainProjection(Projection):
         postfixes = ["x", "y"] if n == 2 else [str(i) for i in range(1, n + 1)]
         names = [f"{self.var_prefix}-{postfix}" for postfix in postfixes]
         return get_unique_names(self.orig_domain, names)
+
+    def copy(self):
+        proj = copy.deepcopy(self.proj)
+        model = type(self)(proj, self.domain.copy(), self.n_components)
+        model.pre_domain = self.pre_domain.copy()
+        model.name = self.name
+        return model
 
 
 class LinearProjector(Projector):

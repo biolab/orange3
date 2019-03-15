@@ -1,15 +1,19 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import warnings
+import unittest
+from unittest.mock import Mock
 
 import numpy as np
 
 from Orange.data import Table
+from Orange.projection import FreeViz
+from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, AnchorProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate
-from Orange.widgets.visualize.owfreeviz import OWFreeViz
+from Orange.widgets.visualize.owfreeviz import OWFreeViz, Result, run_freeviz
 
 
 class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
@@ -49,22 +53,40 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def test_optimization(self):
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        self.widget.btn_start.click()
+        self.widget.run_button.click()
+        self.assertEqual(self.widget.run_button.text(), "Stop")
 
     def test_optimization_cancelled(self):
         self.test_optimization()
-        self.widget.btn_start.click()
+        self.widget.run_button.click()
+        self.assertEqual(self.widget.run_button.text(), "Resume")
 
     def test_optimization_reset(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.test_optimization()
         init = self.widget.controls.initialization
         simulate.combobox_activate_index(init, 0)
+        self.assertEqual(self.widget.run_button.text(), "Stop")
         simulate.combobox_activate_index(init, 1)
+        self.assertEqual(self.widget.run_button.text(), "Stop")
+
+    def test_optimization_finish(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        output1 = self.get_output(self.widget.Outputs.components)
+        self.widget.run_button.click()
+        self.assertEqual(self.widget.run_button.text(), "Stop")
+        self.wait_until_stop_blocking()
+        self.assertEqual(self.widget.run_button.text(), "Start")
+        output2 = self.get_output(self.widget.Outputs.components)
+        self.assertTrue((output1.X != output2.X).any())
+
+    def test_optimization_no_data(self):
+        self.widget.run_button.click()
+        self.assertEqual(self.widget.run_button.text(), "Start")
 
     def test_constant_data(self):
         data = Table("titanic")[56:59]
         self.send_signal(self.widget.Inputs.data, data)
-        self.widget.btn_start.click()
+        self.widget.run_button.click()
         self.assertTrue(self.widget.Error.constant_data.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.constant_data.is_shown())
@@ -100,4 +122,47 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         zoo = Table("zoo")
         self.send_signal(self.widget.Inputs.data, zoo)
         self.assertTrue(self.widget.Warning.removed_features.is_shown())
-        self.widget.btn_start.click()
+        self.widget.run_button.click()
+
+
+class TestOWFreeVizRunner(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.data = Table("iris")
+
+    def setUp(self):
+        anchors = FreeViz.init_radial(len(self.data.domain.attributes))
+        self.projector = projector = FreeViz(scale=False, center=False,
+                                             initial=anchors, maxiter=10)
+        self.projector.domain = self.data.domain
+        self.projector.components_ = anchors.T
+        self.projection = FreeVizModel(projector, projector.domain, 2)
+        self.projection.pre_domain = self.data.domain
+
+    def test_Result(self):
+        result = Result(projector=self.projector, projection=self.projection)
+        self.assertIsInstance(result.projector, FreeViz)
+        self.assertIsInstance(result.projection, FreeVizModel)
+
+    def test_run(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+        result = run_freeviz(self.data, self.projector, state)
+        array = np.array([[1.66883742e-01, 9.40395481e-38],
+                          [-8.86817512e-02, 9.96060012e-01],
+                          [6.67450609e-02, -3.97675811e-01],
+                          [-1.44947052e-01, -5.98384200e-01]])
+        np.testing.assert_almost_equal(array.T, result.projection.components_)
+        state.set_status.assert_called_once_with("Calculating...")
+        self.assertGreater(state.set_partial_result.call_count, 40)
+        self.assertGreater(state.set_progress_value.call_count, 40)
+
+    def test_run_do_not_modify_model_inplace(self):
+        state = Mock()
+        state.is_interruption_requested.return_value = True
+        result = run_freeviz(self.data, self.projector, state)
+        state.set_partial_result.assert_called_once()
+        self.assertIs(self.projector, result.projector)
+        self.assertIsNot(self.projection.proj, result.projection.proj)
+        self.assertTrue((self.projection.components_.T !=
+                         result.projection.components_.T).any())
