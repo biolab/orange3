@@ -72,12 +72,15 @@ class VariableSelectionModel(VariableListModel):
             return super().data(index, role)
 
     def toggle_item(self, index):
-        if index.data(self.IsSelected):
-            self.nselected -= 1
-            self.insert(self.nselected, self.pop(index.row()))
-        else:
-            self.insert(self.nselected, self.pop(index.row()))
-            self.nselected += 1
+        self.modelAboutToBeReset.emit()
+        was_selected = index.data(self.IsSelected)
+        self.nselected -= was_selected
+        self._list.insert(
+            self.nselected, self._list.pop(index.row()))
+        self._other_data.insert(
+            self.nselected, self._other_data.pop(index.row()))
+        self.nselected += not was_selected
+        self.modelReset.emit()
         self.selection_changed.emit()
 
     def __setitem__(self, s, value):
@@ -86,6 +89,7 @@ class VariableSelectionModel(VariableListModel):
             start, stop, step = s.indices(len(self))
             if start == stop <= self.nselected:
                 self.nselected += 1
+                self.selection_changed.emit()
 
     def __delitem__(self, s):
         super().__delitem__(s)
@@ -93,6 +97,32 @@ class VariableSelectionModel(VariableListModel):
             start, stop, step = s.indices(len(self))
             if start + 1 == stop <= self.nselected:
                 self.nselected -= 1
+                self.selection_changed.emit()
+
+    def set_selection(self, selection):
+        self.modelAboutToBeReset.emit()
+        sel_indices = (self.indexOf(attr) for attr in selection)
+        other_data = []
+        for index in sorted(sel_indices, reverse=True):
+            del self._list[index]
+            other_data.append(self._other_data.pop(index))
+        self._list = list(selection) + self._list
+        self._other_data = other_data + self._other_data
+        self.nselected = len(selection)
+        self.modelReset.emit()
+        self.selection_changed.emit()
+
+    def get_selection(self):
+        return self[:self.nselected]
+
+    def get_nselected(self):
+        return self.nselected
+
+    def set_nselected(self, nselected):
+        self.modelAboutToBeReset.emit()
+        self.nselected = nselected
+        self.modelReset.emit()
+        self.selection_changed.emit()
 
 
 class VariablesDelegate(QStyledItemDelegate):

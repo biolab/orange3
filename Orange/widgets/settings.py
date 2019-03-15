@@ -453,7 +453,7 @@ class SettingsHandler:
                 self.write_defaults_file(settings_file)
             except (EOFError, IOError, pickle.PicklingError) as ex:
                 log.error("Could not write default settings for %s (%s).",
-                          self.widget_class, type(ex).__name__)
+                          self.widget_class, ex)
                 settings_file.close()
                 os.remove(filename)
             else:
