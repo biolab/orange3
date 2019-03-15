@@ -3,7 +3,7 @@ from unittest.mock import patch
 import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
-from Orange.preprocess import Preprocess, Normalize
+from Orange.preprocess import Normalize
 from Orange.projection.manifold import TSNE
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
@@ -110,28 +110,6 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin,
             if var.is_discrete:
                 self.assertNotIn(var, controls.attr_size.model())
                 self.assertIn(var, controls.attr_shape.model())
-
-    def test_output_preprocessor(self):
-        # To test the validity of the preprocessor, we'll have to actually
-        # compute the projections
-        self.restore_mocked_functions()
-
-        self.send_signal(self.widget.Inputs.data, self.data)
-        self.wait_until_stop_blocking(wait=20000)
-        output_data = self.get_output(self.widget.Outputs.annotated_data)
-
-        # We send the same data to the widget, we expect the point locations to
-        # be fairly close to their original ones
-        pp = self.get_output(self.widget.Outputs.preprocessor)
-        self.assertIsInstance(pp, Preprocess)
-
-        transformed_data = pp(self.data)
-        self.assertIsInstance(transformed_data, Table)
-        self.assertEqual(transformed_data.X.shape, (len(self.data), 2))
-        np.testing.assert_allclose(transformed_data.X, output_data.metas[:, :2],
-                                   rtol=1, atol=3)
-        self.assertEqual([a.name for a in transformed_data.domain.attributes],
-                         [m.name for m in output_data.domain.metas[:2]])
 
     def test_multiscale_changed(self):
         self.assertFalse(self.widget.controls.multiscale.isChecked())

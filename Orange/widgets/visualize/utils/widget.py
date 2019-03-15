@@ -10,7 +10,6 @@ from Orange.data import (
 )
 from Orange.data.util import get_unique_names, array_equal
 from Orange.data.sql.table import SqlTable
-from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.statistics.util import bincount
 
 from Orange.widgets import gui, report
@@ -624,7 +623,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
 
     class Outputs(OWDataProjectionWidget.Outputs):
         components = Output("Components", Table)
-        preprocessor = Output("Preprocessor", Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         sparse_data = Msg("Sparse data is not supported")
@@ -702,7 +700,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
     def commit(self):
         super().commit()
         self.send_components()
-        self.send_preprocessor()
 
     def send_components(self):
         components = None
@@ -720,12 +717,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
     def _send_components_metas(self):
         variable_names = [a.name for a in self.projection.domain.attributes]
         return np.array(variable_names, dtype=object)[:, None]
-
-    def send_preprocessor(self):
-        prep = None
-        if self.data is not None and self.projection is not None:
-            prep = ApplyDomain(self.projection.domain, self.projection.name)
-        self.Outputs.preprocessor.send(prep)
 
     def clear(self):
         super().clear()

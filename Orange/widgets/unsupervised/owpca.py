@@ -34,7 +34,6 @@ class OWPCA(widget.OWWidget):
         transformed_data = Output("Transformed data", Table)
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
-        preprocessor = Output("Preprocessor", preprocess.Preprocess)
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -199,7 +198,6 @@ class OWPCA(widget.OWWidget):
         self.Outputs.transformed_data.send(None)
         self.Outputs.components.send(None)
         self.Outputs.pca.send(self._pca_projector)
-        self.Outputs.preprocessor.send(None)
 
     def _setup_plot(self):
         self.plot.clear()
@@ -345,7 +343,7 @@ class OWPCA(widget.OWWidget):
         axis.setTicks([[(i, str(i+1)) for i in range(0, p, d)]])
 
     def commit(self):
-        transformed = components = pp = None
+        transformed = components = None
         if self._pca is not None:
             if self._transformed is None:
                 # Compute the full transform (MAX_COMPONENTS components) only once.
@@ -369,13 +367,10 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
-            pp = preprocess.ApplyDomain(domain, "PCA")
-
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)
         self.Outputs.pca.send(self._pca_projector)
-        self.Outputs.preprocessor.send(pp)
 
     def send_report(self):
         if self.data is None:
