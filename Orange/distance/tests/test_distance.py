@@ -27,11 +27,18 @@ class CommonTests:
 
     def test_sparse(self):
         """Test sparse support in distances."""
-        sparse_iris = csr_matrix(Table('iris').X)
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        dense_data = Table.from_list(
+            domain, [[1, 0, 2], [-1, 5, 0], [0, 1, 1], [7, 0, 0]])
+        sparse_data = Table(domain, csr_matrix(dense_data.X))
+
         if not self.Distance.supports_sparse:
-            self.assertRaises(TypeError, self.Distance, sparse_iris)
+            self.assertRaises(TypeError, self.Distance, sparse_data)
         else:
-            self.Distance(sparse_iris)
+            # check the result is the same for sparse and dense
+            dist_dense = self.Distance(dense_data)
+            dist_sparse = self.Distance(sparse_data)
+            np.testing.assert_allclose(dist_sparse, dist_dense)
 
 
 class CommonFittedTests(CommonTests):

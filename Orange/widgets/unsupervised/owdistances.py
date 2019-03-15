@@ -118,10 +118,11 @@ class OWDistances(OWWidget):
 
         def _fix_discrete():
             nonlocal data
-            if data.domain.has_discrete_attributes() and (
-                    issparse(data.X) and getattr(metric, "fallback", None)
-                    or not metric.supports_discrete
-                    or self.axis == 1 and metric is not distance.Jaccard):
+            if data.domain.has_discrete_attributes() \
+                    and metric is not distance.Jaccard \
+                    and (issparse(data.X) and getattr(metric, "fallback", None)
+                         or not metric.supports_discrete
+                         or self.axis == 1):
                 if not data.domain.has_continuous_attributes():
                     self.Error.no_continuous_features()
                     return False
@@ -131,7 +132,7 @@ class OWDistances(OWWidget):
 
         def _fix_nonbinary():
             nonlocal data
-            if metric is distance.Jaccard:
+            if metric is distance.Jaccard and not issparse(data.X):
                 nbinary = sum(a.is_discrete and len(a.values) == 2
                               for a in data.domain.attributes)
                 if not nbinary:
@@ -151,11 +152,11 @@ class OWDistances(OWWidget):
 
         self.clear_messages()
         if data is None:
-            return
+            return None
         for check in (_check_sparse,
                       _fix_discrete, _fix_missing, _fix_nonbinary):
             if not check():
-                return
+                return None
         try:
             if metric.supports_normalization and self.normalized_dist:
                 return metric(data, axis=1 - self.axis, impute=True,

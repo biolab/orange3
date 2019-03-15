@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 from scipy import stats
+from scipy import sparse as sp
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.metrics import pairwise_distances
@@ -368,7 +369,7 @@ class Cosine(FittedDistance):
             data1 = prepare_data(x1)
             data2 = data1 if x2 is None else prepare_data(x2)
             dist = safe_sparse_dot(data1, data2.T)
-            np.clip(dist, 0, 1, out=dist)
+            np.clip(dist, -1, 1, out=dist)
             if x2 is None:
                 diag = np.diag_indices_from(dist)
                 dist[diag] = np.where(np.isnan(dist[diag]), np.nan, 1.0)
@@ -385,6 +386,12 @@ class JaccardModel(FittedDistanceModel):
         self.ps = ps
 
     def compute_distances(self, x1, x2):
+        if sp.issparse(x1):
+            return self._compute_sparse(x1, x2)
+        else:
+            return self._compute_dense(x1, x2)
+
+    def _compute_dense(self, x1, x2):
         """
         The method uses a function implemented in Cython. Data (`x1` and `x2`)
         is accompanied by two tables. One is a 2-d table in which elements of
@@ -414,11 +421,30 @@ class JaccardModel(FittedDistanceModel):
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
+    def _compute_sparse(self, x1, x2=None):
+        symmetric = x2 is None
+        if symmetric:
+            x2 = x1
+        x1 = sp.csr_matrix(x1)
+        x1.eliminate_zeros()
+        x2 = sp.csr_matrix(x2)
+        x2.eliminate_zeros()
+        n, m = x1.shape[0], x2.shape[0]
+        matrix = np.zeros((n, m))
+        for i in range(n):
+            xi_ind = set(x1[i].indices)
+            for j in range(i if symmetric else m):
+                jacc = 1 - len(xi_ind.intersection(x2[j].indices))\
+                           / len(set(x1[i].indices).union(x1[j].indices))
+                matrix[i, j] = jacc
+                if symmetric:
+                    matrix[j, i] = jacc
+        return matrix
+
 
 class Jaccard(FittedDistance):
-    supports_sparse = False
+    supports_sparse = True
     supports_discrete = True
-    fallback = SklDistance('jaccard')
     ModelType = JaccardModel
 
     def fit_rows(self, attributes, x, n_vals):
@@ -426,9 +452,12 @@ class Jaccard(FittedDistance):
         Return a model for computation of Jaccard values. The model stores
         frequencies of non-zero values per each column.
         """
-        ps = np.fromiter(
-            (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
-            dtype=np.double, count=len(n_vals))
+        if sp.issparse(x):
+            ps = x.getnnz(axis=0)
+        else:
+            ps = np.fromiter(
+                (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
+                dtype=np.double, count=len(n_vals))
         return JaccardModel(attributes, self.axis, self.impute, ps)
 
     fit_cols = fit_rows
