@@ -90,6 +90,17 @@ class WidgetTest(GuiTest):
 
     widgets = []  # type: List[OWWidget]
 
+    def __init_subclass__(cls, **kwargs):
+
+        def test_minimum_size(self):
+            widget = getattr(self, "widget", None)
+            if widget is None:
+                self.skipTest("minimum size not tested as .widget was not set")
+            self.check_minimum_size(widget)
+
+        if not hasattr(cls, "test_minimum_size"):
+            cls.test_minimum_size = test_minimum_size
+
     @classmethod
     def setUpClass(cls):
         """Prepare environment for test execution
@@ -364,10 +375,7 @@ class WidgetTest(GuiTest):
         finally:
             QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
 
-    def test_minimum_size(self):
-        widget = getattr(self, "widget", None)
-        if widget is None:
-            return
+    def check_minimum_size(self, widget):
 
         def invalidate_cached_size_hint(w):
             # as in OWWidget.setVisible
@@ -380,7 +388,6 @@ class WidgetTest(GuiTest):
 
         invalidate_cached_size_hint(widget)
         min_size = widget.minimumSizeHint()
-        # FIXME high-dpi screens
         self.assertLess(min_size.width(), 800)
         self.assertLess(min_size.height(), 700)
 
@@ -392,6 +399,8 @@ class TestWidgetTest(WidgetTest):
         with self.assertRaises(TimeoutError):
             self.process_events(until=lambda: False, timeout=0)
 
+    def test_minimum_size(self):
+        return  # skip this test
 
 
 class BaseParameterMapping:
