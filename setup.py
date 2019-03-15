@@ -237,6 +237,7 @@ class CoverageCommand(Command):
         sys.exit(subprocess.call(r'''
         coverage run --source=Orange -m unittest -v Orange.tests
         echo; echo
+        coverage combine
         coverage report
         coverage html &&
             { echo; echo "See also: file://$(pwd)/htmlcov/index.html"; echo; }
