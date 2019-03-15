@@ -25,10 +25,10 @@ from serverfiles import LocalFiles, ServerFiles, sizeformat
 
 import Orange.data
 from Orange.misc.environ import data_dir
-from Orange.widgets import widget, settings, gui
+from Orange.widgets import settings, gui
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import OWWidget, Msg
 
 
 log = logging.getLogger(__name__)
@@ -124,7 +124,7 @@ class Namespace(SimpleNamespace):
             self.title = self.filename
 
 
-class OWDataSets(widget.OWWidget):
+class OWDataSets(OWWidget):
     name = "Datasets"
     description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
@@ -139,7 +139,8 @@ class OWDataSets(widget.OWWidget):
     DATASET_DIR = "datasets"
 
     # override HEADER_SCHEMA to define new columns
-    # if schema is changed override methods: self.assign_delegates and self.create_model
+    # if schema is changed override methods: self.assign_delegates and
+    # self.create_model
     HEADER_SCHEMA = [
         ['islocal', {'label': ''}],
         ['title', {'label': 'Title'}],
@@ -150,10 +151,10 @@ class OWDataSets(widget.OWWidget):
         ['tags', {'label': 'Tags'}]
     ]  # type: List[str, dict]
 
-    class Error(widget.OWWidget.Error):
+    class Error(OWWidget.Error):
         no_remote_datasets = Msg("Could not fetch dataset list")
 
-    class Warning(widget.OWWidget.Warning):
+    class Warning(OWWidget.Warning):
         only_local_datasets = Msg("Could not fetch datasets list, only local "
                                   "cached datasets are shown")
 
@@ -171,11 +172,17 @@ class OWDataSets(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
+        self.allinfo_local = {}
+        self.allinfo_remote = {}
+
         self.local_cache_path = os.path.join(data_dir(), self.DATASET_DIR)
 
-        self._header_labels = [header['label'] for _, header in self.HEADER_SCHEMA]
-        self._header_index = namedtuple('_header_index', [info_tag for info_tag, _ in self.HEADER_SCHEMA])
-        self.Header = self._header_index(*[index for index, _ in enumerate(self._header_labels)])
+        self._header_labels = [
+            header['label'] for _, header in self.HEADER_SCHEMA]
+        self._header_index = namedtuple(
+            '_header_index', [info_tag for info_tag, _ in self.HEADER_SCHEMA])
+        self.Header = self._header_index(
+            *[index for index, _ in enumerate(self._header_labels)])
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
@@ -279,7 +286,8 @@ class OWDataSets(widget.OWWidget):
         isremote = file_path in self.allinfo_remote
 
         outdated = islocal and isremote and (
-                self.allinfo_remote[file_path].get('version', '') != self.allinfo_local[file_path].get('version', '')
+            self.allinfo_remote[file_path].get('version', '')
+            != self.allinfo_local[file_path].get('version', '')
         )
         islocal &= not outdated
 
@@ -290,11 +298,7 @@ class OWDataSets(widget.OWWidget):
                          islocal=islocal, outdated=outdated, **info)
 
     def create_model(self):
-        allkeys = set(self.allinfo_local)
-
-        if self.allinfo_remote is not None:
-            allkeys = allkeys | set(self.allinfo_remote)
-
+        allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
         allkeys = sorted(allkeys)
 
         model = QStandardItemModel(self)
@@ -339,8 +343,8 @@ class OWDataSets(widget.OWWidget):
         self.allinfo_local = self.list_local()
 
         try:
-            self.allinfo_remote = f.result()  # type: Dict[Tuple[str, ...], dict]
-        except Exception:
+            self.allinfo_remote = f.result()
+        except Exception:  # anytying can happen, pylint: disable=broad-except
             log.exception("Error while fetching updated index")
             if not self.allinfo_local:
                 self.Error.no_remote_datasets()
@@ -364,7 +368,8 @@ class OWDataSets(widget.OWWidget):
         header.restoreState(self.header_state)
 
         # Update the info text
-        self.infolabel.setText(format_info(model.rowCount(), len(self.allinfo_local)))
+        self.infolabel.setText(
+            format_info(model.rowCount(), len(self.allinfo_local)))
 
         if current_index != -1:
             selmodel = self.view.selectionModel()
@@ -493,6 +498,7 @@ class OWDataSets(widget.OWWidget):
 
         try:
             path = f.result()
+        # anything can happen here, pylint: disable=broad-except
         except Exception as ex:
             log.exception("Error:")
             self.error(format_exception(ex))
@@ -522,7 +528,8 @@ class OWDataSets(widget.OWWidget):
             self.__awaiting_state.pb.advance.disconnect(self.__progress_advance)
             self.__awaiting_state = None
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(900, 600)
 
     def closeEvent(self, event):
@@ -530,7 +537,7 @@ class OWDataSets(widget.OWWidget):
         self.header_state = bytes(self.view.header().saveState())
         super().closeEvent(event)
 
-    def load_data(self, path):
+    def load_data(self, path):  # pylint: disable=no-self-use
         return Orange.data.Table(path)
 
     def list_remote(self):
@@ -563,7 +570,7 @@ class progress(QObject):
     advance = Signal()
 
 
-class _FetchState(object):
+class _FetchState:
     def __init__(self, future, watcher, pb):
         self.future = future
         self.watcher = watcher
