@@ -1,5 +1,4 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=all
+# pylint: disable=protected-access
 
 import gc
 import weakref
@@ -19,7 +18,7 @@ from Orange.widgets.utils.messagewidget import MessagesWidget
 
 
 class DummyComponent(OWComponent):
-    b = None
+    dummyattr = None
 
 
 class MyWidget(OWWidget):
@@ -43,8 +42,8 @@ class WidgetTestCase(WidgetTest):
         setattr(widget, 'field', 1)
         self.assertEqual(widget.field, 1)
 
-        setattr(widget, 'component.b', 2)
-        self.assertEqual(widget.component.b, 2)
+        setattr(widget, 'component.dummyattr', 2)
+        self.assertEqual(widget.component.dummyattr, 2)
 
         setattr(widget, 'widget.field', 3)
         self.assertEqual(widget.widget.field, 3)
@@ -191,6 +190,22 @@ class WidgetTestCase(WidgetTest):
         self.assertFalse(w.statusBar().isVisibleTo(w))
         w.statusBar().hide()
         self.assertFalse(action.isChecked())
+
+    def test_widgets_cant_be_subclassed(self):
+        # pylint: disable=unused-variable
+        with self.assertWarns(RuntimeWarning):
+            class MySubWidget(MyWidget):
+                pass
+
+        with patch("warnings.warn") as warn:
+
+            class MyWidget2(OWWidget, openclass=True):
+                pass
+
+            class MySubWidget2(MyWidget2):
+                pass
+
+            warn.assert_not_called()
 
 
 class WidgetMsgTestCase(WidgetTest):

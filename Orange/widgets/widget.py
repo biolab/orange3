@@ -65,8 +65,8 @@ class WidgetMetaClass(type(QDialog)):
 
     #noinspection PyMethodParameters
     # pylint: disable=bad-classmethod-argument
-    def __new__(mcs, name, bases, kwargs):
-        cls = super().__new__(mcs, name, bases, kwargs)
+    def __new__(mcs, name, bases, namespace, openclass=False, **kwargs):
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         if not cls.name: # not a widget
             return cls
         cls.convert_signals()
@@ -74,11 +74,20 @@ class WidgetMetaClass(type(QDialog)):
             SettingsHandler.create(cls, template=cls.settingsHandler)
         return cls
 
+    @classmethod
+    # pylint: disable=bad-classmethod-argument
+    def __prepare__(mcs, name, bases, metaclass=None, openclass=False,
+                    **kwargs):
+        namespace = super().__prepare__(mcs, name, bases, metaclass, **kwargs)
+        if not openclass:
+            namespace["_final_class"] = True
+        return namespace
+
 
 # pylint: disable=too-many-instance-attributes
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                WidgetMessagesMixin, WidgetSignalsMixin,
-               metaclass=WidgetMetaClass):
+               metaclass=WidgetMetaClass, openclass=True):
     """Base widget class"""
 
     # Global widget count
@@ -262,6 +271,16 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     # pylint: disable=super-init-not-called
     def __init__(self, *args, **kwargs):
         """__init__s are called in __new__; don't call them from here"""
+
+    def __init_subclass__(cls, **_):
+        for base in cls.__bases__:
+            if hasattr(base, "_final_class"):
+                warnings.warn(
+                    "subclassing of widget classes is deprecated and will be "
+                    "disabled in the future.\n"
+                    f"Extract code from {base.__name__} or explicitly open it.",
+                    RuntimeWarning)
+                # raise TypeError(f"class {base.__name__} cannot be subclassed")
 
     @classmethod
     def get_widget_description(cls):

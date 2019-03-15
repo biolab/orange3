@@ -1197,3 +1197,9 @@ class datasets:
         yield cls.data_one_column_nans()
         yield ds_cls
         yield ds_reg
+
+
+@contextmanager
+def open_widget_classes():
+    with patch.object(OWWidget, "__init_subclass__"):
+        yield
