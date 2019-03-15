@@ -140,7 +140,11 @@ class OWImpute(OWWidget):
 
     class Error(OWWidget.Error):
         imputation_failed = Msg("Imputation failed for '{}'")
-        model_based_imputer_sparse = Msg("Model based imputer does not work for sparse data")
+        model_based_imputer_sparse = \
+            Msg("Model based imputer does not work for sparse data")
+
+    class Warning(OWWidget.Warning):
+        cant_handle_var = Msg("Default method can not handle '{}'")
 
     settingsHandler = settings.DomainContextHandler()
 
@@ -341,7 +345,7 @@ class OWImpute(OWWidget):
         self.Error.imputation_failed.clear()
         self.Error.model_based_imputer_sparse.clear()
 
-        if self.data is None or len(self.data) == 0 or len(self.varmodel) == 0:
+        if not self.data or not self.varmodel.rowCount():
             self.Outputs.data.send(self.data)
             self.modified = False
             return
@@ -358,6 +362,7 @@ class OWImpute(OWWidget):
         ]
 
         def impute_one(method, var, data):
+            # Readability counts, pylint: disable=no-else-raise
             # type: (impute.BaseImputeMethod, Variable, Table) -> Any
             if isinstance(method, impute.Model) and data.is_sparse():
                 raise SparseNotSupported()
@@ -389,59 +394,62 @@ class OWImpute(OWWidget):
         assert len(futures) == len(self.varmodel)
         assert self.data is not None
 
-        self.__task = None
-        self.setBlocking(False)
-        self.progressBarFinished()
-
-        data = self.data
-        attributes = []
-        class_vars = []
-        drop_mask = np.zeros(len(self.data), bool)
-
-        for i, (var, fut) in enumerate(zip(self.varmodel, futures)):
-            assert fut.done()
-            newvar = []
+        def get_variable(variable, future, drop_mask) \
+                -> Optional[List[Orange.data.Variable]]:
+            # Returns a (potentially empty) list of variables,
+            # or None on failure that should interrupt the imputation
+            assert future.done()
             try:
-                res = fut.result()
+                res = future.result()
             except SparseNotSupported:
                 self.Error.model_based_imputer_sparse()
-                # ?? break
+                return []  # None?
             except VariableNotSupported:
-                self.warning("Default method can not handle '{}'".
-                             format(var.name))
+                self.Warning.cant_handle_var(variable.name)
+                return []
             except Exception:  # pylint: disable=broad-except
                 log = logging.getLogger(__name__)
-                log.info("Error for %s", var, exc_info=True)
-                self.Error.imputation_failed(var.name)
-                attributes = class_vars = None
-                break
+                log.info("Error for %s", variable.name, exc_info=True)
+                self.Error.imputation_failed(variable.name)
+                return None
+            if isinstance(res, RowMask):
+                drop_mask |= res.mask
+                newvar = variable
             else:
-                if isinstance(res, RowMask):
-                    drop_mask |= res.mask
-                    newvar = var
-                else:
-                    newvar = res
-
+                newvar = res
             if isinstance(newvar, Orange.data.Variable):
                 newvar = [newvar]
+            return newvar
 
-            if i < len(data.domain.attributes):
-                attributes.extend(newvar)
-            else:
-                class_vars.extend(newvar)
-
-        if attributes is None:
-            data = None
-        else:
-            domain = Orange.data.Domain(attributes, class_vars,
-                                        data.domain.metas)
+        def create_data(attributes, class_vars):
+            domain = Orange.data.Domain(
+                attributes, class_vars, self.data.domain.metas)
             try:
-                data = self.data.from_table(domain, data[~drop_mask])
+                return self.data.from_table(domain, self.data[~drop_mask])
             except Exception:  # pylint: disable=broad-except
                 log = logging.getLogger(__name__)
                 log.info("Error", exc_info=True)
                 self.Error.imputation_failed("Unknown")
+                return None
+
+        self.__task = None
+        self.setBlocking(False)
+        self.progressBarFinished()
+
+        attributes = []
+        class_vars = []
+        drop_mask = np.zeros(len(self.data), bool)
+        for i, (var, fut) in enumerate(zip(self.varmodel, futures)):
+            newvar = get_variable(var, fut, drop_mask)
+            if newvar is None:
                 data = None
+                break
+            if i < len(self.data.domain.attributes):
+                attributes.extend(newvar)
+            else:
+                class_vars.extend(newvar)
+        else:
+            data = create_data(attributes, class_vars)
 
         self.Outputs.data.send(data)
         self.modified = False
@@ -484,6 +492,8 @@ class OWImpute(OWWidget):
             self.report_items((("Method", default.name),))
 
     def _on_var_selection_changed(self):
+        # Method is well documented, splitting it is not needed for readability,
+        # thus pylint: disable=too-many-branches
         indexes = self.selection.selectedIndexes()
         defmethod = (Method.AsAboveSoBelow, ())
         methods = [index.data(StateRole) for index in indexes]
