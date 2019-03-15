@@ -12,11 +12,11 @@ from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 
 class OWTransform(OWWidget):
-    name = "Transform"
-    description = "Transform data table."
+    name = "Apply Domain"
+    description = "Applies template domain on data table."
     icon = "icons/Transform.svg"
     priority = 2110
-    keywords = []
+    keywords = ["transform"]
 
     retain_all_data = Setting(False)
 
