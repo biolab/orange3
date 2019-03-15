@@ -118,12 +118,11 @@ class OWDistances(OWWidget):
 
         def _fix_discrete():
             nonlocal data
-            if data.domain.has_discrete_attributes() and (
-                    issparse(data.X) and getattr(metric, "fallback",
-                                                 None) and metric is not
-                                distance.Jaccard
-                    or not metric.supports_discrete
-                    or self.axis == 1 and metric is not distance.Jaccard):
+            if data.domain.has_discrete_attributes() \
+                    and metric is not distance.Jaccard \
+                    and (issparse(data.X) and getattr(metric, "fallback", None)
+                         or not metric.supports_discrete
+                         or self.axis == 1):
                 if not data.domain.has_continuous_attributes():
                     self.Error.no_continuous_features()
                     return False
@@ -133,19 +132,15 @@ class OWDistances(OWWidget):
 
         def _fix_nonbinary():
             nonlocal data
-            if metric is distance.Jaccard:
-                if issparse(data.X):
-                    # do not remove non-binary
-                    return True
-                else:
-                    nbinary = sum(a.is_discrete and len(a.values) == 2
-                                  for a in data.domain.attributes)
-                    if not nbinary:
-                        self.Error.no_binary_features()
-                        return False
-                    elif nbinary < len(data.domain.attributes):
-                        self.Warning.ignoring_nonbinary()
-                        data = distance.remove_nonbinary_features(data)
+            if metric is distance.Jaccard and not issparse(data.X):
+                nbinary = sum(a.is_discrete and len(a.values) == 2
+                              for a in data.domain.attributes)
+                if not nbinary:
+                    self.Error.no_binary_features()
+                    return False
+                elif nbinary < len(data.domain.attributes):
+                    self.Warning.ignoring_nonbinary()
+                    data = distance.remove_nonbinary_features(data)
             return True
 
         def _fix_missing():
@@ -157,11 +152,11 @@ class OWDistances(OWWidget):
 
         self.clear_messages()
         if data is None:
-            return
+            return None
         for check in (_check_sparse,
                       _fix_discrete, _fix_missing, _fix_nonbinary):
             if not check():
-                return
+                return None
         try:
             if metric.supports_normalization and self.normalized_dist:
                 return metric(data, axis=1 - self.axis, impute=True,
