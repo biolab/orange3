@@ -1,8 +1,8 @@
 import numbers
 
-from AnyQt.QtWidgets import QFormLayout, QLineEdit
+from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtGui import QColor
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt
 
 import numpy
 import pyqtgraph as pg
@@ -14,12 +14,6 @@ from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-
-try:
-    from orangecontrib import remote
-    remotely = True
-except ImportError:
-    remotely = False
 
 
 # Maximum number of PCA components that we can set in the widget
@@ -46,9 +40,6 @@ class OWPCA(widget.OWWidget):
 
     ncomponents = settings.Setting(2)
     variance_covered = settings.Setting(100)
-    batch_size = settings.Setting(100)
-    address = settings.Setting('')
-    auto_update = settings.Setting(True)
     auto_commit = settings.Setting(True)
     normalize = settings.ContextSetting(True)
     maxp = settings.Setting(20)
@@ -98,34 +89,6 @@ class OWPCA(widget.OWWidget):
         form.addRow("Components:", self.components_spin)
         form.addRow("Variance covered:", self.variance_spin)
 
-        # Incremental learning
-        self.sampling_box = gui.vBox(self.controlArea, "Incremental learning")
-        self.addresstext = QLineEdit(box)
-        self.addresstext.setPlaceholderText('Remote server')
-        if self.address:
-            self.addresstext.setText(self.address)
-        self.sampling_box.layout().addWidget(self.addresstext)
-
-        form = QFormLayout()
-        self.sampling_box.layout().addLayout(form)
-        self.batch_spin = gui.spin(
-            self.sampling_box, self, "batch_size", 50, 100000, step=50,
-            keyboardTracking=False)
-        form.addRow("Batch size ~ ", self.batch_spin)
-
-        self.start_button = gui.button(
-            self.sampling_box, self, "Start remote computation",
-            callback=self.start, autoDefault=False,
-            tooltip="Start/abort computation on the server")
-        self.start_button.setEnabled(False)
-
-        gui.checkBox(self.sampling_box, self, "auto_update",
-                     "Periodically fetch model", callback=self.update_model)
-        self.__timer = QTimer(self, interval=2000)
-        self.__timer.timeout.connect(self.get_model)
-
-        self.sampling_box.setVisible(remotely)
-
         # Options
         self.options_box = gui.vBox(self.controlArea, "Options")
         self.normalize_box = gui.checkBox(
@@ -161,50 +124,21 @@ class OWPCA(widget.OWWidget):
         self.mainArea.layout().addWidget(self.plot)
         self._update_normalize()
 
-    def update_model(self):
-        self.get_model()
-        if self.auto_update and self.rpca and not self.rpca.ready():
-            self.__timer.start(2000)
-        else:
-            self.__timer.stop()
-
-    def start(self):
-        if 'Abort' in self.start_button.text():
-            self.rpca.abort()
-            self.__timer.stop()
-            self.start_button.setText("Start remote computation")
-        else:
-            self.address = self.addresstext.text()
-            with remote.server(self.address):
-                from Orange.projection.pca import RemotePCA
-                maxiter = (1e5 + self.data.approx_len()) / self.batch_size * 3
-                self.rpca = RemotePCA(self.data, self.batch_size, int(maxiter))
-            self.update_model()
-            self.start_button.setText("Abort remote computation")
-
     @Inputs.data
     def set_data(self, data):
         self.closeContext()
         self.clear_messages()
         self.clear()
-        self.start_button.setEnabled(False)
         self.information()
         self.data = None
         if isinstance(data, SqlTable):
             if data.approx_len() < AUTO_DL_LIMIT:
                 data = Table(data)
-            elif not remotely:
+            else:
                 self.information("Data has been sampled")
                 data_sample = data.sample_time(1, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 data = Table(data_sample)
-            else:       # data was big and remote available
-                self.sampling_box.setVisible(True)
-                self.start_button.setText("Start remote computation")
-                self.start_button.setEnabled(True)
-        if not isinstance(data, SqlTable):
-            self.sampling_box.setVisible(False)
-
         if isinstance(data, Table):
             if len(data.domain.attributes) == 0:
                 self.Error.no_features()
@@ -266,21 +200,6 @@ class OWPCA(widget.OWWidget):
         self.Outputs.components.send(None)
         self.Outputs.pca.send(self._pca_projector)
         self.Outputs.preprocessor.send(None)
-
-    def get_model(self):
-        if self.rpca is None:
-            return
-        if self.rpca.ready():
-            self.__timer.stop()
-            self.start_button.setText("Restart (finished)")
-        self._pca = self.rpca.get_state()
-        if self._pca is None:
-            return
-        self._variance_ratio = self._pca.explained_variance_ratio_
-        self._cumulative = numpy.cumsum(self._variance_ratio)
-        self._setup_plot()
-        self._transformed = None
-        self.commit()
 
     def _setup_plot(self):
         self.plot.clear()
@@ -485,6 +404,11 @@ class OWPCA(widget.OWWidget):
 
         # Remove old `decomposition_idx` when SVD was still included
         settings.pop("decomposition_idx", None)
+
+        # Remove RemotePCA settings
+        settings.pop("batch_size", None)
+        settings.pop("address", None)
+        settings.pop("auto_update", None)
 
 
 if __name__ == "__main__":  # pragma: no cover

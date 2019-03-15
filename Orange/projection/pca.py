@@ -9,21 +9,11 @@ from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 
-try:
-    from orangecontrib.remote import aborted, save_state
-except ImportError:
-    def aborted():
-        return False
-
-    def save_state(_):
-        pass
-
 import Orange.data
 from Orange.statistics import util as ut
 from Orange.data import Variable
 from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.preprocess import Continuize
 from Orange.preprocess.score import LearnerScorer
 from Orange.projection import SklProjector, DomainProjection
 
@@ -352,26 +342,3 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain, len(proj.components_))
-
-
-class RemotePCA:
-    def __new__(cls, data, batch=100, max_iter=100):
-        cont = Continuize(multinomial_treatment=Continuize.Remove)
-        data = cont(data)
-        model = Orange.projection.IncrementalPCA()
-        n = data.approx_len()
-        percent = batch / n * 100 if n else 100
-        for i in range(max_iter):
-            data_sample = data.sample_percentage(percent, no_cache=True)
-            if not data_sample:
-                continue
-            data_sample.download_data(1000000)
-            data_sample = Orange.data.Table.from_numpy(
-                Orange.data.Domain(data_sample.domain.attributes),
-                data_sample.X)
-            model = model.partial_fit(data_sample)
-            model.iteration = i
-            save_state(model)
-            if aborted() or data_sample is data:
-                break
-        return model
