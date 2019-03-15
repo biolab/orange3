@@ -53,7 +53,7 @@ class TestTreeAdapter(unittest.TestCase):
         np.testing.assert_almost_equal(
             adapt.get_distribution(self.left),
             np.array([[1, 42]]))
-        self.assertEqual(adapt.rules(self.right), ["v1 > 13.000"])
+        self.assertEqual(adapt.rules(self.right), ["v1 > 13"])
         self.assertIs(adapt.attribute(self.root), self.v1)
         self.assertEqual(adapt.leaves(self.left), self.left.children)
         self.assertEqual(adapt.leaves(self.right), [self.right.children[0]])

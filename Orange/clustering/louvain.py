@@ -41,8 +41,8 @@ def table_to_knn_graph(data, k_neighbors, metric, progress_callback=None):
 
     """
     # We do k + 1 because each point is closest to itself, which is not useful
-    knn = NearestNeighbors(n_neighbors=k_neighbors, metric=metric).fit(data.X)
-    nearest_neighbors = knn.kneighbors(data.X, return_distance=False)
+    knn = NearestNeighbors(n_neighbors=k_neighbors, metric=metric).fit(data)
+    nearest_neighbors = knn.kneighbors(data, return_distance=False)
     # Convert to list of sets so jaccard can be computed efficiently
     nearest_neighbors = list(map(set, nearest_neighbors))
     num_nodes = len(nearest_neighbors)
@@ -148,3 +148,10 @@ class Louvain:
     def fit_predict(self, X, y=None):
         self.fit(X, y)
         return self.labels
+
+
+if __name__ == "__main__":
+    # clustering run on iris data - orange table
+    data = Table("iris")
+    louvain = Louvain(2)
+    louvain.fit(data)

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import scipy.spatial.distance
 
@@ -5,7 +7,7 @@ from AnyQt.QtCore import Qt, QTimer
 
 import pyqtgraph as pg
 
-from Orange.data import ContinuousVariable, Domain, Table
+from Orange.data import ContinuousVariable, Domain, Table, StringVariable
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
@@ -156,7 +158,6 @@ class OWMDS(OWDataProjectionWidget):
         #: Input data table
         self.signal_data = None
 
-        self.__invalidated = True
         self.embedding = None
         self.effective_matrix = None
 
@@ -241,7 +242,7 @@ class OWMDS(OWDataProjectionWidget):
     def _initialize(self):
         matrix_existed = self.effective_matrix is not None
         effective_matrix = self.effective_matrix
-        self.__invalidated = True
+        self._invalidated = True
         self.data = None
         self.effective_matrix = None
         self.closeContext()
@@ -267,8 +268,11 @@ class OWMDS(OWDataProjectionWidget):
 
         if self.matrix is not None:
             self.effective_matrix = self.matrix
-            if self.matrix.axis == 0 and self.data is self.matrix_data:
-                self.data = None
+            if self.matrix.axis == 0 and self.data is not None \
+                    and self.data is self.matrix_data:
+                names = [[attr.name] for attr in self.data.domain.attributes]
+                domain = Domain([], metas=[StringVariable("labels")])
+                self.data = Table(domain, names)
         elif self.data.domain.attributes:
             preprocessed_data = MDS().preprocess(self.data)
             self.effective_matrix = Euclidean(preprocessed_data)
@@ -280,13 +284,19 @@ class OWMDS(OWDataProjectionWidget):
 
         self.init_attr_values()
         self.openContext(self.data)
-        self.__invalidated = not (matrix_existed and
-                                  self.effective_matrix is not None and
-                                  np.array_equal(effective_matrix,
-                                                 self.effective_matrix))
-        if self.__invalidated:
+        self._invalidated = not (matrix_existed and
+                                 self.effective_matrix is not None and
+                                 np.array_equal(effective_matrix,
+                                                self.effective_matrix))
+        if self._invalidated:
             self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
+
+    def init_attr_values(self):
+        super().init_attr_values()
+        if self.matrix is not None and self.matrix.axis == 0 and \
+                self.data is not None and len(self.data):
+            self.attr_label = self.data.domain["labels"]
 
     def _toggle_run(self):
         if self.__state == OWMDS.Running:
@@ -337,15 +347,20 @@ class OWMDS(OWDataProjectionWidget):
                     init_type=init_type, init_data=init
                 )
 
-                mdsfit = mds(X)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore", ".*double_scalars.*", RuntimeWarning)
+                    mdsfit = mds(X)
                 iterations_done += step_iter
 
                 embedding, stress = mdsfit.embedding_, mdsfit.stress_
-                stress /= np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
+                emb_norm = np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
+                if emb_norm > 0:
+                    stress /= emb_norm
 
-                if iterations_done >= max_iter:
-                    done = True
-                elif (oldstress - stress) < mds.params["eps"]:
+                if iterations_done >= max_iter \
+                        or (oldstress - stress) < mds.params["eps"] \
+                        or stress == 0:
                     done = True
                 init = embedding
                 oldstress = stress
@@ -428,12 +443,15 @@ class OWMDS(OWDataProjectionWidget):
 
     def do_PCA(self):
         self.__invalidate_embedding(self.PCA)
+        self.setup_plot()
 
     def do_random(self):
         self.__invalidate_embedding(self.Random)
+        self.setup_plot()
 
     def do_jitter(self):
         self.__invalidate_embedding(self.Jitter)
+        self.setup_plot()
 
     def __invalidate_embedding(self, initialization=PCA):
         def jitter_coord(part):
@@ -460,8 +478,6 @@ class OWMDS(OWDataProjectionWidget):
             jitter_coord(self.embedding[:, 0])
             jitter_coord(self.embedding[:, 1])
 
-        self.setup_plot()
-
         # restart the optimization if it was interrupted.
         if state == OWMDS.Running:
             self.__start()
@@ -480,15 +496,12 @@ class OWMDS(OWDataProjectionWidget):
 
     def handleNewSignals(self):
         self._initialize()
-        if self.__invalidated:
+        if self._invalidated:
             self.graph.pause_drawing_pairs()
-            self.__invalidated = False
             self.__invalidate_embedding()
-            self.cb_class_density.setEnabled(self.can_draw_density())
+            self.enable_controls()
             self.start()
-        else:
-            self.graph.update_point_props()
-        self.commit()
+        super().handleNewSignals()
 
     def _invalidate_output(self):
         self.commit()

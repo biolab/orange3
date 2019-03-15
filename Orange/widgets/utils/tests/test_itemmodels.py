@@ -581,7 +581,6 @@ class TestVariableListModel(unittest.TestCase):
         with patch.object(PyListModel, "data") as data:
             index = self.model.index(0)
             _ = self.model.data(index, Qt.BackgroundRole)
-            print(data.call_args[1:])
             self.assertEqual(data.call_args[0][1:], (index, Qt.BackgroundRole))
 
     def test_invalid_index(self):

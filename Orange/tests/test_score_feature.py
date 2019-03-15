@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import warnings
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from Orange import preprocess
 from Orange.modelling import RandomForestLearner
 from Orange.preprocess.score import InfoGain, GainRatio, Gini, Chi2, ANOVA,\
     UnivariateLinearRegression, ReliefF, FCBF, RReliefF
-
+from Orange.projection import PCA
 
 
 class FeatureScoringTest(unittest.TestCase):
@@ -150,12 +151,16 @@ class FeatureScoringTest(unittest.TestCase):
                             DiscreteVariable('target')),
                      np.full((2, 2), np.nan),
                      np.r_[0., 1])
-        weights = scorer(data, None)
-        np.testing.assert_equal(weights, np.nan)
+        with warnings.catch_warnings():
+            # these warnings are expected
+            warnings.filterwarnings("ignore", "invalid value.*double_scalars")
+            warnings.filterwarnings("ignore", "invalid value.*true_divide")
+
+            weights = scorer(data, None)
+            np.testing.assert_equal(weights, np.nan)
 
     def test_learner_with_transformation(self):
         learner = RandomForestLearner(random_state=0)
-        from Orange.projection import PCA
         iris = Table("iris")
         data = PCA(n_components=2)(iris)(iris)
         scores = learner.score_data(data)

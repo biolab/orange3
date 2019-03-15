@@ -170,7 +170,7 @@ class TestOWFile(WidgetTest):
         self.assertEqual(file_name, path.basename(self.widget.last_path()))
         self.assertTrue(self.widget.Error.file_not_found.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
-        self.assertEqual(self.widget.info.text(), "No data.")
+        self.assertEqual(self.widget.infolabel.text(), "No data.")
 
         # Open a sample dataset
         self.open_dataset("iris")
@@ -285,8 +285,10 @@ a
         self.assertTrue(self.widget.Warning.load_warning.is_shown())
 
     def test_fail(self):
-        with named_file("name\nc\n\nstring", suffix=".tab") as fn:
+        with named_file("name\nc\n\nstring", suffix=".tab") as fn, \
+                patch("Orange.widgets.data.owfile.log.exception") as log:
             self.open_dataset(fn)
+            log.assert_called()
         self.assertTrue(self.widget.Error.unknown.is_shown())
 
     def test_read_format(self):

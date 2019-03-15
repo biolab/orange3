@@ -2,6 +2,7 @@ import unittest
 import unittest.mock
 import threading
 import random
+import warnings
 
 from concurrent.futures import Future, ThreadPoolExecutor
 from types import SimpleNamespace
@@ -241,6 +242,14 @@ class TestFutureSetWatcher(CoreAppTestCase):
 
 
 class TestTask(CoreAppTestCase):
+    def setUp(self):
+        # This test tests a deprecated class, so ... obviously
+        warnings.filterwarnings(
+            "ignore", "`Task` has been deprecated", PendingDeprecationWarning)
+        warnings.filterwarnings(
+            "ignore", "`submit_task` will be deprecated",
+            PendingDeprecationWarning)
+        super().setUp()
 
     def test_task(self):
         results = []

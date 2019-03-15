@@ -689,7 +689,8 @@ class OWDataTable(widget.OWWidget):
                 RichTableModel.Labels | RichTableModel.Name)
 
             labelnames = set()
-            for a in model.source.domain.variables:
+            domain = model.source.domain
+            for a in itertools.chain(domain.metas, domain.variables):
                 labelnames.update(a.attributes.keys())
             labelnames = sorted(
                 [label for label in labelnames if not label.startswith("_")])

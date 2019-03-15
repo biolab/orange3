@@ -4,11 +4,31 @@ and once used from the bottlechest package (fork of bottleneck).
 
 It also patches bottleneck to contain these functions.
 """
-from warnings import warn
+import warnings
+from typing import Iterable
 
-import bottleneck as bn
 import numpy as np
+import bottleneck as bn
 from scipy import sparse as sp
+import scipy.stats.stats
+from sklearn.utils.sparsefuncs import mean_variance_axis
+
+
+def sparse_array_equal(x1, x2):
+    """Check if two sparse arrays are equal."""
+    if not sp.issparse(x1):
+        raise TypeError("`x1` must be sparse.")
+    if not sp.issparse(x2):
+        raise TypeError("`x2` must be sparse.")
+
+    return x1.shape == x2.shape and (x1 != x2).nnz == 0
+
+
+def array_equal(x1, x2):
+    """Equivalent of np.array_equal that properly handles sparse matrices."""
+    if sp.issparse(x1) and sp.issparse(x2):
+        return sparse_array_equal(x1, x2)
+    return np.array_equal(x1, x2)
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
@@ -391,8 +411,8 @@ def mean(x):
          if sp.issparse(x) else
          np.mean(x))
     if np.isnan(m):
-        warn('mean() resulted in nan. If input can contain nan values, perhaps '
-             'you meant nanmean?', stacklevel=2)
+        warnings.warn('mean() resulted in nan. If input can contain nan values,'
+                      ' perhaps you meant nanmean?', stacklevel=2)
     return m
 
 
@@ -421,27 +441,31 @@ def nansum(x, axis=None):
 
 def nanmean(x, axis=None):
     """ Equivalent of np.nanmean that supports sparse or dense matrices. """
-    def nanmean_sparse(x):
-        n_values = np.prod(x.shape) - np.sum(np.isnan(x.data))
-        return np.nansum(x.data) / n_values
+    if not sp.issparse(x):
+        means = np.nanmean(x, axis=axis)
+    elif axis is None:
+        means, _ = mean_variance_axis(x, axis=0)
+        means = np.nanmean(means)
+    else:
+        means, _ = mean_variance_axis(x, axis=axis)
 
-    return _apply_func(x, np.nanmean, nanmean_sparse, axis=axis)
+    return means
 
 
-def nanvar(x, axis=None):
+def nanvar(x, axis=None, ddof=0):
     """ Equivalent of np.nanvar that supports sparse or dense matrices. """
     def nanvar_sparse(x):
         n_vals = np.prod(x.shape) - np.sum(np.isnan(x.data))
         n_zeros = np.prod(x.shape) - len(x.data)
         mean = np.nansum(x.data) / n_vals
-        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / n_vals
+        return (np.nansum((x.data - mean) ** 2) + mean ** 2 * n_zeros) / (n_vals - ddof)
 
     return _apply_func(x, np.nanvar, nanvar_sparse, axis=axis)
 
 
-def nanstd(x, axis=None):
+def nanstd(x, axis=None, ddof=0):
     """ Equivalent of np.nanstd that supports sparse and dense matrices. """
-    return np.sqrt(nanvar(x, axis=axis))
+    return np.sqrt(nanvar(x, axis=axis, ddof=ddof))
 
 
 def nanmedian(x, axis=None):
@@ -460,6 +484,14 @@ def nanmedian(x, axis=None):
             return np.nanmedian(x.toarray())
 
     return _apply_func(x, np.nanmedian, nanmedian_sparse, axis=axis)
+
+
+def nanmode(x, axis=0):
+    """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
+    nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
+    res = scipy.stats.stats.mode(x, axis)
+    return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
+                                        np.where(nans, np.nan, res.count))
 
 
 def unique(x, return_counts=False):
@@ -555,16 +587,56 @@ def digitize(x, bins, right=False):
     return r
 
 
-def var(x, axis=None):
+def var(x, axis=None, ddof=0):
     """ Equivalent of np.var that supports sparse and dense matrices. """
     if not sp.issparse(x):
-        return np.var(x, axis)
+        return np.var(x, axis, ddof=ddof)
 
     result = x.multiply(x).mean(axis) - np.square(x.mean(axis))
     result = np.squeeze(np.asarray(result))
+
+    # Apply correction for degrees of freedom
+    n = np.prod(x.shape) if axis is None else x.shape[axis]
+    result *= n / (n - ddof)
+
     return result
 
 
-def std(x, axis=None):
+def std(x, axis=None, ddof=0):
     """ Equivalent of np.std that supports sparse and dense matrices. """
-    return np.sqrt(var(x, axis=axis))
+    return np.sqrt(var(x, axis=axis, ddof=ddof))
+
+
+def FDR(p_values: Iterable, dependent=False, m=None, ordered=False) -> Iterable:
+    """ `False Discovery Rate <http://en.wikipedia.org/wiki/False_discovery_rate>`_
+        correction on a list of p-values.
+
+    :param p_values: list or np.ndarray of p-values.
+    :param dependent: use correction for dependent hypotheses (default False).
+    :param m: number of hypotheses tested (default ``len(p_values)``).
+    :param ordered: prevent sorting of p-values if they are already sorted
+        (default False).
+    :return: list or np.ndarray, same as the input
+    """
+    if p_values is None or len(p_values) == 0 or \
+            (m is not None and m <= 0):
+        return None
+
+    is_list = isinstance(p_values, list)
+    p_values = np.array(p_values)
+    if m is None:
+        m = len(p_values)
+    if not ordered:
+        ordered = (np.diff(p_values) >= 0).all()
+        if not ordered:
+            indices = np.argsort(p_values)
+            p_values = p_values[indices]
+
+    if dependent:  # correct q for dependent tests
+        m *= sum(1 / np.arange(1, m + 1))
+
+    fdrs = (p_values * m / np.arange(1, len(p_values) + 1))[::-1]
+    fdrs = np.array(np.minimum.accumulate(fdrs)[::-1])
+    if not ordered:
+        fdrs[indices] = fdrs.copy()
+    return fdrs if not is_list else list(fdrs)

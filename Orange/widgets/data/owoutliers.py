@@ -143,7 +143,7 @@ class OWOutliers(widget.OWWidget):
 
     def _get_outliers(self):
         try:
-            y_pred = self.detect_outliers()
+            y_pred, amended_data = self.detect_outliers()
         except ValueError:
             self.Error.singular_cov()
             self.in_out_info_label.setText(self.in_out_info_default)
@@ -154,11 +154,10 @@ class OWOutliers(widget.OWWidget):
         else:
             inliers_ind = np.where(y_pred == 1)[0]
             outliers_ind = np.where(y_pred == -1)[0]
-            inliers = self.new_data[inliers_ind]
-            outliers = self.new_data[outliers_ind]
+            inliers = amended_data[inliers_ind]
+            outliers = amended_data[outliers_ind]
             self.in_out_info_label.setText(
-                "{} inliers, {} outliers".format(len(inliers),
-                                                 len(outliers)))
+                f"{len(inliers)} inliers, {len(outliers)} outliers")
             self.n_inliers = len(inliers)
             self.n_outliers = len(outliers)
 
@@ -168,7 +167,7 @@ class OWOutliers(widget.OWWidget):
         self.clear_messages()
         inliers = outliers = None
         self.n_inliers = self.n_outliers = None
-        if self.data is not None and len(self.data) > 0:
+        if self.data:
             inliers, outliers = self._get_outliers()
 
         self.Outputs.inliers.send(inliers)
@@ -187,23 +186,22 @@ class OWOutliers(widget.OWWidget):
         data = self.data.transform(Domain(self.data.domain.attributes))
         model = learner(data)
         y_pred = model(data)
-        self.add_metas(model)
-        return np.array(y_pred)
+        amended_data = self.amended_data(model)
+        return np.array(y_pred), amended_data
 
-    def add_metas(self, model):
-        if self.outlier_method == self.Covariance:
-            mahal = model.mahalanobis(self.data.X)
-            mahal = mahal.reshape(len(self.data), 1)
-            attrs = self.data.domain.attributes
-            classes = self.data.domain.class_vars
-            new_metas = list(self.data.domain.metas) + \
-                        [ContinuousVariable(name="Mahalanobis")]
-            self.new_domain = Domain(attrs, classes, new_metas)
-            self.new_data = self.data.transform(self.new_domain)
-            self.new_data.metas = np.hstack((self.data.metas, mahal))
-        else:
-            self.new_domain = self.data.domain
-            self.new_data = self.data
+    def amended_data(self, model):
+        if self.outlier_method != self.Covariance:
+            return self.data
+        mahal = model.mahalanobis(self.data.X)
+        mahal = mahal.reshape(len(self.data), 1)
+        attrs = self.data.domain.attributes
+        classes = self.data.domain.class_vars
+        new_metas = list(self.data.domain.metas) + \
+                    [ContinuousVariable(name="Mahalanobis")]
+        new_domain = Domain(attrs, classes, new_metas)
+        amended_data = self.data.transform(new_domain)
+        amended_data.metas = np.hstack((self.data.metas, mahal))
+        return amended_data
 
     def send_report(self):
         if self.n_outliers is None or self.n_inliers is None:

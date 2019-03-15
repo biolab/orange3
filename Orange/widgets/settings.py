@@ -90,6 +90,24 @@ class Setting:
         return (self.default, )
 
 
+# Pylint ignores type annotations in assignments. For
+#
+#    x: int = Setting(0)
+#
+# it ignores `int` and assumes x is of type `Setting`. Annotations in
+# comments ( # type: int) also don't work. The only way to annotate x is
+#
+#    x: int
+#    x = Setting(0)
+#
+# but we don't want to clutter the code with extra lines of annotations. Hence
+# we disable checking the type of `Setting` by confusing pylint with an extra
+# definition that is never executed.
+if 1 == 0:
+    class Setting:  # pylint: disable=function-redefined
+        pass
+
+
 class SettingProvider:
     """A hierarchical structure keeping track of settings belonging to
     a class and child setting providers.
@@ -489,6 +507,12 @@ class SettingsHandler:
         new_data.update(data)
         return new_data
 
+    def _prepare_defaults(self, widget):
+        self.defaults = self.provider.pack(widget)
+        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
+            if setting.schema_only:
+                data.pop(setting.name, None)
+
     def pack_data(self, widget):
         """
         Pack the settings for the given widget. This method is used when
@@ -504,6 +528,7 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
+        widget.settingsAboutToBePacked.emit()
         packed_settings = self.provider.pack(widget)
         packed_settings[VERSION_KEY] = self.widget_class.settings_version
         return packed_settings
@@ -517,10 +542,8 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
-        self.defaults = self.provider.pack(widget)
-        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
-            if setting.schema_only:
-                data.pop(setting.name, None)
+        widget.settingsAboutToBePacked.emit()
+        self._prepare_defaults(widget)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
@@ -663,9 +686,11 @@ class ContextHandler(SettingsHandler):
         """Call the inherited method, then add local contexts to the dict."""
         data = super().pack_data(widget)
         self.settings_from_widget(widget)
-        for context in widget.context_settings:
+        context_settings = [copy.copy(context) for context in
+                            widget.context_settings]
+        for context in context_settings:
             context.values[VERSION_KEY] = self.widget_class.settings_version
-        data["context_settings"] = widget.context_settings
+        data["context_settings"] = context_settings
         return data
 
     def update_defaults(self, widget):
@@ -675,6 +700,7 @@ class ContextHandler(SettingsHandler):
         Merge the widgets local contexts into the global contexts and persist
         the settings (including the contexts) to disk.
         """
+        widget.settingsAboutToBePacked.emit()
         self.settings_from_widget(widget)
         globs = self.global_contexts
         assert widget.context_settings is not globs
@@ -683,7 +709,10 @@ class ContextHandler(SettingsHandler):
         globs.sort(key=lambda c: -c.time)
         del globs[self.MAX_SAVED_CONTEXTS:]
 
-        super().update_defaults(widget)
+        # Save non-context settings. Do not call super().update_defaults, so that
+        # settingsAboutToBePacked is emitted once.
+        self._prepare_defaults(widget)
+        self.write_defaults()
 
     def new_context(self, *args):
         """Create a new context."""

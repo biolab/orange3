@@ -1,4 +1,4 @@
 docutils
 numpydoc
 Sphinx>=1.3
-PyQt5
+recommonmark

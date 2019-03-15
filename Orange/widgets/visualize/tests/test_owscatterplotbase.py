@@ -455,6 +455,26 @@ class TestOWScatterPlotBase(WidgetTest):
             - graph.scatterplot_item.data["size"],
             SELECTION_WIDTH)
 
+    @patch("Orange.widgets.visualize.owscatterplotgraph"
+           ".MAX_N_VALID_SIZE_ANIMATE", 5)
+    def test_size_animation(self):
+        self._update_sizes_for_points(5)
+        self.assertEqual(self.graph.scatterplot_item.setSize.call_count, 6)
+        self._update_sizes_for_points(6)
+        self.graph.scatterplot_item.setSize.assert_called_once()
+
+    def _update_sizes_for_points(self, n: int):
+        arr = np.arange(n, dtype=float)
+        self.master.get_coordinates_data = lambda: (arr, arr)
+        self.master.get_size_data = lambda: arr
+        self.graph.reset_graph()
+        self.graph.scatterplot_item.setSize = Mock(
+            wraps=self.graph.scatterplot_item.setSize)
+        self.master.get_size_data = lambda: arr[::-1]
+        self.graph.update_sizes()
+        self.process_events(until=lambda: not (
+            self.graph.timer is not None and self.graph.timer.isActive()))
+
     def test_colors_discrete(self):
         self.master.is_continuous_color = lambda: False
         palette = self.master.get_palette()

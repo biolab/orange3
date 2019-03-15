@@ -523,14 +523,19 @@ class ContinuousVariable(Variable):
         """
         super().__init__(name, compute_value, sparse=sparse)
         if number_of_decimals is None:
-            self.number_of_decimals = 3
+            self._number_of_decimals = 3
             self.adjust_decimals = 2
+            self._format_str = "%g"
         else:
             self.number_of_decimals = number_of_decimals
 
     @property
     def number_of_decimals(self):
         return self._number_of_decimals
+
+    @property
+    def format_str(self):
+        return self._format_str
 
     @property
     def colors(self):
@@ -554,7 +559,7 @@ class ContinuousVariable(Variable):
     def number_of_decimals(self, x):
         self._number_of_decimals = x
         self.adjust_decimals = 0
-        self._out_format = "%.{}f".format(self.number_of_decimals)
+        self._format_str = "%.{}f".format(self.number_of_decimals)
 
     def to_val(self, s):
         """
@@ -577,7 +582,7 @@ class ContinuousVariable(Variable):
         """
         if isnan(val):
             return "?"
-        return self._out_format % val
+        return self._format_str % val
 
     str_val = repr_val
 

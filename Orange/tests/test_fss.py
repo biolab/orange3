@@ -27,6 +27,39 @@ class TestFSS(unittest.TestCase):
         best = max((gini(self.titanic, f), f) for f in self.titanic.domain.attributes)[1]
         self.assertEqual(data2.domain.attributes[0], best)
 
+    def test_select_2(self):
+        gini = Gini()
+        # 100th percentile = selection of top1 attribute
+        sel1 = SelectBestFeatures(method=gini, k=1.0)
+        data2 = sel1(self.titanic)
+        best = max((gini(self.titanic, f), f) for f in self.titanic.domain.attributes)[1]
+        self.assertEqual(data2.domain.attributes[0], best)
+
+        # no k and no threshold, select all attributes
+        sel2 = SelectBestFeatures(method=gini, k=0)
+        data2 = sel2(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), len(self.titanic.domain.attributes))
+
+        # 31% = selection of top  (out of 3) attributes
+        sel3 = SelectBestFeatures(method=gini, k=0.31)
+        data2 = sel3(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), 1)
+
+        # 35% = selection of top  (out of 3) attributes
+        sel3 = SelectBestFeatures(method=gini, k=0.35)
+        data2 = sel3(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), 1)
+
+        # 1% = select one (out of 3) attributes
+        sel3 = SelectBestFeatures(method=gini, k=0.01)
+        data2 = sel3(self.titanic)
+        self.assertEqual(len(data2.domain.attributes), 1)
+
+        # number of selected attrs should be relative to number of current input attrs
+        sel3 = SelectBestFeatures(method=gini, k=1.0)
+        data2 = sel3(self.wine)
+        self.assertEqual(len(data2.domain.attributes), 13)
+
     def test_select_threshold(self):
         anova = ANOVA()
         t = 30

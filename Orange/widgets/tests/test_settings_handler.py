@@ -8,6 +8,8 @@ import unittest
 from unittest.mock import patch, Mock
 import warnings
 
+from AnyQt.QtCore import pyqtSignal as Signal, QObject
+
 from Orange.tests import named_file
 from Orange.widgets.settings import SettingsHandler, Setting, SettingProvider,\
     VERSION_KEY, rename_setting, Context, migrate_str_to_variable
@@ -77,10 +79,11 @@ class SettingHandlerTestCase(unittest.TestCase):
         with named_file("") as f:
             handler._get_settings_filename = lambda: f
 
-            with patch('Orange.widgets.settings.open', create=True) as mocked_open:
-                mocked_open.side_effect = PermissionError()
-
+            with patch("Orange.widgets.settings.log.error") as log, \
+                patch('Orange.widgets.settings.open', create=True,
+                       side_effect=PermissionError):
                 handler.write_defaults()
+                log.assert_called()
 
     def test_write_defaults_handles_writing_errors(self):
         handler = SettingsHandler()
@@ -90,10 +93,11 @@ class SettingHandlerTestCase(unittest.TestCase):
             f.close()  # so it can be opened on windows
             handler._get_settings_filename = lambda x=f: x.name
 
-            with patch.object(handler, "write_defaults_file") as mocked_write:
-                mocked_write.side_effect = error()
-
+            with patch("Orange.widgets.settings.log.error") as log, \
+                    patch.object(handler, "write_defaults_file",
+                                 side_effect=error):
                 handler.write_defaults()
+                log.assert_called()
 
             # Corrupt setting files should be removed
             self.assertFalse(os.path.exists(f.name))
@@ -340,13 +344,25 @@ class SettingHandlerTestCase(unittest.TestCase):
         if os.path.isfile(filename):
             os.remove(filename)
 
+    def test_about_pack_settings_signal(self):
+        handler = SettingsHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        fn = Mock()
+        widget.settingsAboutToBePacked.connect(fn)
+        handler.pack_data(widget)
+        self.assertEqual(1, fn.call_count)
+        handler.update_defaults(widget)
+        self.assertEqual(2, fn.call_count)
+
 
 class Component:
     int_setting = Setting(42)
     schema_only_setting = Setting("only", schema_only=True)
 
 
-class SimpleWidget:
+class SimpleWidget(QObject):
     settings_version = 1
 
     setting = Setting(42)
@@ -355,8 +371,10 @@ class SimpleWidget:
     non_setting = 5
 
     component = SettingProvider(Component)
+    settingsAboutToBePacked = Signal()
 
     def __init__(self):
+        super().__init__()
         self.component = Component()
 
     migrate_settings = Mock()

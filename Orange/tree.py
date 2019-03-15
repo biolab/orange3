@@ -114,7 +114,7 @@ class NumericNode(Node):
 
     def descend(self, inst):
         val = inst[self.attr_idx]
-        return np.nan if np.isnan(val) else val > self.threshold
+        return np.nan if np.isnan(val) else int(val > self.threshold)
 
     def _set_child_descriptions(self, child, child_idx, conditions):
         attr = self.attr

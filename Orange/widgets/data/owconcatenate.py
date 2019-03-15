@@ -40,6 +40,11 @@ class OWConcatenate(widget.OWWidget):
     class Outputs:
         data = Output("Data", Orange.data.Table)
 
+    merge_type: int
+    append_source_column: bool
+    source_column_role: int
+    source_attr_name: str
+
     #: Domain merging operations
     MergeUnion, MergeIntersection = 0, 1
 
@@ -140,11 +145,11 @@ class OWConcatenate(widget.OWWidget):
 
     @Inputs.additional_data
     @check_sql_input
-    def set_more_data(self, data=None, id=None):
+    def set_more_data(self, data=None, sig_id=None):
         if data is not None:
-            self.more_data[id] = data
-        elif id in self.more_data:
-            del self.more_data[id]
+            self.more_data[sig_id] = data
+        elif sig_id in self.more_data:
+            del self.more_data[sig_id]
 
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
@@ -220,24 +225,24 @@ def unique(seq):
             seen_set.add(el)
 
 
-def domain_union(A, B):
+def domain_union(a, b):
     union = Orange.data.Domain(
-        tuple(unique(A.attributes + B.attributes)),
-        tuple(unique(A.class_vars + B.class_vars)),
-        tuple(unique(A.metas + B.metas))
+        tuple(unique(a.attributes + b.attributes)),
+        tuple(unique(a.class_vars + b.class_vars)),
+        tuple(unique(a.metas + b.metas))
     )
     return union
 
 
-def domain_intersection(A, B):
+def domain_intersection(a, b):
     def tuple_intersection(t1, t2):
         inters = set(t1) & set(t2)
         return tuple(unique(el for el in t1 + t2 if el in inters))
 
     intersection = Orange.data.Domain(
-        tuple_intersection(A.attributes, B.attributes),
-        tuple_intersection(A.class_vars, B.class_vars),
-        tuple_intersection(A.metas, B.metas),
+        tuple_intersection(a.attributes, b.attributes),
+        tuple_intersection(a.class_vars, b.class_vars),
+        tuple_intersection(a.metas, b.metas),
     )
 
     return intersection

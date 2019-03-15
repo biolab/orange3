@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+
 import numpy as np
 import sklearn
 
@@ -114,13 +115,14 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         m = lr(self.zoo)
         probs = m(self.zoo[50], m.Probs)
         probs2 = m(self.zoo[50, :], m.Probs)
-        np.testing.assert_almost_equal(probs, probs2)
+        np.testing.assert_almost_equal(probs, probs2[0])
 
     def test_single_class(self):
         t = self.iris[60:90]
         self.assertEqual(len(np.unique(t.Y)), 1)
         learn = LogisticRegressionLearner()
-        model = learn(t)
+        with self.assertWarns(UserWarning):
+            model = learn(t)
         self.assertEqual(model(t[0]), 1)
         self.assertTrue(np.all(model(t[0], ret=Model.Probs) == [0, 1, 0]))
         self.assertTrue(np.all(model(t) == 1))

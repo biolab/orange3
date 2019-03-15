@@ -230,7 +230,7 @@ class CanvasMainWindow(QMainWindow):
         frame.setWidget(self.scheme_widget)
 
         # Window 'title'
-        self.setWindowFilePath(self.scheme_widget.path())
+        self.setWindowFilePath(self.scheme_widget.path() or " ")
         self.scheme_widget.pathChanged.connect(self.setWindowFilePath)
         self.scheme_widget.modificationChanged.connect(self.setWindowModified)
 
@@ -632,9 +632,10 @@ class CanvasMainWindow(QMainWindow):
 
         self.freeze_action = \
             QAction(self.tr("Freeze"), self,
+                    shortcut=QKeySequence("Shift+F"),
                     objectName="signal-freeze-action",
                     checkable=True,
-                    toolTip=self.tr("Freeze signal propagation."),
+                    toolTip=self.tr("Freeze signal propagation (Shift+F)"),
                     toggled=self.set_signal_freeze,
                     icon=canvas_icons("Pause.svg")
                     )
@@ -1706,12 +1707,10 @@ class CanvasMainWindow(QMainWindow):
         return dlg.exec_()
 
     def reset_widget_settings(self):
-        res = message_question(
-            "Clear all widget settings on next restart",
+        res = message_information(
+            "Orange needs to be restarted for the changes to take effect.",
             title="Clear settings",
-            informative_text=(
-                "A restart of the application is necessary " +
-                "for the changes to take effect"),
+            informative_text="Press OK to close Orange now.",
             buttons=QMessageBox.Ok | QMessageBox.Cancel,
             default_button=QMessageBox.Ok,
             parent=self

@@ -150,7 +150,8 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def test_add_variables(self):
         w = self.widget
-        w.variables_selection.add_remove.buttons[1].click()
+        with self.no_show_on_desktop():
+            w.variables_selection.add_remove.buttons[1].click()
 
     def test_set_radius_no_data(self):
         """
@@ -181,6 +182,11 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.setup_plot.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.setup_plot.assert_called_once()
+
+    def test_two_classes_dataset(self):
+        self.widget.radio_placement.buttons[1].click()
+        self.send_signal(self.widget.Inputs.data, Table("heart_disease"))
+        self.assertFalse(self.widget.radio_placement.buttons[1].isEnabled())
 
 
 class LinProjVizRankTests(WidgetTest):

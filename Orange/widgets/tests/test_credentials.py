@@ -50,21 +50,27 @@ class TestCredentialManager(unittest.TestCase):
         Handle error when setting password fails.
         GH-2354
         """
-        with patch("keyring.set_password", side_effect=Exception):
+        with patch("keyring.set_password", side_effect=Exception), \
+                patch("Orange.widgets.credentials.log.exception") as log:
             self.cm.key = ""
+            log.assert_called()
 
     def test_delete_password(self):
         """
         Handling error when deleting password fails
         GH-2354
         """
-        with patch("keyring.delete_password", side_effect=Exception):
+        with patch("keyring.delete_password", side_effect=Exception), \
+                patch("Orange.widgets.credentials.log.exception") as log:
             del self.cm.key
+            log.assert_called()
 
     def test_get_password(self):
         """
         Handling errors when getting password fails.
         GH-2354
         """
-        with patch("keyring.get_password", side_effect=Exception):
+        with patch("keyring.get_password", side_effect=Exception), \
+                patch("Orange.widgets.credentials.log.exception") as log:
             self.assertEqual(self.cm.key, None)
+            log.assert_called()

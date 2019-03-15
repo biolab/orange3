@@ -28,7 +28,7 @@ from AnyQt.QtWidgets import (
     QWidget, QDialog, QLabel, QLineEdit, QTreeView, QHeaderView,
     QTextBrowser, QDialogButtonBox, QProgressDialog,
     QVBoxLayout, QStyle, QStyledItemDelegate, QStyleOptionViewItem,
-    QApplication, QHBoxLayout, QPushButton, QFormLayout
+    QApplication, QHBoxLayout, QPushButton, QFormLayout, QMessageBox
 )
 
 from AnyQt.QtGui import (
@@ -41,9 +41,11 @@ from AnyQt.QtCore import (
     QSettings)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
-from ..gui.utils import message_warning, message_information, \
-                        message_critical as message_error, \
-                        OSX_NSURL_toLocalFile
+from ..gui.utils import (
+    message_warning, message_critical as message_error,
+    OSX_NSURL_toLocalFile
+)
+
 from ..help.manager import get_dist_meta, trim, parse_meta
 
 
@@ -774,9 +776,25 @@ class AddonManagerDialog(QDialog):
         self.reject()
 
     def __on_installer_finished(self):
-        message = "Please restart Orange for changes to take effect."
-        message_information(message, parent=self)
-        self.accept()
+
+        def message_restart(parent):
+            icon = QMessageBox.Information
+            buttons = QMessageBox.Ok | QMessageBox.Cancel
+            title = 'Information'
+            text = 'Orange needs to be restarted for the changes to take effect.'
+
+            msg_box = QMessageBox(icon, title, text, buttons, parent)
+            msg_box.setDefaultButton(QMessageBox.Ok)
+            msg_box.setInformativeText('Press OK to close Orange now.')
+
+            msg_box.button(QMessageBox.Cancel).setText('Close later')
+            return msg_box.exec_()
+
+        if QMessageBox.Ok == message_restart(self):
+            self.accept()
+            self.parent().close()
+        else:
+            self.reject()
 
 
 def list_available_versions():

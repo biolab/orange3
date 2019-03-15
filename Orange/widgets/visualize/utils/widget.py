@@ -459,6 +459,15 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
+        self._handle_subset_data()
+        if self._invalidated:
+            self._invalidated = False
+            self.setup_plot()
+        else:
+            self.graph.update_point_props()
+        self.commit()
+
+    def _handle_subset_data(self):
         self.Warning.subset_independent.clear()
         self.Warning.subset_not_subset.clear()
         if self.data is None or self.subset_data is None:
@@ -470,13 +479,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
                 self.Warning.subset_independent()
             elif self.subset_indices - ids:
                 self.Warning.subset_not_subset()
-
-        if self._invalidated:
-            self._invalidated = False
-            self.setup_plot()
-        else:
-            self.graph.update_point_props()
-        self.commit()
 
     def get_subset_mask(self):
         if not self.subset_indices:

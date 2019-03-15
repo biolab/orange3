@@ -1,9 +1,10 @@
+import warnings
 from contextlib import contextmanager
 import os
 import pickle
 import time
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 # pylint: disable=unused-import
 from typing import List, Optional, TypeVar
 try:
@@ -105,6 +106,9 @@ class WidgetTest(GuiTest):
         report = OWReport()
         cls.widgets.append(report)
         OWReport.get_instance = lambda: report
+        if not (os.environ.get("TRAVIS") or os.environ.get("APPVEYOR")):
+            report.show = Mock()
+
         Variable._clear_all_caches()
 
     def tearDown(self):
@@ -143,6 +147,17 @@ class WidgetTest(GuiTest):
         self.process_events()
         self.widgets.append(widget)
         return widget
+
+    @contextmanager
+    def no_show_on_desktop(self):
+        # disabling show on travis and appveyor causes timeouts?!
+        if os.environ.get("TRAVIS") or os.environ.get("APPVEYOR"):
+            yield
+        else:
+            for widget in self.widgets:
+                widget.show = Mock()
+            with patch("AnyQt.QtWidgets.QWidget.show"):
+                yield
 
     @staticmethod
     def reset_default_settings(widget):
@@ -932,6 +947,21 @@ class ProjectionWidgetTestMixin:
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
+    def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.send_signal(self.widget.Inputs.data_subset, self.data[:10])
+        subset = [brush.color().name() == "#46befa" for brush in
+                  self.widget.graph.scatterplot_item.data['brush'][:10]]
+        other = [brush.color().name() == "#000000" for brush in
+                 self.widget.graph.scatterplot_item.data['brush'][10:]]
+        self.assertTrue(all(subset))
+        self.assertTrue(all(other))
+
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -952,6 +982,10 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
+        # scipy.sparse uses matrix; this filter can be removed when it stops
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
+
         table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 from AnyQt.QtWidgets import QWidget, QVBoxLayout
@@ -25,6 +27,9 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.main_area = gui.vBox(self, spacing=0)
+
+    def get_parameters(self):
+        return self.parameters
 
     def __parameter_changed(self, update_parameter, parameter_name):
         update_parameter(parameter_name)
@@ -131,6 +136,11 @@ class MDSParametersEditor(ManifoldParametersEditor):
         self.random_state_radio = self._create_radio_parameter(
             "init_type", "Initialization")
 
+    def get_parameters(self):
+        par = super().get_parameters()
+        if self.init_type_index == 0:
+            par = {"n_init": 1, **par}
+        return par
 
 class IsomapParametersEditor(ManifoldParametersEditor):
     n_neighbors = Setting(5)
@@ -208,6 +218,9 @@ class OWManifoldLearning(OWWidget):
         sparse_not_supported = Msg("Sparse data is not supported.")
         out_of_memory = Msg("Out of memory")
 
+    class Warning(OWWidget.Warning):
+        graph_not_connected = Msg("Disconnected graph, embedding may not work")
+
     @classmethod
     def migrate_settings(cls, settings, version):
         if version < 2:
@@ -276,11 +289,19 @@ class OWManifoldLearning(OWWidget):
         self.apply()
 
     def apply(self):
+        builtin_warn = warnings.warn
+        def _handle_disconnected_graph_warning(msg, *args, **kwargs):
+            if msg.startswith("Graph is not fully connected"):
+                self.Warning.graph_not_connected()
+            else:
+                builtin_warn(msg, *args, **kwargs)
+
         out = None
         data = self.data
         method = self.MANIFOLD_METHODS[self.manifold_method_index]
         have_data = data is not None and len(data)
         self.Error.clear()
+        self.Warning.clear()
 
         if have_data and data.is_sparse():
             self.Error.sparse_not_supported()
@@ -290,6 +311,7 @@ class OWManifoldLearning(OWWidget):
                             data.domain.class_vars,
                             data.domain.metas)
             try:
+                warnings.warn = _handle_disconnected_graph_warning
                 projector = method(**self.get_method_parameters(data, method))
                 model = projector(data)
                 if isinstance(model, TSNEModel):
@@ -309,12 +331,14 @@ class OWManifoldLearning(OWWidget):
                 self.Error.out_of_memory()
             except np.linalg.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
+            finally:
+                warnings.warn = builtin_warn
 
         self.Outputs.transformed_data.send(out)
 
     def get_method_parameters(self, data, method):
         parameters = dict(n_components=self.n_components)
-        parameters.update(self.params_widget.parameters)
+        parameters.update(self.params_widget.get_parameters())
         return parameters
 
     def send_report(self):

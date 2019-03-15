@@ -311,7 +311,7 @@ class OWSGD(OWBaseLearner):
             if self.model.domain.class_var.is_discrete:
                 coeffs = create_coef_table(self.model)
             else:
-                attrs = [ContinuousVariable("coef", number_of_decimals=7)]
+                attrs = [ContinuousVariable("coef")]
                 domain = Domain(attrs, metas=[StringVariable("name")])
                 cfs = list(self.model.intercept) + list(self.model.coefficients)
                 names = ["intercept"] + \

@@ -377,6 +377,7 @@ class FileFormat(metaclass=FileFormatMeta):
     # Priority when multiple formats support the same extension. Also
     # the sort order in file open/save combo boxes. Lower is better.
     PRIORITY = 10000
+    OPTIONAL_TYPE_ANNOTATIONS = False
 
     def __init__(self, filename):
         """
@@ -431,8 +432,11 @@ class FileFormat(metaclass=FileFormatMeta):
         raise IOError('No readers for file "{}"'.format(filename))
 
     @classmethod
-    def write(cls, filename, data):
-        return cls.write_file(filename, data)
+    def write(cls, filename, data, with_annotations=True):
+        if cls.OPTIONAL_TYPE_ANNOTATIONS:
+            return cls.write_file(filename, data, with_annotations)
+        else:
+            return cls.write_file(filename, data)
 
     @classmethod
     def write_table_metadata(cls, filename, data):
@@ -798,11 +802,12 @@ class FileFormat(metaclass=FileFormatMeta):
                                                   zip(repeat('meta'), data.domain.metas)))))
 
     @classmethod
-    def write_headers(cls, write, data):
+    def write_headers(cls, write, data, with_annotations=True):
         """`write` is a callback that accepts an iterable"""
         write(cls.header_names(data))
-        write(cls.header_types(data))
-        write(cls.header_flags(data))
+        if with_annotations:
+            write(cls.header_types(data))
+            write(cls.header_flags(data))
 
     @classmethod
     def formatter(cls, var):
@@ -856,6 +861,7 @@ class CSVReader(FileFormat):
     SUPPORT_COMPRESSED = True
     SUPPORT_SPARSE_DATA = False
     PRIORITY = 20
+    OPTIONAL_TYPE_ANNOTATIONS = True
 
     def read(self):
         for encoding in (lambda: ('us-ascii', None),                 # fast
@@ -915,12 +921,12 @@ class CSVReader(FileFormat):
         raise ValueError('Cannot parse dataset {}: {}'.format(self.filename, error)) from error
 
     @classmethod
-    def write_file(cls, filename, data):
+    def write_file(cls, filename, data, with_annotations=True):
         with cls.open(filename, mode='wt', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=cls.DELIMITERS[0])
-            cls.write_headers(writer.writerow, data)
+            cls.write_headers(writer.writerow, data, with_annotations)
             cls.write_data(writer.writerow, data)
-        cls.write_table_metadata(filename, data)
+            cls.write_table_metadata(filename, data)
 
 
 class TabReader(CSVReader):
@@ -981,7 +987,7 @@ class ExcelReader(FileFormat):
     """Reader for excel files"""
     EXTENSIONS = ('.xlsx',)
     DESCRIPTION = 'Microsoft Excel spreadsheet'
-    SUPPORT_COMPRESSED = True
+    SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
 
     def __init__(self, filename):

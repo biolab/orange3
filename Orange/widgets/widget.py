@@ -177,6 +177,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
+    settingsAboutToBePacked = Signal()
     contextAboutToBeOpened = Signal(object)
     contextOpened = Signal()
     contextClosed = Signal()
@@ -814,14 +815,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.setAttribute(Qt.WA_Resized, True)
             self.__was_shown = True
         self.__quicktipOnce()
-
-    def wheelEvent(self, event):
-        """Silently accept the wheel event.
-
-        This is to ensure combo boxes and other controls that have focus
-        don't receive this event unless the cursor is over them.
-        """
-        event.accept()
 
     def setCaption(self, caption):
         # save caption title in case progressbar will change it

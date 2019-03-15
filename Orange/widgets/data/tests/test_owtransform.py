@@ -76,6 +76,14 @@ class TestOWTransform(WidgetTest):
         self.assertIsInstance(output, Table)
         self.assertEqual(output.X.shape, (len(self.data), 2))
 
+        # test retain data functionality
+        self.widget.retain_all_data = True
+        self.widget.apply()
+        output = self.get_output(self.widget.Outputs.transformed_data)
+        self.assertIsInstance(output, Table)
+        self.assertEqual(output.X.shape, (len(self.data), 4))
+        self.assertEqual(output.metas.shape, (len(self.data), 2))
+
     def test_error_transforming(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.send_signal(self.widget.Inputs.preprocessor, Preprocess())

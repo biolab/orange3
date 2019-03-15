@@ -737,7 +737,7 @@ def average_shifted_histogram(a, h, m=3, weights=None, smoothing=1):
     offset = (wfac * m - 1) * delta
     nbins = max(numpy.ceil((amax - amin + 2 * offset) / delta), 2 * m * wfac - 1)
 
-    bins = numpy.linspace(amin - offset, amax + offset, nbins + 1,
+    bins = numpy.linspace(amin - offset, amax + offset, int(nbins + 1),
                           endpoint=True)
     hist, edges = numpy.histogram(a, bins, weights=weights, density=True)
 

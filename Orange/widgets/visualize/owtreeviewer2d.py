@@ -381,7 +381,7 @@ class OWTreeViewer2D(OWWidget):
         box = gui.vBox(
             self.controlArea, 'Tree', addSpace=20,
             sizePolicy=QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
-        self.info = gui.widgetLabel(box, 'No tree.')
+        self.infolabel = gui.widgetLabel(box, 'No tree.')
 
         layout = QFormLayout()
         layout.setVerticalSpacing(20)

@@ -269,6 +269,8 @@ class Normalize(Preprocess):
     Parameters
     ----------
     zero_based : bool (default=True)
+        Only used when `norm_type=NormalizeBySpan`.
+
         Determines the value used as the “low” value of the variable.
         It determines the interval for normalized continuous variables
         (either [-1, 1] or [0, 1]).
@@ -293,6 +295,7 @@ class Normalize(Preprocess):
 
     normalize_datetime : bool (default=False)
 
+
     Examples
     --------
     >>> from Orange.data import Table
@@ -309,7 +312,8 @@ class Normalize(Preprocess):
                  zero_based=True,
                  norm_type=NormalizeBySD,
                  transform_class=False,
-                 center=True, normalize_datetime=False):
+                 center=True, 
+                 normalize_datetime=False):
         self.zero_based = zero_based
         self.norm_type = norm_type
         self.transform_class = transform_class
@@ -526,8 +530,6 @@ class Scale(Preprocess):
             factor = 1 / s
             transformed_var = var.copy(
                 compute_value=transformation.Normalizer(var, c, factor))
-            if s != 1:
-                transformed_var.number_of_decimals = 3
             return transformed_var
 
         newvars = []

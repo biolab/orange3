@@ -1,35 +1,19 @@
-import contextlib
 import os
 import string
 import unittest
 from urllib import parse
-import uuid
+import random
+import inspect
 
-import Orange
-from Orange.data.sql.table import SqlTable
+import numpy as np
 
-
-def sql_test(f):
-    try:
-        import psycopg2  # pylint: disable=import-error
-        return unittest.skipIf(not sql_version, "Database is not running.")(f)
-    except:
-        return unittest.skip("Psycopg2 is required for sql tests.")(f)
-
-
-def connection_params():
-    return parse_uri(get_dburi())
-
-
-def get_dburi():
-    dburi = os.environ.get('ORANGE_TEST_DB_URI')
-    if dburi:
-        return dburi
-    else:
-        return "postgres://localhost/test"
+from Orange.data import Table
 
 
 def parse_uri(uri):
+    """Parse uri to db type and dictionary of connection parameters."""
+    if uri == "":
+        return "", dict()
     parsed_uri = parse.urlparse(uri)
     database = parsed_uri.path.strip('/')
     if "/" in database:
@@ -51,42 +35,7 @@ def parse_uri(uri):
     ))
     if table:
         params['table'] = table
-    return params
-
-
-try:
-    import psycopg2  # pylint: disable=import-error
-    with psycopg2.connect(**connection_params()) as conn:
-        sql_version = conn.server_version
-except:
-    sql_version = 0
-
-
-def create_iris():
-    iris = Orange.data.Table("iris")
-    with psycopg2.connect(**connection_params()) as conn:
-        cur = conn.cursor()
-        cur.execute("DROP TABLE IF EXISTS iris")
-        cur.execute("""
-            CREATE TABLE iris (
-                "sepal length" float,
-                "sepal width" float,
-                "petal length" float,
-                "petal width" float,
-                "iris" varchar(15)
-            )
-        """)
-        for row in iris:
-            values = []
-            for i, val in enumerate(row):
-                if i != 4:
-                    values.append(str(val))
-                else:
-                    values.append(iris.domain.class_var.values[int(val)])
-            cur.execute("""INSERT INTO iris VALUES
-            (%s, %s, %s, %s, '%s')""" % tuple(values))
-        cur.execute("ANALYZE iris")
-    return get_dburi(), 'iris'
+    return parsed_uri.scheme, params
 
 
 class TestParseUri(unittest.TestCase):
@@ -94,6 +43,7 @@ class TestParseUri(unittest.TestCase):
         parameters = parse_uri(
             "sql://user:password@host:7678/database/table")
 
+        self.assertEqual("sql", parameters[0])
         self.assertDictContainsSubset(dict(
             host="host",
             user="user",
@@ -101,15 +51,25 @@ class TestParseUri(unittest.TestCase):
             port=7678,
             database="database",
             table="table"
-        ), parameters)
+        ), parameters[1])
 
     def test_parse_minimal_connection_uri(self):
         parameters = parse_uri(
             "sql://host/database/table")
 
+        self.assertEqual("sql", parameters[0])
         self.assertDictContainsSubset(
             dict(host="host", database="database", table="table"),
-            parameters
+            parameters[1]
+        )
+
+    def test_parse_empty(self):
+        parameters = parse_uri("")
+
+        self.assertEqual("", parameters[0])
+        self.assertDictContainsSubset(
+            dict(),
+            parameters[1]
         )
 
     def assertDictContainsSubset(self, subset, dictionary, msg=None):
@@ -144,81 +104,44 @@ class TestParseUri(unittest.TestCase):
         self.fail(self._formatMessage(msg, standardMsg))
 
 
-@sql_test
-class PostgresTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        from psycopg2.pool import ThreadedConnectionPool  # pylint: disable=import-error
-        from Orange.data.sql.backend.postgres import Psycopg2Backend
+def connection_params():
+    """
+    Get environment variable that holds db connection parameters.
+    You can assign multiple connections by concatenating them with '|'.
+    """
+    dburi = os.environ.get('ORANGE_TEST_DB_URI', "")
+    return dict(parse_uri(uri) for uri in dburi.split("|"))
 
-        Psycopg2Backend.connection_pool = \
-            ThreadedConnectionPool(1, 1, **connection_params())
-        cls.backend = Psycopg2Backend(connection_params())
-        cls.conn, cls.iris = create_iris()
 
-    @classmethod
-    def tearDownClass(cls):
-        from Orange.data.sql.backend.postgres import Psycopg2Backend
-        Psycopg2Backend.connection_pool.closeall()
-        Psycopg2Backend.connection_pool = None
+class DBTestConnection:
+    """Used to prepare the connection to the database"""
+    uri_name = ""
+    module = ""
 
-    def create_sql_table(self, data, columns=None):
-        table_name = self._create_sql_table(data, columns)
-        return connection_params(), table_name
+    def __init__(self, params):
+        self._params = params
+        self.is_module = False
+        self.is_active = False
+        self.try_connection()
 
-    @contextlib.contextmanager
-    def sql_table_from_data(self, data, guess_values=True):
-        from Orange.data.sql.backend.postgres import Psycopg2Backend
-        assert Psycopg2Backend.connection_pool is not None
+    @property
+    def params(self):
+        return self._params.copy()
 
-        table_name = self._create_sql_table(data)
-        yield SqlTable(connection_params(), table_name,
-                       inspect_values=guess_values)
-        self.drop_sql_table(table_name)
+    def try_connection(self):
+        """
+        Test if db specific connection module is installed and if you can
+        connect to db.
+        """
+        raise NotImplementedError()
 
-    def _create_sql_table(self, data, sql_column_types=None):
-        data = list(data)
-        if sql_column_types is None:
-            column_size = self._get_column_types(data)
-            sql_column_types = [
-                'float' if size == 0 else 'varchar(%s)' % size
-                for size in column_size
-            ]
-        table_name = uuid.uuid4()
-        create_table_sql = """
-            CREATE TEMPORARY TABLE "%(table_name)s" (
-                %(columns)s
-            )
-        """ % dict(
-            table_name=table_name,
-            columns=",\n".join(
-                'col%d %s' % (i, t)
-                for i, t in enumerate(sql_column_types)
-            )
-        )
-        with self.backend.execute_sql_query(create_table_sql):
-            pass
-        for row in data:
-            values = []
-            for v, t in zip(row, sql_column_types):
-                if v is None:
-                    values.append('NULL')
-                elif t == 0:
-                    values.append(str(v))
-                else:
-                    values.append("'%s'" % v)
-            insert_sql = """
-            INSERT INTO "%(table_name)s" VALUES
-                (%(values)s)
-            """ % dict(
-                table_name=table_name,
-                values=', '.join(values)
-            )
-            with self.backend.execute_sql_query(insert_sql):
-                pass
-        return str(table_name)
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        """This creates a new sql table in the specific db."""
+        raise NotImplementedError()
 
-    def _get_column_types(self, data):
+    @staticmethod
+    def _get_column_types(data):
         if not data:
             return [0] * 3
         column_size = [0] * len(data[0])
@@ -226,17 +149,307 @@ class PostgresTest(unittest.TestCase):
             for i, value in enumerate(row):
                 if isinstance(value, str):
                     column_size[i] = max(len(value), column_size[i])
+
         return column_size
 
     def drop_sql_table(self, table_name):
-        with self.backend.execute_sql_query('DROP TABLE "%s" ' % table_name):
+        """This drops given sql table in the specific db."""
+        raise NotImplementedError
+
+    def get_backend(self):
+        """This returns the db specific Orange Backend."""
+        raise NotImplementedError
+
+
+class PostgresTestConnection(DBTestConnection):
+    uri_name = "postgres"
+    module = "psycopg2"
+
+    def try_connection(self):
+        try:
+            import psycopg2
+            self.is_module = True
+            with psycopg2.connect(**self.params) as conn:
+                self.is_active = True
+                self.version = conn.server_version
+        except:
             pass
 
-    def float_variable(self, size):
-        return [i*.1 for i in range(size)]
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        data = list(data)
 
-    def discrete_variable(self, size):
-        return ["mf"[i % 2] for i in range(size)]
+        if table_name is None:
+            table_name = ''.join(random.choices(string.ascii_lowercase, k=16))
 
-    def string_variable(self, size):
-        return string.ascii_letters[:size]
+        if sql_column_types is None:
+            column_size = self._get_column_types(data)
+            sql_column_types = [
+                'float' if size == 0 else 'varchar({})'.format(size)
+                for size in column_size
+            ]
+
+        if sql_column_names is None:
+            sql_column_names = ["col{}".format(i)
+                                for i in range(len(sql_column_types))]
+        else:
+            sql_column_names = map(lambda x: '"{}"'.format(x), sql_column_names)
+
+        drop_table_sql = "DROP TABLE IF EXISTS {}".format(table_name)
+
+        create_table_sql = "CREATE TABLE {} ({})".format(
+            table_name,
+            ", ".join('{} {}'.format(n, t)
+                      for n, t in zip(sql_column_names, sql_column_types)))
+
+        insert_values = ", ".join(
+            "({})".format(
+                ", ".join("NULL" if v is None else "'{}'".format(v)
+                          for v, t in zip(row, sql_column_types))
+            ) for row in data
+        )
+
+        insert_sql = "INSERT INTO {} VALUES {}".format(table_name,
+                                                       insert_values)
+
+        import psycopg2
+        with psycopg2.connect(**self.params) as conn:
+            with conn.cursor() as curs:
+                curs.execute(drop_table_sql)
+            with conn.cursor() as curs:
+                curs.execute(create_table_sql)
+            if insert_values:
+                with conn.cursor() as curs:
+                    curs.execute(insert_sql)
+
+        return self.params, table_name
+
+    def drop_sql_table(self, table_name):
+        import psycopg2
+        with psycopg2.connect(**self.params) as conn:
+            with conn.cursor() as curs:
+                curs.execute("DROP TABLE {}".format(table_name))
+
+    def get_backend(self):
+        from Orange.data.sql.backend import Psycopg2Backend
+        return Psycopg2Backend(self.params)
+
+
+class MicrosoftTestConnection(DBTestConnection):
+    uri_name = "mssql"
+    module = "pymssql"
+
+    def try_connection(self):
+        try:
+            import pymssql
+            self.is_module = True
+            with pymssql.connect(**self.params):
+                self.is_active = True
+        except:
+            pass
+
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        data = list(data)
+
+        if table_name is None:
+            table_name = ''.join(random.choices(string.ascii_lowercase, k=16))
+
+        if sql_column_types is None:
+            column_size = self._get_column_types(data)
+            sql_column_types = [
+                'float' if size == 0 else 'varchar({})'.format(size)
+                for size in column_size
+            ]
+
+        if sql_column_names is None:
+            sql_column_names = ["col{}".format(i)
+                                for i in range(len(sql_column_types))]
+        else:
+            sql_column_names = map(lambda x: '"{}"'.format(x), sql_column_names)
+
+        drop_table_sql = "DROP TABLE IF EXISTS {}".format(table_name)
+
+        create_table_sql = "CREATE TABLE {} ({})".format(
+            table_name,
+            ", ".join('{} {}'.format(n, t)
+                      for n, t in zip(sql_column_names, sql_column_types)))
+
+        insert_values = ", ".join(
+            "({})".format(
+                ", ".join("NULL" if v is None else "'{}'".format(v)
+                          for v, t in zip(row, sql_column_types))
+            ) for row in data
+        )
+
+        insert_sql = "INSERT INTO {} VALUES {}".format(table_name,
+                                                       insert_values)
+
+        import pymssql
+        with pymssql.connect(**self.params) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(drop_table_sql)
+                cursor.execute(create_table_sql)
+                if insert_values:
+                    cursor.execute(insert_sql)
+            conn.commit()
+
+        return self.params, table_name
+
+    def drop_sql_table(self, table_name):
+        import pymssql
+        with pymssql.connect(**self.params) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("DROP TABLE {}".format(table_name))
+            conn.commit()
+
+    def get_backend(self):
+        from Orange.data.sql.backend import PymssqlBackend
+        return PymssqlBackend(self.params)
+
+
+test_connections = {
+    PostgresTestConnection.uri_name: PostgresTestConnection,
+    MicrosoftTestConnection.uri_name: MicrosoftTestConnection
+}
+
+
+def dbs():
+    """Parse env variable and initialize connection to given dbs."""
+    params = connection_params()
+
+    db_conn = {}
+    for c in params:
+        if c and c in test_connections:
+            db_conn[c] = test_connections[c](params[c])
+
+    return db_conn
+
+
+class DataBaseTest:
+    db_conn = dbs()
+
+    @classmethod
+    def _check_db(cls, db):
+        if ">" in db:
+            i = db.find(">")
+            if db[:i] in cls.db_conn and \
+                    cls.db_conn[db[:i]].version <= int(db[i + 1:]):
+                raise unittest.SkipTest(
+                    "This test is only run database version higher then {}"
+                    .format(db[i + 1:]))
+            else:
+                db = db[:i]
+        elif "<" in db:
+            i = db.find("<")
+            if db[:i] in cls.db_conn and \
+                    cls.db_conn[db[:i]].version >= int(db[i + 1:]):
+                raise unittest.SkipTest(
+                    "This test is only run on database version lower then {}"
+                    .format(db[i + 1:]))
+            else:
+                db = db[:i]
+
+        if db in cls.db_conn:
+            if not cls.db_conn[db].is_module:
+                raise unittest.SkipTest(
+                    "{} module is required for this database".format(
+                        cls.db_conn[db].module))
+
+            elif not cls.db_conn[db].is_active:
+                raise unittest.SkipTest("Database is not running")
+        else:
+            if db in test_connections.keys():
+                raise unittest.SkipTest("No connection provided for {}".format(db))
+            else:
+                raise Exception("Unsupported database")
+
+        return db
+
+    @classmethod
+    def _setup_test_with(cls, test, db):
+        """This is used to setup the `db` database and run `test` on it"""
+        def new_test(test_self, *args):
+            new_db = cls._check_db(db)
+
+            test_self.current_db = new_db
+
+            error = None
+            if hasattr(test_self, "setUpDB"):
+                test_self.setUpDB()
+            try:
+                test(test_self, *args)
+            except Exception as ex:
+                error = ex
+            finally:
+                if hasattr(test_self, "tearDownDB"):
+                    test_self.tearDownDB()
+
+            if error is not None:
+                raise error
+
+        return new_test
+
+    @classmethod
+    def run_on(cls, dbs):
+        """
+        Decorator used to create new test for every given database.
+
+        For every db in the list of dbs create a new test that:
+            * changes create_sql_table, drop_sql_table and backend to those
+              implemented in the db subclass of DBTestConnection
+            * runs setUpDB if exists
+            * runs original test
+            * runs tearDownDB if exists
+        """
+        def decorator(function):
+            if function.__name__.startswith("test_db_"):
+                return function
+
+            stack = inspect.stack()
+            frame = stack[1]
+            frame_locals = frame[0].f_locals
+
+            for db in dbs:
+                name = 'test_db_' + db + '_' + function.__name__[5:]
+                frame_locals[name] = cls._setup_test_with(function, db)
+                frame_locals[name].__name__ = name
+                frame_locals[name].place_as = function
+                if function.__doc__ is not None:
+                    frame_locals[name].__doc__ = 'On ' + db + ' run: ' + \
+                                                 function.__doc__
+
+            function.__test__ = False
+
+        return decorator
+
+    @property
+    def backend(self):
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db].get_backend()
+
+    def create_sql_table(self, data, sql_column_types=None,
+                         sql_column_names=None, table_name=None):
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db]\
+            .create_sql_table(data, sql_column_types=sql_column_types,
+                              sql_column_names=sql_column_names,
+                              table_name=table_name)
+
+    def drop_sql_table(self, table_name):
+        """This is according to the db currently being tested"""
+        return self.db_conn[self.current_db]\
+            .drop_sql_table(table_name=table_name)
+
+    def create_iris_sql_table(self):
+        iris = Table("iris")
+        cn = ["sepal length", "sepal width", "petal length", "petal width",
+              "iris"]
+        ct = ["float", "float", "float", "float", "varchar(15)"]
+        Y = np.array(iris.domain.class_var.values)[iris.Y.astype(int)]
+        data = [list(x) + [y] for x, y in zip(iris.X, Y)]
+        return self.create_sql_table(data, table_name="iris",
+                                     sql_column_names=cn, sql_column_types=ct)
+
+    def drop_iris_sql_table(self):
+        self.drop_sql_table("iris")

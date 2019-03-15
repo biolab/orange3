@@ -2,8 +2,10 @@
 # pylint: disable=missing-docstring
 
 import unittest
+import warnings
 
 import numpy as np
+from sklearn.exceptions import ConvergenceWarning
 
 from Orange.classification import (SVMLearner, LinearSVMLearner,
                                    NuSVMLearner, OneClassSVMLearner)
@@ -24,6 +26,8 @@ class TestSVMLearner(unittest.TestCase):
         self.assertGreater(CA(res)[0], 0.9)
 
     def test_LinearSVM(self):
+        # This warning is irrelevant here
+        warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
         learn = LinearSVMLearner()
         res = CrossValidation(self.data, [learn], k=2)
         self.assertGreater(CA(res)[0], 0.8)

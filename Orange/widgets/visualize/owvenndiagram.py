@@ -87,7 +87,7 @@ class OWVennDiagram(widget.OWWidget):
 
         # GUI
         box = gui.vBox(self.controlArea, "Info")
-        self.info = gui.widgetLabel(box, "No data on input.\n")
+        self.infolabel = gui.widgetLabel(box, "No data on input.\n")
 
         self.identifiersBox = gui.radioButtonsInBox(
             self.controlArea, self, "useidentifiers", [],
@@ -211,10 +211,9 @@ class OWVennDiagram(widget.OWWidget):
 
         self._createDiagram()
         if self.data:
-            self.info.setText(
-                "{} datasets on input.\n".format(len(self.data)))
+            self.infolabel.setText(f"{len(self.data)} datasets on input.\n")
         else:
-            self.info.setText("No data on input\n")
+            self.infolabel.setText("No data on input\n")
 
         self._updateInfo()
         super().handleNewSignals()
@@ -456,10 +455,9 @@ class OWVennDiagram(widget.OWWidget):
         self.warning()
 
         if not len(self.data):
-            self.info.setText("No data on input\n")
+            self.infolabel.setText("No data on input\n")
         else:
-            self.info.setText(
-                "{0} datasets on input\n".format(len(self.data)))
+            self.infolabel.setText(f"{len(self.data)} datasets on input\n")
 
         if self.useidentifiers:
             no_idx = ["#{}".format(i + 1)
@@ -909,7 +907,8 @@ def varying_between(table, idvar):
         subset = table[indices]
         for var in list(candidate_set):
             column, _ = subset.get_column_view(var)
-            values = util.unique(column)
+            with numpy.errstate(invalid="ignore"):  # nans are removed below
+                values = util.unique(column)
 
             if not var.is_string:
                 values = unique_non_nan(values)

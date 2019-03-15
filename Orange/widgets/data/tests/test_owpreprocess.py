@@ -8,7 +8,8 @@ from Orange.preprocess import (
 )
 from Orange.preprocess import discretize, impute, fss, score
 from Orange.widgets.data import owpreprocess
-from Orange.widgets.data.owpreprocess import OWPreprocess
+from Orange.widgets.data.owpreprocess import OWPreprocess, \
+    UnivariateFeatureSelect, Scale as ScaleEditor
 from Orange.widgets.tests.base import WidgetTest, datasets
 
 
@@ -39,15 +40,72 @@ class TestOWPreprocess(WidgetTest):
     def test_normalize(self):
         data = Table("iris")
         saved = {"preprocessors": [("orange.preprocess.scale",
-                                    {"center": Scale.CenteringType.Mean,
-                                     "scale": Scale.ScalingType.Std})]}
+                                    {"method": ScaleEditor.NormalizeBySD})]}
         model = self.widget.load(saved)
         self.widget.set_model(model)
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.preprocessed_data)
-
         np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
         np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
+
+        saved = {"preprocessors": [("orange.preprocess.scale",
+                                    {"method": ScaleEditor.CenterByMean})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        np.testing.assert_allclose(output.X.mean(0), 0, atol=1e-7)
+        self.assertTrue((output.X.std(0) > 0).all())
+
+        saved = {"preprocessors": [("orange.preprocess.scale",
+                                    {"method": ScaleEditor.ScaleBySD})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertTrue((output.X.mean(0) != 0).all())
+        np.testing.assert_allclose(output.X.std(0), 1, atol=1e-7)
+
+        saved = {"preprocessors":
+                 [("orange.preprocess.scale",
+                   {"method": ScaleEditor.NormalizeBySpan_ZeroBased})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertAlmostEqual(output.X.min(), 0)
+        self.assertAlmostEqual(output.X.max(), 1)
+
+        saved = {"preprocessors":
+                 [("orange.preprocess.scale",
+                   {"method": ScaleEditor.NormalizeSpan_NonZeroBased})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertAlmostEqual(output.X.min(), -1)
+        self.assertAlmostEqual(output.X.max(), 1)
+
+    def test_select_features(self):
+        data = Table("iris")
+        saved = {"preprocessors": [("orange.preprocess.fss",
+                                    {"strategy": UnivariateFeatureSelect.Fixed,
+                                     "k": 2})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertEqual(len(output.domain.attributes), 2)
+
+        saved = {"preprocessors": [
+            ("orange.preprocess.fss",
+             {"strategy": UnivariateFeatureSelect.Proportion,
+              "p": 75})]}
+        model = self.widget.load(saved)
+        self.widget.set_model(model)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.preprocessed_data)
+        self.assertEqual(len(output.domain.attributes), 3)
 
     def test_data_column_nans(self):
         """
@@ -126,7 +184,7 @@ class TestFeatureSelectEditor(WidgetTest):
         widget = owpreprocess.FeatureSelectEditor()
         p = widget.createinstance(widget.parameters())
         self.assertIsInstance(p, fss.SelectBestFeatures)
-        self.assertEqual(p.method, score.InfoGain)
+        self.assertIsInstance(p.method, score.InfoGain)
         self.assertEqual(p.k, 10)
 
 

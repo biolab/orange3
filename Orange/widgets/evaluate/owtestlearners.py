@@ -1,6 +1,6 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
-
+import warnings
 from itertools import chain
 import abc
 import enum
@@ -21,6 +21,7 @@ from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtCore import Qt, QSize, QThread, QMetaObject, Q_ARG
 from AnyQt.QtCore import pyqtSlot as Slot
+from sklearn.exceptions import UndefinedMetricWarning
 
 from Orange.base import Learner
 import Orange.classification
@@ -971,10 +972,19 @@ class OWTestLearners(OWWidget):
 
 
 def scorer_caller(scorer, ovr_results, target=None):
-    if scorer.is_binary:
-        return lambda: scorer(ovr_results, target=target, average='weighted')
-    else:
-        return lambda: scorer(ovr_results)
+    def thunked():
+        with warnings.catch_warnings():
+            # F-score and Precision return 0 for labels with no predicted
+            # samples. We're OK with that.
+            warnings.filterwarnings(
+                "ignore", "((F-score|Precision)) is ill-defined.*",
+                UndefinedMetricWarning)
+            if scorer.is_binary:
+                return scorer(ovr_results, target=target, average='weighted')
+            else:
+                return scorer(ovr_results)
+
+    return thunked
 
 
 class UserInterrupt(BaseException):

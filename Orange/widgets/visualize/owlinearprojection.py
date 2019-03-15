@@ -383,7 +383,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
         if self.data is not None:
             has_discrete_class = self.data.domain.has_discrete_class
-            if not has_discrete_class or len(np.unique(self.data.Y)) < 2:
+            if not has_discrete_class or len(np.unique(self.data.Y)) < 3:
                 buttons[self.Placement.LDA].setEnabled(False)
                 if self.placement == self.Placement.LDA:
                     self.placement = self.Placement.Circular

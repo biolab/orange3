@@ -20,7 +20,7 @@ from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QToolButton, QLineEdit, QAction, QActionGroup, QStackedWidget, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
-    QDialogButtonBox, QPushButton
+    QDialogButtonBox, QPushButton, QCheckBox
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
@@ -49,6 +49,10 @@ class Categorical(
         ("base", Optional[str]),
         ("annotations", AnnotationsType),
     ])): pass
+
+
+class Ordered(Categorical):
+    pass
 
 
 class Real(
@@ -130,8 +134,14 @@ class Annotate(namedtuple("Annotate", ["annotations"])):
         return var._replace(annotations=self.annotations)
 
 
-Transform = Union[Rename, CategoriesMapping, Annotate]
-TransformTypes = (Rename, CategoriesMapping, Annotate)
+class ChangeOrdered(NamedTuple("ChangeOrdered", [("ordered", bool)])):
+    """
+    Change Categorical <-> Ordered
+    """
+
+
+Transform = Union[Rename, CategoriesMapping, Annotate, ChangeOrdered]
+TransformTypes = (Rename, CategoriesMapping, Annotate, ChangeOrdered)
 
 
 def deconstruct(obj):
@@ -181,18 +191,18 @@ class DictItemsModel(QStandardItemModel):
     """
     # Implement a proper model with in-place editing.
     # (Maybe it should be a TableModel with 2 columns)
-    def __init__(self, parent=None, dict=None):
+    def __init__(self, parent=None, a_dict=None):
         super().__init__(parent)
         self._dict = {}
         self.setHorizontalHeaderLabels(["Key", "Value"])
-        if dict is not None:
-            self.set_dict(dict)
+        if a_dict is not None:
+            self.set_dict(a_dict)
 
-    def set_dict(self, dict):
+    def set_dict(self, a_dict):
         # type: (Dict[str, str]) -> None
-        self._dict = dict
+        self._dict = a_dict
         self.setRowCount(0)
-        for key, value in sorted(dict.items()):
+        for key, value in sorted(a_dict.items()):
             key_item = QStandardItem(key)
             value_item = QStandardItem(value)
             key_item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
@@ -465,7 +475,10 @@ class DiscreteVariableEditor(VariableEditor):
         super().__init__(*args, **kwargs)
         form = self.layout().itemAt(0)
         assert isinstance(form, QFormLayout)
-
+        self.ordered_cb = QCheckBox(
+            "Ordered", self, toolTip="Is this an ordered categorical."
+        )
+        self.ordered_cb.toggled.connect(self._set_ordered)
         #: A list model of discrete variable's values.
         self.values_model = itemmodels.PyListModel(
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
@@ -553,9 +566,12 @@ class DiscreteVariableEditor(VariableEditor):
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
-        form.insertRow(1, "Values:", vlayout)
+        form.insertRow(1, "", self.ordered_cb)
+        form.insertRow(2, "Values:", vlayout)
 
-        QWidget.setTabOrder(self.name_edit, self.values_edit)
+        QWidget.setTabOrder(self.name_edit, self.ordered_cb)
+        QWidget.setTabOrder(self.ordered_cb, self.values_edit)
+
         QWidget.setTabOrder(self.values_edit, button1)
         QWidget.setTabOrder(button1, button2)
         QWidget.setTabOrder(button2, button3)
@@ -566,11 +582,15 @@ class DiscreteVariableEditor(VariableEditor):
         """
         Set the variable to edit.
         """
+        # pylint: disable=too-many-branches
         super().set_data(var, transform)
         tr = None  # type: Optional[CategoriesMapping]
+        ordered = None  # type: Optional[ChangeOrdered]
         for tr_ in transform:
             if isinstance(tr_, CategoriesMapping):
                 tr = tr_
+            if isinstance(tr_, ChangeOrdered):
+                ordered = tr_
 
         items = []
         if tr is not None:
@@ -622,6 +642,10 @@ class DiscreteVariableEditor(VariableEditor):
                     self.values_model.index(i, 0),
                     item
                 )
+        if ordered is not None:
+            self.ordered_cb.setChecked(ordered.ordered)
+        elif var is not None:
+            self.ordered_cb.setChecked(isinstance(var, Ordered))
         self.add_new_item.actionGroup().setEnabled(var is not None)
 
     def __categories_mapping(self):
@@ -657,6 +681,9 @@ class DiscreteVariableEditor(VariableEditor):
         if any(_1 != _2 or _2 != _3
                for (_1, _2), _3 in zip_longest(mapping, var.categories)):
             tr.append(CategoriesMapping(mapping))
+        ordered = self.ordered_cb.isChecked()
+        if ordered != isinstance(var, Ordered):
+            tr.append(ChangeOrdered(ordered))
         return var, tr
 
     def clear(self):
@@ -753,6 +780,10 @@ class DiscreteVariableEditor(VariableEditor):
             view.edit(index)
         self.on_values_changed()
 
+    def _set_ordered(self, ordered):
+        self.ordered_cb.setChecked(ordered)
+        self.variable_changed.emit()
+
 
 class ContinuousVariableEditor(VariableEditor):
     # TODO: enable editing of display format...
@@ -766,7 +797,7 @@ class TimeVariableEditor(VariableEditor):
 
 def variable_icon(var):
     # type: (Variable) -> QIcon
-    if isinstance(var, Categorical):
+    if isinstance(var, (Categorical, Ordered)):
         return gui.attributeIconDict[1]
     elif isinstance(var, Real):
         return gui.attributeIconDict[2]
@@ -835,7 +866,7 @@ class OWEditDomain(widget.OWWidget):
     description = "Rename variables, edit categories and variable annotations."
     icon = "icons/EditDomain.svg"
     priority = 3125
-    keywords = []
+    keywords = ["rename", "drop", "reorder", "order"]
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -1037,7 +1068,7 @@ class OWEditDomain(widget.OWWidget):
             tr = []
 
         editors = {
-            Categorical: 0,
+            Categorical: 0, Ordered: 0,
             Real: 1,
             Time: 2,
             String: 3
@@ -1130,7 +1161,7 @@ class OWEditDomain(widget.OWWidget):
         assert all(v_.name == v.name
                    for v, (v_, _) in zip(input_vars, state))
         for (_, tr), v in zip(state, input_vars):
-            if tr is not None and len(tr) > 0:
+            if tr:
                 var = apply_transform(v, tr)
             else:
                 var = v
@@ -1248,7 +1279,7 @@ def report_transform(var, trs):
     def text(text):
         return "<span>{}</span>".format(escape(text))
     assert trs
-    rename = annotate = catmap = None
+    rename = annotate = catmap = ordered = None
 
     for tr in trs:
         if isinstance(tr, Rename):
@@ -1257,10 +1288,17 @@ def report_transform(var, trs):
             annotate = tr
         elif isinstance(tr, CategoriesMapping):
             catmap = tr
+        elif isinstance(tr, ChangeOrdered):
+            ordered = tr
+
     if rename is not None:
         header = "{} → {}".format(var.name, rename.name)
     else:
         header = var.name
+    if ordered is not None and ordered.ordered != isinstance(var, Ordered):
+        assert isinstance(var, (Categorical, Ordered))
+        header += " (changed to {})".format(
+            "ordered" if ordered.ordered else "unordered")
     values_section = None
     if catmap is not None:
         values_section = ("Values", [])
@@ -1328,7 +1366,10 @@ def abstract(var):
     if isinstance(var, Orange.data.DiscreteVariable):
         values, base = var.values, var.base_value
         base = values[base] if base >= 0 else None
-        return Categorical(var.name, tuple(values), base, annotations)
+        if var.ordered:
+            return Ordered(var.name, tuple(values), base, annotations)
+        else:
+            return Categorical(var.name, tuple(values), base, annotations)
     elif isinstance(var, Orange.data.TimeVariable):
         return Time(var.name, annotations)
     elif isinstance(var, Orange.data.ContinuousVariable):
@@ -1360,9 +1401,11 @@ def apply_transform(var, trs):
 @apply_transform.register(Orange.data.DiscreteVariable)
 def apply_transform_discete(var, trs):
     # type: (Orange.data.DiscreteVariable, ...) -> ...
+    # pylint: disable=too-many-branches
     name, annotations = var.name, var.attributes
     base_value = var.base_value
     mapping = None
+    ordered = var.ordered
     for tr in trs:
         if isinstance(tr, Rename):
             name = tr.name
@@ -1370,6 +1413,8 @@ def apply_transform_discete(var, trs):
             mapping = tr.mapping
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
+        elif isinstance(tr, ChangeOrdered):
+            ordered = tr.ordered
 
     source_values = var.values
     if mapping is not None:
@@ -1399,7 +1444,8 @@ def apply_transform_discete(var, trs):
     else:
         lookup = Identity(var)
     variable = Orange.data.DiscreteVariable(
-        name, values=dest_values, base_value=base_value, compute_value=lookup
+        name, values=dest_values, base_value=base_value, compute_value=lookup,
+        ordered=ordered,
     )
     variable.attributes.update(annotations)
     return variable

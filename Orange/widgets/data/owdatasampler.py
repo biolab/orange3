@@ -40,6 +40,8 @@ class OWDataSampler(OWWidget):
     FixedProportion, FixedSize, CrossValidation, Bootstrap = range(4)
     SqlTime, SqlProportion = range(2)
 
+    selectedFold: int
+
     use_seed = Setting(False)
     replacement = Setting(False)
     stratify = Setting(False)
@@ -290,19 +292,19 @@ class OWDataSampler(OWWidget):
     def sample(self, data_length, size, stratified):
         rnd = self.RandomSeed if self.use_seed else None
         if self.sampling_type == self.FixedSize:
-            self.indice_gen = SampleRandomN(
+            sampler = SampleRandomN(
                 size, stratified=stratified, replace=self.replacement,
                 random_state=rnd)
         elif self.sampling_type == self.FixedProportion:
-            self.indice_gen = SampleRandomP(
+            sampler = SampleRandomP(
                 self.sampleSizePercentage / 100, stratified=stratified,
                 random_state=rnd)
         elif self.sampling_type == self.Bootstrap:
-            self.indice_gen = SampleBootstrap(data_length, random_state=rnd)
+            sampler = SampleBootstrap(data_length, random_state=rnd)
         else:
-            self.indice_gen = SampleFoldIndices(
+            sampler = SampleFoldIndices(
                 self.number_of_folds, stratified=stratified, random_state=rnd)
-        return self.indice_gen(self.data)
+        return sampler(self.data)
 
     def send_report(self):
         if self.sampling_type == self.FixedProportion:
@@ -377,8 +379,9 @@ class SampleRandomN(Reprable):
 
     def __call__(self, table):
         if self.replace:
+            # pylint: disable=no-member
             rgen = np.random.RandomState(self.random_state)
-            sample = rgen.random_integers(0, len(table) - 1, self.n)
+            sample = rgen.randint(0, len(table), self.n)
             o = np.ones(len(table))
             o[sample] = 0
             others = np.nonzero(o)[0]
@@ -424,6 +427,7 @@ class SampleBootstrap(Reprable):
         Returns:
             tuple (out_of_sample, sample) indices
         """
+        # pylint: disable=no-member
         rgen = np.random.RandomState(self.random_state)
         sample = rgen.randint(0, self.size, self.size)
         sample.sort()  # not needed for the code below, just for the user

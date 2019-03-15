@@ -301,13 +301,13 @@ class TestContinuousVariable(VariableTest):
 
     def test_adjust_decimals(self):
         a = ContinuousVariable("a")
-        self.assertEqual(a.str_val(4.654321), "4.654")
+        self.assertEqual(a.str_val(4.65432), "4.65432")
         a.val_from_str_add("5")
-        self.assertEqual(a.str_val(4.654321), "5")
+        self.assertEqual(a.str_val(4.65432), "5")
         a.val_from_str_add("  5.12    ")
-        self.assertEqual(a.str_val(4.654321), "4.65")
+        self.assertEqual(a.str_val(4.65432), "4.65")
         a.val_from_str_add("5.1234")
-        self.assertEqual(a.str_val(4.654321), "4.6543")
+        self.assertEqual(a.str_val(4.65432), "4.6543")
 
     def test_colors(self):
         a = ContinuousVariable("a")

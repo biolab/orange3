@@ -43,6 +43,12 @@ class OWNeighbors(OWWidget):
         all_data_as_reference = \
             Msg("Every data instance is same as some reference")
 
+    class Error(OWWidget.Error):
+        diff_domains = Msg("Data and reference have different features")
+
+    n_neighbors: int
+    distance_index: int
+
     n_neighbors = Setting(10)
     distance_index = Setting(0)
     exclude_reference = Setting(True)
@@ -107,16 +113,29 @@ class OWNeighbors(OWWidget):
         self.apply()
 
     def compute_distances(self):
+        self.Error.diff_domains.clear()
         if self.data is None or len(self.data) == 0 \
                 or self.reference is None or len(self.reference) == 0:
             self.distances = None
             return
-        distance = METRICS[self.distance_index][1]
+        if set(self.reference.domain.attributes) != \
+                set(self.data.domain.attributes):
+            self.Error.diff_domains()
+            self.distances = None
+            return
+
+        metric = METRICS[self.distance_index][1]
         n_ref = len(self.reference)
-        all_data = Table.concatenate([self.reference, self.data], 0)
+
+        # comparing only attributes, no metas and class-vars
+        new_domain = Domain(self.data.domain.attributes)
+        reference = self.reference.transform(new_domain)
+        data = self.data.transform(new_domain)
+
+        all_data = Table.concatenate([reference, data], 0)
         pp_all_data = Impute()(RemoveNaNColumns()(all_data))
         pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
-        self.distances = distance(pp_data, pp_reference).min(axis=1)
+        self.distances = metric(pp_data, pp_reference).min(axis=1)
 
     def apply(self):
         indices = self._compute_indices()
@@ -158,7 +177,7 @@ class OWNeighbors(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("iris.tab")
+    iris = Table("iris.tab")
     WidgetPreview(OWNeighbors).run(
-        set_data=data,
-        set_ref=data[:1])
+        set_data=iris,
+        set_ref=iris[:1])

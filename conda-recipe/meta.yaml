@@ -36,7 +36,7 @@ requirements:
     - setuptools
     - numpy         >=1.9.0
     - scipy
-    - scikit-learn  >=0.18
+    - scikit-learn  >=0.20
     - bottleneck    >=1.0.0
     - chardet       >=2.3.0
     - docutils
@@ -51,7 +51,7 @@ requirements:
     - commonmark
     - serverfiles
     - matplotlib    >=2.0.0
-    - fasttsne      ==0.2.13
+    - opentsne      >=0.3.0
 
 test:
   # Python imports

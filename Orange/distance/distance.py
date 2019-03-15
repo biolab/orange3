@@ -1,3 +1,6 @@
+import warnings
+from unittest.mock import patch
+
 import numpy as np
 from scipy import stats
 import sklearn.metrics as skl_metrics
@@ -56,7 +59,8 @@ class EuclideanRowsModel(FittedDistanceModel):
             distances *= -2
             distances += xx
             distances += yy
-            np.maximum(distances, 0, out=distances)
+            with np.errstate(invalid="ignore"):  # Nans are fixed below
+                np.maximum(distances, 0, out=distances)
             if x2 is None:
                 distances.flat[::distances.shape[0] + 1] = 0.0
             fixer = _distance.fix_euclidean_rows_normalized if self.normalize \
@@ -111,7 +115,8 @@ class EuclideanColumnsModel(FittedDistanceModel):
         distances *= -2
         distances += xx
         distances += xx.T
-        np.maximum(distances, 0, out=distances)
+        with np.errstate(invalid="ignore"):  # Nans are fixed below
+            np.maximum(distances, 0, out=distances)
         distances.flat[::distances.shape[0] + 1] = 0.0
 
         fixer = _distance.fix_euclidean_cols_normalized if self.normalize \
@@ -153,11 +158,24 @@ class Euclidean(FittedDistance):
         Return `EuclideanColumnsModel` with stored means and variances
         for normalization and imputation.
         """
+        def nowarn(msg, cat, *args, **kwargs):
+            if cat is RuntimeWarning and (
+                    msg == "Mean of empty slice"
+                    or msg == "Degrees of freedom <= 0 for slice"):
+                if self.normalize:
+                    raise ValueError("some columns have no defined values")
+            else:
+                orig_warn(msg, cat, *args, **kwargs)
+
         self.check_no_discrete(n_vals)
-        means = np.nanmean(x, axis=0)
-        vars = np.nanvar(x, axis=0)
-        if self.normalize and (np.isnan(vars).any() or not vars.all()):
-            raise ValueError("some columns are constant or have no values")
+        # catch_warnings resets the registry for "once", while avoiding this
+        # warning would be annoying and slow, hence patching
+        orig_warn = warnings.warn
+        with patch("warnings.warn", new=nowarn):
+            means = np.nanmean(x, axis=0)
+            vars = np.nanvar(x, axis=0)
+        if self.normalize and not vars.all():
+            raise ValueError("some columns are constant")
         return EuclideanColumnsModel(
             attributes, self.impute, self.normalize, means, vars)
 
@@ -277,8 +295,12 @@ class Manhattan(FittedDistance):
         for normalization and imputation.
         """
         self.check_no_discrete(n_vals)
-        medians = np.nanmedian(x, axis=0)
-        mads = np.nanmedian(np.abs(x - medians), axis=0)
+        if x.size == 0:
+            medians = np.zeros(len(x))
+            mads = np.zeros(len(x))
+        else:
+            medians = np.nanmedian(x, axis=0)
+            mads = np.nanmedian(np.abs(x - medians), axis=0)
         if self.normalize and (np.isnan(mads).any() or not mads.all()):
             raise ValueError(
                 "some columns have zero absolute distance from median, "
@@ -640,7 +662,7 @@ class MahalanobisDistance:
         return Mahalanobis(axis=axis).fit(data)
 
 class Hamming(Distance):
-    supports_sparse = True
+    supports_sparse = False
     supports_missing = False
     supports_normalization = False
     supports_discrete = True

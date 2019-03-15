@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import warnings
+
 import numpy as np
 
 from Orange.data import Table
@@ -24,6 +26,13 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def setUp(self):
         self.widget = self.create_widget(OWFreeViz)
+
+    def test_sparse_data(self):
+        """Test widget for sparse data"""
+        # scipy.sparse uses matrix; this filter can be removed when it's fixed
+        warnings.filterwarnings(
+            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
+        super().test_sparse_data()
 
     def test_error_msg(self):
         data = self.data[:, list(range(len(self.data.domain.attributes)))]

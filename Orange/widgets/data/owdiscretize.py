@@ -87,6 +87,8 @@ class DiscDelegate(QStyledItemDelegate):
 
     @staticmethod
     def cutsText(state):
+        # This function has many branches, but they don't hurt readabability
+        # pylint: disable=too-many-branches
         method = state.method
         name = None
         # Need a better way to distinguish discretization states
@@ -153,6 +155,7 @@ class OWDiscretize(widget.OWWidget):
 
         #: input data
         self.data = None
+        self.class_var = None
         #: Current variable discretization state
         self.var_state = {}
         #: Saved variable discretization settings (context setting)
@@ -160,6 +163,7 @@ class OWDiscretize(widget.OWWidget):
 
         self.method = 0
         self.k = 5
+        self.cutpoints = []
 
         box = gui.vBox(self.controlArea, self.tr("Default Discretization"))
         self.default_bbox = rbox = gui.radioButtons(
@@ -185,8 +189,8 @@ class OWDiscretize(widget.OWWidget):
             [right, self.left][opt.startswith("Equal")].layout().addWidget(t)
         gui.separator(right, 18, 18)
 
-        def _intbox(widget, attr, callback):
-            box = gui.indentedBox(widget)
+        def _intbox(parent, attr, callback):
+            box = gui.indentedBox(parent)
             s = gui.spin(
                 box, self, attr, minv=2, maxv=10, label="Num. of intervals:",
                 callback=callback)
@@ -266,7 +270,6 @@ class OWDiscretize(widget.OWWidget):
                  if var.is_continuous]
         self.varmodel[:] = cvars
 
-        class_var = data.domain.class_var
         has_disc_class = data.domain.has_discrete_class
 
         self.default_bbox.buttons[self.MDL - 1].setEnabled(has_disc_class)
@@ -330,8 +333,9 @@ class OWDiscretize(widget.OWWidget):
                 return None, var
             elif is_discretized(dvar):
                 return dvar.compute_value.points, dvar
-            else:
-                assert False
+            assert False
+            return None
+
         for i, var in enumerate(self.varmodel):
             state = self.var_state[i]
             if state.points is None and state.disc_var is None:
@@ -339,7 +343,8 @@ class OWDiscretize(widget.OWWidget):
                 new_state = state._replace(points=points, disc_var=dvar)
                 self._set_var_state(i, new_state)
 
-    def _method_index(self, method):
+    @staticmethod
+    def _method_index(method):
         return METHODS.index((type(method), ))
 
     def _current_default_method(self):
@@ -411,7 +416,7 @@ class OWDiscretize(widget.OWWidget):
         self._update_points()
         self.commit()
 
-    def _var_selection_changed(self, *args):
+    def _var_selection_changed(self, *_):
         indices = self.selected_indices()
         # set of all methods for the current selection
         methods = [self.var_state[i].method for i in indices]

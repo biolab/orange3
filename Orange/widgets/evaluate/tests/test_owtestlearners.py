@@ -214,7 +214,6 @@ class TestOWTestLearners(WidgetTest):
                 "yyyy"))
         )
         self.widget.n_folds = 0
-        self.widget.class_selection = "y"
         self.assertFalse(self.widget.Error.only_one_class_var_value.is_shown())
         self.send_signal("Data", table)
         self.send_signal("Learner", MajorityLearner(), 0, wait=1000)

@@ -12,6 +12,7 @@ from Orange.widgets.model.owlogisticregression import (create_coef_table,
 from Orange.widgets.tests.base import (WidgetTest, WidgetLearnerTestMixin,
                                        ParameterMapping)
 
+
 class LogisticRegressionTest(unittest.TestCase):
     def test_coef_table_single(self):
         data = Table("titanic")
@@ -67,9 +68,9 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         GH-2116
         """
         table = Table("iris")
-        cases = [[list(range(80))],
-                 [list(range(90, 140))],
-                 [list(range(30)) + list(range(120, 140))]]
+        cases = [slice(80), slice(90, 140),
+                 np.hstack((np.arange(30, dtype=int),
+                            np.arange(120, 140, dtype=int)))]
         for case in cases:
             data = table[case, :]
             self.send_signal("Data", data)

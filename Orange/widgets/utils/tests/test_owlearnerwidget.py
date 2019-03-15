@@ -85,7 +85,6 @@ class TestOWBaseLearner(WidgetTest):
             outputs = [("A", None)]
 
         desc = WidgetA.get_widget_description()
-        print(desc)
         inputs = [i.name for i in desc["inputs"]]
         outputs = [o.name for o in desc["outputs"]]
 

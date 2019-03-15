@@ -12,7 +12,7 @@ from AnyQt.QtWidgets import QAction
 from AnyQt.QtTest import QSignalSpy
 
 from Orange.widgets.gui import OWComponent
-from Orange.widgets.settings import Setting
+from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.messagewidget import MessagesWidget
@@ -26,6 +26,7 @@ class MyWidget(OWWidget):
     name = "Dummy"
 
     field = Setting(42)
+    component = SettingProvider(DummyComponent)
 
     def __init__(self):
         super().__init__()
@@ -274,17 +275,20 @@ class WidgetMsgTestCase(WidgetTest):
         w.messageActivated.connect(messages.add)
         w.messageDeactivated.connect(messages.remove)
 
-        w.error(1, "A")
+        with self.assertWarns(UserWarning):
+            w.error(1, "A")
 
         self.assertEqual(len(w.Error.active), 1)
         self.assertEqual(len(messages), 1)
 
-        w.error(1)
+        with self.assertWarns(UserWarning):
+            w.error(1)
 
         self.assertEqual(len(messages), 0)
         self.assertEqual(len(w.Error.active), 0)
 
-        w.error(2, "B")
+        with self.assertWarns(UserWarning):
+            w.error(2, "B")
         self.assertEqual(len(messages), 1)
 
         w.Error.clear()

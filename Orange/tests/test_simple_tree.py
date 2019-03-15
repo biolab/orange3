@@ -99,7 +99,7 @@ class TestSimpleTreeLearner(unittest.TestCase):
         for ins in data[::20]:
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
-            self.assertEqual(sum(prob[0]), 1)
+            self.assertEqual(sum(prob), 1)
 
     def test_SimpleTree_to_string_classification(self):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
@@ -140,15 +140,15 @@ class TestSimpleTreeLearner(unittest.TestCase):
         reg = lrn(data)
         reg_str = reg.to_string()
         res = '\n' \
-              'd1 (20.0: 6.0)\n' \
+              'd1 (20: 6.0)\n' \
               ': e\n' \
-              '   c1 (15.0: 4.0)\n' \
+              '   c1 (15: 4.0)\n' \
               '   : <=2.5\n' \
-              '      c1 (16.667: 3.0)\n' \
-              '      : <=1.5 --> (15.0: 2.0)\n' \
-              '      : >1.5 --> (20.0: 1.0)\n' \
-              '   : >2.5 --> (10.0: 1.0)\n' \
-              ': f --> (30.0: 2.0)'
+              '      c1 (16.6667: 3.0)\n' \
+              '      : <=1.5 --> (15: 2.0)\n' \
+              '      : >1.5 --> (20: 1.0)\n' \
+              '   : >2.5 --> (10: 1.0)\n' \
+              ': f --> (30: 2.0)'
         self.assertEqual(reg_str, res)
 
     def test_SimpleTree_to_string_cls_decimals(self):

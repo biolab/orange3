@@ -37,6 +37,7 @@ from Orange.widgets.visualize.utils.plotutils import (
 
 
 SELECTION_WIDTH = 5
+MAX_N_VALID_SIZE_ANIMATE = 1000
 
 
 class PaletteItemSample(ItemSample):
@@ -766,7 +767,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                     widget.scatterplot_item.setSize(size)
                     widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
 
-            if np.sum(current_size_data) / self.n_valid != -1 and np.sum(diff):
+            if self.n_valid <= MAX_N_VALID_SIZE_ANIMATE and \
+                    np.all(current_size_data > 0) and np.any(diff != 0):
                 # If encountered any strange behaviour when updating sizes,
                 # implement it with threads
                 self.timer = QTimer(self.scatterplot_item, interval=50)
@@ -864,12 +866,15 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         except the former is darker. If the data has a subset, the brush
         is transparent for points that are not in the subset.
         """
-        self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
-        c_data -= self.scale.offset
-        c_data /= self.scale.width
-        c_data = np.floor(c_data) + 0.5
-        c_data /= self.scale.bins
-        c_data = np.clip(c_data, 0, 1)
+        if np.isnan(c_data).all():
+            self.scale = None
+        else:
+            self.scale = DiscretizedScale(np.nanmin(c_data), np.nanmax(c_data))
+            c_data -= self.scale.offset
+            c_data /= self.scale.width
+            c_data = np.floor(c_data) + 0.5
+            c_data /= self.scale.bins
+            c_data = np.clip(c_data, 0, 1)
         pen = self.palette.getRGB(c_data)
         brush = np.hstack(
             [pen, np.full((len(pen), 1), self.alpha_value, dtype=int)])
@@ -1230,10 +1235,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self.scatterplot_item is not None:
             self.select(points)
 
-    def select_by_rectangle(self, value_rect):
+    def select_by_rectangle(self, rect):
         if self.scatterplot_item is not None:
-            x0, y0 = value_rect.topLeft().x(), value_rect.topLeft().y()
-            x1, y1 = value_rect.bottomRight().x(), value_rect.bottomRight().y()
+            x0, x1 = sorted((rect.topLeft().x(), rect.bottomRight().x()))
+            y0, y1 = sorted((rect.topLeft().y(), rect.bottomRight().y()))
             x, y = self.master.get_coordinates_data()
             indices = np.flatnonzero(
                 (x0 <= x) & (x <= x1) & (y0 <= y) & (y <= y1))
