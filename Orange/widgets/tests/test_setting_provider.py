@@ -9,6 +9,9 @@ SHOW_LABELS = "show_labels"
 SHOW_X_AXIS = "show_x_axis"
 SHOW_Y_AXIS = "show_y_axis"
 ALLOW_ZOOMING = "allow_zooming"
+A_LIST = "a_list"
+A_SET = "a_set"
+A_DICT = "a_dict"
 
 
 class SettingProviderTestCase(unittest.TestCase):
@@ -43,6 +46,9 @@ class SettingProviderTestCase(unittest.TestCase):
 
         self.assertEqual(widget.show_graph, True)
         self.assertEqual(widget.show_zoom_toolbar, True)
+        self.assertEqual(widget.graph.a_list, [])
+        self.assertEqual(widget.graph.a_set, {1, 2, 3})
+        self.assertEqual(widget.graph.a_dict, {1: 2, 3: 4})
         self.assertEqual(widget.graph.show_labels, True)
         self.assertEqual(widget.graph.show_x_axis, True)
         self.assertEqual(widget.graph.show_y_axis, True)
@@ -105,6 +111,9 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_LABELS: True,
                 SHOW_X_AXIS: True,
                 SHOW_Y_AXIS: False,
+                A_LIST: [],
+                A_SET: {1, 2, 3},
+                A_DICT: {1: 2, 3: 4}
             },
             ZOOM_TOOLBAR: {
                 ALLOW_ZOOMING: True,
@@ -128,6 +137,25 @@ class SettingProviderTestCase(unittest.TestCase):
         self.assertEqual(widget.graph.show_y_axis, False)
         self.assertEqual(widget.zoom_toolbar.allow_zooming, True)
 
+    def test_mutables_are_unpacked_in_place(self):
+        widget = Widget()
+        a_list = widget.graph.a_list
+        a_set = widget.graph.a_set
+        a_dict = widget.graph.a_dict
+        default_provider.unpack(widget, {
+            GRAPH: {
+                A_LIST: [1, 2, 3],
+                A_SET: {4, 5},
+                A_DICT: {6: 7}
+            },
+        })
+        self.assertIs(a_list, widget.graph.a_list)
+        self.assertEqual(a_list, [1, 2, 3])
+        self.assertIs(a_set, widget.graph.a_set)
+        self.assertEqual(a_set, {4, 5})
+        self.assertIs(a_dict, widget.graph.a_dict)
+        self.assertEqual(a_dict, {6: 7})
+
     def test_traverse_settings_works_without_instance_or_data(self):
         settings = set()
 
@@ -136,12 +164,13 @@ class SettingProviderTestCase(unittest.TestCase):
 
         self.assertEqual(settings, {
             SHOW_ZOOM_TOOLBAR, SHOW_GRAPH,
-            SHOW_LABELS, SHOW_X_AXIS, SHOW_Y_AXIS,
+            SHOW_LABELS, SHOW_X_AXIS, SHOW_Y_AXIS, A_LIST, A_SET, A_DICT,
             ALLOW_ZOOMING})
 
     def test_traverse_settings_selects_correct_data(self):
         settings = {}
-        graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5}
+        graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4, SHOW_Y_AXIS: 5,
+                      A_LIST: [], A_SET: {1, 2, 3}, A_DICT: {1: 2, 3: 4}}
         zoom_data = {ALLOW_ZOOMING: 6}
         all_data = {SHOW_GRAPH: 1,
                     SHOW_ZOOM_TOOLBAR: 2,
@@ -159,6 +188,9 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_LABELS: graph_data,
                 SHOW_X_AXIS: graph_data,
                 SHOW_Y_AXIS: graph_data,
+                A_LIST: graph_data,
+                A_SET: graph_data,
+                A_DICT: graph_data,
                 ALLOW_ZOOMING: zoom_data,
             }
         )
@@ -179,6 +211,9 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_LABELS: graph_data,
                 SHOW_X_AXIS: graph_data,
                 SHOW_Y_AXIS: graph_data,
+                A_LIST: graph_data,
+                A_SET: graph_data,
+                A_DICT: graph_data,
                 ALLOW_ZOOMING: {},
             }
         )
@@ -197,6 +232,9 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_LABELS: widget.graph,
                 SHOW_X_AXIS: widget.graph,
                 SHOW_Y_AXIS: widget.graph,
+                A_LIST: widget.graph,
+                A_SET: widget.graph,
+                A_DICT: widget.graph,
                 ALLOW_ZOOMING: widget.zoom_toolbar,
             },
             settings
@@ -218,6 +256,9 @@ class SettingProviderTestCase(unittest.TestCase):
                 SHOW_LABELS: None,
                 SHOW_X_AXIS: None,
                 SHOW_Y_AXIS: None,
+                A_LIST: None,
+                A_SET: None,
+                A_DICT: None,
                 ALLOW_ZOOMING: widget.zoom_toolbar,
             }
         )
@@ -251,6 +292,9 @@ class BaseGraph:
 class Graph(BaseGraph):
     show_x_axis = Setting(True)
     show_y_axis = Setting(True)
+    a_list = Setting([])
+    a_set = Setting({1, 2, 3})
+    a_dict = Setting({1: 2, 3: 4})
 
     def __init__(self):
         super().__init__()

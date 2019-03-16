@@ -149,11 +149,13 @@ class TestDomainContextHandler(TestCase):
 
         widget = SimpleWidget()
         self.handler.initialize(widget)
+        old_metas_list = widget.with_metas
         self.handler.open_context(widget, self.args[0])
 
         context = widget.current_context
         self.assertEqual(context.attributes, self.args[1])
         self.assertEqual(context.metas, self.args[2])
+        self.assertIs(old_metas_list, widget.with_metas)
 
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),

@@ -39,11 +39,13 @@ import pprint
 import time
 import warnings
 from operator import itemgetter
+from typing import Any
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.utils import vartype
+from Orange.widgets.gui import OWComponent
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +108,27 @@ class Setting:
 if 1 == 0:
     class Setting:  # pylint: disable=function-redefined
         pass
+
+
+def _apply_setting(setting: Setting, instance: OWComponent, value: Any):
+    """
+    Set `setting` of widget `instance` to the given `value`, in place if
+    possible.
+
+    If old and new values are of the same type, and the type is either a list
+    or has methods `clear` and `update`, setting is updated in place. Otherwise
+    the function calls `setattr`.
+    """
+    target = getattr(instance, setting.name, None)
+    if type(target) is type(value):
+        if isinstance(value, list):
+            target[:] = value
+            return
+        elif hasattr(value, "clear") and hasattr(value, "update"):
+            target.clear()
+            target.update(value)
+            return
+    setattr(instance, setting.name, value)
 
 
 class SettingProvider:
@@ -261,7 +284,7 @@ class SettingProvider:
         """
         for setting, _data, inst in self.traverse_settings(data, instance):
             if setting.name in _data and inst is not None:
-                setattr(inst, setting.name, _data[setting.name])
+                _apply_setting(setting, inst, _data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -570,7 +593,7 @@ class SettingsHandler:
         """
         for setting, _, inst in self.provider.traverse_settings(instance=instance):
             if setting.packable:
-                setattr(inst, setting.name, setting.default)
+                _apply_setting(setting, inst, setting.default)
 
 
 class ContextSetting(Setting):
@@ -855,7 +878,7 @@ class ContextHandler(SettingsHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name])
-            setattr(instance, setting.name, value)
+            _apply_setting(setting, instance, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
@@ -1006,7 +1029,7 @@ class DomainContextHandler(ContextHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name], domain)
-            setattr(instance, setting.name, value)
+            _apply_setting(setting, instance, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
