@@ -1,15 +1,14 @@
 """
 Utility classes for visualization widgets
 """
-
-import queue
+import copy
 from bisect import bisect_left
 from operator import attrgetter
+from queue import Queue, Empty
+from types import SimpleNamespace as namespace
+from typing import Optional, Iterable, List, Callable, Iterator
 
-from AnyQt.QtCore import (
-    Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel, QThread, QObject,
-    pyqtSlot as Slot, QTimer
-)
+from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal, QSortFilterProxyModel
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QColor, QBrush, QPen
 from AnyQt.QtWidgets import (
     QTableView, QGraphicsTextItem, QGraphicsRectItem, QGraphicsView, QDialog,
@@ -18,12 +17,26 @@ from AnyQt.QtWidgets import (
 from Orange.data import Variable
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate, TableBarItem
+from Orange.widgets.utils.concurrent import ConcurrentMixin, TaskState
 from Orange.widgets.utils.messages import WidgetMessagesMixin
 from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.widget import Msg
 
 
-class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
+class Result(namespace):
+    queue = None  # type: Queue[QueuedScore, ...]
+    scores = None  # type: Optional[List[float, ...]]
+
+
+class QueuedScore(namespace):
+    position = None  # type: int
+    score = None  # type: float
+    state = None  # type: Iterable
+    next_state = None  # type: Iterable
+
+
+class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
+                    ConcurrentMixin):
     """
     Base class for VizRank dialogs, providing a GUI with a table and a button,
     and the skeleton for managing the evaluation of visualizations.
@@ -91,6 +104,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         """Initialize the attributes and set up the interface"""
         QDialog.__init__(self, master, windowTitle=self.captionTitle)
         WidgetMessagesMixin.__init__(self)
+        ConcurrentMixin.__init__(self)
         self.setLayout(QVBoxLayout())
 
         self.insert_message_bar()
@@ -102,14 +116,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.saved_state = None
         self.saved_progress = 0
         self.scores = []
-        self.add_to_model = queue.Queue()
-
-        self.update_timer = QTimer(self)
-        self.update_timer.timeout.connect(self._update)
-        self.update_timer.setInterval(200)
-
-        self._thread = None
-        self._worker = None
+        self.add_to_model = Queue()
 
         self.filter = QLineEdit()
         self.filter.setPlaceholderText("Filter ...")
@@ -187,10 +194,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
 
         def deleteEvent():
             vizrank.keep_running = False
-            if vizrank._thread is not None and vizrank._thread.isRunning():
-                vizrank._thread.quit()
-                vizrank._thread.wait()
-
+            vizrank.shutdown()
             master_delete_event()
 
         master.closeEvent = closeEvent
@@ -212,29 +216,19 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         This method must be called by the widget when the data is reset,
         e.g. from `set_data` handler.
         """
-        if self._thread is not None and self._thread.isRunning():
+        if self.task is not None:
             self.keep_running = False
-            self._thread.quit()
-            self._thread.wait()
+            self.cancel()
         self.keep_running = False
         self.scheduled_call = None
         self.saved_state = None
         self.saved_progress = 0
-        self.update_timer.stop()
         self.progressBarFinished()
         self.scores = []
         self._update_model()  # empty queue
         self.rank_model.clear()
         self.button.setText("Start")
         self.button.setEnabled(self.check_preconditions())
-        self._thread = QThread(self)
-        self._worker = Worker(self)
-        self._worker.moveToThread(self._thread)
-        self._worker.stopped.connect(self._thread.quit)
-        self._worker.stopped.connect(self._select_first_if_none)
-        self._worker.stopped.connect(self._stopped)
-        self._worker.done.connect(self._done)
-        self._thread.started.connect(self._worker.do_work)
 
     def filter_changed(self, text):
         self.model_proxy.setFilterFixedString(text)
@@ -316,19 +310,32 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         if not self.rank_table.selectedIndexes():
             self.rank_table.selectRow(0)
 
-    def _done(self):
+    def on_partial_result(self, result: Result):
+        try:
+            while True:
+                queued = result.queue.get_nowait()
+                self.saved_state = queued.next_state
+                self.add_to_model.put_nowait(queued)
+        except Empty:
+            pass
+        self.scores = result.scores
+        self.saved_progress = len(self.scores)
+        self._update()
+
+    def on_done(self, result: Result):
         self.button.setText("Finished")
         self.button.setEnabled(False)
         self.keep_running = False
         self.saved_state = None
+        self._stopped()
 
     def _stopped(self):
-        self.update_timer.stop()
         self.progressBarFinished()
         self._update_model()
         self.stopped()
         if self.scheduled_call:
             self.scheduled_call()
+        self._select_first_if_none()
 
     def _update(self):
         self._update_model()
@@ -340,9 +347,14 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
     def _update_model(self):
         try:
             while True:
-                pos, row_items = self.add_to_model.get_nowait()
-                self.rank_model.insertRow(pos, row_items)
-        except queue.Empty:
+                queued = self.add_to_model.get_nowait()
+                row_items = self.row_for_state(queued.score, queued.state)
+                bar_length = self.bar_length(queued.score)
+                if bar_length is not None:
+                    row_items[0].setData(bar_length,
+                                         gui.TableBarItem.BarRole)
+                self.rank_model.insertRow(queued.position, row_items)
+        except Empty:
             pass
 
     def toggle(self):
@@ -350,16 +362,16 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         self.keep_running = not self.keep_running
         if self.keep_running:
             self.button.setText("Pause")
+            self.button.repaint()
             self.progressBarInit()
-            self.update_timer.start()
             self.before_running()
-            self._thread.start()
+            self.start(run_vizrank, self.compute_score,
+                       self.iterate_states(self.saved_state), self.scores)
         else:
             self.button.setText("Continue")
-            self._thread.quit()
-            # Need to sync state (the worker must read the keep_running
-            # state and stop) for reliable restart.
-            self._thread.wait()
+            self.button.repaint()
+            self.cancel()
+            self._stopped()
 
     def before_running(self):
         """Code that is run before running vizrank in its own thread"""
@@ -370,37 +382,36 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin):
         pass
 
 
-class Worker(QObject):
-    done = Signal()
-    stopped = Signal()
+def run_vizrank(compute_score: Callable, states: Iterator,
+                scores: List, task: TaskState):
+    res = Result(queue=Queue(), scores=None)
+    scores = scores.copy()
 
-    def __init__(self, obj):
-        super().__init__()
-        self.obj = obj
+    def do_work(st, next_st):
+        try:
+            score = compute_score(st)
+            if score is not None:
+                pos = bisect_left(scores, score)
+                res.queue.put_nowait(QueuedScore(position=pos, score=score,
+                                                 state=st, next_state=next_st))
+                scores.insert(pos, score)
+        except Exception:  # ignore current state in case of any problem
+            pass
+        res.scores = scores.copy()
+        task.set_partial_result(res)
 
-    @Slot()
-    def do_work(self):
-        for state in self.obj.iterate_states(self.obj.saved_state):
-            self.obj.saved_state = state
-            if not self.obj.keep_running:
-                self.stopped.emit()
-                return
-            try:
-                score = self.obj.compute_score(state)
-                if score is not None:
-                    pos = bisect_left(self.obj.scores, score)
-                    row_items = self.obj.row_for_state(score, state)
-                    bar_length = self.obj.bar_length(score)
-                    if bar_length is not None:
-                        row_items[0].setData(bar_length,
-                                             gui.TableBarItem.BarRole)
-                    self.obj.add_to_model.put((pos, row_items))
-                    self.obj.scores.insert(pos, score)
-            except Exception:  # ignore current state in case of any problem
-                pass
-            self.obj.saved_progress += 1
-        self.done.emit()
-        self.stopped.emit()
+    state = None
+    next_state = next(states)
+    try:
+        while True:
+            if task.is_interruption_requested():
+                return res
+            state = copy.copy(next_state)
+            next_state = copy.copy(next(states))
+            do_work(state, next_state)
+    except StopIteration:
+        do_work(state, None)
+    return res
 
 
 class VizRankDialogAttr(VizRankDialog):
