@@ -442,8 +442,11 @@ class JaccardModel(FittedDistanceModel):
         for i in range(n):
             xi_ind = set(x1[i].indices)
             for j in range(i if symmetric else m):
-                jacc = 1 - len(xi_ind.intersection(x2[j].indices))\
-                           / len(set(x1[i].indices).union(x1[j].indices))
+                union = len(xi_ind.union(x2[j].indices))
+                if union:
+                    jacc = 1 - len(xi_ind.intersection(x2[j].indices)) / union
+                else:
+                    jacc = 0
                 matrix[i, j] = jacc
                 if symmetric:
                     matrix[j, i] = jacc
