@@ -892,6 +892,20 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                           [0.4, 1, 5/12],
                           [0.25, 5/12, 1]]))
 
+    def test_zero_instances(self):
+        "Test all zero instances"
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        dense_data = Table.from_list(
+            domain, [[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+        sparse_data = Table(domain, csr_matrix(dense_data.X))
+        dist_dense = self.Distance(dense_data)
+        dist_sparse = self.Distance(sparse_data)
+
+        self.assertEqual(dist_dense[0][1], 0)
+        self.assertEqual(dist_sparse[0][1], 0)
+        self.assertEqual(dist_dense[0][2], 1)
+        self.assertEqual(dist_sparse[0][2], 1)
+
 class HammingDistanceTest(FittedDistanceTest):
     Distance = distance.Hamming
 
