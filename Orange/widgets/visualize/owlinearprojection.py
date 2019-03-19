@@ -25,8 +25,6 @@ from Orange.util import Enum
 from Orange.widgets import gui, report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
-from Orange.widgets.utils import vartype
-from Orange.widgets.utils.itemmodels import VariableListModel
 from Orange.widgets.utils.plot import variables_selection
 from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -264,8 +262,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     settings_version = 5
 
     placement = Setting(Placement.Circular)
-    selected_vars = ContextSetting([], inplace=True)
-    n_selected = ContextSetting(None)
+    selected_vars = ContextSetting([])
     vizrank = SettingProvider(LinearProjectionVizRank)
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)
@@ -274,25 +271,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
-
-    def __init__(self):
-        self.model_selected = VariableSelectionModel()
-        self.model_selected.wrap(self.selected_vars)
-        self.model_selected.removed.connect(self.__model_selected_changed)
-        self.contextOpened.connect(self._n_selected_to_model)
-        self.settingsAboutToBePacked.connect(self._model_to_n_selected)
-
-        self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
-            None, self, "Suggest Features", self.__vizrank_set_attrs)
-
-        super().__init__()
-
-    def _n_selected_to_model(self):
-        if self.n_selected is not None:
-            self.model_selected.set_nselected(self.n_selected)
-
-    def _model_to_n_selected(self):
-        self.n_selected = self.model_selected.get_nselected()
 
     def _add_controls(self):
         self._add_controls_variables()
@@ -307,9 +285,12 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.control_area_stretch.setParent(None)
 
     def _add_controls_variables(self):
+        self.model_selected = VariableSelectionModel(self.selected_vars)
         variables_selection(self.controlArea, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
+        self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
+            None, self, "Suggest Features", self.__vizrank_set_attrs)
         self.controlArea.layout().addWidget(self.btn_vizrank)
 
     def _add_controls_placement(self):
@@ -332,12 +313,15 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     @property
     def effective_variables(self):
-        return self.model_selected.get_selection()
+        return self.selected_vars
 
     def __vizrank_set_attrs(self, attrs):
         if not attrs:
             return
-        self.model_selected.set_selection(attrs)
+        self.selected_vars[:] = attrs
+        # Ugly, but the alternative is to have yet another signal to which
+        # the view will have to connect
+        self.model_selected.selection_changed.emit()
         self.__model_selected_changed()
 
     def __model_selected_changed(self):
@@ -420,6 +404,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     def init_attr_values(self):
         super().init_attr_values()
+        self.selected_vars[:] = self.continuous_variables[:3]
         self.model_selected[:] = self.continuous_variables
 
     def init_projection(self):

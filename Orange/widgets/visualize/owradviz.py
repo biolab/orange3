@@ -274,8 +274,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     settings_version = 2
 
-    selected_vars = ContextSetting([], inplace=True)
-    n_selected = ContextSetting(3)
+    selected_vars = ContextSetting([])
     vizrank = SettingProvider(RadvizVizRank)
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
@@ -288,23 +287,12 @@ class OWRadviz(OWAnchorProjectionWidget):
                                   " two values are not shown.")
 
     def __init__(self):
-        self.model_selected = VariableSelectionModel()
-        self.model_selected.wrap(self.selected_vars)
-        self.contextOpened.connect(self._n_selected_to_model)
-        self.settingsAboutToBePacked.connect(self._model_to_n_selected)
-
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.vizrank_set_attrs
-        )
+            None, self, "Suggest features", self.vizrank_set_attrs)
         super().__init__()
 
-    def _n_selected_to_model(self):
-        self.model_selected.set_nselected(self.n_selected)
-
-    def _model_to_n_selected(self):
-        self.n_selected = self.model_selected.get_nselected()
-
     def _add_controls(self):
+        self.model_selected = VariableSelectionModel(self.selected_vars)
         variables_selection(self.controlArea, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
@@ -323,12 +311,15 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     @property
     def effective_variables(self):
-        return self.model_selected.get_selection()
+        return self.selected_vars
 
     def vizrank_set_attrs(self, *attrs):
         if not attrs:
             return
-        self.model_selected.set_selection(attrs)
+        self.selected_vars[:] = attrs
+        # Ugly, but the alternative is to have yet another signal to which
+        # the view will have to connect
+        self.model_selected.selection_changed.emit()
         self.__model_selected_changed()
 
     def __model_selected_changed(self):
@@ -368,6 +359,7 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def init_attr_values(self):
         super().init_attr_values()
+        self.selected_vars[:] = self.primitive_variables[:5]
         self.model_selected[:] = self.primitive_variables
 
     def _manual_move(self, anchor_idx, x, y):

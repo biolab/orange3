@@ -32,7 +32,7 @@ from AnyQt.QtWidgets import (
     QAction, QSizePolicy, QLabel, QStyledItemDelegate, QStyle, QListView
 )
 from AnyQt.QtGui import QIcon, QColor, QFont
-from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect, QPoint, QTimer
+from AnyQt.QtCore import Qt, pyqtSignal, QSize, QRect, QPoint, QMimeData
 
 from Orange.data import ContinuousVariable, DiscreteVariable
 from Orange.widgets import gui
@@ -55,74 +55,74 @@ SIZE_POLICY_FIXED = (QSizePolicy.Minimum, QSizePolicy.Maximum)
 
 class VariableSelectionModel(VariableListModel):
     IsSelected = next(OrangeUserRole)
+    SortRole = next(OrangeUserRole)
     selection_changed = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, selected_vars):
         super().__init__(enable_dnd=True)
-        self.nselected = 3
+        self.selected_vars = selected_vars
+
+    def is_selected(self, index):
+        return self[index.row()] in self.selected_vars
 
     def data(self, index, role):
         if role == self.IsSelected:
-            return index.row() < self.nselected
+            return self.is_selected(index)
         elif role == Qt.FontRole:
             font = QFont()
-            font.setBold(index.row() < self.nselected)
+            font.setBold(self.is_selected(index))
             return font
+        elif role == self.SortRole:
+            if self.is_selected(index):
+                return self.selected_vars.index(self[index.row()])
+            else:
+                return len(self.selected_vars) + index.row()
         else:
             return super().data(index, role)
 
     def toggle_item(self, index):
-        self.modelAboutToBeReset.emit()
-        was_selected = index.data(self.IsSelected)
-        self.nselected -= was_selected
-        self._list.insert(
-            self.nselected, self._list.pop(index.row()))
-        self._other_data.insert(
-            self.nselected, self._other_data.pop(index.row()))
-        self.nselected += not was_selected
-        self.modelReset.emit()
+        var = self[index.row()]
+        if var in self.selected_vars:
+            self.selected_vars.remove(var)
+        else:
+            self.selected_vars.append(var)
         self.selection_changed.emit()
 
-    def __setitem__(self, s, value):
-        super().__setitem__(s, value)
-        if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            if start == stop <= self.nselected:
-                self.nselected += 1
-                self.selection_changed.emit()
+    def mimeData(self, indexlist):
+        if len(indexlist) != 1:
+            return None
+        mime = QMimeData()
+        mime.setData(self.MIME_TYPE, b'see properties: item_index')
+        mime.setProperty('item_index', indexlist[0])
+        return mime
 
-    def __delitem__(self, s):
-        super().__delitem__(s)
-        if isinstance(s, slice):
-            start, stop, step = s.indices(len(self))
-            if start + 1 == stop <= self.nselected:
-                self.nselected -= 1
-                self.selection_changed.emit()
-
-    def set_selection(self, selection):
-        self.modelAboutToBeReset.emit()
-        sel_indices = (self.indexOf(attr) for attr in selection)
-        other_data = []
-        for index in sorted(sel_indices, reverse=True):
-            del self._list[index]
-            other_data.append(self._other_data.pop(index))
-        self._list = list(selection) + self._list
-        self._other_data = other_data + self._other_data
-        self.nselected = len(selection)
-        self.modelReset.emit()
+    def dropMimeData(self, mime, action, row, column, parent):
+        if action == Qt.IgnoreAction:
+            return True  # pragma: no cover
+        if not mime.hasFormat(self.MIME_TYPE):
+            return False  # pragma: no cover
+        prev_index = mime.property('item_index')
+        post_index = self.index(row)
+        if prev_index is None:
+            return False
+        var = self[prev_index.row()]
+        if self.is_selected(prev_index):
+            self.selected_vars.remove(var)
+        if self.is_selected(post_index):
+            postpos = self.selected_vars.index(self[row])
+            self.selected_vars.insert(postpos, var)
         self.selection_changed.emit()
+        return True
 
-    def get_selection(self):
-        return self[:self.nselected]
+    # The following methods are disabled to prevent their use by dragging
+    def removeRows(self, *_):
+        return False
 
-    def get_nselected(self):
-        return self.nselected
+    def moveRows(self, *_):
+        return False
 
-    def set_nselected(self, nselected):
-        self.modelAboutToBeReset.emit()
-        self.nselected = nselected
-        self.modelReset.emit()
-        self.selection_changed.emit()
+    def insertRows(self, *_):
+        return False
 
 
 class VariablesDelegate(QStyledItemDelegate):
@@ -170,10 +170,14 @@ class VariableSelectionView(QListView):
 
     def __init__(self, *args, acceptedType=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setSizePolicy(
+            QSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding))
+        self.setMinimumHeight(10)
         self.setMouseTracking(True)
         self.setAttribute(Qt.WA_Hover)
 
         self.setSelectionMode(self.SingleSelection)
+        self.setAutoScroll(False)  # Prevent scrolling to removed item
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
         self.setDragDropMode(self.InternalMove)
@@ -181,8 +185,7 @@ class VariableSelectionView(QListView):
         self.setDragDropOverwriteMode(False)
         self.setUniformItemSizes(True)
 
-        #: type | Tuple[type]
-        #self.__acceptedType = acceptedType
+        self.setItemDelegate(VariablesDelegate())
 
     def sizeHint(self):
         return QSize(1, 50)
@@ -198,18 +201,27 @@ class VariableSelectionView(QListView):
     def startDrag(self, supportedActions):
         super().startDrag(supportedActions)
         self.selectionModel().clearSelection()
-        self.scrollTo(self.model().index(0, 0))
 
 
 def variables_selection(widget, master, model):
-        filter, view = variables_filter(
-            model=model, parent=master, view_type=VariableSelectionView)
-        view.setMinimumHeight(10)
-        view.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.MinimumExpanding))
-        view.setItemDelegate(VariablesDelegate())
-        view.clicked.connect(lambda index: model.toggle_item(view.model().mapToSource(index)))
-        widget.layout().addWidget(filter)
-        widget.layout().addWidget(view)
+    def update_list():
+        proxy.sort(0)
+        proxy.invalidate()
+        view.selectionModel().clearSelection()
+
+    filter, view = variables_filter(
+        model=model, parent=master, view_type=VariableSelectionView)
+    proxy = view.model()
+    proxy.setSortRole(model.SortRole)
+    model.selection_changed.connect(update_list)
+    model.dataChanged.connect(update_list)
+    model.modelReset.connect(update_list)
+    model.rowsInserted.connect(update_list)
+    view.clicked.connect(
+        lambda index: model.toggle_item(proxy.mapToSource(index)))
+    master.contextOpened.connect(update_list)
+    widget.layout().addWidget(filter)
+    widget.layout().addWidget(view)
 
 
 class OrientedWidget(QWidget):

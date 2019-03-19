@@ -56,17 +56,16 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
 
     def test_saved_features(self):
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.model_selected.pop(0)
-        self.widget.variables_selection.removed.emit()
-        selected = [a.name for a in self.widget.model_selected]
+        del self.widget.selected_vars[0]
+        selected = self.widget.selected_vars[:]
 
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(OWRadviz, stored_settings=settings)
         self.send_signal(w.Inputs.data, self.data, widget=w)
-        self.assertListEqual(selected, [a.name for a in w.model_selected])
+        self.assertListEqual(selected, self.widget.selected_vars)
         self.send_signal(self.widget.Inputs.data, self.heart_disease)
-        selected = [a.name for a in self.widget.model_selected]
-        names = [a.name for a in self.heart_disease.domain.attributes
+        selected = self.widget.selected_vars[:]
+        names = [a for a in self.heart_disease.domain.attributes
                  if a.is_continuous or a.is_discrete and len(a.values) == 2]
         self.assertListEqual(selected, names[:5])
 
@@ -99,15 +98,15 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
     def test_saved_selected_vars(self):
         self.send_signal(self.widget.Inputs.data, self.data)
 
-        self.widget.model_selected[:] = self.data.domain[:1]
-        self.widget.variables_selection.removed.emit()
+        self.widget.selected_vars[:] = self.data.domain[:1]
+        self.widget.model_selected.selection_changed.emit()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertEqual(len(self.widget.model_selected[:]), 1)
+        self.assertEqual(len(self.widget.selected_vars[:]), 1)
 
-        self.widget.model_selected[:] = self.data.domain[:0]
-        self.widget.variables_selection.removed.emit()
+        self.widget.selected_vars[:] = self.data.domain[:0]
+        self.widget.model_selected.selection_changed.emit()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertEqual(len(self.widget.model_selected[:]), 4)
+        self.assertEqual(len(self.widget.selected_vars[:]), 0)
 
     def test_invalidated_model_selected(self):
         self.widget.setup_plot = Mock()
@@ -115,16 +114,16 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.widget.setup_plot.assert_called_once()
 
         self.widget.setup_plot.reset_mock()
-        self.widget.model_selected[:] = self.data.domain[2:]
-        self.widget.variables_selection.removed.emit()
+        self.widget.selected_vars[:] = self.data.domain[2:]
+        self.widget.model_selected.selection_changed.emit()
         self.widget.setup_plot.assert_called_once()
 
         self.widget.setup_plot.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data[:, 2:])
         self.widget.setup_plot.assert_not_called()
 
-        self.widget.model_selected[:] = self.data.domain[3:]
-        self.widget.variables_selection.removed.emit()
+        self.widget.selected_vars[:] = self.data.domain[3:]
+        self.widget.model_selected.selection_changed.emit()
         self.widget.setup_plot.assert_called_once()
 
         self.widget.setup_plot.reset_mock()
