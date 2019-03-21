@@ -975,6 +975,7 @@ class OWHeatMap(widget.OWWidget):
             if rowitem.title:
                 title = QGraphicsSimpleTextItem(rowitem.title, widget)
                 item = GraphicsSimpleTextLayoutItem(title, parent=grid)
+                item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 grid.addItem(item, Row0 + i * 2, Col0)
 
             if rowitem.cluster:
