@@ -241,12 +241,12 @@ class TestOWKMeans(WidgetTest):
     class KMeansFail(Orange.clustering.KMeans):
         fail_on = set()
 
-        def fit(self, *args):
+        def fit(self, X, Y=None):
             # when not optimizing, params is empty?!
             k = self.params.get("n_clusters", 3)
             if k in self.fail_on:
                 raise ValueError("k={} fails".format(k))
-            return super().fit(*args)
+            return super().fit(X, Y)
 
     @patch("Orange.widgets.unsupervised.owkmeans.KMeans", new=KMeansFail)
     def test_optimization_fails(self):
@@ -387,7 +387,8 @@ class TestOWKMeans(WidgetTest):
         widget.k = 4
         widget.optimize_k = False
 
-        random = np.random.RandomState(0)  # Avoid randomness in the test
+        # Avoid randomness in the test
+        random = np.random.RandomState(0)  # pylint: disable=no-member
         table = Table(random.rand(110, 2))
         with patch("Orange.clustering.kmeans.SILHOUETTE_MAX_SAMPLES", 100):
             self.send_signal(self.widget.Inputs.data, table)

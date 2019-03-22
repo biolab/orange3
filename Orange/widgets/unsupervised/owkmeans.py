@@ -34,7 +34,8 @@ class ClusterTableModel(QAbstractTableModel):
     def rowCount(self, index=QModelIndex()):
         return 0 if index.isValid() else len(self.scores)
 
-    def columnCount(self, index=QModelIndex()):
+    @staticmethod
+    def columnCount(_index=QModelIndex()):
         return 1
 
     def flags(self, index):
@@ -65,10 +66,12 @@ class ClusterTableModel(QAbstractTableModel):
             return score
         elif role == gui.BarRatioRole and valid:
             return score
+        return None
 
-    def headerData(self, row, orientation, role=Qt.DisplayRole):
+    def headerData(self, row, _orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return str(row + self.start_k)
+        return None
 
 
 class Task:
@@ -444,8 +447,9 @@ class OWKMeans(widget.OWWidget):
 
     def selected_row(self):
         indices = self.table_view.selectedIndexes()
-        if indices:
-            return indices[0].row()
+        if not indices:
+            return None
+        return indices[0].row()
 
     def select_row(self):
         self.send_data()
