@@ -247,7 +247,7 @@ def remove_unused_values(var, data):
     translation_table[unique] = range(len(used_values))
 
     base_value = -1
-    if 0 >= var.base_value < len(var.values):
+    if 0 <= var.base_value < len(var.values):
         base = translation_table[var.base_value]
         if np.isfinite(base):
             base_value = int(base)
