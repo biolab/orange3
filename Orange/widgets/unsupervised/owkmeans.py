@@ -11,6 +11,7 @@ from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.data.util import get_unique_names
+from Orange.preprocess.impute import ReplaceUnknowns
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import \
@@ -468,21 +469,45 @@ class OWKMeans(widget.OWWidget):
             values=["C%d" % (x + 1) for x in range(km.k)]
         )
         clust_ids = km(self.data)
+        clust_col = clust_ids.X.ravel()
         silhouette_var = ContinuousVariable(
             get_unique_names(domain, "Silhouette"))
         if km.silhouette_samples is not None:
             self.Warning.no_silhouettes.clear()
             scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
+            clust_scores = []
+            for i in range(km.k):
+                in_clust = clust_col == i
+                if in_clust.any():
+                    clust_scores.append(np.mean(scores[in_clust]))
+                else:
+                    clust_scores.append(0.)
+            clust_scores = np.atleast_2d(clust_scores).T
         else:
             self.Warning.no_silhouettes()
             scores = np.nan
+            clust_scores = np.full((km.k, 1), np.nan)
 
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
-        new_table.get_column_view(cluster_var)[0][:] = clust_ids.X.ravel()
+        new_table.get_column_view(cluster_var)[0][:] = clust_col
         new_table.get_column_view(silhouette_var)[0][:] = scores
 
-        centroids = Table(Domain(km.pre_domain.attributes), km.centroids)
+        centroid_attributes = [
+            attr.compute_value.variable
+            if isinstance(attr.compute_value, ReplaceUnknowns)
+            and attr.compute_value.variable in domain.attributes
+            else attr
+            for attr in km.pre_domain.attributes]
+        centroid_domain = add_columns(
+            Domain(centroid_attributes, [], domain.metas),
+            metas=[cluster_var, silhouette_var])
+        centroids = Table(
+            centroid_domain, km.centroids, None,
+            np.hstack((np.full((km.k, len(domain.metas)), np.nan),
+                       np.arange(km.k).reshape(km.k, 1),
+                       clust_scores))
+        )
 
         self.Outputs.annotated_data.send(new_table)
         self.Outputs.centroids.send(centroids)
