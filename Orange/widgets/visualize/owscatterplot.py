@@ -314,8 +314,6 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank_button.setToolTip(text)
 
     def set_data(self, data):
-        if self.data and data and self.data.checksum() == data.checksum():
-            return
         super().set_data(data)
 
         def findvar(name, iterable):
