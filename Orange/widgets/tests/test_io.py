@@ -77,6 +77,32 @@ class TestPng(GuiTest):
             os.unlink(fname)
 
 
+class TestPdf(GuiTest):
+
+    def test_pyqtgraph(self):
+        fd, fname = tempfile.mkstemp('.pdf')
+        os.close(fd)
+        graph = pyqtgraph.PlotWidget()
+        try:
+            imgio.PdfFormat.write(fname, graph)
+            with open(fname, "rb") as f:
+                self.assertTrue(f.read().startswith(b'%PDF'))
+        finally:
+            os.unlink(fname)
+
+    def test_other(self):
+        fd, fname = tempfile.mkstemp('.pdf')
+        os.close(fd)
+        sc = QGraphicsScene()
+        sc.addItem(QGraphicsRectItem(0, 0, 3, 3))
+        try:
+            imgio.PdfFormat.write(fname, sc)
+            with open(fname, "rb") as f:
+                self.assertTrue(f.read().startswith(b'%PDF'))
+        finally:
+            os.unlink(fname)
+
+
 class TestMatplotlib(WidgetTest):
 
     def test_python(self):
