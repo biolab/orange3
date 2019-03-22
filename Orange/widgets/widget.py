@@ -13,11 +13,12 @@ from typing import Optional, Union
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX
+    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX,
+    QScrollArea
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
-    QSettings, QUrl, QThread, pyqtSignal as Signal
+    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
@@ -82,6 +83,53 @@ class WidgetMetaClass(type(QDialog)):
         if not openclass:
             namespace["_final_class"] = True
         return namespace
+
+
+class VerticalScrollArea(QScrollArea):
+    """
+    A QScrollArea that can only scroll vertically because it never
+    needs to scroll horizontally: it adapts its width to the contents.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.horizontalScrollBar().setEnabled(False)
+        self.installEventFilter(self)  # to get LayoutRequest on this object
+
+    def _set_width(self):
+        scroll_bar_width = 0
+        if self.verticalScrollBar().isVisible():
+            scroll_bar_width = self.verticalScrollBar().width()
+        self.setMinimumWidth(self.widget().minimumSizeHint().width() + scroll_bar_width)
+
+    def eventFilter(self, receiver, event):
+        if (receiver and receiver is self.widget() and event.type() == QEvent.Resize) \
+                or (receiver is self and event.type() == QEvent.LayoutRequest):
+            self._set_width()
+        return super().eventFilter(receiver, event)
+
+
+class HiddenVerticalScrollArea(VerticalScrollArea):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.NoFrame)
+
+    def sizeHint(self):
+        if self.widget():
+            return self.widget().sizeHint()
+        else:
+            return super().sizeHint()
+
+    def minimumSizeHint(self):
+        if self.widget():
+            return QSize(self.widget().minimumSizeHint().width(),
+                         super().minimumSizeHint().height())
+        else:
+            return super().minimumSizeHint()
 
 
 # pylint: disable=too-many-instance-attributes
@@ -348,8 +396,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.layout().addWidget(self.__splitter)
 
     def _insert_control_area(self):
-        self.left_side = gui.vBox(self.__splitter, spacing=0)
+        self.__scroll_area = HiddenVerticalScrollArea(self)
+        self.__splitter.addWidget(self.__scroll_area)
+        self.left_side = gui.vBox(self.__scroll_area, spacing=0)
         self.__splitter.setSizes([1])  # Smallest size allowed by policy
+        self.__scroll_area.setWidget(self.left_side)
         if self.buttons_area_orientation is not None:
             self.controlArea = gui.vBox(self.left_side, addSpace=0)
             self._insert_buttons_area()
