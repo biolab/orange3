@@ -516,6 +516,9 @@ class OWDataTable(widget.OWWidget):
             current = self.tabs.currentWidget()
             if current is not None:
                 self.set_info(current._input_slot.summary)
+        else:
+            self.__pending_selected_rows = None
+            self.__pending_selected_cols = None
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
         self.openContext(data)
