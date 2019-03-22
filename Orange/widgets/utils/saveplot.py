@@ -19,7 +19,7 @@ def save_plot(data, file_formats, filename=""):
         start_dir = os.path.expanduser("~")
     last_filter = settings.value(_LAST_FILTER_KEY, "")
     filename, writer, filter = \
-        filedialogs.get_file_name(start_dir, last_filter, file_formats)
+        filedialogs.open_filename_dialog_save(start_dir, last_filter, file_formats)
     if not filename:
         return
     try:

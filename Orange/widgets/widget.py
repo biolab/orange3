@@ -145,7 +145,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     want_message_bar = True
     #: Widget painted by `Save graph` button
     graph_name = None
-    graph_writers = FileFormat.img_writers
+    graph_writers = [f for f in FileFormat.formats
+                     if getattr(f, 'write_image', None)
+                     and getattr(f, "EXTENSIONS", None)]
 
     save_position = True
 
