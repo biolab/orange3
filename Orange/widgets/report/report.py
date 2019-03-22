@@ -48,8 +48,10 @@ class Report:
         """
         Raise the report window.
         """
-        self.create_report_html()
         report = self._get_designated_report_view()
+        if report is None:
+            return
+        self.create_report_html()
         # Should really have a signal `report_ready` or similar to decouple
         # the implementations.
         report.make_report(self)

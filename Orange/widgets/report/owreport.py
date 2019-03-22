@@ -12,8 +12,8 @@ import pkg_resources
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
 from AnyQt.QtGui import QIcon, QCursor, QStandardItemModel, QStandardItem
 from AnyQt.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QTableView, QHeaderView
-)
+    QApplication, QDialog, QFileDialog, QTableView, QHeaderView,
+    QMessageBox)
 from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
 
 from Orange.util import deprecated
@@ -28,8 +28,7 @@ from Orange.canvas.gui.utils import message_critical
 try:
     from Orange.widgets.utils.webview import WebviewWidget
 except ImportError:
-    from unittest.mock import Mock
-    WebviewWidget = Mock
+    WebviewWidget = None
 
 
 log = logging.getLogger(__name__)
@@ -453,6 +452,17 @@ class OWReport(OWWidget):
             DeprecationWarning, stacklevel=2
         )
         app_inst = QApplication.instance()
+        if WebviewWidget is None:
+            QMessageBox.critical(
+                None, "Missing Component",
+                "Your installation of Orange contains neither WebEngine nor "
+                "WebKit.\n\n"
+                "If you installed Orange with conda or pip, try using another "
+                "PyQt distribution.\n\n"
+                "If you installed Orange with a standard installer, please "
+                "report this bug."
+            )
+            return None
         if not hasattr(app_inst, "_report_window"):
             report = OWReport()
             app_inst._report_window = report
