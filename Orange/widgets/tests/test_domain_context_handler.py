@@ -108,20 +108,6 @@ class TestDomainContextHandler(TestCase):
                                    with_metas=('d1', Discrete)))
         self.assertEqual(0, self.handler.match(context, *self.args))
 
-        # selected if_selected
-        context = Mock(values=dict(with_metas=('d1', Discrete),
-                                   if_selected=[('u', Discrete)],
-                                   selected=[0]))
-        self.assertEqual(0, self.handler.match(context, *self.args))
-
-        # unselected if_selected
-        context = Mock(values=dict(with_metas=('d1', Discrete),
-                                   if_selected=[('u', Discrete),
-                                                ('d1', Discrete)],
-                                   selected=[1]))
-        self.assertAlmostEqual(0.667, self.handler.match(context, *self.args),
-                               places=2)
-
     def test_clone_context(self):
         self.handler.bind(SimpleWidget)
         context = self.create_context(self.domain, dict(
@@ -166,10 +152,7 @@ class TestDomainContextHandler(TestCase):
         context = self.create_context(None, dict(
             text=('u', -2),
             with_metas=[('d1', Discrete), ('d1', Continuous),
-                        ('c1', Continuous), ('c1', Discrete)],
-            if_selected=[('c1', Discrete), ('c1', Continuous),
-                         ('d1', Discrete), ('d1', Continuous)],
-            selected=[2],
+                        ('c1', Continuous), ('c1', Discrete)]
         ))
         self.handler.global_contexts = \
             [Mock(values={}), context, Mock(values={})]
@@ -185,9 +168,6 @@ class TestDomainContextHandler(TestCase):
         self.assertEqual(widget.text, 'u')
         self.assertEqual(widget.with_metas, [('d1', Discrete),
                                              ('c1', Continuous)])
-        self.assertEqual(widget.if_selected, [('c1', Continuous),
-                                              ('d1', Discrete)])
-        self.assertEqual(widget.selected, [1])
 
     def test_open_context_with_no_match(self):
         self.handler.bind(SimpleWidget)
@@ -310,9 +290,6 @@ class SimpleWidget:
     text = ContextSetting("", not_attribute=True)
     with_metas = ContextSetting([], required=ContextSetting.OPTIONAL)
     required = ContextSetting("", required=ContextSetting.REQUIRED)
-    if_selected = ContextSetting([], required=ContextSetting.IF_SELECTED,
-                                 selected='selected')
-    selected = ""
 
     def retrieveSpecificSettings(self):
         pass

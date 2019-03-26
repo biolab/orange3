@@ -600,7 +600,6 @@ class ContextSetting(Setting):
     """Description of a context dependent setting"""
 
     OPTIONAL = 0
-    IF_SELECTED = 1
     REQUIRED = 2
 
     # Context settings are not persisted, but are stored in context instead.
@@ -651,12 +650,6 @@ class ContextHandler(SettingsHandler):
         super().__init__()
         self.global_contexts = []
         self.known_settings = {}
-
-    def analyze_setting(self, prefix, setting):
-        super().analyze_setting(prefix, setting)
-        if isinstance(setting, ContextSetting):
-            if hasattr(setting, 'selected'):
-                self.known_settings[prefix + setting.selected] = setting
 
     def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
@@ -876,11 +869,8 @@ class ContextHandler(SettingsHandler):
                 self.provider.traverse_settings(data=context.values, instance=widget):
             if not isinstance(setting, ContextSetting) or setting.name not in data:
                 continue
-
             value = self.decode_setting(setting, data[setting.name])
             _apply_setting(setting, instance, value)
-            if hasattr(setting, "selected") and setting.selected in data:
-                setattr(instance, setting.selected, data[setting.selected])
 
     def settings_from_widget(self, widget, *args):
         """Update the current context with the setting values from the widget.
@@ -896,8 +886,6 @@ class ContextHandler(SettingsHandler):
             if isinstance(setting, ContextSetting) and hasattr(instance, setting.name):
                 value = getattr(instance, setting.name)
                 yield setting.name, self.encode_setting(context, setting, value)
-                if hasattr(setting, "selected"):
-                    yield setting.selected, list(getattr(instance, setting.selected))
 
         context.values = self.provider.pack(widget, packer=packer)
 
@@ -999,18 +987,9 @@ class DomainContextHandler(ContextHandler):
     def filter_value(self, setting, data, domain, attrs, metas):
         value = data.get(setting.name, None)
         if isinstance(value, list):
-            sel_name = getattr(setting, "selected", None)
-            selected = set(data.pop(sel_name, []))
-            new_selected, new_value = [], []
-            for i, item in enumerate(value):
-                if self.is_valid_item(setting, item, attrs, metas):
-                    if i in selected:
-                        new_selected.append(len(new_value))
-                    new_value.append(item)
-
+            new_value = [item for item in value
+                         if self.is_valid_item(setting, item, attrs, metas)]
             data[setting.name] = new_value
-            if hasattr(setting, 'selected'):
-                data[setting.selected] = new_selected
         elif value is not None:
             if (value[1] >= 0 and
                     not self._var_exists(setting, value, attrs, metas)):
@@ -1030,8 +1009,6 @@ class DomainContextHandler(ContextHandler):
 
             value = self.decode_setting(setting, data[setting.name], domain)
             _apply_setting(setting, instance, value)
-            if hasattr(setting, "selected") and setting.selected in data:
-                setattr(instance, setting.selected, data[setting.selected])
 
     @staticmethod
     def encode_variable(var):
@@ -1119,20 +1096,11 @@ class DomainContextHandler(ContextHandler):
         returns a tuple containing number of matched and all values.
         """
         matched = 0
-        if hasattr(setting, 'selected'):
-            selected = set(context.values.get(setting.selected, []))
-        else:
-            selected = set()
-
         for i, item in enumerate(value):
             if self.is_valid_item(setting, item, attrs, metas):
                 matched += 1
-            else:
-                if setting.required == ContextSetting.REQUIRED:
-                    raise IncompatibleContext()
-                if setting.IF_SELECTED and i in selected:
-                    raise IncompatibleContext()
-
+            elif setting.required == ContextSetting.REQUIRED:
+                raise IncompatibleContext()
         return matched, len(value)
 
     def match_value(self, setting, value, attrs, metas):
