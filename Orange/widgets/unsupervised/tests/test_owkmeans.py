@@ -217,17 +217,20 @@ class TestOWKMeans(WidgetTest):
             [[0, np.mean(np.arctan(np.arange(50) / 150)) / np.pi + 0.5],
              [1, np.mean(np.arctan(np.arange(50, 150) / 150)) / np.pi + 0.5],
              [2, 0], [3, 0]])
+        self.assertEqual(out.name, "iris centroids")
 
     def test_centroids_domain_on_output(self):
         widget = self.widget
         widget.optimize_k = False
         widget.k = 4
         heart_disease = Table("heart_disease")
+        heart_disease.name = Table.name  # untitled
         self.send_signal(widget.Inputs.data, heart_disease)
         self.commit_and_wait()
 
         in_attrs = heart_disease.domain.attributes
-        out_attrs = self.get_output(widget.Outputs.centroids).domain.attributes
+        out = self.get_output(widget.Outputs.centroids)
+        out_attrs = out.domain.attributes
         out_ids = {id(attr) for attr in out_attrs}
         for attr in in_attrs:
             self.assertEqual(
@@ -237,6 +240,7 @@ class TestOWKMeans(WidgetTest):
         self.assertEqual(
             len(out_attrs),
             sum(attr.is_continuous or len(attr.values) for attr in in_attrs))
+        self.assertEqual(out.name, "centroids")
 
     class KMeansFail(Orange.clustering.KMeans):
         fail_on = set()

@@ -512,6 +512,10 @@ class OWKMeans(widget.OWWidget):
                        np.arange(km.k).reshape(km.k, 1),
                        clust_scores))
         )
+        if self.data.name == Table.name:
+            centroids.name = "centroids"
+        else:
+            centroids.name = f"{self.data.name} centroids"
 
         self.Outputs.annotated_data.send(new_table)
         self.Outputs.centroids.send(centroids)
