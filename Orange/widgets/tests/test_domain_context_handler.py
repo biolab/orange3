@@ -235,6 +235,32 @@ class TestDomainContextHandler(TestCase):
         val = self.handler.encode_setting(None, setting, var)
         self.assertEqual(val, (var.name, 100 + vartype(var)))
 
+    def test_encode_list_settings(self):
+        setting = ContextSetting(None)
+
+        var1, var2 = self.domain[:2]
+        val = self.handler.encode_setting(None, setting, [None, var1, var2])
+        self.assertEqual(
+            val,
+            ([None,
+              (var1.name, 100 + vartype(var1)),
+              (var2.name, 100 + vartype(var2))], -3))
+
+        a_list = [1, 2, 3]
+        val = self.handler.encode_setting(None, setting, a_list)
+        self.assertEqual(val, [1, 2, 3])
+        self.assertIsNot(val, a_list)
+
+        a_list = []
+        val = self.handler.encode_setting(None, setting, a_list)
+        self.assertEqual(val, [])
+        self.assertIsNot(val, a_list)
+
+        a_list = [None, None]
+        val = self.handler.encode_setting(None, setting, a_list)
+        self.assertEqual(val, [None, None])
+        self.assertIsNot(val, a_list)
+
     def test_decode_setting(self):
         setting = ContextSetting(None)
 
@@ -247,6 +273,21 @@ class TestDomainContextHandler(TestCase):
         val = self.handler.decode_setting(setting, (var.name, 100 + vartype(var)),
                                           all_metas_domain)
         self.assertIs(val, var)
+
+    def test_decode_list_setting(self):
+        setting = ContextSetting(None)
+
+        var1, var2 = self.domain[:2]
+        val = self.handler.decode_setting(
+            setting,
+            ([None,
+              (var1.name, 100 + vartype(var1)),
+              (var2.name, 100 + vartype(var2))], -3),
+            self.domain)
+        self.assertEqual(val, [None, var1, var2])
+
+        val = self.handler.decode_setting(setting, [1, 2, 3], self.domain)
+        self.assertEqual(val, [1, 2, 3])
 
     def test_backward_compatible_params(self):
         with warnings.catch_warnings(record=True) as w:
