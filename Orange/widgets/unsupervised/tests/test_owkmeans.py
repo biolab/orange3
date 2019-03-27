@@ -197,15 +197,60 @@ class TestOWKMeans(WidgetTest):
         # removing data should have cleared the output
         self.assertEqual(self.widget.data, None)
 
+    @patch("Orange.clustering.kmeans.KMeansModel.__call__")
+    def test_centroids_on_output(self, km_call):
+        ret = km_call.return_value = Mock()
+        ret.X = np.array([0] * 50 + [1] * 100)
+        ret.silhouette_samples = np.arange(150) / 150
+
+        widget = self.widget
+        widget.optimize_k = False
+        widget.k = 4
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.commit_and_wait()
+
+        widget.clusterings[4].silhouette_samples = np.arange(150) / 150
+        widget.send_data()
+        out = self.get_output(widget.Outputs.centroids)
+        np.testing.assert_almost_equal(
+            out.metas,
+            [[0, np.mean(np.arctan(np.arange(50) / 150)) / np.pi + 0.5],
+             [1, np.mean(np.arctan(np.arange(50, 150) / 150)) / np.pi + 0.5],
+             [2, 0], [3, 0]])
+        self.assertEqual(out.name, "iris centroids")
+
+    def test_centroids_domain_on_output(self):
+        widget = self.widget
+        widget.optimize_k = False
+        widget.k = 4
+        heart_disease = Table("heart_disease")
+        heart_disease.name = Table.name  # untitled
+        self.send_signal(widget.Inputs.data, heart_disease)
+        self.commit_and_wait()
+
+        in_attrs = heart_disease.domain.attributes
+        out = self.get_output(widget.Outputs.centroids)
+        out_attrs = out.domain.attributes
+        out_ids = {id(attr) for attr in out_attrs}
+        for attr in in_attrs:
+            self.assertEqual(
+                id(attr) in out_ids, attr.is_continuous,
+                f"at attribute '{attr.name}'"
+            )
+        self.assertEqual(
+            len(out_attrs),
+            sum(attr.is_continuous or len(attr.values) for attr in in_attrs))
+        self.assertEqual(out.name, "centroids")
+
     class KMeansFail(Orange.clustering.KMeans):
         fail_on = set()
 
-        def fit(self, *args):
+        def fit(self, X, Y=None):
             # when not optimizing, params is empty?!
             k = self.params.get("n_clusters", 3)
             if k in self.fail_on:
                 raise ValueError("k={} fails".format(k))
-            return super().fit(*args)
+            return super().fit(X, Y)
 
     @patch("Orange.widgets.unsupervised.owkmeans.KMeans", new=KMeansFail)
     def test_optimization_fails(self):
@@ -346,7 +391,8 @@ class TestOWKMeans(WidgetTest):
         widget.k = 4
         widget.optimize_k = False
 
-        random = np.random.RandomState(0)  # Avoid randomness in the test
+        # Avoid randomness in the test
+        random = np.random.RandomState(0)  # pylint: disable=no-member
         table = Table(random.rand(110, 2))
         with patch("Orange.clustering.kmeans.SILHOUETTE_MAX_SAMPLES", 100):
             self.send_signal(self.widget.Inputs.data, table)
