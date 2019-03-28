@@ -969,11 +969,9 @@ class DomainContextHandler(ContextHandler):
 
     def open_context(self, widget, domain):
         if domain is None:
-            return None, False
-
+            return
         if not isinstance(domain, Domain):
             domain = domain.domain
-
         super().open_context(widget, domain, *self.encode_domain(domain))
 
     def filter_value(self, setting, data, domain, attrs, metas):
@@ -1093,7 +1091,7 @@ class DomainContextHandler(ContextHandler):
         returns a tuple containing number of matched and all values.
         """
         matched = 0
-        for i, item in enumerate(value):
+        for item in value:
             if self.is_valid_item(setting, item, attrs, metas):
                 matched += 1
             elif setting.required == ContextSetting.REQUIRED:
@@ -1125,7 +1123,6 @@ class DomainContextHandler(ContextHandler):
 
 class IncompatibleContext(Exception):
     """Raised when a required variable in context is not available in data."""
-    pass
 
 
 class ClassValuesContextHandler(ContextHandler):
@@ -1227,8 +1224,8 @@ class SettingsPrinter(pprint.PrettyPrinter):
 
     def _format(self, obj, stream, indent, allowance, context, level):
         if not isinstance(obj, Context):
-            return super()._format(obj, stream, indent,
-                                   allowance, context, level)
+            super()._format(obj, stream, indent, allowance, context, level)
+            return
 
         stream.write("Context(")
         for key, value in sorted(obj.__dict__.items(), key=itemgetter(0)):

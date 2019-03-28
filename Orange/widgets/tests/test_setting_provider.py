@@ -159,7 +159,7 @@ class SettingProviderTestCase(unittest.TestCase):
     def test_traverse_settings_works_without_instance_or_data(self):
         settings = set()
 
-        for setting, data, instance in default_provider.traverse_settings():
+        for setting, data, _ in default_provider.traverse_settings():
             settings.add(setting.name)
 
         self.assertEqual(settings, {
@@ -177,7 +177,7 @@ class SettingProviderTestCase(unittest.TestCase):
                     GRAPH: graph_data,
                     ZOOM_TOOLBAR: zoom_data}
 
-        for setting, data, instance in default_provider.traverse_settings(all_data):
+        for setting, data, _ in default_provider.traverse_settings(all_data):
             settings[setting.name] = data
 
         self.assertEqual(
@@ -200,7 +200,7 @@ class SettingProviderTestCase(unittest.TestCase):
         graph_data = {SHOW_LABELS: 3, SHOW_X_AXIS: 4}
         all_data = {SHOW_GRAPH: 1, SHOW_ZOOM_TOOLBAR: 2, GRAPH: graph_data}
 
-        for setting, data, instance in default_provider.traverse_settings(all_data):
+        for setting, data, _ in default_provider.traverse_settings(all_data):
             settings[setting.name] = data
 
         self.assertEqual(
@@ -222,7 +222,8 @@ class SettingProviderTestCase(unittest.TestCase):
         settings = {}
         widget = Widget()
 
-        for setting, data, instance in default_provider.traverse_settings(instance=widget):
+        for setting, _, instance in \
+                default_provider.traverse_settings(instance=widget):
             settings[setting.name] = instance
 
         self.assertEqual(
@@ -245,7 +246,8 @@ class SettingProviderTestCase(unittest.TestCase):
         widget = Widget()
         widget.graph = None
 
-        for setting, data, instance in default_provider.traverse_settings(instance=widget):
+        for setting, _, instance in \
+                default_provider.traverse_settings(instance=widget):
             settings[setting.name] = instance
 
         self.assertEqual(
