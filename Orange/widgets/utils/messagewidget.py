@@ -344,6 +344,14 @@ class MessagesWidget(QWidget):
             openExternalLinks=self.__openExternalLinks,
             sizePolicy=QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         )
+        self.__textlabel.setStyleSheet("""
+            QLabel {
+                padding-left: 8px;
+                padding-right: 8pt;
+                background-color: #b00;
+                color: white;
+                font-weight: 550;
+                }""")
         #: Indicator that extended contents are accessible with a click on the
         #: widget.
         self.__popupicon = QLabel(
