@@ -937,6 +937,13 @@ class DomainContextHandler(ContextHandler):
                 .format(name), OrangeDeprecationWarning
             )
 
+    @staticmethod
+    def _warn_about_str_var_settings(setting):
+        warnings.warn(
+            "Storing variables as strings in settings is deprecated.\n"
+            "Support for this will be dropped in Orange 3.26.\n"
+            f"Change f{setting.name} to store an instance of `Variable`.")
+
     def encode_domain(self, domain):
         """
         domain: Orange.data.domain to encode
@@ -1013,23 +1020,26 @@ class DomainContextHandler(ContextHandler):
     def encode_variable(var):
         return var.name, 100 + vartype(var)
 
-    def encode_setting(self, context, setting, value):
+    @classmethod
+    def encode_setting(cls, context, setting, value):
         if isinstance(value, list):
             if all(e is None or isinstance(e, Variable) for e in value) \
                     and any(e is not None for e in value):
-                return [None if e is None else self.encode_variable(e)
+                return [None if e is None else cls.encode_variable(e)
                         for e in value], -3
             else:
                 return copy.copy(value)
 
         if isinstance(setting, ContextSetting):
             if isinstance(value, str):
-                if not setting.exclude_attributes and value in context.attributes:
-                    return value, context.attributes[value]
-                if not setting.exclude_metas and value in context.metas:
-                    return value, context.metas[value]
+                variables = {
+                    **({} if setting.exclude_attributes else context.attributes),
+                    **({} if setting.exclude_metas else context.metas)}
+                if value in variables:
+                    cls._warn_about_str_var_settings(setting)
+                    return value, variables[value]
             elif isinstance(value, Variable):
-                return self.encode_variable(value)
+                return cls.encode_variable(value)
 
         return copy.copy(value), -2
 
@@ -1045,14 +1055,16 @@ class DomainContextHandler(ContextHandler):
         else:
             return value
 
-    @staticmethod
-    def _var_exists(setting, value, attributes, metas):
+    @classmethod
+    def _var_exists(cls, setting, value, attributes, metas):
         if not isinstance(value, tuple) or len(value) != 2:
             return False
 
         attr_name, attr_type = value
         if attr_type >= 100:
             attr_type -= 100
+        else:
+            cls._warn_about_str_var_settings(setting)
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and

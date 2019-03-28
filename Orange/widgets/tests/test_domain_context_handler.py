@@ -1,14 +1,17 @@
 import warnings
+from distutils.version import LooseVersion
 from unittest import TestCase
 from unittest.mock import Mock
+
+import Orange
 from Orange.data import Domain, DiscreteVariable
 from Orange.data import ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import vartype
 
-Continuous = vartype(ContinuousVariable())
-Discrete = vartype(DiscreteVariable())
+Continuous = 100 + vartype(ContinuousVariable())
+Discrete = 100 + vartype(DiscreteVariable())
 
 
 class TestDomainContextHandler(TestCase):
@@ -22,9 +25,9 @@ class TestDomainContextHandler(TestCase):
                    DiscreteVariable('d4', values='jkl')]
         )
         self.args = (self.domain,
-                     {'c1': Continuous, 'd1': Discrete,
-                      'd2': Discrete, 'd3': Discrete},
-                     {'c2': Continuous, 'd4': Discrete, })
+                     {'c1': Continuous - 100, 'd1': Discrete - 100,
+                      'd2': Discrete - 100, 'd3': Discrete - 100},
+                     {'c2': Continuous - 100, 'd4': Discrete - 100, })
         self.handler = DomainContextHandler()
         self.handler.read_defaults = lambda: None
 
@@ -35,9 +38,10 @@ class TestDomainContextHandler(TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
         self.assertEqual(encoded_attributes,
-                         {'c1': Continuous, 'd1': Discrete,
-                          'd2': Discrete, 'd3': Discrete})
-        self.assertEqual(encoded_metas, {'c2': Continuous, 'd4': Discrete, })
+                         {'c1': Continuous - 100, 'd1': Discrete - 100,
+                          'd2': Discrete - 100, 'd3': Discrete - 100})
+        self.assertEqual(encoded_metas,
+                         {'c2': Continuous - 100, 'd4': Discrete - 100, })
 
     def test_encode_domain_with_match_class(self):
         handler = DomainContextHandler(
@@ -46,9 +50,11 @@ class TestDomainContextHandler(TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
         self.assertEqual(encoded_attributes,
-                         {'c1': Continuous, 'd1': Discrete, 'd2': Discrete,
+                         {'c1': Continuous - 100, 'd1': Discrete - 100,
+                          'd2': Discrete - 100,
                           'd3': list('ghi')})
-        self.assertEqual(encoded_metas, {'c2': Continuous, 'd4': Discrete})
+        self.assertEqual(encoded_metas,
+                         {'c2': Continuous - 100, 'd4': Discrete - 100})
 
     def test_encode_domain_with_match_all(self):
         handler = DomainContextHandler(
@@ -57,10 +63,10 @@ class TestDomainContextHandler(TestCase):
         encoded_attributes, encoded_metas = handler.encode_domain(self.domain)
 
         self.assertEqual(encoded_attributes,
-                         {'c1': Continuous, 'd1': list('abc'),
+                         {'c1': Continuous - 100, 'd1': list('abc'),
                           'd2': list('def'), 'd3': list('ghi')})
         self.assertEqual(encoded_metas,
-                         {'c2': Continuous, 'd4': list('jkl')})
+                         {'c2': Continuous - 100, 'd4': list('jkl')})
 
     def test_match_returns_2_on_perfect_match(self):
         context = Mock(
@@ -275,6 +281,23 @@ class TestDomainContextHandler(TestCase):
             DomainContextHandler(metas_in_res=True)
             self.assertIn(OrangeDeprecationWarning,
                           [x.category for x in w])
+
+    def test_deprecated_str_as_var(self):
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.26"):
+            # pragma: no cover
+            self.fail("Remove support for variables stored as string settings "
+                      "and this test.")
+
+        context = Mock()
+        context.attributes = {"foo": 2}
+        context.metas = {}
+        setting = ContextSetting("")
+        setting.name = "setting_name"
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            DomainContextHandler.encode_setting(context, setting, "foo")
+            self.assertIn("setting_name", w[0].message.args[0])
+
 
     def create_context(self, domain, values):
         if domain is None:
