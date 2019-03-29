@@ -93,7 +93,7 @@ class OWSql(OWWidget):
 
         self.backends = BackendModel(Backend.available_backends())
         self.backendcombo = QComboBox(box)
-        if len(self.backends):
+        if self.backends:
             self.backendcombo.setModel(self.backends)
         else:
             self.Error.no_backends()
@@ -200,24 +200,15 @@ class OWSql(OWWidget):
         cm.username = self.username or ''
         cm.password = self.password or ''
 
-    def _credential_manager(self, host, port):
+    @staticmethod
+    def _credential_manager(host, port):
         return CredentialManager("SQL Table: {}:{}".format(host, port))
 
-    def error(self, id=0, text=""):
-        super().error(id, text)
-        err_style = 'QLineEdit {border: 2px solid red;}'
-        if 'server' in text or 'host' in text:
-            self.servertext.setStyleSheet(err_style)
-        else:
-            self.servertext.setStyleSheet('')
-        if 'role' in text:
-            self.usernametext.setStyleSheet(err_style)
-        else:
-            self.usernametext.setStyleSheet('')
-        if 'database' in text:
-            self.databasetext.setStyleSheet(err_style)
-        else:
-            self.databasetext.setStyleSheet('')
+    def highlight_error(self, text=""):
+        err = ['', 'QLineEdit {border: 2px solid red;}']
+        self.servertext.setStyleSheet(err['server' in text or 'host' in text])
+        self.usernametext.setStyleSheet(err['role' in text])
+        self.databasetext.setStyleSheet(err['database' in text])
 
     def _parse_host_port(self):
         hostport = self.servertext.text().split(':')
@@ -262,6 +253,7 @@ class OWSql(OWWidget):
         except BackendError as err:
             error = str(err).split('\n')[0]
             self.Error.connection(error)
+            self.highlight_error(error)
             self.database_desc = self.data_desc_table = None
             self.tablecombo.clear()
 
@@ -288,6 +280,7 @@ class OWSql(OWWidget):
             self.table = None
             if len(str(self.sql)) > 14:
                 return self.open_table()
+        return None
 
         #self.Error.missing_extension(
         #    's' if len(missing) > 1 else '',
@@ -305,7 +298,7 @@ class OWSql(OWWidget):
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
             self.data_desc_table = None
-            return
+            return None
 
         if self.tablecombo.itemText(curIdx) != "Custom SQL":
             self.table = self.tables[self.tablecombo.currentIndex()]
@@ -321,7 +314,7 @@ class OWSql(OWWidget):
                 if not self.materialize_table_name:
                     self.Error.connection(
                         "Specify a table name to materialize the query")
-                    return
+                    return None
                 try:
                     with self.backend.execute_sql_query("DROP TABLE IF EXISTS " +
                                                         self.materialize_table_name):
@@ -334,7 +327,7 @@ class OWSql(OWWidget):
                         pass
                 except (psycopg2.ProgrammingError, BackendError) as ex:
                     self.Error.connection(str(ex))
-                    return
+                    return None
 
         try:
             table = SqlTable(dict(host=self.host,
@@ -347,7 +340,7 @@ class OWSql(OWWidget):
                              inspect_values=False)
         except BackendError as ex:
             self.Error.connection(str(ex))
-            return
+            return None
 
         self.Error.connection.clear()
 
@@ -398,7 +391,7 @@ class OWSql(OWWidget):
                                                       QMessageBox.YesRole)
                     confirm.exec()
                     if confirm.clickedButton() == no_button:
-                        return
+                        return None
                     elif confirm.clickedButton() == sample_button:
                         table = table.sample_percentage(
                             AUTO_DL_LIMIT / table.approx_len() * 100)
@@ -406,7 +399,7 @@ class OWSql(OWWidget):
                     if table.approx_len() > MAX_DL_LIMIT:
                         QMessageBox.warning(
                             self, 'Warning', "Data is too big to download.\n")
-                        return
+                        return None
                     else:
                         confirm = QMessageBox.question(
                             self, 'Question',
@@ -414,7 +407,7 @@ class OWSql(OWWidget):
                             "want to download it to local memory?",
                             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                         if confirm == QMessageBox.No:
-                            return
+                            return None
 
             table.download_data(MAX_DL_LIMIT)
             table = Table(table)
