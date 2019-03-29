@@ -106,7 +106,7 @@ class VerticalScrollArea(QScrollArea):
         self.setMinimumWidth(self.widget().minimumSizeHint().width() + scroll_bar_width)
 
     def eventFilter(self, receiver, event):
-        if (receiver and receiver is self.widget() and event.type() == QEvent.Resize) \
+        if (receiver in (self, self.widget()) and event.type() == QEvent.Resize) \
                 or (receiver is self and event.type() == QEvent.LayoutRequest):
             self._set_width()
         return super().eventFilter(receiver, event)
