@@ -55,10 +55,12 @@ class VariablesListItemModel(VariableListModel):
             flags |= Qt.ItemIsDropEnabled
         return flags
 
-    def supportedDropActions(self):
+    @staticmethod
+    def supportedDropActions():
         return Qt.MoveAction  # pragma: no cover
 
-    def supportedDragActions(self):
+    @staticmethod
+    def supportedDragActions():
         return Qt.MoveAction  # pragma: no cover
 
     def mimeTypes(self):
@@ -233,8 +235,7 @@ class OWSelectAttributes(widget.OWWidget):
                                           callback=partial(self.move_up, self.class_attrs_view))
         self.move_class_button = gui.button(bbox, self, ">",
                                             callback=partial(self.move_selected,
-                                                             self.class_attrs_view,
-                                                             exclusive=False)
+                                                             self.class_attrs_view)
                                            )
         self.down_class_button = gui.button(bbox, self, "Down",
                                             callback=partial(self.move_down, self.class_attrs_view))
@@ -368,7 +369,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.check_data()
         self.enable_used_attrs()
         self.enable_use_features_box()
-        if self.use_input_features and len(self.features_from_data_attributes):
+        if self.use_input_features and self.features_from_data_attributes:
             self.enable_used_attrs(False)
             self.use_features()
         self.unconditional_commit()
@@ -376,7 +377,7 @@ class OWSelectAttributes(widget.OWWidget):
     def check_data(self):
         self.Warning.mismatching_domain.clear()
         if self.data is not None and self.features is not None and \
-                not len(self.features_from_data_attributes):
+                not self.features_from_data_attributes:
             self.Warning.mismatching_domain()
 
     def enable_used_attrs(self, enable=True):
@@ -400,7 +401,8 @@ class OWSelectAttributes(widget.OWWidget):
         self.used_attrs[:] = attributes
         self.commit()
 
-    def selected_rows(self, view):
+    @staticmethod
+    def selected_rows(view):
         """ Return the selected rows in the view.
         """
         rows = view.selectionModel().selectedRows()
@@ -433,17 +435,16 @@ class OWSelectAttributes(widget.OWWidget):
         selected = self.selected_rows(view)
         self.move_rows(view, selected, 1)
 
-    def move_selected(self, view, exclusive=False):
+    def move_selected(self, view):
         if self.selected_rows(view):
             self.move_selected_from_to(view, self.available_attrs_view)
         elif self.selected_rows(self.available_attrs_view):
-            self.move_selected_from_to(self.available_attrs_view, view,
-                                       exclusive)
+            self.move_selected_from_to(self.available_attrs_view, view)
 
-    def move_selected_from_to(self, src, dst, exclusive=False):
-        self.move_from_to(src, dst, self.selected_rows(src), exclusive)
+    def move_selected_from_to(self, src, dst):
+        self.move_from_to(src, dst, self.selected_rows(src))
 
-    def move_from_to(self, src, dst, rows, exclusive=False):
+    def move_from_to(self, src, dst, rows):
         src_model = source_model(src)
         attrs = [src_model[r] for r in rows]
 
@@ -461,7 +462,7 @@ class OWSelectAttributes(widget.OWWidget):
         if last_view is not None:
             self.update_interface_state(last_view)
 
-    def update_interface_state(self, focus=None, selected=None, deselected=None):
+    def update_interface_state(self, focus=None):
         for view in [self.available_attrs_view, self.used_attrs_view,
                      self.class_attrs_view, self.meta_attrs_view]:
             if view is not focus and not view.hasFocus() \
@@ -489,7 +490,7 @@ class OWSelectAttributes(widget.OWWidget):
         if move_attr_enabled:
             self.move_attr_button.setText(">" if available_selected else "<")
 
-        move_class_enabled = (all_primitive and available_selected) or class_selected
+        move_class_enabled = bool(all_primitive and available_selected) or class_selected
 
         self.move_class_button.setEnabled(bool(move_class_enabled))
         if move_class_enabled:
@@ -549,6 +550,6 @@ class OWSelectAttributes(widget.OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Orange.data.Table("brown-selected")
-    features = AttributeList(data.domain.attributes[:2])
-    WidgetPreview(OWSelectAttributes).run(set_data=data, set_features=features)
+    brown = Orange.data.Table("brown-selected")
+    feats = AttributeList(brown.domain.attributes[:2])
+    WidgetPreview(OWSelectAttributes).run(set_data=brown, set_features=feats)
