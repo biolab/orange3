@@ -182,6 +182,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
+    #: Is vertical scrolling on the widget's left side, which usually
+    #: contains  the `controlArea`, allowed?
+    left_side_scrolling = False
     #: Orientation of the buttonsArea box; valid only if
     #: `want_control_area` is `True`. Possible values are Qt.Horizontal,
     #: Qt.Vertical and None for no buttons area
@@ -396,11 +399,14 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.layout().addWidget(self.__splitter)
 
     def _insert_control_area(self):
-        self.__scroll_area = HiddenVerticalScrollArea(self)
-        self.__splitter.addWidget(self.__scroll_area)
-        self.left_side = gui.vBox(self.__scroll_area, spacing=0)
+        if self.left_side_scrolling:
+            scroll_area = HiddenVerticalScrollArea(self)
+            self.__splitter.addWidget(scroll_area)
+            self.left_side = gui.vBox(scroll_area, spacing=0)
+            scroll_area.setWidget(self.left_side)
+        else:
+            self.left_side = gui.vBox(self.__splitter, spacing=0)
         self.__splitter.setSizes([1])  # Smallest size allowed by policy
-        self.__scroll_area.setWidget(self.left_side)
         if self.buttons_area_orientation is not None:
             self.controlArea = gui.vBox(self.left_side, addSpace=0)
             self._insert_buttons_area()

@@ -428,6 +428,8 @@ class OWHeatMap(widget.OWWidget):
 
     graph_name = "scene"
 
+    left_side_scrolling = True
+
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
         discrete_ignored = Msg("{} categorical feature{} ignored")

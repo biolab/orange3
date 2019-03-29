@@ -267,6 +267,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)
 
+    left_side_scrolling = True
+
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
 
