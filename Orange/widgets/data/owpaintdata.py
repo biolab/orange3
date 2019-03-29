@@ -800,7 +800,7 @@ class OWPaintData(OWWidget):
         self.class_model.rowsInserted.connect(self._class_count_changed)
         self.class_model.rowsRemoved.connect(self._class_count_changed)
 
-        if self.data is None or not len(self.data):
+        if not self.data:
             self.data = []
             self.__buffer = np.zeros((0, 3))
         elif isinstance(self.data, np.ndarray):
@@ -998,7 +998,7 @@ class OWPaintData(OWWidget):
             if data and data.is_sparse():
                 self.Warning.sparse_not_supported()
                 return False
-            if data is not None and len(data):
+            if data:
                 if not data.domain.attributes:
                     self.Warning.no_input_variables()
                     data = None
@@ -1006,7 +1006,7 @@ class OWPaintData(OWWidget):
                     self.Information.use_first_two()
             self.input_data = data
             self.btResetToInput.setDisabled(data is None)
-            return data is not None and len(data)
+            return bool(data)
 
         if not _check_and_set_data(data):
             return
@@ -1264,10 +1264,10 @@ class OWPaintData(OWWidget):
         self.commit()
 
     def commit(self):
-        data = np.array(self.data)
-        if len(data) == 0:
+        if not self.data:
             self.Outputs.data.send(None)
             return
+        data = np.array(self.data)
         if self.hasAttr2:
             X, Y = data[:, :2], data[:, 2]
             attrs = (Orange.data.ContinuousVariable(self.attr1),
