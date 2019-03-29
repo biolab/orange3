@@ -39,11 +39,13 @@ import pprint
 import time
 import warnings
 from operator import itemgetter
+from typing import Any
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.utils import vartype
+from Orange.widgets.gui import OWComponent
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +108,27 @@ class Setting:
 if 1 == 0:
     class Setting:  # pylint: disable=function-redefined
         pass
+
+
+def _apply_setting(setting: Setting, instance: OWComponent, value: Any):
+    """
+    Set `setting` of widget `instance` to the given `value`, in place if
+    possible.
+
+    If old and new values are of the same type, and the type is either a list
+    or has methods `clear` and `update`, setting is updated in place. Otherwise
+    the function calls `setattr`.
+    """
+    target = getattr(instance, setting.name, None)
+    if type(target) is type(value):
+        if isinstance(value, list):
+            target[:] = value
+            return
+        elif hasattr(value, "clear") and hasattr(value, "update"):
+            target.clear()
+            target.update(value)
+            return
+    setattr(instance, setting.name, value)
 
 
 class SettingProvider:
@@ -261,7 +284,7 @@ class SettingProvider:
         """
         for setting, _data, inst in self.traverse_settings(data, instance):
             if setting.name in _data and inst is not None:
-                setattr(inst, setting.name, _data[setting.name])
+                _apply_setting(setting, inst, _data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -570,7 +593,7 @@ class SettingsHandler:
         """
         for setting, _, inst in self.provider.traverse_settings(instance=instance):
             if setting.packable:
-                setattr(inst, setting.name, setting.default)
+                _apply_setting(setting, inst, setting.default)
 
 
 class ContextSetting(Setting):
@@ -855,7 +878,7 @@ class ContextHandler(SettingsHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name])
-            setattr(instance, setting.name, value)
+            _apply_setting(setting, instance, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
@@ -1006,25 +1029,38 @@ class DomainContextHandler(ContextHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name], domain)
-            setattr(instance, setting.name, value)
+            _apply_setting(setting, instance, value)
             if hasattr(setting, "selected") and setting.selected in data:
                 setattr(instance, setting.selected, data[setting.selected])
 
+    @staticmethod
+    def encode_variable(var):
+        return var.name, 100 + vartype(var)
+
     def encode_setting(self, context, setting, value):
         if isinstance(value, list):
-            return copy.copy(value)
-        elif isinstance(setting, ContextSetting):
+            if all(e is None or isinstance(e, Variable) for e in value) \
+                    and any(e is not None for e in value):
+                return [None if e is None else self.encode_variable(e)
+                        for e in value], -3
+            else:
+                return copy.copy(value)
+
+        if isinstance(setting, ContextSetting):
             if isinstance(value, str):
                 if not setting.exclude_attributes and value in context.attributes:
                     return value, context.attributes[value]
                 if not setting.exclude_metas and value in context.metas:
                     return value, context.metas[value]
             elif isinstance(value, Variable):
-                return value.name, 100 + vartype(value)
+                return self.encode_variable(value)
+
         return copy.copy(value), -2
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
+            if value[1] == -3:
+                return [None if e is None else domain[e[0]] for e in value[0]]
             if value[1] >= 100:
                 if domain is None:
                     raise ValueError("Cannot decode variable without domain")
@@ -1061,6 +1097,12 @@ class DomainContextHandler(ContextHandler):
                 if isinstance(value, list):
                     matches.append(
                         self.match_list(setting, value, context, attrs, metas))
+                elif isinstance(value, tuple) \
+                        and len(value) == 2 \
+                        and isinstance(value[0], list) \
+                        and value[1] == -3:
+                    matches.append(
+                        self.match_list(setting, value[0], context, attrs, metas))
                 elif value is not None:
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
