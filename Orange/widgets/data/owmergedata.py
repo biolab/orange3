@@ -240,8 +240,7 @@ class OWMergeData(widget.OWWidget):
 
     def commit(self):
         self.Warning.duplicate_names.clear()
-        if self.data is None or len(self.data) == 0 or \
-                self.extra_data is None or len(self.extra_data) == 0:
+        if not self.data or not self.extra_data:
             merged_data = None
         else:
             merged_data = self.merge()
