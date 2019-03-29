@@ -91,6 +91,28 @@ class TestOWSql(WidgetTest):
         self.assertTrue(widget.download)
         self.assertFalse(widget.downloadcb.isEnabled())
 
+    @mock.patch('Orange.widgets.data.owsql.Table')
+    @mock.patch('Orange.widgets.data.owsql.SqlTable')
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_restore_table(self, mock_backends, mock_sqltable, mock_table):
+        """Test if selected table is restored from settings"""
+        backend = mock.Mock()
+        backend().display_name = "database"
+        del backend().missing_extension
+        backend().list_tables.return_value = ["a", "b", "c"]
+        mock_backends.available_backends.return_value = [backend]
+        mock_sqltable().approx_len.return_value = 100
+
+        settings = {'__version__': 2,
+                    'host': '',
+                    'port': '',
+                    'guess_values': False,
+                    'download': False,
+                    'table': 'b'}
+
+        widget = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.tablecombo.currentText(), "b")
+
 
 if __name__ == "__main__":
     unittest.main()
