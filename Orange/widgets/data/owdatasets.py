@@ -207,6 +207,8 @@ class OWDataSets(OWWidget):
             editTriggers=QTreeView.NoEditTriggers,
             uniformRowHeights=True,
         )
+        # the method doesn't exists yet, pylint: disable=unnecessary-lambda
+        self.view.doubleClicked.connect(lambda: self.unconditional_commit())
         box = gui.widgetBox(self.splitter, "Description", addToLayout=False)
         self.descriptionlabel = QLabel(
             wordWrap=True,
