@@ -13,8 +13,7 @@ from typing import Optional, Union
 from AnyQt.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QSizePolicy, QApplication, QStyle,
     QShortcut, QSplitter, QSplitterHandle, QPushButton, QStatusBar,
-    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX,
-    QScrollArea
+    QProgressBar, QAction, QFrame, QStyleOption, QWIDGETSIZE_MAX
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
@@ -30,7 +29,7 @@ from Orange.canvas.registry import description as widget_description
 # pylint: disable=unused-import
 from Orange.canvas.registry import WidgetDescription, OutputSignal, InputSignal
 from Orange.widgets.report import Report
-from Orange.widgets.gui import OWComponent
+from Orange.widgets.gui import OWComponent, VerticalScrollArea
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
@@ -83,53 +82,6 @@ class WidgetMetaClass(type(QDialog)):
         if not openclass:
             namespace["_final_class"] = True
         return namespace
-
-
-class VerticalScrollArea(QScrollArea):
-    """
-    A QScrollArea that can only scroll vertically because it never
-    needs to scroll horizontally: it adapts its width to the contents.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setWidgetResizable(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.horizontalScrollBar().setEnabled(False)
-        self.installEventFilter(self)  # to get LayoutRequest on this object
-
-    def _set_width(self):
-        scroll_bar_width = 0
-        if self.verticalScrollBar().isVisible():
-            scroll_bar_width = self.verticalScrollBar().width()
-        self.setMinimumWidth(self.widget().minimumSizeHint().width() + scroll_bar_width)
-
-    def eventFilter(self, receiver, event):
-        if (receiver in (self, self.widget()) and event.type() == QEvent.Resize) \
-                or (receiver is self and event.type() == QEvent.LayoutRequest):
-            self._set_width()
-        return super().eventFilter(receiver, event)
-
-
-class HiddenVerticalScrollArea(VerticalScrollArea):
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setFrameShape(QFrame.NoFrame)
-
-    def sizeHint(self):
-        if self.widget():
-            return self.widget().sizeHint()
-        else:
-            return super().sizeHint()
-
-    def minimumSizeHint(self):
-        if self.widget():
-            min_height = min(self.widget().minimumSizeHint().height(), 300)
-            return QSize(self.widget().minimumSizeHint().width(), min_height)
-        else:
-            return super().minimumSizeHint()
 
 
 # pylint: disable=too-many-instance-attributes
@@ -398,9 +350,28 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__splitter = self._Splitter(Qt.Horizontal, self)
         self.layout().addWidget(self.__splitter)
 
+    class _HiddenVerticalScrollArea(VerticalScrollArea):
+
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.setFrameShape(QFrame.NoFrame)
+
+        def sizeHint(self):
+            if self.widget():
+                return self.widget().sizeHint()
+            else:
+                return super().sizeHint()
+
+        def minimumSizeHint(self):
+            if self.widget():
+                min_height = min(self.widget().minimumSizeHint().height(), 300)
+                return QSize(self.widget().minimumSizeHint().width(), min_height)
+            else:
+                return super().minimumSizeHint()
+
     def _insert_control_area(self):
         if self.left_side_scrolling:
-            scroll_area = HiddenVerticalScrollArea(self)
+            scroll_area = self._HiddenVerticalScrollArea(self)
             self.__splitter.addWidget(scroll_area)
             self.left_side = gui.vBox(scroll_area, spacing=0)
             scroll_area.setWidget(self.left_side)

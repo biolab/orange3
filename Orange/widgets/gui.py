@@ -22,8 +22,7 @@ from AnyQt.QtGui import QCursor, QColor
 from AnyQt.QtWidgets import (
     QApplication, QStyle, QSizePolicy, QWidget, QLabel, QGroupBox, QSlider,
     QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
-    QTableView, QHeaderView, QListView
-)
+    QTableView, QHeaderView, QListView, QScrollArea)
 
 try:
     # Some Orange widgets might expect this here
@@ -3359,3 +3358,30 @@ class ControlGetter:
                     "component".format(name))
         else:
             return callfronts[0].control
+
+
+class VerticalScrollArea(QScrollArea):
+    """
+    A QScrollArea that can only scroll vertically because it never
+    needs to scroll horizontally: it adapts its width to the contents.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.horizontalScrollBar().setEnabled(False)
+        self.installEventFilter(self)  # to get LayoutRequest on this object
+
+    def _set_width(self):
+        scroll_bar_width = 0
+        if self.verticalScrollBar().isVisible():
+            scroll_bar_width = self.verticalScrollBar().width()
+        self.setMinimumWidth(self.widget().minimumSizeHint().width() + scroll_bar_width)
+
+    def eventFilter(self, receiver, event):
+        if (receiver in (self, self.widget()) and event.type() == QEvent.Resize) \
+                or (receiver is self and event.type() == QEvent.LayoutRequest):
+            self._set_width()
+        return super().eventFilter(receiver, event)
