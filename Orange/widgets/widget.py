@@ -126,8 +126,8 @@ class HiddenVerticalScrollArea(VerticalScrollArea):
 
     def minimumSizeHint(self):
         if self.widget():
-            return QSize(self.widget().minimumSizeHint().width(),
-                         super().minimumSizeHint().height())
+            min_height = min(self.widget().minimumSizeHint().height(), 300)
+            return QSize(self.widget().minimumSizeHint().width(), min_height)
         else:
             return super().minimumSizeHint()
 
