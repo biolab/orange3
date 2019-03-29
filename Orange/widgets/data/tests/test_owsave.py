@@ -431,6 +431,9 @@ class TestOWSaveLinuxDialog(TestOWSaveBase):
         dialog.selectFile("high.tab.gz")
         self.assertTrue(dialog.selectedFiles()[0].endswith("/high.csv"))
 
+        dialog.selectFile("high.tab.gz.tab.tab.gz")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.csv"))
+
     def test_save_file_dialog_uses_valid_filters_linux(self):
         widget = self.widget
         widget._valid_filters = lambda: ["a (*.a)", "b (*.b)"]

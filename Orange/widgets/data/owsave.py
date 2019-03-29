@@ -185,11 +185,23 @@ class OWSave(widget.OWWidget):
 
     @staticmethod
     def _replace_extension(filename, extension):
-        known_extensions = map(OWSave._extension_from_filter, OWSave.filters)
-        for known_ext in sorted(known_extensions, key=len, reverse=True):
-            if filename.endswith(known_ext):
-                filename = filename[:-len(known_ext)]
+        """
+        Remove all extensions that appear in any filter.
+
+        Double extensions are broken in different weird ways across all systems,
+        including omitting some, like turning iris.tab.gz to iris.gz. This
+        function removes anything that can appear anywhere.
+        """
+        known_extensions = set()
+        for filt in OWSave.filters:
+            known_extensions |= \
+                set(OWSave._extension_from_filter(filt).split("."))
+        known_extensions.remove("")
+        while True:
+            base, ext = os.path.splitext(filename)
+            if ext[1:] not in known_extensions:
                 break
+            filename = base
         return filename + extension
 
     @staticmethod
