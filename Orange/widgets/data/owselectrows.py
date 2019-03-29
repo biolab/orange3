@@ -21,13 +21,13 @@ from Orange.data.filter import FilterContinuous, FilterString
 from Orange.data.domain import filter_visible
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Remove
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting, ContextSetting, DomainContextHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 from Orange.widgets.utils import vartype
 from Orange.widgets import report
-from Orange.widgets.widget import Msg
+from Orange.widgets.widget import Msg, OWWidget
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 
@@ -36,6 +36,7 @@ class SelectRowsContextHandler(DomainContextHandler):
     """Context handler that filters conditions"""
 
     def is_valid_item(self, setting, condition, attrs, metas):
+        # pylint: disable=arguments-differ
         """Return True if condition applies to a variable in given domain."""
         varname, *_ = condition
         return varname in attrs or varname in metas
@@ -69,7 +70,7 @@ class FilterDiscreteType(enum.Enum):
     IsDefined = "IsDefined"
 
 
-class OWSelectRows(widget.OWWidget):
+class OWSelectRows(OWWidget):
     name = "Select Rows"
     id = "Orange.widgets.data.file"
     description = "Select rows from the data based on values of variables."
@@ -133,7 +134,7 @@ class OWSelectRows(widget.OWWidget):
     operator_names = {vtype: [name for _, name in filters]
                       for vtype, filters in Operators.items()}
 
-    class Error(widget.OWWidget.Error):
+    class Error(OWWidget.Error):
         parsing_error = Msg("{}")
 
     def __init__(self):
@@ -345,22 +346,7 @@ class OWSelectRows(widget.OWWidget):
             le.setValidator(QRegExpValidator(QRegExp(TimeVariable.REGEX)))
             return le
 
-        var = self.data.domain[oper_combo.attr_combo.currentText()]
-        box = self.cond_list.cellWidget(oper_combo.row, 2)
-        if selected_values is not None:
-            lc = list(selected_values) + ["", ""]
-            lc = [str(x) for x in lc[:2]]
-        else:
-            lc = ["", ""]
-        if box and vartype(var) == box.var_type:
-            lc = self._get_lineedit_contents(box) + lc
-        oper = oper_combo.currentIndex()
-
-        if oper_combo.currentText() == "is defined":
-            label = QLabel()
-            label.var_type = vartype(var)
-            self.cond_list.setCellWidget(oper_combo.row, 2, label)
-        elif var.is_discrete:
+        def add_discrete():
             if oper_combo.currentText() == "is one of":
                 if selected_values:
                     lc = [x for x in list(selected_values)]
@@ -377,7 +363,8 @@ class OWSelectRows(widget.OWWidget):
                 combo.var_type = vartype(var)
                 self.cond_list.setCellWidget(oper_combo.row, 2, combo)
                 combo.currentIndexChanged.connect(self.conditions_changed)
-        else:
+
+        def add_string_continuous():
             box = gui.hBox(self, addToLayout=False)
             box.var_type = vartype(var)
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
@@ -394,6 +381,26 @@ class OWSelectRows(widget.OWWidget):
                     box.controls.append(add_textual(lc[1]))
             else:
                 box.controls = []
+
+        var = self.data.domain[oper_combo.attr_combo.currentText()]
+        box = self.cond_list.cellWidget(oper_combo.row, 2)
+        if selected_values is not None:
+            lc = list(selected_values) + ["", ""]
+            lc = [str(x) for x in lc[:2]]
+        else:
+            lc = ["", ""]
+        if box and vartype(var) == box.var_type:
+            lc = self._get_lineedit_contents(box) + lc
+        oper = oper_combo.currentIndex()
+
+        if oper_combo.currentText() == "is defined":
+            label = QLabel()
+            label.var_type = vartype(var)
+            self.cond_list.setCellWidget(oper_combo.row, 2, label)
+        elif var.is_discrete:
+            add_discrete()
+        else:
+            add_string_continuous()
         if not adding_all:
             self.conditions_changed()
 
@@ -448,8 +455,9 @@ class OWSelectRows(widget.OWWidget):
             # controls are being constructed
             pass
 
-    def _values_to_floats(self, attr, values):
-        if not len(values):
+    @staticmethod
+    def _values_to_floats(attr, values):
+        if not values:
             return values
         if not all(values):
             return None
@@ -475,57 +483,15 @@ class OWSelectRows(widget.OWWidget):
 
         self.Error.clear()
         if self.data:
-            domain = self.data.domain
-            conditions = []
-            for attr_name, oper_idx, values in self.conditions:
-                attr_index = domain.index(attr_name)
-                attr = domain[attr_index]
-                operators = self.Operators[type(attr)]
-                opertype, _ = operators[oper_idx]
-                if attr.is_continuous:
-                    try:
-                        floats = self._values_to_floats(attr, values)
-                    except ValueError as e:
-                        self.Error.parsing_error(e.args[0])
-                        return
-                    if floats is None:
-                        continue
-                    filter = data_filter.FilterContinuous(
-                        attr_index, opertype, *floats)
-                elif attr.is_string:
-                    filter = data_filter.FilterString(
-                        attr_index, opertype, *[str(v) for v in values])
-                else:
-                    if opertype == FilterDiscreteType.IsDefined:
-                        f_values = None
-                    else:
-                        if not values or not values[0]:
-                            continue
-                        values = [attr.values[i-1] for i in values]
-                        if opertype == FilterDiscreteType.Equal:
-                            f_values = {values[0]}
-                        elif opertype == FilterDiscreteType.NotEqual:
-                            f_values = set(attr.values)
-                            f_values.remove(values[0])
-                        elif opertype == FilterDiscreteType.In:
-                            f_values = set(values)
-                        else:
-                            raise ValueError("invalid operand")
-                    filter = data_filter.FilterDiscrete(attr_index, f_values)
-                conditions.append(filter)
-
+            conditions = self._build_conditions()
             if conditions:
-                self.filters = data_filter.Values(conditions)
-                matching_output = self.filters(self.data)
-                self.filters.negate = True
-                non_matching_output = self.filters(self.data)
+                filters = data_filter.Values(conditions)
+                matching_output = filters(self.data)
+                filters.negate = True
+                non_matching_output = filters(self.data)
 
                 row_sel = np.in1d(self.data.ids, matching_output.ids)
                 annotated_output = create_annotated_table(self.data, row_sel)
-
-            # if hasattr(self.data, "name"):
-            #     matching_output.name = self.data.name
-            #     non_matching_output.name = self.data.name
 
             purge_attrs = self.purge_attributes
             purge_classes = self.purge_classes
@@ -542,11 +508,11 @@ class OWSelectRows(widget.OWWidget):
                 non_matching_output = remover(non_matching_output)
                 annotated_output = remover(annotated_output)
 
-        if matching_output is not None and not len(matching_output):
+        if not matching_output:
             matching_output = None
-        if non_matching_output is not None and not len(non_matching_output):
+        if not non_matching_output:
             non_matching_output = None
-        if annotated_output is not None and not len(annotated_output):
+        if not annotated_output:
             annotated_output = None
 
         self.Outputs.matching_data.send(matching_output)
@@ -558,7 +524,61 @@ class OWSelectRows(widget.OWWidget):
 
         self.update_info(matching_output, self.data_out_rows, "Out: ")
 
-    def update_info(self, data, lab1, label):
+    def _build_conditions(self):
+        # false warning about 'values', these functions are called from the loop
+        # pylint: disable=undefined-loop-variable,used-before-assignment
+        def add_continuous_cond():
+            try:
+                floats = self._values_to_floats(attr, values)
+            except ValueError as e:
+                self.Error.parsing_error(e.args[0])
+                return False
+            if floats is not None:
+                conditions.append(
+                    data_filter.FilterContinuous(attr_index, opertype, *floats))
+            return True
+
+        def add_string_condition():
+            conditions.append(
+                data_filter.FilterString(attr_index, opertype,
+                                         *[str(v) for v in values]))
+
+        def add_discrete_condition():
+            if opertype == FilterDiscreteType.IsDefined:
+                f_values = None
+            else:
+                if not values or not values[0]:
+                    return
+                values = [attr.values[i - 1] for i in values]
+                if opertype == FilterDiscreteType.Equal:
+                    f_values = {values[0]}
+                elif opertype == FilterDiscreteType.NotEqual:
+                    f_values = set(attr.values)
+                    f_values.remove(values[0])
+                elif opertype == FilterDiscreteType.In:
+                    f_values = set(values)
+                else:
+                    raise ValueError("invalid operand")
+            conditions.append(data_filter.FilterDiscrete(attr_index, f_values))
+
+        domain = self.data.domain
+        conditions = []
+        for attr_name, oper_idx, values in self.conditions:
+            attr_index = domain.index(attr_name)
+            attr = domain[attr_index]
+            operators = self.Operators[type(attr)]
+            opertype, _ = operators[oper_idx]
+            if attr.is_continuous:
+                if not add_continuous_cond():
+                    return []
+            elif attr.is_string:
+                add_string_condition()
+            else:
+                add_discrete_condition()
+        return conditions
+
+    @staticmethod
+    def update_info(data, lab1, label):
         def sp(s, capitalize=True):
             return s and s or ("No" if capitalize else "no"), "s" * (s != 1)
 
@@ -686,6 +706,7 @@ class DropDownToolButton(QToolButton):
         self.popup = CheckBoxPopup(var, lc, parent, self)
         self.setMenu(QMenu()) # to show arrow
         self.clicked.connect(self.open_popup)
+        self.var_type = -1
 
     def open_popup(self):
         self.popup.moved()
@@ -696,7 +717,7 @@ class DropDownToolButton(QToolButton):
         self.setText(metrics.elidedText(self.desc_text, Qt.ElideRight,
                                         self.width() - 15))
 
-    def resizeEvent(self, QResizeEvent):
+    def resizeEvent(self, _event):
         self.set_text()
 
 
