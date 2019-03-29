@@ -141,12 +141,6 @@ class OWSql(OWWidget):
         self.tablecombo.setToolTip('table')
         tables.layout().addWidget(self.tablecombo)
 
-        index = self.tablecombo.findText(str(self.table))
-        if index != -1:
-            self.tablecombo.setCurrentIndex(index)
-        # set up the callback to select_table in case of selection change
-        self.tablecombo.activated[int].connect(self.select_table)
-
         self.connectbutton = gui.button(
             tables, self, '↻', callback=self.connect)
         self.connectbutton.setSizePolicy(
@@ -181,6 +175,11 @@ class OWSql(OWWidget):
         gui.rubber(self.buttonsArea)
 
         self.connect()
+        index = self.tablecombo.findText(str(self.table))
+        if index != -1:
+            self.tablecombo.setCurrentIndex(index)
+        # set up the callback to select_table in case of selection change
+        self.tablecombo.activated[int].connect(self.select_table)
 
         QTimer.singleShot(0, self.select_table)
 
