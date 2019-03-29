@@ -1,7 +1,7 @@
 Loading your Data
 =================
 
-Orange comes with its `own data format <http://docs.orange.biolab.si/reference/rst/Orange.data.formats.html#tab-delimited>`_, but can
+Orange comes with its `own data format <https://docs.biolab.si//3/data-mining-library/tutorial/data.html#data-input>`_, but can
 also handle native Excel (.xlsx or .xls), comma- or tab-delimited data files. The input data
 set is usually a table, with data instances (samples) in rows and
 data attributes in columns. Attributes can be of different `types`
