@@ -92,7 +92,7 @@ class OWNeighbors(OWWidget):
         if data is None:
             label.setText(f"No {name} instances")
         else:
-            pl = "s" if len(data) else ""
+            pl = "s" if data else ""
             label.setText(f"{len(data)} {name} instance{pl} on input.")
 
     @Inputs.data
@@ -114,8 +114,7 @@ class OWNeighbors(OWWidget):
 
     def compute_distances(self):
         self.Error.diff_domains.clear()
-        if self.data is None or len(self.data) == 0 \
-                or self.reference is None or len(self.reference) == 0:
+        if not self.data or not self.reference:
             self.distances = None
             return
         if set(self.reference.domain.attributes) != \
