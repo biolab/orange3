@@ -87,7 +87,7 @@ class TestOWSave(TestOWSaveBase):
                              os.path.expanduser(_w("~/iris.csv")))
 
     @patch("Orange.widgets.data.owsave.QFileDialog.getSaveFileName")
-    def test_save_file_sets_name(self, filedialog):
+    def test_save_file_sets_name(self, _filedialog):
         widget = self.widget
         filters = iter(widget.filters)
         filter1 = next(filters)
@@ -263,6 +263,7 @@ class TestOWSave(TestOWSaveBase):
         widget.data.X = sp.csr_matrix(widget.data.X)
         valid = widget._valid_filters()
         self.assertNotEqual(widget.filters, {})
+        # false positive, pylint: disable=no-member
         self.assertTrue(all(v.SUPPORT_SPARSE_DATA for v in valid.values()))
 
     def test_valid_default_filter(self):

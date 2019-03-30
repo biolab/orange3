@@ -87,6 +87,7 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_with_constant_features(self):
         """Check correlation table for dataset with a constant columns"""
         np.random.seed(0)
+        # pylint: disable=no-member
         X = np.random.randint(3, size=(4, 3)).astype(float)
         X[:, 2] = 1
 

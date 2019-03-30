@@ -12,7 +12,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         WidgetOutputsTestMixin.init(cls)
 
         cls.signal_name = "Data"
-        cls.signal_data = cls.data
+        cls.signal_data = cls.data  # pylint: disable=no-member
 
     def setUp(self):
         self.widget = self.create_widget(OWDataTable)
@@ -54,5 +54,6 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         new_domain.class_var.attributes = {"b": "foo"}
         self.widget.set_corner_text = Mock()
         self.send_signal(self.widget.Inputs.data, iris.transform(new_domain))
+        # false positive, pylint: disable=unsubscriptable-object
         self.assertEqual(
             self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")

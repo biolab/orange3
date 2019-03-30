@@ -33,8 +33,8 @@ class TestOWOutliers(WidgetTest):
         data = Table("iris")[::3]
         self.assertFalse(self.widget.Error.memory_error.is_shown())
         with unittest.mock.patch(
-            "Orange.widgets.data.owoutliers.OWOutliers.detect_outliers",
-            side_effect=MemoryError):
+                "Orange.widgets.data.owoutliers.OWOutliers.detect_outliers",
+                side_effect=MemoryError):
             self.send_signal("Data", data)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
 

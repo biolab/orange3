@@ -250,6 +250,7 @@ class TestOWSelectRows(WidgetTest):
         return self.create_widget(OWSelectRows, settings)
 
     def enterFilter(self, variable, filter, value1=None, value2=None):
+        # pylint: disable=redefined-builtin
         row = self.widget.cond_list.model().rowCount()
         self.widget.add_button.click()
 
@@ -276,7 +277,8 @@ class TestOWSelectRows(WidgetTest):
                     if isinstance(w, QLineEdit)]
         return value_inputs
 
-    def __set_value(self, widget, value):
+    @staticmethod
+    def __set_value(widget, value):
         if isinstance(widget, QLineEdit):
             QTest.mouseClick(widget, Qt.LeftButton)
             QTest.keyClicks(widget, value, delay=0)
