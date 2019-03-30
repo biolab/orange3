@@ -31,10 +31,10 @@ from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
-from Orange.widgets import widget, gui
+from Orange.widgets import gui
 from Orange.widgets.settings import Setting, DomainContextHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -65,6 +65,7 @@ class RichTableModel(TableModel):
     def data(self, index, role=Qt.DisplayRole,
              # for faster local lookup
              _BarRole=gui.TableBarItem.BarRole):
+        # pylint: disable=arguments-differ
         if role == _BarRole and self._continuous[index.column()]:
             val = super().data(index, TableModel.ValueRole)
             if val is None or isnan(val):
@@ -129,9 +130,6 @@ class TableSliceProxy(QIdentityProxyModel):
             self.beginResetModel()
             self.__rowslice = rowslice
             self.endResetModel()
-
-    def setSourceModel(self, model):
-        super().setSourceModel(model)
 
     def mapToSource(self, proxyindex):
         model = self.sourceModel()
@@ -325,13 +323,13 @@ def table_selection_to_mime_data(table):
     """
     lines = table_selection_to_list(table)
 
-    csv = lines_to_csv_string(lines, dialect="excel").encode("utf-8")
-    tsv = lines_to_csv_string(lines, dialect="excel-tab").encode("utf-8")
+    as_csv = lines_to_csv_string(lines, dialect="excel").encode("utf-8")
+    as_tsv = lines_to_csv_string(lines, dialect="excel-tab").encode("utf-8")
 
     mime = QMimeData()
-    mime.setData("text/csv", QByteArray(csv))
-    mime.setData("text/tab-separated-values", QByteArray(tsv))
-    mime.setData("text/plain", QByteArray(tsv))
+    mime.setData("text/csv", QByteArray(as_csv))
+    mime.setData("text/tab-separated-values", QByteArray(as_tsv))
+    mime.setData("text/plain", QByteArray(as_tsv))
     return mime
 
 
@@ -364,7 +362,7 @@ def table_selection_to_list(table):
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class OWDataTable(widget.OWWidget):
+class OWDataTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
     icon = "icons/Table.svg"
@@ -449,7 +447,8 @@ class OWDataTable(widget.OWWidget):
     def copy_to_clipboard(self):
         self.copy()
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(800, 500)
 
     @Inputs.data
@@ -492,7 +491,7 @@ class OWDataTable(widget.OWWidget):
 
             self._setup_table_view(view, data)
             slot = TableSlot(tid, data, table_summary(data), view)
-            view._input_slot = slot
+            view._input_slot = slot  # pylint: disable=protected-access
             self._inputs[tid] = slot
 
             self.tabs.setCurrentIndex(self.tabs.indexOf(view))
@@ -500,7 +499,7 @@ class OWDataTable(widget.OWWidget):
             self.set_info(slot.summary)
 
             if isinstance(slot.summary.len, concurrent.futures.Future):
-                def update(f):
+                def update(_):
                     QMetaObject.invokeMethod(
                         self, "_update_info", Qt.QueuedConnection)
 
@@ -515,6 +514,7 @@ class OWDataTable(widget.OWWidget):
 
             current = self.tabs.currentWidget()
             if current is not None:
+                # pylint: disable=protected-access
                 self.set_info(current._input_slot.summary)
 
         self.tabs.tabBar().setVisible(self.tabs.count() > 1)
@@ -605,13 +605,14 @@ class OWDataTable(widget.OWWidget):
         """Set table corner text."""
         # As this is an ugly hack, do everything in
         # try - except blocks, as it may stop working in newer Qt.
-
+        # pylint: disable=broad-except
         if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
             try:
                 btn = table.findChild(QAbstractButton)
 
-                class efc(QObject):
-                    def eventFilter(self, o, e):
+                class Efc(QObject):
+                    @staticmethod
+                    def eventFilter(o, e):
                         if (isinstance(o, QAbstractButton) and
                                 e.type() == QEvent.Paint):
                             # paint by hand (borrowed from QTableCornerButton)
@@ -633,7 +634,7 @@ class OWDataTable(widget.OWWidget):
                             painter.drawControl(QStyle.CE_Header, opt)
                             return True     # eat event
                         return False
-                table.efc = efc()
+                table.efc = Efc()
                 # disconnect default handler for clicks and connect a new one, which supports
                 # both selection and deselection of all data
                 btn.clicked.disconnect()
@@ -663,6 +664,7 @@ class OWDataTable(widget.OWWidget):
                 pass
 
     def _on_select_all(self, _):
+        # pylint: disable=protected-access
         data_info = self.tabs.currentWidget()._input_slot.summary
         if len(self.selected_rows) == data_info.len \
                 and len(self.selected_cols) == len(data_info.domain):
@@ -674,6 +676,7 @@ class OWDataTable(widget.OWWidget):
         """Update the info box on current tab change"""
         view = self.tabs.widget(index)
         if view is not None and view.model() is not None:
+            # pylint: disable=protected-access
             self.set_info(view._input_slot.summary)
         else:
             self.set_info(None)
@@ -765,13 +768,14 @@ class OWDataTable(widget.OWWidget):
     def _update_info(self):
         current = self.tabs.currentWidget()
         if current is not None and current.model() is not None:
+            # pylint: disable=protected-access
             self.set_info(current._input_slot.summary)
 
     def update_selection(self, *_):
         self.commit()
 
     def set_selection(self):
-        if len(self.selected_rows) and len(self.selected_cols):
+        if self.selected_rows and self.selected_cols:
             view = self.tabs.currentWidget()
             model = view.model()
             if model.rowCount() <= self.selected_rows[-1] or \
@@ -793,7 +797,8 @@ class OWDataTable(widget.OWWidget):
             view.selectionModel().select(
                 selection, QItemSelectionModel.ClearAndSelect)
 
-    def get_selection(self, view):
+    @staticmethod
+    def get_selection(view):
         """
         Return the selected row and column indices of the selection in view.
         """
@@ -956,6 +961,7 @@ def table_summary(table):
         )
 
         dist = bstats.stats
+        # pylint: disable=unbalanced-tuple-unpacking
         X_dist, Y_dist, M_dist = numpy.split(
             dist, numpy.cumsum([len(domain.attributes),
                                 len(domain.class_vars)]))
@@ -974,6 +980,7 @@ def table_summary(table):
                 return NotAvailable()
             else:
                 assert False
+                return None
 
         X_part = parts(table.X, table.X_density(), X_dist)
         Y_part = parts(table.Y, table.Y_density(), Y_dist)
