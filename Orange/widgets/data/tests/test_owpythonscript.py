@@ -20,15 +20,15 @@ class TestOWPythonScript(WidgetTest):
 
     def test_inputs(self):
         """Check widget's inputs"""
-        for input, data in (("Data", self.iris),
-                            ("Learner", self.learner),
-                            ("Classifier", self.model),
-                            ("Object", "object")):
-            self.assertEqual(getattr(self.widget, input.lower()), {})
-            self.send_signal(input, data, (1,))
-            self.assertEqual(getattr(self.widget, input.lower()), {1: data})
-            self.send_signal(input, None, (1,))
-            self.assertEqual(getattr(self.widget, input.lower()), {})
+        for input_, data in (("Data", self.iris),
+                             ("Learner", self.learner),
+                             ("Classifier", self.model),
+                             ("Object", "object")):
+            self.assertEqual(getattr(self.widget, input_.lower()), {})
+            self.send_signal(input_, data, (1,))
+            self.assertEqual(getattr(self.widget, input_.lower()), {1: data})
+            self.send_signal(input_, None, (1,))
+            self.assertEqual(getattr(self.widget, input_.lower()), {})
 
     def test_outputs(self):
         """Check widget's outputs"""
@@ -187,6 +187,7 @@ class TestOWPythonScript(WidgetTest):
 
     def _drag_enter_event(self, url):
         # make sure data does not get garbage collected before it used
+        # pylint: disable=attribute-defined-outside-init
         self.event_data = data = QMimeData()
         data.setUrls([QUrl(url)])
         return QDragEnterEvent(
@@ -204,6 +205,7 @@ class TestOWPythonScript(WidgetTest):
 
     def _drop_event(self, url):
         # make sure data does not get garbage collected before it used
+        # pylint: disable=attribute-defined-outside-init
         self.event_data = data = QMimeData()
         data.setUrls([QUrl(url)])
 

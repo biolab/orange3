@@ -23,7 +23,7 @@ class TestOWColor(WidgetTest):
     def test_invalid_input_colors(self):
         a = ContinuousVariable("a")
         a.attributes["colors"] = "invalid"
-        a.colors
+        _ = a.colors
         t = Table(Domain([a]))
 
         self.send_signal(self.widget.Inputs.data, t)

@@ -131,8 +131,8 @@ class TestOWCreateClass(WidgetTest):
 
     def _test_default_rules(self):
         self.assertEqual(self.widget.active_rules, [["", ""], ["", ""]])
-        for i, (label, pattern) in enumerate(self.widget.line_edits):
-            self.assertEqual(label.text(), "".format(i + 1))
+        for i, (label, pattern) in enumerate(self.widget.line_edits, start=1):
+            self.assertEqual(label.placeholderText(), f"C{i}")
             self.assertEqual(pattern.text(), "")
 
     def _set_attr(self, attr):
@@ -258,6 +258,7 @@ class TestOWCreateClass(WidgetTest):
         attr = outdata.get_column_view("gender")[0]
         female = np.equal(attr, gender.values.index("female"))
         np.testing.assert_equal(classes[female], 0)
+        # pylint: disable=invalid-unary-operand-type
         np.testing.assert_equal(classes[~female], 1)
 
         self._set_attr(thal)

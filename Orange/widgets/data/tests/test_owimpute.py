@@ -14,7 +14,7 @@ from Orange.widgets.utils.itemmodels import select_row
 
 
 class Foo(Learner):
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):  # pylint: disable=arguments-differ
         1/0
 
 
@@ -25,6 +25,7 @@ class Bar:
 
 class FooBar(Learner):
     def __call__(self, data, *args, **kwargs):
+        # pylint: disable=arguments-differ, attribute-defined-outside-init
         bar = Bar()
         bar.domain = data.domain
         return bar

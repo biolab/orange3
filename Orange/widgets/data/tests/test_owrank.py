@@ -283,6 +283,7 @@ class TestOWRank(WidgetTest):
                 [ContinuousVariable("c")],
                 [DiscreteVariable("d", values="01")]
             ),
+            # false positive, pylint: disable=invalid-unary-operand-type
             list(zip(
                 [-np.power(10, 10), 1, 1],
                 [0, 1, 1]
