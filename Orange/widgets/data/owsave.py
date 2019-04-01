@@ -272,6 +272,7 @@ class OWSave(widget.OWWidget):
             # pylint: disable=protected-access
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
+                self.suffix = ""
                 self.setAcceptMode(QFileDialog.AcceptSave)
                 self.setOption(QFileDialog.DontUseNativeDialog)
                 self.filterSelected.connect(self.updateDefaultExtension)

@@ -41,6 +41,7 @@ class OWTranspose(OWWidget):
         super().__init__()
         self.data = None
 
+        # self.apply is changed later, pylint: disable=unnecessary-lambda
         box = gui.radioButtons(
             self.controlArea, self, "feature_type", box="Feature names",
             callback=lambda: self.apply())

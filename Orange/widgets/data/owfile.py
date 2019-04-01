@@ -40,8 +40,9 @@ def add_origin(examples, filename):
     """
     if not filename:
         return
-    vars = examples.domain.variables + examples.domain.metas
-    strings = [var for var in vars if var.is_string]
+    strings = [var
+               for var in examples.domain.variables + examples.domain.metas
+               if var.is_string]
     dir_name, _ = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
