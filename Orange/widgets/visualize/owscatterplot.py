@@ -226,6 +226,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
 
+    left_side_scrolling = True
+
     xy_changed_manually = Signal(Variable, Variable)
 
     class Warning(OWDataProjectionWidget.Warning):

@@ -83,6 +83,8 @@ class OWtSNE(OWDataProjectionWidget):
     graph = SettingProvider(OWtSNEGraph)
     embedding_variables_names = ("t-SNE-x", "t-SNE-y")
 
+    left_side_scrolling = True
+
     #: Runtime state
     Running, Finished, Waiting, Paused = 1, 2, 3, 4
 

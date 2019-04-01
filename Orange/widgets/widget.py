@@ -17,7 +17,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
-    QSettings, QUrl, QThread, pyqtSignal as Signal
+    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize
 )
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
@@ -29,7 +29,7 @@ from Orange.canvas.registry import description as widget_description
 # pylint: disable=unused-import
 from Orange.canvas.registry import WidgetDescription, OutputSignal, InputSignal
 from Orange.widgets.report import Report
-from Orange.widgets.gui import OWComponent
+from Orange.widgets.gui import OWComponent, VerticalScrollArea
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
@@ -134,6 +134,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
+    #: Is vertical scrolling on the widget's left side, which usually
+    #: contains  the `controlArea`, allowed?
+    left_side_scrolling = False
     #: Orientation of the buttonsArea box; valid only if
     #: `want_control_area` is `True`. Possible values are Qt.Horizontal,
     #: Qt.Vertical and None for no buttons area
@@ -347,8 +350,33 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__splitter = self._Splitter(Qt.Horizontal, self)
         self.layout().addWidget(self.__splitter)
 
+    class _HiddenVerticalScrollArea(VerticalScrollArea):
+
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.setFrameShape(QFrame.NoFrame)
+
+        def sizeHint(self):
+            if self.widget():
+                return self.widget().sizeHint()
+            else:
+                return super().sizeHint()
+
+        def minimumSizeHint(self):
+            if self.widget():
+                min_height = min(self.widget().minimumSizeHint().height(), 300)
+                return QSize(self.widget().minimumSizeHint().width(), min_height)
+            else:
+                return super().minimumSizeHint()
+
     def _insert_control_area(self):
-        self.left_side = gui.vBox(self.__splitter, spacing=0)
+        if self.left_side_scrolling:
+            scroll_area = self._HiddenVerticalScrollArea(self)
+            self.__splitter.addWidget(scroll_area)
+            self.left_side = gui.vBox(scroll_area, spacing=0)
+            scroll_area.setWidget(self.left_side)
+        else:
+            self.left_side = gui.vBox(self.__splitter, spacing=0)
         self.__splitter.setSizes([1])  # Smallest size allowed by policy
         if self.buttons_area_orientation is not None:
             self.controlArea = gui.vBox(self.left_side, addSpace=0)

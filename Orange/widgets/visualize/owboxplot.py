@@ -275,7 +275,7 @@ class OWBoxPlot(widget.OWWidget):
 
         e = gui.hBox(self.mainArea, addSpace=False)
         self.infot1 = gui.widgetLabel(e, "<center>No test results.</center>")
-        self.mainArea.setMinimumWidth(600)
+        self.mainArea.setMinimumWidth(300)
 
         self.stats = self.dist = self.conts = []
         self.is_continuous = False
@@ -283,7 +283,7 @@ class OWBoxPlot(widget.OWWidget):
         self.update_display_box()
 
     def sizeHint(self):
-        return QSize(100, 500)  # Vertical size is regulated by mainArea
+        return QSize(900, 500)
 
     def eventFilter(self, obj, event):
         if obj is self.box_view.viewport() and \
