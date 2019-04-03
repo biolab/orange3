@@ -1080,6 +1080,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         embedding_mask = np.all(np.isnan(output.metas[:, :2]), axis=1)
         np.testing.assert_array_equal(~embedding_mask, self.widget.valid_data)
+        # reload
+        self.send_signal(self.widget.Inputs.data, table)
 
     def test_sparse_data(self):
         table = Table("iris")

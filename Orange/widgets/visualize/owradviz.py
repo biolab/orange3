@@ -368,7 +368,7 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.attr_color is not None and \
             not np.isnan(self.data.get_column_view(
                 self.attr_color)[0].astype(float)).all() and \
-            len(self.data[self.valid_data]) > 1 and \
+            np.sum(np.all(np.isfinite(self.data.X), axis=1)) > 1 and \
             np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
         self.btn_vizrank.setEnabled(is_enabled)
         if is_enabled:

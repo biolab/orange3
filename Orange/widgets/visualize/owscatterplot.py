@@ -341,7 +341,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_size = findvar(self.attr_size, self.gui.size_model)
 
     def check_data(self):
-        self.clear_messages()
+        super().check_data()
         self.__timer.stop()
         self.sampling.setVisible(False)
         self.sql_data = None
