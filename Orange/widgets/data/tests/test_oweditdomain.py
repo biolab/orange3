@@ -18,7 +18,7 @@ from Orange.widgets.data.oweditdomain import (
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
     Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
-    apply_transform,
+    apply_transform, MultiplicityRole
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -52,6 +52,17 @@ class TestReport(TestCase):
         self.assertIn("aa", r)
         self.assertIn("b", r)
         self.assertIn("<s>", r)
+
+    def test_categorical_merge_mapping(self):
+        var = Categorical("C", ("a", "b1", "b2"), None, ())
+        tr = CategoriesMapping(
+            (("a", "a"),
+             ("b1", "b"),
+             ("b2", "b"),
+             (None, "c")),
+        )
+        r = report_transform(var, [tr])
+        self.assertIn('b', r)
 
     def test_change_ordered(self):
         var = Categorical("C", ("a", "b"), None, ())
@@ -270,6 +281,22 @@ class TestEditors(GuiTest):
         sel_model.select(model.index(0, 0), QItemSelectionModel.Select)
         sel_model.select(model.index(0, 0), QItemSelectionModel.Deselect)
 
+        # merge mapping
+        mapping = [
+            ("a", "a"),
+            ("b", "b"),
+            ("c", "b")
+        ]
+        w.set_data(v, [CategoriesMapping(mapping)])
+        self.assertEqual(w.get_data()[1], [CategoriesMapping(mapping)])
+        self.assertEqual(model.data(model.index(0, 0), MultiplicityRole), 1)
+        self.assertEqual(model.data(model.index(1, 0), MultiplicityRole), 2)
+        self.assertEqual(model.data(model.index(2, 0), MultiplicityRole), 2)
+        model.setData(model.index(0, 0), "b", Qt.EditRole)
+        self.assertEqual(model.data(model.index(0, 0), MultiplicityRole), 3)
+        self.assertEqual(model.data(model.index(1, 0), MultiplicityRole), 3)
+        self.assertEqual(model.data(model.index(2, 0), MultiplicityRole), 3)
+
     def test_time_editor(self):
         w = TimeVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
@@ -345,6 +372,22 @@ class TestTransforms(TestCase):
         self.assertSequenceEqual(DD.values, ["1", "2", "A"])
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([1, np.nan, 0, np.nan]))
+        )
+        self.assertEqual(DD.base_value, -1)
+
+    def test_discrete_merge(self):
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"))
+        mapping = (
+            ("0", "x"),
+            ("1", "y"),
+            ("2", "x"),
+            ("3", "y"),
+        )
+        tr = [CategoriesMapping(mapping)]
+        DD = apply_transform(D, tr)
+        self.assertSequenceEqual(DD.values, ["x", "y"])
+        self._assertLookupEquals(
+            DD.compute_value, Lookup(D, np.array([0, 1, 1, 0]))
         )
         self.assertEqual(DD.base_value, -1)
 
