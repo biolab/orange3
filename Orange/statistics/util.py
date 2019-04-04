@@ -361,7 +361,9 @@ def stats(X, weights=None, compute_variance=False):
             X.shape[0] - non_zero,
             non_zero))
     else:
-        nans = (~X.astype(bool)).sum(axis=0) if X.size else np.zeros(X.shape[1])
+        X_str = X.astype(str)
+        nans = ((X_str == "nan") | (X_str == "")).sum(axis=0) \
+            if X.size else np.zeros(X.shape[1])
         return np.column_stack((
             np.tile(np.inf, X.shape[1]),
             np.tile(-np.inf, X.shape[1]),

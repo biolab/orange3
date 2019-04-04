@@ -118,13 +118,14 @@ class TestUtil(unittest.TestCase):
 
     def test_stats_non_numeric(self):
         X = np.array([
-            ['', 'a', 'b'],
-            ['a', '', 'b'],
-            ['a', 'b', ''],
+            ["", "a", np.nan, 0],
+            ["a", "", np.nan, 1],
+            ["a", "b", 0, 0],
         ], dtype=object)
         np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 1, 2],
-                                           [np.inf, -np.inf, 0, 0, 1, 2]])
+                                           [np.inf, -np.inf, 0, 0, 2, 1],
+                                           [np.inf, -np.inf, 0, 0, 0, 3]])
 
     def test_nanmin_nanmax(self):
         warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
