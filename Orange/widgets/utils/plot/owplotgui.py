@@ -102,15 +102,16 @@ class VariableSelectionModel(VariableListModel):
         if not mime.hasFormat(self.MIME_TYPE):
             return False  # pragma: no cover
         prev_index = mime.property('item_index')
-        post_index = self.index(row)
         if prev_index is None:
             return False
         var = self[prev_index.row()]
         if self.is_selected(prev_index):
             self.selected_vars.remove(var)
-        if self.is_selected(post_index):
+        if row < len(self) and self.is_selected(self.index(row)):
             postpos = self.selected_vars.index(self[row])
             self.selected_vars.insert(postpos, var)
+        elif row == 0 or self.is_selected(self.index(row - 1)):
+            self.selected_vars.append(var)
         self.selection_changed.emit()
         return True
 
@@ -166,8 +167,6 @@ class VariablesDelegate(QStyledItemDelegate):
 
 
 class VariableSelectionView(QListView):
-    dragDropActionDidComplete = pyqtSignal(int)
-
     def __init__(self, *args, acceptedType=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.setSizePolicy(
@@ -209,7 +208,7 @@ def variables_selection(widget, master, model):
         proxy.invalidate()
         view.selectionModel().clearSelection()
 
-    filter, view = variables_filter(
+    filter_edit, view = variables_filter(
         model=model, parent=master, view_type=VariableSelectionView)
     proxy = view.model()
     proxy.setSortRole(model.SortRole)
@@ -220,7 +219,8 @@ def variables_selection(widget, master, model):
     view.clicked.connect(
         lambda index: model.toggle_item(proxy.mapToSource(index)))
     master.contextOpened.connect(update_list)
-    widget.layout().addWidget(filter)
+    widget.layout().addWidget(filter_edit)
+    widget.layout().addSpacing(4)
     widget.layout().addWidget(view)
 
 

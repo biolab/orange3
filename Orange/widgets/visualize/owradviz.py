@@ -46,11 +46,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
         self.master = master
         self.n_neighbors = 10
-        max_n_attrs = 0
 
         box = gui.hBox(self)
         self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
+            box, self, "n_attrs", 3, 99, label="Maximum number of variables: ",
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
@@ -131,7 +130,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             return False
         elif not master.btn_vizrank.isEnabled():
             return False
-        self.n_attrs_spin.setMaximum(20)  # all primitive vars except color one
+        self.n_attrs_spin.setMaximum(len(master.model_selected))
         return True
 
     def on_row_clicked(self, index):
@@ -272,7 +271,7 @@ class OWRadviz(OWAnchorProjectionWidget):
     priority = 241
     keywords = ["viz"]
 
-    settings_version = 2
+    settings_version = 3
 
     selected_vars = ContextSetting([])
     vizrank = SettingProvider(RadvizVizRank)
@@ -286,16 +285,13 @@ class OWRadviz(OWAnchorProjectionWidget):
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
 
-    def __init__(self):
-        self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.vizrank_set_attrs)
-        super().__init__()
-
     def _add_controls(self):
         self.model_selected = VariableSelectionModel(self.selected_vars)
         variables_selection(self.controlArea, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
+        self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
+            None, self, "Suggest features", self.vizrank_set_attrs)
         self.controlArea.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
         self.controlArea.layout().removeWidget(self.control_area_stretch)
@@ -320,7 +316,6 @@ class OWRadviz(OWAnchorProjectionWidget):
         # Ugly, but the alternative is to have yet another signal to which
         # the view will have to connect
         self.model_selected.selection_changed.emit()
-        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.init_projection()
@@ -380,12 +375,14 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        values = context.values
         if version < 2:
-            values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
+        if version < 3 and "selected_vars" in values:
+            values["selected_vars"] = (values["selected_vars"], -3)
 
 
 class MoveIndicator(pg.GraphicsObject):

@@ -259,7 +259,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
                        Placement.LDA: "Linear Discriminant Analysis",
                        Placement.PCA: "Principal Component Analysis"}
 
-    settings_version = 5
+    settings_version = 6
 
     placement = Setting(Placement.Circular)
     selected_vars = ContextSetting([])
@@ -322,7 +322,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         # Ugly, but the alternative is to have yet another signal to which
         # the view will have to connect
         self.model_selected.selection_changed.emit()
-        self.__model_selected_changed()
 
     def __model_selected_changed(self):
         self.projection = None
@@ -471,6 +470,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        values = context.values
         if version < 2:
             domain = context.ordered_domain
             c_domain = [t for t in context.ordered_domain if t[1] == 2]
@@ -479,20 +479,25 @@ class OWLinearProjection(OWAnchorProjectionWidget):
                                         (d_domain, "shape_index", "attr_shape"),
                                         (c_domain, "size_index", "attr_size")):
                 index = context.values[old_val][0] - 1
-                context.values[new_val] = (d[index][0], d[index][1] + 100) \
+                values[new_val] = (d[index][0], d[index][1] + 100) \
                     if 0 <= index < len(d) else None
         if version < 3:
-            context.values["graph"] = {
-                "attr_color": context.values["attr_color"],
-                "attr_shape": context.values["attr_shape"],
-                "attr_size": context.values["attr_size"]
+            values["graph"] = {
+                "attr_color": values["attr_color"],
+                "attr_shape": values["attr_shape"],
+                "attr_size": values["attr_size"]
             }
         if version == 3:
-            values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
+        if version < 6 and "selected_vars" in values:
+            values["selected_vars"] = (values["selected_vars"], -3)
+
+    # for backward compatibility with settings < 6, pull the enum from global
+    # namespace into class
+    Placement = Placement
 
 
 def column_data(table, var, dtype):
