@@ -20,7 +20,7 @@ from Orange.data import (
 )
 from Orange.data.util import SharedComputeValue, vstack, hstack, \
     assure_array_dense, assure_array_sparse, \
-    assure_column_dense, assure_column_sparse
+    assure_column_dense, assure_column_sparse, get_unique_names_duplicates
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
     sparse_implicit_zero_weights
@@ -1604,8 +1604,8 @@ class Table(MutableSequence, Storage):
         return contingencies, unknown_rows
 
     @classmethod
-    def transpose(cls, table, feature_names_column="", meta_attr_name="Feature name",
-                  feature_name="Feature"):
+    def transpose(cls, table, feature_names_column="",
+                  meta_attr_name="Feature name", feature_name="Feature"):
         """
         Transpose the table.
 
@@ -1614,6 +1614,7 @@ class Table(MutableSequence, Storage):
             use for feature names
         :param meta_attr_name: str - name of new meta attribute into which
             feature names are mapped
+        :param feature_name: str - default feature name prefix
         :return: Table - transposed table
         """
 
@@ -1625,10 +1626,14 @@ class Table(MutableSequence, Storage):
         # - classes and metas to attributes of attributes
         # - arbitrary meta column to feature names
         self.X = table.X.T
-        attributes = [ContinuousVariable(str(row[feature_names_column]))
-                      for row in table] if feature_names_column else \
-            [ContinuousVariable(feature_name + " " + str(i + 1).zfill(
-                int(np.ceil(np.log10(n_cols))))) for i in range(n_cols)]
+        if feature_names_column:
+            names = [str(row[feature_names_column]) for row in table]
+            names = get_unique_names_duplicates(names)
+            attributes = [ContinuousVariable(name) for name in names]
+        else:
+            places = int(np.ceil(np.log10(n_cols)))
+            attributes = [ContinuousVariable(f"{feature_name} {i:0{places}}")
+                          for i in range(1, n_cols + 1)]
         if old_domain is not None and feature_names_column:
             for i, _ in enumerate(attributes):
                 if attributes[i].name in old_domain:

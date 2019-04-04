@@ -2,6 +2,7 @@
 Data-manipulation utilities.
 """
 import re
+from collections import Counter
 from itertools import chain
 
 import numpy as np
@@ -196,3 +197,19 @@ def get_unique_names(names, proposed):
         return proposed
     max_index = max(map(max, indicess), default=0) + 1
     return [f"{name} ({max_index})" for name in proposed]
+
+
+def get_unique_names_duplicates(proposed: list) -> list:
+    """
+    Returns list of unique names. If a name is duplicated, the
+    function appends an index in parentheses.
+    """
+    counter = Counter(proposed)
+    temp_counter = Counter()
+    names = []
+    for name in proposed:
+        if counter[name] > 1:
+            temp_counter.update([name])
+            name = f"{name} ({temp_counter[name]})"
+        names.append(name)
+    return names
