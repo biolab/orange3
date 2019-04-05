@@ -15,9 +15,9 @@ The **Continuize** widget receives a data set in the input and outputs the same 
 
 ![](images/Continuize-stamped.png)
 
-1. [Continuization methods](https://en.wikipedia.org/wiki/Continuity_correction), which define the treatment of multivalued discrete attributes. Say that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:  
+1. [Continuization methods](https://en.wikipedia.org/wiki/Continuity_correction), which define the treatment of multivalued discrete attributes. Say that we have a discrete attribute status with the values low, middle and high, listed in that order. Options for their transformation are:
 
-   - **Target or First value as base**: the attribute will be transformed into two continuous attributes, status=middle with values 0 or 1 signifying whether the original attribute had value middle on a particular example, and similarly, status=high. Hence, a three-valued attribute is transformed into two continuous attributes, corresponding to all except the first value of the attribute.
+   - **First value as base**: the attribute will be transformed into two continuous attributes, status=middle with values 0 or 1 signifying whether the original attribute had value middle on a particular example, and similarly, status=high. Hence, a three-valued attribute is transformed into two continuous attributes, corresponding to all except the first value of the attribute.
    - **Most frequent value as base**: similar to the above, except that the data is analyzed and the most frequent value is used as a base. So, if most examples have the value middle, the two newly constructed continuous attributes will be status=low and status=high.
    - **One attribute per value**: this would construct three continuous attributes out of a three-valued discrete one.
    - **Ignore multinominal attributes**: removes the multinominal attributes from the data.

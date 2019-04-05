@@ -41,7 +41,7 @@ class TestReport(TestCase):
         self.assertIn("b", r)
 
     def test_categories_mapping(self):
-        var = Categorical("C", ("a", "b", "c"), None, ())
+        var = Categorical("C", ("a", "b", "c"), ())
         tr = CategoriesMapping(
             (("a", "aa"),
              ("b", None),
@@ -55,7 +55,7 @@ class TestReport(TestCase):
         self.assertIn("<s>", r)
 
     def test_categorical_merge_mapping(self):
-        var = Categorical("C", ("a", "b1", "b2"), None, ())
+        var = Categorical("C", ("a", "b1", "b2"), ())
         tr = CategoriesMapping(
             (("a", "a"),
              ("b1", "b"),
@@ -66,7 +66,7 @@ class TestReport(TestCase):
         self.assertIn('b', r)
 
     def test_change_ordered(self):
-        var = Categorical("C", ("a", "b"), None, ())
+        var = Categorical("C", ("a", "b"), ())
         tr = ChangeOrdered(True)
         r = report_transform(var, [tr])
         self.assertIn("ordered", r)
@@ -245,8 +245,7 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Categorical("C", ("a", "b", "c"), None,
-                        (("A", "1"), ("B", "b")))
+        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")))
         w.set_data(v)
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -302,7 +301,7 @@ class TestEditors(GuiTest):
 
     def test_discrete_editor_add_remove_action(self):
         w = DiscreteVariableEditor()
-        v = Categorical("C", ("a", "b", "c"), None,
+        v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")))
         w.set_data(v)
         action_add = w.add_new_item
@@ -340,7 +339,7 @@ class TestEditors(GuiTest):
 
     def test_discrete_editor_merge_action(self):
         w = DiscreteVariableEditor()
-        v = Categorical("C", ("a", "b", "c"), None,
+        v = Categorical("C", ("a", "b", "c"),
                         (("A", "1"), ("B", "b")))
         w.set_data(v)
         action = w.merge_items
@@ -429,7 +428,7 @@ class TestTransforms(TestCase):
         self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
-        D = DiscreteVariable("D", values=("2", "3", "1", "0"), base_value=1)
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"))
         mapping = (
             ("0", None),
             ("1", "1"),
@@ -443,7 +442,6 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([1, np.nan, 0, np.nan]))
         )
-        self.assertEqual(DD.base_value, -1)
 
     def test_discrete_merge(self):
         D = DiscreteVariable("D", values=("2", "3", "1", "0"))
@@ -459,7 +457,6 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([0, 1, 1, 0]))
         )
-        self.assertEqual(DD.base_value, -1)
 
     def _assertLookupEquals(self, first, second):
         self.assertIsInstance(first, Lookup)

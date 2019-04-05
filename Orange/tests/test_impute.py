@@ -127,20 +127,15 @@ class TestDefault(unittest.TestCase):
 
     def test_default(self):
         nan = np.nan
-        X = [
-            [1.0, nan, 0.0],
-            [2.0, 1.0, 3.0],
-            [nan, nan, nan]
+        X = [[nan, 0.0],
+             [1.0, 3.0],
+             [nan, nan]
         ]
         domain = data.Domain(
-            (data.DiscreteVariable("A", values=["0", "1", "2"],
-                                   base_value=2),
-             data.DiscreteVariable("B", values=["a", "b", "c"]),
+            (data.DiscreteVariable("B", values=["a", "b", "c"]),
              data.ContinuousVariable("C"))
         )
         table = data.Table.from_numpy(domain, np.array(X))
-        v1 = impute.Default(1)(table, domain["A"])
-        self.assertEqual(v1.compute_value.value, 1)
 
         v2 = impute.Default(42)(table, domain["C"])
         self.assertEqual(v2.compute_value.value, 42)

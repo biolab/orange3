@@ -47,7 +47,7 @@ class DomainContinuizer(_RefuseDataInConstructor, Reprable):
                 base = -1
             elif treat in (Continuize.FirstAsBase,
                            Continuize.RemoveMultinomial):
-                base = max(var.base_value, 0)
+                base = 0
             else:
                 base = dists[var_ptr].modus()
             ind_class = [Indicator1, Indicator][self.zero_based]
