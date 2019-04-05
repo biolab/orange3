@@ -442,7 +442,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.enable_controls()
 
     def check_data(self):
-        self.valid_data = None
         self.clear_messages()
 
     def use_context(self):
@@ -649,8 +648,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
             elif len(self.data) < 2:
                 error(self.Error.no_instances)
             else:
-                self.valid_data = np.all(np.isfinite(self.data.X), axis=1)
-                if not np.sum(self.valid_data):
+                if not np.sum(np.all(np.isfinite(self.data.X), axis=1)):
                     error(self.Error.no_valid_data)
 
     def init_projection(self):
@@ -663,6 +661,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
             self.Error.proj_error(ex)
 
     def get_embedding(self):
+        self.valid_data = None
         if self.data is None or self.projection is None:
             return None
         embedding = self.projection(self.data).X

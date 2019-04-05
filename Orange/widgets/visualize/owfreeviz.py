@@ -267,7 +267,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
                 error(self.Error.features_exceeds_instances)
             elif not np.sum(np.std(self.data.X, axis=0)):
                 error(self.Error.constant_data)
-            elif np.sum(self.valid_data) > self.MAX_INSTANCES:
+            elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) > self.MAX_INSTANCES:
                 error(self.Error.too_many_data_instances)
             else:
                 if len(self.effective_variables) < len(domain.attributes):

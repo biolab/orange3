@@ -407,7 +407,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         elif len([v for v in self.continuous_variables
                   if v is not self.attr_color]) < 3:
             msg = "Not enough available continuous variables"
-        elif len(self.data[self.valid_data]) < 2:
+        elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) < 2:
             msg = "Not enough valid data instances"
         else:
             is_enabled = not np.isnan(self.data.get_column_view(
