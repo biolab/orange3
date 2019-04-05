@@ -265,7 +265,10 @@ class TSNEModel(Projection):
         new_embedding = self.embedding_.optimize(**kwargs)
         table = Table(self.embedding.domain, new_embedding.view(np.ndarray),
                       self.embedding.Y, self.embedding.metas)
-        return TSNEModel(new_embedding, table, self.pre_domain)
+
+        new_model = TSNEModel(new_embedding, table, self.pre_domain)
+        new_model.name = self.name
+        return new_model
 
 
 class TSNE(Projector):
@@ -400,7 +403,7 @@ class TSNE(Projector):
         self.callbacks_every_iters = callbacks_every_iters
         self.random_state = random_state
 
-    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> openTSNE.TSNEEmbedding:
+    def compute_affinities(self, X):
         # Sparse data are not supported
         if sp.issparse(X):
             raise TypeError(
@@ -415,40 +418,74 @@ class TSNE(Projector):
             if not isinstance(self.perplexity, Iterable):
                 raise ValueError(
                     "Perplexity should be an instance of `Iterable`, `%s` "
-                    "given." % type(self.perplexity).__name__)
+                    "given." % type(self.perplexity).__name__
+                )
             affinities = openTSNE.affinity.Multiscale(
-                X, perplexities=self.perplexity, metric=self.metric,
-                method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
+                X,
+                perplexities=self.perplexity,
+                metric=self.metric,
+                method=self.neighbors,
+                random_state=self.random_state,
+                n_jobs=self.n_jobs,
+            )
         else:
             if isinstance(self.perplexity, Iterable):
                 raise ValueError(
                     "Perplexity should be an instance of `float`, `%s` "
-                    "given." % type(self.perplexity).__name__)
+                    "given." % type(self.perplexity).__name__
+                )
             affinities = openTSNE.affinity.PerplexityBasedNN(
-                X, perplexity=self.perplexity, metric=self.metric,
-                method=self.neighbors, random_state=self.random_state, n_jobs=self.n_jobs)
+                X,
+                perplexity=self.perplexity,
+                metric=self.metric,
+                method=self.neighbors,
+                random_state=self.random_state,
+                n_jobs=self.n_jobs,
+            )
 
-        # Create an initial embedding
+        return affinities
+
+    def compute_initialization(self, X):
+        # Compute the initial positions of individual points
         if isinstance(self.initialization, np.ndarray):
             initialization = self.initialization
         elif self.initialization == "pca":
             initialization = openTSNE.initialization.pca(
-                X, self.n_components, random_state=self.random_state)
+                X, self.n_components, random_state=self.random_state
+            )
         elif self.initialization == "random":
             initialization = openTSNE.initialization.random(
-                X, self.n_components, random_state=self.random_state)
+                X, self.n_components, random_state=self.random_state
+            )
         else:
             raise ValueError(
                 "Invalid initialization `%s`. Please use either `pca` or "
-                "`random` or provide a numpy array." % self.initialization)
+                "`random` or provide a numpy array." % self.initialization
+            )
 
-        embedding = openTSNE.TSNEEmbedding(
-            initialization, affinities, learning_rate=self.learning_rate,
-            theta=self.theta, min_num_intervals=self.min_num_intervals,
-            ints_in_interval=self.ints_in_interval, n_jobs=self.n_jobs,
+        return initialization
+
+    def prepare_embedding(self, affinities, initialization):
+        """Prepare an embedding object with appropriate parameters, given some
+        affinities and initialization."""
+        return openTSNE.TSNEEmbedding(
+            initialization,
+            affinities,
+            learning_rate=self.learning_rate,
+            theta=self.theta,
+            min_num_intervals=self.min_num_intervals,
+            ints_in_interval=self.ints_in_interval,
+            n_jobs=self.n_jobs,
             negative_gradient_method=self.negative_gradient_method,
-            callbacks=self.callbacks, callbacks_every_iters=self.callbacks_every_iters,
+            callbacks=self.callbacks,
+            callbacks_every_iters=self.callbacks_every_iters,
         )
+
+    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> openTSNE.TSNEEmbedding:
+        # Compute affinities and initial positions and prepare the embedding object
+        affinities = self.compute_affinities(X)
+        initialization = self.compute_initialization(X)
+        embedding = self.prepare_embedding(affinities, initialization)
 
         # Run standard t-SNE optimization
         embedding.optimize(
@@ -462,13 +499,7 @@ class TSNE(Projector):
 
         return embedding
 
-    def __call__(self, data: Table) -> TSNEModel:
-        # Preprocess the data - convert discrete to continuous
-        data = self.preprocess(data)
-
-        # Run tSNE optimization
-        embedding = self.fit(data.X, data.Y)
-
+    def convert_embedding_to_model(self, data, embedding):
         # The results should be accessible in an Orange table, which doesn't
         # need the full embedding attributes and is cast into a regular array
         n = self.n_components
@@ -483,6 +514,17 @@ class TSNE(Projector):
         model.name = self.name
 
         return model
+
+    def __call__(self, data: Table) -> TSNEModel:
+        # Preprocess the data - convert discrete to continuous
+        data = self.preprocess(data)
+
+        # Run tSNE optimization
+        embedding = self.fit(data.X, data.Y)
+
+        # Convert the t-SNE embedding object to a TSNEModel and prepare the
+        # embedding table with t-SNE meta variables
+        return self.convert_embedding_to_model(data, embedding)
 
     @staticmethod
     def default_initialization(data, n_components=2, random_state=None):
