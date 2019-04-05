@@ -14,6 +14,7 @@ from functools import singledispatch
 
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
+    FrozenSet,
 )
 
 from AnyQt.QtWidgets import (
@@ -445,14 +446,17 @@ class ItemEditState:
     Added = 2
 
 
-#: Role used to retrieve the count of EditRole values in the model
+#: Role used to retrieve the count of 'key' values in the model.
 MultiplicityRole = Qt.UserRole + 0x67
 
 
 class CountedListModel(itemmodels.PyListModel):
     """
-    A list model counting how many times unique EditRole values appear in
+    A list model counting how many times unique `key` values appear in
     the list.
+
+    The counts are cached and invalidated on any change to the model involving
+    the changes to `keyRoles`.
     """
     #: cached counts
     __counts_cache = None  # type: Optional[Counter]
@@ -460,22 +464,22 @@ class CountedListModel(itemmodels.PyListModel):
     def data(self, index, role=Qt.DisplayRole):
         # type: (QModelIndex, int) -> Any
         if role == MultiplicityRole:
-            item = self.data(index, Qt.EditRole)
+            key = self.key(index)
             counts = self.__counts()
-            return counts.get(item, 1)
+            return counts.get(key, 1)
         return super().data(index, role)
 
     def setData(self, index, value, role=Qt.EditRole):
         # type: (QModelIndex, Any, int)-> bool
         rval = super().setData(index, value, role)
-        if role == Qt.EditRole:
+        if role in self.keyRoles():
             self.invalidateCounts()
         return rval
 
     def setItemData(self, index, data):
         # type: (QModelIndex, Dict[int, Any]) -> bool
         rval = super().setItemData(index, data)
-        if Qt.EditRole in data:
+        if self.keyRoles().intersection(set(data.keys())):
             self.invalidateCounts()
         return rval
 
@@ -487,7 +491,18 @@ class CountedListModel(itemmodels.PyListModel):
         super().endRemoveRows()
         self.invalidateCounts()
 
-    def invalidateCounts(self):
+    def beginResetModel(self) -> None:
+        super().beginResetModel()
+        self.invalidateCounts()
+
+    def endResetModel(self) -> None:
+        super().endResetModel()
+        self.invalidateCounts()
+
+    def invalidateCounts(self) -> None:
+        """
+        Invalidate the cached counts.
+        """
         self.__counts_cache = None
         # emit the change for the whole model
         self.dataChanged.emit(
@@ -496,18 +511,63 @@ class CountedListModel(itemmodels.PyListModel):
 
     def __counts(self):
         # type: () -> Counter
-        #
         if self.__counts_cache is not None:
             return self.__counts_cache
         counts = Counter()
         for index in map(self.index, range(self.rowCount())):
-            item = self.data(index, Qt.EditRole)
+            key = self.key(index)
             try:
-                counts[item] += 1
+                counts[key] += 1
             except TypeError:
-                warnings.warn(f"EditRole value {item} is not hashable")
+                warnings.warn(f"key value '{key}' is not hashable")
         self.__counts_cache = counts
         return self.__counts_cache
+
+    def key(self, index):
+        # type: (QModelIndex) -> Any
+        """
+        Return the 'key' value that is to be counted.
+
+        The default implementation returns Qt.EditRole value for the index
+
+        Parameters
+        ----------
+        index : QModelIndex
+            The model index.
+
+        Returns
+        -------
+        key : Any
+        """
+        return self.data(index, Qt.EditRole)
+
+    def keyRoles(self):
+        # type: () -> FrozenSet[int]
+        """
+        Return a set of item roles on which `key` depends.
+
+        The counts are invalidated and recomputed whenever any of the roles in
+        this set changes.
+
+        By default the only role returned is Qt.EditRole
+        """
+        return frozenset({Qt.EditRole})
+
+
+class CountedStateModel(CountedListModel):
+    """
+    Count by EditRole (name) and EditStateRole (ItemEditState)
+    """
+    # The purpouse is to count the items with target name only for
+    # ItemEditState.NoRole, i.e. excluding added/dropped values.
+    #
+    def key(self, index):  # type: (QModelIndex) -> Tuple[Any, Any]
+        # reimplemented
+        return self.data(index, Qt.EditRole), self.data(index, EditStateRole)
+
+    def keyRoles(self):  # type: () -> FrozenSet[int]
+        # reimplemented
+        return frozenset({Qt.EditRole, EditStateRole})
 
 
 class CategoriesEditDelegate(QStyledItemDelegate):
@@ -557,7 +617,7 @@ class DiscreteVariableEditor(VariableEditor):
         )
         self.ordered_cb.toggled.connect(self._set_ordered)
         #: A list model of discrete variable's values.
-        self.values_model = CountedListModel(
+        self.values_model = CountedStateModel(
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         )
 
