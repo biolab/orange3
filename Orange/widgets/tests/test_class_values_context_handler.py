@@ -65,7 +65,7 @@ class TestClassValuesContextHandler(TestCase):
 
 
 class SimpleWidget:
-    text = ContextSetting("", not_attribute=True)
+    text = ContextSetting("")
     with_metas = ContextSetting([])
     required = ContextSetting("", required=ContextSetting.REQUIRED)
 

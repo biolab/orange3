@@ -48,6 +48,7 @@ class TestPerfectDomainContextHandler(TestCase):
         context = Context()
         context.attributes = ()
         context.class_vars = ()
+        context.metas = ()
         self.handler.new_context = Mock(return_value=context)
         self.handler.open_context(self.widget, self.domain)
         self.handler.new_context.assert_called_with(*self.args)
