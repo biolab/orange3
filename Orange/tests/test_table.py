@@ -2751,6 +2751,15 @@ class TestTableTranspose(unittest.TestCase):
         self.assertDictEqual(data.domain.attributes[0].attributes,
                              {"attr1": "a1", "attr2": "aa1"})
 
+    def test_transpose_duplicate_feature_names(self):
+        table = Table("iris")
+        domain = table.domain
+        attrs, metas = domain.attributes[:3], domain.attributes[3:]
+        table = table.transform(Domain(attrs, domain.class_vars, metas))
+        transposed = Table.transpose(table, domain.attributes[3].name)
+        names = [f.name for f in transposed.domain.attributes]
+        self.assertEqual(len(names), len(set(names)))
+
     def test_transpose(self):
         zoo = Table("zoo")
         t1 = Table.transpose(zoo)
