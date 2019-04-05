@@ -993,17 +993,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             pen = [nopen] * self.n_shown
         else:
             sels = np.max(self.selection)
-            if sels == 1:
-                pen = np.where(
-                    self._filter_visible(self.selection),
-                    _make_pen(QColor(255, 190, 0, 255), SELECTION_WIDTH + 1),
-                    nopen)
-            else:
-                palette = ColorPaletteGenerator(number_of_colors=sels + 1)
-                pen = np.choose(
-                    self._filter_visible(self.selection),
-                    [nopen] + [_make_pen(palette[i], SELECTION_WIDTH + 1)
-                               for i in range(sels)])
+            palette = ColorPaletteGenerator(number_of_colors=sels + 1)
+            pen = np.choose(
+                self._filter_visible(self.selection),
+                [nopen] + [_make_pen(palette[i], SELECTION_WIDTH + 1)
+                           for i in range(sels)])
         return pen, [QBrush(QColor(255, 255, 255, 0))] * self.n_shown
 
     # Labels
