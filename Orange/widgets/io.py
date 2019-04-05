@@ -3,7 +3,7 @@ import tempfile
 from warnings import warn
 
 from AnyQt import QtGui, QtCore, QtSvg
-from AnyQt.QtCore import QMimeData
+from AnyQt.QtCore import QMimeData, QMarginsF
 from AnyQt.QtWidgets import (
     QGraphicsScene, QGraphicsView, QWidget, QApplication
 )
@@ -27,8 +27,8 @@ class ImgFormat(FileFormat):
         raise NotImplementedError
 
     @staticmethod
-    def _get_target(scene, painter, buffer):
-        raise NotImplementedError
+    def _get_target(scene, painter, buffer, source):
+        return QtCore.QRectF(0, 0, source.width(), source.height())
 
     @staticmethod
     def _save_buffer(buffer, filename):
@@ -147,10 +147,6 @@ class SvgFormat(ImgFormat):
         return buffer
 
     @staticmethod
-    def _get_target(scene, painter, buffer, source):
-        return QtCore.QRectF(0, 0, source.width(), source.height())
-
-    @staticmethod
     def _save_buffer(buffer, filename):
         dev = buffer.outputDevice()
         if dev is not None:
@@ -212,7 +208,39 @@ class MatplotlibPDFFormat(MatplotlibFormat):
         exec(code, {})  # will generate a pdf
 
 
-if hasattr(QtGui, "QPdfWriter"):
+if QtCore.QT_VERSION >= 0x050C00:  # Qt 5.12+
+
+    class PdfFormat(ImgFormat):
+        EXTENSIONS = ('.pdf', )
+        DESCRIPTION = 'Portable Document Format'
+        PRIORITY = 110
+
+        @staticmethod
+        def _get_buffer(size, filename):
+            buffer = QtGui.QPdfWriter(filename)
+            dpi = QtGui.QDesktopWidget().logicalDpiX()
+            buffer.setResolution(dpi)
+            buffer.setPageMargins(QMarginsF(0, 0, 0, 0))
+            buffer.setPageSizeMM(QtCore.QSizeF(size.width(), size.height()) / dpi * 25.4)
+            return buffer
+
+        @staticmethod
+        def _save_buffer(buffer, filename):
+            pass
+
+        @staticmethod
+        def _get_exporter():
+            from Orange.widgets.utils.PDFExporter import PDFExporter
+            return PDFExporter
+
+        @staticmethod
+        def _export(exporter, filename):
+            exporter.export(filename)
+
+elif hasattr(QtGui, "QPdfWriter"):
+
+    # older Qt version have PdfWriter bugs and are handled through SVG
+
     class PdfFormat(ImgFormat):
         EXTENSIONS = ('.pdf', )
         DESCRIPTION = 'Portable Document Format'

@@ -251,8 +251,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         # manually register Matplotlib file writers
         self.graph_writers = self.graph_writers.copy()
         for w in [MatplotlibFormat, MatplotlibPDFFormat]:
-            for ext in w.EXTENSIONS:
-                self.graph_writers[ext] = w
+            self.graph_writers.append(w)
 
     def _add_controls(self):
         self._add_controls_axis()
