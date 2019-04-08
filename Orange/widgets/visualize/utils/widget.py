@@ -433,7 +433,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         if not same_domain:
             self.init_attr_values()
         self.openContext(self.data)
-        self.use_context()
         self._invalidated = not (
             data_existed and self.data is not None and
             array_equal(effective_data.X, self.effective_data.X))
@@ -443,9 +442,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     def check_data(self):
         self.clear_messages()
-
-    def use_context(self):
-        pass
 
     def enable_controls(self):
         self.cb_class_density.setEnabled(self.can_draw_density())

@@ -169,7 +169,8 @@ class CompleterNavigator(QObject):
             return False
 
 
-def variables_filter(model, parent=None, accepted_type=Orange.data.Variable):
+def variables_filter(model, parent=None, accepted_type=Orange.data.Variable,
+                     view_type=VariablesListItemView):
     """
     GUI components: ListView with a lineedit which works as a filter. One can write
     a variable name in a edit box and possible matches are then shown in a listview.
@@ -221,7 +222,7 @@ def variables_filter(model, parent=None, accepted_type=Orange.data.Variable):
 
     proxy = VariableFilterProxyModel()
     proxy.setSourceModel(model)
-    view = VariablesListItemView(acceptedType=accepted_type)
+    view = view_type(acceptedType=accepted_type)
     view.setModel(proxy)
 
     model.dataChanged.connect(update_completer_model)

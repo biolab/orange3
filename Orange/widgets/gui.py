@@ -1077,12 +1077,12 @@ class ListViewWithSizeHint(QListView):
 
 
 def listView(widget, master, value=None, model=None, box=None, callback=None,
-             sizeHint=None, **misc):
+             sizeHint=None, *, viewType=ListViewWithSizeHint, **misc):
     if box:
         bg = vBox(widget, box, addToLayout=False)
     else:
         bg = widget
-    view = ListViewWithSizeHint(preferred_size=sizeHint)
+    view = viewType(preferred_size=sizeHint)
     view.setModel(model)
     if value is not None:
         connectControl(master, value, callback,
