@@ -164,6 +164,8 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         return [item]
 
     def on_selection_changed(self, selected, deselected):
+        if not selected.indexes():
+            return
         attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit([attrs])
 
