@@ -180,34 +180,6 @@ def make_sql_logger(level=logging.INFO):
     sql_log.addHandler(handler)
 
 
-def show_survey():
-    # If run for the first time, open a browser tab with a survey
-    settings = QSettings()
-    show_survey = settings.value("startup/show-survey", True, type=bool)
-    if show_survey:
-        question = QMessageBox(
-            QMessageBox.Question,
-            'Orange Survey',
-            'We would like to know more about how our software is used.\n\n'
-            'Would you care to fill our short 1-minute survey?',
-            QMessageBox.Yes | QMessageBox.No)
-        question.setDefaultButton(QMessageBox.Yes)
-        later = question.addButton('Ask again later', QMessageBox.NoRole)
-        question.setEscapeButton(later)
-
-        def handle_response(result):
-            if result == QMessageBox.Yes:
-                success = QDesktopServices.openUrl(
-                    QUrl("https://orange.biolab.si/survey/short.html"))
-                settings.setValue("startup/show-survey", not success)
-            else:
-                settings.setValue("startup/show-survey", result != QMessageBox.No)
-
-        question.finished.connect(handle_response)
-        question.show()
-        return question
-
-
 def check_for_updates():
     settings = QSettings()
     check_updates = settings.value('startup/check-updates', True, type=bool)
@@ -433,6 +405,8 @@ def main(argv=None):
 
     settings = QSettings()
 
+    settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
+
     stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
 
@@ -558,7 +532,6 @@ def main(argv=None):
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
     # local references prevent destruction
-    survey = show_survey()
     update_check = check_for_updates()
     send_stat = send_usage_statistics()
 
@@ -591,7 +564,6 @@ def main(argv=None):
         status = 42
 
     del canvas_window
-    del survey
     del update_check
     del send_stat
 

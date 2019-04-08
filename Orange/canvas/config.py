@@ -56,6 +56,8 @@ spec = \
      ("startup/check-updates", bool, True,
       "Check for updates"),
 
+     ("startup/launch-count", int, 0, ""),
+
      ("stylesheet", str, "orange",
       "QSS stylesheet to use"),
 
