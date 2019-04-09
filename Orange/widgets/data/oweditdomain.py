@@ -518,7 +518,7 @@ class CountedListModel(itemmodels.PyListModel):
             key = self.key(index)
             try:
                 counts[key] += 1
-            except TypeError:
+            except TypeError:  # pragma: no cover
                 warnings.warn(f"key value '{key}' is not hashable")
         self.__counts_cache = counts
         return self.__counts_cache
@@ -900,7 +900,7 @@ class DiscreteVariableEditor(VariableEditor):
         view = self.values_edit
         rows = view.selectionModel().selectedRows(0)
         if not rows:
-            return
+            return  # pragma: no cover
         for index in rows:
             model = index.model()
             state = index.data(EditStateRole)
@@ -953,7 +953,7 @@ class DiscreteVariableEditor(VariableEditor):
         model = view.model()  # type: QAbstractItemModel
         rows = view.selectedIndexes()  # type: List[QModelIndex]
         if not len(rows) >= 2:
-            return
+            return  # pragma: no cover
         first_row = rows[0]
 
         def mapRectTo(widget, parent, rect):
