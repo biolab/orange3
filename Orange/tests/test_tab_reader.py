@@ -23,6 +23,7 @@ class TestTabReader(unittest.TestCase):
 
     def setUp(self):
         DiscreteVariable._clear_cache()
+        self.data = Table([[1, 2, 3]])
 
     def test_read_easy(self):
         simplefile = """\
@@ -189,7 +190,7 @@ class TestTabReader(unittest.TestCase):
 
 
     def test_dataset_with_weird_names_and_column_attributes(self):
-        data = Table(path.join(path.dirname(__file__), 'weird.tab'))
+        data = Table(path.join(path.dirname(__file__), 'datasets/weird.tab'))
         self.assertEqual(len(data), 6)
         self.assertEqual(len(data.domain), 1)
         self.assertEqual(len(data.domain.metas), 1)
@@ -213,10 +214,9 @@ class TestTabReader(unittest.TestCase):
     def test_attributes_saving(self):
         tempdir = tempfile.mkdtemp()
         try:
-            table = Table("titanic")
-            self.assertEqual(table.attributes, {})
-            table.attributes[1] = "test"
-            table.save(path.join(tempdir, "out.tab"))
+            self.assertEqual(self.data.attributes, {})
+            self.data.attributes[1] = "test"
+            self.data.save(path.join(tempdir, "out.tab"))
             table = Table(path.join(tempdir, "out.tab"))
             self.assertEqual(table.attributes[1], "test")
         finally:
@@ -225,11 +225,10 @@ class TestTabReader(unittest.TestCase):
     def test_attributes_saving_as_txt(self):
         tempdir = tempfile.mkdtemp()
         try:
-            table = Table("titanic")
-            table.attributes = OrderedDict()
-            table.attributes["a"] = "aa"
-            table.attributes["b"] = "bb"
-            table.save(path.join(tempdir, "out.tab"))
+            self.data.attributes = OrderedDict()
+            self.data.attributes["a"] = "aa"
+            self.data.attributes["b"] = "bb"
+            self.data.save(path.join(tempdir, "out.tab"))
             table = Table(path.join(tempdir, "out.tab"))
             self.assertIsInstance(table.attributes, OrderedDict)
             self.assertEqual(table.attributes["a"], "aa")
@@ -246,12 +245,11 @@ class TestTabReader(unittest.TestCase):
     def test_metadata(self):
         tempdir = tempfile.mkdtemp()
         try:
-            table = Table("titanic")
-            table.attributes = OrderedDict()
-            table.attributes["a"] = "aa"
-            table.attributes["b"] = "bb"
+            self.data.attributes = OrderedDict()
+            self.data.attributes["a"] = "aa"
+            self.data.attributes["b"] = "bb"
             fname = path.join(tempdir, "out.tab")
-            TabReader.write_table_metadata(fname, table)
+            TabReader.write_table_metadata(fname, self.data)
             self.assertTrue(path.isfile(fname + ".metadata"))
         finally:
             shutil.rmtree(tempdir)
@@ -259,10 +257,9 @@ class TestTabReader(unittest.TestCase):
     def test_no_metadata(self):
         tempdir = tempfile.mkdtemp()
         try:
-            table = Table("titanic")
-            table.attributes = OrderedDict()
+            self.data.attributes = OrderedDict()
             fname = path.join(tempdir, "out.tab")
-            TabReader.write_table_metadata(fname, table)
+            TabReader.write_table_metadata(fname, self.data)
             self.assertFalse(path.isfile(fname + ".metadata"))
         finally:
             shutil.rmtree(tempdir)
@@ -270,13 +267,12 @@ class TestTabReader(unittest.TestCase):
     def test_had_metadata_now_there_is_none(self):
         tempdir = tempfile.mkdtemp()
         try:
-            table = Table("titanic")
-            table.attributes["a"] = "aa"
+            self.data.attributes["a"] = "aa"
             fname = path.join(tempdir, "out.tab")
-            TabReader.write_table_metadata(fname, table)
+            TabReader.write_table_metadata(fname, self.data)
             self.assertTrue(path.isfile(fname + ".metadata"))
-            del table.attributes["a"]
-            TabReader.write_table_metadata(fname, table)
+            del self.data.attributes["a"]
+            TabReader.write_table_metadata(fname, self.data)
             self.assertFalse(path.isfile(fname + ".metadata"))
         finally:
             shutil.rmtree(tempdir)
@@ -286,10 +282,10 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(data.domain["age"].number_of_decimals, 0)
         self.assertEqual(data.domain["ST by exercise"].number_of_decimals, 1)
 
-        data = Table("glass")
-        self.assertEqual(data.domain["RI"].number_of_decimals, 5)
-        self.assertEqual(data.domain["Na"].number_of_decimals, 2)
-        self.assertEqual(data.domain["Fe"].number_of_decimals, 2)
+        data = Table("housing")
+        self.assertEqual(data.domain["CRIM"].number_of_decimals, 5)
+        self.assertEqual(data.domain["INDUS"].number_of_decimals, 2)
+        self.assertEqual(data.domain["AGE"].number_of_decimals, 1)
 
     def test_many_discrete(self):
         b = io.StringIO()

@@ -7,6 +7,7 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.classification import MajorityLearner
+from Orange.tests import test_filename
 
 
 class TestMajorityLearner(unittest.TestCase):
@@ -61,7 +62,7 @@ class TestMajorityLearner(unittest.TestCase):
         self.assertEqual(y.all(), 1)
 
     def test_continuous(self):
-        autompg = Table('auto-mpg')
+        autompg = Table(test_filename('datasets/imports-85.tab'))
         learn = MajorityLearner()
         self.assertRaises(ValueError, learn, autompg)
 

@@ -25,7 +25,7 @@ class TestNormalizer(unittest.TestCase):
                          ["cl1", "cl2"])
     @classmethod
     def setUpClass(cls):
-        cls.data = Table(test_filename("test5.tab"))
+        cls.data = Table(test_filename("datasets/test5.tab"))
 
     def test_normalize_default(self):
         normalizer = Normalize()
@@ -133,7 +133,7 @@ class TestNormalizer(unittest.TestCase):
         np.testing.assert_array_equal(data.X, normalized.X)
 
     def test_datetime_normalization(self):
-        data = Table(test_filename("test10.tab"))
+        data = Table(test_filename("datasets/test10.tab"))
         normalizer = Normalize(zero_based=False,
                                norm_type=Normalize.NormalizeBySD,
                                transform_class=False)

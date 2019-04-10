@@ -4,20 +4,21 @@ import warnings
 import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
-import Orange.data
+from Orange.data import Table
 import Orange.evaluation
 import Orange.classification
 
 from Orange.widgets.evaluate.tests.base import EvaluateTest
 from Orange.widgets.evaluate.owcalibrationplot import OWCalibrationPlot
 from Orange.widgets.tests.base import WidgetTest
+from Orange.tests import test_filename
 
 
 class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.lenses = data = Orange.data.Table("lenses")
+        cls.lenses = data = Table(test_filename("datasets/lenses.tab"))
         cls.res = Orange.evaluation.TestOnTestData(
             train_data=data[::2], test_data=data[1::2],
             learners=[Orange.classification.MajorityLearner(),

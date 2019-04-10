@@ -12,12 +12,13 @@ from Orange.classification import (SVMLearner, LinearSVMLearner,
 from Orange.regression import (SVRLearner, NuSVRLearner)
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.evaluation import CrossValidation, CA, RMSE
+from Orange.tests import test_filename
 
 
 class TestSVMLearner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data = Table('ionosphere')
+        cls.data = Table(test_filename('datasets/ionosphere.tab'))
         cls.data.shuffle()
 
     def test_SVM(self):

@@ -12,6 +12,7 @@ from Orange.modelling import RandomForestLearner
 from Orange.preprocess.score import InfoGain, GainRatio, Gini, Chi2, ANOVA,\
     UnivariateLinearRegression, ReliefF, FCBF, RReliefF
 from Orange.projection import PCA
+from Orange.tests import test_filename
 
 
 class FeatureScoringTest(unittest.TestCase):
@@ -20,8 +21,9 @@ class FeatureScoringTest(unittest.TestCase):
     def setUpClass(cls):
         cls.zoo = Table("zoo")  # disc. features, disc. class
         cls.housing = Table("housing")  # cont. features, cont. class
-        cls.monk = Table("monks-1")
-        cls.adult = Table("adult_sample")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
+        cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
     def test_info_gain(self):
         scorer = InfoGain()
@@ -98,26 +100,26 @@ class FeatureScoringTest(unittest.TestCase):
         self.assertTrue(np.argmax(sc) == 1)
 
     def test_relieff(self):
-        old_monk = self.monk.copy()
-        weights = ReliefF(random_state=42)(self.monk, None)
-        found = [self.monk.domain[attr].name for attr in reversed(weights.argsort()[-3:])]
-        reference = ['a', 'b', 'e']
+        old_breast = self.breast.copy()
+        weights = ReliefF(random_state=42)(self.breast, None)
+        found = [self.breast.domain[attr].name for attr in reversed(weights.argsort()[-3:])]
+        reference = ['Bare_Nuclei', 'Clump thickness', 'Marginal_Adhesion']
         self.assertEqual(sorted(found), reference)
         # Original data is unchanged
-        np.testing.assert_equal(old_monk.X, self.monk.X)
-        np.testing.assert_equal(old_monk.Y, self.monk.Y)
+        np.testing.assert_equal(old_breast.X, self.breast.X)
+        np.testing.assert_equal(old_breast.Y, self.breast.Y)
         # Ensure it doesn't crash on adult dataset
-        weights = ReliefF(random_state=42)(self.adult, None)
-        found = [self.adult.domain[attr].name for attr in weights.argsort()[-2:]]
+        weights = ReliefF(random_state=42)(self.lenses, None)
+        found = [self.lenses.domain[attr].name for attr in weights.argsort()[-2:]]
         # some leeway for randomness in relieff random instance selection
-        self.assertIn('marital-status', found)
+        self.assertIn('tear_rate', found)
         # Ensure it doesn't crash on missing target class values
-        old_monk.Y[0] = np.nan
-        weights = ReliefF()(old_monk, None)
+        old_breast.Y[0] = np.nan
+        weights = ReliefF()(old_breast, None)
 
         np.testing.assert_array_equal(
-            ReliefF(random_state=1)(self.monk, None),
-            ReliefF(random_state=1)(self.monk, None)
+            ReliefF(random_state=1)(self.breast, None),
+            ReliefF(random_state=1)(self.breast, None)
         )
 
     def test_rrelieff(self):

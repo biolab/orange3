@@ -14,9 +14,9 @@ class TestDatasets(unittest.TestCase):
         Variable._clear_all_caches()
 
     def test_access(self):
-        d1 = datasets.anneal
-        fname = datasets.anneal['location']
-        d2 = datasets['anneal']
+        d1 = datasets.iris
+        fname = datasets.iris['location']
+        d2 = datasets['iris']
         self.assertNotEqual(len(d1), 0)
         self.assertEqual(len(d1), len(d2))
 
@@ -38,6 +38,7 @@ class TestDatasets(unittest.TestCase):
             self.assertIn(name, datasets)
 
     def test_datasets_info_features(self):
+        print(datasets.items())
         for dataset, info in datasets.items():
 
             Variable._clear_all_caches()

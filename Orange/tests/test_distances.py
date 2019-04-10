@@ -525,7 +525,8 @@ class TestJaccard(TestCase):
 class TestSpearmanR(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = SpearmanR
 
     def test_spearmanr_distance_one_example(self):
@@ -630,7 +631,8 @@ class TestSpearmanR(TestCase):
 class TestSpearmanRAbsolute(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = SpearmanRAbsolute
 
     def test_spearmanrabsolute_distance_one_example(self):
@@ -707,7 +709,8 @@ class TestSpearmanRAbsolute(TestCase):
 class TestPearsonR(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = PearsonR
 
     def test_pearsonr_distance_one_example(self):
@@ -810,7 +813,8 @@ class TestPearsonR(TestCase):
 class TestPearsonRAbsolute(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = PearsonRAbsolute
 
     def test_pearsonrabsolute_distance_one_example(self):
@@ -931,7 +935,7 @@ class TestMahalanobis(TestCase):
 class TestDistances(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test5 = Table(test_filename('test5.tab'))
+        cls.test5 = Table(test_filename('datasets/test5.tab'))
 
     def test_preprocess(self):
         domain = Domain([ContinuousVariable("c"),

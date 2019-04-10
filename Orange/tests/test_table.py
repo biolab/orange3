@@ -46,7 +46,7 @@ class TableTestCase(unittest.TestCase):
         data.table.dataset_dirs.remove(test_dirname())
 
     def test_indexing_class(self):
-        d = data.Table("test1")
+        d = data.Table("datasets/test1")
         self.assertEqual([e.get_class() for e in d], ["t", "t", "f"])
         cind = len(d.domain) - 1
         self.assertEqual([e[cind] for e in d], ["t", "t", "f"])
@@ -59,7 +59,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
 
-        d = data.Table("test2.tab")
+        d = data.Table("datasets/test2.tab")
         self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
 
     def test_indexing(self):
@@ -67,7 +67,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             # regular, discrete
             varc = d.domain["c"]
@@ -131,7 +131,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             e = d[0]
 
             # regular, discrete
@@ -169,7 +169,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             # meta
             vara = d.domain["a"]
@@ -282,7 +282,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             self.assertFalse(isnan(d[0, "a"]))
             d[0] = ["3.14", "1", "f"]
@@ -318,7 +318,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             x = d[:3]
             self.assertEqual(len(x), 3)
             self.assertEqual([e[0] for e in x], [0, 1.1, 2.22])
@@ -340,7 +340,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             d[2:5, 0] = 42
             self.assertEqual([e[0] for e in d],
                              [0, 1.1, 42, 42, 42, 2.25, 2.26, 3.333, Unknown])
@@ -407,7 +407,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             with self.assertRaises(IndexError):
                 x = d[2, 5, 1]
@@ -423,7 +423,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             d[1:4, "b"] = 42
             self.assertEqual([e[0] for e in d],
@@ -458,7 +458,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             vals = [e[0] for e in d]
             d[[1, 2, 5]] = [42, None, None]
@@ -480,7 +480,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         self.assertTrue(d)
 
-        d = data.Table("test3")
+        d = data.Table("datasets/test3")
         self.assertFalse(d)
 
         d = data.Table("iris")
@@ -530,7 +530,7 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(d.has_missing())
         self.assertTrue(d.has_missing_class())
 
-        d = data.Table("test3")
+        d = data.Table("datasets/test3")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
@@ -1055,13 +1055,13 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
 
     def test_valueFilter_string_is_defined(self):
-        d = data.Table("test9.tab")
+        d = data.Table("datasets/test9.tab")
         f = filter.FilterString(-5, filter.FilterString.IsDefined)
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
 
     def test_valueFilter_discrete_meta_is_defined(self):
-        d = data.Table("test9.tab")
+        d = data.Table("datasets/test9.tab")
         f = filter.FilterDiscrete(-4, None)
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 8)
@@ -2264,7 +2264,7 @@ class InterfaceTest(unittest.TestCase):
 
         data_file = _ExtendedTable('iris')
         data_url = _ExtendedTable.from_url(
-            Path(os.path.dirname(__file__), 'test1.tab').as_uri())
+            Path(os.path.dirname(__file__), 'datasets/test1.tab').as_uri())
 
         self.assertIsInstance(data_file, _ExtendedTable)
         self.assertIsInstance(data_url, _ExtendedTable)

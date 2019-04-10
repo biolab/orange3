@@ -490,7 +490,7 @@ class TestDomainDistribution(unittest.TestCase):
         assert_dist_and_unknowns(ddist[19], zeros)
 
     def test_compute_distributions_metas(self):
-        d = data.Table(test_filename("test9.tab"))
+        d = data.Table(test_filename("datasets/test9.tab"))
         variable = d.domain[-2]
         dist, _ = d._compute_distributions([variable])[0]
         assert_dist_equal(dist, [3, 3, 2])

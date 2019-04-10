@@ -7,13 +7,14 @@ import scipy.sparse.linalg as sla
 
 import Orange
 from Orange.projection import CUR
+from Orange.tests import test_filename
 
 
 class TestCUR(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Orange.data.Table('ionosphere')
+        cls.ionosphere = Orange.data.Table(test_filename('datasets/ionosphere.tab'))
 
     def test_cur_projection(self):
         self.__projection_test_helper(self.ionosphere, rank=10, max_error=10)

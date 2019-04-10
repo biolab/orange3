@@ -5,12 +5,13 @@ import unittest
 
 from Orange.data import Table
 from Orange.preprocess import ProjectCUR
+from Orange.tests import test_filename
 
 
 class TestCURProjector(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Table("ionosphere")
+        cls.ionosphere = Table(test_filename("datasets/ionosphere.tab"))
 
     def test_project_cur_default(self):
         data = self.ionosphere

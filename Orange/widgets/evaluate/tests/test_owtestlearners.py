@@ -22,6 +22,7 @@ from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
+from Orange.tests import test_filename
 
 
 class TestOWTestLearners(WidgetTest):
@@ -439,7 +440,7 @@ class TestOWTestLearners(WidgetTest):
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
-        data = Table("lenses")
+        data = Table(test_filename("datasets/lenses.tab"))
         learners = [MajorityLearner()]
         res = TestOnTestData(data[1::2], data[::2], learners=learners)
         r1 = results_one_vs_rest(res, pos_index=0)

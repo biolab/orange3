@@ -29,11 +29,11 @@ class TestValue(unittest.TestCase):
         self.assertEqual(a.value, b.value)
 
     def test_compare_continuous(self):
-        auto = Table('auto-mpg')
-        acc1 = auto[0]['acceleration']  # 12
-        acc2 = auto[1]['acceleration']  # 11.5
+        auto = Table('housing')
+        acc1 = auto[0]['MEDV']  # 24.0
+        acc2 = auto[1]['MEDV']  # 21.6
         self.assertTrue(acc1 > acc2)
-        self.assertTrue(acc1 >= 12.0)
+        self.assertTrue(acc1 >= 24.0)
         self.assertFalse(acc1 != acc1)
 
     def test_compare_discrete(self):

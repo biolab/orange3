@@ -50,13 +50,13 @@ class TestVennDiagram(unittest.TestCase):
                                                      dtype=object))
 
     def test_reshape_wide_missing_vals(self):
-        data = Table(test_filename("test9.tab"))
+        data = Table(test_filename("datasets/test9.tab"))
         reshaped_data = reshape_wide(data, [], [data.domain[0]],
                                      [data.domain[0]])
         self.assertEqual(2, len(reshaped_data))
 
     def test_varying_between_missing_vals(self):
-        data = Table(test_filename("test9.tab"))
+        data = Table(test_filename("datasets/test9.tab"))
         self.assertEqual(6, len(varying_between(data, data.domain[0])))
 
     def test_venn_diagram(self):
@@ -216,7 +216,7 @@ class GroupTableIndicesTest(unittest.TestCase):
 
 
     def test_group_table_indices(self):
-        table = Table(test_filename("test9.tab"))
+        table = Table(test_filename("datasets/test9.tab"))
         dd = defaultdict(list)
         dd["1"] = [0, 1]
         dd["huh"] = [2]

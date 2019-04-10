@@ -13,7 +13,7 @@ class TestOWDistributions(WidgetTest):
     def setUpClass(cls):
         super().setUpClass()
         dataset_dirs.append(test_dirname())
-        cls.data = Table("test9.tab")
+        cls.data = Table("datasets/test9.tab")
         cls.iris = Table("iris")
 
     def setUp(self):

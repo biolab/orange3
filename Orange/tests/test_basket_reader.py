@@ -88,7 +88,8 @@ class TestBasketReader(unittest.TestCase):
                                                           [0, 5, 1]])
 
     def test_data_name(self):
-        filename = os.path.join(os.path.dirname(__file__), 'iris_basket.basket')
+        filename = os.path.join(os.path.dirname(__file__),
+                                'datasets/iris_basket.basket')
         self.assertEqual(read_basket(filename).name, 'iris_basket')
 
 

@@ -22,6 +22,7 @@ from Orange.widgets.data.oweditdomain import (
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
+from Orange.tests import test_filename
 
 
 class TestReport(TestCase):
@@ -158,7 +159,7 @@ class TestOWEditDomain(WidgetTest):
 
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
-        table = Table("cyber-security-breaches")
+        table = Table(test_filename("datasets/cyber-security-breaches.tab"))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))

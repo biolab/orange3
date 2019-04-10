@@ -45,14 +45,14 @@ class TestRegression(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
-                table = Table(test_filename("test8.tab"))
+                table = Table(test_filename("datasets/test8.tab"))
                 self.assertRaises(ValueError, learner, table)
             except TypeError as err:
                 traceback.print_exc()
                 continue
 
     def test_missing_class(self):
-        table = Table("imports-85")
+        table = Table(test_filename("datasets/imports-85.tab"))
         for learner in self.all_learners():
             try:
                 learner = learner()
