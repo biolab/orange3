@@ -76,6 +76,11 @@ the [wiki].
 
 [wiki]: https://github.com/biolab/orange3/wiki
 
+### Missing WebKit/WebEngine
+
+Some distributions of PyQt5 come without WebKit or WebEngine, required by some
+add-ons and for reporting. Running `pip install PyQtWebEngine` may solve this issue.
+
 Starting Orange GUI
 -------------------
 
