@@ -37,10 +37,18 @@ import Orange.data
 
 from Orange.preprocess.transformation import Identity, Lookup
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.data.owconcatenate import unique
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
+
+
+def unique(sequence):
+    """
+    Return unique elements in `sequence`, preserving their (first seen) order.
+    """
+    # depending on Python >= 3.6 'ordered' dict implementation detail.
+    return iter(dict.fromkeys(sequence))
+
 
 #: An ordered sequence of key, value pairs (variable annotations)
 AnnotationsType = Tuple[Tuple[str, str], ...]
