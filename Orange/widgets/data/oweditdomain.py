@@ -498,10 +498,6 @@ class CountedListModel(itemmodels.PyListModel):
         super().endRemoveRows()
         self.invalidateCounts()
 
-    def beginResetModel(self) -> None:
-        super().beginResetModel()
-        self.invalidateCounts()
-
     def endResetModel(self) -> None:
         super().endResetModel()
         self.invalidateCounts()
