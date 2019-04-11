@@ -992,14 +992,14 @@ class DiscreteVariableEditor(VariableEditor):
 
         cb.addItems(
             list(unique(str(row.data(Qt.EditRole)) for row in rows)))
-        rows = [QPersistentModelIndex(row) for row in rows]
+        prows = [QPersistentModelIndex(row) for row in rows]
 
         def complete_merge(text):
             # write the new text for edit role in all rows
             with disconnected(model.dataChanged, self.on_values_changed):
-                for row in rows:
-                    index = row.sibling(row.row(), row.column())
-                    model.setData(index, text, Qt.EditRole)
+                for prow in prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
             cb.close()
             self.variable_changed.emit()
 
