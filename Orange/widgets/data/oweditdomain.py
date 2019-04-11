@@ -21,8 +21,7 @@ from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QToolButton, QLineEdit, QAction, QActionGroup, QStackedWidget, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
-    QDialogButtonBox, QPushButton, QCheckBox,
-    QComboBox
+    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QShortcut
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
 from AnyQt.QtCore import (
@@ -986,6 +985,8 @@ class DiscreteVariableEditor(VariableEditor):
 
         cb = QComboBox(editable=True, insertPolicy=QComboBox.InsertAtBottom)
         cb.setAttribute(Qt.WA_DeleteOnClose)
+        sh = QShortcut(QKeySequence(QKeySequence.Cancel), cb)
+        sh.activated.connect(cb.close)
         cb.setParent(self, Qt.Popup)
         cb.move(vrect.topLeft())
 
