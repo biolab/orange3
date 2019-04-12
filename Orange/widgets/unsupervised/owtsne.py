@@ -279,8 +279,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.tsne_embedding = None  # type: Optional[manifold.TSNEModel]
         self.iterations_done = 0    # type: int
 
-        self.__invalidated = False
-
     def _add_controls(self):
         self._add_controls_start_box()
         super()._add_controls()
@@ -350,7 +348,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self._set_modified(True)
 
     def _invalidate_output(self):
-        self.__invalidated = True
         self.cancel()
         self.run_button.setText("Start")
 
@@ -434,10 +431,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             else:
                 self.normalize_cbx.setToolTip("")
 
-        self.run()
+        if self._invalidated:
+            self.run()
 
     def run(self):
-        self.__invalidated = False
         self._set_modified(False)
 
         # When the data is invalid, it is set to `None` and an error is set,
