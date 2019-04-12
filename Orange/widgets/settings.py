@@ -928,7 +928,7 @@ class DomainContextHandler(ContextHandler):
         warnings.warn(
             "Storing variables as strings in settings is deprecated.\n"
             "Support for this will be dropped in Orange 3.26.\n"
-            f"Change f{setting.name} to store an instance of `Variable`.")
+            f"Change {setting.name} to store an instance of `Variable`.")
 
     def encode_domain(self, domain):
         """
