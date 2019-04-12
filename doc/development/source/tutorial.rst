@@ -54,6 +54,7 @@ a single integer specified by the user.
 .. code-block:: python
 
     from Orange.widgets.widget import OWWidget, Output
+    from Orange.widgets.settings import Setting
     from Orange.widgets import gui
 
     class IntNumber(OWWidget):
@@ -109,9 +110,10 @@ widget functionality:
 
 .. code-block:: python
 
-       def __init__(self)
+       def __init__(self):
            super().__init__()
 
+           from AnyQt.QtGui import QIntValidator
            gui.lineEdit(self.controlArea, self, "number", "Enter a number",
                         box="Number",
                         callback=self.number_changed,
@@ -133,7 +135,7 @@ So let us define a widget that displays a number.
    from Orange.widgets.widget import OWWidget, Input
    from Orange.widgets import gui
 
-   class Print(widget.OWWidget):
+   class Print(OWWidget):
        name = "Print"
        description = "Print out a number"
        icon = "icons/print.svg"
@@ -196,7 +198,7 @@ One more:
            self.b = None
 
        @Inputs.a
-       def set_A(self, a)
+       def set_A(self, a):
            """Set input 'A'."""
            self.a = a
 
