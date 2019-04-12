@@ -44,7 +44,7 @@ class OWContinuize(widget.OWWidget):
     autosend = Setting(True)
 
     multinomial_treats = (
-        ("Target or first value as base", Continuize.FirstAsBase),
+        ("First value as base", Continuize.FirstAsBase),
         ("Most frequent value as base", Continuize.FrequentAsBase),
         ("One attribute per value", Continuize.Indicators),
         ("Ignore multinomial attributes", Continuize.RemoveMultinomial),
@@ -186,11 +186,8 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
     )
 
 
-def dummy_coding(var, base_value=-1, zero_based=True):
+def dummy_coding(var, base_value=0, zero_based=True):
     N = len(var.values)
-    if base_value == -1:
-        base_value = var.base_value if var.base_value >= 0 else 0
-    assert 0 <= base_value < len(var.values)
     return [make_indicator_var(var, i, zero_based=zero_based)
             for i in range(N) if i != base_value]
 

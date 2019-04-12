@@ -192,10 +192,6 @@ Continuization
            indicators in the transformed data instance are 0, the original
            instance had the first value of the corresponding variable.
 
-           If the variable descriptor defines the
-           :obj:`~Orange.data.DiscreteVariable.base_value`, the
-           specified value is used as base instead of the first one.
-
            Continuizing the variable "status" with this setting gives variables
            "status=first", "status=second" and "status=third". If all of them
            were 0, the status of the original data instance was "crew".

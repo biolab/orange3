@@ -744,7 +744,6 @@ def copy_descriptor(descriptor, newname=None):
         newf = Orange.data.DiscreteVariable(
             newname,
             values=descriptor.values,
-            base_value=descriptor.base_value,
             ordered=descriptor.ordered,
         )
         newf.attributes = dict(descriptor.attributes)

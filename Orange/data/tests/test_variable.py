@@ -214,15 +214,10 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(
             repr(var),
             "DiscreteVariable(name='a', values=['F', 'M'])")
-        var.base_value = 1
-        self.assertEqual(
-            repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], base_value=1)")
         var.ordered = True
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], "
-            "ordered=True, base_value=1)")
+            "DiscreteVariable(name='a', values=['F', 'M'], ordered=True)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
@@ -454,9 +449,6 @@ PickleDiscreteVariable = create_pickling_tests(
     ("ordered", lambda: DiscreteVariable(name="Feature 0",
                                          values=["F", "M"],
                                          ordered=True)),
-    ("with_base_value", lambda: DiscreteVariable(name="Feature 0",
-                                                 values=["F", "M"],
-                                                 base_value=0))
 )
 
 

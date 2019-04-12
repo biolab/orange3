@@ -608,12 +608,6 @@ class DiscreteVariable(Variable):
         sometime reorder the values of the variable, e.g. alphabetically.
         This flag hints that the given order of values is "natural"
         (e.g. "small", "middle", "large") and should not be changed.
-
-    .. attribute:: base_value
-
-        The index of the base value, or -1 if there is none. The base value is
-        used in some methods like, for instance, when creating dummy variables
-        for regression.
     """
 
     TYPE_HEADERS = ('discrete', 'd', 'categorical')
@@ -621,15 +615,14 @@ class DiscreteVariable(Variable):
     _all_vars = collections.defaultdict(list)
     presorted_values = []
 
-    def __init__(self, name="", values=(), ordered=False, base_value=-1,
-                 compute_value=None, *, sparse=False):
+    def __init__(self, name="", values=(), ordered=False, compute_value=None,
+                 *, sparse=False):
         """ Construct a discrete variable descriptor with the given values. """
         self.values = list(values)
         if not all(isinstance(value, str) for value in self.values):
             raise TypeError("values of DiscreteVariables must be strings")
         super().__init__(name, compute_value, sparse=sparse)
         self.ordered = ordered
-        self.base_value = base_value
 
     @property
     def colors(self):
@@ -728,11 +721,11 @@ class DiscreteVariable(Variable):
         __dict__.pop("master")
         __dict__.pop("values")
         return make_variable, (self.__class__, self._compute_value, self.name,
-                               self.values, self.ordered, self.base_value), \
+                               self.values, self.ordered), \
             __dict__
 
     @classmethod
-    def make(cls, name, values=(), ordered=False, base_value=-1):
+    def make(cls, name, values=(), ordered=False):
         """
         Return a variable with the given name and other properties. The method
         first looks for a compatible existing variable: the existing
@@ -753,25 +746,19 @@ class DiscreteVariable(Variable):
         :type values: list
         :param ordered: tells whether the order of values is fixed
         :type ordered: bool
-        :param base_value: the index of the base value, or -1 if there is none
-        :type base_value: int
         :returns: an existing compatible variable or `None`
         """
         if not name:
             raise ValueError("Variables without names cannot be stored or made")
-        var = cls._find_compatible(
-            name, values, ordered, base_value)
+        var = cls._find_compatible(name, values, ordered)
         if var:
             return var.make_proxy()
         if not ordered:
-            base_value_rep = base_value != -1 and values[base_value]
             values = cls.ordered_values(values)
-            if base_value != -1:
-                base_value = values.index(base_value_rep)
-        return cls(name, values, ordered, base_value)
+        return cls(name, values, ordered)
 
     @classmethod
-    def _find_compatible(cls, name, values=(), ordered=False, base_value=-1):
+    def _find_compatible(cls, name, values=(), ordered=False):
         """
         Return a compatible existing value, or `None` if there is None.
         See :obj:`make` for details; this function differs by returning `None`
@@ -784,20 +771,15 @@ class DiscreteVariable(Variable):
         :type values: list
         :param ordered: tells whether the order of values is fixed
         :type ordered: bool
-        :param base_value: the index of the base value, or -1 if there is none
-        :type base_value: int
         :returns: an existing compatible variable or `None`
         """
-        base_rep = base_value != -1 and values[base_value]
         existing = cls._all_vars.get(name)
         if existing is None:
             return None
         if not ordered:
             values = cls.ordered_values(values)
         for var in existing:
-            if (var.ordered != ordered or
-                    var.base_value != -1
-                    and var.values[var.base_value] != base_rep):
+            if var.ordered != ordered:
                 continue
             if not values:
                 break  # we have the variable - any existing values are OK
@@ -824,8 +806,6 @@ class DiscreteVariable(Variable):
                 break  # we have the variable
         else:
             return None
-        if base_value != -1 and var.base_value == -1:
-            var.base_value = var.values.index(base_rep)
         return var
 
     @staticmethod
@@ -845,7 +825,7 @@ class DiscreteVariable(Variable):
 
     def copy(self, compute_value=None):
         var = DiscreteVariable(self.name, self.values, self.ordered,
-                               self.base_value, compute_value, sparse=self.sparse)
+                               compute_value, sparse=self.sparse)
         var.attributes = dict(self.attributes)
         return var
 

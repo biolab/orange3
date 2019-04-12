@@ -1,8 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
+
 import numpy as np
 
-from Orange.data import Table
+from Orange.data import Table, DiscreteVariable
+from Orange.preprocess import transformation
+from Orange.widgets.data import owcontinuize
 from Orange.widgets.data.owcontinuize import OWContinuize
 from Orange.widgets.tests.base import WidgetTest
 
@@ -83,3 +87,74 @@ class TestOWContinuize(WidgetTest):
         table[1, 2] = np.NaN
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.unconditional_commit()
+
+
+class TestOWContinuizeUtils(unittest.TestCase):
+    def test_dummy_coding_zero_based(self):
+        var = DiscreteVariable("foo", values=list("abc"))
+
+        varb, varc = owcontinuize.dummy_coding(var)
+
+        self.assertEqual(varb.name, "foo=b")
+        self.assertIsInstance(varb.compute_value, transformation.Indicator)
+        self.assertEqual(varb.compute_value.value, 1)
+        self.assertIs(varb.compute_value.variable, var)
+
+        self.assertEqual(varc.name, "foo=c")
+        self.assertIsInstance(varc.compute_value, transformation.Indicator)
+        self.assertEqual(varc.compute_value.value, 2)
+        self.assertIs(varc.compute_value.variable, var)
+
+        varb, varc = owcontinuize.dummy_coding(var, zero_based=False)
+
+        self.assertEqual(varb.name, "foo=b")
+        self.assertIsInstance(varb.compute_value, transformation.Indicator1)
+        self.assertEqual(varb.compute_value.value, 1)
+        self.assertIs(varb.compute_value.variable, var)
+
+        self.assertEqual(varc.name, "foo=c")
+        self.assertIsInstance(varc.compute_value, transformation.Indicator1)
+        self.assertEqual(varc.compute_value.value, 2)
+        self.assertIs(varb.compute_value.variable, var)
+
+    def test_dummy_coding_base_value(self):
+        var = DiscreteVariable("foo", values=list("abc"))
+
+        varb, varc = owcontinuize.dummy_coding(var, base_value=0)
+
+        self.assertEqual(varb.name, "foo=b")
+        self.assertIsInstance(varb.compute_value, transformation.Indicator)
+        self.assertEqual(varb.compute_value.value, 1)
+        self.assertEqual(varc.name, "foo=c")
+        self.assertIsInstance(varc.compute_value, transformation.Indicator)
+        self.assertEqual(varc.compute_value.value, 2)
+
+        varb, varc = owcontinuize.dummy_coding(var, base_value=1)
+
+        self.assertEqual(varb.name, "foo=a")
+        self.assertIsInstance(varb.compute_value, transformation.Indicator)
+        self.assertEqual(varb.compute_value.value, 0)
+        self.assertEqual(varc.name, "foo=c")
+        self.assertIsInstance(varc.compute_value, transformation.Indicator)
+        self.assertEqual(varc.compute_value.value, 2)
+
+    def test_one_hot_coding(self):
+        var = DiscreteVariable("foo", values=list("abc"))
+
+        vars = owcontinuize.one_hot_coding(var)
+        for i, (c, nvar) in enumerate(zip("abc", vars)):
+            self.assertEqual(nvar.name, f"foo={c}")
+            self.assertIsInstance(nvar.compute_value, transformation.Indicator)
+            self.assertEqual(nvar.compute_value.value, i)
+            self.assertIs(nvar.compute_value.variable, var)
+
+        vars = owcontinuize.one_hot_coding(var, zero_based=False)
+        for i, (c, nvar) in enumerate(zip("abc", vars)):
+            self.assertEqual(nvar.name, f"foo={c}")
+            self.assertIsInstance(nvar.compute_value, transformation.Indicator1)
+            self.assertEqual(nvar.compute_value.value, i)
+            self.assertIs(nvar.compute_value.variable, var)
+
+
+if __name__ == "__main__":
+    unittest.main()

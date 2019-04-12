@@ -47,7 +47,7 @@ ContinuousDescriptor = \
                ["name", "expression", "number_of_decimals"])
 DiscreteDescriptor = \
     namedtuple("DiscreteDescriptor",
-               ["name", "expression", "values", "base_value", "ordered"])
+               ["name", "expression", "values", "ordered"])
 
 StringDescriptor = namedtuple("StringDescriptor", ["name", "expression"])
 
@@ -63,7 +63,6 @@ def make_variable(descriptor, compute_value):
             descriptor.name,
             values=descriptor.values,
             ordered=descriptor.ordered,
-            base_value=descriptor.base_value,
             compute_value=compute_value)
     elif isinstance(descriptor, StringDescriptor):
         return Orange.data.StringVariable(
@@ -255,7 +254,6 @@ class DiscreteFeatureEditor(FeatureEditor):
         return DiscreteDescriptor(
             name=self.nameedit.text(),
             values=values,
-            base_value=-1,
             ordered=False,
             expression=self.expressionedit.text()
         )

@@ -59,7 +59,6 @@ class Categorical(
     NamedTuple("Categorical", [
         ("name", str),
         ("categories", Tuple[str, ...]),
-        ("base", Optional[str]),
         ("annotations", AnnotationsType),
     ])): pass
 
@@ -133,14 +132,8 @@ class CategoriesMapping(namedtuple("CategoriesMapping", ["mapping"])):
     """
     def __call__(self, var):
         # type: (Categorical) -> Categorical
-        mapping = self.mapping  # type: CategoriesMappingType
-        cat = list(unique(cj for _, cj in mapping if cj is not None))
-        mm = dict(self.mapping)
-        if var.base is not None:
-            base = mm.get(var.base)
-        else:
-            base = None
-        return var._replace(categories=cat, base=base)
+        cat = list(unique(cj for _, cj in self.mapping if cj is not None))
+        return var._replace(categories=cat)
 
 
 class Annotate(namedtuple("Annotate", ["annotations"])):
@@ -1444,7 +1437,7 @@ class OWEditDomain(widget.OWWidget):
             mapping = {
                 "DiscreteVariable":
                     lambda name, args, attrs:
-                        ("Categorical", (name, tuple(args[0][1]), None, ())),
+                        ("Categorical", (name, tuple(args[0][1]), ())),
                 "TimeVariable":
                     lambda name, _, attrs:
                         ("Time", (name, ())),
@@ -1590,12 +1583,10 @@ def abstract(var):
         for key, value in var.attributes.items()
     ))
     if isinstance(var, Orange.data.DiscreteVariable):
-        values, base = var.values, var.base_value
-        base = values[base] if base >= 0 else None
         if var.ordered:
-            return Ordered(var.name, tuple(values), base, annotations)
+            return Ordered(var.name, tuple(var.values), annotations)
         else:
-            return Categorical(var.name, tuple(values), base, annotations)
+            return Categorical(var.name, tuple(var.values), annotations)
     elif isinstance(var, Orange.data.TimeVariable):
         return Time(var.name, annotations)
     elif isinstance(var, Orange.data.ContinuousVariable):
@@ -1629,7 +1620,6 @@ def apply_transform_discete(var, trs):
     # type: (Orange.data.DiscreteVariable, ...) -> ...
     # pylint: disable=too-many-branches
     name, annotations = var.name, var.attributes
-    base_value = var.base_value
     mapping = None
     ordered = var.ordered
     for tr in trs:
@@ -1661,18 +1651,11 @@ def apply_transform_discete(var, trs):
             if ci is not None and cj is not None:
                 i, j = source_codes[ci], dest_codes[cj]
                 lookup[i] = j
-
-        if base_value != -1:
-            base_value = lookup[base_value]
-            if np.isnan(base_value):
-                base_value = -1
         lookup = Lookup(var, lookup)
     else:
         lookup = Identity(var)
     variable = Orange.data.DiscreteVariable(
-        name, values=dest_values, base_value=base_value, compute_value=lookup,
-        ordered=ordered,
-    )
+        name, values=dest_values, compute_value=lookup, ordered=ordered)
     variable.attributes.update(annotations)
     return variable
 
