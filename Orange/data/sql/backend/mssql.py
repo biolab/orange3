@@ -29,8 +29,8 @@ class PymssqlBackend(Backend):
             raise BackendError("Incorrect format of connection details")
 
     def list_tables_query(self, schema=None):
-        return """        
-   SELECT [TABLE_SCHEMA], [TABLE_NAME]
+        return """
+        SELECT [TABLE_SCHEMA], [TABLE_NAME]
           FROM information_schema.tables
          WHERE TABLE_TYPE in ('VIEW' ,'BASE TABLE')
       ORDER BY [TABLE_NAME]
