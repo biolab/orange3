@@ -60,7 +60,7 @@ class OWDataSampler(OWWidget):
 
     class Error(OWWidget.Error):
         too_many_folds = Msg("Number of folds exceeds data size")
-        sample_larger_than_data = Msg("Sample must be smaller than data")
+        sample_larger_than_data = Msg("Sample can't be larger than data")
         not_enough_to_stratify = Msg("Data is too small to stratify")
         no_data = Msg("Dataset is empty")
 
@@ -88,7 +88,7 @@ class OWDataSampler(OWWidget):
         self.sampleSizePercentageSlider = gui.hSlider(
             gui.indentedBox(sampling), self,
             "sampleSizePercentage",
-            minValue=0, maxValue=99, ticks=10, labelFormat="%d %%",
+            minValue=0, maxValue=100, ticks=10, labelFormat="%d %%",
             callback=set_sampling_type(self.FixedProportion),
             addSpace=12)
 
@@ -265,7 +265,7 @@ class OWDataSampler(OWWidget):
         else:
             assert self.sampling_type == self.Bootstrap
 
-        if not repl and size is not None and (data_length <= size):
+        if not repl and size is not None and (size > data_length):
             self.Error.sample_larger_than_data()
         if not repl and data_length <= num_classes and self.stratify:
             self.Error.not_enough_to_stratify()
@@ -386,7 +386,12 @@ class SampleRandomN(Reprable):
             o[sample] = 0
             others = np.nonzero(o)[0]
             return others, sample
-        if self.stratified and table.domain.has_discrete_class:
+        if self.n == len(table):
+            rgen = np.random.RandomState(self.random_state)
+            sample = np.arange(self.n)
+            rgen.shuffle(sample)
+            return np.array([], dtype=int), sample
+        elif self.stratified and table.domain.has_discrete_class:
             test_size = max(len(table.domain.class_var.values), self.n)
             splitter = skl.StratifiedShuffleSplit(
                 n_splits=1, test_size=test_size,

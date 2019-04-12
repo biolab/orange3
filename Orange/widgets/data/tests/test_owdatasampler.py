@@ -100,6 +100,22 @@ class TestOWDataSampler(WidgetTest):
         self.set_fixed_sample_size(3, with_replacement=True)
         self.assertTrue(self.widget.Warning.bigger_sample.is_shown())
 
+    def test_shuffling(self):
+        self.send_signal('Data', self.iris)
+
+        self.set_fixed_sample_size(150)
+        self.assertFalse(self.widget.Warning.bigger_sample.is_shown())
+        sample = self.get_output("Data Sample")
+        self.assertTrue((self.iris.ids != sample.ids).any())
+        self.assertEqual(set(self.iris.ids), set(sample.ids))
+
+        self.select_sampling_type(self.widget.FixedProportion)
+        self.widget.sampleSizePercentage = 100
+        self.widget.commit()
+        sample = self.get_output("Data Sample")
+        self.assertTrue((self.iris.ids != sample.ids).any())
+        self.assertEqual(set(self.iris.ids), set(sample.ids))
+
     def set_fixed_sample_size(self, sample_size, with_replacement=False):
         """Set fixed sample size and return the number of gui spin.
 

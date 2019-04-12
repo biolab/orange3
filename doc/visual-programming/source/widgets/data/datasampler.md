@@ -27,6 +27,8 @@ The **Data Sampler** widget implements several data sampling methods. It outputs
    input dataset.
 4. Press *Sample Data* to output the data sample.
 
+If all data instances are selected (by setting the proportion to 100 % or setting the fixed sample size to the entire data size), output instances are still shuffled.
+
 Examples
 --------
 
