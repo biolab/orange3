@@ -16,10 +16,9 @@ from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget, QLabel
 
 from Orange.clustering.louvain import table_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
-from Orange.data.util import get_unique_names
+from Orange.data.util import get_unique_names, array_equal
 from Orange import preprocess
 from Orange.projection import PCA
-from Orange.statistics import util as ut
 from Orange.widgets import widget, gui, report
 from Orange.widgets.settings import DomainContextHandler, ContextSetting, \
     Setting
@@ -408,7 +407,7 @@ class OWLouvainClustering(widget.OWWidget):
         # Make sure to properly enable/disable slider based on `apply_pca` setting
         self.controls.pca_components.setEnabled(self.apply_pca)
 
-        if prev_data and self.data and ut.array_equal(prev_data.X, self.data.X):
+        if prev_data and self.data and array_equal(prev_data.X, self.data.X):
             if self.auto_commit:
                 self._send_data()
             return

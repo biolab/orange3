@@ -7,28 +7,18 @@ It also patches bottleneck to contain these functions.
 import warnings
 from typing import Iterable
 
-import numpy as np
 import bottleneck as bn
-from scipy import sparse as sp
+import numpy as np
 import scipy.stats.stats
+from scipy import sparse as sp
+
 from sklearn.utils.sparsefuncs import mean_variance_axis
 
+from Orange.data.util import array_equal
+from Orange.util import deprecated
 
-def sparse_array_equal(x1, x2):
-    """Check if two sparse arrays are equal."""
-    if not sp.issparse(x1):
-        raise TypeError("`x1` must be sparse.")
-    if not sp.issparse(x2):
-        raise TypeError("`x2` must be sparse.")
-
-    return x1.shape == x2.shape and (x1 != x2).nnz == 0
-
-
-def array_equal(x1, x2):
-    """Equivalent of np.array_equal that properly handles sparse matrices."""
-    if sp.issparse(x1) and sp.issparse(x2):
-        return sparse_array_equal(x1, x2)
-    return np.array_equal(x1, x2)
+# For backwards compatibility
+array_equal = deprecated("Orange.data.util.array_equal")(array_equal)
 
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):

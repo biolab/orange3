@@ -1,5 +1,6 @@
 import unittest
 import warnings
+from distutils.version import LooseVersion
 from itertools import chain
 from functools import partial, wraps
 
@@ -7,9 +8,10 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
     SparseEfficiencyWarning
 
+import Orange
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode, array_equal, FDR
+    unique, var, nanstd, nanvar, nanmode, FDR
 from sklearn.utils import check_random_state
 
 
@@ -34,10 +36,20 @@ def dense_sparse(test_case):
 
             return sp_array
 
+        # Make sure to call setUp and tearDown methods in between test runs so
+        # any widget state doesn't interfere between tests
+        def _setup_teardown():
+            self.tearDown()
+            self.setUp()
+
         test_case(self, np.array)
+        _setup_teardown()
         test_case(self, csr_matrix)
+        _setup_teardown()
         test_case(self, csc_matrix)
+        _setup_teardown()
         test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
+        _setup_teardown()
         test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
 
     return _wrapper
@@ -294,6 +306,17 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_almost_equal(
             np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
             result, decimal=5)
+
+    def test_array_equal_deprecated(self):
+        """This test is to be included in the 3.22 release and will fail in
+        version 3.24. This serves as a reminder to remove the deprecated method
+        and this test."""
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.24"):
+            self.fail(
+                "`Orange.statistics.util.array_equal` was deprecated in "
+                "version 3.22, and there have been two minor versions in "
+                "between. Please remove the deprecated method from the module."
+            )
 
 
 class TestNanmean(unittest.TestCase):
@@ -620,25 +643,6 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
-
-
-class TestArrayEqual(unittest.TestCase):
-    @dense_sparse
-    def test_same_matrices(self, array):
-        x = array([0, 1, 0, 0, 2])
-        self.assertTrue(array_equal(x, x))
-
-    @dense_sparse
-    def test_with_different_shapes(self, array):
-        x = array(np.eye(4))
-        y = array(np.eye(5))
-        self.assertFalse(array_equal(x, y))
-
-    @dense_sparse
-    def test_with_different_values(self, array):
-        x = array([0, 1, 0, 0, 2])
-        y = array([0, 3, 0, 0, 2])
-        self.assertFalse(array_equal(x, y))
 
 
 class TestNanModeAppVeyor(unittest.TestCase):
