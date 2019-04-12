@@ -9,22 +9,26 @@ import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest
 from contextlib import contextmanager
-from collections import namedtuple
+from collections import namedtuple, Counter
 from functools import singledispatch
 
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
+    FrozenSet,
 )
 
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QToolButton, QLineEdit, QAction, QActionGroup, QStackedWidget, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy, QToolTip,
-    QDialogButtonBox, QPushButton, QCheckBox
+    QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QShortcut
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QIcon
+from AnyQt.QtCore import (
+    Qt, QEvent, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex,
+    QRect
+)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from AnyQt.QtCore import Qt, QEvent, QSize, QModelIndex
 
 import numpy as np
 
@@ -35,6 +39,15 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
+
+
+def unique(sequence):
+    """
+    Return unique elements in `sequence`, preserving their (first seen) order.
+    """
+    # depending on Python >= 3.6 'ordered' dict implementation detail.
+    return iter(dict.fromkeys(sequence))
+
 
 #: An ordered sequence of key, value pairs (variable annotations)
 AnnotationsType = Tuple[Tuple[str, str], ...]
@@ -102,7 +115,11 @@ class Rename(namedtuple("Rename", ["name"])):
 #: A list of pairs with the first element the original value and the second
 #: element the new value. If the first element is None then a category level
 #: is added. If the second element is None than the corresponding first level
-#: is dropped. The translation list is sorted by the translated levels.
+#: is dropped. If there are duplicated elements on the right the corresponding
+#: categories on the left are merged.
+#: The mapped order is defined by the translated elements after None removal
+#: and merges (the first occurrence of a multiplied elements defines its
+#: position):
 CategoriesMappingType = List[Tuple[Optional[str], Optional[str]]]
 
 
@@ -117,7 +134,7 @@ class CategoriesMapping(namedtuple("CategoriesMapping", ["mapping"])):
     def __call__(self, var):
         # type: (Categorical) -> Categorical
         mapping = self.mapping  # type: CategoriesMappingType
-        cat = [cj for _, cj in mapping if cj is not None]
+        cat = list(unique(cj for _, cj in mapping if cj is not None))
         mm = dict(self.mapping)
         if var.base is not None:
             base = mm.get(var.base)
@@ -436,17 +453,141 @@ class ItemEditState:
     Added = 2
 
 
+#: Role used to retrieve the count of 'key' values in the model.
+MultiplicityRole = Qt.UserRole + 0x67
+
+
+class CountedListModel(itemmodels.PyListModel):
+    """
+    A list model counting how many times unique `key` values appear in
+    the list.
+
+    The counts are cached and invalidated on any change to the model involving
+    the changes to `keyRoles`.
+    """
+    #: cached counts
+    __counts_cache = None  # type: Optional[Counter]
+
+    def data(self, index, role=Qt.DisplayRole):
+        # type: (QModelIndex, int) -> Any
+        if role == MultiplicityRole:
+            key = self.key(index)
+            counts = self.__counts()
+            return counts.get(key, 1)
+        return super().data(index, role)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        # type: (QModelIndex, Any, int)-> bool
+        rval = super().setData(index, value, role)
+        if role in self.keyRoles():
+            self.invalidateCounts()
+        return rval
+
+    def setItemData(self, index, data):
+        # type: (QModelIndex, Dict[int, Any]) -> bool
+        rval = super().setItemData(index, data)
+        if self.keyRoles().intersection(set(data.keys())):
+            self.invalidateCounts()
+        return rval
+
+    def endInsertRows(self):
+        super().endInsertRows()
+        self.invalidateCounts()
+
+    def endRemoveRows(self):
+        super().endRemoveRows()
+        self.invalidateCounts()
+
+    def endResetModel(self) -> None:
+        super().endResetModel()
+        self.invalidateCounts()
+
+    def invalidateCounts(self) -> None:
+        """
+        Invalidate the cached counts.
+        """
+        self.__counts_cache = None
+        # emit the change for the whole model
+        self.dataChanged.emit(
+            self.index(0), self.index(self.rowCount() - 1), [MultiplicityRole]
+        )
+
+    def __counts(self):
+        # type: () -> Counter
+        if self.__counts_cache is not None:
+            return self.__counts_cache
+        counts = Counter()
+        for index in map(self.index, range(self.rowCount())):
+            key = self.key(index)
+            try:
+                counts[key] += 1
+            except TypeError:  # pragma: no cover
+                warnings.warn(f"key value '{key}' is not hashable")
+        self.__counts_cache = counts
+        return self.__counts_cache
+
+    def key(self, index):
+        # type: (QModelIndex) -> Any
+        """
+        Return the 'key' value that is to be counted.
+
+        The default implementation returns Qt.EditRole value for the index
+
+        Parameters
+        ----------
+        index : QModelIndex
+            The model index.
+
+        Returns
+        -------
+        key : Any
+        """
+        return self.data(index, Qt.EditRole)
+
+    def keyRoles(self):
+        # type: () -> FrozenSet[int]
+        """
+        Return a set of item roles on which `key` depends.
+
+        The counts are invalidated and recomputed whenever any of the roles in
+        this set changes.
+
+        By default the only role returned is Qt.EditRole
+        """
+        return frozenset({Qt.EditRole})
+
+
+class CountedStateModel(CountedListModel):
+    """
+    Count by EditRole (name) and EditStateRole (ItemEditState)
+    """
+    # The purpouse is to count the items with target name only for
+    # ItemEditState.NoRole, i.e. excluding added/dropped values.
+    #
+    def key(self, index):  # type: (QModelIndex) -> Tuple[Any, Any]
+        # reimplemented
+        return self.data(index, Qt.EditRole), self.data(index, EditStateRole)
+
+    def keyRoles(self):  # type: () -> FrozenSet[int]
+        # reimplemented
+        return frozenset({Qt.EditRole, EditStateRole})
+
+
 class CategoriesEditDelegate(QStyledItemDelegate):
     """
-    Display delegate for editing categories (styled display for add,
-    remove and rename operations).
+    Display delegate for editing categories.
+
+    Displayed items are styled for add, remove, merge and rename operations.
     """
     def initStyleOption(self, option, index):
         # type: (QStyleOptionViewItem, QModelIndex)-> None
         super().initStyleOption(option, index)
         text = str(index.data(Qt.EditRole))
+        sourcename = str(index.data(SourceNameRole))
         editstate = index.data(EditStateRole)
-        sourcename = index.data(SourceNameRole)
+        counts = index.data(MultiplicityRole)
+        if not isinstance(counts, int):
+            counts = 1
         suffix = None
         if editstate == ItemEditState.Dropped:
             option.state &= ~QStyle.State_Enabled
@@ -455,11 +596,10 @@ class CategoriesEditDelegate(QStyledItemDelegate):
             suffix = "(dropped)"
         elif editstate == ItemEditState.Added:
             suffix = "(added)"
-        elif isinstance(sourcename, str) and sourcename != text:
-            text = "{sourcename} \N{RIGHTWARDS ARROW} {text}".format(
-                sourcename=sourcename, text=text
-            )
-
+        else:
+            text = f"{sourcename} \N{RIGHTWARDS ARROW} {text}"
+            if counts > 1:
+                suffix = "(merged)"
         if suffix is not None:
             text = text + " " + suffix
         option.text = text
@@ -480,13 +620,14 @@ class DiscreteVariableEditor(VariableEditor):
         )
         self.ordered_cb.toggled.connect(self._set_ordered)
         #: A list model of discrete variable's values.
-        self.values_model = itemmodels.PyListModel(
+        self.values_model = CountedStateModel(
             flags=Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
         )
 
         vlayout = QVBoxLayout(spacing=1, margin=0)
         self.values_edit = QListView(
-            editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed
+            editTriggers=QListView.DoubleClicked | QListView.EditKeyPressed,
+            selectionMode=QListView.ExtendedSelection,
         )
         self.values_edit.setItemDelegate(CategoriesEditDelegate(self))
         self.values_edit.setModel(self.values_model)
@@ -535,9 +676,18 @@ class DiscreteVariableEditor(VariableEditor):
             shortcut=QKeySequence(QKeySequence.Delete),
             shortcutContext=Qt.WidgetShortcut,
         )
+        self.merge_items = QAction(
+            "M", group,
+            objectName="action-merge-item",
+            toolTip="Merge selected items.",
+            shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_Equal),
+            shortcutContext=Qt.WidgetShortcut,
+            enabled=False,
+        )
 
         self.add_new_item.triggered.connect(self._add_category)
         self.remove_item.triggered.connect(self._remove_category)
+        self.merge_items.triggered.connect(self._merge_categories)
 
         button1 = FixedSizeButton(
             self, defaultAction=self.move_value_up,
@@ -555,14 +705,20 @@ class DiscreteVariableEditor(VariableEditor):
             self, defaultAction=self.remove_item,
             accessibleName="Remove"
         )
+        button5 = FixedSizeButton(
+            self, defaultAction=self.merge_items,
+            accessibleName="Merge",
+        )
         self.values_edit.addActions([self.move_value_up, self.move_value_down,
-                                     self.add_new_item, self.remove_item])
+                                     self.add_new_item, self.remove_item,
+                                     self.merge_items])
         hlayout.addWidget(button1)
         hlayout.addWidget(button2)
         hlayout.addSpacing(3)
         hlayout.addWidget(button3)
         hlayout.addWidget(button4)
-
+        hlayout.addSpacing(3)
+        hlayout.addWidget(button5)
         hlayout.addStretch(10)
         vlayout.addLayout(hlayout)
 
@@ -650,6 +806,9 @@ class DiscreteVariableEditor(VariableEditor):
 
     def __categories_mapping(self):
         # type: () -> CategoriesMappingType
+        """
+        Encode and return the current state as a CategoriesMappingType
+        """
         model = self.values_model
         source = self.var.categories
 
@@ -717,9 +876,17 @@ class DiscreteVariableEditor(VariableEditor):
     @Slot()
     def on_value_selection_changed(self):
         rows = self.values_edit.selectionModel().selectedRows()
-        if rows:
+        # enable merge if at least 2 selected items and the selection must not
+        # contain any added/dropped items.
+        enable_merge = \
+            len(rows) > 1 and \
+            not any(index.data(EditStateRole) != ItemEditState.NoState
+                    for index in rows)
+        self.merge_items.setEnabled(enable_merge)
+
+        if len(rows) == 1:
             i = rows[0].row()
-            self.move_value_up.setEnabled(i)
+            self.move_value_up.setEnabled(i != 0)
             self.move_value_down.setEnabled(i != self.values_model.rowCount() - 1)
         else:
             self.move_value_up.setEnabled(False)
@@ -736,25 +903,24 @@ class DiscreteVariableEditor(VariableEditor):
         view = self.values_edit
         rows = view.selectionModel().selectedRows(0)
         if not rows:
-            return
-        assert len(rows) == 1
-        index = rows[0]  # type: QModelIndex
-        model = index.model()
-        state = index.data(EditStateRole)
-        pos = index.data(Qt.UserRole)
-        if pos is not None and pos >= 0:
-            # existing level -> only mark/toggle its dropped state
-            model.setData(
-                index,
-                ItemEditState.Dropped if state != ItemEditState.Dropped
-                else ItemEditState.NoState,
-                EditStateRole)
-        elif state == ItemEditState.Added:
-            # new level -> remove it
-            model.removeRow(index.row())
-        else:
-            assert False, "invalid state '{}' for {}" \
-                .format(state, index.row())
+            return  # pragma: no cover
+        for index in rows:
+            model = index.model()
+            state = index.data(EditStateRole)
+            pos = index.data(SourcePosRole)
+            if pos is not None and pos >= 0:
+                # existing level -> only mark/toggle its dropped state,
+                model.setData(
+                    index,
+                    ItemEditState.Dropped if state != ItemEditState.Dropped
+                    else ItemEditState.NoState,
+                    EditStateRole)
+            elif state == ItemEditState.Added:
+                # new level -> remove it
+                model.removeRow(index.row())
+            else:
+                assert False, "invalid state '{}' for {}" \
+                    .format(state, index.row())
 
     def _add_category(self):
         """
@@ -779,6 +945,66 @@ class DiscreteVariableEditor(VariableEditor):
             view.setCurrentIndex(index)
             view.edit(index)
         self.on_values_changed()
+
+    def _merge_categories(self):
+        """
+        Merge selected categories into one.
+
+        Popup an editable combo box for selection/edit of a new value.
+        """
+        view = self.values_edit
+        model = view.model()  # type: QAbstractItemModel
+        rows = view.selectedIndexes()  # type: List[QModelIndex]
+        if not len(rows) >= 2:
+            return  # pragma: no cover
+        first_row = rows[0]
+
+        def mapRectTo(widget, parent, rect):
+            # type: (QWidget, QWidget, QRect) -> QRect
+            return QRect(
+                widget.mapTo(parent, rect.topLeft()),
+                rect.size(),
+            )
+
+        def mapRectToGlobal(widget, rect):
+            # type: (QWidget, QRect) -> QRect
+            return QRect(
+                widget.mapToGlobal(rect.topLeft()),
+                rect.size(),
+            )
+        view.scrollTo(first_row)
+        vport = view.viewport()
+        vrect = view.visualRect(first_row)
+        vrect = mapRectTo(vport, view, vrect)
+        vrect = vrect.intersected(vport.geometry())
+        vrect = mapRectToGlobal(vport, vrect)
+
+        cb = QComboBox(editable=True, insertPolicy=QComboBox.InsertAtBottom)
+        cb.setAttribute(Qt.WA_DeleteOnClose)
+        sh = QShortcut(QKeySequence(QKeySequence.Cancel), cb)
+        sh.activated.connect(cb.close)
+        cb.setParent(self, Qt.Popup)
+        cb.move(vrect.topLeft())
+
+        cb.addItems(
+            list(unique(str(row.data(Qt.EditRole)) for row in rows)))
+        prows = [QPersistentModelIndex(row) for row in rows]
+
+        def complete_merge(text):
+            # write the new text for edit role in all rows
+            with disconnected(model.dataChanged, self.on_values_changed):
+                for prow in prows:
+                    if prow.isValid():
+                        model.setData(QModelIndex(prow), text, Qt.EditRole)
+            cb.close()
+            self.variable_changed.emit()
+
+        cb.activated[str].connect(complete_merge)
+        size = cb.sizeHint().expandedTo(vrect.size())
+        cb.resize(size)
+        cb.show()
+        cb.raise_()
+        cb.setFocus(Qt.PopupFocusReason)
 
     def _set_ordered(self, ordered):
         self.ordered_cb.setChecked(ordered)
@@ -1418,7 +1644,7 @@ def apply_transform_discete(var, trs):
 
     source_values = var.values
     if mapping is not None:
-        dest_values = [cj for ci, cj in mapping if cj is not None]
+        dest_values = list(unique(cj for ci, cj in mapping if cj is not None))
     else:
         dest_values = var.values
 
