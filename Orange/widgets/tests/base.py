@@ -967,15 +967,17 @@ class ProjectionWidgetTestMixin:
         self.widget.setup_plot = Mock()
         self.widget.commit = Mock()
         self.send_signal(self.widget.Inputs.data, table)
-        self.widget.setup_plot.assert_called_once()
-        self.widget.commit.assert_called_once()
-
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
 
         self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 

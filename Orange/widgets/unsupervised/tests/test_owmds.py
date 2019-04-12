@@ -49,6 +49,23 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.onDeleteWidget()
         super().tearDown()
 
+    def test_plot_once(self, timeout=5000):
+        """Test if data is plotted only once but committed on every input change"""
+        table = Table("heart_disease")
+        self.widget.setup_plot = Mock()
+        self.widget.commit = Mock()
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.commit.reset_mock()
+        self.wait_until_stop_blocking()
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
+        self.widget.commit.reset_mock()
+        self.send_signal(self.widget.Inputs.data_subset, table[::10])
+        self.wait_until_stop_blocking()
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
     def test_pca_init(self):
         self.send_signal(self.signal_name, self.signal_data)
         output = self.get_output(self.widget.Outputs.annotated_data, wait=1000)
