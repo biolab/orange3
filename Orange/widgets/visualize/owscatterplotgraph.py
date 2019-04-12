@@ -340,6 +340,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     (in methods `get_<something>`).
     """
     too_many_labels = Signal(bool)
+    begin_resizing = Signal()
+    step_resizing = Signal()
+    end_resizing = Signal()
 
     label_only_selected = Setting(False)
     point_width = Setting(10)
@@ -766,17 +769,24 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                         size = size_data
                     widget.scatterplot_item.setSize(size)
                     widget.scatterplot_item_sel.setSize(size + SELECTION_WIDTH)
+                    if widget.timer is None:
+                        widget.end_resizing.emit()
+                    else:
+                        widget.step_resizing.emit()
 
             if self.n_valid <= MAX_N_VALID_SIZE_ANIMATE and \
                     np.all(current_size_data > 0) and np.any(diff != 0):
                 # If encountered any strange behaviour when updating sizes,
                 # implement it with threads
+                self.begin_resizing.emit()
                 self.timer = QTimer(self.scatterplot_item, interval=50)
                 self.timer.timeout.connect(Timeout())
                 self.timer.start()
             else:
+                self.begin_resizing.emit()
                 self.scatterplot_item.setSize(size_data)
                 self.scatterplot_item_sel.setSize(size_data + SELECTION_WIDTH)
+                self.end_resizing.emit()
 
     update_point_size = update_sizes  # backward compatibility (needed?!)
     update_size = update_sizes
