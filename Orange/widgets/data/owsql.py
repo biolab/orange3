@@ -234,6 +234,7 @@ class OWSql(OWWidget):
                 password=self.password
             ))
             self.Error.connection.clear()
+            self.highlight_error()
             if getattr(self.backend, 'missing_extension', False):
                 self.Warning.missing_extension(
                     ", ".join(self.backend.missing_extension))
