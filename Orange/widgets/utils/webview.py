@@ -398,10 +398,10 @@ def wait(until: callable, timeout=5000):
     timeout: int
         Milliseconds to wait until TimeoutError is raised.
     """
-    started = time.clock()
+    started = time.perf_counter()
     while not until():
         qApp.processEvents(QEventLoop.ExcludeUserInputEvents)
-        if (time.clock() - started) * 1000 > timeout:
+        if (time.perf_counter() - started) * 1000 > timeout:
             raise TimeoutError()
 
 
