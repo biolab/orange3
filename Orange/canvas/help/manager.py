@@ -63,7 +63,7 @@ class HelpManager(QObject):
                 provider = get_help_provider_for_distribution(dist)
             except Exception:
                 log.exception("Error while initializing help "
-                              "provider for %r", desc.project_name)
+                              "provider for %r", project)
 
             if provider:
                 providers.append((project, provider))
