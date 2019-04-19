@@ -494,7 +494,7 @@ class OWRank(OWWidget):
             )
         else:
             selection = QItemSelection()
-            if self.selected_rows:
+            if self.selected_rows is not None:
                 for row in model.mapFromSourceRows(self.selected_rows):
                     selection.append(QItemSelectionRange(
                         model.index(row, 0), model.index(row, columnCount - 1)))

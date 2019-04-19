@@ -375,3 +375,13 @@ class TestOWRank(WidgetTest):
                                     UserWarning)
             for ds in datasets.datasets():
                 self.send_signal(self.widget.Inputs.data, ds)
+
+    def test_selected_rows(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.iris)
+
+        # select first and second row
+        w.selected_rows = np.array([1, 2])
+        output = self.get_output(w.Outputs.reduced_data)
+
+        self.assertEqual(len(output), len(self.iris))
