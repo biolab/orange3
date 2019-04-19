@@ -523,10 +523,10 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
-        self._format_str = "%g"
         if number_of_decimals is None:
             self._number_of_decimals = 3
             self.adjust_decimals = 2
+            self._format_str = "%g"
         else:
             self.number_of_decimals = number_of_decimals
 
@@ -562,6 +562,8 @@ class ContinuousVariable(Variable):
         self.adjust_decimals = 0
         if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
             self._format_str = "%.{}f".format(self.number_of_decimals)
+        else:
+            self._format_str = "%g"
 
     def to_val(self, s):
         """
