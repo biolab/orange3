@@ -57,9 +57,9 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # a very confusing crash.
         self.widget.cancel()
         try:
-            self.tsne.stop()
-            self.tsne_model.stop()
-        # If `restore_mocked_functions` was called, stopping the patchers will raise
+            self.restore_mocked_functions()
+        # If `restore_mocked_functions` was called in the test itself, stopping
+        # the patchers here will raise a RuntimeError
         except RuntimeError as e:
             if str(e) != "stop called on unstarted patcher":
                 raise e

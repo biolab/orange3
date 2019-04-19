@@ -137,43 +137,38 @@ class TSNERunner:
 
         total_iterations_needed = tsne.early_exaggeration_iter + tsne.n_iter
 
+        def run_optimization(tsne_params: dict, iterations_needed: int) -> bool:
+            """Run t-SNE optimization phase. Return value indicates whether or
+            not the optimization was interrupted."""
+            while task.iterations_done < iterations_needed:
+                # Step size can't be larger than the remaining number of iterations
+                step_size = min(_STEP_SIZE, iterations_needed - task.iterations_done)
+                task.tsne_embedding = task.tsne_embedding.optimize(
+                    step_size, **tsne_params
+                )
+                task.iterations_done += step_size
+                state.set_partial_result(("tsne_embedding", task))
+                if progress_callback is not None:
+                    # The current iterations must be divided by the total
+                    # number of iterations, not the number of iterations in the
+                    # current phase (iterations_needed)
+                    progress_callback(task.iterations_done / total_iterations_needed)
+
+                if state.is_interruption_requested():
+                    return True
+
         # Run early exaggeration phase
-        while task.iterations_done < tsne.early_exaggeration_iter:
-            # Step size can't be larger than the remaining number of iterations
-            step_size = min(
-                _STEP_SIZE, tsne.early_exaggeration_iter - task.iterations_done
-            )
-            task.tsne_embedding = task.tsne_embedding.optimize(
-                step_size,
-                exaggeration=tsne.early_exaggeration,
-                momentum=0.5,
-                inplace=False,
-            )
-            task.iterations_done += step_size
-            state.set_partial_result(("tsne_embedding", task))
-            if progress_callback is not None:
-                progress_callback(task.iterations_done / total_iterations_needed)
-
-            if state.is_interruption_requested():
-                return
-
+        was_interrupted = run_optimization(
+            dict(exaggeration=tsne.early_exaggeration, momentum=0.5, inplace=False),
+            iterations_needed=tsne.early_exaggeration_iter,
+        )
+        if was_interrupted:
+            return
         # Run regular optimization phase
-        while task.iterations_done < total_iterations_needed:
-            # Step size can't be larger than the remaining number of iterations
-            step_size = min(_STEP_SIZE, total_iterations_needed - task.iterations_done)
-            task.tsne_embedding = task.tsne_embedding.optimize(
-                step_size,
-                exaggeration=tsne.exaggeration,
-                momentum=0.8,
-                inplace=False,
-            )
-            task.iterations_done += step_size
-            state.set_partial_result(("tsne_embedding", task))
-            if progress_callback is not None:
-                progress_callback(task.iterations_done / total_iterations_needed)
-
-            if state.is_interruption_requested():
-                return
+        run_optimization(
+            dict(exaggeration=tsne.exaggeration, momentum=0.8, inplace=False),
+            iterations_needed=total_iterations_needed,
+        )
 
     @classmethod
     def run(cls, task, state):
@@ -188,26 +183,22 @@ class TSNERunner:
             task.data, task.perplexity, task.multiscale, task.exaggeration
         )
 
-        # Only execute jobs if needed
         job_queue = []
+        # Add the tasks that still need to be run to the job queue
         if task.pca_projection is None:
-            job_queue.append(
-                (partial(cls.compute_pca, task, state), weights["pca"])
-            )
+            job_queue.append((cls.compute_pca, weights["pca"]))
+
         if task.initialization is None:
-            job_queue.append(
-                (partial(cls.compute_initialization, task, state), weights["init"])
-            )
+            job_queue.append((cls.compute_initialization, weights["init"]))
+
         if task.affinities is None:
-            job_queue.append(
-                (partial(cls.compute_affinities, task, state), weights["aff"])
-            )
+            job_queue.append((cls.compute_affinities, weights["aff"]))
 
         total_iterations = task.tsne.early_exaggeration_iter + task.tsne.n_iter
         if task.tsne_embedding is None or task.iterations_done < total_iterations:
-            job_queue.append(
-                (partial(cls.compute_tsne, task, state), weights["tsne"])
-            )
+            job_queue.append((cls.compute_tsne, weights["tsne"]))
+
+        job_queue = [(partial(f, task, state), w) for f, w in job_queue]
 
         # Figure out the total weight of the jobs
         job_weight = sum(j[1] for j in job_queue)
@@ -406,7 +397,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # Resume task
         else:
             self.run()
-            self.run_button.setText("Stop")
 
     def set_data(self, data: Table):
         super().set_data(data)
