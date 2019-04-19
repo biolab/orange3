@@ -290,3 +290,7 @@ class TestSegmentsIntersection(unittest.TestCase):
                           for i in range(y.shape[1])])
         i = line_intersects_profiles(a, b, table)
         np.testing.assert_array_equal(np.array([False, True, True, True]), i)
+
+
+if __name__ == "__main__":
+    unittest.main()
