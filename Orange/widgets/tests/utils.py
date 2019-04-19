@@ -336,7 +336,11 @@ def table_dense_sparse(test_case):
 
     @wraps(test_case)
     def _wrapper(self):
+        # Make sure to call setUp and tearDown methods in between test runs so
+        # any widget state doesn't interfere between tests
         test_case(self, lambda table: table.to_dense())
+        self.tearDown()
+        self.setUp()
         test_case(self, lambda table: table.to_sparse())
 
     return _wrapper

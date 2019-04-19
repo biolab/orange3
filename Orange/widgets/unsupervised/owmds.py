@@ -9,6 +9,7 @@ from AnyQt.QtCore import Qt
 import pyqtgraph as pg
 
 from Orange.data import ContinuousVariable, Domain, Table, StringVariable
+from Orange.data.util import array_equal
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
@@ -323,8 +324,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.openContext(self.data)
         self._invalidated = not (matrix_existed and
                                  self.effective_matrix is not None and
-                                 np.array_equal(effective_matrix,
-                                                self.effective_matrix))
+                                 array_equal(effective_matrix, self.effective_matrix))
         if self._invalidated:
             self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)

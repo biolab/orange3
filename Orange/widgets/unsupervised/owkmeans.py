@@ -10,7 +10,7 @@ from AnyQt.QtWidgets import QGridLayout, QTableView
 from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
-from Orange.data.util import get_unique_names
+from Orange.data.util import get_unique_names, array_equal
 from Orange.preprocess.impute import ReplaceUnknowns
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
@@ -526,7 +526,7 @@ class OWKMeans(widget.OWWidget):
         self.data, old_data = data, self.data
 
         # Do not needlessly recluster the data if X hasn't changed
-        if old_data and self.data and np.array_equal(self.data.X, old_data.X):
+        if old_data and self.data and array_equal(self.data.X, old_data.X):
             if self.auto_commit:
                 self.send_data()
         else:
