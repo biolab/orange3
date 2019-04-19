@@ -154,6 +154,7 @@ class OWDistributions(widget.OWWidget):
 
     relative_freq = settings.Setting(False)
     disc_cont = settings.Setting(False)
+    cumulative_distr = settings.Setting(False)
 
     smoothing_index = settings.Setting(5)
     show_prob = settings.ContextSetting(0)
@@ -189,6 +190,10 @@ class OWDistributions(widget.OWWidget):
         self.varview.selectionModel().selectionChanged.connect(
             self._on_variable_idx_changed)
         varbox.layout().addWidget(self.varview)
+        gui.checkBox(
+            varbox, self, "cumulative_distr", "Cumulative distribution",
+            callback=self._on_cumulative_distr_changed,
+            tooltip="Show the cumulative distribution function.")
 
         box = gui.vBox(self.controlArea, "Precision")
 
@@ -368,6 +373,7 @@ class OWDistributions(widget.OWWidget):
             self.var = data.domain[0]
         self.set_left_axis_name()
         self.enable_disable_rel_freq()
+        self.controls.cumulative_distr.setDisabled(not self.var.is_continuous)
         if self.cvar:
             self.contingencies = \
                 contingency.get_contingency(data, self.var, self.cvar)
@@ -416,6 +422,9 @@ class OWDistributions(widget.OWWidget):
                                      smoothing_factor=self.smoothing_factor)
             edges = edges + (edges[1] - edges[0])/2
             edges = edges[:-1]
+            if self.cumulative_distr:
+                dx = edges[1] - edges[0]
+                curve = numpy.cumsum(curve) * dx
             item = pg.PlotCurveItem()
             pen = QPen(QBrush(Qt.white), 3)
             pen.setCosmetic(True)
@@ -492,6 +501,9 @@ class OWDistributions(widget.OWWidget):
                 X = X[:-1]
                 X = numpy.array(X)
                 Y = numpy.array(Y)
+                if self.cumulative_distr:
+                    dx = X[1] - X[0]
+                    Y = numpy.cumsum(Y) * dx
                 curvesline.append((X, Y))
 
             for t in ["fill", "line"]:
@@ -632,6 +644,9 @@ class OWDistributions(widget.OWWidget):
         self._setup()
 
     def _on_set_smoothing(self):
+        self._setup()
+
+    def _on_cumulative_distr_changed(self):
         self._setup()
 
     def onDeleteWidget(self):
