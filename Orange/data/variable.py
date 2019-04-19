@@ -22,6 +22,7 @@ Unknown = ValueUnknown = float("nan")
 MISSING_VALUES = {np.nan, "?", "nan", ".", "", "NA", "~", None}
 
 DISCRETE_MAX_VALUES = 3  # == 2 + nan
+MAX_NUM_OF_DECIMALS = 5
 
 
 def make_variable(cls, compute_value, *args):
@@ -522,10 +523,10 @@ class ContinuousVariable(Variable):
         three, but adjusted at the first call of :obj:`to_val`.
         """
         super().__init__(name, compute_value, sparse=sparse)
+        self._format_str = "%g"
         if number_of_decimals is None:
             self._number_of_decimals = 3
             self.adjust_decimals = 2
-            self._format_str = "%g"
         else:
             self.number_of_decimals = number_of_decimals
 
@@ -559,7 +560,8 @@ class ContinuousVariable(Variable):
     def number_of_decimals(self, x):
         self._number_of_decimals = x
         self.adjust_decimals = 0
-        self._format_str = "%.{}f".format(self.number_of_decimals)
+        if self._number_of_decimals <= MAX_NUM_OF_DECIMALS:
+            self._format_str = "%.{}f".format(self.number_of_decimals)
 
     def to_val(self, s):
         """

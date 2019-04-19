@@ -292,7 +292,12 @@ class TestContinuousVariable(VariableTest):
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
         self.assertEqual(a.str_val(4.654321), "4.6543")
+        self.assertEqual(a.str_val(4.654321654321), "4.6543")
         self.assertEqual(a.str_val(Unknown), "?")
+        a = ContinuousVariable("a", 5)
+        self.assertEqual(a.str_val(0.000000000001), "0.00000")
+        a = ContinuousVariable("a", 10)
+        self.assertEqual(a.str_val(0.000000000001), "1e-12")
 
     def test_adjust_decimals(self):
         a = ContinuousVariable("a")
