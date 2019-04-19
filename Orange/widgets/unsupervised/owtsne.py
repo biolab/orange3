@@ -13,7 +13,7 @@ from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.projection import manifold
 from Orange.widgets import gui
-from Orange.widgets.settings import Setting, SettingProvider
+from Orange.widgets.settings import SettingProvider, ContextSetting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
@@ -238,11 +238,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     keywords = ["tsne"]
 
     settings_version = 4
-    perplexity = Setting(30)
-    multiscale = Setting(False)
-    exaggeration = Setting(1)
-    pca_components = Setting(_DEFAULT_PCA_COMPONENTS)
-    normalize = Setting(True)
+    perplexity = ContextSetting(30)
+    multiscale = ContextSetting(False)
+    exaggeration = ContextSetting(1)
+    pca_components = ContextSetting(_DEFAULT_PCA_COMPONENTS)
+    normalize = ContextSetting(True)
 
     GRAPH_CLASS = OWtSNEGraph
     graph = SettingProvider(OWtSNEGraph)
@@ -258,7 +258,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         not_enough_rows = Msg("Input data needs at least 2 rows")
         constant_data = Msg("Input data is constant")
         no_attributes = Msg("Data has no attributes")
-        out_of_memory = Msg("Out of memory")
         no_valid_data = Msg("No projection due to no valid data")
 
     def __init__(self):
@@ -401,19 +400,32 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def set_data(self, data: Table):
         super().set_data(data)
 
-        if data is not None:
-            n_attrs = len(data.domain.attributes)
-            self.controls.pca_components.setMaximum(
-                min(_MAX_PCA_COMPONENTS, n_attrs)
-            )
-            self.controls.pca_components.setValue(
-                min(_DEFAULT_PCA_COMPONENTS, n_attrs)
-            )
+        if self._invalidated:
+            self.run()
 
+    def init_attr_values(self):
+        super().init_attr_values()
+
+        if self.data is not None:
+            n_attrs = len(self.data.domain.attributes)
+            max_components = min(_MAX_PCA_COMPONENTS, n_attrs)
+        else:
+            max_components = _MAX_PCA_COMPONENTS
+
+        # We set this to the default number of components here so it resets
+        # properly, any previous settings will be restored from context
+        # settings a little later
+        self.controls.pca_components.setMaximum(max_components)
+        self.controls.pca_components.setValue(_DEFAULT_PCA_COMPONENTS)
+
+    def enable_controls(self):
+        super().enable_controls()
+
+        if self.data is not None:
             # PCA doesn't support normalization on sparse data, as this would
             # require centering and normalizing the matrix
-            self.normalize_cbx.setDisabled(data.is_sparse())
-            if data.is_sparse():
+            self.normalize_cbx.setDisabled(self.data.is_sparse())
+            if self.data.is_sparse():
                 self.normalize = False
                 self.normalize_cbx.setToolTip(
                     "Data normalization is not supported on sparse matrices."
@@ -421,16 +433,12 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             else:
                 self.normalize_cbx.setToolTip("")
 
-        if self._invalidated:
-            self.run()
-
     def run(self):
         self._set_modified(False)
 
         # When the data is invalid, it is set to `None` and an error is set,
         # therefore it would be erroneous to clear the error here
         if self.data is not None:
-            self.Error.clear()
             self.run_button.setText("Stop")
 
         # Cancel current running task
