@@ -131,6 +131,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
                 self.assertIn(var, controls.attr_shape.model())
 
     def test_multiscale_changed_updates_ui(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.assertFalse(self.widget.controls.multiscale.isChecked())
         self.assertTrue(self.widget.perplexity_spin.isEnabled())
         self.widget.controls.multiscale.setChecked(True)
@@ -138,6 +139,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(OWtSNE, stored_settings=settings)
+        self.send_signal(w.Inputs.data, self.data, widget=w)
         self.assertTrue(w.controls.multiscale.isChecked())
         self.assertFalse(w.perplexity_spin.isEnabled())
 
@@ -185,8 +187,11 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         optimize.return_value = DummyTSNE()(self.data)
 
         # Set value to 1
-        self.widget.controls.exaggeration.setValue(1)
         self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.run_button.clicked.emit()  # stop initial run
+        self.wait_until_stop_blocking()
+        self.widget.controls.exaggeration.setValue(1)
+        self.widget.run_button.clicked.emit()  # run with exaggeration 1
         self.wait_until_stop_blocking()
         _check_exaggeration(optimize, 1)
 
@@ -195,8 +200,11 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         optimize.reset_mock()
 
         # Change to 3
-        self.widget.controls.exaggeration.setValue(3)
         self.send_signal(self.widget.Inputs.data, self.data)
+        self.widget.run_button.clicked.emit()  # stop initial run
+        self.wait_until_stop_blocking()
+        self.widget.controls.exaggeration.setValue(3)
+        self.widget.run_button.clicked.emit()  # run with exaggeration 1
         self.wait_until_stop_blocking()
         _check_exaggeration(optimize, 3)
 

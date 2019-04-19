@@ -418,6 +418,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.controls.pca_components.setMaximum(max_components)
         self.controls.pca_components.setValue(_DEFAULT_PCA_COMPONENTS)
 
+        self.exaggeration = 1
+
     def enable_controls(self):
         super().enable_controls()
 
@@ -432,6 +434,9 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 )
             else:
                 self.normalize_cbx.setToolTip("")
+
+        # Disable the perplexity spin box if multiscale is turned on
+        self.controls.perplexity.setDisabled(self.multiscale)
 
     def run(self):
         self._set_modified(False)
