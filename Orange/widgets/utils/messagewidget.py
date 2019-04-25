@@ -9,7 +9,7 @@ from typing import (
     NamedTuple, Tuple, List, Dict, Iterable, Union, Optional, Hashable
 )
 
-from AnyQt.QtCore import Qt, QSize, QBuffer
+from AnyQt.QtCore import Qt, QSize, QBuffer, QPropertyAnimation, QEasingCurve, Property
 from AnyQt.QtGui import (
     QIcon, QPixmap, QPainter, QPalette, QLinearGradient, QBrush, QPen
 )
@@ -363,6 +363,14 @@ class MessagesWidget(QWidget):
         self.__textlabel.setAttribute(Qt.WA_MacSmallSize)
         self.__defaultStyleSheet = defaultStyleSheet
 
+        self.anim = QPropertyAnimation(self.__iconwidget, b"opacity")
+        self.anim.setDuration(350)
+        self.anim.setStartValue(1)
+        self.anim.setKeyValueAt(0.5, 0)
+        self.anim.setEndValue(1)
+        self.anim.setEasingCurve(QEasingCurve.OutQuad)
+        self.anim.setLoopCount(2)
+
     def sizeHint(self):
         sh = super().sizeHint()
         h = self.style().pixelMetric(QStyle.PM_SmallIconSize)
@@ -514,6 +522,7 @@ class MessagesWidget(QWidget):
         icon = message_icon(summary)
         self.__iconwidget.setIcon(icon)
         self.__iconwidget.setVisible(not (summary.isEmpty() or icon.isNull()))
+        self.anim.start(QPropertyAnimation.KeepWhenStopped)
         self.__textlabel.setTextFormat(summary.textFormat)
         self.__textlabel.setText(summary.text)
         self.__textlabel.setVisible(bool(summary.text))
@@ -614,6 +623,7 @@ class IconWidget(QWidget):
         sizePolicy = kwargs.pop("sizePolicy", QSizePolicy(QSizePolicy.Fixed,
                                                           QSizePolicy.Fixed))
         super().__init__(parent, **kwargs)
+        self._opacity = 1
         self.__icon = QIcon(icon)
         self.__iconSize = QSize(iconSize)
         self.setSizePolicy(sizePolicy)
@@ -624,6 +634,15 @@ class IconWidget(QWidget):
             self.__icon = QIcon(icon)
             self.updateGeometry()
             self.update()
+
+    def getOpacity(self):
+        return self._opacity
+
+    def setOpacity(self, o):
+        self._opacity = o
+        self.update()
+
+    opacity = Property(float, fget=getOpacity, fset=setOpacity)
 
     def icon(self):
         # type: () -> QIcon
@@ -652,6 +671,7 @@ class IconWidget(QWidget):
 
     def paintEvent(self, event):
         painter = QStylePainter(self)
+        painter.setOpacity(self._opacity)
         opt = QStyleOption()
         opt.initFrom(self)
         painter.drawPrimitive(QStyle.PE_Widget, opt)
