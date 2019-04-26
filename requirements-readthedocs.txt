@@ -1,0 +1,4 @@
+-r requirements-core.txt
+-r requirements-doc.txt
+-r requirements-gui.txt
+PyQt5
