@@ -22,6 +22,7 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         self.model = model
         self.domain = model.domain
         self.instances = model.instances
+        self.instances_transformed = self.instances.transform(self.domain)
 
     @abstractmethod
     def weight(self, node):
