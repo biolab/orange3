@@ -2,7 +2,7 @@
 
 from unittest.mock import Mock
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
 
 from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
@@ -201,3 +201,23 @@ class TestOWPythagoreanForest(WidgetTest):
         # Check that individual squares all have the same color
         colors_same = [self._check_all_same(x) for x in zip(*colors)]
         self.assertTrue(all(colors_same))
+
+    def select_tree(self, idx: int) -> None:
+        list_view = self.widget.list_view
+        index = list_view.model().index(idx)
+        selection = QItemSelection(index, index)
+        list_view.selectionModel().select(selection, QItemSelectionModel.ClearAndSelect)
+
+    def test_storing_selection(self):
+        # Select one of the trees
+        idx = 1
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+        self.select_tree(idx)
+        # Clear input
+        self.send_signal(self.widget.Inputs.random_forest, None)
+        # Restore previous data; context settings should be restored
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+
+        output = self.get_output(self.widget.Outputs.tree)
+        self.assertIsNotNone(output)
+        self.assertIs(output.skl_model, self.titanic.trees[idx].skl_model)

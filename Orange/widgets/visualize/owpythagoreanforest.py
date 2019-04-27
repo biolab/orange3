@@ -3,7 +3,7 @@ from math import log, sqrt
 from typing import Any, Callable, Optional
 
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
-    QItemSelection, QT_VERSION
+    QItemSelection, QItemSelectionModel, QT_VERSION
 from AnyQt.QtGui import QPainter, QPen, QColor, QBrush, QMouseEvent
 from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QLabel, QSlider, \
     QListView, QStyledItemDelegate, QStyleOptionViewItem, QStyle
@@ -174,10 +174,14 @@ class OWPythagoreanForest(OWWidget):
     graph_name = 'scene'
 
     # Settings
+    settingsHandler = settings.DomainContextHandler()
+
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
     zoom = settings.Setting(200)
+
+    selected_index = settings.ContextSetting(None)
 
     SIZE_CALCULATION = [
         ('Normal', lambda x: x),
@@ -265,6 +269,7 @@ class OWPythagoreanForest(OWWidget):
     @Inputs.random_forest
     def set_rf(self, model=None):
         """When a different forest is given."""
+        self.closeContext()
         self.clear()
         self.rf_model = model
 
@@ -283,11 +288,19 @@ class OWPythagoreanForest(OWWidget):
             self._update_target_class_combo()
             self._update_depth_slider()
 
+        self.openContext(model)
+        # Restore item selection
+        if self.selected_index is not None:
+            index = self.list_view.model().index(self.selected_index)
+            selection = QItemSelection(index, index)
+            self.list_view.selectionModel().select(selection, QItemSelectionModel.ClearAndSelect)
+
     def clear(self):
         """Clear all relevant data from the widget."""
         self.rf_model = None
         self.forest = None
         self.forest_model.clear()
+        self.selected_index = None
 
         self._clear_info_box()
         self._clear_target_class_combo()
@@ -342,19 +355,19 @@ class OWPythagoreanForest(OWWidget):
         super().onDeleteWidget()
         self.clear()
 
-    def commit(self, selection):
-        # type: (QItemSelection) -> None
+    def commit(self, selection: QItemSelection) -> None:
         """Commit the selected tree to output."""
         selected_indices = selection.indexes()
 
         if not len(selected_indices):
+            self.selected_index = None
             self.Outputs.tree.send(None)
             return
 
-        selected_index, = selection.indexes()
+        # We only allow selecting a single tree so there will always be one index
+        self.selected_index = selected_indices[0].row()
 
-        idx = selected_index.row()
-        tree = self.rf_model.trees[idx]
+        tree = self.rf_model.trees[self.selected_index]
         tree.instances = self.instances
         tree.meta_target_class_index = self.target_class_index
         tree.meta_size_calc_idx = self.size_calc_idx
