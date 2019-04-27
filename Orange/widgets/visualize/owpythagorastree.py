@@ -75,8 +75,7 @@ class OWPythagorasTree(OWWidget):
         super().__init__()
         # Instance variables
         self.model = None
-        self.instances = None
-        self.clf_dataset = None
+        self.data = None
         # The tree adapter instance which is passed from the outside
         self.tree_adapter = None
         self.legend = None
@@ -149,18 +148,12 @@ class OWPythagorasTree(OWWidget):
     @Inputs.tree
     def set_tree(self, model=None):
         """When a different tree is given."""
+        self.closeContext()
         self.clear()
         self.model = model
 
         if model is not None:
-            self.instances = model.instances
-            # this bit is important for the regression classifier
-            if self.instances is not None and \
-                    self.instances.domain != model.domain:
-                self.clf_dataset = self.instances.transform(self.model.domain)
-            else:
-                self.clf_dataset = self.instances
-
+            self.data = model.instances
             self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.clear()
 
@@ -203,8 +196,7 @@ class OWPythagorasTree(OWWidget):
     def clear(self):
         """Clear all relevant data from the widget."""
         self.model = None
-        self.instances = None
-        self.clf_dataset = None
+        self.data = None
         self.tree_adapter = None
 
         if self.legend is not None:
@@ -311,16 +303,21 @@ class OWPythagorasTree(OWWidget):
 
     def commit(self):
         """Commit the selected data to output."""
-        if self.instances is None:
+        if self.data is None:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
-        nodes = [i.tree_node.label for i in self.scene.selectedItems()
-                 if isinstance(i, SquareGraphicsItem)]
+
+        nodes = [
+            i.tree_node.label for i in self.scene.selectedItems()
+            if isinstance(i, SquareGraphicsItem)
+        ]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
         self.Outputs.selected_data.send(data)
         selected_indices = self.tree_adapter.get_indices(nodes)
-        self.Outputs.annotated_data.send(create_annotated_table(self.instances, selected_indices))
+        self.Outputs.annotated_data.send(
+            create_annotated_table(self.data, selected_indices)
+        )
 
     def send_report(self):
         """Send report."""
@@ -331,9 +328,9 @@ class OWPythagorasTree(OWWidget):
         label = [x for x in self.target_class_combo.parent().children()
                  if isinstance(x, QLabel)][0]
 
-        if self.instances.domain.has_discrete_class:
+        if self.data.domain.has_discrete_class:
             label_text = 'Target class'
-            values = [c.title() for c in self.instances.domain.class_vars[0].values]
+            values = [c.title() for c in self.data.domain.class_vars[0].values]
             values.insert(0, 'None')
         else:
             label_text = 'Node color'
@@ -346,7 +343,7 @@ class OWPythagorasTree(OWWidget):
         if self.legend is not None:
             self.scene.removeItem(self.legend)
 
-        if self.instances.domain.has_discrete_class:
+        if self.data.domain.has_discrete_class:
             self._classification_update_legend_colors()
         else:
             self._regression_update_legend_colors()
@@ -379,14 +376,14 @@ class OWPythagorasTree(OWWidget):
 
         # The colors are the class mean
         if self.target_class_index == 1:
-            values = (np.min(self.clf_dataset.Y), np.max(self.clf_dataset.Y))
+            values = (np.min(self.data.Y), np.max(self.data.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)
             items = list(zip(values, colors))
         # Colors are the stddev
         elif self.target_class_index == 2:
-            values = (0, np.std(self.clf_dataset.Y))
+            values = (0, np.std(self.data.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)
