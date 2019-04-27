@@ -57,6 +57,8 @@ class OWPythagorasTree(OWWidget):
     graph_name = 'scene'
 
     # Settings
+    settingsHandler = settings.DomainContextHandler()
+
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
@@ -194,7 +196,9 @@ class OWPythagorasTree(OWWidget):
             #     self.depth_limit = model.meta_depth_limit
             #     self.update_depth()
 
-        self.Outputs.annotated_data.send(create_annotated_table(self.instances, None))
+        self.openContext(self.model)
+
+        self.Outputs.annotated_data.send(create_annotated_table(self.data, None))
 
     def clear(self):
         """Clear all relevant data from the widget."""
