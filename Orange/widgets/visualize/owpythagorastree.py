@@ -224,6 +224,8 @@ class OWPythagorasTree(OWWidget):
         self.invalidate_tree()
 
     def redraw(self):
+        if self.data is None:
+            return
         self.tree_adapter.shuffle_children()
         self.invalidate_tree()
 
