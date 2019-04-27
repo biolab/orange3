@@ -203,7 +203,6 @@ class OWPythagoreanForest(OWWidget):
         self.rf_model = None
         self.forest = None
         self.instances = None
-        self.clf_dataset = None
 
         self.color_palette = None
 
@@ -276,13 +275,7 @@ class OWPythagoreanForest(OWWidget):
         if model is not None:
             self.forest = self._get_forest_adapter(self.rf_model)
             self.forest_model[:] = self.forest.trees
-
             self.instances = model.instances
-            # This bit is important for the regression classifier
-            if self.instances is not None and self.instances.domain != model.domain:
-                self.clf_dataset = self.instances.transform(self.rf_model.domain)
-            else:
-                self.clf_dataset = self.instances
 
             self._update_info_box()
             self._update_target_class_combo()
