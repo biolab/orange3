@@ -3,21 +3,22 @@ from itertools import chain
 from contextlib import contextmanager
 
 import typing
-from typing import Any, List, Tuple, Dict, Optional, Set
+from typing import Any, List, Tuple, Dict, Optional, Set, Union
 
 import numpy as np
 
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
-    QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
+    QGraphicsScene, QGridLayout, QFormLayout, QSizePolicy,
     QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
-    QGraphicsItemGroup)
+    QGraphicsItemGroup, QGraphicsGridLayout, QGraphicsSceneMouseEvent
+)
 from AnyQt.QtGui import (
     QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
     QFont, QFontMetrics, QPolygonF, QKeySequence
 )
 from AnyQt.QtCore import Qt, QSize, QSizeF, QPointF, QRectF, QLineF, QEvent
-from AnyQt.QtCore import pyqtSignal as Signal
+from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 import pyqtgraph as pg
 
@@ -35,6 +36,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output, Msg
+
+from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 
 __all__ = ["OWHierarchicalClustering"]
 
@@ -1011,41 +1014,31 @@ class OWHierarchicalClustering(widget.OWWidget):
                         box=False)
 
         self.scene = QGraphicsScene()
-        self.view = QGraphicsView(
+        self.view = StickyGraphicsView(
             self.scene,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
             alignment=Qt.AlignLeft | Qt.AlignVCenter
         )
+        self.mainArea.layout().setSpacing(1)
+        self.mainArea.layout().addWidget(self.view)
 
         def axis_view(orientation):
-            ax = pg.AxisItem(orientation=orientation, maxTickLength=7)
-            scene = QGraphicsScene()
-            scene.addItem(ax)
-            view = QGraphicsView(
-                scene,
-                horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
-                verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-                alignment=Qt.AlignLeft | Qt.AlignVCenter
-            )
-            view.setFixedHeight(ax.size().height())
-            ax.line = SliderLine(orientation=Qt.Horizontal,
-                                 length=ax.size().height())
-            scene.addItem(ax.line)
-            return view, ax
+            ax = AxisItem(orientation=orientation, maxTickLength=7)
+            ax.mousePressed.connect(self._activate_cut_line)
+            ax.mouseMoved.connect(self._activate_cut_line)
+            ax.mouseReleased.connect(self._activate_cut_line)
+            return ax
 
-        self.top_axis_view, self.top_axis = axis_view("top")
-        self.mainArea.layout().setSpacing(1)
-        self.mainArea.layout().addWidget(self.top_axis_view)
-        self.mainArea.layout().addWidget(self.view)
-        self.bottom_axis_view, self.bottom_axis = axis_view("bottom")
-        self.mainArea.layout().addWidget(self.bottom_axis_view)
+        self.top_axis = axis_view("top")
+        self.bottom_axis = axis_view("bottom")
 
         self._main_graphics = QGraphicsWidget()
-        self._main_layout = QGraphicsLinearLayout(Qt.Horizontal)
-        self._main_layout.setSpacing(10)
+        scenelayout = QGraphicsGridLayout()
+        scenelayout.setHorizontalSpacing(10)
+        scenelayout.setVerticalSpacing(10)
 
-        self._main_graphics.setLayout(self._main_layout)
+        self._main_graphics.setLayout(scenelayout)
         self.scene.addItem(self._main_graphics)
 
         self.dendrogram = DendrogramWidget()
@@ -1060,26 +1053,22 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.labels.setMaximumWidth(200)
         self.labels.layout().setSpacing(0)
 
-        self._main_layout.addItem(self.dendrogram)
-        self._main_layout.addItem(self.labels)
-
-        self._main_layout.setAlignment(
-            self.dendrogram, Qt.AlignLeft | Qt.AlignVCenter)
-        self._main_layout.setAlignment(
-            self.labels, Qt.AlignLeft | Qt.AlignVCenter)
-
+        scenelayout.addItem(self.top_axis, 0, 0,
+                            alignment=Qt.AlignLeft | Qt.AlignVCenter)
+        scenelayout.addItem(self.dendrogram, 1, 0,
+                            alignment=Qt.AlignLeft | Qt.AlignVCenter)
+        scenelayout.addItem(self.labels, 1, 1,
+                            alignment=Qt.AlignLeft | Qt.AlignVCenter)
+        scenelayout.addItem(self.bottom_axis, 2, 0,
+                            alignment=Qt.AlignLeft | Qt.AlignVCenter)
         self.view.viewport().installEventFilter(self)
-        self.top_axis_view.viewport().installEventFilter(self)
-        self.bottom_axis_view.viewport().installEventFilter(self)
         self._main_graphics.installEventFilter(self)
 
-        self.cut_line = SliderLine(self.dendrogram,
+        self.top_axis.setZValue(self.dendrogram.zValue() + 10)
+        self.bottom_axis.setZValue(self.dendrogram.zValue() + 10)
+        self.cut_line = SliderLine(self.top_axis,
                                    orientation=Qt.Horizontal)
         self.cut_line.valueChanged.connect(self._dendrogram_slider_changed)
-        self.cut_line.hide()
-
-        self.bottom_axis.line.valueChanged.connect(self._axis_slider_changed)
-        self.top_axis.line.valueChanged.connect(self._axis_slider_changed)
         self.dendrogram.geometryChanged.connect(self._dendrogram_geom_changed)
         self._set_cut_line_visible(self.selection_method == 1)
         self.__update_font_scale()
@@ -1421,17 +1410,14 @@ class OWHierarchicalClustering(widget.OWWidget):
                 event.type() == QEvent.LayoutRequest:
             # layout preserving the width (vertical re layout)
             self.__layout_main_graphics()
-        elif event.type() == QEvent.MouseButtonPress and \
-                (obj is self.top_axis_view.viewport() or
-                 obj is self.bottom_axis_view.viewport()):
-            self.selection_method = 1
-            # Map click point to cut line local coordinates
-            pos = self.top_axis_view.mapToScene(event.pos())
-            cut = self.top_axis.line.mapFromScene(pos)
-            self.top_axis.line.setValue(cut.x())
-            # update the line visibility, output, ...
-            self._selection_method_changed()
         return super().eventFilter(obj, event)
+
+    @Slot(QPointF)
+    def _activate_cut_line(self, pos: QPointF):
+        """Activate cut line selection an set cut value to `pos.x()`."""
+        self.selection_method = 1
+        self.cut_line.setValue(pos.x())
+        self._selection_method_changed()
 
     def onDeleteWidget(self):
         super().onDeleteWidget()
@@ -1442,30 +1428,28 @@ class OWHierarchicalClustering(widget.OWWidget):
     def _dendrogram_geom_changed(self):
         pos = self.dendrogram.pos_at_height(self.cutoff_height)
         geom = self.dendrogram.geometry()
-        crect = self.dendrogram.contentsRect()
-
         self._set_slider_value(pos.x(), geom.width())
-        self.cut_line.setLength(geom.height())
 
-        self.top_axis.resize(crect.width(), self.top_axis.height())
-        self.top_axis.setPos(geom.left() + crect.left(), 0)
-        self.top_axis.line.setPos(self.cut_line.scenePos().x(), 0)
-
-        self.bottom_axis.resize(crect.width(), self.bottom_axis.height())
-        self.bottom_axis.setPos(geom.left() + crect.left(), 0)
-        self.bottom_axis.line.setPos(self.cut_line.scenePos().x(), 0)
+        self.cut_line.setLength(
+            self.bottom_axis.geometry().bottom()
+            - self.top_axis.geometry().top()
+        )
 
         geom = self._main_graphics.geometry()
         assert geom.topLeft() == QPointF(0, 0)
-        self.scene.setSceneRect(geom)
 
-        geom.setHeight(self.top_axis.size().height())
+        def adjustLeft(rect):
+            rect = QRectF(rect)
+            rect.setLeft(geom.left())
+            return rect
 
-        self.top_axis.scene().setSceneRect(geom)
-        self.bottom_axis.scene().setSceneRect(geom)
-
-    def _axis_slider_changed(self, value):
-        self.cut_line.setValue(value)
+        self.view.setSceneRect(geom)
+        self.view.setHeaderSceneRect(
+            adjustLeft(self.top_axis.geometry()).adjusted(0, 0, 0, 1)
+        )
+        self.view.setFooterSceneRect(
+            adjustLeft(self.bottom_axis.geometry()).adjusted(0, 0, 0, -1)
+        )
 
     def _dendrogram_slider_changed(self, value):
         p = QPointF(value, 0)
@@ -1473,21 +1457,10 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         self.set_cutoff_height(cl_height)
 
-        # Sync the cut positions between the dendrogram and the axis.
-        self._set_slider_value(value, self.dendrogram.size().width())
-
     def _set_slider_value(self, value, span):
         with blocked(self.cut_line):
             self.cut_line.setRange(0, span)
             self.cut_line.setValue(value)
-
-        with blocked(self.top_axis.line):
-            self.top_axis.line.setRange(0, span)
-            self.top_axis.line.setValue(value)
-
-        with blocked(self.bottom_axis.line):
-            self.bottom_axis.line.setRange(0, span)
-            self.bottom_axis.line.setValue(value)
 
     def set_cutoff_height(self, height):
         self.cutoff_height = height
@@ -1497,8 +1470,6 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     def _set_cut_line_visible(self, visible):
         self.cut_line.setVisible(visible)
-        self.top_axis.line.setVisible(visible)
-        self.bottom_axis.line.setVisible(visible)
 
     def select_top_n(self, n):
         root = self._displayed_root
@@ -1776,6 +1747,31 @@ class WrapperLayoutItem(QGraphicsLayoutItem):
         self.item.setToolTip(tip)
 
 
+class AxisItem(pg.AxisItem):
+    mousePressed = Signal(QPointF, Qt.MouseButton)
+    mouseMoved = Signal(QPointF, Qt.MouseButtons)
+    mouseReleased = Signal(QPointF, Qt.MouseButton)
+
+    #: \reimp
+    def wheelEvent(self, event):
+        event.ignore()  # ignore event to propagate to the view -> scroll
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        self.mousePressed.emit(event.pos(), event.button())
+        super().mousePressEvent(event)
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        self.mouseMoved.emit(event.pos(), event.buttons())
+        super().mouseMoveEvent(event)
+        event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self.mouseReleased.emit(event.pos(), event.button())
+        super().mouseReleaseEvent(event)
+        event.accept()
+
+
 class SliderLine(QGraphicsObject):
     """A movable slider line."""
     valueChanged = Signal(float)
@@ -1792,7 +1788,7 @@ class SliderLine(QGraphicsObject):
         self._length = length
         self._min = 0.0
         self._max = 1.0
-        self._line = QLineF()
+        self._line = QLineF()  # type: Optional[QLineF]
         self._pen = QPen()
         super().__init__(parent, **kwargs)
 
@@ -1805,7 +1801,7 @@ class SliderLine(QGraphicsObject):
         else:
             self.setCursor(Qt.SizeHorCursor)
 
-    def setPen(self, pen):
+    def setPen(self, pen: Union[QPen, Qt.GlobalColor, Qt.PenStyle]) -> None:
         pen = QPen(pen)
         if self._pen != pen:
             self.prepareGeometryChange()
@@ -1813,10 +1809,10 @@ class SliderLine(QGraphicsObject):
             self._line = None
             self.update()
 
-    def pen(self):
+    def pen(self) -> QPen:
         return QPen(self._pen)
 
-    def setValue(self, value):
+    def setValue(self, value: float):
         value = min(max(value, self._min), self._max)
 
         if self._value != value:
@@ -1825,10 +1821,10 @@ class SliderLine(QGraphicsObject):
             self._line = None
             self.valueChanged.emit(value)
 
-    def value(self):
+    def value(self) -> float:
         return self._value
 
-    def setRange(self, minval, maxval):
+    def setRange(self, minval: float, maxval: float) -> None:
         maxval = max(minval, maxval)
         if minval != self._min or maxval != self._max:
             self._min = minval
@@ -1836,16 +1832,16 @@ class SliderLine(QGraphicsObject):
             self.rangeChanged.emit(minval, maxval)
             self.setValue(self._value)
 
-    def setLength(self, length):
+    def setLength(self, length: float):
         if self._length != length:
             self.prepareGeometryChange()
             self._length = length
             self._line = None
 
-    def length(self):
+    def length(self) -> float:
         return self._length
 
-    def setOrientation(self, orientation):
+    def setOrientation(self, orientation: Qt.Orientation):
         if self._orientation != orientation:
             self.prepareGeometryChange()
             self._orientation = orientation
@@ -1855,11 +1851,11 @@ class SliderLine(QGraphicsObject):
             else:
                 self.setCursor(Qt.SizeHorCursor)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         event.accept()
         self.linePressed.emit()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         pos = event.pos()
         if self._orientation == Qt.Vertical:
             self.setValue(pos.y())
@@ -1868,7 +1864,7 @@ class SliderLine(QGraphicsObject):
         self.lineMoved.emit()
         event.accept()
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if self._orientation == Qt.Vertical:
             self.setValue(event.pos().y())
         else:
@@ -1876,7 +1872,7 @@ class SliderLine(QGraphicsObject):
         self.lineReleased.emit()
         event.accept()
 
-    def boundingRect(self):
+    def boundingRect(self) -> QRectF:
         if self._line is None:
             if self._orientation == Qt.Vertical:
                 self._line = QLineF(0, self._value, self._length, self._value)

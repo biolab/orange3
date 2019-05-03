@@ -4,8 +4,8 @@ import warnings
 
 import numpy as np
 
-from AnyQt.QtCore import QPoint, Qt, QEvent
-from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtCore import QPoint, Qt
+from AnyQt.QtTest import QTest
 
 import Orange.misc
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
@@ -141,16 +141,15 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.assertIsNotNone(annotated)
 
         # selecting clusters with cutoff should select all data
-        self.widget.eventFilter(self.widget.top_axis_view.viewport(),
-                                self._mouse_button_press_event())
+        QTest.mousePress(
+            self.widget.view.headerView().viewport(),
+            Qt.LeftButton, Qt.NoModifier,
+            QPoint(100, 10)
+        )
         selected = self.get_output(self.widget.Outputs.selected_data)
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertEqual(len(selected), len(self.data))
         self.assertIsNotNone(annotated)
-
-    def _mouse_button_press_event(self):
-        return QMouseEvent(QEvent.MouseButtonPress, QPoint(100, 10),
-                           Qt.LeftButton, Qt.LeftButton, Qt.NoModifier)
 
     def test_retain_selection(self):
         """Hierarchical Clustering didn't retain selection. GH-1563"""
