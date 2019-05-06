@@ -288,6 +288,58 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
             "The information message was not cleared on no data"
         )
 
+    def test_invalidation_flow(self):
+        w = self.widget
+        # Setup widget: send data to input with global structure "off", then
+        # set global structure "on" (after the embedding is computed)
+        w.controls.multiscale.setChecked(False)
+        self.send_signal(w.Inputs.data, self.data)
+        self.wait_until_stop_blocking()
+        self.assertFalse(self.widget.Information.modified.is_shown())
+        # All the embedding components should computed
+        self.assertIsNotNone(w.pca_projection)
+        self.assertIsNotNone(w.affinities)
+        self.assertIsNotNone(w.tsne_embedding)
+        # All the invalidation flags should be set to false
+        self.assertFalse(w._invalidated.pca_projection)
+        self.assertFalse(w._invalidated.affinities)
+        self.assertFalse(w._invalidated.tsne_embedding)
+
+        # Trigger invalidation
+        w.controls.multiscale.setChecked(True)
+        self.assertTrue(self.widget.Information.modified.is_shown())
+        # Setting `multiscale` to true should set the invalidate flags for
+        # the affinities and embedding, but not the pca_projection
+        self.assertFalse(w._invalidated.pca_projection)
+        self.assertTrue(w._invalidated.affinities)
+        self.assertTrue(w._invalidated.tsne_embedding)
+
+        # The flags should now be set, but the embedding should still be
+        # available when selecting a subset of data and such
+        self.assertIsNotNone(w.pca_projection)
+        self.assertIsNotNone(w.affinities)
+        self.assertIsNotNone(w.tsne_embedding)
+
+        # We should still be able to send a data subset to the input and have
+        # the points be highlighted
+        self.send_signal(w.Inputs.data_subset, self.data[:10])
+        self.wait_until_stop_blocking()
+        subset = [brush.color().name() == "#46befa" for brush in
+                  w.graph.scatterplot_item.data["brush"][:10]]
+        other = [brush.color().name() == "#000000" for brush in
+                 w.graph.scatterplot_item.data["brush"][10:]]
+        self.assertTrue(all(subset))
+        self.assertTrue(all(other))
+
+        # Clear the data subset
+        self.send_signal(w.Inputs.data_subset, None)
+
+        # Run the optimization
+        self.widget.run_button.clicked.emit()
+        self.wait_until_stop_blocking()
+        # All of the inavalidation flags should have been cleared
+        self.assertFalse(w._invalidated)
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod

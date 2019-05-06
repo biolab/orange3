@@ -230,6 +230,24 @@ class OWtSNEGraph(OWScatterPlotBase):
             self.view_box.setAspectLocked(True, 1)
 
 
+class invalidated:
+    pca_projection = affinities = tsne_embedding = False
+
+    def __set__(self, instance, value):
+        # `self._invalidate = True` should invalidate everything
+        self.pca_projection = self.affinities = self.tsne_embedding = value
+
+    def __bool__(self):
+        # If any of the values are invalidated, this should return true
+        return self.pca_projection or self.affinities or self.tsne_embedding
+
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, ", ".join(
+            "=".join([k, str(getattr(self, k))])
+            for k in ["pca_projection", "affinities", "tsne_embedding"]
+        ))
+
+
 class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "t-SNE"
     description = "Two-dimensional data projection with t-SNE."
@@ -249,6 +267,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     embedding_variables_names = ("t-SNE-x", "t-SNE-y")
 
     left_side_scrolling = True
+
+    # Use `invalidated` descriptor so we don't break the usage of
+    # `_invalidated` in `OWDataProjectionWidget`, but still allow finer control
+    # over which parts of the embedding to invalidate
+    _invalidated = invalidated()
 
     class Information(OWDataProjectionWidget.Information):
         modified = Msg("The parameter settings have been changed. Press "
@@ -323,21 +346,19 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self._invalidate_affinities()
 
     def _invalidate_pca_projection(self):
-        self.pca_projection = None
-        self.initialization = None
+        self._invalidated.pca_projection = True
         self._invalidate_affinities()
 
     def _invalidate_affinities(self):
-        self.affinities = None
+        self._invalidated.affinities = True
         self._invalidate_tsne_embedding()
 
     def _invalidate_tsne_embedding(self):
-        self.iterations_done = 0
-        self.tsne_embedding = None
-        self._invalidate_output()
+        self._invalidated.tsne_embedding = True
+        self._stop_running_task()
         self._set_modified(True)
 
-    def _invalidate_output(self):
+    def _stop_running_task(self):
         self.cancel()
         self.run_button.setText("Start")
 
@@ -403,8 +424,15 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         else:
             self.run()
 
-    def set_data(self, data: Table):
-        super().set_data(data)
+    def handleNewSignals(self):
+        # We don't bother with the granular invalidation flags because
+        # `super().handleNewSignals` will just set all of them to False or will
+        # do nothing. However, it's important we remember its state because we
+        # won't call `run` if needed. `run` also relies on the state of
+        # `_invalidated` to properly set the intermediate values to None
+        prev_invalidated = bool(self._invalidated)
+        super().handleNewSignals()
+        self._invalidated = prev_invalidated
 
         if self._invalidated:
             self.run()
@@ -445,7 +473,17 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.controls.perplexity.setDisabled(self.multiscale)
 
     def run(self):
+        # Reset invalidated values as indicated by the flags
+        if self._invalidated.pca_projection:
+            self.pca_projection = None
+        if self._invalidated.affinities:
+            self.affinities = None
+        if self._invalidated.tsne_embedding:
+            self.iterations_done = 0
+            self.tsne_embedding = None
+
         self._set_modified(False)
+        self._invalidated = False
 
         # When the data is invalid, it is set to `None` and an error is set,
         # therefore it would be erroneous to clear the error here
