@@ -233,6 +233,61 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
+    def test_modified_info_message_behaviour(self):
+        """Information messages should be cleared if the data changes or if
+        the data is set to None."""
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be hidden by default"
+        )
+
+        self.widget.controls.multiscale.setChecked(False)
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be hidden even after toggling "
+            "options if no data is on input"
+        )
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be hidden after the widget "
+            "computes the embedding"
+        )
+
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be hidden when reloading the "
+            "same data set and no previous messages were shown"
+        )
+
+        self.widget.controls.multiscale.setChecked(True)
+        self.assertTrue(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be shown when a setting is "
+            "changed, but the embedding is not recomputed"
+        )
+
+        self.send_signal(self.widget.Inputs.data, Table("housing"))
+        self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The information message was not cleared on new data"
+        )
+        # Flip; the info message should now be shown again.
+        self.widget.controls.multiscale.setChecked(False)
+        assert self.widget.Information.modified.is_shown()  # sanity check
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The information message was not cleared on no data"
+        )
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod

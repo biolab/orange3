@@ -353,9 +353,15 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             err()
             self.data = None
 
+        # `super().check_data()` clears all messages so we have to remember if
+        # it was shown
+        should_show_modified_message = self.Information.modified.is_shown()
         super().check_data()
+
         if self.data is None:
             return
+
+        self.Information.modified(shown=should_show_modified_message)
 
         if len(self.data) < 2:
             error(self.Error.not_enough_rows)
