@@ -289,6 +289,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         )
 
     def test_invalidation_flow(self):
+        # pylint: disable=protected-access
         w = self.widget
         # Setup widget: send data to input with global structure "off", then
         # set global structure "on" (after the embedding is computed)

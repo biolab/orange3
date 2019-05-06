@@ -231,6 +231,7 @@ class OWtSNEGraph(OWScatterPlotBase):
 
 
 class invalidated:
+    # pylint: disable=invalid-name
     pca_projection = affinities = tsne_embedding = False
 
     def __set__(self, instance, value):
@@ -376,6 +377,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         # `super().check_data()` clears all messages so we have to remember if
         # it was shown
+        # pylint: disable=assignment-from-no-return
         should_show_modified_message = self.Information.modified.is_shown()
         super().check_data()
 
