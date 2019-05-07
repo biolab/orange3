@@ -82,8 +82,8 @@ class OWNNLearner(OWBaseLearner):
     solver_index = Setting(2)
     max_iterations = Setting(200)
     alpha_index = Setting(0)
+    replicable = Setting(True)  # WCR added feature to define random seed for reproducability of results
     settings_version = 1
-    random_state = 1
 
     alphas = list(chain([x / 10000 for x in range(1, 10)],
                         [x / 1000 for x in range(1, 10)],
@@ -106,7 +106,7 @@ class OWNNLearner(OWBaseLearner):
                 orientation=Qt.Horizontal, callback=self.settings_changed,
                 tooltip="A list of integers defining neurons. Length of list "
                         "defines the number of layers. E.g. 4, 2, 2, 3.",
-                placeholderText="e.g. 100,"))
+                placeholderText="e.g. 10,"))
         form.addRow(
             "Activation:",
             gui.comboBox(
@@ -138,11 +138,9 @@ class OWNNLearner(OWBaseLearner):
                 alignment=Qt.AlignRight, callback=self.settings_changed))
         
         form.addRow(
-            "Random state:",
-            gui.spin(
-                None, self, "random_state", 0, 100000, step=20,
-                label="Random state:", orientation=Qt.Horizontal,
-                alignment=Qt.AlignRight, callback=self.settings_changed))
+            "Replicable training:",
+            gui.checkBox(  
+                None, self, "replicable", label="", callback=self.settings_changed))
 
 
     def set_alpha(self):
@@ -163,25 +161,15 @@ class OWNNLearner(OWBaseLearner):
         gui.button(self.apply_button, self, "Cancel", callback=self.cancel)
 
     def create_learner(self):
-        learner = None
-        if (self.random_state > 0):
-            learner = self.LEARNER(
-                hidden_layer_sizes=self.get_hidden_layers(),
-                activation=self.activation[self.activation_index],
-                solver=self.solver[self.solver_index],
-                alpha=self.alpha,
-                max_iter=self.max_iterations,
-                preprocessors=self.preprocessors,
-                random_state=self.random_state)
-        else:
-            learner = self.LEARNER(
-                hidden_layer_sizes=self.get_hidden_layers(),
-                activation=self.activation[self.activation_index],
-                solver=self.solver[self.solver_index],
-                alpha=self.alpha,
-                max_iter=self.max_iterations,
-                preprocessors=self.preprocessors)
-        return learner
+        return self.LEARNER(
+            hidden_layer_sizes=self.get_hidden_layers(),
+            activation=self.activation[self.activation_index],
+            solver=self.solver[self.solver_index],
+            alpha=self.alpha,
+            # WCR added feature to define random seed for reproducability of results
+            random_state= 1 if self.replicable else None,
+            max_iter=self.max_iterations,           
+            preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
         return (("Hidden layers", ', '.join(map(str, self.get_hidden_layers()))),
@@ -189,13 +177,13 @@ class OWNNLearner(OWBaseLearner):
                 ("Solver", self.solv_lbl[self.solver_index]),
                 ("Alpha", self.alpha),
                 ("Max iterations", self.max_iterations),
-                ("Random state", self.random_state))
+                ("Replicable training", self.replicable))
 
     def get_hidden_layers(self):
         layers = tuple(map(int, re.findall(r'\d+', self.hidden_layers_input)))
         if not layers:
-            layers = (100,)
-            self.hidden_layers_input = "100,"
+            layers = (10,)
+            self.hidden_layers_input = "10,"
         return layers
 
     def update_model(self):
