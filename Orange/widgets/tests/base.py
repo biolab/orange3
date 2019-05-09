@@ -890,9 +890,11 @@ class ProjectionWidgetTestMixin:
         """Plot should exist after data has been sent in order to be
         properly set/updated"""
         self.send_signal(self.widget.Inputs.data, self.data)
+
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+
         self.assertIsNotNone(self.widget.graph.scatterplot_item)
 
     def test_default_attrs(self, timeout=DEFAULT_TIMEOUT):
@@ -967,6 +969,9 @@ class ProjectionWidgetTestMixin:
         self.widget.setup_plot = Mock()
         self.widget.commit = Mock()
         self.send_signal(self.widget.Inputs.data, table)
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
+
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
@@ -975,9 +980,6 @@ class ProjectionWidgetTestMixin:
 
         self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
-        if self.widget.isBlocking():
-            spy = QSignalSpy(self.widget.blockingStateChanged)
-            self.assertTrue(spy.wait(timeout))
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
 
@@ -1034,16 +1036,20 @@ class ProjectionWidgetTestMixin:
         self.widget.graph.update_coordinates = Mock()
         self.widget.graph.update_point_props = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.update_coordinates.assert_called_once()
-        self.widget.graph.update_point_props.assert_called_once()
-
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
 
+        self.widget.graph.update_coordinates.assert_called()
+        self.widget.graph.update_point_props.assert_called()
+
         self.widget.graph.update_coordinates.reset_mock()
         self.widget.graph.update_point_props.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
         self.widget.graph.update_coordinates.assert_not_called()
         self.widget.graph.update_point_props.assert_called_once()
 
@@ -1052,13 +1058,16 @@ class ProjectionWidgetTestMixin:
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+
         self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(self.widget.__class__, stored_settings=settings)
+
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
         if w.isBlocking():
             spy = QSignalSpy(w.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
 
