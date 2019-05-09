@@ -22,7 +22,7 @@ from Orange.classification.logistic_regression import \
 from Orange.widgets.settings import Setting, ContextSetting, \
     ClassValuesContextHandler
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Msg, Input
+from Orange.widgets.widget import OWWidget, Msg, Input, Output, AttributeList
 from Orange.widgets import gui
 
 
@@ -573,6 +573,9 @@ class OWNomogram(OWWidget):
         classifier = Input("Classifier", Model)
         data = Input("Data", Table)
 
+    class Outputs:
+        features = Output("Features", AttributeList)
+
     MAX_N_ATTRS = 1000
     POINT_SCALE = 0
     ALIGN_LEFT = 0
@@ -843,10 +846,12 @@ class OWNomogram(OWWidget):
     def update_scene(self):
         self.clear_scene()
         if self.domain is None or not len(self.points[0]):
+            self.Outputs.features.send(None)
             return
 
         n_attrs = self.n_attributes if self.display_index else int(1e10)
         attr_inds, attributes = zip(*self.get_ordered_attributes()[:n_attrs])
+        self.Outputs.features.send(AttributeList(attributes))
 
         name_items = [QGraphicsTextItem(attr.name) for attr in attributes]
         point_text = QGraphicsTextItem("Points")
