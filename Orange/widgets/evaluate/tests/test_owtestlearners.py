@@ -432,10 +432,12 @@ class TestOWTestLearners(WidgetTest):
         """
         Test more than two classes and cross-validation
         """
-        self.assertTupleEqual(self._test_scores(
-            Table("iris")[::15], None, LogisticRegressionLearner(),
-            OWTestLearners.KFold, 0),
-                              (0.917, 0.7, 0.6, 0.55, 0.7))
+        self.assertTrue(
+            all(x >= y for x, y in zip(
+                self._test_scores(
+                    Table("iris")[::15], None, LogisticRegressionLearner(),
+                    OWTestLearners.KFold, 0),
+                (0.8, 0.5, 0.5, 0.5, 0.5))))
 
 
 class TestHelpers(unittest.TestCase):
