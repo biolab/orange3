@@ -413,7 +413,7 @@ class OWFeatureConstructor(OWWidget):
         disc.triggered.connect(
             lambda: self.addFeature(
                 DiscreteDescriptor(generate_newname("D{}"), "",
-                                   ("A", "B"), -1, False))
+                                   ("A", "B"), False))
         )
         string = menu.addAction("Text")
         string.triggered.connect(
