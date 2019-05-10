@@ -82,7 +82,7 @@ class OWNNLearner(OWBaseLearner):
     solver_index = Setting(2)
     max_iterations = Setting(200)
     alpha_index = Setting(0)
-    replicable = Setting(True)  # WCR added feature to define random seed for reproducability of results
+    replicable = Setting(True)
     settings_version = 1
 
     alphas = list(chain([x / 10000 for x in range(1, 10)],
@@ -98,6 +98,7 @@ class OWNNLearner(OWBaseLearner):
         form = QFormLayout()
         form.setFieldGrowthPolicy(form.AllNonFixedFieldsGrow)
         form.setVerticalSpacing(25)
+        form.setLabelAlignment(Qt.AlignLeft)
         gui.widgetBox(self.controlArea, True, orientation=form)
         form.addRow(
             "Neurons in hidden layers:",
@@ -136,12 +137,12 @@ class OWNNLearner(OWBaseLearner):
                 None, self, "max_iterations", 10, 10000, step=10,
                 label="Max iterations:", orientation=Qt.Horizontal,
                 alignment=Qt.AlignRight, callback=self.settings_changed))
-        
-        form.addRow(
-            "Replicable training:",
-            gui.checkBox(  
-                None, self, "replicable", label="", callback=self.settings_changed))
 
+        form.addRow(gui.separator(None))
+        form.addRow(
+            gui.checkBox(
+                None, self, "replicable", label="Replicable training", callback=self.settings_changed),
+        )
 
     def set_alpha(self):
         self.strength_C = self.alphas[self.alpha_index]
@@ -166,9 +167,8 @@ class OWNNLearner(OWBaseLearner):
             activation=self.activation[self.activation_index],
             solver=self.solver[self.solver_index],
             alpha=self.alpha,
-            # WCR added feature to define random seed for reproducability of results
-            random_state= 1 if self.replicable else None,
-            max_iter=self.max_iterations,           
+            random_state=1 if self.replicable else None,
+            max_iter=self.max_iterations,
             preprocessors=self.preprocessors)
 
     def get_learner_parameters(self):
