@@ -190,6 +190,10 @@ class SettingProvider:
         self._initialize_settings(instance, data)
         self._initialize_providers(instance, data)
 
+    def reset_to_original(self, instance):
+        self._initialize_settings(instance, None)
+        self._initialize_providers(instance, None)
+
     def _initialize_settings(self, instance, data):
         if data is None:
             data = {}
@@ -501,6 +505,10 @@ class SettingsHandler:
             data = self._add_defaults(data)
 
         provider.initialize(instance, data)
+
+    def reset_to_original(self, instance):
+        provider = self._select_provider(instance)
+        provider.reset_to_original(instance)
 
     def _migrate_settings(self, settings):
         """Ask widget to migrate settings to the latest version."""

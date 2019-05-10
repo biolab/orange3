@@ -474,6 +474,15 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                 )
                 b.clicked.connect(self.show_report)
                 sb.addWidget(b)
+            if hasattr(self, "reset_settings"):
+                icon = QIcon(gui.resource_filename("icons/reset.svg"))
+                icon.addFile(gui.resource_filename("icons/reset-hover.svg"), mode=QIcon.Active)
+                b = SimpleButton(
+                    icon=icon,
+                    toolTip="Reset settings to defaults"
+                )
+                b.clicked.connect(self.reset_settings)
+                sb.addWidget(b)
             self.message_bar = MessagesWidget(
                 defaultStyleSheet=textwrap.dedent("""
                 div.field-text {
