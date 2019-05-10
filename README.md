@@ -2,7 +2,6 @@ Orange
 ======
 
 [![Join the chat at https://gitter.im/biolab/orange3](https://badges.gitter.im/biolab/orange3.svg)](https://gitter.im/biolab/orange3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
 [![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
 
@@ -11,20 +10,19 @@ visualization, exploration, preprocessing and modeling techniques. It can be
 used through a nice and intuitive user interface or, for more advanced users,
 as a module for the Python programming language.
 
-This is a development version of Orange 3. The stable version 2.7 is still
-available ([binaries] and [sources]).
+This is the latest version of Orange (for Python 3). The deprecated version of Orange 2.7 (for Python 2.7) is still available ([binaries] and [sources]).
 
-[Orange]: http://orange.biolab.si/
-[binaries]: http://orange.biolab.si/orange2/
+[Orange]: https://orange.biolab.si/
+[binaries]: https://orange.biolab.si/orange2/
 [sources]: https://github.com/biolab/orange
 
 
-Installing
-----------
+Installing with Miniconda / Anaconda
+------------------------------------
 
 Orange requires Python 3.6 or newer.
 
-First, install [Anaconda] for your OS. Create virtual environment for Orange:
+First, install [Miniconda] for your OS. Create virtual environment for Orange:
 
     conda create python=3 --name orange3
 
@@ -36,8 +34,13 @@ This will enable access to the latest Orange release. Then install Orange3:
 
     conda install orange3
 
-[Anaconda]: https://www.continuum.io/downloads
+[Miniconda]: https://docs.conda.io/en/latest/miniconda.html
 
+To install the add-ons, follow a similar recipe:
+
+    conda install orange3-<addon name>
+
+See specific add-on repositories for details.
 
 Installing with pip
 -------------------
@@ -103,10 +106,10 @@ Get appropriate wheels for missing libraries. You will need [numpy+mkl] and [sci
 
 Install them with
 
-    pip install some-wheel.whl
+    pip install <wheel name>.whl
 
 Install [Visual Studio compiler]. Then go to Orange3 folder and run:
 
-[Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
+[Visual Studio compiler]: https://developer.microsoft.com/en-us/windows/downloads
 
     python setup.py build_ext -i --compiler=msvc install
