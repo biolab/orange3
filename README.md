@@ -14,6 +14,8 @@ as a module for the Python programming language.
 This is a development version of Orange 3. The stable version 2.7 is still
 available ([binaries] and [sources]).
 
+Test
+
 [Orange]: http://orange.biolab.si/
 [binaries]: http://orange.biolab.si/orange2/
 [sources]: https://github.com/biolab/orange
