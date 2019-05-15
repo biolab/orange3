@@ -797,6 +797,7 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(d[i][j], dd[i][j])
         finally:
             os.remove("test-zoo.tab")
+            os.remove("test-zoo.tab.metadata")
 
         d = data.Table("zoo")
         d.set_weights(range(len(d)))
@@ -815,6 +816,7 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(d[i][j], dd[i][j])
         finally:
             os.remove("test-zoo-weights.tab")
+            os.remove("test-zoo-weights.tab.metadata")
 
     def test_save_pickle(self):
         table = data.Table("iris")
