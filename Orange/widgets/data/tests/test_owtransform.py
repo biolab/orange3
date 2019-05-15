@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from numpy import testing as npt
 
 from Orange.data import Table
-from Orange.preprocess import Discretize, Continuize
+from Orange.preprocess import Discretize
 from Orange.widgets.data.owtransform import OWTransform
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owpca import OWPCA
@@ -83,17 +83,6 @@ class TestOWTransform(WidgetTest):
         self.send_signal(self.widget.Inputs.template_data, pca_out)
         output = self.get_output(self.widget.Outputs.transformed_data)
         npt.assert_array_equal(pca_out.X[::10], output.X)
-
-    def test_retain_all_data(self):
-        data = Table("zoo")
-        cont_data = Continuize()(data)
-        self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.template_data, cont_data)
-        self.widget.controls.retain_all_data.click()
-        output = self.get_output(self.widget.Outputs.transformed_data)
-        self.assertIsInstance(output, Table)
-        self.assertEqual(output.X.shape, (len(data), 16))
-        self.assertEqual(output.metas.shape, (len(data), 38))
 
     def test_error_transforming(self):
         data = self.data[::10]
