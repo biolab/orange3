@@ -3084,6 +3084,10 @@ class VerticalItemDelegate(QStyledItemDelegate):
     # Extra text top/bottom margin.
     Margin = 6
 
+    def __init__(self, extend=False):
+        super().__init__()
+        self._extend = extend  # extend text over cell borders
+
     def sizeHint(self, option, index):
         sh = super().sizeHint(option, index)
         return QtCore.QSize(sh.height() + self.Margin * 2, sh.width())
@@ -3121,6 +3125,8 @@ class VerticalItemDelegate(QStyledItemDelegate):
                 offset = -offset
 
             textrect.translate(0, offset)
+            if self._extend and brect.width() > itemrect.width():
+                textrect.setWidth(brect.width())
 
         painter.translate(option.rect.x(), option.rect.bottom())
         painter.rotate(-90)
