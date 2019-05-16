@@ -10,10 +10,7 @@ from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
-from Orange.widgets.visualize.pythagorastreeviewer import (
-    PythagorasTreeViewer,
-    SquareGraphicsItem
-)
+from Orange.widgets.visualize.pythagorastreeviewer import PythagorasTreeViewer
 
 
 class TestOWPythagoreanForest(WidgetTest):

@@ -151,8 +151,9 @@ class SklTreeAdapter(BaseTreeAdapter):
 
     def attribute(self, node):
         feature_idx = self.splitting_attribute(node)
-        if feature_idx != self.FEATURE_UNDEFINED:
-            return self.domain.attributes[self.splitting_attribute(node)]
+        if feature_idx == self.FEATURE_UNDEFINED:
+            return None
+        return self.domain.attributes[self.splitting_attribute(node)]
 
     def splitting_attribute(self, node):
         return self._tree.feature[node]
