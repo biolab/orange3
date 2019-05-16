@@ -369,7 +369,7 @@ class MessagesWidget(QWidget):
         self.anim.setKeyValueAt(0.5, 0)
         self.anim.setEndValue(1)
         self.anim.setEasingCurve(QEasingCurve.OutQuad)
-        self.anim.setLoopCount(2)
+        self.anim.setLoopCount(5)
 
     def sizeHint(self):
         sh = super().sizeHint()
