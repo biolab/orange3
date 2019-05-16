@@ -829,7 +829,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
     def mousePressEvent(self, event):
         """ Flash message bar icon on mouse press """
-        self.message_bar.anim.start(QPropertyAnimation.KeepWhenStopped)
+        self.message_bar.flashIcon()
         event.ignore()
 
     def setVisible(self, visible):

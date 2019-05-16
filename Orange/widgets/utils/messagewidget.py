@@ -505,6 +505,12 @@ class MessagesWidget(QWidget):
         else:
             return Message()
 
+    def flashIcon(self):
+        for message in self.messages():
+            if message.severity != Severity.Information:
+                self.anim.start(QPropertyAnimation.KeepWhenStopped)
+                break
+
     @staticmethod
     def __styled(css, html):
         # Prepend css style sheet before a html fragment.
