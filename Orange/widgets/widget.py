@@ -17,8 +17,8 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
-    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize
-)
+    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize,
+    QPropertyAnimation)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
 from Orange.data import FileFormat
@@ -826,6 +826,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         if self.save_position and self.isVisible():
             self.__updateSavedGeometry()
         QDialog.closeEvent(self, event)
+
+    def mousePressEvent(self, event):
+        """ Flash message bar icon on mouse press """
+        self.message_bar.anim.start(QPropertyAnimation.KeepWhenStopped)
+        event.ignore()
 
     def setVisible(self, visible):
         # type: (bool) -> None
