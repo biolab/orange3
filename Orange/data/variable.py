@@ -29,7 +29,7 @@ def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
     if issubclass(cls, DiscreteVariable):
-        name, values = args[:2]
+        values = args[1]
 
         # backward compatibility - `base_value` argument was removed in the
         # `make` function - with this fix it is removed if exist

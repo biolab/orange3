@@ -2,7 +2,7 @@
 recursive-include Orange *.pyx *.py *.c *.cpp README* LICENSE
 recursive-include Orange/datasets *.tab *.basket *.info *.dst *.metadata
 
-recursive-include Orange/tests *.tab *.basket *.xlsx
+recursive-include Orange/tests *.tab *.basket *.xlsx *.pkl *.pkl.gz
 
 recursive-include Orange/canvas *.qss *ico *.png *.svg *.ico *.html
 recursive-include Orange/canvas/application/workflows *.ows
