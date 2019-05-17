@@ -94,20 +94,13 @@ class LinePlotStyle:
 class LinePlotAxisItem(pg.AxisItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._ticks = None
+        self._ticks = {}
 
     def set_ticks(self, ticks):
-        self._ticks = dict(enumerate(ticks, 1)) if ticks else None
+        self._ticks = dict(enumerate(ticks, 1)) if ticks else {}
 
     def tickStrings(self, values, scale, spacing):
-        if not self._ticks:
-            return []
-        strings = []
-        for v in values:
-            v = v * scale
-            if float(v).is_integer():
-                strings.append(self._ticks.get(int(v), ""))
-        return strings
+        return [self._ticks.get(v * scale, "") for v in values]
 
 
 class LinePlotViewBox(ViewBox):
