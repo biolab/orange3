@@ -22,6 +22,7 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         self.model = model
         self.domain = model.domain
         self.instances = model.instances
+        self.instances_transformed = self.instances.transform(self.domain)
 
     @abstractmethod
     def weight(self, node):
@@ -40,7 +41,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
             The weight of the node relative to its siblings.
 
         """
-        pass
 
     @abstractmethod
     def num_samples(self, node):
@@ -56,7 +56,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         int
 
         """
-        pass
 
     @abstractmethod
     def parent(self, node):
@@ -71,7 +70,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         object
 
         """
-        pass
 
     @abstractmethod
     def has_children(self, node):
@@ -86,7 +84,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         bool
 
         """
-        pass
 
     def is_leaf(self, node):
         """Check if the given node is a leaf node.
@@ -116,7 +113,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
             A iterable object containing the labels of the child nodes.
 
         """
-        pass
 
     def reverse_children(self, node):
         """Reverse children of a given node.
@@ -125,12 +121,10 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         ----------
         node : object
         """
-        pass
 
     def shuffle_children(self):
         """Randomly shuffle node's children in the entire tree.
         """
-        pass
 
     @abstractmethod
     def get_distribution(self, node):
@@ -151,7 +145,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
             the number of nodes that belong to a given class inside the node.
 
         """
-        pass
 
     @abstractmethod
     def get_impurity(self, node):
@@ -166,7 +159,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         object
 
         """
-        pass
 
     @abstractmethod
     def rules(self, node):
@@ -182,7 +174,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
             A list of Rule objects, can be of any type.
 
         """
-        pass
 
     @abstractmethod
     def short_rule(self, node):
@@ -200,7 +191,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         -------
 
         """
-        pass
 
     def is_root(self, node):
         """Check if a given node is the root node.
@@ -227,7 +217,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         -------
 
         """
-        pass
 
     @abstractmethod
     def get_instances_in_nodes(self, dataset, nodes):
@@ -245,7 +234,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         -------
 
         """
-        pass
 
     @abstractmethod
     def get_indices(self, nodes):
@@ -261,7 +249,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         int
 
         """
-        pass
 
     @property
     @abstractmethod
@@ -276,7 +263,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         int
 
         """
-        pass
 
     @property
     @abstractmethod
@@ -288,7 +274,6 @@ class BaseTreeAdapter(metaclass=ABCMeta):
         object
 
         """
-        pass
 
 
 class TreeAdapter(BaseTreeAdapter):
