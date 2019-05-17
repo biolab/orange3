@@ -30,6 +30,12 @@ def make_variable(cls, compute_value, *args):
         return cls(*args, compute_value=compute_value)
     if issubclass(cls, DiscreteVariable):
         name, values = args[:2]
+
+        # backward compatibility - `base_value` argument was removed in the
+        # `make` function - with this fix it is removed if exist
+        # ars should have len = 3, if more remove last element
+        args = args[:3]
+
         var = cls.make(*args)
         # The `var.values` are in general a superset of `values` with different
         # order. Only use it if it is a structural subtype of the requested
