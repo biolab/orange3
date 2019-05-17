@@ -980,7 +980,7 @@ class _RuleLearner(Learner):
         # while data allows, continuously find new rules,
         # break the loop if min. requirements cannot be met,
         # after finding a rule, remove the instances covered
-        while not self.data_stopping(X, Y, W, target_class):
+        while not self.data_stopping(X, Y, W, target_class, domain):
 
             # generate a new rule that has not been seen before
             new_rule = self.rule_finder(X, Y, W, target_class, base_rules,
@@ -997,7 +997,7 @@ class _RuleLearner(Learner):
 
         return rule_list
 
-    def positive_remaining_data_stopping(self, X, Y, W, target_class):
+    def positive_remaining_data_stopping(self, X, Y, W, target_class, domain):
         """
         Data stopping.
 
@@ -1025,7 +1025,7 @@ class _RuleLearner(Learner):
             Whether or not rule induction will be stopped.
         """
         tc = target_class
-        dist = get_dist(Y, W, self.domain)
+        dist = get_dist(Y, W, domain)
         general_validator = self.rule_finder.general_validator
         num_possible = dist[tc] if tc is not None else dist.sum()
         return num_possible < general_validator.min_covered_examples
@@ -1140,7 +1140,7 @@ class _RuleLearner(Learner):
         rf = self.rule_finder
         dist = get_dist(Y, W, domain)
 
-        default_rule = Rule(None, None, self.domain, dist, dist,
+        default_rule = Rule(None, None, domain, dist, dist,
                             rf.quality_evaluator, rf.complexity_evaluator,
                             rf.significance_validator, rf.general_validator)
 
@@ -1254,7 +1254,7 @@ class _BaseCN2Learner(_RuleLearner):
         rf.significance_validator.default_alpha = default_alpha
         rf.significance_validator.parent_alpha = parent_alpha
 
-    def fit(self, X, Y, W=None):
+    def fit_storage(self, data):
         raise NotImplementedError
 
 
@@ -1273,13 +1273,14 @@ class CN2Learner(_RuleLearner):
         super().__init__(preprocessors, base_rules)
         self.rule_finder.quality_evaluator = EntropyEvaluator()
 
-    def fit(self, X, Y, W=None):
+    def fit_storage(self, data):
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
         Y = Y.astype(dtype=int)
-        rule_list = self.find_rules(X, Y, W, None, self.base_rules, self.domain)
+        rule_list = self.find_rules(X, Y, W, None, self.base_rules, data.domain)
         # add the default rule, if required
         if not rule_list or rule_list and rule_list[-1].length > 0:
-            rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
-        return CN2Classifier(domain=self.domain, rule_list=rule_list)
+            rule_list.append(self.generate_default_rule(X, Y, W, data.domain))
+        return CN2Classifier(domain=data.domain, rule_list=rule_list)
 
 
 class CN2Classifier(_RuleClassifier):
@@ -1326,15 +1327,16 @@ class CN2UnorderedLearner(_RuleLearner):
         super().__init__(preprocessors, base_rules)
         self.rule_finder.quality_evaluator = LaplaceAccuracyEvaluator()
 
-    def fit(self, X, Y, W=None):
+    def fit_storage(self, data):
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
         Y = Y.astype(dtype=int)
         rule_list = []
-        for curr_class in range(len(self.domain.class_var.values)):
+        for curr_class in range(len(data.domain.class_var.values)):
             rule_list.extend(self.find_rules(X, Y, W, curr_class,
-                                             self.base_rules, self.domain))
+                                             self.base_rules, data.domain))
         # add the default rule
-        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
-        return CN2UnorderedClassifier(domain=self.domain, rule_list=rule_list)
+        rule_list.append(self.generate_default_rule(X, Y, W, data.domain))
+        return CN2UnorderedClassifier(domain=data.domain, rule_list=rule_list)
 
 
 class CN2UnorderedClassifier(_RuleClassifier):
@@ -1393,14 +1395,14 @@ class CN2SDLearner(_RuleLearner):
         self.cover_and_remove = self.weighted_cover_and_remove
         self.gamma = 0.7
 
-    def fit(self, X, Y, W=None):
-        Y = Y.astype(dtype=int)
-        rule_list = self.find_rules(X, Y, np.copy(W) if W is not None else None,
-                                    None, self.base_rules, self.domain)
+    def fit_storage(self, data):
+        X, Y = data.X, data.Y.astype(dtype=int)
+        W = np.copy(data.W) if data.has_weights() else None
+        rule_list = self.find_rules(X, Y, W, None, self.base_rules, data.domain)
         # add the default rule, other
         # TRUE rules are insufficient
-        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
-        return CN2SDClassifier(domain=self.domain, rule_list=rule_list)
+        rule_list.append(self.generate_default_rule(X, Y, W, data.domain))
+        return CN2SDClassifier(domain=data.domain, rule_list=rule_list)
 
 
 class CN2SDClassifier(_RuleClassifier):
@@ -1462,16 +1464,17 @@ class CN2SDUnorderedLearner(_RuleLearner):
         self.cover_and_remove = self.weighted_cover_and_remove
         self.gamma = 0.7
 
-    def fit(self, X, Y, W=None):
+    def fit_storage(self, data):
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
         Y = Y.astype(dtype=int)
         rule_list = []
-        for curr_class in range(len(self.domain.class_var.values)):
+        for curr_class in range(len(data.domain.class_var.values)):
             rule_list.extend(self.find_rules(
                 X, Y, np.copy(W) if W is not None else None,
-                curr_class, self.base_rules, self.domain))
+                curr_class, self.base_rules, data.domain))
         # add the default rule
-        rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
-        return CN2SDUnorderedClassifier(domain=self.domain, rule_list=rule_list)
+        rule_list.append(self.generate_default_rule(X, Y, W, data.domain))
+        return CN2SDUnorderedClassifier(domain=data.domain, rule_list=rule_list)
 
 
 class CN2SDUnorderedClassifier(_RuleClassifier):
