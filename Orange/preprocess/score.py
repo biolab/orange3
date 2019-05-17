@@ -170,7 +170,7 @@ class LearnerScorer(Scorer):
             directly correspond to the domain. For example, continuization creates multiple
             features from a discrete feature. """
             scores_grouped = defaultdict(list)
-            for attr, score in zip(model_domain.attributes, scores):
+            for attr, score in zip(model_attributes, scores):
                 # Go up the chain of preprocessors to obtain the original variable, but no further
                 # than the data.domain, because the data is perhaphs already preprocessed.
                 while not (attr in data.domain) and getattr(attr, 'compute_value', False):
@@ -180,14 +180,9 @@ class LearnerScorer(Scorer):
                     if attr in scores_grouped else 0
                     for attr in data.domain.attributes]
 
-        scores = np.atleast_2d(self.score(data))
-
-        from Orange.modelling import Fitter  # Avoid recursive import
-        model_domain = (self.get_learner(data).domain
-                        if isinstance(self, Fitter) else
-                        self.domain)
-
-        if data.domain != model_domain:
+        scores, model_attributes = self.score(data)
+        scores = np.atleast_2d(scores)
+        if data.domain.attributes != model_attributes:
             scores = np.array([join_derived_features(row) for row in scores])
 
         return scores[:, data.domain.attributes.index(feature)] \

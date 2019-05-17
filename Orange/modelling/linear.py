@@ -15,7 +15,8 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data):
         model = self.get_learner(data)(data)
-        return np.atleast_2d(np.abs(model.skl_model.coef_)).mean(0)
+        return (np.atleast_2d(np.abs(model.skl_model.coef_)).mean(0),
+                model.domain.attributes)
 
 
 class SGDLearner(SklFitter, _FeatureScorerMixin):
