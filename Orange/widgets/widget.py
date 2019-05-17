@@ -17,8 +17,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
-    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize,
-    QPropertyAnimation)
+    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
 from Orange.data import FileFormat
@@ -290,7 +289,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     @classmethod
     def get_widget_description(cls):
         if not cls.name:
-            return
+            return None
         properties = {name: getattr(cls, name) for name in
                       ("name", "icon", "description", "priority", "keywords",
                        "help", "help_ref", "url",
@@ -298,8 +297,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         properties["id"] = cls.id or cls.__module__
         properties["inputs"] = cls.get_signals("inputs")
         properties["outputs"] = cls.get_signals("outputs")
-        properties["qualified_name"] = \
-            "{}.{}".format(cls.__module__, cls.__name__)
+        properties["qualified_name"] = f"{cls.__module__}.{cls.__name__}"
         return properties
 
     @classmethod
@@ -924,7 +922,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
         example.
         """
-        pass
 
     def storeSpecificSettings(self):
         """
@@ -936,7 +933,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
         example.
         """
-        pass
 
     def saveSettings(self):
         """
@@ -953,7 +949,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         If possible, subclasses should gracefully cancel any currently
         executing tasks.
         """
-        pass
 
     def handleNewSignals(self):
         """
@@ -963,7 +958,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         Reimplement this method in order to coalesce updates from
         multiple updated inputs.
         """
-        pass
 
     #: Widget's status message has changed.
     statusMessageChanged = Signal(str)
@@ -1054,7 +1048,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         The default implementation does nothing.
         """
-        pass
 
     def saveGeometryAndLayoutState(self):
         # type: () -> QByteArray
@@ -1253,7 +1246,7 @@ class _StatusBar(QStatusBar):
         painter.end()
 
 
-class Message(object):
+class Message:
     """
     A user message.
 
