@@ -120,7 +120,7 @@ class Chi2(SklScorer):
     ]
 
     def score(self, X, y):
-        f, p = skl_fss.chi2(X, y)
+        f, _ = skl_fss.chi2(X, y)
         return f
 
 
@@ -136,7 +136,7 @@ class ANOVA(SklScorer):
     class_type = DiscreteVariable
 
     def score(self, X, y):
-        f, p = skl_fss.f_classif(X, y)
+        f, _ = skl_fss.f_classif(X, y)
         return f
 
 
@@ -230,18 +230,19 @@ class ClassificationScorer(Scorer):
         return scores
 
 
-def _entropy(D):
+def _entropy(dist):
     """Entropy of class-distribution matrix"""
-    P = D / np.sum(D, axis=0)
-    PC = np.clip(P, 1e-15, 1)
-    return np.sum(np.sum(- P * np.log2(PC), axis=0) * np.sum(D, axis=0) / np.sum(D))
+    p = dist / np.sum(dist, axis=0)
+    pc = np.clip(p, 1e-15, 1)
+    return np.sum(np.sum(- p * np.log2(pc), axis=0) *
+                  np.sum(dist, axis=0) / np.sum(dist))
 
 
-def _gini(D):
+def _gini(dist):
     """Gini index of class-distribution matrix"""
-    P = np.asarray(D / np.sum(D, axis=0))
-    return np.sum((1 - np.sum(P ** 2, axis=0)) *
-                  np.sum(D, axis=0) / np.sum(D))
+    p = np.asarray(dist / np.sum(dist, axis=0))
+    return np.sum((1 - np.sum(p ** 2, axis=0)) *
+                  np.sum(dist, axis=0) / np.sum(dist))
 
 
 def _symmetrical_uncertainty(data, attr1, attr2):
@@ -261,31 +262,31 @@ class FCBF(ClassificationScorer):
     """
     def score_data(self, data, feature=None):
         attributes = data.domain.attributes
-        S = []
+        s = []
         for i, attr in enumerate(attributes):
-            S.append((_symmetrical_uncertainty(data, attr, data.domain.class_var), i))
-        S.sort()
+            s.append((_symmetrical_uncertainty(data, attr, data.domain.class_var), i))
+        s.sort()
         worst = []
 
         p = 1
         while True:
             try:
-                SUpc, Fp = S[-p]
+                _, Fp = s[-p]
             except IndexError:
                 break
             q = p + 1
             while True:
                 try:
-                    SUqc, Fq = S[-q]
+                    suqc, Fq = s[-q]
                 except IndexError:
                     break
-                if _symmetrical_uncertainty(data, attributes[Fp], attributes[Fq]) >= SUqc:
-                    del S[-q]
-                    worst.append((1e-4*SUqc, Fq))
+                if _symmetrical_uncertainty(data, attributes[Fp], attributes[Fq]) >= suqc:
+                    del s[-q]
+                    worst.append((1e-4*suqc, Fq))
                 else:
                     q += 1
             p += 1
-        best = S
+        best = s
         scores = [i[0] for i in sorted(chain(best, worst), key=lambda i: i[1])]
         return np.array(scores) if not feature else scores[0]
 

@@ -276,13 +276,13 @@ class OWRuleLearner(OWBaseLearner):
         # bottom-level search procedure (search bias)
         middle_box = gui.vBox(widget=self.controlArea, box="Rule search")
 
-        evaluation_measure_box = gui.comboBox(
+        gui.comboBox(
             widget=middle_box, master=self, value="evaluation_measure",
             label="Evaluation measure:", orientation=Qt.Horizontal,
             items=("Entropy", "Laplace accuracy", "WRAcc"),
             callback=self.settings_changed, contentsLength=3)
 
-        beam_width_box = gui.spin(
+        gui.spin(
             widget=middle_box, master=self, value="beam_width", minv=1,
             maxv=100, step=1, label="Beam width:", orientation=Qt.Horizontal,
             callback=self.settings_changed, alignment=Qt.AlignRight,
@@ -291,26 +291,26 @@ class OWRuleLearner(OWBaseLearner):
         # bottom-level search procedure (over-fitting avoidance bias)
         bottom_box = gui.vBox(widget=self.controlArea, box="Rule filtering")
 
-        min_covered_examples_box = gui.spin(
+        gui.spin(
             widget=bottom_box, master=self, value="min_covered_examples", minv=1,
             maxv=10000, step=1, label="Minimum rule coverage:",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80)
 
-        max_rule_length_box = gui.spin(
+        gui.spin(
             widget=bottom_box, master=self, value="max_rule_length",
             minv=1, maxv=100, step=1, label="Maximum rule length:",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80)
 
-        default_alpha_spin = gui.doubleSpin(
+        gui.doubleSpin(
             widget=bottom_box, master=self, value="default_alpha", minv=0.0,
             maxv=1.0, step=0.01, label="Statistical significance\n(default α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_default_alpha")
 
-        parent_alpha_spin = gui.doubleSpin(
+        gui.doubleSpin(
             widget=bottom_box, master=self, value="parent_alpha", minv=0.0,
             maxv=1.0, step=0.01, label="Relative significance\n(parent α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,

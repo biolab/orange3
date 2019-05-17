@@ -11,9 +11,9 @@ import operator
 from copy import copy
 from hashlib import sha1
 from collections import namedtuple
-import bottleneck as bn
 import numpy as np
 from scipy.stats import chi2
+import bottleneck as bn
 
 from Orange.classification import Learner, Model
 from Orange.data import Table, _contingency
@@ -803,7 +803,6 @@ class RuleHuntress:
     """
     An experimental implementation of the CN2-R algorithm.
     """
-    pass
 
 
 class RuleHunter:
