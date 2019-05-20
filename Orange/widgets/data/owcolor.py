@@ -32,7 +32,8 @@ class ColorTableModel(QAbstractTableModel):
     def _encode_color(color):
         return "#{}{}{}".format(*[("0" + hex(x)[2:])[-2:] for x in color])
 
-    def flags(self, _):
+    @staticmethod
+    def flags(_):
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def set_data(self, variables):
@@ -53,7 +54,7 @@ class ColorTableModel(QAbstractTableModel):
         # pylint: disable=missing-docstring
         # Only valid for the first column
         row = index.row()
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return self.variables[row].name
         if role == Qt.FontRole:
             font = QFont()
@@ -61,6 +62,7 @@ class ColorTableModel(QAbstractTableModel):
             return font
         if role == Qt.TextAlignmentRole:
             return Qt.AlignRight | Qt.AlignVCenter
+        return None
 
     def setData(self, index, value, role):
         # pylint: disable=missing-docstring
@@ -90,19 +92,20 @@ class DiscColorTableModel(ColorTableModel):
             return ColorTableModel.data(self, index, role)
         var = self.variables[row]
         if col > len(var.values):
-            return
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return None
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return var.values[col - 1]
         try:
             color = var.colors[col - 1]
         except (AttributeError, IndexError):
-            return
+            return None
         if role == Qt.DecorationRole:
             return QColor(*color)
         if role == Qt.ToolTipRole:
             return self._encode_color(color)
         if role == ColorRole:
             return var.colors[col - 1]
+        return None
 
     # noinspection PyMethodOverriding
     def setData(self, index, value, role):
@@ -151,6 +154,7 @@ class ContColorTableModel(ColorTableModel):
                                         self._encode_color(var.colors[1]))
             if role == ColorRole:
                 return var.colors
+            return None
 
         def _column2():
             if role == Qt.SizeHintRole:
@@ -159,6 +163,7 @@ class ContColorTableModel(ColorTableModel):
                 return QBrush(Qt.blue)
             if row == self.mouse_row and role == Qt.DisplayRole:
                 return "Copy to all"
+            return None
 
         row, col = index.row(), index.column()
         var = self.variables[row]
@@ -328,7 +333,8 @@ class OWColor(widget.OWWidget):
         box.button.setFixedWidth(180)
         box.layout().insertStretch(0)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(500, 570)
 
     def _create_proxies(self, variables):

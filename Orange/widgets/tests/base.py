@@ -1,4 +1,3 @@
-import warnings
 from contextlib import contextmanager
 import os
 import pickle
@@ -31,7 +30,7 @@ from Orange.data import (
 )
 from Orange.modelling import Fitter
 from Orange.preprocess import RemoveNaNColumns, Randomize, Continuize
-from Orange.preprocess.preprocess import PreprocessorList, Preprocess
+from Orange.preprocess.preprocess import PreprocessorList
 from Orange.regression.base_regression import (
     LearnerRegression, ModelRegression
 )
@@ -89,6 +88,17 @@ class WidgetTest(GuiTest):
     """
 
     widgets = []  # type: List[OWWidget]
+
+    def __init_subclass__(cls, **kwargs):
+
+        def test_minimum_size(self):
+            widget = getattr(self, "widget", None)
+            if widget is None:
+                self.skipTest("minimum size not tested as .widget was not set")
+            self.check_minimum_size(widget)
+
+        if not hasattr(cls, "test_minimum_size"):
+            cls.test_minimum_size = test_minimum_size
 
     @classmethod
     def setUpClass(cls):
@@ -364,6 +374,22 @@ class WidgetTest(GuiTest):
         finally:
             QTest.keyRelease(self.widget, Qt.Key_BassBoost, old_modifiers)
 
+    def check_minimum_size(self, widget):
+
+        def invalidate_cached_size_hint(w):
+            # as in OWWidget.setVisible
+            if w.controlArea is not None:
+                w.controlArea.updateGeometry()
+            if w.buttonsArea is not None:
+                w.buttonsArea.updateGeometry()
+            if w.mainArea is not None:
+                w.mainArea.updateGeometry()
+
+        invalidate_cached_size_hint(widget)
+        min_size = widget.minimumSizeHint()
+        self.assertLess(min_size.width(), 800)
+        self.assertLess(min_size.height(), 700)
+
 
 class TestWidgetTest(WidgetTest):
     """Meta tests for widget test helpers"""
@@ -372,6 +398,8 @@ class TestWidgetTest(WidgetTest):
         with self.assertRaises(TimeoutError):
             self.process_events(until=lambda: False, timeout=0)
 
+    def test_minimum_size(self):
+        return  # skip this test
 
 
 class BaseParameterMapping:
@@ -857,10 +885,15 @@ class ProjectionWidgetTestMixin:
         annotated_vars = annotated.domain.variables
         self.assertLessEqual(set(selected_vars), set(annotated_vars))
 
-    def test_setup_graph(self):
+    def test_setup_graph(self, timeout=DEFAULT_TIMEOUT):
         """Plot should exist after data has been sent in order to be
         properly set/updated"""
         self.send_signal(self.widget.Inputs.data, self.data)
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
         self.assertIsNotNone(self.widget.graph.scatterplot_item)
 
     def test_default_attrs(self, timeout=DEFAULT_TIMEOUT):
@@ -941,11 +974,28 @@ class ProjectionWidgetTestMixin:
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
+        self.widget.setup_plot.assert_called_once()
+        self.widget.commit.assert_called_once()
 
         self.widget.commit.reset_mock()
         self.send_signal(self.widget.Inputs.data_subset, table[::10])
         self.widget.setup_plot.assert_called_once()
         self.widget.commit.assert_called_once()
+
+    def test_subset_data_color(self, timeout=DEFAULT_TIMEOUT):
+        self.send_signal(self.widget.Inputs.data, self.data)
+
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
+        self.send_signal(self.widget.Inputs.data_subset, self.data[:10])
+        subset = [brush.color().name() == "#46befa" for brush in
+                  self.widget.graph.scatterplot_item.data['brush'][:10]]
+        other = [brush.color().name() == "#000000" for brush in
+                 self.widget.graph.scatterplot_item.data['brush'][10:]]
+        self.assertTrue(all(subset))
+        self.assertTrue(all(other))
 
     def test_class_density(self, timeout=DEFAULT_TIMEOUT):
         """Check class density update"""
@@ -967,10 +1017,6 @@ class ProjectionWidgetTestMixin:
 
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         """Test widget for sparse data"""
-        # scipy.sparse uses matrix; this filter can be removed when it stops
-        warnings.filterwarnings(
-            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
-
         table = Table("iris").to_sparse()
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
@@ -985,25 +1031,38 @@ class ProjectionWidgetTestMixin:
         self.widget.graph.update_coordinates = Mock()
         self.widget.graph.update_point_props = Mock()
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.graph.update_coordinates.assert_called_once()
-        self.widget.graph.update_point_props.assert_called_once()
-
         if self.widget.isBlocking():
             spy = QSignalSpy(self.widget.blockingStateChanged)
             self.assertTrue(spy.wait(timeout))
 
+        self.widget.graph.update_coordinates.assert_called()
+        self.widget.graph.update_point_props.assert_called()
+
         self.widget.graph.update_coordinates.reset_mock()
         self.widget.graph.update_point_props.reset_mock()
         self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
         self.widget.graph.update_coordinates.assert_not_called()
         self.widget.graph.update_point_props.assert_called_once()
 
-    def test_saved_selection(self):
+    def test_saved_selection(self, timeout=DEFAULT_TIMEOUT):
         self.send_signal(self.widget.Inputs.data, self.data)
+        if self.widget.isBlocking():
+            spy = QSignalSpy(self.widget.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
         self.widget.graph.select_by_indices(list(range(0, len(self.data), 10)))
         settings = self.widget.settingsHandler.pack_data(self.widget)
         w = self.create_widget(self.widget.__class__, stored_settings=settings)
+
         self.send_signal(self.widget.Inputs.data, self.data, widget=w)
+        if w.isBlocking():
+            spy = QSignalSpy(w.blockingStateChanged)
+            self.assertTrue(spy.wait(timeout))
+
         self.assertEqual(np.sum(w.graph.selection), 15)
         np.testing.assert_equal(self.widget.graph.selection, w.graph.selection)
 
@@ -1027,6 +1086,8 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         output = self.get_output(ANNOTATED_DATA_SIGNAL_NAME)
         embedding_mask = np.all(np.isnan(output.metas[:, :2]), axis=1)
         np.testing.assert_array_equal(~embedding_mask, self.widget.valid_data)
+        # reload
+        self.send_signal(self.widget.Inputs.data, table)
 
     def test_sparse_data(self):
         table = Table("iris")
@@ -1058,18 +1119,6 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
         # check new state
         self.assertEqual(len(self.widget.graph.scatterplot_item.data), nvalid)
         np.testing.assert_equal(self.widget.graph.selection, selection)
-
-    def test_output_preprocessor(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        pp = self.get_output(self.widget.Outputs.preprocessor)
-        self.assertIsInstance(pp, Preprocess)
-        transformed = pp(self.data[::10])
-        self.assertIsInstance(transformed, Table)
-        self.assertEqual(transformed.X.shape, (len(self.data) / 10, 2))
-        output = self.get_output(self.widget.Outputs.annotated_data)
-        np.testing.assert_array_equal(transformed.X, output.metas[::10, :2])
-        self.assertEqual([a.name for a in transformed.domain.attributes],
-                         [m.name for m in output.domain.metas[:2]])
 
 
 class datasets:
@@ -1185,3 +1234,9 @@ class datasets:
         yield cls.data_one_column_nans()
         yield ds_cls
         yield ds_reg
+
+
+@contextmanager
+def open_widget_classes():
+    with patch.object(OWWidget, "__init_subclass__"):
+        yield

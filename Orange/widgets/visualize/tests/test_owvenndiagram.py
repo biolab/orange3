@@ -2,14 +2,13 @@
 # pylint: disable=missing-docstring
 
 import unittest
-import warnings
 from collections import defaultdict
 
 import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import (Table, Domain, StringVariable,
-                         DiscreteVariable, ContinuousVariable)
+                         DiscreteVariable, ContinuousVariable, Variable)
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.utils.annotated_data import (ANNOTATED_DATA_FEATURE_NAME)
 from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
@@ -17,7 +16,8 @@ from Orange.widgets.visualize.owvenndiagram import (reshape_wide,
                                                     varying_between,
                                                     drop_columns,
                                                     OWVennDiagram,
-                                                    group_table_indices)
+                                                    group_table_indices,
+                                                    copy_descriptor)
 from Orange.tests import test_filename
 
 
@@ -50,13 +50,13 @@ class TestVennDiagram(unittest.TestCase):
                                                      dtype=object))
 
     def test_reshape_wide_missing_vals(self):
-        data = Table(test_filename("test9.tab"))
+        data = Table(test_filename("datasets/test9.tab"))
         reshaped_data = reshape_wide(data, [], [data.domain[0]],
                                      [data.domain[0]])
         self.assertEqual(2, len(reshaped_data))
 
     def test_varying_between_missing_vals(self):
-        data = Table(test_filename("test9.tab"))
+        data = Table(test_filename("datasets/test9.tab"))
         self.assertEqual(6, len(varying_between(data, data.domain[0])))
 
     def test_venn_diagram(self):
@@ -207,16 +207,13 @@ class GroupTableIndicesTest(unittest.TestCase):
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])
 
-        # scipy.sparse uses matrix; this filter can be removed when it's fixed
-        warnings.filterwarnings(
-            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
         data = Table.from_numpy(X=sp.csr_matrix(X), domain=domain, metas=M)
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])
 
 
     def test_group_table_indices(self):
-        table = Table(test_filename("test9.tab"))
+        table = Table(test_filename("datasets/test9.tab"))
         dd = defaultdict(list)
         dd["1"] = [0, 1]
         dd["huh"] = [2]
@@ -226,3 +223,49 @@ class GroupTableIndicesTest(unittest.TestCase):
         dd["oh yeah"] = [6]
         dd["3"] = [7]
         self.assertEqual(dd, group_table_indices(table, "g"))
+
+
+class TestVennUtilities(unittest.TestCase):
+    def test_copy_descriptor_discrete(self):
+        var = DiscreteVariable("foo", values=list("abc"), ordered=True)
+        var.attributes = {"bar": 42, "baz": 13}
+        copied = copy_descriptor(var)
+        self.assertIsInstance(copied, DiscreteVariable)
+        self.assertEqual(copied.name, "foo")
+        self.assertEqual(list(copied.values), list("abc"))
+        self.assertTrue(copied.ordered)
+        self.assertEqual(copied.attributes, var.attributes)
+        self.assertIsNot(copied.attributes, var.attributes)
+
+        var = DiscreteVariable("foo", values=list("abc"), ordered=False)
+        copied = copy_descriptor(var, "cux")
+        self.assertEqual(copied.name, "cux")
+        self.assertFalse(copied.ordered)
+
+    def test_copy_descriptor_continuous(self):
+        var = ContinuousVariable("foo", number_of_decimals=42)
+        var.attributes = {"bar": 42, "baz": 13}
+        copied = copy_descriptor(var)
+        self.assertIsInstance(copied, ContinuousVariable)
+        self.assertEqual(copied.name, "foo")
+        self.assertEqual(copied.number_of_decimals, 42)
+        self.assertEqual(copied.attributes, var.attributes)
+        self.assertIsNot(copied.attributes, var.attributes)
+
+        var = ContinuousVariable("foo", number_of_decimals=42)
+        copied = copy_descriptor(var, "cux")
+        self.assertEqual(copied.name, "cux")
+
+    def test_copy_descriptor_other_types(self):
+        class SomeVariable(Variable):
+            pass
+        var = SomeVariable("foo")
+        var.attributes = {"bar": 42, "baz": 13}
+        copied = copy_descriptor(var)
+        self.assertIsInstance(copied, SomeVariable)
+        self.assertEqual(copied.name, "foo")
+        self.assertEqual(copied.attributes, var.attributes)
+        self.assertIsNot(copied.attributes, var.attributes)
+
+        copied = copy_descriptor(var, "cux")
+        self.assertEqual(copied.name, "cux")

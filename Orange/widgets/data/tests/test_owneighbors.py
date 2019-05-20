@@ -80,7 +80,7 @@ class TestOWNeighbors(WidgetTest):
         reference = self.iris[:5]
         self.send_signal(widget.Inputs.data, self.iris)
         self.send_signal(widget.Inputs.reference, reference)
-        self.exclude_reference = True
+        self.widget.exclude_reference = True
         widget.apply_button.button.click()
         neighbors = self.get_output(widget.Outputs.data)
         for inst in reference:
@@ -173,9 +173,11 @@ class TestOWNeighbors(WidgetTest):
             data, refs = data[:10], data[-5:]
             self.send_signals([(widget.Inputs.data, data),
                                (widget.Inputs.reference, refs)])
+            # false positive, pylint: disable=unsubscriptable-object
             d1, d2 = distance.call_args[0]
             np.testing.assert_almost_equal(d1.X, data.X)
             np.testing.assert_almost_equal(d2.X, refs.X)
+            # false positive, pylint: disable=no-member
             np.testing.assert_almost_equal(widget.distances, dists.min(axis=1))
         finally:
             METRICS[widget.distance_index] = orig_metrics

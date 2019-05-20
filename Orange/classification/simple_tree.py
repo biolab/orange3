@@ -274,35 +274,36 @@ class SimpleTreeModel(Model):
                 node = self.node
         n = node.contents
         if self.type == Classification:
-            decimals = 1
+            format_str = format_leaf = format_node = None
         else:
-            decimals = self.domain.class_var.number_of_decimals
+            format_str = f"({self.domain.class_var.format_str}: %s)"
+            format_leaf = " --> " + format_str
+            format_node = "%s " + format_str
         if n.children_size == 0:
             if self.type == Classification:
-                node_cont = [round(n.dist[i], decimals)
+                node_cont = [round(n.dist[i], 1)
                              for i in range(self.cls_vals)]
                 index = node_cont.index(max(node_cont))
                 major_class = self.cls_vars[0].values[index]
                 return ' --> %s (%s)' % (major_class, node_cont)
             else:
-                node_cont = str(round(n.sum / n.n, decimals)) + ': ' + str(n.n)
-                return ' --> (%s)' % node_cont
+                return format_leaf % (n.sum / n.n, n.n)
         else:
             attr = self.dom_attr[n.split_attr]
             node_desc = attr.name
+            indent = '\n' + '   ' * level
             if self.type == Classification:
-                node_cont = [round(n.dist[i], decimals)
+                node_cont = [round(n.dist[i], 1)
                              for i in range(self.cls_vals)]
+                ret_str = indent + '%s (%s)' % (node_desc, node_cont)
             else:
-                node_cont = str(round(n.sum / n.n, decimals)) + ': ' + str(n.n)
-            ret_str = '\n' + '   ' * level + '%s (%s)' % (node_desc,
-                                                          node_cont)
+                ret_str = indent + format_node % (node_desc, n.sum / n.n, n.n)
             for i in range(n.children_size):
                 if attr.is_continuous:
                     split = '<=' if i % 2 == 0 else '>'
-                    split += str(round(n.split, attr.number_of_decimals))
-                    ret_str += '\n' + '   ' * level + ': %s' % split
+                    split += attr.format_str % n.split
+                    ret_str += indent + ': %s' % split
                 else:
-                    ret_str += '\n' + '   ' * level + ': %s' % attr.values[i]
+                    ret_str += indent + ': %s' % attr.values[i]
                 ret_str += self.to_string(n.children[i], level + 1)
             return ret_str

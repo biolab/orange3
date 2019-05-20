@@ -10,6 +10,7 @@ from Orange.widgets.visualize.owboxplot import (
     OWBoxPlot, FilterGraphicsRectItem, _quantiles
 )
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
+from Orange.tests import test_filename
 
 
 class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
@@ -91,8 +92,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self._select_list_items(self.widget.controls.group_var)
 
     def test_attribute_combinations(self):
-        data = Table("anneal")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         group_list = self.widget.controls.group_var
         m = group_list.selectionModel()
         for i in range(len(group_list.model())):
@@ -173,7 +173,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_empty_groups(self):
         """Test if groups with zero elements are not shown"""
-        table = Table("cyber-security-breaches")
+        table = Table(test_filename("datasets/cyber-security-breaches.tab"))
         self.send_signal(self.widget.Inputs.data, table)
         self.__select_variable("US State")
         self.__select_group("US State")
@@ -187,17 +187,17 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
     def test_sorting_disc_group_var(self):
         """Test if subgroups are sorted by their size"""
-        table = Table("adult_sample")
+        table = Table("heart_disease")
         self.send_signal(self.widget.Inputs.data, table)
-        self.__select_variable("education")
-        self.__select_group("workclass")
+        self.__select_variable("gender")
+        self.__select_group("chest pain")
 
         # checkbox not checked - preserve original order of selected grouping attribute
-        self.assertListEqual(self.widget.order, [0, 1, 2, 3, 4, 5, 6])
+        self.assertListEqual(self.widget.order, [0, 1, 2, 3])
 
         # checkbox checked - sort by frequencies
         self.widget.controls.sort_freqs.setChecked(True)
-        self.assertListEqual(self.widget.order, [0, 1, 4, 5, 3, 2, 6])
+        self.assertListEqual(self.widget.order, [0, 2, 1, 3])
 
     def _select_data(self):
         items = [item for item in self.widget.box_scene.items()

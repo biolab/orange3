@@ -8,9 +8,12 @@ import tempfile
 import shutil
 import io
 
+from Orange import data
+
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
 from Orange.data.table import get_sample_datasets_dir
-from Orange.data import Table
+from Orange.data import Table, Variable
+from Orange.tests import test_dirname
 
 
 class WildcardReader(FileFormat):
@@ -94,6 +97,14 @@ class TestLocate(unittest.TestCase):
 
 class TestReader(unittest.TestCase):
 
+    def setUp(self):
+        Variable._clear_all_caches()
+        data.table.dataset_dirs.append(test_dirname())
+        print(data.table.dataset_dirs)
+
+    def tearDown(self):
+        data.table.dataset_dirs.remove(test_dirname())
+
     def test_open_bad_pickle(self):
         """
         Raise TypeError when PickleReader reads a pickle
@@ -144,3 +155,31 @@ class TestReader(unittest.TestCase):
         writer.reset_mock()
         CSVReader.write_headers(writer, Table("iris"), True)
         self.assertEqual(len(writer.call_args_list), 3)
+
+    def test_load_pickle(self):
+        """
+        This function tests whether pickled files in older Orange loads
+        correctly with newer version of Orange.
+        """
+        # load pickles created with Orange 3.20
+        # in next version there is a change in variables.py - line 738
+        # which broke back compatibility - tests were introduced after the fix
+        print(data.table.dataset_dirs)
+        data1 = Table("datasets/sailing-orange-3-20.pkl")
+        data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
+
+        # load pickles created with Orange 3.21
+        data3 = Table("datasets/sailing-orange-3-21.pkl")
+        data4 = Table("datasets/sailing-orange-3-21.pkl.gz")
+
+        examples_count = 20
+        self.assertEqual(examples_count, len(data1))
+        self.assertEqual(examples_count, len(data2))
+        self.assertEqual(examples_count, len(data3))
+        self.assertEqual(examples_count, len(data4))
+
+        attributes_count = 3
+        self.assertEqual(attributes_count, len(data1.domain.attributes))
+        self.assertEqual(attributes_count, len(data2.domain.attributes))
+        self.assertEqual(attributes_count, len(data3.domain.attributes))
+        self.assertEqual(attributes_count, len(data4.domain.attributes))

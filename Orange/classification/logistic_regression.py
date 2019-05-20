@@ -20,7 +20,7 @@ class _FeatureScorerMixin(LearnerScorer):
     def score(self, data):
         data = Normalize()(data)
         model = self(data)
-        return np.abs(model.coefficients)
+        return np.abs(model.coefficients), model.domain.attributes
 
 
 class LogisticRegressionClassifier(SklModel):

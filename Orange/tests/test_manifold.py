@@ -12,6 +12,7 @@ from Orange.distance import Euclidean
 from Orange.projection import (MDS, Isomap, LocallyLinearEmbedding,
                                SpectralEmbedding, TSNE)
 from Orange.projection.manifold import torgerson
+from Orange.tests import test_filename
 
 
 np.random.seed(42)
@@ -20,7 +21,7 @@ np.random.seed(42)
 class TestManifold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Table('ionosphere')
+        cls.ionosphere = Table(test_filename('datasets/ionosphere.tab'))
         cls.iris = Table('iris')
 
     def test_mds(self):
@@ -206,7 +207,8 @@ class TestTSNE(unittest.TestCase):
 
         # Set iterations to 0 so we check that the initialization is fairly random
         tsne = TSNE(early_exaggeration_iter=0, n_iter=0, perplexity=30,
-                    negative_gradient_method='bh', initialization='random')
+                    negative_gradient_method='bh', initialization='random',
+                    random_state=0)
         model = tsne(self.iris)
 
         # Evaluate KNN on the random initialization
@@ -227,7 +229,8 @@ class TestTSNE(unittest.TestCase):
 
         # Set iterations to 0 so we check that the initialization is fairly random
         tsne = TSNE(early_exaggeration_iter=0, n_iter=0, perplexity=30,
-                    negative_gradient_method='fft', initialization='random')
+                    negative_gradient_method='fft', initialization='random',
+                    random_state=0)
         model = tsne(self.iris)
 
         # Evaluate KNN on the random initialization

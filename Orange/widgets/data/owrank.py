@@ -115,7 +115,7 @@ class TableModel(PyTableModel):
         super().__init__(*args, **kwargs)
         self._extremes = {}
 
-    def data(self, index, role=Qt.DisplayRole, _isnan=np.isnan):
+    def data(self, index, role=Qt.DisplayRole):
         if role == gui.BarRatioRole and index.isValid():
             value = super().data(index, Qt.EditRole)
             if not isinstance(value, float):
@@ -130,7 +130,7 @@ class TableModel(PyTableModel):
         value = super().data(index, role)
 
         # Display nothing for non-existent attr value counts in the first column
-        if role == Qt.EditRole and index.column() == 0 and _isnan(value):
+        if role == Qt.EditRole and index.column() == 0 and np.isnan(value):
             return ''
 
         return value
@@ -156,6 +156,7 @@ class TableModel(PyTableModel):
         self._extremes[column] = (vmin, vmax)
 
     def resetSorting(self, yes_reset=False):
+        # pylint: disable=arguments-differ
         """We don't want to invalidate our sort proxy model everytime we
         wrap a new list. Our proxymodel only invalidates explicitly
         (i.e. when new data is set)"""
@@ -309,15 +310,15 @@ class OWRank(OWWidget):
         self.ranksModel.clear()
         self.ranksModel.resetSorting(True)
 
-        self.get_method_scores.cache_clear()
-        self.get_scorer_scores.cache_clear()
+        self.get_method_scores.cache_clear()  # pylint: disable=no-member
+        self.get_scorer_scores.cache_clear()  # pylint: disable=no-member
 
         self.Error.clear()
         self.Information.clear()
         self.Information.missings_imputed(
             shown=data is not None and data.has_missing())
 
-        if data is not None and not len(data.domain.attributes):
+        if data is not None and not data.domain.attributes:
             data = None
             self.Error.no_attributes()
         self.data = data
@@ -356,13 +357,14 @@ class OWRank(OWWidget):
         self.on_select()
 
     @Inputs.scorer
-    def set_learner(self, scorer, id):
+    def set_learner(self, scorer, id):  # pylint: disable=redefined-builtin
         if scorer is None:
             self.scorers.pop(id, None)
         else:
             # Avoid caching a (possibly stale) previous instance of the same
             # Scorer passed via the same signal
             if id in self.scorers:
+                # pylint: disable=no-member
                 self.get_scorer_scores.cache_clear()
 
             self.scorers[id] = ScoreMeta(scorer.name, scorer.name, scorer,
@@ -492,7 +494,7 @@ class OWRank(OWWidget):
             )
         else:
             selection = QItemSelection()
-            if len(self.selected_rows):
+            if self.selected_rows is not None:
                 for row in model.mapFromSourceRows(self.selected_rows):
                     selection.append(QItemSelectionRange(
                         model.index(row, 0), model.index(row, columnCount - 1)))
@@ -597,6 +599,7 @@ if __name__ == "__main__":  # pragma: no cover
         set_learner=(RandomForestLearner(), (3, 'Learner', None)))
     previewer.run()
 
+    # pylint: disable=pointless-string-statement
     """
     WidgetPreview(OWRank).run(
         set_learner=(RandomForestLearner(), (3, 'Learner', None)),

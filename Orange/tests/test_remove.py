@@ -14,7 +14,7 @@ class TestRemover(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.test8 = Table(test_filename('test8.tab'))
+        cls.test8 = Table(test_filename('datasets/test8.tab'))
 
     def test_remove(self):
         data = Table("iris")[:5]
@@ -127,7 +127,7 @@ class TestRemover(unittest.TestCase):
                              {'removed': 0, 'reduced': 1, 'sorted': 0})
 
     def test_remove_unused_values_metas(self):
-        data = Table(test_filename("test9.tab"))
+        data = Table(test_filename("datasets/test9.tab"))
         subset = data[:4]
         res = Remove(attr_flags=Remove.RemoveUnusedValues,
                      meta_flags=Remove.RemoveUnusedValues)(subset)

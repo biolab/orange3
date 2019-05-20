@@ -214,15 +214,10 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(
             repr(var),
             "DiscreteVariable(name='a', values=['F', 'M'])")
-        var.base_value = 1
-        self.assertEqual(
-            repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], base_value=1)")
         var.ordered = True
         self.assertEqual(
             repr(var),
-            "DiscreteVariable(name='a', values=['F', 'M'], "
-            "ordered=True, base_value=1)")
+            "DiscreteVariable(name='a', values=['F', 'M'], ordered=True)")
 
         var = DiscreteVariable.make("a", values="1234567")
         self.assertEqual(
@@ -297,17 +292,22 @@ class TestContinuousVariable(VariableTest):
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
         self.assertEqual(a.str_val(4.654321), "4.6543")
+        self.assertEqual(a.str_val(4.654321654321), "4.6543")
         self.assertEqual(a.str_val(Unknown), "?")
+        a = ContinuousVariable("a", 5)
+        self.assertEqual(a.str_val(0.000000000001), "0.00000")
+        a = ContinuousVariable("a", 10)
+        self.assertEqual(a.str_val(0.000000000001), "1e-12")
 
     def test_adjust_decimals(self):
         a = ContinuousVariable("a")
-        self.assertEqual(a.str_val(4.654321), "4.654")
+        self.assertEqual(a.str_val(4.65432), "4.65432")
         a.val_from_str_add("5")
-        self.assertEqual(a.str_val(4.654321), "5")
+        self.assertEqual(a.str_val(4.65432), "5")
         a.val_from_str_add("  5.12    ")
-        self.assertEqual(a.str_val(4.654321), "4.65")
+        self.assertEqual(a.str_val(4.65432), "4.65")
         a.val_from_str_add("5.1234")
-        self.assertEqual(a.str_val(4.654321), "4.6543")
+        self.assertEqual(a.str_val(4.65432), "4.6543")
 
     def test_colors(self):
         a = ContinuousVariable("a")
@@ -454,9 +454,6 @@ PickleDiscreteVariable = create_pickling_tests(
     ("ordered", lambda: DiscreteVariable(name="Feature 0",
                                          values=["F", "M"],
                                          ordered=True)),
-    ("with_base_value", lambda: DiscreteVariable(name="Feature 0",
-                                                 values=["F", "M"],
-                                                 base_value=0))
 )
 
 

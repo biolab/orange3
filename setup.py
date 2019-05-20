@@ -31,7 +31,7 @@ from distutils.command import install_data, sdist, config, build
 
 NAME = 'Orange3'
 
-VERSION = '3.20.1'
+VERSION = '3.21.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -205,7 +205,9 @@ PACKAGE_DATA = {
     "Orange.widgets.visualize": ["icons/*.svg"],
     "Orange.widgets.unsupervised": ["icons/*.svg"],
     "Orange.widgets.utils": ["_webview/*.js"],
-    "Orange.tests": ["xlsx_files/*.xlsx", "*.tab", "*.basket", "*.csv"]
+    "Orange.tests": ["xlsx_files/*.xlsx", "datasets/*.tab",
+                     "datasets/*.basket", "datasets/*.csv",
+                     "datasets/*.pkl", "datasets/*.pkl.gz"]
 }
 
 
@@ -237,6 +239,7 @@ class CoverageCommand(Command):
         sys.exit(subprocess.call(r'''
         coverage run --source=Orange -m unittest -v Orange.tests
         echo; echo
+        coverage combine
         coverage report
         coverage html &&
             { echo; echo "See also: file://$(pwd)/htmlcov/index.html"; echo; }

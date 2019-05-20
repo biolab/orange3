@@ -226,6 +226,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
 
+    left_side_scrolling = True
+
     xy_changed_manually = Signal(Variable, Variable)
 
     class Warning(OWDataProjectionWidget.Warning):
@@ -249,8 +251,7 @@ class OWScatterPlot(OWDataProjectionWidget):
         # manually register Matplotlib file writers
         self.graph_writers = self.graph_writers.copy()
         for w in [MatplotlibFormat, MatplotlibPDFFormat]:
-            for ext in w.EXTENSIONS:
-                self.graph_writers[ext] = w
+            self.graph_writers.append(w)
 
     def _add_controls(self):
         self._add_controls_axis()
@@ -314,8 +315,6 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.vizrank_button.setToolTip(text)
 
     def set_data(self, data):
-        if self.data and data and self.data.checksum() == data.checksum():
-            return
         super().set_data(data)
 
         def findvar(name, iterable):
@@ -341,7 +340,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_size = findvar(self.attr_size, self.gui.size_model)
 
     def check_data(self):
-        self.clear_messages()
+        super().check_data()
         self.__timer.stop()
         self.sampling.setVisible(False)
         self.sql_data = None

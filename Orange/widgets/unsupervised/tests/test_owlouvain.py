@@ -3,8 +3,11 @@ from unittest.mock import patch
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
+from Orange.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.unsupervised.owlouvainclustering import OWLouvainClustering
+from sklearn.utils import check_random_state
 
 # Deterministic tests
 np.random.seed(42)
@@ -178,3 +181,56 @@ class TestOWLouvain(WidgetTest):
 
         # Ensure that clustering was the same in both instances
         np.testing.assert_equal(result1.metas, result2.metas)
+
+    @table_dense_sparse
+    def test_normalize_data(self, prepare_table):
+        """Check that normalization is called at the proper times."""
+        data = prepare_table(self.iris)
+
+        # Enable checkbox
+        self.widget.controls.normalize.setChecked(True)
+        self.assertTrue(self.widget.controls.normalize.isChecked())
+        with patch("Orange.preprocess.Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_called_once()
+
+        # Disable checkbox
+        self.widget.controls.normalize.setChecked(False)
+        self.assertFalse(self.widget.controls.normalize.isChecked())
+        with patch("Orange.preprocess.Normalize", wraps=Normalize) as normalize:
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            self.assertTrue(self.widget.controls.normalize.isEnabled())
+            normalize.assert_not_called()
+
+    def test_dense_and_sparse_return_same_result(self):
+        """Check that Louvain clustering returns identical results for both
+        dense and sparse data."""
+        random_state = check_random_state(42)
+
+        # Randomly set some values to zero
+        dense_data = self.iris
+        mask = random_state.beta(1, 2, size=self.iris.X.shape) > 0.5
+        dense_data.X[mask] = 0
+        sparse_data = dense_data.to_sparse()
+
+        def _compute_clustering(data):
+            self.send_signal(self.widget.Inputs.data, data)
+            self.wait_until_stop_blocking()
+            result = self.get_output(self.widget.Outputs.annotated_data)
+            self.send_signal(self.widget.Inputs.data, None)
+            return result
+
+        # Disable normalization
+        self.widget.controls.normalize.setChecked(False)
+        dense_result = _compute_clustering(dense_data)
+        sparse_result = _compute_clustering(sparse_data)
+        np.testing.assert_equal(dense_result.metas, sparse_result.metas)
+
+        # Enable normalization
+        self.widget.controls.normalize.setChecked(True)
+        dense_result = _compute_clustering(dense_data)
+        sparse_result = _compute_clustering(sparse_data)
+        np.testing.assert_equal(dense_result.metas, sparse_result.metas)

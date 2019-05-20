@@ -10,6 +10,7 @@ import Orange
 from Orange.classification import SimpleTreeLearner as SimpleTreeCls
 from Orange.regression import SimpleTreeLearner as SimpleTreeReg
 from Orange.data import ContinuousVariable, Domain, DiscreteVariable, Table
+from Orange.tests import test_filename
 
 
 class TestSimpleTreeLearner(unittest.TestCase):
@@ -99,7 +100,7 @@ class TestSimpleTreeLearner(unittest.TestCase):
         for ins in data[::20]:
             clf(ins)
             val, prob = clf(ins, clf.ValueProbs)
-            self.assertEqual(sum(prob[0]), 1)
+            self.assertEqual(sum(prob), 1)
 
     def test_SimpleTree_to_string_classification(self):
         domain = Domain([DiscreteVariable(name='d1', values='ef'),
@@ -140,23 +141,23 @@ class TestSimpleTreeLearner(unittest.TestCase):
         reg = lrn(data)
         reg_str = reg.to_string()
         res = '\n' \
-              'd1 (20.0: 6.0)\n' \
+              'd1 (20: 6.0)\n' \
               ': e\n' \
-              '   c1 (15.0: 4.0)\n' \
+              '   c1 (15: 4.0)\n' \
               '   : <=2.5\n' \
-              '      c1 (16.667: 3.0)\n' \
-              '      : <=1.5 --> (15.0: 2.0)\n' \
-              '      : >1.5 --> (20.0: 1.0)\n' \
-              '   : >2.5 --> (10.0: 1.0)\n' \
-              ': f --> (30.0: 2.0)'
+              '      c1 (16.6667: 3.0)\n' \
+              '      : <=1.5 --> (15: 2.0)\n' \
+              '      : >1.5 --> (20: 1.0)\n' \
+              '   : >2.5 --> (10: 1.0)\n' \
+              ': f --> (30: 2.0)'
         self.assertEqual(reg_str, res)
 
     def test_SimpleTree_to_string_cls_decimals(self):
-        data = Table("voting")
+        data = Table(test_filename("datasets/lenses.tab"))
         lrn = SimpleTreeReg(min_instances=1)
         cls = lrn(data)
         cls_str = cls.to_string()
-        res = '   adoption-of-the-budget-resolution ([3.7, 249.7])'
+        res = '   astigmatic ([4.0, 3.0, 5.0])'
         self.assertEqual(cls_str.split("\n")[3], res)
 
     def test_SimpleTree_to_string_reg_decimals(self):

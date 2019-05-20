@@ -166,7 +166,7 @@ class OWMergeData(widget.OWWidget):
     def _init_combo_current_items(self, variables, models):
         for var, model in zip(variables, models):
             value = getattr(self, var)
-            if len(model) > 0:
+            if model.rowCount():
                 setattr(self, var, value if value in model else INDEX)
 
     def _find_best_match(self):
@@ -228,17 +228,19 @@ class OWMergeData(widget.OWWidget):
     def handleNewSignals(self):
         self._invalidate()
 
-    def dataInfoText(self, data):
+    @staticmethod
+    def dataInfoText(data):
         if data is None:
             return "No data."
         else:
-            return "{}\n{} instances\n{} variables".format(
-                data.name, len(data), len(data.domain) + len(data.domain.metas))
+            return \
+                f"{data.name}\n" \
+                f"{len(data)} instances\n" \
+                f"{len(data.domain) + len(data.domain.metas)} variables"
 
     def commit(self):
         self.Warning.duplicate_names.clear()
-        if self.data is None or len(self.data) == 0 or \
-                self.extra_data is None or len(self.extra_data) == 0:
+        if not self.data or not self.extra_data:
             merged_data = None
         else:
             merged_data = self.merge()
@@ -358,7 +360,7 @@ class OWMergeData(widget.OWWidget):
     def _join_table_by_indices(self, reduced_extra, indices):
         """Join (horizontally) self.data and reduced_extra, taking the pairs
         of rows given in indices"""
-        if not len(indices):
+        if not indices.size:
             return None
         domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)

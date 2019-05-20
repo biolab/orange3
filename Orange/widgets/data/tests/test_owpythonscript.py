@@ -1,8 +1,12 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
+from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+
 from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
-from Orange.widgets.data.owpythonscript import OWPythonScript
+from Orange.tests import named_file
+from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.widget import OWWidget
 
@@ -16,15 +20,15 @@ class TestOWPythonScript(WidgetTest):
 
     def test_inputs(self):
         """Check widget's inputs"""
-        for input, data in (("Data", self.iris),
-                            ("Learner", self.learner),
-                            ("Classifier", self.model),
-                            ("Object", "object")):
-            self.assertEqual(getattr(self.widget, input.lower()), {})
-            self.send_signal(input, data, (1,))
-            self.assertEqual(getattr(self.widget, input.lower()), {1: data})
-            self.send_signal(input, None, (1,))
-            self.assertEqual(getattr(self.widget, input.lower()), {})
+        for input_, data in (("Data", self.iris),
+                             ("Learner", self.learner),
+                             ("Classifier", self.model),
+                             ("Object", "object")):
+            self.assertEqual(getattr(self.widget, input_.lower()), {})
+            self.send_signal(input_, data, (1,))
+            self.assertEqual(getattr(self.widget, input_.lower()), {1: data})
+            self.send_signal(input_, None, (1,))
+            self.assertEqual(getattr(self.widget, input_.lower()), {})
 
     def test_outputs(self):
         """Check widget's outputs"""
@@ -134,3 +138,77 @@ class TestOWPythonScript(WidgetTest):
         self.widget = self.create_widget(OWPythonScript, stored_settings=settings)
         script = self.widget.text.toPlainText()
         self.assertEqual("42", script)
+
+    def test_read_file_content(self):
+        with named_file("Content", suffix=".42") as fn:
+            # valid file opens
+            content = read_file_content(fn)
+            self.assertEqual("Content", content)
+            # invalid utf-8 file does not
+            with open(fn, "wb") as f:
+                f.write(b"\xc3\x28")
+            content = read_file_content(fn)
+            self.assertIsNone(content)
+
+    def test_script_insert_mime_text(self):
+        current = self.widget.text.toPlainText()
+        insert = "test\n"
+        cursor = self.widget.text.cursor()
+        cursor.setPos(0, 0)
+        mime = QMimeData()
+        mime.setText(insert)
+        self.widget.text.insertFromMimeData(mime)
+        self.assertEqual(insert + current, self.widget.text.toPlainText())
+
+    def test_script_insert_mime_file(self):
+        with named_file("test", suffix=".42") as fn:
+            previous = self.widget.text.toPlainText()
+            mime = QMimeData()
+            url = QUrl.fromLocalFile(fn)
+            mime.setUrls([url])
+            self.widget.text.insertFromMimeData(mime)
+            self.assertEqual("test", self.widget.text.toPlainText())
+            self.widget.text.undo()
+            self.assertEqual(previous, self.widget.text.toPlainText())
+
+    def test_dragEnterEvent_accepts_text(self):
+        with named_file("Content", suffix=".42") as fn:
+            event = self._drag_enter_event(QUrl.fromLocalFile(fn))
+            self.widget.dragEnterEvent(event)
+            self.assertTrue(event.isAccepted())
+
+    def test_dragEnterEvent_rejects_binary(self):
+        with named_file("", suffix=".42") as fn:
+            with open(fn, "wb") as f:
+                f.write(b"\xc3\x28")
+            event = self._drag_enter_event(QUrl.fromLocalFile(fn))
+            self.widget.dragEnterEvent(event)
+            self.assertFalse(event.isAccepted())
+
+    def _drag_enter_event(self, url):
+        # make sure data does not get garbage collected before it used
+        # pylint: disable=attribute-defined-outside-init
+        self.event_data = data = QMimeData()
+        data.setUrls([QUrl(url)])
+        return QDragEnterEvent(
+            QPoint(0, 0), Qt.MoveAction, data,
+            Qt.NoButton, Qt.NoModifier)
+
+    def test_dropEvent_replaces_file(self):
+        with named_file("test", suffix=".42") as fn:
+            previous = self.widget.text.toPlainText()
+            event = self._drop_event(QUrl.fromLocalFile(fn))
+            self.widget.dropEvent(event)
+            self.assertEqual("test", self.widget.text.toPlainText())
+            self.widget.text.undo()
+            self.assertEqual(previous, self.widget.text.toPlainText())
+
+    def _drop_event(self, url):
+        # make sure data does not get garbage collected before it used
+        # pylint: disable=attribute-defined-outside-init
+        self.event_data = data = QMimeData()
+        data.setUrls([QUrl(url)])
+
+        return QDropEvent(
+            QPoint(0, 0), Qt.MoveAction, data,
+            Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)

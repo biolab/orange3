@@ -16,9 +16,10 @@ __all__ = ["SelectBestFeatures", "SelectRandomFeatures"]
 class SelectBestFeatures(Reprable):
     """
     A feature selector that builds a new dataset consisting of either the top
-    `k` features or all those that exceed a given `threshold`. Features are
-    scored using the provided feature scoring `method`. By default it is
-    assumed that feature importance diminishes with decreasing scores.
+    `k` features (if `k` is an `int`) or a proportion (if `k` is a `float`
+    between 0.0 and 1.0), or all those that exceed a given `threshold`. Features
+    are scored using the provided feature scoring `method`. By default it is
+    assumed that feature importance decreases with decreasing scores.
 
     If both `k` and `threshold` are set, only features satisfying both
     conditions will be selected.
@@ -32,8 +33,8 @@ class SelectBestFeatures(Reprable):
     method : Orange.preprocess.score.ClassificationScorer, Orange.preprocess.score.SklScorer
         Univariate feature scoring method.
 
-    k : int
-        The number of top features to select.
+    k : int or float
+        The number or propotion of top features to select.
 
     threshold : float
         A threshold that a feature should meet according to the provided method.
@@ -50,6 +51,12 @@ class SelectBestFeatures(Reprable):
         self.decreasing = decreasing
 
     def __call__(self, data):
+        n_attrs = len(data.domain.attributes)
+        if isinstance(self.k, float):
+            effective_k = np.round(self.k * n_attrs).astype(int) or 1
+        else:
+            effective_k = self.k
+
         method = self.method
         # select default method according to the provided data
         if method is None:
@@ -73,7 +80,7 @@ class SelectBestFeatures(Reprable):
         best = sorted(zip(scores, features), key=itemgetter(0),
                       reverse=self.decreasing)
         if self.k:
-            best = best[:self.k]
+            best = best[:effective_k]
         if self.threshold:
             pred = ((lambda x: x[0] >= self.threshold) if self.decreasing else
                     (lambda x: x[0] <= self.threshold))
@@ -113,10 +120,13 @@ class SelectRandomFeatures(Reprable):
         self.k = k
 
     def __call__(self, data):
-        if type(self.k) == float:
-            self.k = int(len(data.domain.attributes) * self.k)
+        if isinstance(self.k, float):
+            effective_k = int(len(data.domain.attributes) * self.k)
+        else:
+            effective_k = self.k
+
         domain = Orange.data.Domain(
             random.sample(data.domain.attributes,
-                          min(self.k, len(data.domain.attributes))),
+                          min(effective_k, len(data.domain.attributes))),
             data.domain.class_vars, data.domain.metas)
         return data.transform(domain)

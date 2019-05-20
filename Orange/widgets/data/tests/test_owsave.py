@@ -1,145 +1,597 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring, protected-access, unsubscriptable-object
+import unittest
 from unittest.mock import patch, Mock
-import itertools
+import os
+import sys
+
+import scipy.sparse as sp
+from AnyQt.QtWidgets import QFileDialog
 
 from Orange.data import Table
-from Orange.data.io import Compression, CSVReader, TabReader, PickleReader, \
-    ExcelReader, FileFormat
+from Orange.data.io import TabReader, PickleReader, ExcelReader
 from Orange.tests import named_file
-from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils.filedialogs import format_filter
+from Orange.widgets.tests.base import WidgetTest, open_widget_classes
 from Orange.widgets.data.owsave import OWSave
 
-FILE_TYPES = [
-    ("{} ({})".format(w.DESCRIPTION, w.EXTENSIONS[0]),
-     w.EXTENSIONS[0],
-     w.SUPPORT_SPARSE_DATA)
-    for w in (TabReader, CSVReader, PickleReader, ExcelReader)
-]
 
-COMPRESSIONS = [
-    ("gzip ({})".format(Compression.GZIP), Compression.GZIP),
-    ("bzip2 ({})".format(Compression.BZIP2), Compression.BZIP2),
-    ("lzma ({})".format(Compression.XZ), Compression.XZ),
-]
+# Yay, MS Windows!
+# This is not the proper general way to do it, but it's simplest and sufficient
+# Short name is suitable for the function's purpose
+def _w(s):  # pylint: disable=invalid-name
+    return s.replace("/", os.sep)
 
 
-class AddedFormat(FileFormat):
-    EXTENSIONS = ('.234',)
-    DESCRIPTION = "Test if a dialog format works after reading OWSave"
-
-    def write_file(self):
-        pass
-
-
-class TestOWSave(WidgetTest):
-
+class TestOWSaveBase(WidgetTest):
     def setUp(self):
-        self.widget = self.create_widget(OWSave)  # type: OWSave
+        with open_widget_classes():
+            class OWSaveMockWriter(OWSave):
+                writer = Mock()
+                writer.EXTENSIONS = [".csv"]
+                writer.SUPPORT_COMPRESSED = True
+                writer.SUPPORT_SPARSE_DATA = False
+                writer.OPTIONAL_TYPE_ANNOTATIONS = False
 
-    def test_writer(self):
-        compressions = [self.widget.controls.compression.itemText(i) for i in
-                        range(self.widget.controls.compression.count())]
-        types = [self.widget.controls.filetype.itemText(i)
-                 for i in range(self.widget.controls.filetype.count())]
-        for t, c, d in itertools.product(types, compressions, [True, False]):
-            self.widget.compression = c
-            self.widget.compress = d
-            self.widget.filetype = t
-            self.widget.update_extension()
-            self.assertEqual(
-                len(self.widget.get_writer_selected().EXTENSIONS), 1)
+        self.widget = self.create_widget(OWSaveMockWriter)  # type: OWSave
+        self.iris = Table("iris")
 
-    def test_ordinary_save(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
 
-        for ext, suffix, _ in FILE_TYPES:
-            self.widget.filetype = ext
-            self.widget.update_extension()
-            writer = self.widget.get_writer_selected()
-            with named_file("", suffix=suffix) as filename:
-                def choose_file(a, b, c, d, e, fn=filename, w=writer):
-                    return fn, format_filter(w)
-
-                with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", choose_file):
-                    self.widget.save_file_as()
-                self.assertEqual(len(Table(filename)), 150)
-
-    @patch('Orange.data.io.FileFormat.write')
-    def test_annotations(self, write):
+class TestOWSave(TestOWSaveBase):
+    def test_dataset(self):
         widget = self.widget
+        widget.auto_save = True
+        insum = widget.info.set_input_summary = Mock()
+        savefile = widget.save_file = Mock()
 
-        self.send_signal(widget.Inputs.data, Table("iris"))
-        widget.filetype = FILE_TYPES[1][0]
-        widget.filename = 'foo.csv'
-        widget.update_extension()
+        datasig = widget.Inputs.data
+        self.send_signal(datasig, self.iris)
+        self.assertEqual(insum.call_args[0][0], "150")
+        insum.reset_mock()
+        savefile.reset_mock()
 
-        widget.add_type_annotations = False
-        widget.unconditional_save_file()
-        write.assert_called()
-        self.assertFalse(write.call_args[0][2])
+        widget.filename = "foo.tab"
+        widget.writer = TabReader
+        widget.auto_save = False
+        self.send_signal(datasig, self.iris)
+        self.assertEqual(insum.call_args[0][0], "150")
+        savefile.assert_not_called()
 
-        widget.add_type_annotations = True
-        widget.unconditional_save_file()
-        self.assertTrue(write.call_args[0][2])
+        widget.auto_save = True
+        self.send_signal(datasig, self.iris)
+        self.assertEqual(insum.call_args[0][0], "150")
+        savefile.assert_called()
 
-    def test_disable_checkbox(self):
+        self.send_signal(datasig, None)
+        insum.assert_called_with(widget.info.NoInput)
+
+    def test_initial_start_dir(self):
         widget = self.widget
-        for type_ in FILE_TYPES:
-            widget.filetype = type_[0]
-            widget.update_extension()
-            if widget.get_writer_selected().OPTIONAL_TYPE_ANNOTATIONS:
-                self.assertTrue(widget.annotations_cb.isEnabled())
-            else:
-                self.assertFalse(widget.annotations_cb.isEnabled())
+        widget.filename = _w("/usr/foo/bar.csv")
+        self.assertEqual(widget._initial_start_dir(),
+                         _w(os.path.expanduser("~/")))
 
-    def test_compression(self):
-        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        with patch("os.path.exists", return_value=True):
+            widget.filename = _w("/usr/foo/bar.csv")
+            self.assertEqual(widget._initial_start_dir(), widget.filename)
 
-        self.widget.compress = True
-        for type, compression in itertools.product([[x, ext] for x, ext, _ in FILE_TYPES],
-                                                   COMPRESSIONS):
-            self.widget.filetype = type[0]
-            self.widget.compression = compression[0]
-            self.widget.update_extension()
-            writer = self.widget.get_writer_selected()
-            with named_file("",
-                            suffix=type[1] + compression[1]) as filename:
-                def choose_file(a, b, c, d, e, fn=filename, w=writer):
-                    return fn, format_filter(w)
+            widget.filename = ""
+            widget.last_dir = _w("/usr/bar")
+            self.assertEqual(widget._initial_start_dir(), _w("/usr/bar/"))
 
-                with patch("AnyQt.QtWidgets.QFileDialog.getSaveFileName", choose_file):
-                    self.widget.save_file_as()
-                self.assertEqual(len(Table(filename)), 150)
+            widget.last_dir = _w("/usr/bar")
+            self.send_signal(widget.Inputs.data, self.iris)
+            self.assertEqual(widget._initial_start_dir(),
+                             _w("/usr/bar/iris.csv"))
 
-    def test_format_combo(self):
+            widget.last_dir = ""
+            self.assertEqual(widget._initial_start_dir(),
+                             os.path.expanduser(_w("~/iris.csv")))
+
+    @patch("Orange.widgets.data.owsave.QFileDialog.getSaveFileName")
+    def test_save_file_sets_name(self, _filedialog):
         widget = self.widget
-        filetype = widget.controls.filetype
+        filters = iter(widget.filters)
+        filter1 = next(filters)
+        filter2 = next(filters)
 
+        widget.filename = _w("/usr/foo/bar.csv")
+        widget.last_dir = _w("/usr/foo/")
+        widget.filter = filter1
+
+        widget._update_messages = Mock()
         widget.save_file = Mock()
 
-        data = Table("iris")
-        sparse_data = Table("iris")
-        sparse_data.is_sparse = Mock(return_value=True)
+        widget.get_save_filename = Mock(return_value=("", filter2))
+        widget.save_file_as()
+        self.assertEqual(widget.filename, _w("/usr/foo/bar.csv"))
+        self.assertEqual(widget.last_dir, _w("/usr/foo/"))
+        self.assertEqual(widget.filter, filter1)
+        widget._update_messages.assert_not_called()
+        widget.save_file.assert_not_called()
 
-        self.send_signal(widget.Inputs.data, data)
-        n_nonsparse = filetype.count()
+        widget.get_save_filename = \
+            Mock(return_value=(_w("/bar/bar.csv"), filter2))
+        widget.save_file_as()
+        self.assertEqual(widget.filename, _w("/bar/bar.csv"))
+        self.assertEqual(widget.last_dir, _w("/bar"))
+        self.assertEqual(widget.filter, filter2)
+        self.assertIn("bar.csv", widget.bt_save.text())
+        widget._update_messages.assert_called()
+        widget.save_file.assert_called()
 
-        self.send_signal(widget.Inputs.data, sparse_data)
-        n_sparse = filetype.count()
-        self.assertGreater(n_nonsparse, n_sparse)
+        widget.get_save_filename = Mock(return_value=("", filter2))
+        widget.save_file_as()
+        self.assertEqual(widget.filename, _w("/bar/bar.csv"))
+        self.assertEqual(widget.last_dir, _w("/bar"))
+        self.assertEqual(widget.filter, filter2)
+        self.assertIn("bar.csv", widget.bt_save.text())
+        widget._update_messages.assert_called()
+        widget.save_file.assert_called()
 
-        self.send_signal(widget.Inputs.data, sparse_data)
-        self.assertEqual(filetype.count(), n_sparse)
+    def test_save_file_calls_save_as(self):
+        widget = self.widget
+        widget.save_file_as = Mock()
 
-        self.send_signal(widget.Inputs.data, data)
-        self.assertEqual(filetype.count(), n_nonsparse)
+        self.send_signal(widget.Inputs.data, self.iris)
 
-        self.send_signal(widget.Inputs.data, None)
-        self.send_signal(widget.Inputs.data, data)
-        self.assertEqual(filetype.count(), n_nonsparse)
+        widget.filename = ""
+        widget.save_file()
+        widget.save_file_as.assert_called()
+        widget.save_file_as.reset_mock()
 
-        self.send_signal(widget.Inputs.data, None)
-        self.send_signal(widget.Inputs.data, sparse_data)
-        self.assertEqual(filetype.count(), n_sparse)
+        widget.filename = "bar.csv"
+        widget.save_file()
+        widget.save_file_as.assert_not_called()
+
+    def test_save_file_checks_can_save(self):
+        widget = self.widget
+        widget.get_save_filename = Mock(return_value=("", 0))
+
+        widget.save_file()
+        widget.writer.write.assert_not_called()
+
+        widget.filename = "foo"
+        widget.save_file()
+        widget.writer.write.assert_not_called()
+
+        widget.filename = ""
+        self.send_signal(widget.Inputs.data, self.iris)
+        widget.save_file()
+        widget.writer.write.assert_not_called()
+
+        widget.filename = "foo"
+        widget.save_file()
+        widget.writer.write.assert_called()
+        widget.writer.reset_mock()
+
+        self.iris.X = sp.csr_matrix(self.iris.X)
+        widget.save_file()
+        widget.writer.write.assert_not_called()
+
+        widget.writer.SUPPORT_SPARSE_DATA = True
+        widget.save_file()
+        widget.writer.write.assert_called()
+
+    def test_save_file_write_errors(self):
+        widget = self.widget
+        datasig = widget.Inputs.data
+
+        widget.auto_save = True
+        widget.filename = _w("bar/foo")
+
+        widget.writer.write.side_effect = IOError
+        self.send_signal(datasig, self.iris)
+        self.assertTrue(widget.Error.general_error.is_shown())
+
+        widget.writer.write.side_effect = None
+        self.send_signal(datasig, self.iris)
+        self.assertFalse(widget.Error.general_error.is_shown())
+
+        widget.writer.write.side_effect = IOError
+        self.send_signal(datasig, self.iris)
+        self.assertTrue(widget.Error.general_error.is_shown())
+
+        widget.writer.write.side_effect = None
+        self.send_signal(datasig, None)
+        self.assertFalse(widget.Error.general_error.is_shown())
+
+        widget.writer.write.side_effect = ValueError
+        self.assertRaises(ValueError, self.send_signal, datasig, self.iris)
+
+    def test_save_file_write(self):
+        widget = self.widget
+        datasig = widget.Inputs.data
+
+        widget.auto_save = True
+
+        widget.filename = _w("bar/foo.csv")
+        widget.add_type_annotations = True
+        self.send_signal(datasig, self.iris)
+        widget.writer.write.assert_called_with(
+            _w("bar/foo.csv"), self.iris, True)
+
+    def test_file_name_label(self):
+        widget = self.widget
+
+        widget.filename = ""
+        widget._update_messages()
+        self.assertFalse(widget.Error.no_file_name.is_shown())
+
+        widget.auto_save = True
+        widget._update_messages()
+        self.assertTrue(widget.Error.no_file_name.is_shown())
+
+        widget.filename = _w("/foo/bar/baz.csv")
+        widget._update_messages()
+        self.assertFalse(widget.Error.no_file_name.is_shown())
+
+    def test_sparse_error(self):
+        widget = self.widget
+        err = widget.Error.unsupported_sparse
+
+        widget.writer = ExcelReader
+        widget.filename = "foo.xlsx"
+        widget.data = self.iris
+
+        widget._update_messages()
+        self.assertFalse(err.is_shown())
+
+        widget.data.X = sp.csr_matrix(widget.data.X)
+        widget._update_messages()
+        self.assertTrue(err.is_shown())
+
+        widget.writer = PickleReader
+        widget._update_messages()
+        self.assertFalse(err.is_shown())
+
+        widget.writer = ExcelReader
+        widget._update_messages()
+        self.assertTrue(err.is_shown())
+
+        widget.data = None
+        widget._update_messages()
+        self.assertFalse(err.is_shown())
+
+    def test_valid_filters_for_sparse(self):
+        widget = self.widget
+
+        widget.data = None
+        self.assertEqual(widget.filters, widget._valid_filters())
+
+        widget.data = self.iris
+        self.assertEqual(widget.filters, widget._valid_filters())
+
+        widget.data.X = sp.csr_matrix(widget.data.X)
+        valid = widget._valid_filters()
+        self.assertNotEqual(widget.filters, {})
+        # false positive, pylint: disable=no-member
+        self.assertTrue(all(v.SUPPORT_SPARSE_DATA for v in valid.values()))
+
+    def test_valid_default_filter(self):
+        widget = self.widget
+        for widget.filter, writer in widget.filters.items():
+            if not writer.SUPPORT_SPARSE_DATA:
+                break
+
+        widget.data = None
+        self.assertIs(widget.filter, widget._default_valid_filter())
+
+        widget.data = self.iris
+        self.assertIs(widget.filter, widget._default_valid_filter())
+
+        widget.data.X = sp.csr_matrix(widget.data.X)
+        self.assertTrue(
+            widget.filters[widget._default_valid_filter()].SUPPORT_SPARSE_DATA)
+
+    def test_send_report(self):
+        widget = self.widget
+
+        widget.report_items = Mock()
+        for writer in widget.filters.values():
+            widget.writer = writer
+            for widget.add_type_annotations in (False, True):
+                widget.filename = f"foo.{writer.EXTENSIONS[0]}"
+                widget.send_report()
+                items = dict(widget.report_items.call_args[0][0])
+                msg = f"for {writer}, annotations={widget.add_type_annotations}"
+                self.assertEqual(items["File name"], widget.filename, msg=msg)
+                if writer.OPTIONAL_TYPE_ANNOTATIONS:
+                    self.assertEqual(
+                        items["Type annotations"],
+                        ["No", "Yes"][widget.add_type_annotations], msg=msg)
+                else:
+                    self.assertFalse(items["Type annotations"], msg=msg)
+
+    def test_migration_to_version_2(self):
+        const_settings = {
+            'add_type_annotations': True, 'auto_save': False,
+            'controlAreaVisible': True, 'last_dir': '/home/joe/Desktop',
+            '__version__': 1}
+
+        # No compression, Tab-separated values
+        settings = {**const_settings,
+                    'compress': False, 'compression': 'gzip (.gz)',
+                    'filetype': 'Tab-separated values (.tab)'}
+        OWSave.migrate_settings(settings)
+        self.assertEqual(
+            settings,
+            {**const_settings,
+             "filter": "Tab-separated values (*.tab)"})
+
+        # Compression; ignore compression format (.xz is no longer supported)
+        settings = {**const_settings,
+                    'compress': True, 'compression': 'lzma (.xz)',
+                    'filetype': 'Tab-separated values (.tab)'}
+        OWSave.migrate_settings(settings)
+        self.assertEqual(
+            settings,
+            {**const_settings,
+             "filter": "Compressed Tab-separated values (*.tab.gz)"})
+
+        # No compression, Excel
+        settings = {**const_settings,
+                    'compress': False, 'compression': 'lzma (.xz)',
+                    'filetype': 'Microsoft Excel spreadsheet (.xlsx)'}
+        OWSave.migrate_settings(settings)
+        self.assertEqual(
+            settings,
+            {**const_settings,
+             "filter": "Microsoft Excel spreadsheet (*.xlsx)"})
+
+        # Excel with compression - compression must be ignored
+        settings = {**const_settings,
+                    'compress': True, 'compression': 'lzma (.xz)',
+                    'filetype': 'Microsoft Excel spreadsheet (.xlsx)'}
+        OWSave.migrate_settings(settings)
+        self.assertEqual(
+            settings,
+            {**const_settings,
+             "filter": "Microsoft Excel spreadsheet (*.xlsx)"})
+
+        # Missing filetype (is this possible?)
+        settings = {**const_settings,
+                    'compress': True, 'compression': 'lzma (.xz)'}
+        OWSave.migrate_settings(settings)
+        self.assertTrue(settings["filter"] in OWSave.filters)
+
+        # Unsupported file format (is this possible?)
+        settings = {**const_settings,
+                    'compress': True, 'compression': 'lzma (.xz)',
+                    'filetype': 'Bar file (.bar)'}
+        OWSave.migrate_settings(settings)
+        self.assertTrue(settings["filter"] in OWSave.filters)
+
+
+class TestFunctionalOWSave(WidgetTest):
+    def setUp(self):
+        self.widget = self.create_widget(OWSave)  # type: OWSave
+        self.iris = Table("iris")
+
+    def test_save_uncompressed(self):
+        widget = self.widget
+        widget.auto_save = False
+
+        spiris = Table("iris")
+        spiris.X = sp.csr_matrix(spiris.X)
+
+        for selected_filter, writer in widget.filters.items():
+            widget.write = writer
+            ext = writer.EXTENSIONS[0]
+            with named_file("", suffix=ext) as filename:
+                widget.get_save_filename = Mock(
+                    return_value=(filename, selected_filter))
+
+                self.send_signal(widget.Inputs.data, self.iris)
+                widget.save_file_as()
+                self.assertEqual(len(Table(filename)), 150)
+
+                if writer.SUPPORT_SPARSE_DATA:
+                    self.send_signal(widget.Inputs.data, spiris)
+                    widget.save_file()
+                    self.assertEqual(len(Table(filename)), 150)
+
+
+@unittest.skipUnless(sys.platform == "linux", "Tests for dialog on Linux")
+class TestOWSaveLinuxDialog(TestOWSaveBase):
+    def test_get_save_filename_linux(self):
+        widget = self.widget
+        widget._initial_start_dir = lambda: "baz"
+        widget.filters = dict.fromkeys("abc")
+        widget.filter = "b"
+        dlg = widget.SaveFileDialog = Mock()  # pylint: disable=invalid-name
+        instance = dlg.return_value
+        instance.selectedFiles.return_value = ["foo"]
+        instance.selectedNameFilter.return_value = "bar"
+        self.assertEqual(widget.get_save_filename(), ("foo", "bar"))
+        self.assertEqual(dlg.call_args[0][2], "baz")
+        self.assertEqual(dlg.call_args[0][3], "a;;b;;c")
+        instance.selectNameFilter.assert_called_with("b")
+
+        instance.exec.return_value = QFileDialog.Rejected
+        self.assertEqual(widget.get_save_filename(), ("", ""))
+
+    def test_save_file_dialog_enforces_extension_linux(self):
+        dialog = OWSave.SaveFileDialog(
+            None, "Save File", "foo.bar",
+            "Bar files (*.tab);;Low files (*.csv)")
+
+        dialog.selectNameFilter("Low files (*.csv)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/foo.csv"))
+
+        dialog.selectFile("high.bar")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.bar.csv"))
+
+        dialog.selectNameFilter("Bar files (*.tab)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.bar.tab"))
+
+        dialog.selectFile("middle.pkl")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.tab"))
+
+        dialog.filterSelected.emit("Low files (*.csv)")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/middle.csv"))
+
+        dialog.selectFile("high.tab.gz")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.csv"))
+
+        dialog.selectFile("high.tab.gz.tab.tab.gz")
+        self.assertTrue(dialog.selectedFiles()[0].endswith("/high.csv"))
+
+    def test_save_file_dialog_uses_valid_filters_linux(self):
+        widget = self.widget
+        widget._valid_filters = lambda: ["a (*.a)", "b (*.b)"]
+        widget._default_valid_filter = lambda: "a (*.a)"
+        dlg = widget.SaveFileDialog = Mock()  # pylint: disable=invalid-name
+        instance = dlg.return_value
+        instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
+        widget.get_save_filename()
+        self.assertEqual(dlg.call_args[0][3], "a (*.a);;b (*.b)")
+        instance.selectNameFilter.assert_called_with("a (*.a)")
+
+
+@unittest.skipUnless(sys.platform in ("darwin", "win32"),
+                     "Test for native dialog on Windows and macOS")
+class TestOWSaveDarwinDialog(TestOWSaveBase):  # pragma: no cover
+    if sys.platform == "darwin":
+        @staticmethod
+        def remove_star(filt):
+            return filt.replace(" (*.", " (.")
+    else:
+        @staticmethod
+        def remove_star(filt):
+            return filt
+
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    def test_get_save_filename_darwin(self, dlg):
+        widget = self.widget
+        widget._initial_start_dir = lambda: "baz"
+        widget.filters = dict.fromkeys(("aa (*.a)", "bb (*.b)", "cc (*.c)"))
+        widget.filter = "bb (*.b)"
+        instance = dlg.return_value
+        instance.exec.return_value = dlg.Accepted = QFileDialog.Accepted
+        instance.selectedFiles.return_value = ["foo"]
+        instance.selectedNameFilter.return_value = self.remove_star("aa (*.a)")
+        self.assertEqual(widget.get_save_filename(), ("foo.a", "aa (*.a)"))
+        self.assertEqual(dlg.call_args[0][2], "baz")
+        self.assertEqual(
+            dlg.call_args[0][3],
+            self.remove_star("aa (*.a);;bb (*.b);;cc (*.c)"))
+        instance.selectNameFilter.assert_called_with(
+            self.remove_star("bb (*.b)"))
+
+        instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
+        self.assertEqual(widget.get_save_filename(), ("", ""))
+
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    def test_save_file_dialog_enforces_extension_darwin(self, dlg):
+        widget = self.widget
+        for filter1 in widget.filters:
+            if OWSave._extension_from_filter(filter1) == ".tab":
+                break
+        for filter2 in widget.filters:
+            if OWSave._extension_from_filter(filter2) == ".csv.gz":
+                break
+
+        widget.filter = filter1
+        instance = dlg.return_value
+        instance.exec.return_value = QFileDialog.Accepted
+
+        instance.selectedNameFilter.return_value = self.remove_star(filter1)
+        instance.selectedFiles.return_value = ["foo"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.pkl"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.tab.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.csv.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.tab")
+        instance.selectedFiles.return_value = ["foo.bar"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.bar.tab")
+
+        instance.selectedNameFilter.return_value = self.remove_star(filter2)
+        instance.selectedFiles.return_value = ["foo"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.pkl"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.tab.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.csv.gz"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
+        instance.selectedFiles.return_value = ["foo.bar"]
+        self.assertEqual(widget.get_save_filename()[0], "foo.bar.csv.gz")
+
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    @patch("os.path.exists", new=lambda x: x == "old.tab")
+    @patch("Orange.widgets.data.owsave.QMessageBox")
+    def test_save_file_dialog_asks_for_overwrite_darwin(self, msgbox, dlg):
+        def selected_files():
+            nonlocal attempts
+            attempts += 1
+            return [["old.tab", "new.tab"][attempts]]
+
+        widget = self.widget
+        widget._initial_start_dir = lambda: "baz"
+        for filter1 in widget.filters:
+            if OWSave._extension_from_filter(filter1) == ".tab":
+                break
+
+        widget.filter = filter1
+        instance = dlg.return_value
+        instance.exec.return_value = QFileDialog.Accepted
+        instance.selectedFiles = selected_files
+        instance.selectedNameFilter.return_value = self.remove_star(filter1)
+
+        attempts = -1
+        msgbox.question.return_value = msgbox.Yes = 1
+        self.assertEqual(widget.get_save_filename()[0], "old.tab")
+
+        attempts = -1
+        msgbox.question.return_value = msgbox.No = 0
+        self.assertEqual(widget.get_save_filename()[0], "new.tab")
+
+    @patch("Orange.widgets.data.owsave.QFileDialog")
+    def test_save_file_dialog_uses_valid_filters_darwin(self, dlg):
+        widget = self.widget
+        widget._valid_filters = lambda: ["aa (*.a)", "bb (*.b)"]
+        widget._default_valid_filter = lambda: "aa (*.a)"
+        instance = dlg.return_value
+        instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
+        widget.get_save_filename()
+        self.assertEqual(
+            dlg.call_args[0][3], self.remove_star("aa (*.a);;bb (*.b)"))
+        instance.selectNameFilter.assert_called_with(
+            self.remove_star("aa (*.a)"))
+
+
+class TestOWSaveUtils(unittest.TestCase):
+    def test_replace_extension(self):
+        replace = OWSave._replace_extension
+        fname = "/bing.bada.boom/foo.1942.tab"
+        self.assertEqual(
+            replace(fname, ".tab"), "/bing.bada.boom/foo.1942.tab")
+        self.assertEqual(
+            replace(fname, ".tab.gz"), "/bing.bada.boom/foo.1942.tab.gz")
+        self.assertEqual(
+            replace(fname, ".xlsx"), "/bing.bada.boom/foo.1942.xlsx")
+
+        fname = "foo.tab.gz"
+        self.assertEqual(replace(fname, ".tab"), "foo.tab")
+        self.assertEqual(replace(fname, ".tab.gz"), "foo.tab.gz")
+        self.assertEqual(replace(fname, ".csv"), "foo.csv")
+        self.assertEqual(replace(fname, ".csv.gz"), "foo.csv.gz")
+
+        fname = "/bing.bada.boom/foo"
+        self.assertEqual(replace(fname, ".tab"), fname + ".tab")
+        self.assertEqual(replace(fname, ".tab.gz"), fname + ".tab.gz")
+
+    def test_extension_from_filter(self):
+        self.assertEqual(
+            OWSave._extension_from_filter("Description (*.ext)"), ".ext")
+        self.assertEqual(
+            OWSave._extension_from_filter("Description (*.foo.ba)"), ".foo.ba")
+        self.assertEqual(
+            OWSave._extension_from_filter("Description (.ext)"), ".ext")
+        self.assertEqual(
+            OWSave._extension_from_filter("Description (.foo.bar)"), ".foo.bar")
+
+
+if __name__ == "__main__":
+    unittest.main()

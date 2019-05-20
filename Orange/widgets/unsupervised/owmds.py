@@ -1,19 +1,22 @@
-import warnings
+# pylint: disable=too-many-ancestors
+from types import SimpleNamespace as namespace
 
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtCore import Qt, QTimer
+from AnyQt.QtCore import Qt
 
 import pyqtgraph as pg
 
-from Orange.data import ContinuousVariable, Domain, Table
+from Orange.data import ContinuousVariable, Domain, Table, StringVariable
+from Orange.data.util import array_equal
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
 
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import SettingProvider
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
@@ -27,6 +30,47 @@ def stress(X, distD):
     delta = D1 - distD
     delta_sq = np.square(delta, out=delta)
     return delta_sq.sum(axis=0) / 2
+
+
+class Result(namespace):
+    embedding = None  # type: np.ndarray
+
+
+def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
+            embedding: np.ndarray, state: TaskState):
+    res = Result(embedding=embedding)
+
+    iterations_done = 0
+    init = embedding
+    state.set_status("Running...")
+    oldstress = np.finfo(np.float).max
+
+    while True:
+        step_iter = min(max_iter - iterations_done, step_size)
+        mds = MDS(
+            dissimilarity="precomputed", n_components=2,
+            n_init=1, max_iter=step_iter,
+            init_type=init_type, init_data=init
+        )
+
+        mdsfit = mds(matrix)
+        iterations_done += step_iter
+
+        embedding, stress = mdsfit.embedding_, mdsfit.stress_
+        emb_norm = np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
+        if emb_norm > 0:
+            stress /= emb_norm
+
+        res.embedding = embedding
+        state.set_partial_result(res)
+        state.set_progress_value(100 * iterations_done / max_iter)
+        if iterations_done >= max_iter or stress == 0 or \
+                (oldstress - stress) < mds.params["eps"]:
+            return res
+        init = embedding
+        oldstress = stress
+        if state.is_interruption_requested():
+            return res
 
 
 #: Maximum number of displayed closest pairs.
@@ -104,7 +148,7 @@ class OWMDSGraph(OWScatterPlotBase):
         self.plot_widget.addItem(self.pairs_curve)
 
 
-class OWMDS(OWDataProjectionWidget):
+class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "MDS"
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
@@ -129,9 +173,6 @@ class OWMDS(OWDataProjectionWidget):
         ("None", -1)
     ]
 
-    #: Runtime state
-    Running, Finished, Waiting = 1, 2, 3
-
     max_iter = settings.Setting(300)
     initialization = settings.Setting(PCA)
     refresh_rate = settings.Setting(3)
@@ -139,6 +180,8 @@ class OWMDS(OWDataProjectionWidget):
     GRAPH_CLASS = OWMDSGraph
     graph = SettingProvider(OWMDSGraph)
     embedding_variables_names = ("mds-x", "mds-y")
+
+    left_side_scrolling = True
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -150,7 +193,8 @@ class OWMDS(OWDataProjectionWidget):
         optimization_error = Msg("Error during optimization\n{}")
 
     def __init__(self):
-        super().__init__()
+        OWDataProjectionWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
         #: Input dissimilarity matrix
         self.matrix = None  # type: Optional[DistMatrix]
         #: Data table from the `self.matrix.row_items` (if present)
@@ -158,16 +202,8 @@ class OWMDS(OWDataProjectionWidget):
         #: Input data table
         self.signal_data = None
 
-        self.__invalidated = True
-        self.embedding = None
-        self.effective_matrix = None
-
-        self.__update_loop = None
-        # timer for scheduling updates
-        self.__timer = QTimer(self, singleShot=True, interval=0)
-        self.__timer.timeout.connect(self.__next_step)
-        self.__state = OWMDS.Waiting
-        self.__in_next_step = False
+        self.embedding = None  # type: Optional[np.ndarray]
+        self.effective_matrix = None  # type: Optional[DistMatrix]
 
         self.graph.pause_drawing_pairs()
 
@@ -176,7 +212,6 @@ class OWMDS(OWDataProjectionWidget):
             self.gui.points_models[2].order[:1] \
             + ("Stress", ) + \
             self.gui.points_models[2].order[1:]
-        # self._initialize()
 
     def _add_controls(self):
         self._add_controls_optimization()
@@ -189,16 +224,19 @@ class OWMDS(OWDataProjectionWidget):
 
     def _add_controls_optimization(self):
         box = gui.vBox(self.controlArea, box=True)
-        self.runbutton = gui.button(box, self, "Run optimization",
-                                    callback=self._toggle_run)
+        self.run_button = gui.button(box, self, "Start", self._toggle_run)
         gui.comboBox(box, self, "refresh_rate", label="Refresh: ",
                      orientation=Qt.Horizontal,
                      items=[t for t, _ in OWMDS.RefreshRate],
-                     callback=self.__invalidate_refresh)
+                     callback=self.__refresh_rate_combo_changed)
         hbox = gui.hBox(box, margin=0)
         gui.button(hbox, self, "PCA", callback=self.do_PCA)
         gui.button(hbox, self, "Randomize", callback=self.do_random)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter)
+
+    def __refresh_rate_combo_changed(self):
+        if self.task is not None:
+            self._run()
 
     def set_data(self, data):
         """Set the input dataset.
@@ -235,15 +273,14 @@ class OWMDS(OWDataProjectionWidget):
 
     def clear(self):
         super().clear()
+        self.cancel()
         self.embedding = None
         self.graph.set_effective_matrix(None)
-        self.__set_update_loop(None)
-        self.__state = OWMDS.Waiting
 
     def _initialize(self):
         matrix_existed = self.effective_matrix is not None
         effective_matrix = self.effective_matrix
-        self.__invalidated = True
+        self._invalidated = True
         self.data = None
         self.effective_matrix = None
         self.closeContext()
@@ -269,8 +306,11 @@ class OWMDS(OWDataProjectionWidget):
 
         if self.matrix is not None:
             self.effective_matrix = self.matrix
-            if self.matrix.axis == 0 and self.data is self.matrix_data:
-                self.data = None
+            if self.matrix.axis == 0 and self.data is not None \
+                    and self.data is self.matrix_data:
+                names = [[attr.name] for attr in self.data.domain.attributes]
+                domain = Domain([], metas=[StringVariable("labels")])
+                self.data = Table(domain, names)
         elif self.data.domain.attributes:
             preprocessed_data = MDS().preprocess(self.data)
             self.effective_matrix = Euclidean(preprocessed_data)
@@ -282,165 +322,84 @@ class OWMDS(OWDataProjectionWidget):
 
         self.init_attr_values()
         self.openContext(self.data)
-        self.__invalidated = not (matrix_existed and
-                                  self.effective_matrix is not None and
-                                  np.array_equal(effective_matrix,
-                                                 self.effective_matrix))
-        if self.__invalidated:
+        self._invalidated = not (matrix_existed and
+                                 self.effective_matrix is not None and
+                                 array_equal(effective_matrix, self.effective_matrix))
+        if self._invalidated:
             self.clear()
         self.graph.set_effective_matrix(self.effective_matrix)
 
+    def init_attr_values(self):
+        super().init_attr_values()
+        if self.matrix is not None and self.matrix.axis == 0 and \
+                self.data is not None and len(self.data):
+            self.attr_label = self.data.domain["labels"]
+
     def _toggle_run(self):
-        if self.__state == OWMDS.Running:
-            self.stop()
-            self._invalidate_output()
+        if self.task is not None:
+            self.cancel()
+            self.run_button.setText("Resume")
+            self.commit()
         else:
-            self.start()
+            self._run()
 
-    def start(self):
-        if self.__state == OWMDS.Running:
+    def _run(self):
+        if self.effective_matrix is None:
             return
-        elif self.__state == OWMDS.Finished:
-            # Resume/continue from a previous run
-            self.__start()
-        elif self.__state == OWMDS.Waiting and \
-                self.effective_matrix is not None:
-            self.__start()
-
-    def stop(self):
-        if self.__state == OWMDS.Running:
-            self.__set_update_loop(None)
-
-    def __start(self):
         self.graph.pause_drawing_pairs()
-        X = self.effective_matrix
-        init = self.embedding
-
-        # number of iterations per single GUI update step
+        self.run_button.setText("Stop")
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
         if step_size == -1:
             step_size = self.max_iter
+        init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
+        self.start(run_mds, self.effective_matrix, self.max_iter,
+                   step_size, init_type, self.embedding)
 
-        def update_loop(X, max_iter, step, init):
-            """
-            return an iterator over successive improved MDS point embeddings.
-            """
-            # NOTE: this code MUST NOT call into QApplication.processEvents
-            done = False
-            iterations_done = 0
-            oldstress = np.finfo(np.float).max
-            init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
-
-            while not done:
-                step_iter = min(max_iter - iterations_done, step)
-                mds = MDS(
-                    dissimilarity="precomputed", n_components=2,
-                    n_init=1, max_iter=step_iter,
-                    init_type=init_type, init_data=init
-                )
-
-                with warnings.catch_warnings():
-                    warnings.filterwarnings(
-                        "ignore", ".*double_scalars.*", RuntimeWarning)
-                    mdsfit = mds(X)
-                iterations_done += step_iter
-
-                embedding, stress = mdsfit.embedding_, mdsfit.stress_
-                emb_norm = np.sqrt(np.sum(embedding ** 2, axis=1)).sum()
-                if emb_norm > 0:
-                    stress /= emb_norm
-
-                if iterations_done >= max_iter \
-                        or (oldstress - stress) < mds.params["eps"] \
-                        or stress == 0:
-                    done = True
-                init = embedding
-                oldstress = stress
-
-                yield embedding, mdsfit.stress_, iterations_done / max_iter
-
-        self.__set_update_loop(update_loop(X, self.max_iter, step_size, init))
-        self.progressBarInit(processEvents=None)
-
-    def __set_update_loop(self, loop):
-        """
-        Set the update `loop` coroutine.
-
-        The `loop` is a generator yielding `(embedding, stress, progress)`
-        tuples where `embedding` is a `(N, 2) ndarray` of current updated
-        MDS points, `stress` is the current stress and `progress` a float
-        ratio (0 <= progress <= 1)
-
-        If an existing update coroutine loop is already in place it is
-        interrupted (i.e. closed).
-
-        .. note::
-            The `loop` must not explicitly yield control flow to the event
-            loop (i.e. call `QApplication.processEvents`)
-
-        """
-        if self.__update_loop is not None:
-            self.__update_loop.close()
-            self.__update_loop = None
-            self.progressBarFinished(processEvents=None)
-
-        self.__update_loop = loop
-
-        if loop is not None:
-            self.setBlocking(True)
-            self.progressBarInit(processEvents=None)
-            self.setStatusMessage("Running")
-            self.runbutton.setText("Stop")
-            self.__state = OWMDS.Running
-            self.__timer.start()
+    # ConcurrentWidgetMixin
+    def on_partial_result(self, result: Result):
+        assert isinstance(result.embedding, np.ndarray)
+        assert len(result.embedding) == len(self.effective_matrix)
+        first_result = self.embedding is None
+        new_embedding = result.embedding
+        need_update = new_embedding is not self.embedding
+        self.embedding = new_embedding
+        if first_result:
+            self.setup_plot()
         else:
-            self.setBlocking(False)
-            self.setStatusMessage("")
-            self.runbutton.setText("Start")
-            self.__state = OWMDS.Finished
-            self.__timer.stop()
+            if need_update:
+                self.graph.update_coordinates()
+                self.graph.update_density()
 
-    def __next_step(self):
-        if self.__update_loop is None:
-            return
+    def on_done(self, result: Result):
+        assert isinstance(result.embedding, np.ndarray)
+        assert len(result.embedding) == len(self.effective_matrix)
+        self.embedding = result.embedding
+        self.graph.resume_drawing_pairs()
+        self.run_button.setText("Start")
+        self.commit()
 
-        assert not self.__in_next_step
-        self.__in_next_step = True
-
-        loop = self.__update_loop
-        self.Error.out_of_memory.clear()
-        try:
-            embedding, _, progress = next(self.__update_loop)
-            assert self.__update_loop is loop
-        except StopIteration:
-            self.__set_update_loop(None)
-            self.unconditional_commit()
-            self.graph.resume_drawing_pairs()
-        except MemoryError:
+    def on_exception(self, ex: Exception):
+        if isinstance(ex, MemoryError):
             self.Error.out_of_memory()
-            self.__set_update_loop(None)
-            self.graph.resume_drawing_pairs()
-        except Exception as exc:
-            self.Error.optimization_error(str(exc))
-            self.__set_update_loop(None)
-            self.graph.resume_drawing_pairs()
         else:
-            self.progressBarSet(100.0 * progress, processEvents=None)
-            self.embedding = embedding
-            self.graph.update_coordinates()
-            # schedule next update
-            self.__timer.start()
-
-        self.__in_next_step = False
+            self.Error.optimization_error(str(ex))
+        self.graph.resume_drawing_pairs()
+        self.run_button.setText("Start")
 
     def do_PCA(self):
-        self.__invalidate_embedding(self.PCA)
+        self.do_initialization(self.PCA)
 
     def do_random(self):
-        self.__invalidate_embedding(self.Random)
+        self.do_initialization(self.Random)
 
     def do_jitter(self):
-        self.__invalidate_embedding(self.Jitter)
+        self.do_initialization(self.Jitter)
+
+    def do_initialization(self, init_type: int):
+        self.run_button.setText("Start")
+        self.__invalidate_embedding(init_type)
+        self.setup_plot()
+        self.commit()
 
     def __invalidate_embedding(self, initialization=PCA):
         def jitter_coord(part):
@@ -449,10 +408,6 @@ class OWMDS(OWDataProjectionWidget):
 
         # reset/invalidate the MDS embedding, to the default initialization
         # (Random or PCA), restarting the optimization if necessary.
-        state = self.__state
-        if self.__update_loop is not None:
-            self.__set_update_loop(None)
-
         if self.effective_matrix is None:
             self.graph.reset_graph()
             return
@@ -467,38 +422,19 @@ class OWMDS(OWDataProjectionWidget):
             jitter_coord(self.embedding[:, 0])
             jitter_coord(self.embedding[:, 1])
 
-        self.setup_plot()
-
         # restart the optimization if it was interrupted.
-        if state == OWMDS.Running:
-            self.__start()
-
-    def __invalidate_refresh(self):
-        state = self.__state
-
-        if self.__update_loop is not None:
-            self.__set_update_loop(None)
-
-        # restart the optimization if it was interrupted.
-        # TODO: decrease the max iteration count by the already
-        # completed iterations count.
-        if state == OWMDS.Running:
-            self.__start()
+        if self.task is not None:
+            self._run()
 
     def handleNewSignals(self):
         self._initialize()
-        if self.__invalidated:
+        if self._invalidated:
             self.graph.pause_drawing_pairs()
-            self.__invalidated = False
             self.__invalidate_embedding()
-            self.cb_class_density.setEnabled(self.can_draw_density())
-            self.start()
-        else:
-            self.graph.update_point_props()
-        self.commit()
-
-    def _invalidate_output(self):
-        self.commit()
+            self.enable_controls()
+            if self.effective_matrix is not None:
+                self._run()
+        super().handleNewSignals()
 
     def _on_connected_changed(self):
         self.graph.set_effective_matrix(self.effective_matrix)
@@ -529,6 +465,10 @@ class OWMDS(OWDataProjectionWidget):
             variables = ContinuousVariable(x_name), ContinuousVariable(y_name)
             return Table(Domain(variables), self.embedding)
         return super()._get_projection_data()
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     @classmethod
     def migrate_settings(cls, settings_, version):
@@ -576,5 +516,5 @@ class OWMDS(OWDataProjectionWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("iris")
-    WidgetPreview(OWMDS).run(set_data=data, set_subset_data=data[:30])
+    table = Table("iris")
+    WidgetPreview(OWMDS).run(set_data=table, set_subset_data=table[:30])

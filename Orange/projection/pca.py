@@ -1,29 +1,19 @@
 import numbers
-
 import six
 import numpy as np
 import scipy.sparse as sp
 from scipy.linalg import lu, qr, svd
+
 from sklearn import decomposition as skl_decomposition
 from sklearn.utils import check_array, check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
-
-try:
-    from orangecontrib.remote import aborted, save_state
-except ImportError:
-    def aborted():
-        return False
-
-    def save_state(_):
-        pass
 
 import Orange.data
 from Orange.statistics import util as ut
 from Orange.data import Variable
 from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.preprocess import Continuize
 from Orange.preprocess.score import LearnerScorer
 from Orange.projection import SklProjector, DomainProjection
 
@@ -45,10 +35,13 @@ def randomized_pca(A, n_components, n_oversamples=10, n_iter="auto",
 
     n_samples, n_features = A.shape
 
-    c = np.atleast_2d(A.mean(axis=0))
+    c = np.atleast_2d(ut.nanmean(A, axis=0))
 
     if n_samples >= n_features:
         Q = random_state.normal(size=(n_features, n_components + n_oversamples))
+        if A.dtype.kind == "f":
+            Q = Q.astype(A.dtype, copy=False)
+
         Q = safe_sparse_dot(A, Q) - safe_sparse_dot(c, Q)
 
         # Normalized power iterations
@@ -66,6 +59,9 @@ def randomized_pca(A, n_components, n_oversamples=10, n_iter="auto",
 
     else:  # n_features > n_samples
         Q = random_state.normal(size=(n_samples, n_components + n_oversamples))
+        if A.dtype.kind == "f":
+            Q = Q.astype(A.dtype, copy=False)
+
         Q = safe_sparse_dot(A.T, Q) - safe_sparse_dot(c.T, Q.sum(axis=0)[None, :])
 
         # Normalized power iterations
@@ -158,19 +154,19 @@ class ImprovedPCA(skl_decomposition.PCA):
                 "n_components=%r cannot be a string with svd_solver='%s'" %
                 (n_components, svd_solver)
             )
-        elif not 1 <= n_components <= min(n_samples, n_features):
+        if not 1 <= n_components <= min(n_samples, n_features):
             raise ValueError(
                 "n_components=%r must be between 1 and min(n_samples, "
                 "n_features)=%r with svd_solver='%s'" % (
                     n_components, min(n_samples, n_features), svd_solver
                 )
             )
-        elif not isinstance(n_components, (numbers.Integral, np.integer)):
+        if not isinstance(n_components, (numbers.Integral, np.integer)):
             raise ValueError(
                 "n_components=%r must be of type int when greater than or "
                 "equal to 1, was of type=%r" % (n_components, type(n_components))
             )
-        elif svd_solver == "arpack" and n_components == min(n_samples, n_features):
+        if svd_solver == "arpack" and n_components == min(n_samples, n_features):
             raise ValueError(
                 "n_components=%r must be strictly less than min(n_samples, "
                 "n_features)=%r with svd_solver='%s'" % (
@@ -247,8 +243,10 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data):
         model = self(data)
-        return np.abs(model.components_[:self.component]) \
-            if self.component else np.abs(model.components_)
+        return (
+            np.abs(model.components_[:self.component]) if self.component
+            else np.abs(model.components_),
+            model.orig_domain.attributes)
 
 
 class PCA(SklProjector, _FeatureScorerMixin):
@@ -346,26 +344,3 @@ class TruncatedSVD(SklProjector, _FeatureScorerMixin):
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain, len(proj.components_))
-
-
-class RemotePCA:
-    def __new__(cls, data, batch=100, max_iter=100):
-        cont = Continuize(multinomial_treatment=Continuize.Remove)
-        data = cont(data)
-        model = Orange.projection.IncrementalPCA()
-        n = data.approx_len()
-        percent = batch / n * 100 if n else 100
-        for i in range(max_iter):
-            data_sample = data.sample_percentage(percent, no_cache=True)
-            if not data_sample:
-                continue
-            data_sample.download_data(1000000)
-            data_sample = Orange.data.Table.from_numpy(
-                Orange.data.Domain(data_sample.domain.attributes),
-                data_sample.X)
-            model = model.partial_fit(data_sample)
-            model.iteration = i
-            save_state(model)
-            if aborted() or data_sample is data:
-                break
-        return model

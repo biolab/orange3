@@ -458,7 +458,16 @@ class TestOWScatterPlotBase(WidgetTest):
     @patch("Orange.widgets.visualize.owscatterplotgraph"
            ".MAX_N_VALID_SIZE_ANIMATE", 5)
     def test_size_animation(self):
+        begin_resizing = QSignalSpy(self.graph.begin_resizing)
+        step_resizing = QSignalSpy(self.graph.step_resizing)
+        end_resizing = QSignalSpy(self.graph.end_resizing)
         self._update_sizes_for_points(5)
+        # first end_resizing is triggered in reset, thus wait for step_resizing
+        step_resizing.wait(200)
+        end_resizing.wait(200)
+        self.assertEqual(len(begin_resizing), 2)  # reset and update
+        self.assertEqual(len(step_resizing), 5)
+        self.assertEqual(len(end_resizing), 2)  # reset and update
         self.assertEqual(self.graph.scatterplot_item.setSize.call_count, 6)
         self._update_sizes_for_points(6)
         self.graph.scatterplot_item.setSize.assert_called_once()

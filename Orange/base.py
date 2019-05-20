@@ -90,7 +90,6 @@ class Learner(ReprableWithPreprocessors):
             self.preprocessors = tuple(preprocessors)
         elif preprocessors:
             self.preprocessors = (preprocessors,)
-        self.__tls = threading.local()
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -117,7 +116,6 @@ class Learner(ReprableWithPreprocessors):
             raise TypeError("%s doesn't support multiple class variables" %
                             self.__class__.__name__)
 
-        self.domain = data.domain
         model = self._fit_model(data)
         model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         model.domain = data.domain
@@ -173,31 +171,6 @@ class Learner(ReprableWithPreprocessors):
     def name(self, value):
         self.__name = value
 
-    # Learners implemented using `fit` access the `domain` through the
-    # instance attribute. This makes (or it would) make it impossible to
-    # be implemented in a thread-safe manner. So the domain is made a
-    # property descriptor utilizing thread local storage behind the scenes.
-    @property
-    def domain(self):
-        return self.__tls.domain
-
-    @domain.setter
-    def domain(self, domain):
-        self.__tls.domain = domain
-
-    @domain.deleter
-    def domain(self):
-        del self.__tls.domain
-
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        del state["_Learner__tls"]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.__tls = threading.local()
-
     def __str__(self):
         return self.name
 
@@ -209,12 +182,16 @@ class Model(Reprable):
     Probs = 1
     ValueProbs = 2
 
-    def __init__(self, domain=None):
+    def __init__(self, domain=None, original_domain=None):
         if isinstance(self, Learner):
             domain = None
         elif domain is None:
             raise ValueError("unspecified domain")
         self.domain = domain
+        if original_domain is not None:
+            self.original_domain = original_domain
+        else:
+            self.original_domain = domain
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:
@@ -234,19 +211,25 @@ class Model(Reprable):
                         .format(type(data).__name__))
 
     def __call__(self, data, ret=Value):
+        def fix_dim(x):
+            return x[0] if one_d else x
+
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
             raise ValueError("cannot predict continuous distributions")
 
         # Call the predictor
+        one_d = False
         if isinstance(data, np.ndarray):
+            one_d = data.ndim == 1
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
         elif isinstance(data, (Table, Instance)):
             if isinstance(data, Instance):
                 data = Table(data.domain, [data])
+                one_d = True
             if data.domain != self.domain:
                 if self.original_domain.attributes != data.domain.attributes \
                         and data.X.size \
@@ -260,7 +243,8 @@ class Model(Reprable):
         elif isinstance(data, (list, tuple)):
             if not isinstance(data[0], (list, tuple)):
                 data = [data]
-            data = Table(self.original_domain, data)
+                one_d = True
+            data = Table.from_list(self.original_domain, data)
             data = data.transform(self.domain)
             prediction = self.predict_storage(data)
         else:
@@ -292,19 +276,19 @@ class Model(Reprable):
             else:
                 probs = one_hot(value)
             if ret == Model.ValueProbs:
-                return value, probs
+                return fix_dim(value), fix_dim(probs)
             else:
-                return probs
+                return fix_dim(probs)
 
         # Return what we need to
         if ret == Model.Probs:
-            return probs
+            return fix_dim(probs)
         if isinstance(data, Instance) and not multitarget:
             value = Value(self.domain.class_var, value[0])
         if ret == Model.Value:
-            return value
+            return fix_dim(value)
         else:  # ret == Model.ValueProbs
-            return value, probs
+            return fix_dim(value), fix_dim(probs)
 
     def __getstate__(self):
         """Skip (possibly large) data when pickling models"""

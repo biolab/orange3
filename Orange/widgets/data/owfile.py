@@ -40,8 +40,9 @@ def add_origin(examples, filename):
     """
     if not filename:
         return
-    vars = examples.domain.variables + examples.domain.metas
-    strings = [var for var in vars if var.is_string]
+    strings = [var
+               for var in examples.domain.variables + examples.domain.metas
+               if var.is_string]
     dir_name, _ = os.path.split(filename)
     for var in strings:
         if "type" in var.attributes and "origin" not in var.attributes:
@@ -82,7 +83,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     keywords = ["file", "load", "read", "open"]
 
     class Outputs:
-        data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")
+        data = Output("Data", Table,
+                      doc="Attribute-valued dataset read from the input file.")
 
     want_main_area = False
 
@@ -105,6 +107,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         RecentPath("", "sample-datasets", "titanic.tab"),
         RecentPath("", "sample-datasets", "housing.tab"),
         RecentPath("", "sample-datasets", "heart_disease.tab"),
+        RecentPath("", "sample-datasets", "brown-selected.tab"),
+        RecentPath("", "sample-datasets", "zoo.tab"),
     ])
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
@@ -215,6 +219,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             callback=lambda: self.browse_file(True), autoDefault=False)
         gui.rubber(box)
 
+        gui.button(
+            box, self, "Reset", callback=self.reset_domain_edit)
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
         self.apply_button.setEnabled(False)
@@ -237,7 +243,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         QTimer.singleShot(0, self.load_data)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(600, 550)
 
     def select_file(self, n):
@@ -277,7 +284,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             start_file = self.last_path() or os.path.expanduser("~/")
 
         readers = [f for f in FileFormat.formats
-                   if getattr(f, 'read', None) and getattr(f, "EXTENSIONS", None)]
+                   if getattr(f, 'read', None)
+                   and getattr(f, "EXTENSIONS", None)]
         filename, reader, _ = open_filename_dialog(start_file, None, readers)
         if not filename:
             return
@@ -344,13 +352,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         self.apply_domain_edit()  # sends data
         return None
 
-    def _get_reader(self):
-        """
-
-        Returns
-        -------
-        FileFormat
-        """
+    def _get_reader(self) -> FileFormat:
         if self.source == self.LOCAL_FILE:
             path = self.last_path()
             if path is None:
@@ -393,7 +395,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         else:
             self.sheet_combo.setCurrentIndex(0)
 
-    def _describe(self, table):
+    @staticmethod
+    def _describe(table):
+        def missing_prop(prop):
+            if prop:
+                return f"({prop * 100:.1f}% missing values)"
+            else:
+                return "(no missing values)"
+
         domain = table.domain
         text = ""
 
@@ -401,36 +410,35 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         descs = [attrs[desc]
                  for desc in ("Name", "Description") if desc in attrs]
         if len(descs) == 2:
-            descs[0] = "<b>{}</b>".format(descs[0])
+            descs[0] = f"<b>{descs[0]}</b>"
         if descs:
-            text += "<p>{}</p>".format("<br/>".join(descs))
-        # Instances
-        text += "<p>{} instance(s)".format(len(table))
-        # Attributes
-        missing_attr = "({:.1f}% missing values)".format(table.get_nan_frequency_attribute() * 100) \
-            if table.has_missing_attribute() else "(no missing values)"
-        text += "<br/>{} feature(s) {}".format(len(domain.attributes), missing_attr)
-        # Classes
-        missing_class = "({:.1f}% missing values)".format(table.get_nan_frequency_class() * 100) \
-            if table.has_missing_class() else "(no missing values)"
+            text += f"<p>{'<br/>'.join(descs)}</p>"
+
+        text += f"<p>{len(table)} instance(s)"
+
+        missing_in_attr = missing_prop(table.has_missing_attribute()
+                                       and table.get_nan_frequency_attribute())
+        missing_in_class = missing_prop(table.has_missing_class()
+                                        and table.get_nan_frequency_class())
+        text += f"<br/>{len(domain.attributes)} feature(s) {missing_in_attr}"
         if domain.has_continuous_class:
-            text += "<br/>Regression; numerical class {}".format(missing_class)
+            text += f"<br/>Regression; numerical class {missing_in_class}"
         elif domain.has_discrete_class:
-            text += "<br/>Classification; categorical class with {} values {}".format(
-                len(domain.class_var.values), missing_class)
+            text += "<br/>Classification; categorical class " \
+                f"with {len(domain.class_var.values)} values {missing_in_class}"
         elif table.domain.class_vars:
-            text += "<br/>Multi-target; {} target variables {}".format(
-                len(table.domain.class_vars), missing_class)
+            text += "<br/>Multi-target; " \
+                f"{len(table.domain.class_vars)} target variables " \
+                f"{missing_in_class}"
         else:
             text += "<br/>Data has no target variable."
-        # Metas
-        text += "<br/>{} meta attribute(s)".format(len(domain.metas))
+        text += f"<br/>{len(domain.metas)} meta attribute(s)"
         text += "</p>"
 
         if 'Timestamp' in table.domain:
             # Google Forms uses this header to timestamp responses
-            text += '<p>First entry: {}<br/>Last entry: {}</p>'.format(
-                table[0, 'Timestamp'], table[-1, 'Timestamp'])
+            text += f"<p>First entry: {table[0, 'Timestamp']}<br/>" \
+                f"Last entry: {table[-1, 'Timestamp']}</p>"
         return text
 
     def storeSpecificSettings(self):
@@ -439,6 +447,10 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     def retrieveSpecificSettings(self):
         if hasattr(self.current_context, "modified_variables"):
             self.variables[:] = self.current_context.modified_variables
+
+    def reset_domain_edit(self):
+        self.domain_editor.reset_domain()
+        self.apply_domain_edit()
 
     def apply_domain_edit(self):
         if self.data is None:
@@ -481,7 +493,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             else:
                 name = self.loaded_file
             if self.sheet_combo.isVisible():
-                name += " ({})".format(self.sheet_combo.currentText())
+                name += f" ({self.sheet_combo.currentText()})"
             self.report_items("File", [("File name", name),
                                        ("Format", get_ext_name(name))])
         else:
@@ -490,7 +502,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.report_data("Data", self.data)
 
-    def dragEnterEvent(self, event):
+    @staticmethod
+    def dragEnterEvent(event):
         """Accept drops of valid file urls"""
         urls = event.mimeData().urls()
         if urls:

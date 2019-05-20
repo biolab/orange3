@@ -22,7 +22,7 @@ class _FeatureScorerMixin(LearnerScorer):
     def score(self, data):
         data = Normalize()(data)
         model = self(data)
-        return np.abs(model.coefficients)
+        return np.abs(model.coefficients), model.domain.attributes
 
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
@@ -31,7 +31,7 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     def __init__(self, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
         return LinearModel(model.skl_model)
 
@@ -114,7 +114,7 @@ class PolynomialLearner(Learner):
         self.degree = degree
         self.learner = learner
 
-    def fit(self, X, Y, W):
+    def fit(self, X, Y, W=None):
         polyfeatures = skl_preprocessing.PolynomialFeatures(self.degree)
         X = polyfeatures.fit_transform(X)
         clf = self.learner

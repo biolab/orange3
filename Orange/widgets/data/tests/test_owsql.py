@@ -7,17 +7,20 @@ from unittest import mock
 from Orange.data import Table
 from Orange.widgets.data.owsql import OWSql
 from Orange.widgets.tests.base import WidgetTest
-from Orange.tests.sql.base import create_iris, parse_uri, sql_test
+from Orange.tests.sql.base import DataBaseTest as dbt
 
 
-@sql_test
-class TestOWSqlConnected(WidgetTest):
-    def setUp(self):
+class TestOWSqlConnected(WidgetTest, dbt):
+    def setUpDB(self):
+        # pylint: disable=attribute-defined-outside-init
         self.widget = self.create_widget(OWSql)
-        params, _ = create_iris()
-        self.params = parse_uri(params)
+        self.params, _ = self.create_iris_sql_table()
         self.iris = Table("iris")
 
+    def tearDownDB(self):
+        self.drop_iris_sql_table()
+
+    @dbt.run_on(["postgres"])
     def test_connection(self):
         """Test if a connection to the database can be established"""
         self.set_connection_params()
@@ -28,6 +31,7 @@ class TestOWSqlConnected(WidgetTest):
         tables = ["Select a table", "Custom SQL"]
         self.assertTrue(set(self.widget.tables).issuperset(set(tables)))
 
+    @dbt.run_on(["postgres"])
     def test_output_iris(self):
         """Test if iris data can be fetched from database"""
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
@@ -87,6 +91,28 @@ class TestOWSql(WidgetTest):
 
         self.assertTrue(widget.download)
         self.assertFalse(widget.downloadcb.isEnabled())
+
+    @mock.patch('Orange.widgets.data.owsql.Table')
+    @mock.patch('Orange.widgets.data.owsql.SqlTable')
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_restore_table(self, mock_backends, mock_sqltable, mock_table):
+        """Test if selected table is restored from settings"""
+        backend = mock.Mock()
+        backend().display_name = "database"
+        del backend().missing_extension
+        backend().list_tables.return_value = ["a", "b", "c"]
+        mock_backends.available_backends.return_value = [backend]
+        mock_sqltable().approx_len.return_value = 100
+
+        settings = {'__version__': 2,
+                    'host': '',
+                    'port': '',
+                    'guess_values': False,
+                    'download': False,
+                    'table': 'b'}
+
+        widget = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.tablecombo.currentText(), "b")
 
 
 if __name__ == "__main__":

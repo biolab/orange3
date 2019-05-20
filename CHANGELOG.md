@@ -6,6 +6,62 @@ Change Log
 * ...
 
 
+[3.21.0] - 2019-05-20
+---------------------
+##### Enhancements
+* Error Animations ([#3788](../../pull/3788))
+* OWTSNE: Offload computation to separate thread ([#3604](../../pull/3604))
+* OWDistributions: add cumulative distribution ([#3766](../../pull/3766))
+* Edit Domain: Merge categorical values ([#3725](../../pull/3725))
+* Transform: Values of primitive variables as feature names ([#3721](../../pull/3721))
+* k-Means: Output centroid labels ([#3695](../../pull/3695))
+* Support sparse Jaccard ([#3657](../../pull/3657))
+* Offload work to a separate thread ([#3627](../../pull/3627))
+* Correlations: Enhancements and fixes ([#3660](../../pull/3660))
+* DomainEditor: Indicate changed variables with bold face font ([#3576](../../pull/3576))
+* OWPythonScript: dropping and pasting of python scripts ([#3611](../../pull/3611))
+* Improve Save widget's gui ([#3545](../../pull/3545))
+* Table.from_numpy: Replace infs with nans. ([#3624](../../pull/3624))
+* FDR: Calculate FDR using numpy ([#3625](../../pull/3625))
+* Correlations: fixes and enhancements ([#3591](../../pull/3591))
+* Preprocess: implement Select Relevant Feature's percentile ([#3588](../../pull/3588))
+* Added keyboard shortcuts for Align & Freeze/Unfreeze  ([#3601](../../pull/3601))
+* PCA: Remove SVD & add normalization for sparse ([#3581](../../pull/3581))
+* OwLouvain: Add normalize data checkbox to PCA preprocessing ([#3573](../../pull/3573))
+* Use %g (including sci notation) if number of decimals is not set ([#3574](../../pull/3574))
+* PCA: Preserve f32s & reduce memory footprint when computing means ([#3582](../../pull/3582))
+
+##### Bugfixes
+* OWLinePlot: legible bottom axis labels ([#3768](../../pull/3768))
+* OWPythagorasTree: Enable node selection from forests with categorical variables. ([#3775](../../pull/3775))
+* canvas/help: Fix a NameError in exception handler ([#3759](../../pull/3759))
+* ProjectionWidgetTestMixin: Fix test_plot_once ([#3738](../../pull/3738))
+* LinearProjectionVizRank: Add a necessary check ([#3732](../../pull/3732))
+* stats: Fix statistics for primitive variables ([#3722](../../pull/3722))
+* SQL Table: Restore selected table from settings ([#3703](../../pull/3703))
+* OWAnchorProjectionWidget: Retain valid_data when reloading dataset ([#3718](../../pull/3718))
+* Compatibility with Logitech's Smart Move ([#3702](../../pull/3702))
+* OWTable: Don't set selection when there is no data on input ([#3693](../../pull/3693))
+* Save Data: Remove extra file extensions ([#3700](../../pull/3700))
+* owheatmap: Fix group label size policy ([#3688](../../pull/3688))
+* Test & Score: hide warnings for hidden scores. ([#3676](../../pull/3676))
+* VizRankDialog: Use extended thread pool to prevent segfaults ([#3669](../../pull/3669))
+* Send usage statistics in a thread at startup ([#3632](../../pull/3632))
+* Transform: Replace 'Preprocess' input with 'Template Data' input ([#3673](../../pull/3673))
+* OWTable: Include attributes from meta attributes in header row labels ([#3633](../../pull/3633))
+* OWSieve: Fix operators in tooltips ([#3602](../../pull/3602))
+* MDS: Handle subset data ([#3620](../../pull/3620))
+* migrate_context: widgets crash when migrating context without version ([#3603](../../pull/3603))
+* Louvain clustering fails when Table or ndarray on input. ([#3618](../../pull/3618))
+* Orange: add more informatino on missing compiled libraries ([#3614](../../pull/3614))
+* LinearProjection: Disable LDA for less than three classes ([#3615](../../pull/3615))
+* Orange restart dialogs: Improve wording ([#3605](../../pull/3605))
+* OWDistances: Use only binary features for Jaccard distance ([#3569](../../pull/3569))
+* ScatterplotGraph: Use mapToView instead of mapRectFromParent ([#3571](../../pull/3571))
+* MDS: Fix crashes when feeding column distances ([#3583](../../pull/3583))
+* Naive Bayes: Ignore existing classes in Laplacian smoothing ([#3575](../../pull/3575))
+
+
 [3.20.1] - 2019-02-12
 --------------------
 ##### Enhancements
@@ -1039,7 +1095,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.20.1...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.21.0...HEAD
+[3.21.0]: https://github.com/biolab/orange3/compare/3.20.1...3.21.0
 [3.20.1]: https://github.com/biolab/orange3/compare/3.20.0...3.20.1
 [3.20.0]: https://github.com/biolab/orange3/compare/3.19.0...3.20.0
 [3.19.0]: https://github.com/biolab/orange3/compare/3.18.0...3.19.0

@@ -1,7 +1,7 @@
 import unittest
 
 from Orange.data import Domain, ContinuousVariable
-from Orange.data.util import get_unique_names
+from Orange.data.util import get_unique_names, get_unique_names_duplicates
 
 
 class TestGetUniqueNames(unittest.TestCase):
@@ -45,6 +45,14 @@ class TestGetUniqueNames(unittest.TestCase):
         self.assertEqual(get_unique_names(domain, "qux"), "qux")
         self.assertEqual(get_unique_names(domain, "foo"), "foo (1)")
         self.assertEqual(get_unique_names(domain, "baz"), "baz (4)")
+
+    def test_get_unique_names_from_duplicates(self):
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz"]),
+            ["foo", "bar", "baz"])
+        self.assertEqual(
+            get_unique_names_duplicates(["foo", "bar", "baz", "bar"]),
+            ["foo", "bar (1)", "baz", "bar (2)"])
 
 
 if __name__ == "__main__":

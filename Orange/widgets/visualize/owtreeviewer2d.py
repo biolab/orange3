@@ -358,7 +358,7 @@ class TreeNavigator(QGraphicsView):
             self.master_view.mapToScene(self.master_view.viewport().rect()))
 
 
-class OWTreeViewer2D(OWWidget):
+class OWTreeViewer2D(OWWidget, openclass=True):
     zoom = Setting(5)
     line_width_method = Setting(2)
     max_tree_depth = Setting(0)

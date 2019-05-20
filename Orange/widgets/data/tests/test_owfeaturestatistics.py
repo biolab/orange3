@@ -1,9 +1,8 @@
 import datetime
-import warnings
 from collections import namedtuple
-from functools import wraps, partial
+from functools import partial
 from itertools import chain
-from typing import Callable, List
+from typing import List
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
@@ -12,7 +11,7 @@ from AnyQt.QtCore import QItemSelection, QItemSelectionRange, \
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
 from Orange.widgets.tests.base import WidgetTest, datasets
-from Orange.widgets.tests.utils import simulate
+from Orange.widgets.tests.utils import simulate, table_dense_sparse
 from Orange.widgets.data.owfeaturestatistics import \
     OWFeatureStatistics
 
@@ -175,26 +174,11 @@ def make_table(attributes, target=None, metas=None):
     )
 
 
-def table_dense_sparse(test_case):
-    # type: (Callable) -> Callable
-    """Run a single test case on both dense and sparse Orange tables."""
-
-    @wraps(test_case)
-    def _wrapper(self):
-        test_case(self, lambda table: table.to_dense())
-        test_case(self, lambda table: table.to_sparse())
-
-    return _wrapper
-
-
 class TestVariousDataSets(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
         )
-        # scipy.sparse uses matrix; this filter can be removed when it stops
-        warnings.filterwarnings(
-            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
 
     def force_render_table(self):
         """Some fields e.g. histograms are only initialized when they actually

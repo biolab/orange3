@@ -17,8 +17,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QRect, QMargins, QByteArray, QDataStream, QBuffer,
-    QSettings, QUrl, QThread, pyqtSignal as Signal
-)
+    QSettings, QUrl, QThread, pyqtSignal as Signal, QSize)
 from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
 from Orange.data import FileFormat
@@ -29,7 +28,7 @@ from Orange.canvas.registry import description as widget_description
 # pylint: disable=unused-import
 from Orange.canvas.registry import WidgetDescription, OutputSignal, InputSignal
 from Orange.widgets.report import Report
-from Orange.widgets.gui import OWComponent
+from Orange.widgets.gui import OWComponent, VerticalScrollArea
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
@@ -65,8 +64,8 @@ class WidgetMetaClass(type(QDialog)):
 
     #noinspection PyMethodParameters
     # pylint: disable=bad-classmethod-argument
-    def __new__(mcs, name, bases, kwargs):
-        cls = super().__new__(mcs, name, bases, kwargs)
+    def __new__(mcs, name, bases, namespace, openclass=False, **kwargs):
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
         if not cls.name: # not a widget
             return cls
         cls.convert_signals()
@@ -74,11 +73,20 @@ class WidgetMetaClass(type(QDialog)):
             SettingsHandler.create(cls, template=cls.settingsHandler)
         return cls
 
+    @classmethod
+    # pylint: disable=bad-classmethod-argument
+    def __prepare__(mcs, name, bases, metaclass=None, openclass=False,
+                    **kwargs):
+        namespace = super().__prepare__(mcs, name, bases, metaclass, **kwargs)
+        if not openclass:
+            namespace["_final_class"] = True
+        return namespace
+
 
 # pylint: disable=too-many-instance-attributes
 class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
                WidgetMessagesMixin, WidgetSignalsMixin,
-               metaclass=WidgetMetaClass):
+               metaclass=WidgetMetaClass, openclass=True):
     """Base widget class"""
 
     # Global widget count
@@ -125,6 +133,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     want_main_area = True
     #: Should the widget construct a `controlArea`.
     want_control_area = True
+    #: Is vertical scrolling on the widget's left side, which usually
+    #: contains  the `controlArea`, allowed?
+    left_side_scrolling = False
     #: Orientation of the buttonsArea box; valid only if
     #: `want_control_area` is `True`. Possible values are Qt.Horizontal,
     #: Qt.Vertical and None for no buttons area
@@ -136,7 +147,9 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     want_message_bar = True
     #: Widget painted by `Save graph` button
     graph_name = None
-    graph_writers = FileFormat.img_writers
+    graph_writers = [f for f in FileFormat.formats
+                     if getattr(f, 'write_image', None)
+                     and getattr(f, "EXTENSIONS", None)]
 
     save_position = True
 
@@ -177,6 +190,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     #: :type: list of :class:`Message`
     UserAdviceMessages = []
 
+    settingsAboutToBePacked = Signal()
     contextAboutToBeOpened = Signal(object)
     contextOpened = Signal()
     contextClosed = Signal()
@@ -262,10 +276,20 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
     def __init__(self, *args, **kwargs):
         """__init__s are called in __new__; don't call them from here"""
 
+    def __init_subclass__(cls, **_):
+        for base in cls.__bases__:
+            if hasattr(base, "_final_class"):
+                warnings.warn(
+                    "subclassing of widget classes is deprecated and will be "
+                    "disabled in the future.\n"
+                    f"Extract code from {base.__name__} or explicitly open it.",
+                    RuntimeWarning)
+                # raise TypeError(f"class {base.__name__} cannot be subclassed")
+
     @classmethod
     def get_widget_description(cls):
         if not cls.name:
-            return
+            return None
         properties = {name: getattr(cls, name) for name in
                       ("name", "icon", "description", "priority", "keywords",
                        "help", "help_ref", "url",
@@ -273,8 +297,7 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         properties["id"] = cls.id or cls.__module__
         properties["inputs"] = cls.get_signals("inputs")
         properties["outputs"] = cls.get_signals("outputs")
-        properties["qualified_name"] = \
-            "{}.{}".format(cls.__module__, cls.__name__)
+        properties["qualified_name"] = f"{cls.__module__}.{cls.__name__}"
         return properties
 
     @classmethod
@@ -327,8 +350,33 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         self.__splitter = self._Splitter(Qt.Horizontal, self)
         self.layout().addWidget(self.__splitter)
 
+    class _HiddenVerticalScrollArea(VerticalScrollArea):
+
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.setFrameShape(QFrame.NoFrame)
+
+        def sizeHint(self):
+            if self.widget():
+                return self.widget().sizeHint()
+            else:
+                return super().sizeHint()
+
+        def minimumSizeHint(self):
+            if self.widget():
+                min_height = min(self.widget().minimumSizeHint().height(), 300)
+                return QSize(self.widget().minimumSizeHint().width(), min_height)
+            else:
+                return super().minimumSizeHint()
+
     def _insert_control_area(self):
-        self.left_side = gui.vBox(self.__splitter, spacing=0)
+        if self.left_side_scrolling:
+            scroll_area = self._HiddenVerticalScrollArea(self)
+            self.__splitter.addWidget(scroll_area)
+            self.left_side = gui.vBox(scroll_area, spacing=0)
+            scroll_area.setWidget(self.left_side)
+        else:
+            self.left_side = gui.vBox(self.__splitter, spacing=0)
         self.__splitter.setSizes([1])  # Smallest size allowed by policy
         if self.buttons_area_orientation is not None:
             self.controlArea = gui.vBox(self.left_side, addSpace=0)
@@ -777,6 +825,11 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
             self.__updateSavedGeometry()
         QDialog.closeEvent(self, event)
 
+    def mousePressEvent(self, event):
+        """ Flash message bar icon on mouse press """
+        self.message_bar.flashIcon()
+        event.ignore()
+
     def setVisible(self, visible):
         # type: (bool) -> None
         """Reimplemented from `QDialog.setVisible`."""
@@ -869,7 +922,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
         example.
         """
-        pass
 
     def storeSpecificSettings(self):
         """
@@ -881,7 +933,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         attributes. See :obj:`Orange.widgets.data.owcolor.OWColor` for an
         example.
         """
-        pass
 
     def saveSettings(self):
         """
@@ -898,7 +949,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         If possible, subclasses should gracefully cancel any currently
         executing tasks.
         """
-        pass
 
     def handleNewSignals(self):
         """
@@ -908,7 +958,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         Reimplement this method in order to coalesce updates from
         multiple updated inputs.
         """
-        pass
 
     #: Widget's status message has changed.
     statusMessageChanged = Signal(str)
@@ -999,7 +1048,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
 
         The default implementation does nothing.
         """
-        pass
 
     def saveGeometryAndLayoutState(self):
         # type: () -> QByteArray
@@ -1198,7 +1246,7 @@ class _StatusBar(QStatusBar):
         painter.end()
 
 
-class Message(object):
+class Message:
     """
     A user message.
 

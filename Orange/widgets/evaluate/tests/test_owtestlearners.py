@@ -22,6 +22,7 @@ from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
+from Orange.tests import test_filename
 
 
 class TestOWTestLearners(WidgetTest):
@@ -431,15 +432,17 @@ class TestOWTestLearners(WidgetTest):
         """
         Test more than two classes and cross-validation
         """
-        self.assertTupleEqual(self._test_scores(
-            Table("iris")[::15], None, LogisticRegressionLearner(),
-            OWTestLearners.KFold, 0),
-                              (0.917, 0.7, 0.6, 0.55, 0.7))
+        self.assertTrue(
+            all(x >= y for x, y in zip(
+                self._test_scores(
+                    Table("iris")[::15], None, LogisticRegressionLearner(),
+                    OWTestLearners.KFold, 0),
+                (0.8, 0.5, 0.5, 0.5, 0.5))))
 
 
 class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
-        data = Table("lenses")
+        data = Table(test_filename("datasets/lenses.tab"))
         learners = [MajorityLearner()]
         res = TestOnTestData(data[1::2], data[::2], learners=learners)
         r1 = results_one_vs_rest(res, pos_index=0)

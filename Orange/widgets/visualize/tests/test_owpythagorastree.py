@@ -4,11 +4,14 @@ import unittest
 
 from os import path
 
+from Orange.classification.random_forest import RandomForestLearner
 from Orange.data import Table
 from Orange.modelling import TreeLearner
+from Orange.regression.random_forest import RandomForestRegressionLearner
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.visualize.owpythagorastree import OWPythagorasTree
+from Orange.widgets.visualize.owpythagoreanforest import OWPythagoreanForest
 from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTree,
     Point,
@@ -359,3 +362,24 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         # Check that individual squares all have the same color
         colors_same = [self._check_all_same(x) for x in zip(*colors)]
         self.assertTrue(all(colors_same))
+
+    def test_forest_tree_table(self):
+        titanic_data = Table('titanic')[::50]
+        titanic = RandomForestLearner(n_estimators=3)(titanic_data)
+        titanic.instances = titanic_data
+
+        housing_data = Table('housing')[:10]
+        housing = RandomForestRegressionLearner(n_estimators=3)(housing_data)
+        housing.instances = housing_data
+
+        forest_w = self.create_widget(OWPythagoreanForest)
+        for data in (housing, titanic):
+            self.send_signal(forest_w.Inputs.random_forest, data, widget=forest_w)
+            tree = forest_w.forest_model[0].model
+
+            tree_w = self.widget
+            self.send_signal(tree_w.Inputs.tree, tree, widget=tree_w)
+            square = [i for i in tree_w.scene.items() if isinstance(i, SquareGraphicsItem)][-1]
+            square.setSelected(True)
+            tab = self.get_output(tree_w.Outputs.selected_data, widget=tree_w)
+            self.assertGreater(len(tab), 0)

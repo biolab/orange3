@@ -1,4 +1,4 @@
-from Orange.data import Table, StringVariable
+from Orange.data import Table, ContinuousVariable, StringVariable
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -21,7 +21,7 @@ class OWTranspose(OWWidget):
     class Outputs:
         data = Output("Data", Table, dynamic=False)
 
-    GENERIC, FROM_META_ATTR = range(2)
+    GENERIC, FROM_VAR = range(2)
 
     resizing_enabled = False
     want_main_area = False
@@ -34,6 +34,11 @@ class OWTranspose(OWWidget):
     feature_names_column = ContextSetting(None)
     auto_apply = Setting(True)
 
+    class Warning(OWWidget.Warning):
+        duplicate_names = Msg("Values are not unique.\nTo avoid multiple "
+                              "features with the same name, values \nof "
+                              "'{}' have been augmented with indices.")
+
     class Error(OWWidget.Error):
         value_error = Msg("{}")
 
@@ -41,6 +46,7 @@ class OWTranspose(OWWidget):
         super().__init__()
         self.data = None
 
+        # self.apply is changed later, pylint: disable=unnecessary-lambda
         box = gui.radioButtons(
             self.controlArea, self, "feature_type", box="Feature names",
             callback=lambda: self.apply())
@@ -52,10 +58,10 @@ class OWTranspose(OWWidget):
             placeholderText="Type a prefix ...", toolTip="Custom feature name")
         edit.editingFinished.connect(self._apply_editing)
 
-        self.meta_button = gui.appendRadioButton(box, "From meta attribute:")
+        self.meta_button = gui.appendRadioButton(box, "From variable:")
         self.feature_model = DomainModel(
-            order=DomainModel.METAS, valid_types=StringVariable,
-            alphabetical=True)
+            valid_types=(ContinuousVariable, StringVariable),
+            alphabetical=False)
         self.feature_combo = gui.comboBox(
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
             "feature_names_column", contentsLength=12,
@@ -74,7 +80,7 @@ class OWTranspose(OWWidget):
         self.apply()
 
     def _feature_combo_changed(self):
-        self.feature_type = self.FROM_META_ATTR
+        self.feature_type = self.FROM_VAR
         self.apply()
 
     @Inputs.data
@@ -94,7 +100,7 @@ class OWTranspose(OWWidget):
         self.meta_button.setEnabled(bool(self.feature_model))
         if self.feature_model:
             self.feature_names_column = self.feature_model[0]
-            self.feature_type = self.FROM_META_ATTR
+            self.feature_type = self.FROM_VAR
         else:
             self.feature_names_column = None
 
@@ -103,10 +109,15 @@ class OWTranspose(OWWidget):
         transposed = None
         if self.data:
             try:
+                variable = self.feature_type == self.FROM_VAR and \
+                           self.feature_names_column
                 transposed = Table.transpose(
-                    self.data,
-                    self.feature_type == self.FROM_META_ATTR and self.feature_names_column,
+                    self.data, variable,
                     feature_name=self.feature_name or self.DEFAULT_PREFIX)
+                if variable:
+                    names = self.data.get_column_view(variable)[0]
+                    if len(names) != len(set(names)):
+                        self.Warning.duplicate_names(variable)
             except ValueError as e:
                 self.Error.value_error(e)
         self.Outputs.data.send(transposed)
@@ -115,7 +126,7 @@ class OWTranspose(OWWidget):
         if self.feature_type == self.GENERIC:
             names = self.feature_name or self.DEFAULT_PREFIX
         else:
-            names = "from meta attribute"
+            names = "from variable"
             if self.feature_names_column:
                 names += "  '{}'".format(self.feature_names_column.name)
         self.report_items("", [("Feature names", names)])
@@ -124,4 +135,4 @@ class OWTranspose(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWTranspose).run(Table("zoo"))
+    WidgetPreview(OWTranspose).run(Table("iris"))

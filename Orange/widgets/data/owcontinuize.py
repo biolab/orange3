@@ -44,7 +44,7 @@ class OWContinuize(widget.OWWidget):
     autosend = Setting(True)
 
     multinomial_treats = (
-        ("Target or first value as base", Continuize.FirstAsBase),
+        ("First value as base", Continuize.FirstAsBase),
         ("Most frequent value as base", Continuize.FrequentAsBase),
         ("One attribute per value", Continuize.Indicators),
         ("Ignore multinomial attributes", Continuize.RemoveMultinomial),
@@ -129,7 +129,7 @@ class OWContinuize(widget.OWWidget):
 
     def commit(self):
         continuizer = self.constructContinuizer()
-        if self.data is not None and len(self.data):
+        if self.data:
             domain = continuizer(self.data)
             data = self.data.transform(domain)
             self.Outputs.data.send(data)
@@ -186,11 +186,8 @@ def make_indicator_var(source, value_ind, weight=None, zero_based=True):
     )
 
 
-def dummy_coding(var, base_value=-1, zero_based=True):
+def dummy_coding(var, base_value=0, zero_based=True):
     N = len(var.values)
-    if base_value == -1:
-        base_value = var.base_value if var.base_value >= 0 else 0
-    assert 0 <= base_value < len(var.values)
     return [make_indicator_var(var, i, zero_based=zero_based)
             for i in range(N) if i != base_value]
 
@@ -262,7 +259,7 @@ def continuize_var(var,
                    continuous_treatment=Continuize.Leave,
                    zero_based=True):
 
-    if var.is_continuous:
+    def continuize_continuous():
         if continuous_treatment == Normalize.NormalizeBySpan:
             return [normalize_by_span(var, data_or_dist, zero_based)]
         elif continuous_treatment == Normalize.NormalizeBySD:
@@ -270,7 +267,7 @@ def continuize_var(var,
         else:
             return [var]
 
-    elif var.is_discrete:
+    def continuize_discrete():
         if len(var.values) > 2 and \
                 multinomial_treatment == Continuize.ReportError:
             raise ValueError("{0.name} is a multinomial variable".format(var))
@@ -285,8 +282,8 @@ def continuize_var(var,
             return [ordinal_to_norm_continuous(var, zero_based)]
         elif multinomial_treatment == Continuize.Indicators:
             return one_hot_coding(var, zero_based)
-        elif multinomial_treatment == Continuize.FirstAsBase or \
-                multinomial_treatment == Continuize.RemoveMultinomial:
+        elif multinomial_treatment in (
+                Continuize.FirstAsBase, Continuize.RemoveMultinomial):
             return dummy_coding(var, zero_based=zero_based)
         elif multinomial_treatment == Continuize.FrequentAsBase:
             dist = _ensure_dist(var, data_or_dist)
@@ -294,8 +291,13 @@ def continuize_var(var,
             return dummy_coding(var, base_value=modus, zero_based=zero_based)
         elif multinomial_treatment == Continuize.Leave:
             return [var]
-        else:
-            raise NotImplementedError  # ValueError??
+        raise ValueError("Invalid value of `multinomial_treatment`")
+
+    if var.is_continuous:
+        return continuize_continuous()
+    elif var.is_discrete:
+        return continuize_discrete()
+    raise TypeError("Non-primitive variables cannot be continuized")
 
 
 def _ensure_dist(var, data_or_dist):

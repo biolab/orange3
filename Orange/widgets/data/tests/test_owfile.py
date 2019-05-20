@@ -47,7 +47,8 @@ class WithWarnings(FileFormat):
     EXTENSIONS = ('.with_warning',)
     DESCRIPTION = "Warning"
 
-    def read(self):
+    @staticmethod
+    def read():
         warnings.warn("Some warning")
         return Orange.data.Table("iris")
 
@@ -57,7 +58,8 @@ class MyCustomTabReader(FileFormat):
     DESCRIPTION = "Always return iris"
     PRIORITY = 999999
 
-    def read(self):
+    @staticmethod
+    def read():
         return Orange.data.Table("iris")
 
 
@@ -294,7 +296,7 @@ a
     def test_read_format(self):
         iris = Table("iris")
 
-        def open_iris_with_no_spec_format(a, b, c, filters, e):
+        def open_iris_with_no_spec_format(_a, _b, _c, filters, _e):
             return iris.__file__, filters.split(";;")[0]
 
         with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
@@ -303,7 +305,7 @@ a
 
         self.assertIsNone(self.widget.recent_paths[0].file_format)
 
-        def open_iris_with_tab(a, b, c, filters, e):
+        def open_iris_with_tab(*_):
             return iris.__file__, format_filter(TabReader)
 
         with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
@@ -359,7 +361,7 @@ a
         # test adding file formats after registering the widget
         called = False
         with named_file("", suffix=".tab") as filename:
-            def test_format(sd, sf, ff, **kwargs):
+            def test_format(_sd, _sf, ff, **_):
                 nonlocal called
                 called = True
                 self.assertIn(FailedSheetsFormat, ff)
@@ -519,9 +521,10 @@ a
         """
         window = CanvasMainWindow()
         scheme = Scheme(title="A Scheme", description="A String\n")
+        # pylint: disable=attribute-defined-outside-init
         self.runtime_called = False
 
-        def set_runtime_env(*args):
+        def set_runtime_env(*_):
             self.runtime_called = True
 
         scheme.set_runtime_env = set_runtime_env

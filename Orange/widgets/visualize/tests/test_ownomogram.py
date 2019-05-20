@@ -10,6 +10,7 @@ from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
     NaiveBayesLearner, LogisticRegressionLearner, MajorityLearner
 )
+from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.visualize.ownomogram import (
     OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
@@ -25,7 +26,7 @@ class TestOWNomogram(WidgetTest):
         cls.nb_cls = NaiveBayesLearner()(cls.data)
         cls.lr_cls = LogisticRegressionLearner()(cls.data)
         cls.titanic = Table("titanic")
-        cls.lenses = Table("lenses")
+        cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
     def setUp(self):
         self.widget = self.create_widget(OWNomogram)  # type: OWNomogram
@@ -211,6 +212,38 @@ class TestOWNomogram(WidgetTest):
         # had problems on PyQt4
         m = MovableToolTip()
         m.show(QPoint(0, 0), "Some text.")
+
+    def test_output(self):
+        cls = LogisticRegressionLearner()(self.titanic)
+        data = self.titanic[10:11]
+        status, age, sex = data.domain.attributes
+        self.send_signal(self.widget.Inputs.classifier, cls)
+        self.widget.sort_combo.setCurrentIndex(1)
+        self.widget.sort_combo.activated.emit(1)
+
+        # Output more attributer than there are -> output all
+        self.widget.n_attributes = 5
+        self.widget.n_spin.valueChanged.emit(5)
+        attrs = self.get_output(self.widget.Outputs.features)
+        self.assertEqual(attrs, [age, sex, status])
+
+        # Output the first two
+        self.widget.n_attributes = 2
+        self.widget.n_spin.valueChanged.emit(2)
+        attrs = self.get_output(self.widget.Outputs.features)
+        self.assertEqual(attrs, [age, sex])
+
+        # Set to output all
+        self.widget.display_index = 0
+        self.widget.controls.display_index.group.buttonClicked[int].emit(0)
+        attrs = self.get_output(self.widget.Outputs.features)
+        self.assertEqual(attrs, [age, sex, status])
+
+        # Remove classifier -> output None
+        self.send_signal(self.widget.Inputs.classifier, None)
+        attrs = self.get_output(self.widget.Outputs.features)
+        self.assertIsNone(attrs)
+
 
 if __name__ == "__main__":
     unittest.main()

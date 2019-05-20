@@ -1,5 +1,6 @@
 import unittest
 import warnings
+from distutils.version import LooseVersion
 from itertools import chain
 from functools import partial, wraps
 
@@ -7,9 +8,11 @@ import numpy as np
 from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
     SparseEfficiencyWarning
 
+import Orange
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
-    unique, var, nanstd, nanvar, nanmode
+    unique, var, nanstd, nanvar, nanmode, FDR
+from sklearn.utils import check_random_state
 
 
 def dense_sparse(test_case):
@@ -33,10 +36,20 @@ def dense_sparse(test_case):
 
             return sp_array
 
+        # Make sure to call setUp and tearDown methods in between test runs so
+        # any widget state doesn't interfere between tests
+        def _setup_teardown():
+            self.tearDown()
+            self.setUp()
+
         test_case(self, np.array)
+        _setup_teardown()
         test_case(self, csr_matrix)
+        _setup_teardown()
         test_case(self, csc_matrix)
+        _setup_teardown()
         test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
+        _setup_teardown()
         test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
 
     return _wrapper
@@ -117,13 +130,14 @@ class TestUtil(unittest.TestCase):
 
     def test_stats_non_numeric(self):
         X = np.array([
-            ['', 'a', 'b'],
-            ['a', '', 'b'],
-            ['a', 'b', ''],
+            ["", "a", np.nan, 0],
+            ["a", "", np.nan, 1],
+            ["a", "b", 0, 0],
         ], dtype=object)
         np.testing.assert_equal(stats(X), [[np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 1, 2],
-                                           [np.inf, -np.inf, 0, 0, 1, 2]])
+                                           [np.inf, -np.inf, 0, 0, 2, 1],
+                                           [np.inf, -np.inf, 0, 0, 0, 3]])
 
     def test_nanmin_nanmax(self):
         warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
@@ -165,13 +179,6 @@ class TestUtil(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             mean([1, np.nan, 0])
-
-    def test_nanmean(self):
-        for X in self.data:
-            X_sparse = csr_matrix(X)
-            np.testing.assert_array_equal(
-                nanmean(X_sparse),
-                np.nanmean(X))
 
     def test_nanmode(self):
         X = np.array([[np.nan, np.nan, 1, 1],
@@ -268,6 +275,73 @@ class TestUtil(unittest.TestCase):
                 np.nanstd(x, axis=axis, ddof=10),
                 nanstd(csr_matrix(x), axis=axis, ddof=10),
             )
+
+    def test_FDR(self):
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
+        np.testing.assert_almost_equal(
+            np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
+            FDR(p_values), decimal=5)
+
+    def test_FDR_dependent(self):
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
+        np.testing.assert_almost_equal(
+            np.array([0.00076, 0.00091, 0.00011, 0.00086, 0.00057]),
+            FDR(p_values, dependent=True), decimal=5)
+
+    def test_FDR_m(self):
+        p_values = np.array([0.0002, 0.0004, 0.00001, 0.0003, 0.0001])
+        np.testing.assert_almost_equal(
+            np.array([0.0002, 0.00024, 0.00003, 0.000225, 0.00015]),
+            FDR(p_values, m=3), decimal=5)
+
+    def test_FDR_no_values(self):
+        self.assertIsNone(FDR(None))
+        self.assertIsNone(FDR([]))
+        self.assertIsNone(FDR([0.0002, 0.0004], m=0))
+
+    def test_FDR_list(self):
+        p_values = [0.0002, 0.0004, 0.00001, 0.0003, 0.0001]
+        result = FDR(p_values)
+        self.assertIsInstance(result, list)
+        np.testing.assert_almost_equal(
+            np.array([0.00033, 0.0004, 0.00005, 0.00038, 0.00025]),
+            result, decimal=5)
+
+    def test_array_equal_deprecated(self):
+        """This test is to be included in the 3.22 release and will fail in
+        version 3.24. This serves as a reminder to remove the deprecated method
+        and this test."""
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.24"):
+            self.fail(
+                "`Orange.statistics.util.array_equal` was deprecated in "
+                "version 3.22, and there have been two minor versions in "
+                "between. Please remove the deprecated method from the module."
+            )
+
+
+class TestNanmean(unittest.TestCase):
+    def setUp(self):
+        self.random_state = check_random_state(42)
+        self.x = self.random_state.uniform(size=(10, 5))
+        np.fill_diagonal(self.x, np.nan)
+
+    @dense_sparse
+    def test_axis_none(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x), nanmean(array(self.x))
+        )
+
+    @dense_sparse
+    def test_axis_0(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x, axis=0), nanmean(array(self.x), axis=0)
+        )
+
+    @dense_sparse
+    def test_axis_1(self, array):
+        np.testing.assert_almost_equal(
+            np.nanmean(self.x, axis=1), nanmean(array(self.x), axis=1)
+        )
 
 
 class TestDigitize(unittest.TestCase):

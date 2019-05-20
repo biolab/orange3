@@ -9,7 +9,6 @@ import scipy
 import scipy.spatial
 import scipy.stats
 from scipy.sparse import csr_matrix
-from sklearn.exceptions import DataConversionWarning
 
 from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
@@ -500,34 +499,34 @@ class TestJaccard(TestCase):
                       [0., 0., 0.5]]))
 
     def test_jaccard_distance_numpy(self):
-        with self.assertWarns(DataConversionWarning):
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[0].x, self.titanic[2].x, axis=1),
-                np.array([[0.5]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic.X),
-                np.array([[0., 0., 0.5, 0.5],
-                          [0., 0., 0.5, 0.5],
-                          [0.5, 0.5, 0., 0.],
-                          [0.5, 0.5, 0., 0.]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[2].x, self.titanic[:3].X),
-                np.array([[0.5, 0.5, 0.]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[:2].X, self.titanic[3].x),
-                np.array([[0.5],
-                          [0.5]]))
-            np.testing.assert_almost_equal(
-                self.dist(self.titanic[:2].X, self.titanic[:3].X),
-                np.array([[0., 0., 0.5],
-                          [0., 0., 0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[0].x, self.titanic[2].x, axis=1),
+            np.array([[0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic.X),
+            np.array([[0., 0., 0.5, 0.5],
+                      [0., 0., 0.5, 0.5],
+                      [0.5, 0.5, 0., 0.],
+                      [0.5, 0.5, 0., 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[2].x, self.titanic[:3].X),
+            np.array([[0.5, 0.5, 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[:2].X, self.titanic[3].x),
+            np.array([[0.5],
+                      [0.5]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.titanic[:2].X, self.titanic[:3].X),
+            np.array([[0., 0., 0.5],
+                      [0., 0., 0.5]]))
 
 
 # noinspection PyTypeChecker
 class TestSpearmanR(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = SpearmanR
 
     def test_spearmanr_distance_one_example(self):
@@ -632,7 +631,8 @@ class TestSpearmanR(TestCase):
 class TestSpearmanRAbsolute(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = SpearmanRAbsolute
 
     def test_spearmanrabsolute_distance_one_example(self):
@@ -709,7 +709,8 @@ class TestSpearmanRAbsolute(TestCase):
 class TestPearsonR(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = PearsonR
 
     def test_pearsonr_distance_one_example(self):
@@ -812,7 +813,8 @@ class TestPearsonR(TestCase):
 class TestPearsonRAbsolute(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.breast = Table("breast-cancer-wisconsin-cont")
+        cls.breast = Table(test_filename(
+            "datasets/breast-cancer-wisconsin.tab"))
         cls.dist = PearsonRAbsolute
 
     def test_pearsonrabsolute_distance_one_example(self):
@@ -933,7 +935,7 @@ class TestMahalanobis(TestCase):
 class TestDistances(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.test5 = Table(test_filename('test5.tab'))
+        cls.test5 = Table(test_filename('datasets/test5.tab'))
 
     def test_preprocess(self):
         domain = Domain([ContinuousVariable("c"),

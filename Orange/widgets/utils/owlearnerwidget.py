@@ -25,7 +25,7 @@ class OWBaseLearnerMeta(WidgetMetaClass):
     its own Outputs class with output that match the corresponding
     learner.
     """
-    def __new__(cls, name, bases, attributes):
+    def __new__(cls, name, bases, attributes, **kwargs):
         def abstract_widget():
             return not attributes.get("name")
 
@@ -35,7 +35,7 @@ class OWBaseLearnerMeta(WidgetMetaClass):
                 setattr(result, name, deepcopy(signal))
             return result
 
-        obj = super().__new__(cls, name, bases, attributes)
+        obj = super().__new__(cls, name, bases, attributes, **kwargs)
         if abstract_widget():
             return obj
 
@@ -51,7 +51,7 @@ class OWBaseLearnerMeta(WidgetMetaClass):
         return obj
 
 
-class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta):
+class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
     """Abstract widget for classification/regression learners.
 
     Notes

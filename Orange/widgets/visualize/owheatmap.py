@@ -428,6 +428,8 @@ class OWHeatMap(widget.OWWidget):
 
     graph_name = "scene"
 
+    left_side_scrolling = True
+
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
         discrete_ignored = Msg("{} categorical feature{} ignored")
@@ -975,6 +977,7 @@ class OWHeatMap(widget.OWWidget):
             if rowitem.title:
                 title = QGraphicsSimpleTextItem(rowitem.title, widget)
                 item = GraphicsSimpleTextLayoutItem(title, parent=grid)
+                item.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
                 grid.addItem(item, Row0 + i * 2, Col0)
 
             if rowitem.cluster:

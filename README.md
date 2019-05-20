@@ -2,7 +2,6 @@ Orange
 ======
 
 [![Join the chat at https://gitter.im/biolab/orange3](https://badges.gitter.im/biolab/orange3.svg)](https://gitter.im/biolab/orange3?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![build: passing](https://img.shields.io/travis/biolab/orange3.svg)](https://travis-ci.org/biolab/orange3)
 [![codecov](https://codecov.io/gh/biolab/orange3/branch/master/graph/badge.svg)](https://codecov.io/gh/biolab/orange3)
 
@@ -11,18 +10,42 @@ visualization, exploration, preprocessing and modeling techniques. It can be
 used through a nice and intuitive user interface or, for more advanced users,
 as a module for the Python programming language.
 
-This is a development version of Orange 3. The stable version 2.7 is still
-available ([binaries] and [sources]).
+This is the latest version of Orange (for Python 3). The deprecated version of Orange 2.7 (for Python 2.7) is still available ([binaries] and [sources]).
 
-[Orange]: http://orange.biolab.si/
-[binaries]: http://orange.biolab.si/orange2/
+[Orange]: https://orange.biolab.si/
+[binaries]: https://orange.biolab.si/orange2/
 [sources]: https://github.com/biolab/orange
 
 
-Installing
-----------
-Orange requires Python 3.4 or newer. To build it and install
-it in a development environment, run:
+Installing with Miniconda / Anaconda
+------------------------------------
+
+Orange requires Python 3.6 or newer.
+
+First, install [Miniconda] for your OS. Create virtual environment for Orange:
+
+    conda create python=3 --name orange3
+
+In your Anaconda Prompt add conda-forge to your channels:
+
+    conda config --add channels conda-forge
+
+This will enable access to the latest Orange release. Then install Orange3:
+
+    conda install orange3
+
+[Miniconda]: https://docs.conda.io/en/latest/miniconda.html
+
+To install the add-ons, follow a similar recipe:
+
+    conda install orange3-<addon name>
+
+See specific add-on repositories for details.
+
+Installing with pip
+-------------------
+
+To install Orange with pip, run the following.
 
     # Install some build requirements via your system's package manager
     sudo apt install virtualenv git build-essential python3-dev
@@ -38,9 +61,7 @@ it in a development environment, run:
 
     # Install Qt dependencies for the GUI
     pip install PyQt5
-    # Of if Python <= 3.4 and/or with package manager
-    # sudo apt install python3-pyqt4
-    
+
     # Install other minimum required dependencies
     pip install -r requirements-core.txt  # For Orange Python library
     pip install -r requirements-gui.txt   # For Orange GUI
@@ -58,46 +79,21 @@ the [wiki].
 
 [wiki]: https://github.com/biolab/orange3/wiki
 
-Anaconda Installation
----------------------
+### Missing WebKit/WebEngine
 
-First, install [Anaconda] for your OS (Python version 3.5+). Create virtual environment for Orange:
-
-    conda create python=3 --name orange3 
-
-In your Anaconda Prompt add conda-forge to your channels:
-
-    conda config --add channels conda-forge
-
-This will enable access to the latest Orange release. Then install Orange3:
-
-    conda install orange3
-
-[Anaconda]: https://www.continuum.io/downloads
+Some distributions of PyQt5 come without WebKit or WebEngine, required by some
+add-ons and for reporting. Running `pip install PyQtWebEngine` may solve this issue.
 
 Starting Orange GUI
 -------------------
 
-Orange GUI requires PyQt, which is not pip-installable in Python 3. You
-have to download and install it system-wide. Make sure that the virtual
-environment for orange is created with `--system-site-packages`, so it will
-have access to the installed PyQt4.
-
-To start Orange GUI from the command line, assuming it was successfully
-installed, run:
+To start Orange GUI from the command line, run:
 
     orange-canvas
     # or
     python3 -m Orange.canvas
 
 Append `--help` for a list of program options.
-
-If you're running Orange with PyQt5 or if you have multiple PyQt versions
-available, set the environmental variable `QT_API` to the PyQt version to use,
-e.g.:
-
-    export QT_API=pyqt5
-    orange-canvas
 
 
 Compiling on Windows
@@ -110,10 +106,10 @@ Get appropriate wheels for missing libraries. You will need [numpy+mkl] and [sci
 
 Install them with
 
-    pip install some-wheel.whl
+    pip install <wheel name>.whl
 
 Install [Visual Studio compiler]. Then go to Orange3 folder and run:
 
-[Visual Studio compiler]: http://landinghub.visualstudio.com/visual-cpp-build-tools
+[Visual Studio compiler]: https://developer.microsoft.com/en-us/windows/downloads
 
     python setup.py build_ext -i --compiler=msvc install

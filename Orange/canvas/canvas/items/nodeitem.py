@@ -17,8 +17,8 @@ from AnyQt.QtGui import (
     QPainterPathStroker
 )
 from AnyQt.QtCore import (
-    Qt, QEvent, QPointF, QRectF, QRect, QSize, QTimer, QPropertyAnimation
-)
+    Qt, QEvent, QPointF, QRectF, QRect, QSize, QTime, QTimer, QPropertyAnimation,
+    QEasingCurve)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtProperty as Property
 
 from .graphicspathobject import GraphicsPathObject
@@ -77,7 +77,7 @@ class NodeBodyItem(GraphicsPathObject):
     """
     def __init__(self, parent=None):
         GraphicsPathObject.__init__(self, parent)
-        assert(isinstance(parent, NodeItem))
+        assert isinstance(parent, NodeItem)
 
         self.__processingState = 0
         self.__progress = -1
@@ -587,7 +587,7 @@ def standard_icon(standard_pixmap):
     return style.standardIcon(standard_pixmap)
 
 
-class GraphicsIconItem(QGraphicsItem):
+class GraphicsIconItem(QGraphicsWidget):
     """
     A graphics item displaying an :class:`QIcon`.
     """
@@ -608,6 +608,15 @@ class GraphicsIconItem(QGraphicsItem):
         self.__iconSize = QSize(iconSize)
         self.__icon = QIcon(icon)
 
+        self._opacity = 1
+        self.anim = QPropertyAnimation(self, b"opacity")
+        self.anim.setDuration(350)
+        self.anim.setStartValue(1)
+        self.anim.setKeyValueAt(0.5, 0)
+        self.anim.setEndValue(1)
+        self.anim.setEasingCurve(QEasingCurve.OutQuad)
+        self.anim.setLoopCount(5)
+
     def setIcon(self, icon):
         """
         Set the icon (:class:`QIcon`).
@@ -615,6 +624,15 @@ class GraphicsIconItem(QGraphicsItem):
         if self.__icon != icon:
             self.__icon = QIcon(icon)
             self.update()
+
+    def getOpacity(self):
+        return self._opacity
+
+    def setOpacity(self, o):
+        self._opacity = o
+        self.update()
+
+    opacity = Property(float, fget=getOpacity, fset=setOpacity)
 
     def icon(self):
         """
@@ -673,6 +691,7 @@ class GraphicsIconItem(QGraphicsItem):
                 QPainter.SmoothPixmapTransform,
                 self.__transformationMode == Qt.SmoothTransformation
             )
+            painter.setOpacity(self._opacity)
             self.__icon.paint(painter, target, Qt.AlignCenter, mode)
 
 
@@ -798,6 +817,9 @@ class NodeItem(QGraphicsWidget):
         self.errorItem = None
         self.warningItem = None
         self.infoItem = None
+
+        self.mousePressTime = QTime()
+        self.mousePressTime.start()
 
         self.__title = ""
         self.__processingState = 0
@@ -1189,7 +1211,7 @@ class NodeItem(QGraphicsWidget):
             if "progress" in format_fields and len(format_fields) == 1:
                 # Insert progress into the status text format string.
                 spec, _ = format_fields["progress"]
-                if spec != None:
+                if spec is not None:
                     progress_included = True
                     progress_str = "{0:.0f}%".format(self.progress())
                     status_text.append(msg.format(progress=progress_str))
@@ -1224,6 +1246,8 @@ class NodeItem(QGraphicsWidget):
         messages = [self.__error, self.__warning, self.__info]
         for message, item in zip(messages, items):
             item.setVisible(bool(message))
+            if bool(message):
+                item.anim.start(QPropertyAnimation.KeepWhenStopped)
             item.setToolTip(message or "")
 
         shown = [item for item in items if item.isVisible()]
@@ -1241,10 +1265,17 @@ class NodeItem(QGraphicsWidget):
                 origin = origin + QPointF(rect.width() + spacing, 0)
 
     def mousePressEvent(self, event):
-        if self.shapeItem.path().contains(event.pos()):
-            return super().mousePressEvent(event)
-        else:
+        if self.mousePressTime.elapsed() < QApplication.doubleClickInterval():
+            # Double-click triggers two mouse press events and a double-click event.
+            # Ignore the second mouse press event (causes widget's node relocation with
+            # Logitech's Smart Move).
             event.ignore()
+        else:
+            self.mousePressTime.restart()
+            if self.shapeItem.path().contains(event.pos()):
+                super().mousePressEvent(event)
+            else:
+                event.ignore()
 
     def mouseDoubleClickEvent(self, event):
         if self.shapeItem.path().contains(event.pos()):
@@ -1255,17 +1286,17 @@ class NodeItem(QGraphicsWidget):
 
     def contextMenuEvent(self, event):
         if self.shapeItem.path().contains(event.pos()):
-            return super().contextMenuEvent(event)
+            super().contextMenuEvent(event)
         else:
             event.ignore()
 
     def focusInEvent(self, event):
         self.shapeItem.setHasFocus(True)
-        return super().focusInEvent(event)
+        super().focusInEvent(event)
 
     def focusOutEvent(self, event):
         self.shapeItem.setHasFocus(False)
-        return super().focusOutEvent(event)
+        super().focusOutEvent(event)
 
     def changeEvent(self, event):
         if event.type() == QEvent.PaletteChange:
@@ -1332,13 +1363,13 @@ def NodeItem_toolTipHelper(node, links_in=[], links_out=[]):
         inputs = [channel_fmt.format(inp.name) for inp in desc.inputs]
         inputs = inputs_list_fmt.format(inputs="".join(inputs))
     else:
-        inputs = "No inputs<hr/>" 
+        inputs = "No inputs<hr/>"
 
     if desc.outputs:
         outputs = [channel_fmt.format(out.name) for out in desc.outputs]
         outputs = outputs_list_fmt.format(outputs="".join(outputs))
     else:
-        outputs = "No outputs" 
+        outputs = "No outputs"
 
     tooltip = title + inputs + outputs
     style = "ul { margin-top: 1px; margin-bottom: 1px; }"

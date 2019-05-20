@@ -11,12 +11,13 @@ from sklearn.utils import check_random_state
 from Orange.data import Table, Domain
 from Orange.preprocess import Continuize, Normalize
 from Orange.projection import pca, PCA, SparsePCA, IncrementalPCA, TruncatedSVD
+from Orange.tests import test_filename
 
 
 class TestPCA(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ionosphere = Table('ionosphere')
+        cls.ionosphere = Table(test_filename('datasets/ionosphere.tab'))
         cls.iris = Table('iris')
         cls.zoo = Table('zoo')
 

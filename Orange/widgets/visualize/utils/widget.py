@@ -10,7 +10,6 @@ from Orange.data import (
 )
 from Orange.data.util import get_unique_names, array_equal
 from Orange.data.sql.table import SqlTable
-from Orange.preprocess.preprocess import Preprocess, ApplyDomain
 from Orange.statistics.util import bincount
 
 from Orange.widgets import gui, report
@@ -33,7 +32,7 @@ MAX_CATEGORIES = 11  # maximum number of colors or shapes (including Other)
 MAX_POINTS_IN_TOOLTIP = 5
 
 
-class OWProjectionWidgetBase(OWWidget):
+class OWProjectionWidgetBase(OWWidget, openclass=True):
     """
     Base widget for widgets that use attribute data to set the colors, labels,
     shapes and sizes of points.
@@ -343,7 +342,7 @@ class OWProjectionWidgetBase(OWWidget):
         self.graph.update_tooltip(event.modifiers())
 
 
-class OWDataProjectionWidget(OWProjectionWidgetBase):
+class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     """
     Base widget for widgets that get Data and Data Subset (both
     Orange.data.Table) on the input, and output Selected Data and Data
@@ -434,7 +433,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         if not same_domain:
             self.init_attr_values()
         self.openContext(self.data)
-        self.use_context()
         self._invalidated = not (
             data_existed and self.data is not None and
             array_equal(effective_data.X, self.effective_data.X))
@@ -443,11 +441,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.enable_controls()
 
     def check_data(self):
-        self.valid_data = None
         self.clear_messages()
-
-    def use_context(self):
-        pass
 
     def enable_controls(self):
         self.cb_class_density.setEnabled(self.can_draw_density())
@@ -459,6 +453,15 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.controls.graph.alpha_value.setEnabled(subset is None)
 
     def handleNewSignals(self):
+        self._handle_subset_data()
+        if self._invalidated:
+            self._invalidated = False
+            self.setup_plot()
+        else:
+            self.graph.update_point_props()
+        self.commit()
+
+    def _handle_subset_data(self):
         self.Warning.subset_independent.clear()
         self.Warning.subset_not_subset.clear()
         if self.data is None or self.subset_data is None:
@@ -470,13 +473,6 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
                 self.Warning.subset_independent()
             elif self.subset_indices - ids:
                 self.Warning.subset_not_subset()
-
-        if self._invalidated:
-            self._invalidated = False
-            self.setup_plot()
-        else:
-            self.graph.update_point_props()
-        self.commit()
 
     def get_subset_mask(self):
         if not self.subset_indices:
@@ -613,7 +609,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase):
         self.graph.clear()
 
 
-class OWAnchorProjectionWidget(OWDataProjectionWidget):
+class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     """ Base widget for widgets with graphs with anchors. """
     SAMPLE_SIZE = 100
 
@@ -622,7 +618,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
 
     class Outputs(OWDataProjectionWidget.Outputs):
         components = Output("Components", Table)
-        preprocessor = Output("Preprocessor", Preprocess)
 
     class Error(OWDataProjectionWidget.Error):
         sparse_data = Msg("Sparse data is not supported")
@@ -649,8 +644,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
             elif len(self.data) < 2:
                 error(self.Error.no_instances)
             else:
-                self.valid_data = np.all(np.isfinite(self.data.X), axis=1)
-                if not np.sum(self.valid_data):
+                if not np.sum(np.all(np.isfinite(self.data.X), axis=1)):
                     error(self.Error.no_valid_data)
 
     def init_projection(self):
@@ -663,6 +657,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
             self.Error.proj_error(ex)
 
     def get_embedding(self):
+        self.valid_data = None
         if self.data is None or self.projection is None:
             return None
         embedding = self.projection(self.data).X
@@ -700,7 +695,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
     def commit(self):
         super().commit()
         self.send_components()
-        self.send_preprocessor()
 
     def send_components(self):
         components = None
@@ -718,12 +712,6 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget):
     def _send_components_metas(self):
         variable_names = [a.name for a in self.projection.domain.attributes]
         return np.array(variable_names, dtype=object)[:, None]
-
-    def send_preprocessor(self):
-        prep = None
-        if self.data is not None and self.projection is not None:
-            prep = ApplyDomain(self.projection.domain, self.projection.name)
-        self.Outputs.preprocessor.send(prep)
 
     def clear(self):
         super().clear()

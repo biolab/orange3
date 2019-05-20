@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 from scipy import stats
+from scipy import sparse as sp
 import sklearn.metrics as skl_metrics
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.metrics import pairwise_distances
@@ -13,6 +14,7 @@ from Orange.statistics import util
 from .base import (Distance, DistanceModel, FittedDistance, FittedDistanceModel,
                    SklDistance, _orange_to_numpy)
 
+
 class EuclideanRowsModel(FittedDistanceModel):
     """
     Model for computation of Euclidean distances between rows.
@@ -22,14 +24,14 @@ class EuclideanRowsModel(FittedDistanceModel):
     """
     def __init__(self, attributes, impute, normalize,
                  continuous, discrete,
-                 means, vars, dist_missing2_cont,
+                 means, stdvars, dist_missing2_cont,
                  dist_missing_disc, dist_missing2_disc):
         super().__init__(attributes, 1, impute)
         self.normalize = normalize
         self.continuous = continuous
         self.discrete = discrete
         self.means = means
-        self.vars = vars
+        self.vars = stdvars
         self.dist_missing2_cont = dist_missing2_cont
         self.dist_missing_disc = dist_missing_disc
         self.dist_missing2_disc = dist_missing2_disc
@@ -90,11 +92,11 @@ class EuclideanColumnsModel(FittedDistanceModel):
     Means are used as offsets for normalization, and two deviations are
     used for scaling.
     """
-    def __init__(self, attributes, impute, normalize, means, vars):
+    def __init__(self, attributes, impute, normalize, means, stdvars):
         super().__init__(attributes, 0, impute)
         self.normalize = normalize
         self.means = means
-        self.vars = vars
+        self.vars = stdvars
 
     def compute_distances(self, x1, x2=None):
         """
@@ -133,6 +135,7 @@ class Euclidean(FittedDistance):
     rows_model_type = EuclideanRowsModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        # pylint: disable=arguments-differ
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
@@ -159,9 +162,8 @@ class Euclidean(FittedDistance):
         for normalization and imputation.
         """
         def nowarn(msg, cat, *args, **kwargs):
-            if cat is RuntimeWarning and (
-                    msg == "Mean of empty slice"
-                    or msg == "Degrees of freedom <= 0 for slice"):
+            if cat is RuntimeWarning and msg in (
+                    "Mean of empty slice", "Degrees of freedom <= 0 for slice"):
                 if self.normalize:
                     raise ValueError("some columns have no defined values")
             else:
@@ -173,11 +175,11 @@ class Euclidean(FittedDistance):
         orig_warn = warnings.warn
         with patch("warnings.warn", new=nowarn):
             means = np.nanmean(x, axis=0)
-            vars = np.nanvar(x, axis=0)
-        if self.normalize and not vars.all():
+            stdvars = np.nanvar(x, axis=0)
+        if self.normalize and not stdvars.all():
             raise ValueError("some columns are constant")
         return EuclideanColumnsModel(
-            attributes, self.impute, self.normalize, means, vars)
+            attributes, self.impute, self.normalize, means, stdvars)
 
 
 class ManhattanRowsModel(FittedDistanceModel):
@@ -269,6 +271,7 @@ class Manhattan(FittedDistance):
     rows_model_type = ManhattanRowsModel
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False, normalize=False):
+        # pylint: disable=arguments-differ
         return super().__new__(cls, e1, e2, axis, impute, normalize=normalize)
 
     def get_continuous_stats(self, column):
@@ -336,6 +339,10 @@ class Cosine(FittedDistance):
 
     fit_cols = fit_rows
 
+    def get_continuous_stats(self, column):
+        # Implement an unneeded abstract method to silence pylint
+        return None
+
     class CosineModel(FittedDistanceModel):
         """Model for computation of cosine distances across rows and columns.
         All non-zero discrete values are treated as 1."""
@@ -368,7 +375,7 @@ class Cosine(FittedDistance):
             data1 = prepare_data(x1)
             data2 = data1 if x2 is None else prepare_data(x2)
             dist = safe_sparse_dot(data1, data2.T)
-            np.clip(dist, 0, 1, out=dist)
+            np.clip(dist, -1, 1, out=dist)
             if x2 is None:
                 diag = np.diag_indices_from(dist)
                 dist[diag] = np.where(np.isnan(dist[diag]), np.nan, 1.0)
@@ -385,6 +392,12 @@ class JaccardModel(FittedDistanceModel):
         self.ps = ps
 
     def compute_distances(self, x1, x2):
+        if sp.issparse(x1):
+            return self._compute_sparse(x1, x2)
+        else:
+            return self._compute_dense(x1, x2)
+
+    def _compute_dense(self, x1, x2):
         """
         The method uses a function implemented in Cython. Data (`x1` and `x2`)
         is accompanied by two tables. One is a 2-d table in which elements of
@@ -395,6 +408,7 @@ class JaccardModel(FittedDistanceModel):
         compute distances between rows without missing values, and a slower
         loop for those with missing values.
         """
+        # view is false positive, pylint: disable=no-member
         nonzeros1 = np.not_equal(x1, 0).view(np.int8)
         if self.axis == 1:
             nans1 = _distance.any_nan_row(x1)
@@ -414,11 +428,34 @@ class JaccardModel(FittedDistanceModel):
             return _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps)
 
+    @staticmethod
+    def _compute_sparse(x1, x2=None):
+        symmetric = x2 is None
+        if symmetric:
+            x2 = x1
+        x1 = sp.csr_matrix(x1)
+        x1.eliminate_zeros()
+        x2 = sp.csr_matrix(x2)
+        x2.eliminate_zeros()
+        n, m = x1.shape[0], x2.shape[0]
+        matrix = np.zeros((n, m))
+        for i in range(n):
+            xi_ind = set(x1[i].indices)
+            for j in range(i if symmetric else m):
+                union = len(xi_ind.union(x2[j].indices))
+                if union:
+                    jacc = 1 - len(xi_ind.intersection(x2[j].indices)) / union
+                else:
+                    jacc = 0
+                matrix[i, j] = jacc
+                if symmetric:
+                    matrix[j, i] = jacc
+        return matrix
+
 
 class Jaccard(FittedDistance):
-    supports_sparse = False
+    supports_sparse = True
     supports_discrete = True
-    fallback = SklDistance('jaccard')
     ModelType = JaccardModel
 
     def fit_rows(self, attributes, x, n_vals):
@@ -426,12 +463,19 @@ class Jaccard(FittedDistance):
         Return a model for computation of Jaccard values. The model stores
         frequencies of non-zero values per each column.
         """
-        ps = np.fromiter(
-            (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
-            dtype=np.double, count=len(n_vals))
+        if sp.issparse(x):
+            ps = x.getnnz(axis=0)
+        else:
+            ps = np.fromiter(
+                (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
+                dtype=np.double, count=len(n_vals))
         return JaccardModel(attributes, self.axis, self.impute, ps)
 
     fit_cols = fit_rows
+
+    def get_continuous_stats(self, column):
+        # Implement an unneeded abstract method to silence pylint
+        return None
 
 
 class CorrelationDistanceModel(DistanceModel):
@@ -532,7 +576,7 @@ def _corrcoef2(a, b, axis=0):
     numpy.corrcoef
     """
     a, b = np.atleast_2d(a, b)
-    if not (axis == 0 or axis == 1):
+    if axis not in (0, 1):
         raise ValueError("Invalid axis {} (only 0 or 1 accepted)".format(axis))
 
     mean_a = np.mean(a, axis=axis, keepdims=True)
@@ -568,6 +612,7 @@ def _corrcoef2(a, b, axis=0):
 
 
 class CorrelationDistance(Distance):
+    # pylint: disable=abstract-method
     supports_missing = False
 
 
@@ -662,7 +707,7 @@ class MahalanobisDistance:
         return Mahalanobis(axis=axis).fit(data)
 
 class Hamming(Distance):
-    supports_sparse = True
+    supports_sparse = False
     supports_missing = False
     supports_normalization = False
     supports_discrete = True

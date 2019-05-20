@@ -24,17 +24,17 @@ import Orange.data
 from Orange import preprocess
 from Orange.preprocess import Continuize, ProjectPCA, RemoveNaNRows, \
     ProjectCUR, Scale as _Scale, Randomize as _Randomize
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-
+from Orange.preprocess import Normalize
 from Orange.widgets.data.utils.preprocess import (
     BaseEditor, blocked, StandardItemModel, DescriptionRole,
     ParametersRole, Controller, SequenceFlow
 )
-
 
 class _NoneDisc(preprocess.discretize.Discretization):
     """Discretize all variables into None.
@@ -334,7 +334,7 @@ class UnivariateFeatureSelect(QWidget):
     edited = Signal()
 
     #: Strategy
-    Fixed, Percentile, FDR, FPR, FWE = 1, 2, 3, 4, 5
+    Fixed, Proportion, FDR, FPR, FWE = 1, 2, 3, 4, 5
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
@@ -354,7 +354,7 @@ class UnivariateFeatureSelect(QWidget):
 
         self.layout().addWidget(box)
 
-        box = QGroupBox(title="Strategy", flat=True)
+        box = QGroupBox(title="Number of features", flat=True)
         self.__group = group = QButtonGroup(self, exclusive=True)
         self.__spins = {}
 
@@ -370,20 +370,17 @@ class UnivariateFeatureSelect(QWidget):
         self.__spins[UnivariateFeatureSelect.Fixed] = kspin
         form.addRow(fixedrb, kspin)
 
-        percrb = QRadioButton("Percentile:")
-        group.addButton(percrb, UnivariateFeatureSelect.Percentile)
+        percrb = QRadioButton("Proportion:")
+        group.addButton(percrb, UnivariateFeatureSelect.Proportion)
         pspin = QDoubleSpinBox(
-            minimum=0.0, maximum=100.0, singleStep=0.5,
+            minimum=1.0, maximum=100.0, singleStep=0.5,
             value=self.__p, suffix="%",
-            enabled=self.__strategy == UnivariateFeatureSelect.Percentile
+            enabled=self.__strategy == UnivariateFeatureSelect.Proportion
         )
 
         pspin.valueChanged[float].connect(self.setP)
         pspin.editingFinished.connect(self.edited)
-        self.__spins[UnivariateFeatureSelect.Percentile] = pspin
-        # Percentile controls disabled for now.
-        pspin.setEnabled(False)
-        percrb.setEnabled(False)
+        self.__spins[UnivariateFeatureSelect.Proportion] = pspin
         form.addRow(percrb, pspin)
 
 #         form.addRow(QRadioButton("FDR"), QDoubleSpinBox())
@@ -423,9 +420,9 @@ class UnivariateFeatureSelect(QWidget):
     def setP(self, p):
         if self.__p != p:
             self.__p = p
-            spin = self.__spins[UnivariateFeatureSelect.Percentile]
+            spin = self.__spins[UnivariateFeatureSelect.Proportion]
             spin.setValue(p)
-            if self.__strategy == UnivariateFeatureSelect.Percentile:
+            if self.__strategy == UnivariateFeatureSelect.Proportion:
                 self.changed.emit()
 
     def setItems(self, itemlist):
@@ -508,10 +505,12 @@ class FeatureSelectEditor(BaseEditor):
         score = FeatureSelectEditor.MEASURES[score][1]
         strategy = params.get("strategy", UnivariateFeatureSelect.Fixed)
         k = params.get("k", 10)
+        p = params.get("p", 75.0)
         if strategy == UnivariateFeatureSelect.Fixed:
-            return preprocess.fss.SelectBestFeatures(score, k=k)
+            return preprocess.fss.SelectBestFeatures(score(), k=k)
+        elif strategy == UnivariateFeatureSelect.Proportion:
+            return preprocess.fss.SelectBestFeatures(score(), k=p / 100)
         else:
-            # TODO: implement top percentile selection
             raise NotImplementedError
 
     def __repr__(self):
@@ -534,7 +533,7 @@ class RandomFeatureSelectEditor(BaseEditor):
         self.__k = 10
         self.__p = 75.0
 
-        box = QGroupBox(title="Strategy", flat=True)
+        box = QGroupBox(title="Number of features", flat=True)
         self.__group = group = QButtonGroup(self, exclusive=True)
         self.__spins = {}
 
@@ -637,55 +636,72 @@ def enum_to_index(enum, key):
     enum key to its int position"""
     return list(enum).index(key)
 
-
 class Scale(BaseEditor):
-    NoCentering, CenterMean, CenterMedian = 0, 1, 2
-    NoScaling, ScaleBySD, ScaleBySpan = 0, 1, 2
+    CenterByMean, ScaleBySD, NormalizeBySD, NormalizeBySpan_ZeroBased, \
+        NormalizeSpan_NonZeroBased = 0, 1, 2, 3, 4
+
+    Names = {
+        NormalizeBySD: "Standardize to μ=0, σ²=1",
+        CenterByMean: "Center to μ=0",
+        ScaleBySD: "Scale to σ²=1",
+        NormalizeSpan_NonZeroBased: "Normalize to interval [-1, 1]",
+        NormalizeBySpan_ZeroBased: "Normalize to interval [0, 1]",
+    }
 
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.setLayout(QVBoxLayout())
 
-        form = QFormLayout()
-        self.__centercb = QComboBox()
-        self.__centercb.addItems(["No Centering", "Center by Mean",
-                                  "Center by Median"])
+        self.__method = Scale.NormalizeBySD
+        self.__group = group = QButtonGroup(self, exclusive=True)
+        group.buttonClicked.connect(self.__on_buttonClicked)
 
-        self.__scalecb = QComboBox()
-        self.__scalecb.addItems(["No scaling", "Scale by SD",
-                                 "Scale by span"])
+        for methodid in [self.NormalizeBySD, self.CenterByMean, self.ScaleBySD,
+                         self.NormalizeSpan_NonZeroBased,
+                         self.NormalizeBySpan_ZeroBased]:
+            text = self.Names[methodid]
+            rb = QRadioButton(text=text, checked=self.__method == methodid)
+            group.addButton(rb, methodid)
+            self.layout().addWidget(rb)
 
-        form.addRow("Center:", self.__centercb)
-        form.addRow("Scale:", self.__scalecb)
-        self.layout().addLayout(form)
-        self.__centercb.currentIndexChanged.connect(self.changed)
-        self.__scalecb.currentIndexChanged.connect(self.changed)
-        self.__centercb.activated.connect(self.edited)
-        self.__scalecb.activated.connect(self.edited)
+    def setMethod(self, method):
+        b = self.__group.button(method)
+        if b is not None:
+            b.setChecked(True)
+            self.__method = method
+            self.changed.emit()
 
     def setParameters(self, params):
-        center = params.get("center", _Scale.CenteringType.Mean)
-        scale = params.get("scale", _Scale.ScalingType.Std)
-        self.__centercb.setCurrentIndex(
-            enum_to_index(_Scale.CenteringType, center))
-        self.__scalecb.setCurrentIndex(
-            enum_to_index(_Scale.ScalingType, scale))
+        method = params.get("method", Scale.NormalizeBySD)
+        self.setMethod(method)
 
     def parameters(self):
-        return {"center": index_to_enum(_Scale.CenteringType,
-                                        self.__centercb.currentIndex()),
-                "scale": index_to_enum(_Scale.ScalingType,
-                                       self.__scalecb.currentIndex())}
+        return {"method": self.__method}
+
+    def __on_buttonClicked(self):
+        self.__method = self.__group.checkedId()
+        self.changed.emit()
+        self.edited.emit()
 
     @staticmethod
     def createinstance(params):
-        center = params.get("center", _Scale.CenteringType.Mean)
-        scale = params.get("scale", _Scale.ScalingType.Std)
-        return _Scale(center=center, scale=scale)
+        method = params.get("method", Scale.NormalizeBySD)
+        if method == Scale.CenterByMean:
+            return _Scale(_Scale.CenteringType.Mean,
+                          _Scale.ScalingType.NoScaling)
+        elif method == Scale.ScaleBySD:
+            return _Scale(_Scale.CenteringType.NoCentering,
+                          _Scale.ScalingType.Std)
+        elif method == Scale.NormalizeBySD:
+            return Normalize(norm_type=Normalize.NormalizeBySD)
+        elif method == Scale.NormalizeBySpan_ZeroBased:
+            return Normalize(norm_type=Normalize.NormalizeBySpan)
+        else:  # method == Scale.NormalizeSpan_NonZeroBased
+            return Normalize(norm_type=Normalize.NormalizeBySpan,
+                             zero_based=False)
 
     def __repr__(self):
-        return "{}, {}".format(self.__centercb.currentText(),
-                               self.__scalecb.currentText())
+        return self.Names[self.__method]
 
 
 class Randomize(BaseEditor):
@@ -834,13 +850,13 @@ class Description:
     """
     A description of an action/function.
     """
-    def __init__(self, title, icon=None, summary=None, input=None, output=None,
+    def __init__(self, title, icon=None, summary=None, input_=None, output=None,
                  requires=None, note=None, related=None, keywords=None,
                  helptopic=None):
         self.title = title
         self.icon = icon
         self.summary = summary
-        self.input = input
+        self.input = input_
         self.output = output
         self.requires = requires
         self.note = note
@@ -947,6 +963,8 @@ class OWPreprocess(widget.OWWidget):
     priority = 2105
     keywords = ["process"]
 
+    settings_version = 2
+
     class Inputs:
         data = Input("Data", Orange.data.Table)
 
@@ -954,8 +972,8 @@ class OWPreprocess(widget.OWWidget):
         preprocessor = Output("Preprocessor", preprocess.preprocess.Preprocess, dynamic=False)
         preprocessed_data = Output("Preprocessed Data", Orange.data.Table)
 
-    storedsettings = settings.Setting({})
-    autocommit = settings.Setting(True)
+    storedsettings = Setting({})
+    autocommit = Setting(True)
     PREPROCESSORS = PREPROCESS_ACTIONS
     CONTROLLER = Controller
 
@@ -1036,10 +1054,7 @@ class OWPreprocess(widget.OWWidget):
                           Qt.ItemIsDragEnabled)
             self.preprocessors.appendRow([item])
 
-        try:
-            model = self.load(self.storedsettings)
-        except Exception:
-            model = self.load({})
+        model = self.load(self.storedsettings)
 
         self.set_model(model)
 
@@ -1056,7 +1071,7 @@ class OWPreprocess(widget.OWWidget):
         preprocessors = saved.get("preprocessors", [])
         model = StandardItemModel()
 
-        def dropMimeData(data, action, row, column, parent):
+        def dropMimeData(data, action, row, _column, _parent):
             if data.hasFormat("application/x-qwidget-ref") and \
                     action == Qt.CopyAction:
                 qname = bytes(data.data("application/x-qwidget-ref")).decode()
@@ -1089,7 +1104,8 @@ class OWPreprocess(widget.OWWidget):
             model.appendRow(item)
         return model
 
-    def save(self, model):
+    @staticmethod
+    def save(model):
         """Save the preprocessor list to a dict."""
         d = {"name": ""}
         preprocessors = []
@@ -1214,6 +1230,25 @@ class OWPreprocess(widget.OWWidget):
         self.storedsettings = self.save(self.preprocessormodel)
         super().saveSettings()
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            for action, params in settings["storedsettings"]["preprocessors"]:
+                if action == "orange.preprocess.scale":
+                    scale = center = None
+                    if "center" in params:
+                        center = params.pop("center").name
+                    if "scale" in params:
+                        scale = params.pop("scale").name
+                    migratable = {
+                        ("Mean", "NoScaling"): Scale.CenterByMean,
+                        ("NoCentering", "Std"): Scale.ScaleBySD,
+                        ("Mean", "Std"): Scale.NormalizeBySD,
+                        ("NoCentering", "Span"): Scale.NormalizeBySpan_ZeroBased
+                    }
+                    params["method"] = \
+                        migratable.get((center, scale), Scale.NormalizeBySD)
+
     def onDeleteWidget(self):
         self.data = None
         self.set_model(None)
@@ -1237,9 +1272,8 @@ class OWPreprocess(widget.OWWidget):
     def send_report(self):
         pp = [(self.controler.model().index(i, 0).data(Qt.DisplayRole), w)
               for i, w in enumerate(self.controler.view.widgets())]
-        if len(pp):
+        if pp:
             self.report_items("Settings", pp)
-
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWPreprocess).run(Orange.data.Table("brown-selected"))

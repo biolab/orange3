@@ -10,6 +10,7 @@ import traceback
 import warnings
 
 import numpy as np
+from scipy import sparse as sp
 from sklearn.exceptions import ConvergenceWarning
 
 from Orange.base import SklLearner
@@ -72,6 +73,37 @@ class ModelTest(unittest.TestCase):
         pred = []
         for row in table:
             pred.append(clf(row))
+
+    def test_prediction_dimensions(self):
+        class MockModel(Model):
+            def predict(self, data):
+                return np.zeros((data.shape[0], len(domain.class_var.values)))
+
+        x = np.zeros((42, 5))
+        y = np.zeros(42)
+        domain = Domain([ContinuousVariable(n) for n in "abcde"],
+                        DiscreteVariable("y", values=["a", "b"]))
+        data = Table.from_numpy(domain, x, y)
+        a_list = [[0] * 5] * 42
+        a_tuple = ((0, ) * 5,) * 42
+        m = MockModel(domain)
+
+        for inp in (data, x, sp.csr_matrix(x), a_list, a_tuple):
+            msg = f"in test for type '{type(inp)}'"
+            # two-dimensional
+            self.assertEqual(m(inp, ret=m.Value).shape, (42, ), msg)
+            self.assertEqual(m(inp, ret=m.Probs).shape, (42, 2), msg)
+            values, probs = m(inp, ret=m.ValueProbs)
+            self.assertEqual(values.shape, (42, ), msg)
+            self.assertEqual(probs.shape, (42, 2), msg)
+
+            # one-dimensional
+            if not isinstance(inp, sp.csr_matrix):
+                self.assertEqual(m(inp[0], ret=m.Value).shape, (), msg)
+                self.assertEqual(m(inp[0], ret=m.Probs).shape, (2, ), msg)
+                values, probs = m(inp[0], ret=m.ValueProbs)
+                self.assertEqual(values.shape, (), msg)
+                self.assertEqual(probs.shape, (2, ), msg)
 
     def test_learner_adequacy(self):
         table = Table("housing")
@@ -253,7 +285,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
         tree([1, 2, None])
 
     def test_missing_class(self):
-        table = Table(test_filename("adult_sample_missing"))
+        table = Table(test_filename("datasets/adult_sample_missing"))
         for learner in LearnerAccessibility().all_learners():
             try:
                 learner = learner()
@@ -340,7 +372,7 @@ class LearnerAccessibility(unittest.TestCase):
         for learner in self.all_learners():
             try:
                 learner = learner()
-                table = Table(test_filename("test8.tab"))
+                table = Table(test_filename("datasets/test8.tab"))
                 self.assertRaises(ValueError, learner, table)
             except TypeError:
                 traceback.print_exc()

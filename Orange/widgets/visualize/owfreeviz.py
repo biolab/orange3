@@ -1,12 +1,10 @@
+# pylint: disable=too-many-ancestors
 from enum import IntEnum
-import sys
+from types import SimpleNamespace as namespace
 
 import numpy as np
 
-from AnyQt.QtCore import (
-    Qt, QObject, QEvent, QRectF, QLineF, QTimer, QPoint,
-    pyqtSignal as Signal, pyqtSlot as Slot
-)
+from AnyQt.QtCore import Qt, QRectF, QLineF, QPoint
 from AnyQt.QtGui import QColor
 
 import pyqtgraph as pg
@@ -15,128 +13,45 @@ from Orange.data import Table
 from Orange.projection import FreeViz
 from Orange.projection.freeviz import FreeVizModel
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
 
 
-class AsyncUpdateLoop(QObject):
-    """
-    Run/drive an coroutine from the event loop.
+class Result(namespace):
+    projector = None  # type: FreeViz
+    projection = None  # type: FreeVizModel
 
-    This is a utility class which can be used for implementing
-    asynchronous update loops. I.e. coroutines which periodically yield
-    control back to the Qt event loop.
 
-    """
-    Next = QEvent.registerEventType()
+MAX_ITERATIONS = 1000
 
-    #: State flags
-    Idle, Running, Cancelled, Finished = 0, 1, 2, 3
-    #: The coroutine has yielded control to the caller (with `object`)
-    yielded = Signal(object)
-    #: The coroutine has finished/exited (either with an exception
-    #: or with a return statement)
-    finished = Signal()
 
-    #: The coroutine has returned (normal return statement / StopIteration)
-    returned = Signal(object)
-    #: The coroutine has exited with with an exception.
-    raised = Signal(object)
-    #: The coroutine was cancelled/closed.
-    cancelled = Signal()
+def run_freeviz(data: Table, projector: FreeViz, state: TaskState):
+    res = Result(projector=projector, projection=None)
+    step, steps = 0, MAX_ITERATIONS
+    initial = res.projector.components_.T
+    state.set_status("Calculating...")
+    while True:
+        # Needs a copy because projection should not be modified inplace.
+        # If it is modified inplace, the widget and the thread hold a
+        # reference to the same object. When the thread is interrupted it
+        # is still modifying the object, but the widget receives it
+        # (the modified object) with a delay.
+        res.projection = res.projector(data).copy()
+        anchors = res.projector.components_.T
+        res.projector.initial = anchors
 
-    def __init__(self, parent=None, **kwargs):
-        super().__init__(parent, **kwargs)
-        self.__coroutine = None
-        self.__next_pending = False  # Flag for compressing scheduled events
-        self.__in_next = False
-        self.__state = AsyncUpdateLoop.Idle
+        state.set_partial_result(res)
+        if np.allclose(initial, anchors, rtol=1e-5, atol=1e-4):
+            return res
+        initial = anchors
 
-    @Slot(object)
-    def setCoroutine(self, loop):
-        """
-        Set the coroutine.
-
-        The coroutine will be resumed (repeatedly) from the event queue.
-        If there is an existing coroutine set it is first closed/cancelled.
-
-        Raises an RuntimeError if the current coroutine is running.
-        """
-        if self.__coroutine is not None:
-            self.__coroutine.close()
-            self.__coroutine = None
-            self.__state = AsyncUpdateLoop.Cancelled
-
-            self.cancelled.emit()
-            self.finished.emit()
-
-        if loop is not None:
-            self.__coroutine = loop
-            self.__state = AsyncUpdateLoop.Running
-            self.__schedule_next()
-
-    @Slot()
-    def cancel(self):
-        """
-        Cancel/close the current coroutine.
-
-        Raises an RuntimeError if the current coroutine is running.
-        """
-        self.setCoroutine(None)
-
-    def state(self):
-        """
-        Return the current state.
-        """
-        return self.__state
-
-    def isRunning(self):
-        return self.__state == AsyncUpdateLoop.Running
-
-    def __schedule_next(self):
-        if not self.__next_pending:
-            self.__next_pending = True
-            QTimer.singleShot(10, self.__on_timeout)
-
-    def __next(self):
-        if self.__coroutine is not None:
-            try:
-                rval = next(self.__coroutine)
-            except StopIteration as stop:
-                self.__state = AsyncUpdateLoop.Finished
-                self.returned.emit(stop.value)
-                self.finished.emit()
-                self.__coroutine = None
-            except BaseException as er:
-                self.__state = AsyncUpdateLoop.Finished
-                self.raised.emit(er)
-                self.finished.emit()
-                self.__coroutine = None
-            else:
-                self.yielded.emit(rval)
-                self.__schedule_next()
-
-    @Slot()
-    def __on_timeout(self):
-        assert self.__next_pending
-        self.__next_pending = False
-        if not self.__in_next:
-            self.__in_next = True
-            try:
-                self.__next()
-            finally:
-                self.__in_next = False
-        else:
-            # warn
-            self.__schedule_next()
-
-    def customEvent(self, event):
-        if event.type() == AsyncUpdateLoop.Next:
-            self.__on_timeout()
-        else:
-            super().customEvent(event)
+        step += 1
+        state.set_progress_value(100 * step / steps)
+        if state.is_interruption_requested():
+            return res
 
 
 class OWFreeVizGraph(OWGraphWithAnchors):
@@ -207,8 +122,7 @@ class InitType(IntEnum):
         return ["Circular", "Random"]
 
 
-class OWFreeViz(OWAnchorProjectionWidget):
-    MAX_ITERATIONS = 1000
+class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     MAX_INSTANCES = 10000
 
     name = "FreeViz"
@@ -221,6 +135,8 @@ class OWFreeViz(OWAnchorProjectionWidget):
     initialization = settings.Setting(InitType.Circular)
     GRAPH_CLASS = OWFreeVizGraph
     graph = settings.SettingProvider(OWFreeVizGraph)
+
+    left_side_scrolling = True
 
     class Error(OWAnchorProjectionWidget.Error):
         no_class_var = widget.Msg("Data has no target variable")
@@ -237,11 +153,8 @@ class OWFreeViz(OWAnchorProjectionWidget):
                                       " two values are not shown.")
 
     def __init__(self):
-        super().__init__()
-        self._loop = AsyncUpdateLoop(parent=self)
-        self._loop.yielded.connect(self.__set_projection)
-        self._loop.finished.connect(self.__freeviz_finished)
-        self._loop.raised.connect(self.__on_error)
+        OWAnchorProjectionWidget.__init__(self)
+        ConcurrentWidgetMixin.__init__(self)
 
     def _add_controls(self):
         self.__add_controls_start_box()
@@ -258,8 +171,7 @@ class OWFreeViz(OWAnchorProjectionWidget):
             box, self, "initialization", label="Initialization:",
             items=InitType.items(), orientation=Qt.Horizontal,
             labelWidth=90, callback=self.__init_combo_changed)
-        self.btn_start = gui.button(
-            box, self, "Optimize", self.__toggle_start, enabled=False)
+        self.run_button = gui.button(box, self, "Start", self._toggle_run)
 
     @property
     def effective_variables(self):
@@ -269,59 +181,73 @@ class OWFreeViz(OWAnchorProjectionWidget):
     def __radius_slider_changed(self):
         self.graph.update_radius()
 
-    def __toggle_start(self):
-        if self._loop.isRunning():
-            self._loop.cancel()
-            self.btn_start.setText("Optimize")
-            self.progressBarFinished(processEvents=False)
-        else:
-            self._start()
-
     def __init_combo_changed(self):
+        self.Error.proj_error.clear()
+        self.init_projection()
+        self.setup_plot()
+        self.commit()
+        if self.task is not None:
+            self._run()
+
+    def _toggle_run(self):
+        if self.task is not None:
+            self.cancel()
+            self.graph.set_sample_size(None)
+            self.run_button.setText("Resume")
+            self.commit()
+        else:
+            self._run()
+
+    def _run(self):
         if self.data is None:
             return
-        running = self._loop.isRunning()
-        if running:
-            self._loop.cancel()
-        self.init_projection()
-        self.graph.update_coordinates()
-        self.commit()
-        if running:
-            self._start()
-
-    def _start(self):
-        def update_freeviz(anchors):
-            while True:
-                self.projection = self.projector(self.effective_data)
-                _anchors = self.projector.components_.T
-                self.projector.initial = _anchors
-                yield _anchors
-                if np.allclose(anchors, _anchors, rtol=1e-5, atol=1e-4):
-                    return
-                anchors = _anchors
-
         self.graph.set_sample_size(self.SAMPLE_SIZE)
-        self._loop.setCoroutine(update_freeviz(self.projector.components_.T))
-        self.btn_start.setText("Stop")
-        self.progressBarInit()
-        self.setBlocking(True)
-        self.setStatusMessage("Optimizing")
+        self.run_button.setText("Stop")
+        self.start(run_freeviz, self.effective_data, self.projector)
 
-    def __set_projection(self, _):
-        # Set/update the projection matrix and coordinate embeddings
-        self.progressBarAdvance(100. / self.MAX_ITERATIONS)
+    # ConcurrentWidgetMixin
+    def on_partial_result(self, result: Result):
+        assert isinstance(result.projector, FreeViz)
+        assert isinstance(result.projection, FreeVizModel)
+        self.projector = result.projector
+        self.projection = result.projection
         self.graph.update_coordinates()
+        self.graph.update_density()
 
-    def __freeviz_finished(self):
+    def on_done(self, result: Result):
+        assert isinstance(result.projector, FreeViz)
+        assert isinstance(result.projection, FreeVizModel)
+        self.projector = result.projector
+        self.projection = result.projection
         self.graph.set_sample_size(None)
-        self.btn_start.setText("Optimize")
-        self.setStatusMessage("")
-        self.setBlocking(False)
-        self.progressBarFinished()
+        self.run_button.setText("Start")
         self.commit()
 
-    def __on_error(self, err):
-        sys.excepthook(type(err), err, getattr(err, "__traceback__"))
+    def on_exception(self, ex: Exception):
+        self.Error.proj_error(ex)
+        self.graph.set_sample_size(None)
+        self.run_button.setText("Start")
+
+    # OWAnchorProjectionWidget
+    def set_data(self, data):
+        super().set_data(data)
+        if self._invalidated:
+            self.init_projection()
+
+    def init_projection(self):
+        if self.data is None:
+            return
+        anchors = FreeViz.init_radial(len(self.effective_variables)) \
+            if self.initialization == InitType.Circular \
+            else FreeViz.init_random(len(self.effective_variables), 2)
+        self.projector = FreeViz(scale=False, center=False,
+                                 initial=anchors, maxiter=10)
+        data = self.projector.preprocess(self.effective_data)
+        self.projector.domain = data.domain
+        self.projector.components_ = anchors.T
+        self.projection = FreeVizModel(self.projector, self.projector.domain, 2)
+        self.projection.pre_domain = data.domain
+        self.projection.name = self.projector.name
 
     def check_data(self):
         def error(err):
@@ -341,30 +267,16 @@ class OWFreeViz(OWAnchorProjectionWidget):
                 error(self.Error.features_exceeds_instances)
             elif not np.sum(np.std(self.data.X, axis=0)):
                 error(self.Error.constant_data)
-            elif np.sum(self.valid_data) > self.MAX_INSTANCES:
+            elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) > self.MAX_INSTANCES:
                 error(self.Error.too_many_data_instances)
             else:
                 if len(self.effective_variables) < len(domain.attributes):
                     self.Warning.removed_features()
-        self.btn_start.setEnabled(self.data is not None)
 
-    def set_data(self, data):
-        super().set_data(data)
-        if self.data is not None:
-            self.init_projection()
-
-    def init_projection(self):
-        anchors = FreeViz.init_radial(len(self.effective_variables)) \
-            if self.initialization == InitType.Circular \
-            else FreeViz.init_random(len(self.effective_variables), 2)
-        self.projector = FreeViz(scale=False, center=False,
-                                 initial=anchors, maxiter=10)
-        data = self.projector.preprocess(self.effective_data)
-        self.projector.domain = data.domain
-        self.projector.components_ = anchors.T
-        self.projection = FreeVizModel(self.projector, self.projector.domain, 2)
-        self.projection.pre_domain = data.domain
-        self.projection.name = self.projector.name
+    def enable_controls(self):
+        super().enable_controls()
+        self.run_button.setEnabled(self.data is not None)
+        self.run_button.setText("Start")
 
     def get_coordinates_data(self):
         embedding = self.get_embedding()
@@ -379,7 +291,11 @@ class OWFreeViz(OWAnchorProjectionWidget):
 
     def clear(self):
         super().clear()
-        self._loop.cancel()
+        self.cancel()
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     @classmethod
     def migrate_settings(cls, _settings, version):
@@ -416,5 +332,5 @@ class MoveIndicator(pg.GraphicsObject):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("zoo")
-    WidgetPreview(OWFreeViz).run(set_data=data, set_subset_data=data[::10])
+    table = Table("zoo")
+    WidgetPreview(OWFreeViz).run(set_data=table, set_subset_data=table[::10])

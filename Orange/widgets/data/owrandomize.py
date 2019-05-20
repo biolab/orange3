@@ -31,7 +31,7 @@ class OWRandomize(OWWidget):
     shuffle_attrs = Setting(False)
     shuffle_metas = Setting(False)
     scope_prop = Setting(80)
-    random_seed = Setting(0)
+    random_seed = Setting(False)
     auto_apply = Setting(True)
 
     def __init__(self):
@@ -113,7 +113,7 @@ class OWRandomize(OWWidget):
             "Settings",
             [("Shuffled columns", text),
              ("Proportion of shuffled rows", "{}%".format(self.scope_prop)),
-             ("Replicable", ["no", "yes"][self.random_seed])])
+             ("Replicable", "yes" if self.random_seed else "no")])
 
 
 if __name__ == "__main__":  # pragma: no cover

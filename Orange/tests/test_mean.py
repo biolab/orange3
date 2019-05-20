@@ -6,6 +6,7 @@ import numpy as np
 
 from Orange.data import Table
 from Orange.regression import MeanLearner
+from Orange.tests import test_filename
 
 
 class TestMeanLearner(unittest.TestCase):
@@ -42,7 +43,7 @@ class TestMeanLearner(unittest.TestCase):
         self.assertTrue(np.allclose(y2, expected_mean))
 
     def test_empty(self):
-        autompg = Table('auto-mpg')
+        autompg = Table(test_filename('datasets/imports-85.tab'))
         clf = self.learn(autompg[:0])
         y = clf(autompg[0])
         self.assertEqual(y, 0)

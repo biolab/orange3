@@ -19,14 +19,14 @@ class EvaluationResultsContextHandler(settings.ContextHandler):
         elif name == self.selectedAttr:
             context.selectedClassifiers = list(value)
 
-    def settings_from_widget(self, widget):
-        super().settings_from_widget(widget)
+    def settings_from_widget(self, widget, *args):
+        super().settings_from_widget(widget, *args)
         context = widget.current_context
         context.targetClass = getdeepattr(widget, self.targetAttr)
         context.selectedClassifiers = list(getdeepattr(self.selectedAttr))
 
-    def settings_to_widget(self, widget):
-        super().settings_to_widget(widget)
+    def settings_to_widget(self, widget, *args):
+        super().settings_to_widget(widget, *args)
         context = widget.current_context
         if context.targetClass is not None:
             setattr(widget, self.targetAttr, context.targetClass)

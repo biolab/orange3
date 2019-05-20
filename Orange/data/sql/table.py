@@ -75,8 +75,8 @@ class SqlTable(Table):
                 try:
                     self.backend = backend(connection_params)
                     break
-                except BackendError as ex:
-                    print(ex)
+                except BackendError:
+                    pass
             else:
                 raise ValueError("No backend could connect to server")
         else:

@@ -7,7 +7,7 @@ import unittest
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
-from Orange.tests.sql.base import PostgresTest
+from Orange.tests.sql.base import DataBaseTest as dbt
 try:
     from Orange.widgets.visualize.owmosaic import get_conditional_distribution
     from Orange.widgets.visualize.utils.lac import \
@@ -18,12 +18,20 @@ else:
     no_widgets = False
 
 
-class MiscSqlTests(PostgresTest):
+class MiscSqlTests(unittest.TestCase, dbt):
+    def setUpDB(self):
+        self.conn, self.iris = self.create_iris_sql_table()
+
+    def tearDownDB(self):
+        self.drop_iris_sql_table()
+
+    @dbt.run_on(["postgres"])
     def test_discretization(self):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
         sepal_length = iris.domain["sepal length"]
         EqualFreq(n=4)(iris, sepal_length)
 
+    @dbt.run_on(["postgres"])
     @unittest.skipIf(no_widgets, "Cannot import widgets")
     def test_get_conditional_distribution(self):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)
@@ -31,6 +39,7 @@ class MiscSqlTests(PostgresTest):
         get_conditional_distribution(iris, [sepal_length])
         get_conditional_distribution(iris, list(iris.domain.variables))
 
+    @dbt.run_on(["postgres"])
     @unittest.skipIf(no_widgets, "Cannot import widgets")
     def test_create_sql_contingency(self):
         iris = SqlTable(self.conn, self.iris, inspect_values=True)

@@ -17,11 +17,13 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel
 
+from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data import Table
 from Orange.base import Learner, Model
-from Orange.widgets import widget, gui
+from Orange.util import interleave
+from Orange.widgets import gui
 from Orange.widgets.utils import itemmodels
-from Orange.widgets.settings import Setting, SettingsHandler
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
 
@@ -33,6 +35,19 @@ def text_format(foreground=Qt.black, weight=QFont.Normal):
     fmt.setForeground(QBrush(foreground))
     fmt.setFontWeight(weight)
     return fmt
+
+
+def to_local_file(url):
+    return OSX_NSURL_toLocalFile(url) or url.toLocalFile()
+
+
+def read_file_content(filename, limit=None):
+    try:
+        with open(filename, encoding="utf-8", errors='strict') as f:
+            text = f.read(limit)
+            return text
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 class PythonSyntaxHighlighter(QSyntaxHighlighter):
@@ -64,15 +79,15 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
     def highlightBlock(self, text):
-        for pattern, format in self.rules:
+        for pattern, fmt in self.rules:
             exp = QRegExp(pattern)
             index = exp.indexIn(text)
             while index >= 0:
                 length = exp.matchedLength()
                 if exp.captureCount() > 0:
-                    self.setFormat(exp.pos(1), len(str(exp.cap(1))), format)
+                    self.setFormat(exp.pos(1), len(str(exp.cap(1))), fmt)
                 else:
-                    self.setFormat(exp.pos(0), len(str(exp.cap(0))), format)
+                    self.setFormat(exp.pos(0), len(str(exp.cap(0))), fmt)
                 index = exp.indexIn(text, index + length)
 
         # Multi line strings
@@ -138,11 +153,32 @@ class PythonScriptEditor(QPlainTextEdit):
         else:
             super().keyPressEvent(event)
 
+    def insertFromMimeData(self, source):
+        """
+        Reimplemented from QPlainTextEdit.insertFromMimeData.
+        """
+        urls = source.urls()
+        if urls:
+            self.pasteFile(urls[0])
+        else:
+            super().insertFromMimeData(source)
+
+    def pasteFile(self, url):
+        new = read_file_content(to_local_file(url))
+        if new:
+            # inserting text like this allows undo
+            cursor = QTextCursor(self.document())
+            cursor.select(QTextCursor.Document)
+            cursor.insertText(new)
+
 
 class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
+    # `locals` is reasonably used as argument name
+    # pylint: disable=redefined-builtin
     def __init__(self, locals=None, parent=None):
         QPlainTextEdit.__init__(self, parent)
         code.InteractiveConsole.__init__(self, locals)
+        self.newPromptPos = 0
         self.history, self.historyInd = [""], 0
         self.loop = self.interact()
         next(self.loop)
@@ -153,7 +189,7 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
     def updateLocals(self, locals):
         self.locals.update(locals)
 
-    def interact(self, banner=None):
+    def interact(self, banner=None, _=None):
         try:
             sys.ps1
         except AttributeError:
@@ -191,9 +227,9 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
                 self.resetbuffer()
                 more = 0
 
-    def raw_input(self, prompt):
-        input = str(self.document().lastBlock().previous().text())
-        return input[len(prompt):]
+    def raw_input(self, prompt=""):
+        input_str = str(self.document().lastBlock().previous().text())
+        return input_str[len(prompt):]
 
     def new_prompt(self, prompt):
         self.write(prompt)
@@ -296,25 +332,7 @@ class PythonConsole(QPlainTextEdit, code.InteractiveConsole):
             return
 
 
-def interleave(seq1, seq2):
-    """
-    Interleave elements of `seq2` between consecutive elements of `seq1`.
-
-        >>> list(interleave([1, 3, 5], [2, 4]))
-        [1, 2, 3, 4, 5]
-
-    """
-    iterator1, iterator2 = iter(seq1), iter(seq2)
-    leading = next(iterator1)
-    for element in iterator1:
-        yield leading
-        yield next(iterator2)
-        leading = element
-
-    yield leading
-
-
-class Script(object):
+class Script:
     Modified = 1
     MissingFromFilesystem = 2
 
@@ -326,10 +344,8 @@ class Script(object):
 
 
 class ScriptItemDelegate(QStyledItemDelegate):
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def displayText(self, script, locale):
+    @staticmethod
+    def displayText(script, _locale):
         if script.flags & Script.Modified:
             return "*" + script.name
         else:
@@ -344,14 +360,17 @@ class ScriptItemDelegate(QStyledItemDelegate):
             option.palette.setColor(QPalette.Highlight, QColor(Qt.darkRed))
         super().paint(painter, option, index)
 
-    def createEditor(self, parent, option, index):
+    @staticmethod
+    def createEditor(parent, _option, _index):
         return QLineEdit(parent)
 
-    def setEditorData(self, editor, index):
+    @staticmethod
+    def setEditorData(editor, index):
         script = index.data(Qt.DisplayRole)
         editor.setText(script.name)
 
-    def setModelData(self, editor, model, index):
+    @staticmethod
+    def setModelData(editor, model, index):
         model[index.row()].name = str(editor.text())
 
 
@@ -364,15 +383,7 @@ def select_row(view, row):
                     QItemSelectionModel.ClearAndSelect)
 
 
-class PrepareSavingSettingsHandler(SettingsHandler):
-    """Calls storeSpecificSettings, which is currently not called from non-context handlers."""
-
-    def pack_data(self, widget):
-        widget.storeSpecificSettings()
-        return super().pack_data(widget)
-
-
-class OWPythonScript(widget.OWWidget):
+class OWPythonScript(OWWidget):
     name = "Python Script"
     description = "Write a Python script and run it on input data or models."
     icon = "icons/PythonScript.svg"
@@ -397,7 +408,7 @@ class OWPythonScript(widget.OWWidget):
 
     signal_names = ("data", "learner", "classifier", "object")
 
-    settingsHandler = PrepareSavingSettingsHandler()
+    libraryListSource: list
 
     libraryListSource = \
         Setting([Script("Hello world", "print('Hello world')\n")])
@@ -495,6 +506,10 @@ class OWPythonScript(widget.OWWidget):
 
         self.execute_button = gui.button(self.controlArea, self, 'Run', callback=self.commit)
 
+        run = QAction("Run script", self, triggered=self.commit,
+                      shortcut=QKeySequence(Qt.ControlModifier | Qt.Key_R))
+        self.addAction(run)
+
         self.splitCanvas = QSplitter(Qt.Vertical, self.mainArea)
         self.mainArea.layout().addWidget(self.splitCanvas)
 
@@ -528,17 +543,17 @@ class OWPythonScript(widget.OWWidget):
         select_row(self.libraryView, self.currentScriptIndex)
 
         self.restoreScriptText()
+        self.settingsAboutToBePacked.connect(self.saveScriptText)
 
         self.splitCanvas.setSizes([2, 1])
         if self.splitterState is not None:
             self.splitCanvas.restoreState(QByteArray(self.splitterState))
 
+        self.setAcceptDrops(True)
+
         self.splitCanvas.splitterMoved[int, int].connect(self.onSpliterMoved)
         self.controlArea.layout().addStretch(1)
         self.resize(800, 600)
-
-    def storeSpecificSettings(self):
-        self.saveScriptText()
 
     def restoreScriptText(self):
         if self.scriptText is not None:
@@ -550,30 +565,30 @@ class OWPythonScript(widget.OWWidget):
     def saveScriptText(self):
         self.scriptText = self.text.toPlainText()
 
-    def handle_input(self, obj, id, signal):
-        id = id[0]
+    def handle_input(self, obj, sig_id, signal):
+        sig_id = sig_id[0]
         dic = getattr(self, signal)
         if obj is None:
-            if id in dic.keys():
-                del dic[id]
+            if sig_id in dic.keys():
+                del dic[sig_id]
         else:
-            dic[id] = obj
+            dic[sig_id] = obj
 
     @Inputs.data
-    def set_data(self, data, id):
-        self.handle_input(data, id, "data")
+    def set_data(self, data, sig_id):
+        self.handle_input(data, sig_id, "data")
 
     @Inputs.learner
-    def set_learner(self, data, id):
-        self.handle_input(data, id, "learner")
+    def set_learner(self, data, sig_id):
+        self.handle_input(data, sig_id, "learner")
 
     @Inputs.classifier
-    def set_classifier(self, data, id):
-        self.handle_input(data, id, "classifier")
+    def set_classifier(self, data, sig_id):
+        self.handle_input(data, sig_id, "classifier")
 
     @Inputs.object
-    def set_object(self, data, id):
-        self.handle_input(data, id, "object")
+    def set_object(self, data, sig_id):
+        self.handle_input(data, sig_id, "object")
 
     def handleNewSignals(self):
         self.commit()
@@ -588,11 +603,11 @@ class OWPythonScript(widget.OWWidget):
     def setSelectedScript(self, index):
         select_row(self.libraryView, index)
 
-    def onAddScript(self, *args):
+    def onAddScript(self, *_):
         self.libraryList.append(Script("New script", self.text.toPlainText(), 0))
         self.setSelectedScript(len(self.libraryList) - 1)
 
-    def onAddScriptFromFile(self, *args):
+    def onAddScriptFromFile(self, *_):
         filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Python Script',
             os.path.expanduser("~/"),
@@ -606,18 +621,18 @@ class OWPythonScript(widget.OWWidget):
             self.libraryList.append(Script(name, contents, 0, filename))
             self.setSelectedScript(len(self.libraryList) - 1)
 
-    def onRemoveScript(self, *args):
+    def onRemoveScript(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
             del self.libraryList[index]
             select_row(self.libraryView, max(index - 1, 0))
 
-    def onSaveScriptToFile(self, *args):
+    def onSaveScriptToFile(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
             self.saveScript()
 
-    def onSelectedScriptChanged(self, selected, deselected):
+    def onSelectedScriptChanged(self, selected, _deselected):
         index = [i.row() for i in selected.indexes()]
         if index:
             current = index[0]
@@ -629,7 +644,7 @@ class OWPythonScript(widget.OWWidget):
             self.currentScriptIndex = current
 
     def documentForScript(self, script=0):
-        if type(script) != Script:
+        if not isinstance(script, Script):
             script = self.libraryList[script]
         if script not in self._cachedDocuments:
             doc = QTextDocument(self)
@@ -642,7 +657,7 @@ class OWPythonScript(widget.OWWidget):
             self._cachedDocuments[script] = doc
         return self._cachedDocuments[script]
 
-    def commitChangesToLibrary(self, *args):
+    def commitChangesToLibrary(self, *_):
         index = self.selectedScriptIndex()
         if index is not None:
             self.libraryList[index].script = self.text.toPlainText()
@@ -655,7 +670,7 @@ class OWPythonScript(widget.OWWidget):
             self.libraryList[index].flags = Script.Modified if modified else 0
             self.libraryList.emitDataChanged(index)
 
-    def onSpliterMoved(self, pos, ind):
+    def onSpliterMoved(self, _pos, _ind):
         self.splitterState = bytes(self.splitCanvas.saveState())
 
     def restoreSaved(self):
@@ -702,7 +717,6 @@ class OWPythonScript(widget.OWWidget):
 
     def commit(self):
         self.Error.clear()
-        self._script = str(self.text.toPlainText())
         lcls = self.initial_locals_state()
         lcls["_script"] = str(self.text.toPlainText())
         self.console.updateLocals(lcls)
@@ -719,6 +733,21 @@ class OWPythonScript(widget.OWWidget):
                 getattr(self.Error, signal)()
                 out_var = None
             getattr(self.Outputs, signal).send(out_var)
+
+    @staticmethod
+    def dragEnterEvent(event):
+        urls = event.mimeData().urls()
+        if urls:
+            # try reading the file as text
+            c = read_file_content(to_local_file(urls[0]), limit=1000)
+            if c is not None:
+                event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Handle file drops"""
+        urls = event.mimeData().urls()
+        if urls:
+            self.text.pasteFile(urls[0])
 
 
 if __name__ == "__main__":  # pragma: no cover

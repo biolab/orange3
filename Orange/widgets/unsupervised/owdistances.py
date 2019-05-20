@@ -53,12 +53,14 @@ class OWDistances(OWWidget):
 
     class Error(OWWidget.Error):
         no_continuous_features = Msg("No numeric features")
+        no_binary_features = Msg("No binary features")
         dense_metric_sparse_data = Msg("{} requires dense data.")
         distances_memory_error = Msg("Not enough memory")
         distances_value_error = Msg("Problem in calculation:\n{}")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring categorical features")
+        ignoring_nonbinary = Msg("Ignoring non-binary features")
         imputing_data = Msg("Missing values were imputed")
 
     def __init__(self):
@@ -112,31 +114,49 @@ class OWDistances(OWWidget):
             if issparse(data.X) and not metric.supports_sparse:
                 self.Error.dense_metric_sparse_data(METRICS[self.metric_idx][0])
                 return False
+            return True
 
         def _fix_discrete():
             nonlocal data
-            if data.domain.has_discrete_attributes() and (
-                    issparse(data.X) and getattr(metric, "fallback", None)
-                    or not metric.supports_discrete
-                    or self.axis == 1):
+            if data.domain.has_discrete_attributes() \
+                    and metric is not distance.Jaccard \
+                    and (issparse(data.X) and getattr(metric, "fallback", None)
+                         or not metric.supports_discrete
+                         or self.axis == 1):
                 if not data.domain.has_continuous_attributes():
                     self.Error.no_continuous_features()
                     return False
                 self.Warning.ignoring_discrete()
                 data = distance.remove_discrete_features(data)
+            return True
+
+        def _fix_nonbinary():
+            nonlocal data
+            if metric is distance.Jaccard and not issparse(data.X):
+                nbinary = sum(a.is_discrete and len(a.values) == 2
+                              for a in data.domain.attributes)
+                if not nbinary:
+                    self.Error.no_binary_features()
+                    return False
+                elif nbinary < len(data.domain.attributes):
+                    self.Warning.ignoring_nonbinary()
+                    data = distance.remove_nonbinary_features(data)
+            return True
 
         def _fix_missing():
             nonlocal data
             if not metric.supports_missing and bn.anynan(data.X):
                 self.Warning.imputing_data()
                 data = distance.impute(data)
+            return True
 
         self.clear_messages()
         if data is None:
-            return
-        for check in (_check_sparse, _fix_discrete, _fix_missing):
-            if check() is False:
-                return
+            return None
+        for check in (_check_sparse,
+                      _fix_discrete, _fix_missing, _fix_nonbinary):
+            if not check():
+                return None
         try:
             if metric.supports_normalization and self.normalized_dist:
                 return metric(data, axis=1 - self.axis, impute=True,

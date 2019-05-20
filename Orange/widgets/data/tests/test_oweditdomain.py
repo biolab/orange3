@@ -4,9 +4,9 @@ from unittest import TestCase
 import numpy as np
 from numpy.testing import assert_array_equal
 
-from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt
-from AnyQt.QtWidgets import QAction
-from AnyQt.QtTest import QTest
+from AnyQt.QtCore import QModelIndex, QItemSelectionModel, Qt, QItemSelection
+from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit
+from AnyQt.QtTest import QTest, QSignalSpy
 
 from Orange.data import (
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable,
@@ -18,10 +18,11 @@ from Orange.widgets.data.oweditdomain import (
     ContinuousVariableEditor, DiscreteVariableEditor, VariableEditor,
     TimeVariableEditor, Categorical, Real, Time, String,
     Rename, Annotate, CategoriesMapping, ChangeOrdered, report_transform,
-    apply_transform,
+    apply_transform, MultiplicityRole
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
+from Orange.tests import test_filename
 
 
 class TestReport(TestCase):
@@ -40,7 +41,7 @@ class TestReport(TestCase):
         self.assertIn("b", r)
 
     def test_categories_mapping(self):
-        var = Categorical("C", ("a", "b", "c"), None, ())
+        var = Categorical("C", ("a", "b", "c"), ())
         tr = CategoriesMapping(
             (("a", "aa"),
              ("b", None),
@@ -53,8 +54,19 @@ class TestReport(TestCase):
         self.assertIn("b", r)
         self.assertIn("<s>", r)
 
+    def test_categorical_merge_mapping(self):
+        var = Categorical("C", ("a", "b1", "b2"), ())
+        tr = CategoriesMapping(
+            (("a", "a"),
+             ("b1", "b"),
+             ("b2", "b"),
+             (None, "c")),
+        )
+        r = report_transform(var, [tr])
+        self.assertIn('b', r)
+
     def test_change_ordered(self):
-        var = Categorical("C", ("a", "b"), None, ())
+        var = Categorical("C", ("a", "b"), ())
         tr = ChangeOrdered(True)
         r = report_transform(var, [tr])
         self.assertIn("ordered", r)
@@ -158,7 +170,7 @@ class TestOWEditDomain(WidgetTest):
 
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
-        table = Table("cyber-security-breaches")
+        table = Table(test_filename("datasets/cyber-security-breaches.tab"))
         self.send_signal(self.widget.Inputs.data, table)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
@@ -233,8 +245,7 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Categorical("C", ("a", "b", "c"), None,
-                        (("A", "1"), ("B", "b")))
+        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")))
         w.set_data(v)
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -269,6 +280,91 @@ class TestEditors(GuiTest):
         model = sel_model.model()
         sel_model.select(model.index(0, 0), QItemSelectionModel.Select)
         sel_model.select(model.index(0, 0), QItemSelectionModel.Deselect)
+
+        # merge mapping
+        mapping = [
+            ("a", "a"),
+            ("b", "b"),
+            ("c", "b")
+        ]
+        w.set_data(v, [CategoriesMapping(mapping)])
+        self.assertEqual(w.get_data()[1], [CategoriesMapping(mapping)])
+        self.assertEqual(model.data(model.index(0, 0), MultiplicityRole), 1)
+        self.assertEqual(model.data(model.index(1, 0), MultiplicityRole), 2)
+        self.assertEqual(model.data(model.index(2, 0), MultiplicityRole), 2)
+        w.grab()
+        model.setData(model.index(0, 0), "b", Qt.EditRole)
+        self.assertEqual(model.data(model.index(0, 0), MultiplicityRole), 3)
+        self.assertEqual(model.data(model.index(1, 0), MultiplicityRole), 3)
+        self.assertEqual(model.data(model.index(2, 0), MultiplicityRole), 3)
+        w.grab()
+
+    def test_discrete_editor_add_remove_action(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")))
+        w.set_data(v)
+        action_add = w.add_new_item
+        action_remove = w.remove_item
+        view = w.values_edit
+        model, selection = view.model(), view.selectionModel()
+        selection.clear()
+
+        action_add.trigger()
+        self.assertTrue(view.state() == view.EditingState)
+        editor = view.focusWidget()
+        assert isinstance(editor, QLineEdit)
+        spy = QSignalSpy(model.dataChanged)
+        QTest.keyClick(editor, Qt.Key_D)
+        QTest.keyClick(editor, Qt.Key_Return)
+        self.assertTrue(model.rowCount() == 4)
+        # The commit to model is executed via a queued invoke
+        self.assertTrue(bool(spy) or spy.wait())
+        self.assertEqual(model.index(3, 0).data(Qt.EditRole), "d")
+        # remove it
+        spy = QSignalSpy(model.rowsRemoved)
+        action_remove.trigger()
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(len(spy), 1)
+        _, first, last = spy[0]
+        self.assertEqual((first, last), (3, 3))
+        # remove/drop and existing value
+        selection.select(model.index(1, 0), QItemSelectionModel.ClearAndSelect)
+        removespy = QSignalSpy(model.rowsRemoved)
+        changedspy = QSignalSpy(model.dataChanged)
+        action_remove.trigger()
+        self.assertEqual(len(removespy), 0, "Should only mark item as removed")
+        self.assertGreaterEqual(len(changedspy), 1, "Did not change data")
+        w.grab()
+
+    def test_discrete_editor_merge_action(self):
+        w = DiscreteVariableEditor()
+        v = Categorical("C", ("a", "b", "c"),
+                        (("A", "1"), ("B", "b")))
+        w.set_data(v)
+        action = w.merge_items
+        self.assertFalse(action.isEnabled())
+        view = w.values_edit
+        model = view.model()
+        selmodel = view.selectionModel()  # type: QItemSelectionModel
+        selmodel.select(
+            QItemSelection(model.index(0, 0), model.index(1, 0)),
+            QItemSelectionModel.ClearAndSelect
+        )
+        self.assertTrue(action.isEnabled())
+        # trigger the action, then find the active popup, and simulate entry
+        spy = QSignalSpy(w.variable_changed)
+        w.merge_items.trigger()
+        cb = w.findChild(QComboBox)
+        cb.setCurrentText("BA")
+        cb.activated[str].emit("BA")
+        cb.close()
+        self.assertEqual(model.index(0, 0).data(Qt.EditRole), "BA")
+        self.assertEqual(model.index(1, 0).data(Qt.EditRole), "BA")
+
+        self.assertSequenceEqual(
+            list(spy), [[]], 'variable_changed should emit exactly once'
+        )
 
     def test_time_editor(self):
         w = TimeVariableEditor()
@@ -332,7 +428,7 @@ class TestTransforms(TestCase):
         self.assertFalse(Do.ordered)
 
     def test_discrete_add_drop(self):
-        D = DiscreteVariable("D", values=("2", "3", "1", "0"), base_value=1)
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"))
         mapping = (
             ("0", None),
             ("1", "1"),
@@ -346,7 +442,21 @@ class TestTransforms(TestCase):
         self._assertLookupEquals(
             DD.compute_value, Lookup(D, np.array([1, np.nan, 0, np.nan]))
         )
-        self.assertEqual(DD.base_value, -1)
+
+    def test_discrete_merge(self):
+        D = DiscreteVariable("D", values=("2", "3", "1", "0"))
+        mapping = (
+            ("0", "x"),
+            ("1", "y"),
+            ("2", "x"),
+            ("3", "y"),
+        )
+        tr = [CategoriesMapping(mapping)]
+        DD = apply_transform(D, tr)
+        self.assertSequenceEqual(DD.values, ["x", "y"])
+        self._assertLookupEquals(
+            DD.compute_value, Lookup(D, np.array([0, 1, 1, 0]))
+        )
 
     def _assertLookupEquals(self, first, second):
         self.assertIsInstance(first, Lookup)

@@ -39,11 +39,13 @@ import pprint
 import time
 import warnings
 from operator import itemgetter
+from typing import Any
 
 from Orange.data import Domain, Variable
 from Orange.misc.environ import widget_settings_dir
 from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.utils import vartype
+from Orange.widgets.gui import OWComponent
 
 log = logging.getLogger(__name__)
 
@@ -88,6 +90,45 @@ class Setting:
 
     def __getnewargs__(self):
         return (self.default, )
+
+
+# Pylint ignores type annotations in assignments. For
+#
+#    x: int = Setting(0)
+#
+# it ignores `int` and assumes x is of type `Setting`. Annotations in
+# comments ( # type: int) also don't work. The only way to annotate x is
+#
+#    x: int
+#    x = Setting(0)
+#
+# but we don't want to clutter the code with extra lines of annotations. Hence
+# we disable checking the type of `Setting` by confusing pylint with an extra
+# definition that is never executed.
+if 1 == 0:
+    class Setting:  # pylint: disable=function-redefined
+        pass
+
+
+def _apply_setting(setting: Setting, instance: OWComponent, value: Any):
+    """
+    Set `setting` of widget `instance` to the given `value`, in place if
+    possible.
+
+    If old and new values are of the same type, and the type is either a list
+    or has methods `clear` and `update`, setting is updated in place. Otherwise
+    the function calls `setattr`.
+    """
+    target = getattr(instance, setting.name, None)
+    if type(target) is type(value):
+        if isinstance(value, list):
+            target[:] = value
+            return
+        elif hasattr(value, "clear") and hasattr(value, "update"):
+            target.clear()
+            target.update(value)
+            return
+    setattr(instance, setting.name, value)
 
 
 class SettingProvider:
@@ -243,7 +284,7 @@ class SettingProvider:
         """
         for setting, _data, inst in self.traverse_settings(data, instance):
             if setting.name in _data and inst is not None:
-                setattr(inst, setting.name, _data[setting.name])
+                _apply_setting(setting, inst, _data[setting.name])
 
     def get_provider(self, provider_class):
         """Return provider for provider_class.
@@ -412,7 +453,7 @@ class SettingsHandler:
                 self.write_defaults_file(settings_file)
             except (EOFError, IOError, pickle.PicklingError) as ex:
                 log.error("Could not write default settings for %s (%s).",
-                          self.widget_class, type(ex).__name__)
+                          self.widget_class, ex)
                 settings_file.close()
                 os.remove(filename)
             else:
@@ -489,6 +530,12 @@ class SettingsHandler:
         new_data.update(data)
         return new_data
 
+    def _prepare_defaults(self, widget):
+        self.defaults = self.provider.pack(widget)
+        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
+            if setting.schema_only:
+                data.pop(setting.name, None)
+
     def pack_data(self, widget):
         """
         Pack the settings for the given widget. This method is used when
@@ -504,6 +551,7 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
+        widget.settingsAboutToBePacked.emit()
         packed_settings = self.provider.pack(widget)
         packed_settings[VERSION_KEY] = self.widget_class.settings_version
         return packed_settings
@@ -517,10 +565,8 @@ class SettingsHandler:
         ----------
         widget : OWWidget
         """
-        self.defaults = self.provider.pack(widget)
-        for setting, data, _ in self.provider.traverse_settings(data=self.defaults):
-            if setting.schema_only:
-                data.pop(setting.name, None)
+        widget.settingsAboutToBePacked.emit()
+        self._prepare_defaults(widget)
         self.write_defaults()
 
     def fast_save(self, widget, name, value):
@@ -547,14 +593,13 @@ class SettingsHandler:
         """
         for setting, _, inst in self.provider.traverse_settings(instance=instance):
             if setting.packable:
-                setattr(inst, setting.name, setting.default)
+                _apply_setting(setting, inst, setting.default)
 
 
 class ContextSetting(Setting):
     """Description of a context dependent setting"""
 
     OPTIONAL = 0
-    IF_SELECTED = 1
     REQUIRED = 2
 
     # Context settings are not persisted, but are stored in context instead.
@@ -564,10 +609,9 @@ class ContextSetting(Setting):
     # something with the attributes. Large majority does, so this greatly
     # simplifies the declaration of settings in widget at no (visible)
     # cost to those settings that don't need it
-    def __init__(self, default, *, not_attribute=False, required=2,
+    def __init__(self, default, *, required=2,
                  exclude_attributes=False, exclude_metas=False, **data):
         super().__init__(default, **data)
-        self.not_attribute = not_attribute
         self.exclude_attributes = exclude_attributes
         self.exclude_metas = exclude_metas
         self.required = required
@@ -605,12 +649,6 @@ class ContextHandler(SettingsHandler):
         super().__init__()
         self.global_contexts = []
         self.known_settings = {}
-
-    def analyze_setting(self, prefix, setting):
-        super().analyze_setting(prefix, setting)
-        if isinstance(setting, ContextSetting):
-            if hasattr(setting, 'selected'):
-                self.known_settings[prefix + setting.selected] = setting
 
     def initialize(self, instance, data=None):
         """Initialize the widget: call the inherited initialization and
@@ -663,9 +701,11 @@ class ContextHandler(SettingsHandler):
         """Call the inherited method, then add local contexts to the dict."""
         data = super().pack_data(widget)
         self.settings_from_widget(widget)
-        for context in widget.context_settings:
+        context_settings = [copy.copy(context) for context in
+                            widget.context_settings]
+        for context in context_settings:
             context.values[VERSION_KEY] = self.widget_class.settings_version
-        data["context_settings"] = widget.context_settings
+        data["context_settings"] = context_settings
         return data
 
     def update_defaults(self, widget):
@@ -675,6 +715,7 @@ class ContextHandler(SettingsHandler):
         Merge the widgets local contexts into the global contexts and persist
         the settings (including the contexts) to disk.
         """
+        widget.settingsAboutToBePacked.emit()
         self.settings_from_widget(widget)
         globs = self.global_contexts
         assert widget.context_settings is not globs
@@ -683,7 +724,10 @@ class ContextHandler(SettingsHandler):
         globs.sort(key=lambda c: -c.time)
         del globs[self.MAX_SAVED_CONTEXTS:]
 
-        super().update_defaults(widget)
+        # Save non-context settings. Do not call super().update_defaults, so that
+        # settingsAboutToBePacked is emitted once.
+        self._prepare_defaults(widget)
+        self.write_defaults()
 
     def new_context(self, *args):
         """Create a new context."""
@@ -695,23 +739,9 @@ class ContextHandler(SettingsHandler):
         widget.current_context, is_new = \
             self.find_or_create_context(widget, *args)
         if is_new:
-            try:
-                self.settings_from_widget(widget, *args)
-            except TypeError:
-                warnings.warn("settings_from_widget in {} does not accept *args.\n"
-                              "Support for this will be dropped in Orange 3.10"
-                              .format(type(self)),
-                              DeprecationWarning)
-                self.settings_from_widget(widget)
+            self.settings_from_widget(widget, *args)
         else:
-            try:
-                self.settings_to_widget(widget, *args)
-            except TypeError:
-                warnings.warn("settings_to_widget {} does not accept *args.\n"
-                              "Support for this will be dropped in Orange 3.10"
-                              .format(type(self)),
-                              DeprecationWarning)
-                self.settings_to_widget(widget)
+            self.settings_to_widget(widget, *args)
 
     def match(self, context, *args):
         """Return the degree to which the stored `context` matches the data
@@ -824,11 +854,8 @@ class ContextHandler(SettingsHandler):
                 self.provider.traverse_settings(data=context.values, instance=widget):
             if not isinstance(setting, ContextSetting) or setting.name not in data:
                 continue
-
             value = self.decode_setting(setting, data[setting.name])
-            setattr(instance, setting.name, value)
-            if hasattr(setting, "selected") and setting.selected in data:
-                setattr(instance, setting.selected, data[setting.selected])
+            _apply_setting(setting, instance, value)
 
     def settings_from_widget(self, widget, *args):
         """Update the current context with the setting values from the widget.
@@ -844,8 +871,6 @@ class ContextHandler(SettingsHandler):
             if isinstance(setting, ContextSetting) and hasattr(instance, setting.name):
                 value = getattr(instance, setting.name)
                 yield setting.name, self.encode_setting(context, setting, value)
-                if hasattr(setting, "selected"):
-                    yield setting.selected, list(getattr(instance, setting.selected))
 
         context.values = self.provider.pack(widget, packer=packer)
 
@@ -898,6 +923,13 @@ class DomainContextHandler(ContextHandler):
                 .format(name), OrangeDeprecationWarning
             )
 
+    @staticmethod
+    def _warn_about_str_var_settings(setting):
+        warnings.warn(
+            "Storing variables as strings in settings is deprecated.\n"
+            "Support for this will be dropped in Orange 3.26.\n"
+            f"Change {setting.name} to store an instance of `Variable`.")
+
     def encode_domain(self, domain):
         """
         domain: Orange.data.domain to encode
@@ -937,28 +969,17 @@ class DomainContextHandler(ContextHandler):
 
     def open_context(self, widget, domain):
         if domain is None:
-            return None, False
-
+            return
         if not isinstance(domain, Domain):
             domain = domain.domain
-
         super().open_context(widget, domain, *self.encode_domain(domain))
 
     def filter_value(self, setting, data, domain, attrs, metas):
         value = data.get(setting.name, None)
         if isinstance(value, list):
-            sel_name = getattr(setting, "selected", None)
-            selected = set(data.pop(sel_name, []))
-            new_selected, new_value = [], []
-            for i, item in enumerate(value):
-                if self.is_valid_item(setting, item, attrs, metas):
-                    if i in selected:
-                        new_selected.append(len(new_value))
-                    new_value.append(item)
-
+            new_value = [item for item in value
+                         if self.is_valid_item(setting, item, attrs, metas)]
             data[setting.name] = new_value
-            if hasattr(setting, 'selected'):
-                data[setting.selected] = new_selected
         elif value is not None:
             if (value[1] >= 0 and
                     not self._var_exists(setting, value, attrs, metas)):
@@ -977,25 +998,39 @@ class DomainContextHandler(ContextHandler):
                 continue
 
             value = self.decode_setting(setting, data[setting.name], domain)
-            setattr(instance, setting.name, value)
-            if hasattr(setting, "selected") and setting.selected in data:
-                setattr(instance, setting.selected, data[setting.selected])
+            _apply_setting(setting, instance, value)
 
-    def encode_setting(self, context, setting, value):
+    @staticmethod
+    def encode_variable(var):
+        return var.name, 100 + vartype(var)
+
+    @classmethod
+    def encode_setting(cls, context, setting, value):
         if isinstance(value, list):
-            return copy.copy(value)
-        elif isinstance(setting, ContextSetting):
+            if all(e is None or isinstance(e, Variable) for e in value) \
+                    and any(e is not None for e in value):
+                return [None if e is None else cls.encode_variable(e)
+                        for e in value], -3
+            else:
+                return copy.copy(value)
+
+        if isinstance(setting, ContextSetting):
             if isinstance(value, str):
-                if not setting.exclude_attributes and value in context.attributes:
-                    return value, context.attributes[value]
-                if not setting.exclude_metas and value in context.metas:
-                    return value, context.metas[value]
+                variables = {
+                    **({} if setting.exclude_attributes else context.attributes),
+                    **({} if setting.exclude_metas else context.metas)}
+                if value in variables:
+                    cls._warn_about_str_var_settings(setting)
+                    return value, variables[value]
             elif isinstance(value, Variable):
-                return value.name, 100 + vartype(value)
+                return cls.encode_variable(value)
+
         return copy.copy(value), -2
 
     def decode_setting(self, setting, value, domain=None):
         if isinstance(value, tuple):
+            if value[1] == -3:
+                return [None if e is None else domain[e[0]] for e in value[0]]
             if value[1] >= 100:
                 if domain is None:
                     raise ValueError("Cannot decode variable without domain")
@@ -1004,14 +1039,16 @@ class DomainContextHandler(ContextHandler):
         else:
             return value
 
-    @staticmethod
-    def _var_exists(setting, value, attributes, metas):
+    @classmethod
+    def _var_exists(cls, setting, value, attributes, metas):
         if not isinstance(value, tuple) or len(value) != 2:
             return False
 
         attr_name, attr_type = value
         if attr_type >= 100:
             attr_type -= 100
+        else:
+            cls._warn_about_str_var_settings(setting)
         return (not setting.exclude_attributes and
                 attributes.get(attr_name, -1) == attr_type or
                 not setting.exclude_metas and
@@ -1032,6 +1069,12 @@ class DomainContextHandler(ContextHandler):
                 if isinstance(value, list):
                     matches.append(
                         self.match_list(setting, value, context, attrs, metas))
+                elif isinstance(value, tuple) \
+                        and len(value) == 2 \
+                        and isinstance(value[0], list) \
+                        and value[1] == -3:
+                    matches.append(
+                        self.match_list(setting, value[0], context, attrs, metas))
                 elif value is not None:
                     matches.append(
                         self.match_value(setting, value, attrs, metas))
@@ -1048,20 +1091,11 @@ class DomainContextHandler(ContextHandler):
         returns a tuple containing number of matched and all values.
         """
         matched = 0
-        if hasattr(setting, 'selected'):
-            selected = set(context.values.get(setting.selected, []))
-        else:
-            selected = set()
-
-        for i, item in enumerate(value):
+        for item in value:
             if self.is_valid_item(setting, item, attrs, metas):
                 matched += 1
-            else:
-                if setting.required == ContextSetting.REQUIRED:
-                    raise IncompatibleContext()
-                if setting.IF_SELECTED and i in selected:
-                    raise IncompatibleContext()
-
+            elif setting.required == ContextSetting.REQUIRED:
+                raise IncompatibleContext()
         return matched, len(value)
 
     def match_value(self, setting, value, attrs, metas):
@@ -1089,7 +1123,6 @@ class DomainContextHandler(ContextHandler):
 
 class IncompatibleContext(Exception):
     """Raised when a required variable in context is not available in data."""
-    pass
 
 
 class ClassValuesContextHandler(ContextHandler):
@@ -1191,8 +1224,8 @@ class SettingsPrinter(pprint.PrettyPrinter):
 
     def _format(self, obj, stream, indent, allowance, context, level):
         if not isinstance(obj, Context):
-            return super()._format(obj, stream, indent,
-                                   allowance, context, level)
+            super()._format(obj, stream, indent, allowance, context, level)
+            return
 
         stream.write("Context(")
         for key, value in sorted(obj.__dict__.items(), key=itemgetter(0)):

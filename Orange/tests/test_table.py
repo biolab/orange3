@@ -46,7 +46,7 @@ class TableTestCase(unittest.TestCase):
         data.table.dataset_dirs.remove(test_dirname())
 
     def test_indexing_class(self):
-        d = data.Table("test1")
+        d = data.Table("datasets/test1")
         self.assertEqual([e.get_class() for e in d], ["t", "t", "f"])
         cind = len(d.domain) - 1
         self.assertEqual([e[cind] for e in d], ["t", "t", "f"])
@@ -59,7 +59,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         self.assertEqual(d.__file__, os.path.join(dir, "iris.tab"))
 
-        d = data.Table("test2.tab")
+        d = data.Table("datasets/test2.tab")
         self.assertTrue(d.__file__.endswith("test2.tab"))  # platform dependent
 
     def test_indexing(self):
@@ -67,7 +67,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             # regular, discrete
             varc = d.domain["c"]
@@ -131,7 +131,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             e = d[0]
 
             # regular, discrete
@@ -169,7 +169,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             # meta
             vara = d.domain["a"]
@@ -282,10 +282,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
-
-            vara = d.domain["a"]
-            metaa = d.domain.index(vara)
+            d = data.Table("datasets/test2")
 
             self.assertFalse(isnan(d[0, "a"]))
             d[0] = ["3.14", "1", "f"]
@@ -321,7 +318,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             x = d[:3]
             self.assertEqual(len(x), 3)
             self.assertEqual([e[0] for e in x], [0, 1.1, 2.22])
@@ -343,7 +340,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
             d[2:5, 0] = 42
             self.assertEqual([e[0] for e in d],
                              [0, 1.1, 42, 42, 42, 2.25, 2.26, 3.333, Unknown])
@@ -410,7 +407,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             with self.assertRaises(IndexError):
                 x = d[2, 5, 1]
@@ -426,7 +423,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             d[1:4, "b"] = 42
             self.assertEqual([e[0] for e in d],
@@ -461,7 +458,7 @@ class TableTestCase(unittest.TestCase):
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            d = data.Table("test2")
+            d = data.Table("datasets/test2")
 
             vals = [e[0] for e in d]
             d[[1, 2, 5]] = [42, None, None]
@@ -483,7 +480,7 @@ class TableTestCase(unittest.TestCase):
         d = data.Table("iris")
         self.assertTrue(d)
 
-        d = data.Table("test3")
+        d = data.Table("datasets/test3")
         self.assertFalse(d)
 
         d = data.Table("iris")
@@ -533,7 +530,7 @@ class TableTestCase(unittest.TestCase):
         self.assertTrue(d.has_missing())
         self.assertTrue(d.has_missing_class())
 
-        d = data.Table("test3")
+        d = data.Table("datasets/test3")
         self.assertFalse(d.has_missing())
         self.assertFalse(d.has_missing_class())
 
@@ -800,6 +797,7 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(d[i][j], dd[i][j])
         finally:
             os.remove("test-zoo.tab")
+            os.remove("test-zoo.tab.metadata")
 
         d = data.Table("zoo")
         d.set_weights(range(len(d)))
@@ -818,6 +816,7 @@ class TableTestCase(unittest.TestCase):
                     self.assertEqual(d[i][j], dd[i][j])
         finally:
             os.remove("test-zoo-weights.tab")
+            os.remove("test-zoo-weights.tab.metadata")
 
     def test_save_pickle(self):
         table = data.Table("iris")
@@ -879,7 +878,7 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(e), 50)
         e = filter.Random(50, negate=True)(d)
         self.assertEqual(len(e), 100)
-        for i in range(5):
+        for _ in range(5):
             e = filter.Random(0.2)(d)
             self.assertEqual(len(e), 30)
             bc = np.bincount(np.array(e.Y[:], dtype=int))
@@ -1058,13 +1057,13 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(len(filter.Values([f])(d)), len(d) - 5)
 
     def test_valueFilter_string_is_defined(self):
-        d = data.Table("test9.tab")
+        d = data.Table("datasets/test9.tab")
         f = filter.FilterString(-5, filter.FilterString.IsDefined)
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 7)
 
     def test_valueFilter_discrete_meta_is_defined(self):
-        d = data.Table("test9.tab")
+        d = data.Table("datasets/test9.tab")
         f = filter.FilterDiscrete(-4, None)
         x = filter.Values([f])(d)
         self.assertEqual(len(x), 8)
@@ -1276,6 +1275,14 @@ class TableTestCase(unittest.TestCase):
         table = data.Table("iris")[:1]
         table.X = sp.csr_matrix(table.X)
         repr(table)     # make sure repr does not crash
+
+    def test_inf(self):
+        a = np.array([[2, 0, 0, 0],
+                      [0, np.nan, np.nan, 1],
+                      [0, 0, np.inf, 0]])
+        with self.assertWarns(Warning):
+            tab = data.Table(a)
+        self.assertEqual(tab.get_nan_frequency_attribute(), 3/12)
 
 
 def column_sizes(table):
@@ -1698,11 +1705,11 @@ class CreateTableWithData(TableTests):
                                           self.meta_data, self.weight_data)
 
     def test_from_numpy_reconstructable(self):
-        def assert_equal(T1, T2):
-            np.testing.assert_array_equal(T1.X, T2.X)
-            np.testing.assert_array_equal(T1.Y, T2.Y)
-            np.testing.assert_array_equal(T1.metas, T2.metas)
-            np.testing.assert_array_equal(T1.W, T2.W)
+        def assert_equal(t1, t2):
+            np.testing.assert_array_equal(t1.X, t2.X)
+            np.testing.assert_array_equal(t1.Y, t2.Y)
+            np.testing.assert_array_equal(t1.metas, t2.metas)
+            np.testing.assert_array_equal(t1.W, t2.W)
 
         nullcol = np.empty((self.nrows, 0))
         domain = self.create_domain(self.attributes)
@@ -2259,7 +2266,7 @@ class InterfaceTest(unittest.TestCase):
 
         data_file = _ExtendedTable('iris')
         data_url = _ExtendedTable.from_url(
-            Path(os.path.dirname(__file__), 'test1.tab').as_uri())
+            Path(os.path.dirname(__file__), 'datasets/test1.tab').as_uri())
 
         self.assertIsInstance(data_file, _ExtendedTable)
         self.assertIsInstance(data_url, _ExtendedTable)
@@ -2393,10 +2400,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "4.000"}
-        att[1].attributes = {"cls": "3.000"}
-        att[2].attributes = {"cls": "2.000"}
-        att[3].attributes = {"cls": "1.000"}
+        att[0].attributes = {"cls": "4"}
+        att[1].attributes = {"cls": "3"}
+        att[2].attributes = {"cls": "2"}
+        att[3].attributes = {"cls": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2419,9 +2426,9 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[1].attributes = {"cls": "3.000"}
-        att[2].attributes = {"cls": "2.000"}
-        att[3].attributes = {"cls": "1.000"}
+        att[1].attributes = {"cls": "3"}
+        att[2].attributes = {"cls": "2"}
+        att[3].attributes = {"cls": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2445,10 +2452,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls1": "0.000", "cls2": "1.000"}
-        att[1].attributes = {"cls1": "2.000", "cls2": "3.000"}
-        att[2].attributes = {"cls1": "4.000", "cls2": "5.000"}
-        att[3].attributes = {"cls1": "6.000", "cls2": "7.000"}
+        att[0].attributes = {"cls1": "0", "cls2": "1"}
+        att[1].attributes = {"cls1": "2", "cls2": "3"}
+        att[2].attributes = {"cls1": "4", "cls2": "5"}
+        att[3].attributes = {"cls1": "6", "cls2": "7"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2529,10 +2536,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"m1": "0.000"}
-        att[1].attributes = {"m1": "1.000"}
-        att[2].attributes = {"m1": "0.000"}
-        att[3].attributes = {"m1": "1.000"}
+        att[0].attributes = {"m1": "0"}
+        att[1].attributes = {"m1": "1"}
+        att[2].attributes = {"m1": "0"}
+        att[3].attributes = {"m1": "1"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2613,10 +2620,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "1.000", "m1": "aa", "m2": "aaa"}
-        att[1].attributes = {"cls": "2.000", "m1": "bb", "m2": "bbb"}
-        att[2].attributes = {"cls": "3.000", "m1": "cc", "m2": "ccc"}
-        att[3].attributes = {"cls": "4.000", "m1": "dd", "m2": "ddd"}
+        att[0].attributes = {"cls": "1", "m1": "aa", "m2": "aaa"}
+        att[1].attributes = {"cls": "2", "m1": "bb", "m2": "bbb"}
+        att[2].attributes = {"cls": "3", "m1": "cc", "m2": "ccc"}
+        att[3].attributes = {"cls": "4", "m1": "dd", "m2": "ddd"}
         domain = Domain(att, metas=[StringVariable("Feature name")])
         result = Table(domain, np.arange(8).reshape((4, 2)).T,
                        metas=np.array(["c1", "c2"])[:, None])
@@ -2660,8 +2667,8 @@ class TestTableTranspose(unittest.TestCase):
 
     def test_transpose_attributes_of_attributes_continuous(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
-        attrs[0].attributes = {"attr1": "1.100", "attr2": "1.300"}
-        attrs[1].attributes = {"attr1": "2.200", "attr2": "2.300"}
+        attrs[0].attributes = {"attr1": "1.1", "attr2": "1.3"}
+        attrs[1].attributes = {"attr1": "2.2", "attr2": "2.3"}
         domain = Domain(attrs)
         data = Table(domain, np.arange(8).reshape((4, 2)))
 
@@ -2683,7 +2690,7 @@ class TestTableTranspose(unittest.TestCase):
 
         # original should not change
         self.assertDictEqual(data.domain.attributes[0].attributes,
-                             {"attr1": "1.100", "attr2": "1.300"})
+                             {"attr1": "1.1", "attr2": "1.3"})
 
     def test_transpose_attributes_of_attributes_missings(self):
         attrs = [ContinuousVariable("c1"), ContinuousVariable("c2")]
@@ -2724,10 +2731,10 @@ class TestTableTranspose(unittest.TestCase):
 
         att = [ContinuousVariable("Feature 1"), ContinuousVariable("Feature 2"),
                ContinuousVariable("Feature 3"), ContinuousVariable("Feature 4")]
-        att[0].attributes = {"cls": "1.000", "m1": "aa", "m2": "aaa"}
-        att[1].attributes = {"cls": "2.000", "m1": "bb", "m2": "bbb"}
-        att[2].attributes = {"cls": "3.000", "m1": "cc", "m2": "ccc"}
-        att[3].attributes = {"cls": "4.000", "m1": "dd", "m2": "ddd"}
+        att[0].attributes = {"cls": "1", "m1": "aa", "m2": "aaa"}
+        att[1].attributes = {"cls": "2", "m1": "bb", "m2": "bbb"}
+        att[2].attributes = {"cls": "3", "m1": "cc", "m2": "ccc"}
+        att[3].attributes = {"cls": "4", "m1": "dd", "m2": "ddd"}
         metas = [StringVariable("Feature name"),
                  DiscreteVariable("attr1", values=("a1", "b1")),
                  DiscreteVariable("attr2", values=("aa1", "bb1"))]
@@ -2745,6 +2752,15 @@ class TestTableTranspose(unittest.TestCase):
         # original should not change
         self.assertDictEqual(data.domain.attributes[0].attributes,
                              {"attr1": "a1", "attr2": "aa1"})
+
+    def test_transpose_duplicate_feature_names(self):
+        table = Table("iris")
+        domain = table.domain
+        attrs, metas = domain.attributes[:3], domain.attributes[3:]
+        table = table.transform(Domain(attrs, domain.class_vars, metas))
+        transposed = Table.transpose(table, domain.attributes[3].name)
+        names = [f.name for f in transposed.domain.attributes]
+        self.assertEqual(len(names), len(set(names)))
 
     def test_transpose(self):
         zoo = Table("zoo")

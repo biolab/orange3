@@ -27,3 +27,5 @@ Thumbs.db
 # PyLint, Coverage reports
 .pylint_cache/*
 htmlcov/*
+.coverage
+.coverage.*

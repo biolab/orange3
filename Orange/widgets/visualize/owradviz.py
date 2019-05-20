@@ -20,9 +20,8 @@ from Orange.projection import RadViz
 from Orange.widgets import widget, gui
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
-from Orange.widgets.utils import vartype
-from Orange.widgets.utils.itemmodels import VariableListModel
-from Orange.widgets.utils.plot import VariablesSelection
+from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel, \
+    variables_selection
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import VizRankDialog
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
@@ -47,11 +46,10 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
         self.master = master
         self.n_neighbors = 10
-        max_n_attrs = len(master.model_selected) + len(master.model_other) - 1
 
         box = gui.hBox(self)
         self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
+            box, self, "n_attrs", 3, 99, label="Maximum number of variables: ",
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
@@ -73,7 +71,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         used by VizRank to evaluate attributes
         """
         master = self.master
-        attrs = [v for v in chain(master.model_selected[:], master.model_other[:])
+        attrs = [v for v in master.primitive_variables
                  if v is not self.attr_color]
         data = self.master.data.transform(Domain(attributes=attrs, class_vars=self.attr_color))
         self.data = data
@@ -132,7 +130,7 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             return False
         elif not master.btn_vizrank.isEnabled():
             return False
-        self.n_attrs_spin.setMaximum(20)  # all primitive vars except color one
+        self.n_attrs_spin.setMaximum(len(master.model_selected))
         return True
 
     def on_row_clicked(self, index):
@@ -273,37 +271,28 @@ class OWRadviz(OWAnchorProjectionWidget):
     priority = 241
     keywords = ["viz"]
 
-    settings_version = 2
+    settings_version = 3
 
     selected_vars = ContextSetting([])
     vizrank = SettingProvider(RadvizVizRank)
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
 
+    left_side_scrolling = True
+
     class Warning(OWAnchorProjectionWidget.Warning):
         invalid_embedding = widget.Msg("No projection for selected features")
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
 
-    def __init__(self):
-        self.model_selected = VariableListModel(enable_dnd=True)
-        self.model_selected.removed.connect(self.__model_selected_changed)
-        self.model_other = VariableListModel(enable_dnd=True)
-
-        self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.vizrank_set_attrs
-        )
-        super().__init__()
-
     def _add_controls(self):
-        self.variables_selection = VariablesSelection(
-            self, self.model_selected, self.model_other, self.controlArea
-        )
-        self.variables_selection.added.connect(self.__model_selected_changed)
-        self.variables_selection.removed.connect(self.__model_selected_changed)
-        self.variables_selection.add_remove.layout().addWidget(
-            self.btn_vizrank
-        )
+        self.model_selected = VariableSelectionModel(self.selected_vars)
+        variables_selection(self.controlArea, self, self.model_selected)
+        self.model_selected.selection_changed.connect(
+            self.__model_selected_changed)
+        self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
+            None, self, "Suggest features", self.vizrank_set_attrs)
+        self.controlArea.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
         self.controlArea.layout().removeWidget(self.control_area_stretch)
         self.control_area_stretch.setParent(None)
@@ -318,19 +307,17 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     @property
     def effective_variables(self):
-        return self.model_selected[:]
+        return self.selected_vars
 
     def vizrank_set_attrs(self, *attrs):
         if not attrs:
             return
-        self.model_selected[:] = attrs[:]
-        self.model_other[:] = [var for var in self.primitive_variables
-                               if var not in attrs]
-        self.__model_selected_changed()
+        self.selected_vars[:] = attrs
+        # Ugly, but the alternative is to have yet another signal to which
+        # the view will have to connect
+        self.model_selected.selection_changed.emit()
 
     def __model_selected_changed(self):
-        self.selected_vars = [(var.name, vartype(var)) for var
-                              in self.model_selected]
         self.init_projection()
         self.setup_plot()
         self.commit()
@@ -344,29 +331,13 @@ class OWRadviz(OWAnchorProjectionWidget):
         self._init_vizrank()
         self.init_projection()
 
-    def use_context(self):
-        self.model_selected.clear()
-        self.model_other.clear()
-        if self.data is not None and len(self.selected_vars):
-            d, selected = self.data.domain, [v[0] for v in self.selected_vars]
-            self.model_selected[:] = [d[name] for name in selected]
-            self.model_other[:] = [d[attr.name] for attr in
-                                   self.primitive_variables
-                                   if attr.name not in selected]
-        elif self.data is not None:
-            d, variables = self.data.domain, self.primitive_variables
-            class_var = [variables.pop(variables.index(d.class_var))] \
-                if d.class_var in variables else []
-            self.model_selected[:] = variables[:5]
-            self.model_other[:] = variables[5:] + class_var
-
     def _init_vizrank(self):
         is_enabled = self.data is not None and \
             len(self.primitive_variables) > 3 and \
             self.attr_color is not None and \
             not np.isnan(self.data.get_column_view(
                 self.attr_color)[0].astype(float)).all() and \
-            len(self.data[self.valid_data]) > 1 and \
+            np.sum(np.all(np.isfinite(self.data.X), axis=1)) > 1 and \
             np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
         self.btn_vizrank.setEnabled(is_enabled)
         if is_enabled:
@@ -383,7 +354,8 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def init_attr_values(self):
         super().init_attr_values()
-        self.selected_vars = []
+        self.selected_vars[:] = self.primitive_variables[:5]
+        self.model_selected[:] = self.primitive_variables
 
     def _manual_move(self, anchor_idx, x, y):
         angle = np.arctan2(y, x)
@@ -403,12 +375,14 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
+        values = context.values
         if version < 2:
-            values = context.values
             values["attr_color"] = values["graph"]["attr_color"]
             values["attr_size"] = values["graph"]["attr_size"]
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
+        if version < 3 and "selected_vars" in values:
+            values["selected_vars"] = (values["selected_vars"], -3)
 
 
 class MoveIndicator(pg.GraphicsObject):
@@ -447,5 +421,5 @@ class MoveIndicator(pg.GraphicsObject):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("heart_disease")
+    data = Table("brown-selected")
     WidgetPreview(OWRadviz).run(set_data=data, set_subset_data=data[::10])

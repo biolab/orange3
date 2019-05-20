@@ -117,7 +117,6 @@ class TestModel(TestCase):
 
     def test_flags(self):
         m = VariablesListItemModel([ContinuousVariable("X")])
-        index = m.index(0)
         flags = m.flags(m.index(0))
         self.assertTrue(flags & Qt.ItemIsDragEnabled)
         self.assertFalse(flags & Qt.ItemIsDropEnabled)
@@ -359,6 +358,7 @@ class TestOWSelectAttributes(WidgetTest):
         self.assertFalse(event.isAccepted())
 
     def _drag_enter_event(self, variables):
+        # pylint: disable=attribute-defined-outside-init
         self.event_data = mime = QMimeData()
         mime.setProperty("_items", variables)
         return QDragEnterEvent(QPoint(0, 0), Qt.MoveAction, mime,

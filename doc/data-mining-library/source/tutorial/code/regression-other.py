@@ -19,4 +19,4 @@ print("y   ", " ".join("%5s" % l.name for l in regressors))
 for d in test:
     print(("{:<5}" + " {:5.1f}"*len(regressors)).format(
         d.get_class(),
-        *(r(d)[0] for r in regressors)))
+        *(r(d) for r in regressors)))

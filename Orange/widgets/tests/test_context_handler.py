@@ -3,6 +3,7 @@ from copy import copy, deepcopy
 from io import BytesIO
 from unittest import TestCase
 from unittest.mock import Mock, patch, call
+from AnyQt.QtCore import pyqtSignal as Signal, QObject
 from Orange.widgets.settings import (
     ContextHandler, ContextSetting, Context, Setting, SettingsPrinter,
     VERSION_KEY, IncompatibleContext
@@ -11,13 +12,14 @@ from Orange.widgets.settings import (
 __author__ = 'anze'
 
 
-class SimpleWidget:
+class SimpleWidget(QObject):
     settings_version = 1
 
     setting = Setting(42)
     schema_only_setting = Setting(None, schema_only=True)
 
     context_setting = ContextSetting(42)
+    settingsAboutToBePacked = Signal()
 
     migrate_settings = Mock()
     migrate_context = Mock()
@@ -212,6 +214,18 @@ class TestContextHandler(TestCase):
         widget.current_context = handler.new_context()
         handler.close_context(widget)
         self.assertEqual(widget.schema_only_setting, 0xD06F00D)
+
+    def test_about_pack_settings_signal(self):
+        handler = ContextHandler()
+        handler.bind(SimpleWidget)
+        widget = SimpleWidget()
+        handler.initialize(widget)
+        fn = Mock()
+        widget.settingsAboutToBePacked.connect(fn)
+        handler.pack_data(widget)
+        self.assertEqual(1, fn.call_count)
+        handler.update_defaults(widget)
+        self.assertEqual(2, fn.call_count)
 
 
 class TestSettingsPrinter(TestCase):

@@ -5,10 +5,10 @@ import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain
+from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose
 from Orange.widgets.tests.base import WidgetTest
-
+from Orange.tests import test_filename
 
 class TestOWTranspose(WidgetTest):
     def setUp(self):
@@ -30,20 +30,14 @@ class TestOWTranspose(WidgetTest):
 
     def test_feature_type(self):
         widget = self.widget
-        data = Table("conferences.tab")
+        data = Table(test_filename("datasets/test_asn_data_working.csv"))
         metas = data.domain.metas
-        domain = data.domain
-        # Put one non-string column to metas, so widget must skip it
-        domain2 = Domain(domain.attributes[:-1],
-                         domain.class_vars,
-                         (domain.attributes[0], ) + domain.metas)
-        data2 = Table(domain2, data)
 
         widget.feature_type = widget.GENERIC
-        self.send_signal(widget.Inputs.data, data2)
+        self.send_signal(widget.Inputs.data, data)
 
-        # By default, the widget switches from GENERIC to the first string meta
-        self.assertEqual(widget.feature_type, widget.FROM_META_ATTR)
+        # By default, the widget switches from GENERIC to the first meta
+        self.assertEqual(widget.feature_type, widget.FROM_VAR)
         self.assertIs(widget.feature_names_column, metas[0])
         output = self.get_output(widget.Outputs.data)
         self.assertListEqual(
@@ -51,12 +45,12 @@ class TestOWTranspose(WidgetTest):
             [metas[0].to_val(m) for m in data.metas[:, 0]])
 
         # Test that the widget takes the correct column
-        widget.feature_names_column = metas[1]
+        widget.feature_names_column = metas[4]
         widget.apply()
         output = self.get_output(widget.Outputs.data)
-        self.assertListEqual(
-            [a.name for a in output.domain.attributes],
-            [metas[1].to_val(m) for m in data.metas[:, 1]])
+        self.assertTrue(
+            all(a.name.startswith(metas[1].to_val(m))
+                for a, m in zip(output.domain.attributes, data.metas[:, 4])))
 
         # Switch to generic
         self.assertEqual(widget.DEFAULT_PREFIX, "Feature")
@@ -84,13 +78,13 @@ class TestOWTranspose(WidgetTest):
 
     def test_send_report(self):
         widget = self.widget
-        widget.feature_type = widget.FROM_META_ATTR
+        widget.feature_type = widget.FROM_VAR
         widget.report_button.click()
         widget.feature_type = widget.GENERIC
         widget.report_button.click()
 
         self.send_signal(widget.Inputs.data, self.zoo)
-        widget.feature_type = widget.FROM_META_ATTR
+        widget.feature_type = widget.FROM_VAR
         widget.report_button.click()
         widget.feature_type = widget.GENERIC
         widget.report_button.click()
@@ -110,7 +104,7 @@ class TestOWTranspose(WidgetTest):
         # Data with metas: default type is meta, radio enabled
         self.send_signal(widget.Inputs.data, self.zoo)
         self.assertTrue(widget.meta_button.isEnabled())
-        self.assertEqual(widget.feature_type, widget.FROM_META_ATTR)
+        self.assertEqual(widget.feature_type, widget.FROM_VAR)
         self.assertIs(widget.feature_names_column, widget.feature_model[0])
         self.assertTrue(widget.apply.called)
 
@@ -123,7 +117,7 @@ class TestOWTranspose(WidgetTest):
         # Changing combo changes the radio button to meta
         widget.apply.reset_mock()
         widget.feature_combo.activated.emit(0)
-        self.assertEqual(widget.feature_type, widget.FROM_META_ATTR)
+        self.assertEqual(widget.feature_type, widget.FROM_VAR)
         self.assertTrue(widget.apply.called)
 
     def test_all_whitespace(self):
@@ -140,6 +134,20 @@ class TestOWTranspose(WidgetTest):
             self.assertTrue(widget.Error.value_error.is_shown())
         self.send_signal(widget.Inputs.data, self.zoo)
         self.assertFalse(widget.Error.value_error.is_shown())
+
+    def test_feature_names_from_cont_vars(self):
+        table = Table("iris")
+        self.send_signal(self.widget.Inputs.data, table)
+        self.assertListEqual(self.widget.feature_model[:],
+                             list(table.domain.attributes))
+        self.widget.feature_combo.activated.emit(3)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertListEqual([f.name for f in output.domain.attributes[:10]],
+                             ["0.2 (1)", "0.2 (2)", "0.2 (3)", "0.2 (4)",
+                              "0.2 (5)", "0.4 (1)", "0.3 (1)", "0.2 (6)",
+                              "0.2 (7)", "0.1 (1)"])
+        self.assertTrue(self.widget.Warning.duplicate_names.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()

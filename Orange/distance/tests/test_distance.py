@@ -3,6 +3,7 @@ from unittest.mock import patch
 from math import sqrt
 
 import numpy as np
+from scipy.sparse import csr_matrix
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Domain, Table
 from Orange import distance
@@ -23,6 +24,21 @@ class CommonTests:
         np.testing.assert_almost_equal(
             self.Distance(Table(self.domain), self.data),
             np.zeros((0, n)))
+
+    def test_sparse(self):
+        """Test sparse support in distances."""
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        dense_data = Table.from_list(
+            domain, [[1, 0, 2], [-1, 5, 0], [0, 1, 1], [7, 0, 0]])
+        sparse_data = Table(domain, csr_matrix(dense_data.X))
+
+        if not self.Distance.supports_sparse:
+            self.assertRaises(TypeError, self.Distance, sparse_data)
+        else:
+            # check the result is the same for sparse and dense
+            dist_dense = self.Distance(dense_data)
+            dist_sparse = self.Distance(sparse_data)
+            np.testing.assert_allclose(dist_sparse, dist_dense)
 
 
 class CommonFittedTests(CommonTests):
@@ -875,6 +891,20 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
             1 - np.array([[1, 0.4, 0.25],
                           [0.4, 1, 5/12],
                           [0.25, 5/12, 1]]))
+
+    def test_zero_instances(self):
+        "Test all zero instances"
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        dense_data = Table.from_list(
+            domain, [[0, 0, 0], [0, 0, 0], [0, 0, 1]])
+        sparse_data = Table(domain, csr_matrix(dense_data.X))
+        dist_dense = self.Distance(dense_data)
+        dist_sparse = self.Distance(sparse_data)
+
+        self.assertEqual(dist_dense[0][1], 0)
+        self.assertEqual(dist_sparse[0][1], 0)
+        self.assertEqual(dist_dense[0][2], 1)
+        self.assertEqual(dist_sparse[0][2], 1)
 
 class HammingDistanceTest(FittedDistanceTest):
     Distance = distance.Hamming

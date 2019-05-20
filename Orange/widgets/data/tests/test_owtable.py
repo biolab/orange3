@@ -1,8 +1,8 @@
-# Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+from unittest.mock import Mock
+
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
-from Orange.data import Table
+from Orange.data import Table, Domain
 
 
 class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
@@ -12,7 +12,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         WidgetOutputsTestMixin.init(cls)
 
         cls.signal_name = "Data"
-        cls.signal_data = cls.data
+        cls.signal_data = cls.data  # pylint: disable=no-member
 
     def setUp(self):
         self.widget = self.create_widget(OWDataTable)
@@ -43,3 +43,17 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.widget.selected_rows = list(range(0, len(self.data.domain), 10))
         self.widget.set_selection()
         return self.widget.selected_rows
+
+    def test_attrs_appear_in_corner_text(self):
+        iris = Table("iris")
+        domain = iris.domain
+        new_domain = Domain(
+            domain.attributes[1:], iris.domain.class_var, domain.attributes[:1])
+        new_domain.metas[0].attributes = {"c": "foo"}
+        new_domain.attributes[0].attributes = {"a": "bar", "c": "baz"}
+        new_domain.class_var.attributes = {"b": "foo"}
+        self.widget.set_corner_text = Mock()
+        self.send_signal(self.widget.Inputs.data, iris.transform(new_domain))
+        # false positive, pylint: disable=unsubscriptable-object
+        self.assertEqual(
+            self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")

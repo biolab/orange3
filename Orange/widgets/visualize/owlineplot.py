@@ -91,6 +91,18 @@ class LinePlotStyle:
     MEAN_DARK_FACTOR = 110
 
 
+class LinePlotAxisItem(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._ticks = {}
+
+    def set_ticks(self, ticks):
+        self._ticks = dict(enumerate(ticks, 1)) if ticks else {}
+
+    def tickStrings(self, values, scale, spacing):
+        return [self._ticks.get(v * scale, "") for v in values]
+
+
 class LinePlotViewBox(ViewBox):
     selection_changed = Signal(np.ndarray)
 
@@ -172,8 +184,10 @@ class LinePlotViewBox(ViewBox):
 
 class LinePlotGraph(pg.PlotWidget):
     def __init__(self, parent):
+        self.bottom_axis = LinePlotAxisItem(orientation="bottom")
         super().__init__(parent, viewBox=LinePlotViewBox(),
-                         background="w", enableMenu=False)
+                         background="w", enableMenu=False,
+                         axisItems={"bottom": self.bottom_axis})
         self.view_box = self.getViewBox()
         self.selection = set()
         self.legend = self._create_legend(((1, 0), (1, 0)))
@@ -213,7 +227,7 @@ class LinePlotGraph(pg.PlotWidget):
         self.selection = set()
         self.view_box.reset()
         self.clear()
-        self.getAxis('bottom').setTicks(None)
+        self.getAxis('bottom').set_ticks(None)
         self.legend.hide()
 
     def select_button_clicked(self):
@@ -593,8 +607,8 @@ class OWLinePlot(OWWidget):
         if self.data is None:
             return
 
-        ticks = [[(i, a.name) for i, a in enumerate(self.graph_variables, 1)]]
-        self.graph.getAxis('bottom').setTicks(ticks)
+        ticks = [a.name for a in self.graph_variables]
+        self.graph.getAxis("bottom").set_ticks(ticks)
         self.plot_groups()
         self.apply_selection()
         self.graph.view_box.enableAutoRange()

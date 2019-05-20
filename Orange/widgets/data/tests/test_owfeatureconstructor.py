@@ -31,7 +31,7 @@ class FeatureConstructorTest(unittest.TestCase):
         values = ('iris one', 'iris two', 'iris three')
         desc = PyListModel(
             [DiscreteDescriptor(name=name, expression=expression,
-                                values=values, base_value=-1, ordered=False)]
+                                values=values, ordered=False)]
         )
         data = Table(Domain(list(data.domain.attributes) +
                             construct_variables(desc, data.domain.variables),
@@ -76,7 +76,8 @@ class FeatureConstructorTest(unittest.TestCase):
             self.assertEqual(data[i * 50, name],
                              str(data[i * 50, "iris"]) + "_name")
 
-    def test_construct_numeric_names(self):
+    @staticmethod
+    def test_construct_numeric_names():
         data = Table("iris")
         data.domain.attributes[0].name = "0.1"
         data.domain.attributes[1].name = "1"
@@ -89,6 +90,7 @@ class FeatureConstructorTest(unittest.TestCase):
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
+        # pylint: disable=protected-access
         ContinuousVariable._clear_all_caches()
 
 
@@ -102,8 +104,8 @@ class TestTools(unittest.TestCase):
         with self.assertRaises(ValueError):
             freevars(suite, [])
 
-        def freevars_(source, env=[]):
-            return freevars(ast.parse(source, "", "eval"), env)
+        def freevars_(source, env=None):
+            return freevars(ast.parse(source, "", "eval"), env or [])
 
         self.assertEqual(freevars_("1"), [])
         self.assertEqual(freevars_("..."), [])

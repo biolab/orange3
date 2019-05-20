@@ -269,6 +269,8 @@ class Normalize(Preprocess):
     Parameters
     ----------
     zero_based : bool (default=True)
+        Only used when `norm_type=NormalizeBySpan`.
+
         Determines the value used as the “low” value of the variable.
         It determines the interval for normalized continuous variables
         (either [-1, 1] or [0, 1]).
@@ -286,6 +288,14 @@ class Normalize(Preprocess):
     transform_class : bool (default=False)
         If True the class is normalized as well.
 
+    center : bool (default=True)
+        Only used when `norm_type=NormalizeBySD`.
+
+        Whether or not to center the data so it has mean zero.
+
+    normalize_datetime : bool (default=False)
+
+
     Examples
     --------
     >>> from Orange.data import Table
@@ -301,10 +311,14 @@ class Normalize(Preprocess):
     def __init__(self,
                  zero_based=True,
                  norm_type=NormalizeBySD,
-                 transform_class=False):
+                 transform_class=False,
+                 center=True,
+                 normalize_datetime=False):
         self.zero_based = zero_based
         self.norm_type = norm_type
         self.transform_class = transform_class
+        self.center = center
+        self.normalize_datetime = normalize_datetime
 
     def __call__(self, data):
         """
@@ -331,10 +345,14 @@ class Normalize(Preprocess):
             # matrix, which requires too much memory. For example, this is used for Bag of Words
             # models where normalization is not really needed.
             return data
+
         normalizer = normalize.Normalizer(
             zero_based=self.zero_based,
             norm_type=self.norm_type,
-            transform_class=self.transform_class)
+            transform_class=self.transform_class,
+            center=self.center,
+            normalize_datetime=self.normalize_datetime
+        )
         return normalizer(data)
 
 
@@ -512,8 +530,6 @@ class Scale(Preprocess):
             factor = 1 / s
             transformed_var = var.copy(
                 compute_value=transformation.Normalizer(var, c, factor))
-            if s != 1:
-                transformed_var.number_of_decimals = 3
             return transformed_var
 
         newvars = []
@@ -525,18 +541,6 @@ class Scale(Preprocess):
         domain = Orange.data.Domain(newvars, data.domain.class_vars,
                                     data.domain.metas)
         return data.transform(domain)
-
-
-class ApplyDomain(Preprocess):
-    def __init__(self, domain, name):
-        self._domain = domain
-        self._name = name
-
-    def __call__(self, data):
-        return data.transform(self._domain)
-
-    def __str__(self):
-        return self._name
 
 
 class PreprocessorList(Preprocess):
