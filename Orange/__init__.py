@@ -53,10 +53,3 @@ except:  # pylint: disable=bare-except
     pass
 finally:
     del ctypes
-
-
-# scipy.sparse uses matrix
-# we can't do anything about it, so we silence it until scipy is fixed
-import warnings
-warnings.filterwarnings(
-    "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)

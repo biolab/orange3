@@ -3,7 +3,6 @@
 
 import unittest
 from unittest.mock import Mock
-import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -98,18 +97,12 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self._test_predictions_with_absent_class(sparse=None)
 
     def test_predictions_csr_matrix(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
-            self._test_predictions(sparse=sp.csr_matrix)
-            self._test_predictions_with_absent_class(sparse=sp.csr_matrix)
+        self._test_predictions(sparse=sp.csr_matrix)
+        self._test_predictions_with_absent_class(sparse=sp.csr_matrix)
 
     def test_predictions_csc_matrix(self):
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
-            self._test_predictions(sparse=sp.csc_matrix)
-            self._test_predictions_with_absent_class(sparse=sp.csc_matrix)
+        self._test_predictions(sparse=sp.csc_matrix)
+        self._test_predictions_with_absent_class(sparse=sp.csc_matrix)
 
     def _test_predictions(self, sparse):
         x = np.array([
