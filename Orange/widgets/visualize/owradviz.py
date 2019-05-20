@@ -209,13 +209,14 @@ class OWRadvizGraph(OWGraphWithAnchors):
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.anchors_scatter_item = None
+        self.padding = 0.025
 
     def clear(self):
         super().clear()
         self.anchors_scatter_item = None
 
     def set_view_box_range(self):
-        self.view_box.setRange(QRectF(-1.2, -1.05, 2.4, 2.1), padding=0.025)
+        self.view_box.setRange(QRectF(-1, -1, 2, 2), padding=self.padding)
 
     def closest_draggable_item(self, pos):
         points, _ = self.master.get_anchors()
@@ -231,18 +232,36 @@ class OWRadvizGraph(OWGraphWithAnchors):
         points, labels = self.master.get_anchors()
         if points is None:
             return
-        if self.anchor_items is None:
-            self.anchor_items = []
-            for point, label in zip(points, labels):
-                anchor = TextItem()
-                anchor.setText(label)
-                anchor.setColor(QColor(0, 0, 0))
-                anchor.setPos(*point)
-                self.plot_widget.addItem(anchor)
-                self.anchor_items.append(anchor)
-        else:
-            for anchor, point in zip(self.anchor_items, points):
-                anchor.setPos(*point)
+        if self.anchor_items is not None:
+            for anchor in self.anchor_items:
+                self.plot_widget.removeItem(anchor)
+
+        self.anchor_items = []
+        label_len = []
+        for point, label in zip(points, labels):
+            anchor = TextItem()
+            anchor.textItem.setToolTip(f"<b>{label}</b>")
+            if len(label) > 20:
+                label = label[:17] + "..."
+            anchor.setText(label)
+            label_len.append(len(label))
+            anchor.setColor(QColor(0, 0, 0))
+
+            x, y = point
+            angle = np.rad2deg(np.arctan2(y, x))
+            anchor.setPos(x * 1.025, y * 1.025)
+
+            if abs(angle) < 90:
+                anchor.setAngle(angle)
+                anchor.setAnchor((0, 0.5))
+            else:
+                anchor.setAngle(angle + 180)
+                anchor.setAnchor((1, 0.5))
+
+            self.plot_widget.addItem(anchor)
+            self.anchor_items.append(anchor)
+
+        self.padding = max(label_len) * 0.02
         self._update_anchors_scatter_item(points)
 
     def _update_anchors_scatter_item(self, points):
@@ -284,9 +303,11 @@ class OWRadviz(OWAnchorProjectionWidget):
         invalid_embedding = widget.Msg("No projection for selected features")
         removed_vars = widget.Msg("Categorical variables with more than"
                                   " two values are not shown.")
+        max_vars_selected = widget.Msg("Maximum number of selected variables reached.")
 
     def _add_controls(self):
-        self.model_selected = VariableSelectionModel(self.selected_vars)
+        self.model_selected = VariableSelectionModel(self.selected_vars,
+                                                     max_vars=20)
         variables_selection(self.controlArea, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
@@ -318,6 +339,10 @@ class OWRadviz(OWAnchorProjectionWidget):
         self.model_selected.selection_changed.emit()
 
     def __model_selected_changed(self):
+        if self.model_selected.is_full():
+            self.Warning.max_vars_selected()
+        else:
+            self.Warning.max_vars_selected.clear()
         self.init_projection()
         self.setup_plot()
         self.commit()
