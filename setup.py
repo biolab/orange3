@@ -206,7 +206,8 @@ PACKAGE_DATA = {
     "Orange.widgets.unsupervised": ["icons/*.svg"],
     "Orange.widgets.utils": ["_webview/*.js"],
     "Orange.tests": ["xlsx_files/*.xlsx", "datasets/*.tab",
-                     "datasets/*.basket", "datasets/*.csv"]
+                     "datasets/*.basket", "datasets/*.csv",
+                     "datasets/*.pkl", "datasets/*.pkl.gz"]
 }
 
 
