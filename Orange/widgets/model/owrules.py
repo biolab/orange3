@@ -150,7 +150,7 @@ class CustomRuleLearner(_RuleLearner):
         # while data allows, continuously find new rules,
         # break the loop if min. requirements cannot be met,
         # after finding a rule, remove the instances covered
-        while not self.data_stopping(X, Y, W, target_class):
+        while not self.data_stopping(X, Y, W, target_class, domain):
 
             # remember the distribution to correctly update progress
             temp_class_dist = get_dist(Y, W, domain)
@@ -180,28 +180,30 @@ class CustomRuleLearner(_RuleLearner):
 
         return rule_list
 
-    def fit(self, X, Y, W=None):
+    def fit_storage(self, data):
         rule_list = []
+        X, Y, W = data.X, data.Y, data.W if data.has_weights() else None
         Y = Y.astype(dtype=int)
         if self.rule_ordering == "ordered":
             rule_list = self.find_rules_and_measure_progress(
                 X, Y, np.copy(W) if W is not None else None, None,
-                self.base_rules, self.domain, progress_amount=1)
+                self.base_rules, data.domain, progress_amount=1)
             # add the default rule, if required
             if (not rule_list or rule_list and rule_list[-1].length > 0 or
                     self.covering_algorithm == "weighted"):
-                rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
+                rule_list.append(
+                    self.generate_default_rule(X, Y, W, data.domain))
 
         elif self.rule_ordering == "unordered":
-            for curr_class in range(len(self.domain.class_var.values)):
+            for curr_class in range(len(data.domain.class_var.values)):
                 rule_list.extend(self.find_rules_and_measure_progress(
                     X, Y, np.copy(W) if W is not None else None,
-                    curr_class, self.base_rules, self.domain,
-                    progress_amount=1/len(self.domain.class_var.values)))
+                    curr_class, self.base_rules, data.domain,
+                    progress_amount=1/len(data.domain.class_var.values)))
             # add the default rule
-            rule_list.append(self.generate_default_rule(X, Y, W, self.domain))
+            rule_list.append(self.generate_default_rule(X, Y, W, data.domain))
 
-        return CustomRuleClassifier(domain=self.domain, rule_list=rule_list,
+        return CustomRuleClassifier(domain=data.domain, rule_list=rule_list,
                                     params=self.params)
 
 
@@ -274,13 +276,13 @@ class OWRuleLearner(OWBaseLearner):
         # bottom-level search procedure (search bias)
         middle_box = gui.vBox(widget=self.controlArea, box="Rule search")
 
-        evaluation_measure_box = gui.comboBox(
+        gui.comboBox(
             widget=middle_box, master=self, value="evaluation_measure",
             label="Evaluation measure:", orientation=Qt.Horizontal,
             items=("Entropy", "Laplace accuracy", "WRAcc"),
             callback=self.settings_changed, contentsLength=3)
 
-        beam_width_box = gui.spin(
+        gui.spin(
             widget=middle_box, master=self, value="beam_width", minv=1,
             maxv=100, step=1, label="Beam width:", orientation=Qt.Horizontal,
             callback=self.settings_changed, alignment=Qt.AlignRight,
@@ -289,26 +291,26 @@ class OWRuleLearner(OWBaseLearner):
         # bottom-level search procedure (over-fitting avoidance bias)
         bottom_box = gui.vBox(widget=self.controlArea, box="Rule filtering")
 
-        min_covered_examples_box = gui.spin(
+        gui.spin(
             widget=bottom_box, master=self, value="min_covered_examples", minv=1,
             maxv=10000, step=1, label="Minimum rule coverage:",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80)
 
-        max_rule_length_box = gui.spin(
+        gui.spin(
             widget=bottom_box, master=self, value="max_rule_length",
             minv=1, maxv=100, step=1, label="Maximum rule length:",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80)
 
-        default_alpha_spin = gui.doubleSpin(
+        gui.doubleSpin(
             widget=bottom_box, master=self, value="default_alpha", minv=0.0,
             maxv=1.0, step=0.01, label="Statistical significance\n(default α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_default_alpha")
 
-        parent_alpha_spin = gui.doubleSpin(
+        gui.doubleSpin(
             widget=bottom_box, master=self, value="parent_alpha", minv=0.0,
             maxv=1.0, step=0.01, label="Relative significance\n(parent α):",
             orientation=Qt.Horizontal, callback=self.settings_changed,

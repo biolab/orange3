@@ -154,19 +154,19 @@ class ImprovedPCA(skl_decomposition.PCA):
                 "n_components=%r cannot be a string with svd_solver='%s'" %
                 (n_components, svd_solver)
             )
-        elif not 1 <= n_components <= min(n_samples, n_features):
+        if not 1 <= n_components <= min(n_samples, n_features):
             raise ValueError(
                 "n_components=%r must be between 1 and min(n_samples, "
                 "n_features)=%r with svd_solver='%s'" % (
                     n_components, min(n_samples, n_features), svd_solver
                 )
             )
-        elif not isinstance(n_components, (numbers.Integral, np.integer)):
+        if not isinstance(n_components, (numbers.Integral, np.integer)):
             raise ValueError(
                 "n_components=%r must be of type int when greater than or "
                 "equal to 1, was of type=%r" % (n_components, type(n_components))
             )
-        elif svd_solver == "arpack" and n_components == min(n_samples, n_features):
+        if svd_solver == "arpack" and n_components == min(n_samples, n_features):
             raise ValueError(
                 "n_components=%r must be strictly less than min(n_samples, "
                 "n_features)=%r with svd_solver='%s'" % (
@@ -243,8 +243,10 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data):
         model = self(data)
-        return np.abs(model.components_[:self.component]) \
-            if self.component else np.abs(model.components_)
+        return (
+            np.abs(model.components_[:self.component]) if self.component
+            else np.abs(model.components_),
+            model.orig_domain.attributes)
 
 
 class PCA(SklProjector, _FeatureScorerMixin):

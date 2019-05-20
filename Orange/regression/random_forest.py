@@ -15,7 +15,7 @@ class _FeatureScorerMixin(LearnerScorer):
 
     def score(self, data):
         model = self(data)
-        return model.skl_model.feature_importances_
+        return model.skl_model.feature_importances_, model.domain.attributes
 
 
 class RandomForestRegressor(SklModel, RandomForestModel):

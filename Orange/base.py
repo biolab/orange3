@@ -90,7 +90,6 @@ class Learner(ReprableWithPreprocessors):
             self.preprocessors = tuple(preprocessors)
         elif preprocessors:
             self.preprocessors = (preprocessors,)
-        self.__tls = threading.local()
 
     def fit(self, X, Y, W=None):
         raise RuntimeError(
@@ -117,7 +116,6 @@ class Learner(ReprableWithPreprocessors):
             raise TypeError("%s doesn't support multiple class variables" %
                             self.__class__.__name__)
 
-        self.domain = data.domain
         model = self._fit_model(data)
         model.used_vals = [np.unique(y) for y in data.Y[:, None].T]
         model.domain = data.domain
@@ -172,31 +170,6 @@ class Learner(ReprableWithPreprocessors):
     @name.setter
     def name(self, value):
         self.__name = value
-
-    # Learners implemented using `fit` access the `domain` through the
-    # instance attribute. This makes (or it would) make it impossible to
-    # be implemented in a thread-safe manner. So the domain is made a
-    # property descriptor utilizing thread local storage behind the scenes.
-    @property
-    def domain(self):
-        return self.__tls.domain
-
-    @domain.setter
-    def domain(self, domain):
-        self.__tls.domain = domain
-
-    @domain.deleter
-    def domain(self):
-        del self.__tls.domain
-
-    def __getstate__(self):
-        state = dict(self.__dict__)
-        del state["_Learner__tls"]
-        return state
-
-    def __setstate__(self, state):
-        self.__dict__.update(state)
-        self.__tls = threading.local()
 
     def __str__(self):
         return self.name
