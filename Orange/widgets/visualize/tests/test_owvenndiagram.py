@@ -2,7 +2,6 @@
 # pylint: disable=missing-docstring
 
 import unittest
-import warnings
 from collections import defaultdict
 
 import numpy as np
@@ -208,9 +207,6 @@ class GroupTableIndicesTest(unittest.TestCase):
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])
 
-        # scipy.sparse uses matrix; this filter can be removed when it's fixed
-        warnings.filterwarnings(
-            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
         data = Table.from_numpy(X=sp.csr_matrix(X), domain=domain, metas=M)
         self.assertEqual(varying_between(data, idvar=data.domain.metas[0]),
                          [variables[2], variables[3], metas[3], metas[4], metas[5], metas[6]])

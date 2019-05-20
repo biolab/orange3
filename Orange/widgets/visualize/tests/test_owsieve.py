@@ -140,10 +140,6 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         """
         Sparse support.
         """
-        # scipy.sparse uses matrix; this filter can be removed when it's fixed
-        warnings.filterwarnings(
-            "ignore", ".*the matrix subclass.*", PendingDeprecationWarning)
-
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertEqual(len(self.widget.discrete_data.domain),
                          len(self.iris.domain))
