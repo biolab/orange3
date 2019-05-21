@@ -100,7 +100,6 @@ class TestReader(unittest.TestCase):
     def setUp(self):
         Variable._clear_all_caches()
         data.table.dataset_dirs.append(test_dirname())
-        print(data.table.dataset_dirs)
 
     def tearDown(self):
         data.table.dataset_dirs.remove(test_dirname())
@@ -164,7 +163,6 @@ class TestReader(unittest.TestCase):
         # load pickles created with Orange 3.20
         # in next version there is a change in variables.py - line 738
         # which broke back compatibility - tests were introduced after the fix
-        print(data.table.dataset_dirs)
         data1 = Table("datasets/sailing-orange-3-20.pkl")
         data2 = Table("datasets/sailing-orange-3-20.pkl.gz")
 
