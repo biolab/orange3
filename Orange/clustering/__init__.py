@@ -4,3 +4,4 @@
 from .dbscan import *
 from .hierarchical import *
 from .kmeans import *
+from .louvain import *
