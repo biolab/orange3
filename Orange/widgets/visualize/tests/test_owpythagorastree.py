@@ -383,3 +383,15 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
             square.setSelected(True)
             tab = self.get_output(tree_w.Outputs.selected_data, widget=tree_w)
             self.assertGreater(len(tab), 0)
+
+    def test_changing_data_restores_depth_from_previous_settings(self):
+        titanic_data = Table("titanic")[::50]
+        forest = RandomForestLearner(n_estimators=3)(titanic_data)
+        forest.instances = titanic_data
+
+        self.send_signal(self.widget.Inputs.tree, forest.trees[0])
+        self.widget.controls.depth_limit.setValue(1)
+
+        # The domain is still the same, so restore the depth limit from before
+        self.send_signal(self.widget.Inputs.tree, forest.trees[1])
+        self.assertEqual(self.widget.ptree._depth_limit, 1)

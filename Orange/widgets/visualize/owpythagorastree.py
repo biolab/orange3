@@ -172,24 +172,23 @@ class OWPythagorasTree(OWWidget):
 
             self._update_main_area()
 
-            # The target class can also be passed from the meta properties
-            # This must be set after `_update_target_class_combo`
-            if hasattr(model, 'meta_target_class_index'):
-                self.target_class_index = model.meta_target_class_index
-                self.update_colors()
-
-            # Get meta variables describing what the settings should look like
-            # if the tree is passed from the Pythagorean forest widget.
-            if hasattr(model, 'meta_size_calc_idx'):
-                self.size_calc_idx = model.meta_size_calc_idx
-                self.update_size_calc()
-
-            # TODO There is still something wrong with this
-            # if hasattr(model, 'meta_depth_limit'):
-            #     self.depth_limit = model.meta_depth_limit
-            #     self.update_depth()
-
         self.openContext(self.model)
+
+        self.update_depth()
+
+        # The forest widget sets the following attributes on the tree,
+        # describing the settings on the forest widget. To keep the tree
+        # looking the same as on the forest widget, we prefer these settings to
+        # context settings, if set.
+        if hasattr(model, "meta_target_class_index"):
+            self.target_class_index = model.meta_target_class_index
+            self.update_colors()
+        if hasattr(model, "meta_size_calc_idx"):
+            self.size_calc_idx = model.meta_size_calc_idx
+            self.update_size_calc()
+        if hasattr(model, "meta_depth_limit"):
+            self.depth_limit = model.meta_depth_limit
+            self.update_depth()
 
         self.Outputs.annotated_data.send(create_annotated_table(self.data, None))
 
