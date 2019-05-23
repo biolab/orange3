@@ -248,12 +248,11 @@ class OWWidgetManager(_WidgetManager):
         """
         node = super().node_for_widget(widget)
         if node is None:
+            # the node -> widget mapping requested (by this subclass or
+            # WidgetSignalManager) before or after the base class tracks it
+            # (in create_widget_for_node or delete_widget_for_node).
             for item in self.__item_for_node.values():
                 if item.widget is widget:
-                    # the node -> widget mapping requested while the widget is
-                    # still in __init__ (via signalManager.send ->
-                    # node_for_widget)
-                    assert item.state & ProcessingState.Initializing
                     return item.node
         return node
 
@@ -305,7 +304,7 @@ class OWWidgetManager(_WidgetManager):
         Reimplemented.
         """
         assert node not in self.workflow().nodes
-        item = self.__item_for_node.pop(node, None)
+        item = self.__item_for_node.get(node)
         if item is not None and isinstance(item.widget, OWWidget):
             assert item.node is node
             if item.state & ProcessingState.Initializing:
@@ -347,6 +346,7 @@ class OWWidgetManager(_WidgetManager):
                 m.contents = ""
                 node.set_state_message(m)
 
+            self.__item_for_node.pop(node)
             self.__delete_item(item)
 
     def __delete_item(self, item):
