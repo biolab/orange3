@@ -3,7 +3,7 @@ from typing import Optional
 
 from AnyQt.QtCore import Qt, QSettings
 from AnyQt.QtWidgets import (
-    QAction, QFileDialog, QMenu, QMenuBar, QWidget, QMessageBox
+    QAction, QFileDialog, QMenu, QMenuBar, QWidget, QMessageBox, QDialog
 )
 from AnyQt.QtGui import QKeySequence
 
@@ -177,3 +177,36 @@ class OWCanvasMainWindow(CanvasMainWindow):
                     icon=QMessageBox.Information
                 ).exec()
 
+    def ask_save_report(self):
+        """
+        Ask whether to save the report or not.
+        Returns:
+            `QDialog.Rejected` if user cancels, `QDialog.Accepted` otherwise
+        """
+        workflow = self.current_document().scheme()
+        if not isinstance(workflow, WidgetsScheme) or not workflow.has_report():
+            return QDialog.Accepted
+
+        report = workflow.report_view()
+        if not report.is_changed():
+            return QDialog.Accepted
+
+        answ = QMessageBox(
+            self,
+            windowTitle="Report window",
+            icon=QMessageBox.Question,
+            text="Report window contains unsaved changes",
+            informativeText="Save the report?",
+            standardButtons=QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+        ).exec()
+        if answ == QMessageBox.Cancel:
+            return QDialog.Rejected
+        if answ == QMessageBox.Yes:
+            return report.save_report()
+        return QDialog.Accepted
+
+    def closeEvent(self, event):
+        if self.ask_save_report() == QDialog.Rejected:
+            event.ignore()
+            return
+        super().closeEvent(event)
