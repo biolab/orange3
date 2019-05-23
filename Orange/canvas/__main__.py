@@ -31,11 +31,11 @@ from orangecanvas.registry import qt
 from orangecanvas.registry import WidgetRegistry, set_global_registry
 from orangecanvas.registry import cache
 from orangecanvas.application.application import CanvasApplication
-from orangecanvas.application.canvasmain import CanvasMainWindow
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.gui.splashscreen import SplashScreen
 from orangecanvas import config as canvasconfig
 
+from Orange.canvas.mainwindow import OWCanvasMainWindow
 from Orange.canvas.errorreporting import handle_exception
 from Orange.canvas import config
 
@@ -462,7 +462,7 @@ def main(argv=None):
     dirpath = os.path.abspath(os.path.dirname(orangecanvas.__file__))
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
-    canvas_window = CanvasMainWindow()
+    canvas_window = OWCanvasMainWindow()
     canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
 
