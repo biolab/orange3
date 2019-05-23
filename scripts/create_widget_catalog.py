@@ -6,10 +6,10 @@ from AnyQt.QtGui import QImage, QPainter
 from AnyQt.QtWidgets import QGraphicsScene, QApplication, QWidget, QGraphicsView, QHBoxLayout
 from AnyQt.QtCore import QRectF, Qt, QTimer
 
-from Orange.canvas import config
-from Orange.canvas.canvas.items import NodeItem
-from Orange.canvas.help import HelpManager
-from Orange.canvas.registry.qt import QtWidgetDiscovery, QtWidgetRegistry
+from orangecanvas import config
+from orangecanvas.canvas.items import NodeItem
+from orangecanvas.help import HelpManager
+from orangecanvas.registry.qt import QtWidgetDiscovery, QtWidgetRegistry
 
 
 class WidgetCatalog:
