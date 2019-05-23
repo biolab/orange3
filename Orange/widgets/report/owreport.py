@@ -1,4 +1,5 @@
 import os
+import io
 import logging
 import traceback
 import warnings
@@ -16,6 +17,7 @@ from AnyQt.QtWidgets import (
     QApplication, QDialog, QFileDialog, QTableView, QHeaderView,
     QMessageBox)
 from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
+
 
 from Orange.util import deprecated
 from Orange.widgets import gui
@@ -295,16 +297,25 @@ class OWReport(OWWidget):
 
     def _get_scheme(self):
         canvas = self.get_canvas_instance()
-        return canvas.get_scheme_xml() if canvas else None
+        if canvas is None:
+            return None
+        scheme = canvas.current_document().scheme()
+        return self._get_scheme_str(scheme)
+
+    def _get_scheme_str(self, scheme):
+        buffer = io.BytesIO()
+        scheme.save_to(buffer, pickle_fallback=True)
+        return buffer.getvalue().decode("utf-8")
 
     def _show_scheme(self, row):
         scheme = self.table_model.item(row).scheme
         canvas = self.get_canvas_instance()
-        if canvas:
-            document = canvas.current_document()
-            if document.isModifiedStrict():
-                self.last_scheme = canvas.get_scheme_xml()
-            self._load_scheme(scheme)
+        if canvas is None:
+            return
+        document = canvas.current_document()
+        if document.isModifiedStrict():
+            self.last_scheme = self._get_scheme_str(document.scheme())
+        self._load_scheme(scheme)
 
     def _show_last_scheme(self):
         if self.last_scheme:
@@ -316,13 +327,12 @@ class OWReport(OWWidget):
         canvas = self.get_canvas_instance()
         if canvas is not None:
             document = canvas.current_document()
-            old = document.scheme()
-            if old.has_report() and old.report_view() is self:
-                # remove self so it is not closed
-                old.set_report_view(None)
-            canvas.load_scheme_xml(contents)
-            scheme = canvas.current_document().scheme()
-            scheme.set_report_view(self)
+            scheme = document.scheme()
+            # Clear the undo stack as it will no longer apply to the new
+            # workflow.
+            document.undoStack().clear()
+            scheme.clear()
+            scheme.load_from(io.StringIO(contents))
 
     def save_report(self):
         """Save report"""
