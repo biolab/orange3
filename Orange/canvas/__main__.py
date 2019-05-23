@@ -39,8 +39,9 @@ from orangecanvas.main import (
     breeze_dark,
 )
 
-from Orange.canvas.mainwindow import OWCanvasMainWindow
-from Orange.canvas.errorreporting import handle_exception
+from orangewidget.workflow.errorreporting import handle_exception
+from orangewidget.workflow.mainwindow import OWCanvasMainWindow
+
 from Orange.canvas import config
 
 log = logging.getLogger(__name__)
@@ -215,6 +216,8 @@ def main(argv=None):
     root_level = min(levels[options.log_level], logging.INFO)
     rootlogger = logging.getLogger(orangecanvas.__name__)
     rootlogger.setLevel(root_level)
+
+    logging.getLogger("orangewidget").setLevel(root_level)
     logging.getLogger("Orange").setLevel(root_level)
     logging.getLogger("orangecontrib").setLevel(root_level)
 
