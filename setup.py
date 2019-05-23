@@ -84,6 +84,9 @@ EXTRAS_REQUIRE = {
 }
 
 ENTRY_POINTS = {
+    "orange.widgets": (
+        "Orange Widgets = Orange.widgets",
+    ),
     "orange.canvas.help": (
         "html-index = Orange.widgets:WIDGET_HELP_PATH",
     ),
@@ -188,7 +191,6 @@ PACKAGE_DATA = {
     "Orange": ["datasets/*.{}".format(ext)
                for ext in ["tab", "csv", "basket", "info", "dst", "metadata"]],
     "Orange.canvas": ["icons/*.png", "icons/*.svg"],
-    "Orange.canvas.styles": ["*.qss", "orange/*.svg"],
     "Orange.canvas.workflows": ["*.ows"],
     "Orange.widgets": ["icons/*.png",
                        "icons/*.svg"],

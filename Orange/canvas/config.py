@@ -15,11 +15,7 @@ import requests
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QPoint, QRect
 
-from orangecanvas import config
-
-# from . import discovery
-# from . import widgetsscheme
-from orangewidget.workflow import widgetsscheme, discovery
+from orangewidget.workflow import widgetsscheme, discovery, config
 
 import Orange
 
@@ -27,12 +23,11 @@ import Orange
 OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
 
 WIDGETS_ENTRY = "orange.widgets"
-ADDONS_ENTRY = "orange3.addon"
 
 
 class Config(config.Config):
     """
-    Orange application config
+    Orange application configuration
     """
     OrganizationDomain = "biolab.si"
     ApplicationName = "Orange Canvas"
@@ -83,16 +78,16 @@ class Config(config.Config):
     def widgets_entry_points():
         """
         Return an `EntryPoint` iterator for all 'orange.widget' entry
-        points plus the default Orange Widgets.
+        points.
         """
-        # This could also be achieved by declaring the entry point in
-        # Orange's setup.py, but that would not guaranty this entry point
-        # is the first in a list.
-        dist = pkg_resources.get_distribution("Orange3")
-        default_ep = pkg_resources.EntryPoint(
-            "Orange Widgets", "Orange.widgets", dist=dist)
-        return itertools.chain(
-            (default_ep,), pkg_resources.iter_entry_points(WIDGETS_ENTRY))
+        # Ensure the 'this' distribution's ep is the first. iter_entry_points
+        # yields them in unspecified order.
+        all_eps = sorted(
+            pkg_resources.iter_entry_points(WIDGETS_ENTRY),
+            key=lambda ep:
+                0 if ep.dist.project_name.lower() == "orange3" else 1
+        )
+        return iter(all_eps)
 
     @staticmethod
     def addon_entry_points():
