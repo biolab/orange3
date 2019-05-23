@@ -14,8 +14,6 @@ import pkg_resources
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QCoreApplication, QPoint, QRect, QSettings
 
-from .utils.settings import Settings, config_slot
-
 log = logging.getLogger(__name__)
 
 
@@ -139,15 +137,6 @@ spec = \
 
      ("network/https-proxy", str, '', 'HTTPS proxy.'),
      ]
-
-spec = [config_slot(*t) for t in spec]
-
-
-def settings():
-    init()
-    store = QSettings()
-    settings = Settings(defaults=spec, store=store)
-    return settings
 
 
 def data_dir():
