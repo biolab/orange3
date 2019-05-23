@@ -3,8 +3,8 @@ from os import listdir, environ
 from os.path import isfile, join, dirname
 import unittest
 
-from Orange.canvas.application import workflows
-from Orange.canvas.scheme import widgetsscheme
+from Orange.canvas import workflows
+from Orange.canvas import widgetsscheme
 from Orange.canvas.scheme.readwrite import scheme_load
 from Orange.widgets.tests.base import WidgetTest
 
