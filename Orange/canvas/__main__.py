@@ -16,7 +16,7 @@ import pickle
 import shlex
 import shutil
 from unittest.mock import patch
-from urllib.request import urlopen, Request, getproxies
+from urllib.request import urlopen, Request
 
 import pkg_resources
 
@@ -34,6 +34,10 @@ from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
 from orangecanvas.gui.splashscreen import SplashScreen
 from orangecanvas import config as canvasconfig
+from orangecanvas.main import (
+    fix_win_pythonw_std_stream, fix_set_proxy_env, fix_macos_nswindow_tabbing,
+    breeze_dark,
+)
 
 from Orange.canvas.mainwindow import OWCanvasMainWindow
 from Orange.canvas.errorreporting import handle_exception
@@ -51,123 +55,6 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 # Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
 import pyqtgraph
 pyqtgraph.setConfigOption("exitCleanup", False)
-
-
-default_proxies = None
-
-
-def fix_osx_10_9_private_font():
-    # Fix fonts on Os X (QTBUG 47206, 40833, 32789)
-    if sys.platform == "darwin":
-        import platform
-        try:
-            version = platform.mac_ver()[0]
-            version = float(version[:version.rfind(".")])
-            if version >= 10.11:  # El Capitan
-                QFont.insertSubstitution(".SF NS Text", "Helvetica Neue")
-            elif version >= 10.10:  # Yosemite
-                QFont.insertSubstitution(".Helvetica Neue DeskInterface",
-                                         "Helvetica Neue")
-            elif version >= 10.9:
-                QFont.insertSubstitution(".Lucida Grande UI", "Lucida Grande")
-        except AttributeError:
-            pass
-
-
-def fix_macos_nswindow_tabbing():
-    """
-    Disable automatic NSWindow tabbing on macOS Sierra and higher.
-
-    See QTBUG-61707
-    """
-    import ctypes
-    import ctypes.util
-    import platform
-
-    if sys.platform != "darwin":
-        return
-    ver, _, _ = platform.mac_ver()
-    ver = tuple(map(int, ver.split(".")[:2]))
-    if ver < (10, 12):
-        return
-
-    c_char_p, c_void_p = ctypes.c_char_p, ctypes.c_void_p
-    id = Sel = Class = c_void_p
-
-    def annotate(func, restype, argtypes):
-        func.restype = restype
-        func.argtypes = argtypes
-        return func
-    try:
-        libobjc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("libobjc"))
-        # Load AppKit.framework which contains NSWindow class
-        # pylint: disable=unused-variable
-        AppKit = ctypes.cdll.LoadLibrary(ctypes.util.find_library("AppKit"))
-        objc_getClass = annotate(
-            libobjc.objc_getClass, Class, [c_char_p])
-        objc_msgSend = annotate(
-            libobjc.objc_msgSend, id, [id, Sel])
-        sel_registerName = annotate(
-            libobjc.sel_registerName, Sel, [c_char_p])
-        class_getClassMethod = annotate(
-            libobjc.class_getClassMethod, c_void_p, [Class, Sel])
-    except (OSError, AttributeError):
-        return
-
-    NSWindow = objc_getClass(b"NSWindow")
-    if NSWindow is None:
-        return
-    setAllowsAutomaticWindowTabbing = sel_registerName(
-        b'setAllowsAutomaticWindowTabbing:'
-    )
-    # class_respondsToSelector does not work (for class methods)
-    if class_getClassMethod(NSWindow, setAllowsAutomaticWindowTabbing):
-        # [NSWindow setAllowsAutomaticWindowTabbing: NO]
-        objc_msgSend(
-            NSWindow,
-            setAllowsAutomaticWindowTabbing,
-            ctypes.c_bool(False),
-        )
-
-
-def fix_win_pythonw_std_stream():
-    """
-    On windows when running without a console (using pythonw.exe) the
-    std[err|out] file descriptors are invalid and start throwing exceptions
-    when their buffer is flushed (`http://bugs.python.org/issue706263`_)
-
-    """
-    if sys.platform == "win32" and \
-            os.path.basename(sys.executable) == "pythonw.exe":
-        if sys.stdout is None:
-            sys.stdout = open(os.devnull, "w")
-        if sys.stderr is None:
-            sys.stderr = open(os.devnull, "w")
-
-
-def fix_set_proxy_env():
-    """
-    Set http_proxy/https_proxy environment variables (for requests, pip, ...)
-    from user-specified settings or, if none, from system settings on OS X
-    and from registry on Windos.
-    """
-    # save default proxies so that setting can be reset
-    global default_proxies
-    if default_proxies is None:
-        default_proxies = getproxies()  # can also read windows and macos settings
-
-    settings = QSettings()
-    proxies = getproxies()
-    for scheme in set(["http", "https"]) | set(proxies):
-        from_settings = settings.value("network/" + scheme + "-proxy", "", type=str)
-        from_default = default_proxies.get(scheme, "")
-        env_scheme = scheme + '_proxy'
-        if from_settings:
-            os.environ[env_scheme] = from_settings
-        elif from_default:
-            os.environ[env_scheme] = from_default  # crucial for windows/macos support
-        else:
-            os.environ.pop(env_scheme, "")
 
 
 def make_sql_logger(level=logging.INFO):
@@ -319,9 +206,6 @@ def main(argv=None):
     # Fix streams before configuring logging (otherwise it will store
     # and write to the old file descriptors)
     fix_win_pythonw_std_stream()
-
-    # Try to fix fonts on OSX Mavericks
-    fix_osx_10_9_private_font()
 
     # Try to fix macOS automatic window tabbing (Sierra and later)
     fix_macos_nswindow_tabbing()
@@ -585,44 +469,6 @@ def main(argv=None):
 
     del app
     return status
-
-
-def breeze_dark():
-    # 'Breeze Dark' color scheme from KDE.
-    text = QColor(239, 240, 241)
-    textdisabled = QColor(98, 108, 118)
-    window = QColor(49, 54, 59)
-    base = QColor(35, 38, 41)
-    highlight = QColor(61, 174, 233)
-    link = QColor(41, 128, 185)
-
-    light = QColor(69, 76, 84)
-    mid = QColor(43, 47, 52)
-    dark = QColor(28, 31, 34)
-    shadow = QColor(20, 23, 25)
-
-    palette = QPalette()
-    palette.setColor(QPalette.Window, window)
-    palette.setColor(QPalette.WindowText, text)
-    palette.setColor(QPalette.Disabled, QPalette.WindowText, textdisabled)
-    palette.setColor(QPalette.Base, base)
-    palette.setColor(QPalette.AlternateBase, window)
-    palette.setColor(QPalette.ToolTipBase, window)
-    palette.setColor(QPalette.ToolTipText, text)
-    palette.setColor(QPalette.Text, text)
-    palette.setColor(QPalette.Disabled, QPalette.Text, textdisabled)
-    palette.setColor(QPalette.Button, window)
-    palette.setColor(QPalette.ButtonText, text)
-    palette.setColor(QPalette.Disabled, QPalette.ButtonText, textdisabled)
-    palette.setColor(QPalette.BrightText, Qt.white)
-    palette.setColor(QPalette.Highlight, highlight)
-    palette.setColor(QPalette.HighlightedText, text)
-    palette.setColor(QPalette.Light, light)
-    palette.setColor(QPalette.Mid, mid)
-    palette.setColor(QPalette.Dark, dark)
-    palette.setColor(QPalette.Shadow, shadow)
-    palette.setColor(QPalette.Link, link)
-    return palette
 
 
 if __name__ == "__main__":
