@@ -486,11 +486,15 @@ class OWReport(OWWidget):
         -------
         window : Optional[CanvasMainWindow]
         """
+        try:
+            from Orange.canvas.mainwindow import OWCanvasMainWindow
+        except ImportError:
+            return None
         # Run up the parent/window chain
         parent = self.parent()
         if parent is not None:
             window = parent.window()
-            if window.inherits("CanvasMainWindow"):
+            if isinstance(window, OWCanvasMainWindow):
                 return window
 
     def copy_to_clipboard(self):
