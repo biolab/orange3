@@ -577,6 +577,13 @@ class OWWidgetManager(_WidgetManager):
             event = QWhatsThisClickedEvent(help_url)
             QCoreApplication.sendEvent(self.scheme(), event)
 
+    def __dump_settings(self):
+        sender = self.sender()
+        assert isinstance(sender, QAction)
+        node = sender.data()
+        scheme = self.scheme()
+        scheme.dump_settings(node)
+
     def __initialize_widget_messages(self, node, widget):
         """
         Initialize the tracked info/warning/error message state.
@@ -696,6 +703,35 @@ class OWWidgetManager(_WidgetManager):
         for item in self.__item_for_node.values():
             if item.widget is not None:
                 item.widget.workflowEnvChanged(key, newvalue, oldvalue)
+
+    def actions_for_context_menu(self, node):
+        # type: (SchemeNode) -> List[QAction]
+        """
+        Reimplemented from WidgetManager.actions_for_context_menu.
+
+        Parameters
+        ----------
+        node : SchemeNode
+
+        Returns
+        -------
+        actions : List[QAction]
+        """
+        actions = []
+        widget = self.widget_for_node(node)
+        if widget is not None:
+            actions = [a for a in widget.actions()
+                       if a.property("ext-workflow-node-menu-action") is True]
+            if log.isEnabledFor(logging.DEBUG):
+                ac = QAction(
+                    self.tr("Show settings"), widget,
+                    objectName="show-settings",
+                    toolTip=self.tr("Show widget settings"),
+                )
+                ac.setData(node)
+                ac.triggered.connect(self.__dump_settings)
+                actions.append(ac)
+        return super().actions_for_context_menu(node) + actions
 
 
 WidgetManager = OWWidgetManager
