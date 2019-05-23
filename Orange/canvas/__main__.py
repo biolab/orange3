@@ -56,6 +56,14 @@ def make_sql_logger(level=logging.INFO):
     sql_log.addHandler(handler)
 
 
+def make_stdout_handler(level, fmt=None):
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    if fmt:
+        handler.setFormatter(logging.Formatter(fmt))
+    return handler
+
+
 def show_survey():
     # If run for the first time, open a browser tab with a survey
     settings = QSettings()
@@ -207,21 +215,10 @@ def main(argv=None):
     # Try to fix macOS automatic window tabbing (Sierra and later)
     fix_macos_nswindow_tabbing()
 
-    # File handler should always be at least INFO level so we need
-    # the application root level to be at least at INFO.
-    root_level = min(levels[options.log_level], logging.INFO)
-    rootlogger = logging.getLogger(orangecanvas.__name__)
-    rootlogger.setLevel(root_level)
-
-    logging.getLogger("orangewidget").setLevel(root_level)
-    logging.getLogger("Orange").setLevel(root_level)
-    logging.getLogger("orangecontrib").setLevel(root_level)
-
-
-    # Standard output stream handler at the requested level
-    stream_hander = logging.StreamHandler()
-    stream_hander.setLevel(level=levels[options.log_level])
-    rootlogger.addHandler(stream_hander)
+    logging.basicConfig(
+        level=levels[options.log_level],
+        handlers=[make_stdout_handler(levels[options.log_level])]
+    )
     # set default application configuration
     config_ = config.Config()
     canvasconfig.set_default(config_)
@@ -278,13 +275,22 @@ def main(argv=None):
     # Set http_proxy environment variables, after (potentially) clearing settings
     fix_set_proxy_env()
 
+    # Setup file log handler for the select logger list - this is always
+    # at least INFO
+    level = min(levels[options.log_level], logging.INFO)
     file_handler = logging.FileHandler(
         filename=os.path.join(config.log_dir(), "canvas.log"),
         mode="w"
     )
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+    )
+    file_handler.setLevel(level)
 
-    file_handler.setLevel(root_level)
-    rootlogger.addHandler(file_handler)
+    for namespace in ["orangecanvas", "orangewidget", "Orange"]:
+        logger = logging.getLogger(namespace)
+        logger.setLevel(level)
+        logger.addHandler(file_handler)
 
     # intercept any QFileOpenEvent requests until the main window is
     # fully initialized.
