@@ -24,13 +24,15 @@ from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
 
-# Importing WebviewWidget can fail if neither QWebKit (old, deprecated) nor
-# QWebEngine (bleeding-edge, hard to install) are available
+# Importing WebviewWidget can fail if neither QWebKit or QWebEngine
+# are available
 try:
     from Orange.widgets.utils.webview import WebviewWidget
-except ImportError:
-    from unittest.mock import Mock
-    WebviewWidget = Mock
+except ImportError:  # pragma: no cover
+    WebviewWidget = None
+    HAVE_REPORT = False
+else:
+    HAVE_REPORT = True
 
 
 log = logging.getLogger(__name__)
@@ -190,8 +192,9 @@ class OWReport(OWWidget):
                 item.comment = value
                 self.report_changed = True
 
-        self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
-        self.mainArea.layout().addWidget(self.report_view)
+        if WebviewWidget is not None:
+            self.report_view = WebviewWidget(self.mainArea, bridge=PyBridge(self))
+            self.mainArea.layout().addWidget(self.report_view)
 
     @deprecated("Widgets should not be pickled")
     def __getstate__(self):
