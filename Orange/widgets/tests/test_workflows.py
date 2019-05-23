@@ -3,9 +3,13 @@ from os import listdir, environ
 from os.path import isfile, join, dirname
 import unittest
 
+from orangecanvas.registry import WidgetRegistry
+from orangecanvas.scheme.readwrite import scheme_load
+
+from Orange.canvas.conf import orangeconfig
 from Orange.canvas import workflows
 from Orange.canvas import widgetsscheme
-from Orange.canvas.scheme.readwrite import scheme_load
+
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -22,6 +26,12 @@ TEST_WORKFLOWS = chain(
 )
 
 
+def registry():
+    d = orangeconfig.widget_discovery(WidgetRegistry())
+    d.run(orangeconfig.widgets_entry_points())
+    return d.registry
+
+
 @unittest.skipIf(environ.get("SKIP_EXAMPLE_WORKFLOWS", False),
                  "Example workflows inflate coverage")
 class TestWorkflows(WidgetTest):
@@ -31,11 +41,12 @@ class TestWorkflows(WidgetTest):
         and also those placed "workflows" subfolder.
         GH-2240
         """
+        reg = registry()
         for ows_file in TEST_WORKFLOWS:
             new_scheme = widgetsscheme.WidgetsScheme()
             with open(ows_file, "rb") as f:
                 try:
-                    scheme_load(new_scheme, f)
+                    scheme_load(new_scheme, f, registry=reg)
                 except Exception as e:
                     self.fail("Old workflow '{}' could not be loaded\n'{}'".
                               format(ows_file, str(e)))

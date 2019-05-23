@@ -27,7 +27,7 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.util import try_
-from Orange.canvas.scheme import Scheme
+from Orange.canvas.widgetsscheme import WidgetsScheme
 try:
     from Orange.widgets.widget import OWWidget
     from Orange.version import full_version as VERSION_STR
@@ -222,7 +222,7 @@ class ErrorReporting(QDialog):
         if widget is not None:
             try:
                 workflow = widget.signalManager.parent()
-                if not isinstance(workflow, Scheme):
+                if not isinstance(workflow, WidgetsScheme):
                     raise TypeError
             except Exception:
                 workflow = None

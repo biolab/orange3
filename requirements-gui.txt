@@ -1,3 +1,5 @@
+orange-canvas-core>=0.1a,<0.2a
+
 # PyQt4/PyQt5 compatibility
 AnyQt>=0.0.8
 

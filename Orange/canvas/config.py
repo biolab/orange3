@@ -2,153 +2,178 @@
 Orange Canvas Configuration
 
 """
-
 import os
 import sys
-import logging
 import itertools
-import warnings
+from distutils.version import LooseVersion
+
+from typing import Dict, Any, Optional, Iterable, List
 
 import pkg_resources
+import requests
 
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
-from AnyQt.QtCore import Qt, QCoreApplication, QPoint, QRect, QSettings
+from AnyQt.QtCore import Qt, QPoint, QRect
 
-log = logging.getLogger(__name__)
+from orangecanvas import config
+
+from . import discovery
+from . import widgetsscheme
+
+import Orange
+
+# generated from biolab/orange3-addons repository
+OFFICIAL_ADDON_LIST = "https://orange.biolab.si/addons/list"
+
+WIDGETS_ENTRY = "orange.widgets"
+ADDONS_ENTRY = "orange3.addon"
+
+
+class Config(config.Config):
+    """
+    Orange application config
+    """
+    OrganizationDomain = "biolab.si"
+    ApplicationName = "Orange Canvas"
+    ApplicationVersion = Orange.__version__
+
+    @staticmethod
+    def application_icon():
+        """
+        Return the main application icon.
+        """
+        path = pkg_resources.resource_filename(
+            __name__, "icons/orange-canvas.svg"
+        )
+        return QIcon(path)
+
+    @staticmethod
+    def splash_screen():
+
+        path = pkg_resources.resource_filename(
+            __name__, "icons/orange-splash-screen.png")
+        pm = QPixmap(path)
+
+        version = Config.ApplicationVersion
+        if version:
+            version_parsed = LooseVersion(version)
+            version_comp = version_parsed.version
+            version = ".".join(map(str, version_comp[:2]))
+        size = 21 if len(version) < 5 else 16
+        font = QFont("Helvetica")
+        font.setPixelSize(size)
+        font.setBold(True)
+        font.setItalic(True)
+        font.setLetterSpacing(QFont.AbsoluteSpacing, 2)
+        metrics = QFontMetrics(font)
+        br = metrics.boundingRect(version).adjusted(-5, 0, 5, 0)
+        br.moveCenter(QPoint(436, 224))
+
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setRenderHint(QPainter.TextAntialiasing)
+        p.setFont(font)
+        p.setPen(QColor("#231F20"))
+        p.drawText(br, Qt.AlignCenter, version)
+        p.end()
+        return pm, QRect(88, 193, 200, 20)
+
+    @staticmethod
+    def widgets_entry_points():
+        """
+        Return an `EntryPoint` iterator for all 'orange.widget' entry
+        points plus the default Orange Widgets.
+        """
+        # This could also be achieved by declaring the entry point in
+        # Orange's setup.py, but that would not guaranty this entry point
+        # is the first in a list.
+        dist = pkg_resources.get_distribution("Orange3")
+        default_ep = pkg_resources.EntryPoint(
+            "Orange Widgets", "Orange.widgets", dist=dist)
+        return itertools.chain(
+            (default_ep,), pkg_resources.iter_entry_points(WIDGETS_ENTRY))
+
+    @staticmethod
+    def addon_entry_points():
+        return Config.widgets_entry_points()
+
+    @staticmethod
+    def addon_defaults_list(session=None):
+        # type: (Optional[requests.Session]) -> List[Dict[str, Any]]
+        """
+        Return a list of available add-ons.
+        """
+        if session is None:
+            session = requests.Session()
+        return session.get(OFFICIAL_ADDON_LIST).json()
+
+    @staticmethod
+    def core_packages():
+        # type: () -> List[str]
+        """
+        Return a list of 'core packages'
+
+        These packages constitute required the application framework. They
+        cannot be removes via the 'Add-on/plugins' manager. They however can
+        be updated. The package that defines the application's `main()` entry
+        point must always be in this list.
+        """
+        return ["Orange3 >=3.20,<4.0a"]
+
+    @staticmethod
+    def examples_entry_points():
+        # type: () -> Iterable[pkg_resources.EntryPoint]
+        """
+        Return an iterator over the entry points yielding 'Example Workflows'
+        """
+        # `iter_entry_points` yields them in unspecified order, so we insert
+        # our first
+        default_ep = pkg_resources.EntryPoint(
+            "Orange3", "Orange.canvas.workflows",
+            dist=pkg_resources.get_distribution("Orange3"))
+
+        return itertools.chain(
+            (default_ep,),
+            pkg_resources.iter_entry_points("orange.widgets.tutorials")
+        )
+
+    widget_discovery = discovery.WidgetDiscovery
+    workflow_constructor = widgetsscheme.WidgetsScheme
+
+    APPLICATION_URLS = {
+        #: Submit a bug report action in the Help menu
+        "Bug Report": "https://github.com/biolab/orange3/issues",
+        #: A url quick tour/getting started url
+        "Quick Start": "https://orange.biolab.si/getting-started/",
+        #: The 'full' documentation, should be something like current /docs/
+        #: but specific for 'Visual Programing' only
+        "Documentation": "https://orange.biolab.si/toolbox/",
+        #: YouTube tutorials
+        "Screencasts":
+            "https://www.youtube.com/watch"
+            "?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1",
+        #: Used for 'Submit Feedback' action in the help menu
+        "Feedback": "https://orange.biolab.si/survey/long.html",
+    }
 
 
 def init():
-    """
-    Initialize the QCoreApplication.organizationDomain, applicationName,
-    applicationVersion and the default settings format. Will only run once.
-
-    .. note:: This should not be run before QApplication has been initialized.
-              Otherwise it can break Qt's plugin search paths.
-
-    """
-    dist = pkg_resources.get_distribution("Orange3")
-    version = dist.version
-    # Use only major.minor
-    version = ".".join(version.split(".", 2)[:2])
-
-    QCoreApplication.setOrganizationDomain("biolab.si")
-    QCoreApplication.setApplicationName("Orange Canvas")
-    QCoreApplication.setApplicationVersion(version)
-    QSettings.setDefaultFormat(QSettings.IniFormat)
-
-    # Make it a null op.
-    global init
-    init = lambda: None
-
-
-rc = {}
-
-
-spec = \
-    [("startup/show-splash-screen", bool, True,
-      "Show splash screen at startup"),
-
-     ("startup/show-welcome-screen", bool, True,
-      "Show Welcome screen at startup"),
-
-     ("startup/check-updates", bool, True,
-      "Check for updates"),
-
-     ("stylesheet", str, "orange",
-      "QSS stylesheet to use"),
-
-     ("schemeinfo/show-at-new-scheme", bool, True,
-      "Show Workflow Properties when creating a new Workflow"),
-
-     ("mainwindow/scheme-margins-enabled", bool, False,
-      "Show margins around the workflow view"),
-
-     ("mainwindow/show-scheme-shadow", bool, True,
-      "Show shadow around the workflow view"),
-
-     ("mainwindow/toolbox-dock-exclusive", bool, True,
-      "Should the toolbox show only one expanded category at the time"),
-
-     ("mainwindow/toolbox-dock-floatable", bool, False,
-      "Is the canvas toolbox floatable (detachable from the main window)"),
-
-     ("mainwindow/toolbox-dock-movable", bool, True,
-      "Is the canvas toolbox movable (between left and right edge)"),
-
-     ("mainwindow/toolbox-dock-use-popover-menu", bool, True,
-      "Use a popover menu to select a widget when clicking on a category "
-      "button"),
-
-     ("mainwindow/widgets-float-on-top", bool, False,
-      "Float widgets on top of other windows"),
-
-     ("mainwindow/number-of-recent-schemes", int, 15,
-      "Number of recent workflows to keep in history"),
-
-     ("schemeedit/show-channel-names", bool, True,
-      "Show channel names"),
-
-     ("schemeedit/show-link-state", bool, True,
-      "Show link state hints."),
-
-     ("schemeedit/enable-node-animations", bool, True,
-      "Enable node animations."),
-
-     ("schemeedit/freeze-on-load", bool, False,
-      "Freeze signal propagation when loading a workflow."),
-
-     ("quickmenu/trigger-on-double-click", bool, True,
-      "Show quick menu on double click."),
-
-     ("quickmenu/trigger-on-right-click", bool, True,
-      "Show quick menu on right click."),
-
-     ("quickmenu/trigger-on-space-key", bool, True,
-      "Show quick menu on space key press."),
-
-     ("quickmenu/trigger-on-any-key", bool, False,
-      "Show quick menu on double click."),
-
-     ("logging/level", int, 1, "Logging level"),
-
-     ("logging/show-on-error", bool, True, "Show log window on error"),
-
-     ("logging/dockable", bool, True, "Allow log window to be docked"),
-
-     ("help/open-in-external-browser", bool, False,
-      "Open help in an external browser"),
-
-     ("error-reporting/machine-id", str, '',
-      "Report custom name instead of machine ID"),
-
-     ("error-reporting/send-statistics", bool, False,
-      "Share anonymous usage statistics to improve Orange"),
-
-     ("error-reporting/permission-requested", bool, False,
-      "Has the user already been asked to share statistics"),
-
-     ("add-ons/allow-conda", bool, True,
-      "Install add-ons with conda"),
-
-     ("add-ons/pip-install-arguments", str, '',
-      'Arguments to pass to "pip install" when installing add-ons.'),
-
-     ("network/http-proxy", str, '', 'HTTP proxy.'),
-
-     ("network/https-proxy", str, '', 'HTTPS proxy.'),
-     ]
+    # left for backwards compatibility
+    raise RuntimeError("This is not the init you are looking for.")
 
 
 def data_dir():
-    """Return the application data directory. If the directory path
-    does not yet exists then create it.
-
     """
+    Return the application data directory. If the directory path
+    does not yet exists then create it.
+    """
+
     from Orange.misc import environ
     path = os.path.join(environ.data_dir(), "canvas")
-
-    if not os.path.isdir(path):
+    try:
         os.makedirs(path, exist_ok=True)
+    except OSError:
+        pass
     return path
 
 
@@ -159,9 +184,10 @@ def cache_dir():
     """
     from Orange.misc import environ
     path = os.path.join(environ.cache_dir(), "canvas")
-
-    if not os.path.isdir(path):
+    try:
         os.makedirs(path, exist_ok=True)
+    except OSError:
+        pass
     return path
 
 
@@ -169,15 +195,16 @@ def log_dir():
     """
     Return the application log directory.
     """
-    init()
     if sys.platform == "darwin":
-        name = str(QCoreApplication.applicationName())
+        name = Config.ApplicationName
         logdir = os.path.join(os.path.expanduser("~/Library/Logs"), name)
     else:
         logdir = data_dir()
 
-    if not os.path.exists(logdir):
-        os.makedirs(logdir)
+    try:
+        os.makedirs(logdir, exist_ok=True)
+    except OSError:
+        pass
     return logdir
 
 
@@ -189,117 +216,13 @@ def widget_settings_dir():
     return environ.widget_settings_dir()
 
 
-def open_config():
-    warnings.warn(
-        "open_config was never used and will be removed in the future",
-        DeprecationWarning, stacklevel=2
-    )
-    return
-
-
-def save_config():
-    warnings.warn(
-        "save_config was never used and will be removed in the future",
-        DeprecationWarning, stacklevel=2
-    )
-
-
-def recent_schemes():
-    """Return a list of recently accessed schemes.
-    """
-    app_dir = data_dir()
-    recent_filename = os.path.join(app_dir, "recent.pck")
-    recent = []
-    if os.path.isdir(app_dir) and os.path.isfile(recent_filename):
-        with open(recent_filename, "rb") as f:
-            recent = pickle.load(f)
-
-    # Filter out files not found on the file system
-    recent = [(title, path) for title, path in recent \
-              if os.path.exists(path)]
-    return recent
-
-
-def save_recent_scheme_list(scheme_list):
-    """Save the list of recently accessed schemes
-    """
-    app_dir = data_dir()
-    recent_filename = os.path.join(app_dir, "recent.pck")
-
-    if os.path.isdir(app_dir):
-        with open(recent_filename, "wb") as f:
-            pickle.dump(scheme_list, f)
-
-
-WIDGETS_ENTRY = "orange.widgets"
-
-
-# This could also be achieved by declaring the entry point in
-# Orange's setup.py, but that would not guaranty this entry point
-# is the first in a list.
-
-def default_entry_point():
-    """
-    Return a default orange.widgets entry point for loading
-    default Orange Widgets.
-
-    """
-    dist = pkg_resources.get_distribution("Orange3")
-    ep = pkg_resources.EntryPoint("Orange Widgets", "Orange.widgets",
-                                  dist=dist)
-    return ep
-
-
 def widgets_entry_points():
-    """
-    Return an `EntryPoint` iterator for all 'orange.widget' entry
-    points plus the default Orange Widgets.
-
-    """
-    ep_iter = pkg_resources.iter_entry_points(WIDGETS_ENTRY)
-    chain = [[default_entry_point()],
-             ep_iter
-             ]
-    return itertools.chain(*chain)
-
-#: Entry points by which add-ons register with pkg_resources.
-ADDON_ENTRY = "orange3.addon"
+    return Config.widgets_entry_points()
 
 
 def splash_screen():
-    """
-    """
-    pm = QPixmap(
-        pkg_resources.resource_filename(
-            __name__, "icons/orange-splash-screen.png")
-    )
-
-    version = QCoreApplication.applicationVersion()
-    size = 21 if len(version) < 5 else 16
-    font = QFont("Helvetica")
-    font.setPixelSize(size)
-    font.setBold(True)
-    font.setItalic(True)
-    font.setLetterSpacing(QFont.AbsoluteSpacing, 2)
-    metrics = QFontMetrics(font)
-    br = metrics.boundingRect(version).adjusted(-5, 0, 5, 0)
-    br.moveCenter(QPoint(436, 224))
-
-    p = QPainter(pm)
-    p.setRenderHint(QPainter.Antialiasing)
-    p.setRenderHint(QPainter.TextAntialiasing)
-    p.setFont(font)
-    p.setPen(QColor("#231F20"))
-    p.drawText(br, Qt.AlignCenter, version)
-    p.end()
-    return pm, QRect(88, 193, 200, 20)
+    return Config.splash_screen()
 
 
 def application_icon():
-    """
-    Return the main application icon.
-    """
-    path = pkg_resources.resource_filename(
-        __name__, "icons/orange-canvas.svg"
-    )
-    return QIcon(path)
+    return Config.application_icon()
