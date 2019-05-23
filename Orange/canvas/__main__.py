@@ -25,6 +25,7 @@ from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
 )
+import pyqtgraph
 
 import orangecanvas
 from orangecanvas.registry import qt
@@ -45,17 +46,6 @@ from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 from Orange.canvas import config
 
 log = logging.getLogger(__name__)
-
-# The modules below are imported on the fly (and used just there) for clarity
-# pylint: disable=wrong-import-order
-# pylint: disable=wrong-import-position
-
-# Allow termination with CTRL + C
-signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-# Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
-import pyqtgraph
-pyqtgraph.setConfigOption("exitCleanup", False)
 
 
 def make_sql_logger(level=logging.INFO):
@@ -159,7 +149,13 @@ def check_for_updates():
         return thread
 
 
+
 def main(argv=None):
+    # Allow termination with CTRL + C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    # Disable pyqtgraph's atexit and QApplication.aboutToQuit cleanup handlers.
+    pyqtgraph.setConfigOption("exitCleanup", False)
+
     if argv is None:
         argv = sys.argv
 
