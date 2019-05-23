@@ -6,7 +6,7 @@ from AnyQt.QtCore import (
     Qt, QAbstractItemModel, QByteArray, QBuffer, QIODevice
 )
 from AnyQt.QtGui import QColor, QBrush
-from AnyQt.QtWidgets import QGraphicsScene, QTableView
+from AnyQt.QtWidgets import QGraphicsScene, QTableView, QMessageBox
 
 from Orange.util import try_
 from Orange.widgets.io import PngFormat
@@ -49,12 +49,26 @@ class Report:
         Raise the report window.
         """
         self.create_report_html()
-        report = self._get_designated_report_view()
-        # Should really have a signal `report_ready` or similar to decouple
-        # the implementations.
-        report.make_report(self)
-        report.show()
-        report.raise_()
+        from Orange.widgets.report.owreport import HAVE_REPORT
+        if not HAVE_REPORT:
+            QMessageBox.critical(
+                None, "Missing Component",
+                "Your installation of Orange contains neither WebEngine nor "
+                "WebKit.\n\n"
+                "If you installed Orange with conda or pip, try using another "
+                "PyQt distribution.\n\n"
+                "If you installed Orange with a standard installer, please "
+                "report this bug."
+            )
+            return None
+
+        if HAVE_REPORT:
+            report = self._get_designated_report_view()
+            # Should really have a signal `report_ready` or similar to decouple
+            # the implementations.
+            report.make_report(self)
+            report.show()
+            report.raise_()
 
     def get_widget_name_extension(self):
         """
