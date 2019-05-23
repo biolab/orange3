@@ -20,7 +20,6 @@ companion :class:`WidgetsSignalManager` class.
 """
 import copy
 import logging
-import traceback
 import enum
 import types
 import warnings
@@ -30,7 +29,7 @@ from weakref import finalize
 
 from typing import Optional, Dict, Any, List
 
-from AnyQt.QtWidgets import QWidget, QLabel, QSizePolicy, QAction
+from AnyQt.QtWidgets import QWidget, QAction
 from AnyQt.QtGui import QWhatsThisClickedEvent
 
 from AnyQt.QtCore import Qt, QCoreApplication, QEvent, QByteArray
@@ -387,38 +386,18 @@ class OWWidgetManager(_WidgetManager):
         Create a OWWidget instance for the node.
         """
         desc = node.description  # type: WidgetDescription
-        klass = widget = None
-        initialized = False
-        error = None
-
+        signal_manager = self.signal_manager()
+        # Setup mapping for possible reentry via signal manager in widget's
+        # __init__
         item = Item(node, None, ProcessingState.Initializing)
         self.__item_for_node[node] = item
 
-        # First try to actually retrieve the class.
         try:
+            # Lookup implementation class
             klass = name_lookup(desc.qualified_name)
-        except ImportError:
-            log.exception("", exc_info=True)
-            error = "Could not import {0!r}\n\n{1}".format(
-                node.description.qualified_name, traceback.format_exc()
-            )
-        except Exception:  # pylint: disable=broad-except
-            log.exception("", exc_info=True)
-            error = "An unexpected error during import of {0!r}\n\n{1}".format(
-                node.description.qualified_name, traceback.format_exc()
-            )
-
-        if klass is None:
-            item.widget = widget = mock_error_owwidget(node, error)
-            initialized = True
-
-        if widget is None:
             log.info("WidgetManager: Creating '%s.%s' instance '%s'.",
                      klass.__module__, klass.__name__, node.title)
-
-            signal_manager = self.signal_manager()
-
-            widget = klass.__new__(
+            item.widget = widget = klass.__new__(
                 klass,
                 None,
                 captionTitle=node.title,
@@ -428,26 +407,15 @@ class OWWidgetManager(_WidgetManager):
                 # changes to the environment.
                 env=self.scheme().runtime_env()
             )
-            initialized = False
+            widget.__init__()
+        except BaseException:
+            item.widget = None
+            raise
+        finally:
+            # Clear Initializing flag even in case of error
+            item.state &= ~ProcessingState.Initializing
 
-        if not initialized:
-            item.widget = widget
-            try:
-                widget.__init__()
-            except Exception:  # pylint: disable=broad-except
-                log.exception("", exc_info=True)
-                # # sys.excepthook(*sys.exc_info())
-                msg = traceback.format_exc()
-                msg = "Could not create {0!r}\n\n{1}".format(
-                    node.description.name, msg
-                )
-                # substitute it with a mock error widget.
-                item.widget = widget = mock_error_owwidget(node, msg)
-                item.state = 0
-
-        # Clear Initializing flag
-        item.state &= ~ProcessingState.Initializing
-        # initialize and bind the OWWidget to the node
+        # bind the OWWidget to the node
         node.title_changed.connect(widget.setCaption)
         # Widget's info/warning/error messages.
         self.__initialize_widget_messages(node, widget)
@@ -844,70 +812,3 @@ class WidgetsSignalManager(SignalManager):
                 raise
         finally:
             app.restoreOverrideCursor()
-
-
-def mock_error_owwidget(node, message):
-    """
-    Create a mock OWWidget instance for `node`.
-
-    Parameters
-    ----------
-    node : SchemeNode
-    message : str
-    """
-    from Orange.widgets import widget, settings
-
-    class DummyOWWidget(widget.OWWidget):
-        """
-        Dummy OWWidget used to report import/init errors in the canvas.
-        """
-        name = "Placeholder"
-
-        # Fake settings handler that preserves the settings
-        class DummySettingsHandler(settings.SettingsHandler):
-            def pack_data(self, widget):
-                return getattr(widget, "_settings", {})
-
-            def initialize(self, widget, data=None):
-                widget._settings = data
-                settings.SettingsHandler.initialize(self, widget, None)
-
-            # specifically disable persistent global defaults
-            def write_defaults(self):
-                pass
-
-            def read_defaults(self):
-                pass
-
-        settingsHandler = DummySettingsHandler()
-
-        want_main_area = False
-
-        def __init__(self, parent=None):
-            super().__init__(parent)
-            self.errorLabel = QLabel(
-                textInteractionFlags=Qt.TextSelectableByMouse,
-                wordWrap=True,
-            )
-            self.errorLabel.setSizePolicy(
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding
-            )
-            self.controlArea.layout().addWidget(self.errorLabel)
-
-        def setErrorMessage(self, message):
-            self.errorLabel.setText(message)
-            self.error(message)
-
-    widget = DummyOWWidget()
-    widget._settings = node.properties
-
-    for link in node.description.inputs:
-        handler = link.handler
-        if handler.startswith("self."):
-            _, handler = handler.split(".", 1)
-
-        setattr(widget, handler, lambda *args: None)
-
-    widget.setErrorMessage(message)
-    return widget
