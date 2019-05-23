@@ -1,5 +1,6 @@
 import os
 import logging
+import traceback
 import warnings
 import pickle
 from collections import OrderedDict
@@ -12,16 +13,14 @@ import pkg_resources
 from AnyQt.QtCore import Qt, QObject, pyqtSlot
 from AnyQt.QtGui import QIcon, QCursor, QStandardItemModel, QStandardItem
 from AnyQt.QtWidgets import (
-    QApplication, QDialog, QFileDialog, QTableView, QHeaderView
-)
+    QApplication, QDialog, QFileDialog, QTableView, QHeaderView,
+    QMessageBox)
 from AnyQt.QtPrintSupport import QPrinter, QPrintDialog
 
 from Orange.util import deprecated
 from Orange.widgets import gui
 from Orange.widgets.widget import OWWidget
 from Orange.widgets.settings import Setting
-from Orange.canvas.application.canvasmain import CanvasMainWindow
-from Orange.canvas.gui.utils import message_critical
 
 # Importing WebviewWidget can fail if neither QWebKit (old, deprecated) nor
 # QWebEngine (bleeding-edge, hard to install) are available
@@ -422,14 +421,19 @@ class OWReport(OWWidget):
         return self
 
     def permission_error(self, filename):
-        message_critical(
-            self.tr("Permission error when trying to write report."),
-            title=self.tr("Error"),
-            informative_text=self.tr("Permission error occurred "
-                                     "while saving '{}'.").format(filename),
-            exc_info=True,
-            parent=self)
         log.error("PermissionError when trying to write report.", exc_info=True)
+        mb = QMessageBox(
+            self,
+            icon=QMessageBox.Critical,
+            windowTitle=self.tr("Error"),
+            text=self.tr("Permission error when trying to write report."),
+            informativeText=self.tr("Permission error occurred "
+                                    "while saving '{}'.").format(filename),
+            detailedText=traceback.format_exc(limit=20)
+        )
+        mb.setWindowModality(Qt.WindowModal)
+        mb.setAttribute(Qt.WA_DeleteOnClose)
+        mb.exec_()
 
     def is_empty(self):
         return not self.table_model.rowCount()
@@ -473,9 +477,8 @@ class OWReport(OWWidget):
         parent = self.parent()
         if parent is not None:
             window = parent.window()
-            if isinstance(window, CanvasMainWindow):
+            if window.inherits("CanvasMainWindow"):
                 return window
-        return None
 
     def copy_to_clipboard(self):
         self.report_view.triggerPageAction(self.report_view.page().Copy)

@@ -1,6 +1,3 @@
-# Module imports Input, Output and AttributeList to be used in widgets
-# pylint: disable=too-many-lines
-
 import sys
 import os
 import types
@@ -22,30 +19,37 @@ from AnyQt.QtGui import QIcon, QKeySequence, QDesktopServices, QPainter
 
 from Orange.data import FileFormat
 from Orange.widgets import settings, gui
-from Orange.canvas.registry import description as widget_description
-# OutputSignal and InputSignal are imported for compatibility, but shouldn't
-# be used; use Input and Output instead
-# pylint: disable=unused-import
-from Orange.canvas.registry import WidgetDescription, OutputSignal, InputSignal
+
 from Orange.widgets.report import Report
 from Orange.widgets.gui import OWComponent, VerticalScrollArea
 from Orange.widgets.io import ClipboardFormat
 from Orange.widgets.settings import SettingsHandler
 from Orange.widgets.utils import saveplot, getdeepattr
 from Orange.widgets.utils.progressbar import ProgressBarMixin
-from Orange.widgets.utils.messages import \
+from Orange.widgets.utils.messages import (
     WidgetMessagesMixin, UnboundMsg, MessagesWidget
-from Orange.widgets.utils.signals import WidgetSignalsMixin
-# Module exposes Input, Output and AttributeList to be used in widgets
-# pylint: disable=unused-import
-from Orange.widgets.utils.signals import Input, Output, AttributeList
+)
+from Orange.widgets.utils.signals import (
+    WidgetSignalsMixin, Input, Output, AttributeList,
+    InputSignal, OutputSignal,
+    Default, NonDefault, Single, Multiple, Dynamic, Explicit
+)
 from Orange.widgets.utils.overlay import MessageOverlayWidget, OverlayWidget
 from Orange.widgets.utils.buttons import SimpleButton
 
 # Msg is imported and renamed, so widgets can import it from this module rather
-# than the one with the mixin (Orange.widgets.utils.messages). Assignment is
-# used instead of "import ... as", otherwise PyCharm does not suggest import
+# than the one with the mixin (Orange.widgets.utils.messages).
 Msg = UnboundMsg
+
+
+__all__ = [
+    "OWWidget", "Input", "Output", "AttributeList", "Message", "Msg",
+    "StateInfo",
+
+    # these are re-exported here for legacy reasons. Use Input/Output instead.
+    "InputSignal", "OutputSignal",
+    "Default", "NonDefault", "Single", "Multiple", "Dynamic", "Explicit"
+]
 
 
 def _asmappingproxy(mapping):
@@ -1284,23 +1288,23 @@ class Message:
 #: When there are multiple IO signals with the same type the
 #: one with the default flag takes precedence when adding a new
 #: link in the canvas.
-Default = widget_description.Default
-NonDefault = widget_description.NonDefault
+Default = Default
+NonDefault = NonDefault
 #: Single input signal (default)
-Single = widget_description.Single
+Single = Single
 #: Multiple outputs can be linked to this signal.
 #: Signal handlers with this flag have (object, id: object) -> None signature.
-Multiple = widget_description.Multiple
+Multiple = Multiple
 #: Applies to user interaction only.
 #: Only connected if specifically requested (in a dedicated "Links" dialog)
 #: or it is the only possible connection.
-Explicit = widget_description.Explicit
+Explicit = Explicit
 #: Dynamic output type.
 #: Specifies that the instances on the output will in general be
 #: subtypes of the declared type and that the output can be connected
 #: to any input signal which can accept a subtype of the declared output
 #: type.
-Dynamic = widget_description.Dynamic
+Dynamic = Dynamic
 
 
 class StateInfo(QObject):
@@ -1539,3 +1543,6 @@ class StateInfo(QObject):
         if self.__output_summary != summary:
             self.__output_summary = summary
             self.output_summary_changed.emit(summary)
+
+
+# pylint: disable=too-many-lines
