@@ -1,3 +1,5 @@
+raise ImportError
+
 import contextlib
 import time
 import warnings

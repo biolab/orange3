@@ -17,8 +17,9 @@ from AnyQt.QtCore import Qt, QPoint, QRect
 
 from orangecanvas import config
 
-from . import discovery
-from . import widgetsscheme
+# from . import discovery
+# from . import widgetsscheme
+from orangewidget.workflow import widgetsscheme, discovery
 
 import Orange
 

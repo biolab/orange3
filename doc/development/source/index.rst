@@ -18,4 +18,3 @@ API
 ---
 .. toctree::
     concurrent
-    messagewidget

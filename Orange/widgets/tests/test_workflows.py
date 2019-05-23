@@ -4,10 +4,10 @@ from os.path import isfile, join, dirname
 import unittest
 
 from orangecanvas.registry import WidgetRegistry
+from orangewidget.workflow import widgetsscheme
 
 from Orange.canvas.config import Config
 from Orange.canvas import workflows
-from Orange.canvas import widgetsscheme
 
 from Orange.widgets.tests.base import GuiTest
 

@@ -24,6 +24,8 @@ from AnyQt.QtWidgets import (
     QTableWidgetItem, QItemDelegate, QStyledItemDelegate,
     QTableView, QHeaderView, QListView, QScrollArea)
 
+from orangewidget.gui import OWComponent
+
 try:
     # Some Orange widgets might expect this here
     from Orange.widgets.utils.webview import WebviewWidget  # pylint: disable=unused-import
