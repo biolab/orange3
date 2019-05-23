@@ -12,13 +12,11 @@ companion :class:`WidgetsSignalManager` class.
 .. autoclass:: WidgetsScheme
    :bases:
 
-
 .. autoclass:: WidgetsManager
    :bases:
 
 .. autoclass:: WidgetsSignalManager
-  :bases:
-
+   :bases:
 """
 import copy
 import logging
@@ -30,26 +28,29 @@ import warnings
 from urllib.parse import urlencode
 from weakref import finalize
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
-import sip
-
-from AnyQt.QtWidgets import QWidget, QShortcut, QLabel, QSizePolicy, QAction
-from AnyQt.QtGui import QKeySequence, QWhatsThisClickedEvent
+from AnyQt.QtWidgets import QWidget, QLabel, QSizePolicy, QAction
+from AnyQt.QtGui import QWhatsThisClickedEvent
 
 from AnyQt.QtCore import Qt, QCoreApplication, QEvent, QByteArray
-from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
-from Orange.widgets.widget import OWWidget
+from AnyQt.QtCore import pyqtSlot as Slot
+
+from orangecanvas.registry import WidgetDescription
 
 from orangecanvas.scheme.signalmanager import (
-    SignalManager, compress_signals
+    SignalManager, Signal, compress_signals
 )
-from orangecanvas.scheme.scheme import Scheme, SchemeNode
-from orangecanvas.scheme.widgetmanager import WidgetManager as _WidgetManager
+from orangecanvas.scheme import Scheme, SchemeNode
 from orangecanvas.scheme.node import UserMessage
-from orangecanvas.scheme import WorkflowEvent
+from orangecanvas.scheme.widgetmanager import WidgetManager as _WidgetManager
 from orangecanvas.utils import name_lookup
 from orangecanvas.resources import icon_loader
+
+from Orange.widgets.widget import OWWidget
+from Orange.widgets.report.owreport import OWReport
+
+from Orange.widgets.settings import SettingsPrinter
 
 
 log = logging.getLogger(__name__)
@@ -57,34 +58,18 @@ log = logging.getLogger(__name__)
 
 class WidgetsScheme(Scheme):
     """
-    A Scheme containing Orange Widgets managed with a `WidgetsSignalManager`
-    instance.
+    A workflow scheme containing Orange Widgets (:class:`OWWidget`).
 
     Extends the base `Scheme` class to handle the lifetime
     (creation/deletion, etc.) of `OWWidget` instances corresponding to
-    the nodes in the scheme. It also delegates the inter-widget signal
-    propagation to an instance of `WidgetsSignalManager`.
+    the nodes in the scheme. The inter-widget signal propagation is
+    delegated to an instance of `WidgetsSignalManager`.
     """
-
-    #: Emitted when a report_view is requested for the first time, before a
-    #: default instance is created. Clients can connect to this signal to
-    #: set a report view (`set_report_view`) to use instead.
-    report_view_requested = Signal()
-
     def __init__(self, parent=None, title=None, description=None, env={},
                  **kwargs):
         super().__init__(parent, title, description, env=env, **kwargs)
         self.widget_manager = WidgetManager()
         self.signal_manager = WidgetsSignalManager(self)
-
-        def onchanged(state):
-            # Update widget creation policy based on signal manager's state
-            if state == SignalManager.Running:
-                self.widget_manager.set_creation_policy(WidgetManager.Normal)
-            else:
-                self.widget_manager.set_creation_policy(WidgetManager.OnDemand)
-
-        self.signal_manager.stateChanged.connect(onchanged)
         self.widget_manager.set_scheme(self)
         self.__report_view = None  # type: Optional[OWReport]
 
@@ -99,26 +84,6 @@ class WidgetsScheme(Scheme):
         Return the SchemeNode instance for the `widget`.
         """
         return self.widget_manager.node_for_widget(widget)
-
-    def save_widget_geometry_for_node(self, node):
-        # type: (SchemeNode) -> bytes
-        """
-        Save and return the current geometry and state for node
-
-        Parameters
-        ----------
-        node : Scheme
-        """
-        w = self.widget_for_node(node)  # type: OWWidget
-        return bytes(w.saveGeometryAndLayoutState())
-
-    def restore_widget_geometry_for_node(self, node, state):
-        # type: (SchemeNode, bytes) -> bool
-        w = self.widget_for_node(node)
-        if w is not None:
-            return w.restoreGeometryAndLayoutState(QByteArray(state))
-        else:
-            return False
 
     def sync_node_properties(self):
         """
@@ -155,19 +120,10 @@ class WidgetsScheme(Scheme):
         """
         Return a OWReport instance used by the workflow.
 
-        If a report window has not been set then the `report_view_requested`
-        signal is emitted to allow the framework to setup the report window.
-        If the report window is still not set after the signal is emitted, a
-        new default OWReport instance is constructed and returned.
-
         Returns
         -------
         report : OWReport
         """
-        from Orange.widgets.report.owreport import OWReport
-        if self.__report_view is None:
-            self.report_view_requested.emit()
-
         if self.__report_view is None:
             parent = self.parent()
             if isinstance(parent, QWidget):
@@ -191,42 +147,41 @@ class WidgetsScheme(Scheme):
         self.__report_view = view
 
     def dump_settings(self, node: SchemeNode):
-        from Orange.widgets.settings import SettingsPrinter
         widget = self.widget_for_node(node)
 
         pp = SettingsPrinter(indent=4)
         pp.pprint(widget.settingsHandler.pack_data(widget))
 
     def event(self, event):
-        if event.type() == QEvent.Close and \
-                self.__report_view is not None:
-            self.__report_view.close()
+        if event.type() == QEvent.Close:
+            if self.__report_view is not None:
+                self.__report_view.close()
+            self.signal_manager.stop()
         return super().event(event)
-
-    def close(self):
-        QCoreApplication.sendEvent(self, QEvent(QEvent.Close))
 
 
 class ProcessingState(enum.IntEnum):
-    """Widget processing state flags"""
+    """OWWidget processing state flags"""
     #: Signal manager is updating/setting the widget's inputs
     InputUpdate = 1
-    #: Widget has entered a blocking state (OWWidget.isBlocking)
+    #:  Widget has entered a blocking state (OWWidget.isBlocking() is True)
     BlockingUpdate = 2
-    #: Widget has entered processing state
+    #: Widget has entered processing state (progressBarInit/Finish)
     ProcessingUpdate = 4
     #: Widget is still in the process of initialization
     Initializing = 8
 
 
 class Item(types.SimpleNamespace):
-    def __init__(self, node, widget, state, pending_delete=False):
-        # type: (SchemeNode, Optional[OWWidget], int, bool) -> None
+    """
+    A SchemeNode, OWWidget pair tracked by OWWidgetManager
+    """
+    def __init__(self, node, widget, state):
+        # type: (SchemeNode, Optional[OWWidget], int) -> None
         super().__init__()
         self.node = node
         self.widget = widget
         self.state = state
-        self.pending_delete = pending_delete
 
 
 class OWWidgetManager(_WidgetManager):
@@ -237,12 +192,6 @@ class OWWidgetManager(_WidgetManager):
     :class:`WidgetsScheme`.
 
     """
-    # #: A new OWWidget was created and added by the manager.
-    # widget_for_node_added = Signal(SchemeNode, QWidget)
-    #
-    # #: An OWWidget was removed, hidden and will be deleted when appropriate.
-    # widget_for_node_removed = Signal(SchemeNode, QWidget)
-
     InputUpdate, BlockingUpdate, ProcessingUpdate, Initializing = ProcessingState
 
     #: State mask for widgets that cannot be deleted immediately
@@ -263,7 +212,6 @@ class OWWidgetManager(_WidgetManager):
 
         # Tracks the widget in the update loop by the SignalManager
         self.__updating_widget = None
-        self.__float_widgets_on_top = False
 
     def set_scheme(self, scheme):
         """
@@ -295,16 +243,23 @@ class OWWidgetManager(_WidgetManager):
         return self.__signal_manager
 
     def node_for_widget(self, widget):
-        # reimplemented
+        # type: (QWidget) -> Optional[SchemeNode]
+        """
+        Reimplemented.
+        """
         node = super().node_for_widget(widget)
         if node is None:
             for item in self.__item_for_node.values():
                 if item.widget is widget:
+                    # the node -> widget mapping requested while the widget is
+                    # still in __init__ (via signalManager.send ->
+                    # node_for_widget)
                     assert item.state & ProcessingState.Initializing
                     return item.node
         return node
 
     def widget_settings_for_node(self, node):
+        # type: (SchemeNode) -> Dict[str, Any]
         """
         Return the properties/settings from the widget for node.
 
@@ -324,9 +279,24 @@ class OWWidgetManager(_WidgetManager):
 
     def widget_settings(self, widget):
         # type: (OWWidget) -> Dict[str, Any]
+        """
+        Return the settings from `OWWidget` instance.
+
+        Parameters
+        ----------
+        widget : OWWidget
+
+        Returns
+        -------
+        settings : Dict[str, Any]
+        """
         return widget.settingsHandler.pack_data(widget)
 
     def create_widget_for_node(self, node):
+        # type: (SchemeNode) -> QWidget
+        """
+        Reimplemented.
+        """
         widget = self.create_widget_instance(node)
         return widget
 
@@ -416,7 +386,7 @@ class OWWidgetManager(_WidgetManager):
         """
         Create a OWWidget instance for the node.
         """
-        desc = node.description
+        desc = node.description  # type: WidgetDescription
         klass = widget = None
         initialized = False
         error = None
@@ -432,14 +402,14 @@ class OWWidgetManager(_WidgetManager):
             error = "Could not import {0!r}\n\n{1}".format(
                 node.description.qualified_name, traceback.format_exc()
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception("", exc_info=True)
             error = "An unexpected error during import of {0!r}\n\n{1}".format(
                 node.description.qualified_name, traceback.format_exc()
             )
 
         if klass is None:
-            widget = mock_error_owwidget(node, error)
+            item.widget = widget = mock_error_owwidget(node, error)
             initialized = True
 
         if widget is None:
@@ -453,7 +423,7 @@ class OWWidgetManager(_WidgetManager):
                 None,
                 captionTitle=node.title,
                 signal_manager=signal_manager,
-                stored_settings=node.properties,
+                stored_settings=copy.deepcopy(node.properties),
                 # NOTE: env is a view of the real env and reflects
                 # changes to the environment.
                 env=self.scheme().runtime_env()
@@ -480,9 +450,9 @@ class OWWidgetManager(_WidgetManager):
         # initialize and bind the OWWidget to the node
         node.title_changed.connect(widget.setCaption)
         # Widget's info/warning/error messages.
-        self.__initialize_widget_state(node, widget)
-        widget.messageActivated.connect(self.__on_widget_state_changed)
-        widget.messageDeactivated.connect(self.__on_widget_state_changed)
+        self.__initialize_widget_messages(node, widget)
+        widget.messageActivated.connect(self.__on_widget_message_changed)
+        widget.messageDeactivated.connect(self.__on_widget_message_changed)
 
         # Widget's statusMessage
         node.set_status_message(widget.statusMessage())
@@ -515,19 +485,12 @@ class OWWidgetManager(_WidgetManager):
             help_action.setVisible(True)
             help_action.triggered.connect(self.__on_help_request)
 
-        # Up shortcut (activate/open parent)
-        up_shortcut = QShortcut(
-            QKeySequence(Qt.ControlModifier + Qt.Key_Up), widget)
-        up_shortcut.activated.connect(self.__on_activate_parent)
-
         widget.setWindowIcon(
             icon_loader.from_description(desc).get(desc.icon)
         )
         widget.setCaption(node.title)
         # befriend class Report
         widget._Report__report_view = self.scheme().report_view
-
-        self.__set_float_on_top_flag(widget)
 
         # Schedule an update with the signal manager, due to the cleared
         # implicit Initializing flag
@@ -542,39 +505,42 @@ class OWWidgetManager(_WidgetManager):
         Same as `manager.widget_processing_state(manger.widget_for_node(node))`
 
         """
+        if node not in self.__item_for_node:
+            if node in self.__scheme.nodes:
+                return ProcessingState.Initializing
+            else:
+                return 0
         return self.__item_for_node[node].state
 
     def widget_processing_state(self, widget):
+        # type: (OWWidget) -> int
         """
         Return the processing state flags for the widget.
 
-        The state is an bitwise or of `InputUpdate` and `BlockingUpdate`.
-
+        The state is an bitwise of the :class:`ProcessingState` flags.
         """
         node = self.node_for_widget(widget)
         return self.__item_for_node[node].state
 
-    def set_float_widgets_on_top(self, float_on_top):
-        """
-        Set `Float Widgets on Top` flag on all widgets.
-        """
-        self.__float_widgets_on_top = float_on_top
-        for item in self.__item_for_node.values():
-            if item.widget is not None:
-                self.__set_float_on_top_flag(item.widget)
-
     def save_widget_geometry(self, node, widget):
         # type: (SchemeNode, QWidget) -> bytes
         """
-        Save and return the current geometry and state for node
+        Reimplemented.
+
+        Save and return the current geometry and state for node.
         """
         if isinstance(widget, OWWidget):
-            return widget.saveGeometryAndLayoutState()
+            return bytes(widget.saveGeometryAndLayoutState())
         else:
             return super().save_widget_geometry(node, widget)
 
     def restore_widget_geometry(self, node, widget, state):
         # type: (SchemeNode, QWidget, bytes) -> bool
+        """
+        Restore the widget geometry state.
+
+        Reimplemented.
+        """
         if isinstance(widget, OWWidget):
             return widget.restoreGeometryAndLayoutState(QByteArray(state))
         else:
@@ -582,8 +548,6 @@ class OWWidgetManager(_WidgetManager):
 
     def eventFilter(self, receiver, event):
         if event.type() == QEvent.Close and receiver is self.__scheme:
-            self.signal_manager().stop()
-
             # Notify the remaining widget instances (if any).
             for item in list(self.__item_for_node.values()):
                 widget = item.widget
@@ -601,7 +565,7 @@ class OWWidgetManager(_WidgetManager):
         the scheme and hope someone responds to it.
 
         """
-        # Sender is the QShortcut, and parent the OWBaseWidget
+        # Sender is the QShortcut, and parent the OWWidget
         widget = self.sender().parent()
         try:
             node = self.node_for_widget(widget)
@@ -613,14 +577,7 @@ class OWWidgetManager(_WidgetManager):
             event = QWhatsThisClickedEvent(help_url)
             QCoreApplication.sendEvent(self.scheme(), event)
 
-    def __on_activate_parent(self):
-        """
-        Activate parent shortcut was pressed.
-        """
-        event = WorkflowEvent(WorkflowEvent.ActivateParentRequest)
-        QCoreApplication.sendEvent(self.scheme(), event)
-
-    def __initialize_widget_state(self, node, widget):
+    def __initialize_widget_messages(self, node, widget):
         """
         Initialize the tracked info/warning/error message state.
         """
@@ -629,14 +586,14 @@ class OWWidgetManager(_WidgetManager):
             if message:
                 node.set_state_message(message)
 
-    def __on_widget_state_changed(self, msg):
+    def __on_widget_message_changed(self, msg):
         """
-        The OWBaseWidget info/warning/error state has changed.
+        The OWWidget info/warning/error state has changed.
         """
         widget = msg.group.widget
         node = self.node_for_widget(widget)
         if node is not None:
-            self.__initialize_widget_state(node, widget)
+            self.__initialize_widget_messages(node, widget)
 
     @Slot(int)
     def __on_processing_state_changed(self, state):
@@ -666,7 +623,8 @@ class OWWidgetManager(_WidgetManager):
         Signal manager entered the input update loop for the node.
         """
         assert self.__updating_widget is None, "MUST NOT re-enter"
-        assert node in self.__item_for_node, "MUST NOT process non-tracked"
+        # Force widget creation (if not already done)
+        _ = self.widget_for_node(node)
         item = self.__item_for_node[node]
         # Remember the widget instance. The node and the node->widget mapping
         # can be removed between this and __on_processing_finished.
@@ -739,24 +697,6 @@ class OWWidgetManager(_WidgetManager):
             if item.widget is not None:
                 item.widget.workflowEnvChanged(key, newvalue, oldvalue)
 
-    def __set_float_on_top_flag(self, widget):
-        """Set or unset widget's float on top flag"""
-        should_float_on_top = self.__float_widgets_on_top
-        float_on_top = bool(widget.windowFlags() & Qt.WindowStaysOnTopHint)
-
-        if float_on_top == should_float_on_top:
-            return
-
-        widget_was_visible = widget.isVisible()
-        if should_float_on_top:
-            widget.setWindowFlags(widget.windowFlags() | Qt.WindowStaysOnTopHint)
-        else:
-            widget.setWindowFlags(widget.windowFlags() & ~Qt.WindowStaysOnTopHint)
-
-        # Changing window flags hid the widget
-        if widget_was_visible:
-            widget.show()
-
 
 WidgetManager = OWWidgetManager
 
@@ -776,7 +716,6 @@ class WidgetsSignalManager(SignalManager):
     """
     def __init__(self, scheme, **kwargs):
         super().__init__(scheme, **kwargs)
-        scheme.installEventFilter(self)
 
     def send(self, widget, channelname, value, signal_id):
         # type: (OWWidget, str, Any, Any) -> None
@@ -804,7 +743,7 @@ class WidgetsSignalManager(SignalManager):
         # handlers with Multiple flag.
         signal_id = (widget.widget_id, channelname, signal_id)
 
-        SignalManager.send(self, node, channel, value, signal_id)
+        super().send(node, channel, value, signal_id)
 
     def is_blocking(self, node):
         """Reimplemented from `SignalManager`"""
@@ -818,10 +757,10 @@ class WidgetsSignalManager(SignalManager):
         Implementation of `SignalManager.send_to_node`.
 
         Deliver input signals to an OWWidget instance.
-
         """
         widget = self.scheme().widget_for_node(node)
-        self.process_signals_for_widget(node, widget, signals)
+        if widget is not None:
+            self.process_signals_for_widget(node, widget, signals)
 
     def compress_signals(self, signals):
         """
@@ -830,75 +769,45 @@ class WidgetsSignalManager(SignalManager):
         return compress_signals(signals)
 
     def process_signals_for_widget(self, node, widget, signals):
+        # type: (SchemeNode, OWWidget, List[Signal]) -> None
         """
         Process new signals for the OWWidget.
         """
-        if sip.isdeleted(widget):
-            log.critical("Widget %r was deleted. Cannot process signals",
-                         widget)
-            return
-
         app = QCoreApplication.instance()
-
-        for signal in signals:
-            link = signal.link
-            value = signal.value
-            handler = link.sink_channel.handler
-            if handler.startswith("self."):
-                handler = handler.split(".", 1)[1]
-
-            handler = getattr(widget, handler)
-
-            if link.sink_channel.single:
-                args = (value,)
-            else:
-                args = (value, signal.id)
-
-            log.debug("Process signals: calling %s.%s (from %s with id:%s)",
-                      type(widget).__name__, handler.__name__, link, signal.id)
-
-            app.setOverrideCursor(Qt.WaitCursor)
-            try:
-                handler(*args)
-            except Exception:
-                log.exception("Error calling '%s' of '%s'",
-                              handler.__name__, node.title)
-                raise
-            finally:
-                app.restoreOverrideCursor()
-
-        app.setOverrideCursor(Qt.WaitCursor)
         try:
-            widget.handleNewSignals()
-        except Exception:
-            log.exception("Error calling 'handleNewSignals()' of '%s'",
-                          node.title)
-            raise
+            app.setOverrideCursor(Qt.WaitCursor)
+            for signal in signals:
+                link = signal.link
+                value = signal.value
+                handler = link.sink_channel.handler
+                if handler.startswith("self."):
+                    handler = handler.split(".", 1)[1]
+
+                handler = getattr(widget, handler)
+
+                if link.sink_channel.single:
+                    args = (value,)
+                else:
+                    args = (value, signal.id)
+
+                log.debug("Process signals: calling %s.%s (from %s with id:%s)",
+                          type(widget).__name__, handler.__name__, link, signal.id)
+
+                try:
+                    handler(*args)
+                except Exception:
+                    log.exception("Error calling '%s' of '%s'",
+                                  handler.__name__, node.title)
+                    raise
+
+            try:
+                widget.handleNewSignals()
+            except Exception:
+                log.exception("Error calling 'handleNewSignals()' of '%s'",
+                              node.title)
+                raise
         finally:
             app.restoreOverrideCursor()
-
-    def eventFilter(self, receiver, event):
-        if event.type() == QEvent.DeferredDelete and receiver is self.scheme():
-            try:
-                state = self.runtime_state()
-            except AttributeError:
-                # If the scheme (which is a parent of this object) is
-                # already being deleted the SignalManager can also be in
-                # the process of destruction (noticeable by its __dict__
-                # being empty). There is nothing really to do in this
-                # case.
-                state = None
-
-            if state == SignalManager.Processing:
-                log.info("Deferring a 'DeferredDelete' event for the Scheme "
-                         "instance until SignalManager exits the current "
-                         "update loop.")
-                event.setAccepted(False)
-                self.processingFinished.connect(self.scheme().deleteLater)
-                self.stop()
-                return True
-
-        return SignalManager.eventFilter(self, receiver, event)
 
 
 def mock_error_owwidget(node, message):
