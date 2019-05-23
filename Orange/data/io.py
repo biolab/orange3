@@ -344,6 +344,12 @@ class FileFormatMeta(Registry):
 
     @property
     def img_writers(cls):
+        warnings.warn(
+            f"'{__name__}.FileFormat.img_writers' is no longer used and "
+            "will be removed. Please use "
+            "'Orange.widgets.io.FileFormat.img_writers' instead.",
+            DeprecationWarning, stacklevel=2
+        )
         return cls._ext_to_attr_if_attr2('', 'write_image')
 
     @property
