@@ -2,12 +2,14 @@ import os
 from typing import Optional
 
 from AnyQt.QtCore import Qt, QSettings
-from AnyQt.QtWidgets import QAction, QFileDialog, QMenu, QMenuBar, QWidget
-
+from AnyQt.QtWidgets import (
+    QAction, QFileDialog, QMenu, QMenuBar, QWidget, QMessageBox
+)
 from AnyQt.QtGui import QKeySequence
 
 from orangecanvas.application.canvasmain import CanvasMainWindow
 from Orange.canvas.widgetsscheme import WidgetsScheme
+from Orange.canvas import config
 from Orange.widgets.report.owreport import HAVE_REPORT, OWReport
 
 
@@ -67,6 +69,11 @@ class OWCanvasMainWindow(CanvasMainWindow):
             enabled=HAVE_REPORT,
         )
         self.open_report_action.triggered.connect(self.open_report)
+        self.reset_widget_settings_action = QAction(
+            self.tr("Reset Widget Settings..."), self,
+            triggered=self.reset_widget_settings
+        )
+
         menubar = self.menuBar()
         # Insert the 'Load report' in the File menu ...
         _insert_action(menubar, "file-menu", "open-actions-separator",
@@ -74,6 +81,9 @@ class OWCanvasMainWindow(CanvasMainWindow):
         # ... and 'Show report' in the View menu.
         _insert_action(menubar, "view-menu", "view-visible-actions-separator",
                        self.show_report_action)
+
+        _insert_action(menubar, "options-menu", "canvas-addons-action",
+                       self.reset_widget_settings_action)
 
     def open_report(self):
         """
@@ -139,3 +149,31 @@ class OWCanvasMainWindow(CanvasMainWindow):
         """
         sc = self.current_document().scheme()  # type: WidgetsScheme
         sc.show_report_view()
+
+    def reset_widget_settings(self):
+        mb = QMessageBox(
+            self,
+            windowTitle="Clear settings",
+            text="Orange needs to be restarted for the changes to take effect.",
+            icon=QMessageBox.Information,
+            informativeText="Press OK to close Orange now.",
+            standardButtons=QMessageBox.Ok | QMessageBox.Cancel,
+        )
+        res = mb.exec()
+        if res == QMessageBox.Ok:
+            # Touch a finely crafted file inside the settings directory.
+            # The existence of this file is checked by the canvas main
+            # function and is deleted there.
+            fname = os.path.join(config.widget_settings_dir(),
+                                 "DELETE_ON_START")
+            os.makedirs(config.widget_settings_dir(), exist_ok=True)
+            with open(fname, "a"):
+                pass
+
+            if not self.close():
+                QMessageBox(
+                    self,
+                    text="Settings will still be reset at next application start",
+                    icon=QMessageBox.Information
+                ).exec()
+
