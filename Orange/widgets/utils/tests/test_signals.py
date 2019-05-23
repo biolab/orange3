@@ -8,12 +8,11 @@
 import unittest
 from unittest.mock import patch, MagicMock
 
-from Orange.canvas.registry.description import \
-    Single, Multiple, Default, NonDefault, Explicit, Dynamic, InputSignal, \
-    OutputSignal
+from Orange.widgets.widget import \
+    Single, Multiple, Default, NonDefault, Explicit, Dynamic
 from Orange.widgets.tests.base import GuiTest
 from Orange.widgets.utils.signals import _Signal, Input, Output, \
-    WidgetSignalsMixin
+    WidgetSignalsMixin, InputSignal, OutputSignal
 from Orange.widgets.widget import OWWidget
 
 
