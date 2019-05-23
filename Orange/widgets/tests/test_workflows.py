@@ -4,37 +4,30 @@ from os.path import isfile, join, dirname
 import unittest
 
 from orangecanvas.registry import WidgetRegistry
-from orangecanvas.scheme.readwrite import scheme_load
 
-from Orange.canvas.conf import orangeconfig
+from Orange.canvas.config import Config
 from Orange.canvas import workflows
 from Orange.canvas import widgetsscheme
 
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import GuiTest
 
 
-def discover_workflows(tests_dir):
-    ows_path = join(tests_dir, "workflows")
-    ows_files = [f for f in listdir(ows_path)
-                 if isfile(join(ows_path, f)) and f.endswith(".ows")]
+def discover_workflows(dir):
+    ows_files = [f for f in listdir(dir)
+                 if isfile(join(dir, f)) and f.endswith(".ows")]
     for ows_file in ows_files:
-        yield join(ows_path, ows_file)
-
-TEST_WORKFLOWS = chain(
-    [t.abspath() for t in workflows.example_workflows()],
-    discover_workflows(dirname(__file__))
-)
+        yield join(dir, ows_file)
 
 
 def registry():
-    d = orangeconfig.widget_discovery(WidgetRegistry())
-    d.run(orangeconfig.widgets_entry_points())
+    d = Config.widget_discovery(WidgetRegistry())
+    d.run(Config.widgets_entry_points())
     return d.registry
 
 
 @unittest.skipIf(environ.get("SKIP_EXAMPLE_WORKFLOWS", False),
                  "Example workflows inflate coverage")
-class TestWorkflows(WidgetTest):
+class TestWorkflows(GuiTest):
     def test_scheme_examples(self):
         """
         Test if Orange workflow examples can be opened. Examples in canvas
@@ -42,11 +35,20 @@ class TestWorkflows(WidgetTest):
         GH-2240
         """
         reg = registry()
-        for ows_file in TEST_WORKFLOWS:
+        test_workflows = chain(
+            discover_workflows(dirname(workflows.__file__)),
+            discover_workflows(join(dirname(__file__), "workflows"))
+        )
+        for ows_file in test_workflows:
             new_scheme = widgetsscheme.WidgetsScheme()
+            new_scheme.widget_manager.set_creation_policy(
+                new_scheme.widget_manager.Immediate
+            )
             with open(ows_file, "rb") as f:
                 try:
-                    scheme_load(new_scheme, f, registry=reg)
+                    new_scheme.load_from(f, registry=reg)
                 except Exception as e:
                     self.fail("Old workflow '{}' could not be loaded\n'{}'".
                               format(ows_file, str(e)))
+                finally:
+                    new_scheme.clear()
