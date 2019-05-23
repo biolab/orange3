@@ -7,7 +7,9 @@ from orangewidget.utils.signals import (
 from orangewidget.widget import (
     OWBaseWidget, Message, Msg, StateInfo, Input, Output,
 )
+from Orange.widgets.report import DataReport as Report
 from Orange.widgets.utils.signals import AttributeList
+
 
 __all__ = [
     "OWWidget", "Input", "Output", "AttributeList", "Message", "Msg",
@@ -24,9 +26,12 @@ WidgetSignalsMixin = WidgetSignalsMixin
 
 WidgetMetaClass = type(OWBaseWidget)
 
-#: :class:`~OWBaseWidget` re-exposed in this namespace. Orange Widgets
-#: should import  This from this module.
-OWWidget = OWBaseWidget
+
+class OWWidget(OWBaseWidget, Report, openclass=True):
+    """
+    :class:`~orangewidget.widget.OWBaseWidget` extended with `Orange.data.Table`
+    related report methods (:class:`.Report`)
+    """
 
 #: Input/Output flags (Deprecated).
 #: --------------------------------
