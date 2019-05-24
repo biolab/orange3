@@ -535,7 +535,7 @@ elif HAVE_WEBENGINE:
     class WebviewWidget(_WebViewBase, WebEngineView):
         _html = _NOTSET
 
-        def __init__(self, parent=None, bridge=None, *, debug=False, **kwargs):
+        def __init__(self, parent=None, bridge=None, *, js_timeout=5000, debug=False, **kwargs):
             WebEngineView.__init__(self, parent, bridge, debug=debug, **kwargs)
             _WebViewBase.__init__(self)
 
@@ -549,6 +549,7 @@ elif HAVE_WEBENGINE:
             self.page().webChannel().registerObject(
                 '__js_object_channel', jsobj)
             self._results = IdStore()
+            self.js_timeout = js_timeout
 
         def _evalJS(self, code):
             wait(until=self._jsobject_channel.is_all_exposed)
@@ -556,7 +557,8 @@ elif HAVE_WEBENGINE:
                 return None
             result = self._results.create()
             self.runJavaScript(code, lambda x: self._results.store(result, x))
-            wait(until=lambda: result in self._results)
+            wait(until=lambda: result in self._results,
+                 timeout=self.js_timeout)
             return self._results.pop(result)
 
         def onloadJS(self, code):
