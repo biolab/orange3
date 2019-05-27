@@ -5,6 +5,11 @@ dist: xenial
 services:
   - docker
 
+addons:
+    apt:
+        packages:
+            - libxkbcommon-x11-0  # for PyQt 5.12
+
 matrix:
     include:
         - env: RUN_PYLINT=true
