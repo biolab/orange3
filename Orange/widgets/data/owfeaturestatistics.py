@@ -252,7 +252,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
             if sp.issparse(x):
                 x = x.todense(order="C")
             # return ss.mode(x, *args, **kwargs)[0]
-            return ut.nanmode(x, *args, **kwargs)[0]  # Temporary replacement for scipy < 1.2.0
+            return ut.nanmode(x, *args, **kwargs)[0]  # Temporary replacement for scipy
 
         self._center = self.__compute_stat(
             matrices,

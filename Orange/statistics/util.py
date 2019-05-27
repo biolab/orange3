@@ -479,7 +479,11 @@ def nanmedian(x, axis=None):
 
 
 def nanmode(x, axis=0):
-    """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
+    """ A temporary replacement for a scipy.stats.mode.
+
+    This function returns mode NaN if all values are NaN (scipy<1.2.0 wrongly
+    returns zero). Also, this function returns count NaN if all values are NaN
+    (scipy=1.3.0 returns some number)."""
     nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
     res = scipy.stats.stats.mode(x, axis)
     return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),
