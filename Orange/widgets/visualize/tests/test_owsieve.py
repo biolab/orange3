@@ -1,6 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-import warnings
 from math import isnan
 import unittest
 from unittest.mock import patch
@@ -31,7 +30,6 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
 
     def setUp(self):
         self.widget = self.create_widget(OWSieveDiagram)
-        warnings.filterwarnings("error", ".*")
 
     def test_context_settings(self):
         # Set titanic and check first two attributes on display
