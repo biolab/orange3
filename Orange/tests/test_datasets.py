@@ -38,7 +38,6 @@ class TestDatasets(unittest.TestCase):
             self.assertIn(name, datasets)
 
     def test_datasets_info_features(self):
-        print(datasets.items())
         for dataset, info in datasets.items():
 
             Variable._clear_all_caches()
