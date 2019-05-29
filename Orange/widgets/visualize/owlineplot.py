@@ -504,6 +504,8 @@ class OWLinePlot(OWWidget):
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.controlArea)
 
+        self.controlArea.setMinimumWidth(180)
+
         gui.rubber(self.controlArea)
         gui.auto_commit(self.controlArea, self, "auto_commit",
                         "Send Selection", "Send Automatically")
