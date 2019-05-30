@@ -5,6 +5,7 @@ from unittest.mock import patch, Mock
 import numpy as np
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QRadioButton
+from sklearn.metrics import silhouette_score
 
 import Orange.clustering
 from Orange.data import Table, Domain
@@ -197,26 +198,22 @@ class TestOWKMeans(WidgetTest):
         # removing data should have cleared the output
         self.assertEqual(self.widget.data, None)
 
-    @patch("Orange.clustering.kmeans.KMeansModel.__call__")
-    def test_centroids_on_output(self, km_call):
-        ret = km_call.return_value = Mock()
-        ret.X = np.array([0] * 50 + [1] * 100)
-        ret.silhouette_samples = np.arange(150) / 150
-
+    def test_centroids_on_output(self):
         widget = self.widget
         widget.optimize_k = False
         widget.k = 4
         self.send_signal(widget.Inputs.data, self.iris)
         self.commit_and_wait()
+        widget.clusterings[widget.k].labels = np.array([0] * 50 + [1] * 100).flatten()
 
-        widget.clusterings[4].silhouette_samples = np.arange(150) / 150
+        widget.samples_scores = lambda x: np.arctan(
+            np.arange(150) / 150) / np.pi + 0.5
         widget.send_data()
         out = self.get_output(widget.Outputs.centroids)
-        np.testing.assert_almost_equal(
-            out.metas,
-            [[0, np.mean(np.arctan(np.arange(50) / 150)) / np.pi + 0.5],
-             [1, np.mean(np.arctan(np.arange(50, 150) / 150)) / np.pi + 0.5],
-             [2, 0], [3, 0]])
+        np.testing.assert_array_almost_equal(
+            np.array([[0, np.mean(np.arctan(np.arange(50) / 150)) / np.pi + 0.5],
+                      [1, np.mean(np.arctan(np.arange(50, 150) / 150)) / np.pi + 0.5],
+                      [2, 0], [3, 0]]), out.metas.astype(float))
         self.assertEqual(out.name, "iris centroids")
 
     def test_centroids_domain_on_output(self):
@@ -262,12 +259,14 @@ class TestOWKMeans(WidgetTest):
         self.KMeansFail.fail_on = {3, 5, 7}
         model = widget.table_view.model()
 
-        with patch.object(model, "set_scores", wraps=model.set_scores) as set_scores:
+        with patch.object(
+                model, "set_scores", wraps=model.set_scores) as set_scores:
             self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
             scores, start_k = set_scores.call_args[0]
             self.assertEqual(
                 scores,
-                [km if isinstance(km, str) else km.silhouette
+                [km if isinstance(km, str) else silhouette_score(
+                    self.iris.X, km(self.iris))
                  for km in (widget.clusterings[k] for k in range(3, 9))]
             )
             self.assertEqual(start_k, 3)
@@ -312,15 +311,14 @@ class TestOWKMeans(WidgetTest):
         self.assertIsNotNone(self.get_output(self.widget.Outputs.annotated_data))
 
     def test_select_best_row(self):
-        class Cluster:
-            def __init__(self, n):
-                self.silhouette = n
-
         widget = self.widget
         widget.k_from, widget.k_to = 2, 6
-        widget.clusterings = {k: Cluster(5 - (k - 4) ** 2) for k in range(2, 7)}
+        widget.optimize_k = True
+        self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
+        self.commit_and_wait()
         widget.update_results()
-        self.assertEqual(widget.selected_row(), 2)
+        # for housing dataset best selection is 3 clusters, so row no. 1
+        self.assertEqual(widget.selected_row(), 1)
 
         widget.clusterings = {k: "error" for k in range(2, 7)}
         widget.update_results()
@@ -394,7 +392,9 @@ class TestOWKMeans(WidgetTest):
         # Avoid randomness in the test
         random = np.random.RandomState(0)  # pylint: disable=no-member
         table = Table(random.rand(110, 2))
-        with patch("Orange.clustering.kmeans.SILHOUETTE_MAX_SAMPLES", 100):
+        with patch(
+                "Orange.widgets.unsupervised.owkmeans.SILHOUETTE_MAX_SAMPLES",
+                100):
             self.send_signal(self.widget.Inputs.data, table)
             outtable = self.get_output(widget.Outputs.annotated_data)
             outtable = outtable.get_column_view("Silhouette")[0]

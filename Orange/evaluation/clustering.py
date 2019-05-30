@@ -94,11 +94,10 @@ class ClusteringEvaluation(Validation):
 
         for k in range(self.k):
             for i, learner in enumerate(learners):
-                model = learner(data)
+                model = learner.get_model(data)
                 if self.store_models:
                     res.models[k, i] = model
-                labels = model(data)
-                res.predicted[i, k, :] = labels.X.flatten()
+                res.predicted[i, k, :] = model.labels
 
         return res
 

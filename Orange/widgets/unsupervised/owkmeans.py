@@ -6,9 +6,10 @@ from AnyQt.QtCore import Qt, QTimer, QAbstractTableModel, QModelIndex, QThread, 
     pyqtSlot as Slot
 from AnyQt.QtGui import QIntValidator
 from AnyQt.QtWidgets import QGridLayout, QTableView
+from sklearn.metrics import silhouette_samples, silhouette_score
 
 from Orange.clustering import KMeans
-from Orange.clustering.kmeans import KMeansModel, SILHOUETTE_MAX_SAMPLES
+from Orange.clustering.kmeans import KMeansModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.data.util import get_unique_names, array_equal
 from Orange.preprocess.impute import ReplaceUnknowns
@@ -23,6 +24,7 @@ from Orange.widgets.widget import Input, Output
 
 
 RANDOM_STATE = 0
+SILHOUETTE_MAX_SAMPLES = 5000
 
 
 class ClusterTableModel(QAbstractTableModel):
@@ -268,15 +270,15 @@ class OWKMeans(widget.OWWidget):
         return len(self.data.domain.attributes)
 
     @staticmethod
-    def _compute_clustering(data, k, init, n_init, max_iter, silhouette, random_state):
+    def _compute_clustering(data, k, init, n_init, max_iter, random_state):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
         if k > len(data):
             raise NotEnoughData()
 
         return KMeans(
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
-            compute_silhouette_score=silhouette, random_state=random_state,
-        )(data)
+            random_state=random_state
+        ).get_model(data)
 
     @Slot(int, int)
     def __progress_changed(self, n, d):
@@ -336,7 +338,6 @@ class OWKMeans(widget.OWWidget):
             init=self.INIT_METHODS[self.smart_init][1],
             n_init=self.n_init,
             max_iter=self.max_iterations,
-            silhouette=True,
             random_state=RANDOM_STATE,
         ) for k in ks]
         watcher = FutureSetWatcher(futures)
@@ -432,10 +433,9 @@ class OWKMeans(widget.OWWidget):
         self.commit()
 
     def update_results(self):
-        scores = [
-            mk if isinstance(mk, str) else mk.silhouette for mk in (
-                self.clusterings[k] for k in range(self.k_from, self.k_to + 1))
-        ]
+        scores = [mk if isinstance(mk, str) else silhouette_score(
+            self.data.X, mk.labels) for mk in (
+                self.clusterings[k] for k in range(self.k_from, self.k_to + 1))]
         best_row = max(
             range(len(scores)), default=0,
             key=lambda x: 0 if isinstance(scores[x], str) else scores[x]
@@ -453,6 +453,16 @@ class OWKMeans(widget.OWWidget):
 
     def select_row(self):
         self.send_data()
+
+    def preproces(self, data):
+        for preprocessor in KMeans.preprocessors:  # use same preprocessors than
+            data = preprocessor(data)
+        return data
+
+    def samples_scores(self, clust_ids):
+        d = self.preproces(self.data)
+        return np.arctan(
+            silhouette_samples(d.X, clust_ids)) / np.pi + 0.5
 
     def send_data(self):
         if self.optimize_k:
@@ -472,16 +482,15 @@ class OWKMeans(widget.OWWidget):
             get_unique_names(domain, "Cluster"),
             values=["C%d" % (x + 1) for x in range(km.k)]
         )
-        clust_ids = km(self.data)
-        clust_col = clust_ids.X.ravel()
+        clust_ids = km.labels
         silhouette_var = ContinuousVariable(
             get_unique_names(domain, "Silhouette"))
-        if km.silhouette_samples is not None:
+        if len(self.data) <= SILHOUETTE_MAX_SAMPLES:
             self.Warning.no_silhouettes.clear()
-            scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
+            scores = self.samples_scores(clust_ids)
             clust_scores = []
             for i in range(km.k):
-                in_clust = clust_col == i
+                in_clust = clust_ids == i
                 if in_clust.any():
                     clust_scores.append(np.mean(scores[in_clust]))
                 else:
@@ -494,7 +503,7 @@ class OWKMeans(widget.OWWidget):
 
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
-        new_table.get_column_view(cluster_var)[0][:] = clust_col
+        new_table.get_column_view(cluster_var)[0][:] = clust_ids
         new_table.get_column_view(silhouette_var)[0][:] = scores
 
         centroid_attributes = [
@@ -502,7 +511,7 @@ class OWKMeans(widget.OWWidget):
             if isinstance(attr.compute_value, ReplaceUnknowns)
             and attr.compute_value.variable in domain.attributes
             else attr
-            for attr in km.pre_domain.attributes]
+            for attr in km.domain.attributes]
         centroid_domain = add_columns(
             Domain(centroid_attributes, [], domain.metas),
             metas=[cluster_var, silhouette_var])

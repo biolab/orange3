@@ -114,7 +114,7 @@ def barycenter(a, axis=0):
 
 def kmeans_compress(X, k=50):
     km = kmeans.KMeans(n_clusters=k, n_init=5, random_state=42)
-    return km(X)
+    return km.get_model(X)
 
 
 def candidate_split_labels(data):
@@ -866,8 +866,8 @@ class OWHeatMap(widget.OWWidget):
                         self.input_data.domain.metas))
                 nclust = min(self.merge_kmeans_k, len(effective_data) - 1)
                 self.kmeans_model = kmeans_compress(effective_data, k=nclust)
-                effective_data.domain = self.kmeans_model.pre_domain
-                merge_indices = [np.flatnonzero(self.kmeans_model.labels_ == ind)
+                effective_data.domain = self.kmeans_model.domain
+                merge_indices = [np.flatnonzero(self.kmeans_model.labels == ind)
                                  for ind in range(nclust)]
                 not_empty_indices = [i for i, x in enumerate(merge_indices)
                                      if len(x) > 0]
