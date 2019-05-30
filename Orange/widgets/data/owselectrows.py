@@ -14,8 +14,11 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QPoint, QRegExp, QPersistentModelIndex, QLocale
 
-from Orange.data import (ContinuousVariable, DiscreteVariable, StringVariable,
-                         Table, TimeVariable)
+from Orange.data import (
+    Variable, ContinuousVariable, DiscreteVariable, StringVariable,
+    TimeVariable,
+    Table
+)
 import Orange.data.filter as data_filter
 from Orange.data.filter import FilterContinuous, FilterString
 from Orange.data.domain import filter_visible
@@ -67,6 +70,13 @@ class FilterDiscreteType(enum.Enum):
     NotEqual = "NotEqual"
     In = "In"
     IsDefined = "IsDefined"
+
+
+def _plural(s):
+    s = s.replace("is ", "are ")
+    for word in ("equals", "contains", "begins", "ends"):
+        s = s.replace(word, word[:-1])
+    return s
 
 
 class OWSelectRows(widget.OWWidget):
@@ -128,7 +138,19 @@ class OWSelectRows(widget.OWWidget):
             (FilterString.IsDefined, "is defined"),
         ]
     }
+
     Operators[TimeVariable] = Operators[ContinuousVariable]
+
+    AllTypes = {}
+    for _all_name, _all_type, _all_ops in (
+            ("All variables", 0,
+             [(None, "are defined")]),
+            ("All numeric variables", 2,
+             [(v, _plural(t)) for v, t in Operators[ContinuousVariable]]),
+            ("All string variables", 3,
+             [(v, _plural(t)) for v, t in Operators[StringVariable]])):
+        Operators[_all_name] = _all_ops
+        AllTypes[_all_name] = _all_type
 
     operator_names = {vtype: [name for _, name in filters]
                       for vtype, filters in Operators.items()}
@@ -211,8 +233,16 @@ class OWSelectRows(widget.OWWidget):
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.row = row
         for var in self._visible_variables(self.data.domain):
-            attr_combo.addItem(*gui.attributeItem(var))
-        attr_combo.setCurrentIndex(attr or 0)
+            if isinstance(var, Variable):
+                attr_combo.addItem(*gui.attributeItem(var))
+            else:
+                attr_combo.addItem(var)
+        if isinstance(attr, str):
+            attr_combo.setCurrentText(attr)
+        else:
+            attr_combo.setCurrentIndex(
+                attr or
+                len(self.AllTypes) - (attr_combo.count() == len(self.AllTypes)))
         self.cond_list.setCellWidget(row, 0, attr_combo)
 
         index = QPersistentModelIndex(model.index(row, 3))
@@ -230,12 +260,14 @@ class OWSelectRows(widget.OWWidget):
 
         self.cond_list.resizeRowToContents(row)
 
-    @staticmethod
-    def _visible_variables(domain):
+    @classmethod
+    def _visible_variables(cls, domain):
         """Generate variables in order they should be presented in in combos."""
-        return filter_visible(chain(domain.class_vars,
-                                    domain.metas,
-                                    domain.attributes))
+        return chain(
+            cls.AllTypes,
+            filter_visible(chain(domain.class_vars,
+                                 domain.metas,
+                                 domain.attributes)))
 
     def add_all(self):
         if self.cond_list.rowCount():
@@ -273,8 +305,12 @@ class OWSelectRows(widget.OWWidget):
         oper_combo = QComboBox()
         oper_combo.row = attr_combo.row
         oper_combo.attr_combo = attr_combo
-        var = self.data.domain[attr_combo.currentText()]
-        oper_combo.addItems(self.operator_names[type(var)])
+        attr_name = attr_combo.currentText()
+        if attr_name in self.AllTypes:
+            oper_combo.addItems(self.operator_names[attr_name])
+        else:
+            var = self.data.domain[attr_name]
+            oper_combo.addItems(self.operator_names[type(var)])
         oper_combo.setCurrentIndex(selected_index or 0)
         self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
         self.set_new_values(oper_combo, adding_all, selected_values)
@@ -345,27 +381,32 @@ class OWSelectRows(widget.OWWidget):
             le.setValidator(QRegExpValidator(QRegExp(TimeVariable.REGEX)))
             return le
 
-        var = self.data.domain[oper_combo.attr_combo.currentText()]
         box = self.cond_list.cellWidget(oper_combo.row, 2)
-        if selected_values is not None:
-            lc = list(selected_values) + ["", ""]
-            lc = [str(x) for x in lc[:2]]
-        else:
-            lc = ["", ""]
-        if box and vartype(var) == box.var_type:
-            lc = self._get_lineedit_contents(box) + lc
+        lc = ["", ""]
         oper = oper_combo.currentIndex()
+        attr_name = oper_combo.attr_combo.currentText()
+        if attr_name in self.AllTypes:
+            vtype = self.AllTypes[attr_name]
+            var = None
+        else:
+            var = self.data.domain[attr_name]
+            vtype = vartype(var)
+            if selected_values is not None:
+                lc = list(selected_values) + ["", ""]
+                lc = [str(x) for x in lc[:2]]
+        if box and vtype == box.var_type:
+            lc = self._get_lineedit_contents(box) + lc
 
-        if oper_combo.currentText() == "is defined":
+        if oper_combo.currentText().endswith(" defined"):
             label = QLabel()
-            label.var_type = vartype(var)
+            label.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, label)
-        elif var.is_discrete:
-            if oper_combo.currentText() == "is one of":
+        elif var is not None and var.is_discrete:
+            if oper_combo.currentText().endswith(" one of"):
                 if selected_values:
                     lc = [x for x in list(selected_values)]
                 button = DropDownToolButton(self, var, lc)
-                button.var_type = vartype(var)
+                button.var_type = vtype
                 self.cond_list.setCellWidget(oper_combo.row, 2, button)
             else:
                 combo = QComboBox()
@@ -379,15 +420,15 @@ class OWSelectRows(widget.OWWidget):
                 combo.currentIndexChanged.connect(self.conditions_changed)
         else:
             box = gui.hBox(self, addToLayout=False)
-            box.var_type = vartype(var)
+            box.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
-            if var.is_continuous:
+            if vtype == 2:  # continuous:
                 validator = add_datetime if isinstance(var, TimeVariable) else add_numeric
                 box.controls = [validator(lc[0])]
                 if oper > 5:
                     gui.widgetLabel(box, " and ")
                     box.controls.append(validator(lc[1]))
-            elif var.is_string:
+            elif vtype == 3:  # string:
                 box.controls = [add_textual(lc[0])]
                 if oper in [6, 7]:
                     gui.widgetLabel(box, " and ")
@@ -420,12 +461,14 @@ class OWSelectRows(widget.OWWidget):
             pass
 
         variables = list(self._visible_variables(self.data.domain))
-        varnames = [v.name for v in variables]
+        varnames = [v.name if isinstance(v, Variable) else v for v in variables]
         if self.conditions:
             for attr, cond_type, cond_value in self.conditions:
                 if attr in varnames:
                     self.add_row(varnames.index(attr), cond_type, cond_value)
-        elif variables:
+                elif attr in self.AllTypes:
+                    self.add_row(attr, cond_type, cond_value)
+        else:
             self.add_row()
 
         self.update_info(data, self.data_in_variables, "In: ")
@@ -478,11 +521,19 @@ class OWSelectRows(widget.OWWidget):
             domain = self.data.domain
             conditions = []
             for attr_name, oper_idx, values in self.conditions:
-                attr_index = domain.index(attr_name)
-                attr = domain[attr_index]
-                operators = self.Operators[type(attr)]
+                if attr_name in self.AllTypes:
+                    attr_index = attr = None
+                    attr_type = self.AllTypes[attr_name]
+                    operators = self.Operators[attr_name]
+                else:
+                    attr_index = domain.index(attr_name)
+                    attr = domain[attr_index]
+                    attr_type = vartype(attr)
+                    operators = self.Operators[type(attr)]
                 opertype, _ = operators[oper_idx]
-                if attr.is_continuous:
+                if attr_type == 0:
+                    filter = data_filter.IsDefined()
+                elif attr_type == 2:  # continuous
                     try:
                         floats = self._values_to_floats(attr, values)
                     except ValueError as e:
@@ -492,7 +543,7 @@ class OWSelectRows(widget.OWWidget):
                         continue
                     filter = data_filter.FilterContinuous(
                         attr_index, opertype, *floats)
-                elif attr.is_string:
+                elif attr_type == 3:  # string
                     filter = data_filter.FilterString(
                         attr_index, opertype, *[str(v) for v in values])
                 else:
@@ -590,35 +641,35 @@ class OWSelectRows(widget.OWWidget):
         conditions = []
         domain = self.data.domain
         for attr_name, oper, values in self.conditions:
-            attr_index = domain.index(attr_name)
-            attr = domain[attr_index]
-            names = self.operator_names[type(attr)]
+            if attr_name in self.AllTypes:
+                attr = attr_name
+                names = self.operator_names[attr_name]
+                var_type = self.AllTypes[attr_name]
+            else:
+                attr = domain[attr_name]
+                var_type = vartype(attr)
+                names = self.operator_names[type(attr)]
             name = names[oper]
             if oper == len(names) - 1:
                 conditions.append("{} {}".format(attr, name))
-            elif attr.is_discrete:
+            elif var_type == 1:  # discrete
                 if name == "is one of":
-                    if len(values) == 1:
-                        conditions.append("{} is {}".format(
-                            attr, attr.values[values[0] - 1]))
-                    elif len(values) > 1:
-                        conditions.append("{} is {} or {}".format(
-                            attr,
-                            ", ".join(attr.values[v - 1] for v in values[:-1]),
-                            attr.values[values[-1] - 1]))
-                else:
-                    if not (values and values[0]):
+                    valnames = [attr.values[v - 1] for v in values]
+                    if not valnames:
                         continue
+                    if len(valnames) == 1:
+                        valstr = valnames[0]
+                    else:
+                        valstr = f"{', '.join(valnames[:-1])} or {valnames[-1]}"
+                    conditions.append(f"{attr} is {valstr}")
+                elif values and values[0]:
                     value = values[0] - 1
-                    conditions.append("{} {} {}".
-                                      format(attr, name, attr.values[value]))
-            else:
-                if len(values) == 1:
-                    conditions.append("{} {} {}".
-                                      format(attr, name, *values))
-                else:
-                    conditions.append("{} {} {} and {}".
-                                      format(attr, name, *values))
+                    conditions.append(f"{attr} {name} {attr.values[value]}")
+            elif var_type == 3:  # string variable
+                conditions.append(
+                    f"{attr} {name} {' and '.join(map(repr, values))}")
+            elif all(x for x in values):  # numeric variable
+                conditions.append(f"{attr} {name} {' and '.join(values)}")
         items = OrderedDict()
         if describe_domain:
             items.update(self.data_desc)

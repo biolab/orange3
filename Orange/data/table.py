@@ -1299,14 +1299,15 @@ class Table(MutableSequence, Storage):
             return self._values_filter_to_indicator(filter)
 
         def get_col_indices():
+            cols = chain(self.domain.variables, self.domain.metas)
+            if isinstance(filter, IsDefined):
+                return list(cols)
+
             if filter.column is not None:
                 return [filter.column]
 
-            cols = chain(self.domain.variables, self.domain.metas)
             if isinstance(filter, FilterDiscrete):
                 raise ValueError("Discrete filter can't be applied across rows")
-            if isinstance(filter, IsDefined):
-                return list(cols)
             if isinstance(filter, FilterContinuous):
                 return [col for col in cols if col.is_continuous]
             if isinstance(filter,
@@ -1317,7 +1318,7 @@ class Table(MutableSequence, Storage):
         def col_filter(col_idx):
             col = self.get_column_view(col_idx)[0]
             if isinstance(filter, IsDefined):
-                if self.domain[col].is_primitive():
+                if self.domain[col_idx].is_primitive():
                     return ~np.isnan(col)
                 else:
                     return col.astype(np.bool)
