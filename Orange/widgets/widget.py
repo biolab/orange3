@@ -7,6 +7,8 @@ from orangewidget.utils.signals import (
 from orangewidget.widget import (
     OWBaseWidget, Message, Msg, StateInfo, Input, Output,
 )
+
+from Orange.widgets.utils.progressbar import ProgressBarMixin
 from Orange.widgets.report import DataReport as Report
 from Orange.widgets.utils.signals import AttributeList
 
@@ -27,7 +29,7 @@ WidgetSignalsMixin = WidgetSignalsMixin
 WidgetMetaClass = type(OWBaseWidget)
 
 
-class OWWidget(OWBaseWidget, Report, openclass=True):
+class OWWidget(OWBaseWidget, ProgressBarMixin, Report, openclass=True):
     """
     :class:`~orangewidget.widget.OWBaseWidget` extended with `Orange.data.Table`
     related report methods (:class:`.Report`)
