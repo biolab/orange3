@@ -7,6 +7,9 @@ if [[ $TRAVIS_PYTHON_VERSION == 3.4 ]]; then pip install pandas==0.20.3; fi
 
 pip install numba==0.41.0 llvmlite==0.26.0
 
+# PyQt >= 5.12 distributes WebEngine separately
+pip install pyqtwebengine
+
 # Install dependencies sequentially
 cat requirements-core.txt \
     requirements-gui.txt \
