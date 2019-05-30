@@ -517,6 +517,13 @@ class TestBincount(unittest.TestCase):
 
         np.testing.assert_equal(bincount(x)[1], expected)
 
+    # object arrays cannot be converted to sparse, so test only for dense
+    def test_count_nans_objectarray(self):
+        x = np.array([0, 0, 1, 2, np.nan, 2], dtype=object)
+        expected = 1
+
+        np.testing.assert_equal(bincount(x)[1], expected)
+
     @dense_sparse
     def test_adds_empty_bins(self, array):
         x = array([0, 1, 3, 5])

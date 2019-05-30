@@ -82,7 +82,7 @@ def sparse_implicit_zero_weights(x, weights):
 def bincount(x, weights=None, max_val=None, minlength=0):
     """Return counts of values in array X.
 
-    Works kind of like np.bincount(), except that it also supports floating
+    Works kind of like np.bincount(), except that it also supports
     arrays with nans.
 
     Parameters
@@ -132,8 +132,8 @@ def bincount(x, weights=None, max_val=None, minlength=0):
 
         x = x.data
 
-    x = np.asanyarray(x)
-    if x.dtype.kind == 'f' and bn.anynan(x):
+    x = np.asanyarray(x, dtype=float)
+    if bn.anynan(x):
         nonnan = ~np.isnan(x)
         x = x[nonnan]
         if weights is not None:
