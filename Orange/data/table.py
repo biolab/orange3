@@ -1184,6 +1184,7 @@ class Table(MutableSequence, Storage):
             return rx(self.metas[:, -1 - index])
 
     def _filter_is_defined(self, columns=None, negate=False):
+        # structure of function is obvious; pylint: disable=too-many-branches
         def _sp_anynan(a):
             return a.indptr[1:] != a[-1:] + a.shape[1]
 
@@ -1311,7 +1312,7 @@ class Table(MutableSequence, Storage):
             if isinstance(filter, FilterContinuous):
                 return [col for col in cols if col.is_continuous]
             if isinstance(filter,
-                            (FilterString, FilterStringList, FilterRegex)):
+                          (FilterString, FilterStringList, FilterRegex)):
                 return [col for col in cols if col.is_string]
             raise TypeError("Invalid filter")
 

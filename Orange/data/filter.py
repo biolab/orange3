@@ -444,6 +444,7 @@ class FilterString(ValueFilter):
         self.ref = value
 
     def __call__(self, inst):
+        # the function is a large 'switch'; pylint: disable=too-many-branches
         value = inst[inst.domain.index(self.column)]
         if self.oper == self.IsDefined:
             return not np.isnan(value)
