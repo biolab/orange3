@@ -356,7 +356,7 @@ class WidgetTest(GuiTest):
         outputs = widget.outputs or widget.Outputs.__dict__.values()
         assert output in (out.name for out in outputs), \
             "widget {} has no output {}".format(widget.name, output)
-        return self.signal_manager.outputs.get((widget, output), None)
+        return widget.signalManager.outputs.get((widget, output), None)
 
     @contextmanager
     def modifiers(self, modifiers):
