@@ -208,6 +208,12 @@ class WidgetTestCase(WidgetTest):
 
             warn.assert_not_called()
 
+    def test_reset_settings(self):
+        w = MyWidget()
+        w.field = 43
+        w._reset_settings()
+        self.assertEqual(42, w.field)
+
 
 class WidgetMsgTestCase(WidgetTest):
 
