@@ -205,6 +205,9 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_attrs_spin.setDisabled(False)
 
 
+MAX_LABEL_LEN = 16
+
+
 class OWRadvizGraph(OWGraphWithAnchors):
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -237,14 +240,28 @@ class OWRadvizGraph(OWGraphWithAnchors):
                 self.plot_widget.removeItem(anchor)
 
         self.anchor_items = []
-        label_len = []
+        label_len = 1
         for point, label in zip(points, labels):
             anchor = TextItem()
             anchor.textItem.setToolTip(f"<b>{label}</b>")
-            if len(label) > 20:
-                label = label[:17] + "..."
+
+            if len(label) > MAX_LABEL_LEN:
+                i = label.rfind(" ", 0, MAX_LABEL_LEN)
+                if i != -1:
+                    first_row = label[:i] + "\n"
+                    second_row = label[i + 1:]
+                    if len(second_row) > MAX_LABEL_LEN:
+                        j = second_row.rfind(" ", 0, MAX_LABEL_LEN)
+                        if j != -1:
+                            second_row = second_row[:j + 1] + "..."
+                        else:
+                            second_row = second_row[:MAX_LABEL_LEN - 3] + "..."
+                    label = first_row + second_row
+                else:
+                    label = label[:MAX_LABEL_LEN - 3] + "..."
+
             anchor.setText(label)
-            label_len.append(len(label))
+            label_len = min(MAX_LABEL_LEN, len(label))
             anchor.setColor(QColor(0, 0, 0))
 
             x, y = point
@@ -261,7 +278,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
             self.plot_widget.addItem(anchor)
             self.anchor_items.append(anchor)
 
-        self.padding = max(label_len) * 0.02
+        self.padding = label_len * 0.0175
         self._update_anchors_scatter_item(points)
 
     def _update_anchors_scatter_item(self, points):
