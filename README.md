@@ -71,22 +71,3 @@ To start Orange GUI from the command line, run:
     python3 -m Orange.canvas
 
 Append `--help` for a list of program options.
-
-
-Compiling on Windows
---------------------
-
-Get appropriate wheels for missing libraries. You will need [numpy+mkl] and [scipy].
-
-[numpy+mkl]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#numpy
-[scipy]: http://www.lfd.uci.edu/~gohlke/pythonlibs/#scipy
-
-Install them with
-
-    pip install <wheel name>.whl
-
-Install [Visual Studio compiler]. Then go to Orange3 folder and run:
-
-[Visual Studio compiler]: https://developer.microsoft.com/en-us/windows/downloads
-
-    python setup.py build_ext -i --compiler=msvc install
