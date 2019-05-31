@@ -1212,8 +1212,10 @@ class Table(MutableSequence, Storage):
                 col, sparse = self.get_column_view(column)
                 if sparse:
                     remove += col == 0
+                elif self.domain[column].is_primitive():
+                    remove += bn.anynan([col.astype(float)], axis=0)
                 else:
-                    remove += bn.anynan([col], axis=0)
+                    remove += col.astype(bool)
         retain = remove if negate else np.logical_not(remove)
         return self.from_table_rows(self, retain)
 

@@ -96,6 +96,11 @@ class TestTableFilters(unittest.TestCase):
         filtered = val_filter(self.table)
         self.assertEqual(list(filtered.metas[:, -2].flatten()), list("bd"))
 
+    def test_is_defined(self):
+        val_filter = IsDefined(columns=["c3"])
+        filtered = val_filter(self.table)
+        self.assertEqual(list(filtered.metas[:, -2].flatten()), list("abcdeg"))
+
 
 if __name__ == "__main__":
     unittest.main()
