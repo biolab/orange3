@@ -48,29 +48,18 @@ Installing with pip
 To install Orange with pip, run the following.
 
     # Install some build requirements via your system's package manager
-    sudo apt install virtualenv git build-essential python3-dev
+    sudo apt install virtualenv build-essential python3-dev
 
     # Create a separate Python environment for Orange and its dependencies ...
     virtualenv --python=python3 --system-site-packages orange3venv
     # ... and make it the active one
     source orange3venv/bin/activate
 
-    # Clone the repository and move into it
-    git clone https://github.com/biolab/orange3.git
-    cd orange3
-
     # Install Qt dependencies for the GUI
     pip install PyQt5 PyQtWebEngine
 
-    # Install other minimum required dependencies
-    pip install -r requirements-core.txt  # For Orange Python library
-    pip install -r requirements-gui.txt   # For Orange GUI
-
-    pip install -r requirements-sql.txt   # To use SQL support
-    pip install -r requirements-opt.txt   # Optional dependencies, may fail
-
-    # Finally install Orange in editable/development mode.
-    pip install -e .
+    # Install Orange
+    pip install orange3
 
 Starting Orange GUI
 -------------------
