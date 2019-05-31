@@ -1035,10 +1035,6 @@ class OWWidget(QDialog, OWComponent, Report, ProgressBarMixin,
         """Is this widget blocking signal processing."""
         return self.__blocking
 
-    def resetSettings(self):
-        """Reset the widget settings to default"""
-        self.settingsHandler.reset_settings(self)
-
     def workflowEnv(self):
         """
         Return (a view to) the workflow runtime environment.
