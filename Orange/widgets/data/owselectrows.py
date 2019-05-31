@@ -422,7 +422,7 @@ class OWSelectRows(widget.OWWidget):
             box = gui.hBox(self, addToLayout=False)
             box.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
-            if vtype == 2:  # continuous:
+            if vtype in (2, 4):  # continuous, time:
                 validator = add_datetime if isinstance(var, TimeVariable) else add_numeric
                 box.controls = [validator(lc[0])]
                 if oper > 5:
@@ -533,7 +533,7 @@ class OWSelectRows(widget.OWWidget):
                 opertype, _ = operators[oper_idx]
                 if attr_type == 0:
                     filter = data_filter.IsDefined()
-                elif attr_type == 2:  # continuous
+                elif attr_type in (2, 4):  # continuous, time
                     try:
                         floats = self._values_to_floats(attr, values)
                     except ValueError as e:
