@@ -5,7 +5,7 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QSize, QLineF, pyqtSignal as Signal
 from AnyQt.QtGui import QPainter, QPen, QColor
-from AnyQt.QtWidgets import QApplication, QSizePolicy, QGraphicsLineItem
+from AnyQt.QtWidgets import QApplication, QGraphicsLineItem
 
 import pyqtgraph as pg
 from pyqtgraph.functions import mkPen
@@ -495,11 +495,9 @@ class OWLinePlot(OWWidget):
             placeholder="None", separators=False, valid_types=DiscreteVariable)
         self.group_view = gui.listView(
             self.controlArea, self, "group_var", box="Group by",
-            model=self.group_vars, callback=self.__group_var_changed)
+            model=self.group_vars, callback=self.__group_var_changed,
+            sizeHint=QSize(30, 100))
         self.group_view.setEnabled(False)
-        self.group_view.setMinimumSize(QSize(30, 100))
-        self.group_view.setSizePolicy(QSizePolicy.Expanding,
-                                      QSizePolicy.Ignored)
 
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.controlArea)
