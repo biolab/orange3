@@ -60,7 +60,7 @@ To install Orange with pip, run the following.
     cd orange3
 
     # Install Qt dependencies for the GUI
-    pip install PyQt5
+    pip install PyQt5 PyQtWebEngine
 
     # Install other minimum required dependencies
     pip install -r requirements-core.txt  # For Orange Python library
@@ -71,18 +71,6 @@ To install Orange with pip, run the following.
 
     # Finally install Orange in editable/development mode.
     pip install -e .
-
-Installation of SciPy and qt-graph-helpers is sometimes challenging because of
-their non-python dependencies that have to be installed manually. More
-detailed, if mostly obsolete, guides for some platforms can be found in
-the [wiki].
-
-[wiki]: https://github.com/biolab/orange3/wiki
-
-### Missing WebKit/WebEngine
-
-Some distributions of PyQt5 come without WebKit or WebEngine, required by some
-add-ons and for reporting. Running `pip install PyQtWebEngine` may solve this issue.
 
 Starting Orange GUI
 -------------------
