@@ -1320,7 +1320,7 @@ class Table(MutableSequence, Storage):
             col = self.get_column_view(col_idx)[0]
             if isinstance(filter, IsDefined):
                 if self.domain[col_idx].is_primitive():
-                    return ~np.isnan(col)
+                    return ~np.isnan(col.astype(float))
                 else:
                     return col.astype(np.bool)
             if isinstance(filter, FilterDiscrete):
