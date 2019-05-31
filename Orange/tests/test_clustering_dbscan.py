@@ -29,3 +29,19 @@ class TestDBSCAN(unittest.TestCase):
         c = dbscan(self.iris)
         X = self.iris.X[::20]
         p = c(X)
+
+    def test_values(self):
+        dbscan = DBSCAN(eps=1)  # it clusters data in two classes
+        c = dbscan(self.iris)
+        table = self.iris
+        p = c(table)
+
+        self.assertEqual(2, len(p.domain[0].values))
+        self.assertSetEqual({"0", "1"}, set(p.domain[0].values))
+
+        table.X[0] = [100, 100, 100, 100]  # we add a big outlier
+
+        p = c(table)
+
+        self.assertEqual(3, len(p.domain[0].values))
+        self.assertSetEqual({"-1", "0", "1"}, set(p.domain[0].values))
