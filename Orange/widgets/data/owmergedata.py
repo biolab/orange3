@@ -90,13 +90,13 @@ class OWMergeData(widget.OWWidget):
             model[:] = [getattr(self, 'attr_{}_data'.format(merge_type))]
             extra_model[:] = [getattr(self, 'attr_{}_extra'.format(merge_type))]
             cb = gui.comboBox(box, self, 'attr_{}_data'.format(merge_type),
-                              contentsLength=12, callback=self._invalidate,
+                              contentsLength=12, callback=self.commit,
                               model=model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
             cb.setFixedWidth(190)
             gui.widgetLabel(box, between_label)
             cb = gui.comboBox(box, self, 'attr_{}_extra'.format(merge_type),
-                              contentsLength=12, callback=self._invalidate,
+                              contentsLength=12, callback=self.commit,
                               model=extra_model)
             cb.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
             cb.setFixedWidth(190)
@@ -126,7 +126,7 @@ class OWMergeData(widget.OWWidget):
 
     def change_merging(self):
         self.set_merging()
-        self._invalidate()
+        self.commit()
 
     @staticmethod
     def _set_unique_model(data, model):
@@ -226,7 +226,7 @@ class OWMergeData(widget.OWWidget):
         self._find_best_match()
 
     def handleNewSignals(self):
-        self._invalidate()
+        self.unconditional_commit()
 
     @staticmethod
     def dataInfoText(data):
@@ -251,9 +251,6 @@ class OWMergeData(widget.OWWidget):
                 if len(set(var_names)) != len(var_names):
                     self.Warning.duplicate_names()
         self.Outputs.data.send(merged_data)
-
-    def _invalidate(self):
-        self.commit()
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index
