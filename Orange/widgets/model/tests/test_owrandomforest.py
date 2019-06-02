@@ -26,11 +26,9 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         when all properties are checked
         """
         self.widget.max_features_spin[0].setCheckState(True)
-        self.widget.random_state_spin[0].setCheckState(True)
         self.widget.max_depth_spin[0].setCheckState(True)
         self.parameters.extend([
             ParameterMapping("max_features", self.widget.max_features_spin[1]),
-            ParameterMapping("random_state", self.widget.random_state_spin[1]),
             ParameterMapping("max_depth", self.widget.max_depth_spin[1])])
         self.test_parameters()
 

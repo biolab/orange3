@@ -24,7 +24,6 @@ class OWRandomForest(OWBaseLearner):
     n_estimators = settings.Setting(10)
     max_features = settings.Setting(5)
     use_max_features = settings.Setting(False)
-    random_state = settings.Setting(0)
     use_random_state = settings.Setting(False)
     max_depth = settings.Setting(3)
     use_max_depth = settings.Setting(False)
@@ -46,11 +45,9 @@ class OWRandomForest(OWBaseLearner):
             label="Number of attributes considered at each split: ",
             callback=self.settings_changed, checked="use_max_features",
             checkCallback=self.settings_changed, alignment=Qt.AlignRight,)
-        self.random_state_spin = gui.spin(
-            box, self, "random_state", 0, 2 ** 31 - 1, controlWidth=80,
-            label="Fixed seed for random generator: ", alignment=Qt.AlignRight,
-            callback=self.settings_changed, checked="use_random_state",
-            checkCallback=self.settings_changed)
+        self.random_state = gui.checkBox(
+            box, self, "use_random_state", label="Replicable training",
+            callback=self.settings_changed)
 
         box = gui.vBox(self.controlArea, "Growth Control")
         self.max_depth_spin = gui.spin(
@@ -69,7 +66,7 @@ class OWRandomForest(OWBaseLearner):
         if self.use_max_features:
             common_args["max_features"] = self.max_features
         if self.use_random_state:
-            common_args["random_state"] = self.random_state
+            common_args["random_state"] = 0
         if self.use_max_depth:
             common_args["max_depth"] = self.max_depth
         if self.use_min_samples_split:
@@ -92,7 +89,7 @@ class OWRandomForest(OWBaseLearner):
             ("Number of trees", self.n_estimators),
             ("Maximal number of considered features",
              self.max_features if self.use_max_features else "unlimited"),
-            ("Fixed random seed", self.use_random_state and self.random_state),
+            ("Replicable training", ["No", "Yes"][self.use_random_state]),
             ("Maximal tree depth",
              self.max_depth if self.use_max_depth else "unlimited"),
             ("Stop splitting nodes with maximum instances",
