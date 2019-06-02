@@ -269,7 +269,7 @@ class OWManifoldLearning(OWWidget):
             alignment=Qt.AlignRight, callbackOnReturn=True,
             callback=self.settings_changed)
         self.apply_button = gui.auto_commit(
-            output_box, self, "auto_apply", "&Apply",
+            self.controlArea, self, "auto_apply", "&Apply",
             box=False, commit=self.apply)
 
     def manifold_method_changed(self):
@@ -286,10 +286,11 @@ class OWManifoldLearning(OWWidget):
         self.data = data
         self.n_components_spin.setMaximum(len(self.data.domain.attributes)
                                           if self.data else 10)
-        self.apply()
+        self.unconditional_apply()
 
     def apply(self):
         builtin_warn = warnings.warn
+
         def _handle_disconnected_graph_warning(msg, *args, **kwargs):
             if msg.startswith("Graph is not fully connected"):
                 self.Warning.graph_not_connected()
@@ -351,4 +352,4 @@ class OWManifoldLearning(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWManifoldLearning).run(Table("ionosphere"))
+    WidgetPreview(OWManifoldLearning).run(Table("brown-selected"))
