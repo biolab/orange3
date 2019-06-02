@@ -88,7 +88,7 @@ class OWRandomize(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self.apply()
+        self.unconditional_apply()
 
     def apply(self):
         data = None
