@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import scipy.sparse as sp
 
@@ -40,32 +42,28 @@ class Discretizer(Transformation):
             return np.array([], dtype=int)
 
     @staticmethod
-    def _fmt_interval(low, high, decimals):
+    def _fmt_interval(low, high, formatter):
         assert low is not None or high is not None
         assert low is None or high is None or low < high
-        assert decimals >= 0
-
-        def fmt_value(value):
-            if value is None or np.isinf(value):
-                return None
-            val = str(round(value, decimals))
-            if val.endswith(".0"):
-                return val[:-2]
-            return val
-
-        low, high = fmt_value(low), fmt_value(high)
-        if not low:
-            return "< {}".format(high)
-        if not high:
-            return "≥ {}".format(low)
-        return "{} - {}".format(low, high)
+        if low is None or np.isinf(low):
+            return f"< {formatter(high)}"
+        if high is None or np.isinf(high):
+            return f"≥ {formatter(low)}"
+        return f"{formatter(low)} - {formatter(high)}"
 
     @classmethod
     def create_discretized_var(cls, var, points):
+        def fmt(val):
+            sval = var.str_val(val)
+            # For decimal numbers, remove trailing 0's and . if no decimals left
+            if re.match(r"^\d+\.\d+", sval):
+                return sval.rstrip("0").rstrip(".")
+            return sval
+
         lpoints = list(points)
         if lpoints:
             values = [
-                cls._fmt_interval(low, high, var.number_of_decimals)
+                cls._fmt_interval(low, high, fmt)
                 for low, high in zip([-np.inf] + lpoints, lpoints + [np.inf])]
             to_sql = BinSql(var, lpoints)
         else:

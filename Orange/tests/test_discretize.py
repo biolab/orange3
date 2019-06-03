@@ -3,7 +3,6 @@
 
 import random
 from unittest import TestCase
-from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -116,9 +115,7 @@ class TestEntropyMDL(TestCase):
 # noinspection PyPep8Naming
 class TestDiscretizer(TestCase):
     def setUp(self):
-        self.var = Mock(data.ContinuousVariable, number_of_decimals=1)
-        self.var.name = "x"
-        self.var.sparse = False
+        self.var = data.ContinuousVariable("x", number_of_decimals=1)
 
     def test_create_discretized_var(self):
         dvar = discretize.Discretizer.create_discretized_var(
