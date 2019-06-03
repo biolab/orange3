@@ -665,15 +665,24 @@ class OWMosaicDisplay(OWWidget):
             for i, val in enumerate(values):
                 if distributiondict[val] != 0:
                     perc = counts[i] / float(total)
-                    xs = [x0 + currpos + width * 0.5 * perc,
+                    rwidth = width * perc
+                    xs = [x0 + currpos + rwidth / 2,
                           x0 - self.ATTR_VAL_OFFSET,
-                          x0 + currpos + width * perc * 0.5,
+                          x0 + currpos + rwidth / 2,
                           x1 + self.ATTR_VAL_OFFSET]
                     ys = [y1 + self.ATTR_VAL_OFFSET,
                           y0 + currpos + height * 0.5 * perc,
                           y0 - self.ATTR_VAL_OFFSET,
                           y0 + currpos + height * 0.5 * perc]
-                    CanvasText(self.canvas, val, xs[side], ys[side], align)
+
+                    text = CanvasText(
+                        self.canvas, val, xs[side], ys[side], align)
+                    if side == 0 and text.boundingRect().width() > rwidth:
+                        text.setToolTip(val)
+                        while val and text.boundingRect().width() > rwidth:
+                            val = val[:-1]
+                            text.setPlainText(val + "...")
+                            text.setPos(xs[0], ys[0])
                     space = height if side % 2 else width
                     currpos += perc * space + spacing * (total_attrs - side)
 
