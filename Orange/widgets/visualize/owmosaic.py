@@ -675,14 +675,9 @@ class OWMosaicDisplay(OWWidget):
                           y0 - self.ATTR_VAL_OFFSET,
                           y0 + currpos + height * 0.5 * perc]
 
-                    text = CanvasText(
-                        self.canvas, val, xs[side], ys[side], align)
-                    if side == 0 and text.boundingRect().width() > rwidth:
-                        text.setToolTip(val)
-                        while val and text.boundingRect().width() > rwidth:
-                            val = val[:-1]
-                            text.setPlainText(val + "...")
-                            text.setPos(xs[0], ys[0])
+                    CanvasText(
+                        self.canvas, val, xs[side], ys[side], align,
+                        max_width=rwidth if side == 0 else None)
                     space = height if side % 2 else width
                     currpos += perc * space + spacing * (total_attrs - side)
 

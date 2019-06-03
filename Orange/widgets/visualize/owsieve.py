@@ -333,7 +333,12 @@ class OWSieveDiagram(OWWidget):
         """Update the graph."""
 
         def text(txt, *args, **kwargs):
-            return CanvasText(self.canvas, "", html_text=to_html(txt),
+            text = html_text = None
+            if "max_width" in kwargs:
+                text = txt
+            else:
+                html_text = to_html(txt)
+            return CanvasText(self.canvas, text, html_text=html_text,
                               *args, **kwargs)
 
         def width(txt):
@@ -488,7 +493,7 @@ class OWSieveDiagram(OWWidget):
                 curr_y += height
 
             xl = text(xval_name, curr_x + width / 2, y_off + square_size,
-                      Qt.AlignHCenter | Qt.AlignTop)
+                      Qt.AlignHCenter | Qt.AlignTop, max_width=width)
             max_xlabel_h = max(int(xl.boundingRect().height()), max_xlabel_h)
             curr_x += width
 
