@@ -10,12 +10,12 @@ from AnyQt.QtWidgets import (
     QToolTip, QAbstractItemView, QStyleOptionViewItem, QStyle,
     QApplication,
 )
-from AnyQt.QtGui import QPainter, QHelpEvent
+from AnyQt.QtGui import QPainter, QHelpEvent, QColor, QPen
 from AnyQt.QtCore import (
-    Qt, QSize, QModelIndex, QAbstractTableModel, QSortFilterProxyModel,
+    Qt, QRect, QRectF, QPoint, QSize,
+    QModelIndex, QAbstractTableModel, QSortFilterProxyModel,
     QLocale, pyqtSlot as Slot
 )
-from AnyQt import QtCore, QtGui
 
 import Orange
 import Orange.evaluation
@@ -187,7 +187,7 @@ class OWPredictions(OWWidget):
     @check_sql_input
     def set_data(self, data):
         """Set the input dataset"""
-        if data is not None and not len(data):
+        if data is not None and not data:
             data = None
             self.Warning.empty_data()
         else:
@@ -210,6 +210,7 @@ class OWPredictions(OWWidget):
         self._invalidate_predictions()
 
     @Inputs.predictors
+    # pylint: disable=redefined-builtin
     def set_predictor(self, predictor=None, id=None):
         if id in self.predictors:
             if predictor is not None:
@@ -311,8 +312,7 @@ class OWPredictions(OWWidget):
             self.predictors[inputid] = pred._replace(results=None)
 
     def _valid_predictors(self):
-        if self.class_var is not None and \
-                self.data is not None:
+        if self.class_var is not None and self.data is not None:
             return [p for p in self.predictors.values()
                     if p.results is not None and not isinstance(p.results, str)]
         else:
@@ -417,7 +417,7 @@ class OWPredictions(OWWidget):
         self._update_spliter()
 
     def _setup_delegate_discrete(self, delegate):
-        colors = [QtGui.QColor(*rgb) for rgb in self.class_var.colors]
+        colors = [QColor(*rgb) for rgb in self.class_var.colors]
         fmt = []
         if self.show_probabilities:
             fmt.append(" : ".join("{{dist[{}]:.2f}}".format(i)
@@ -557,8 +557,9 @@ class OWPredictions(OWWidget):
         if class_var:
             if class_var.is_discrete:
                 return cls.predict_discrete(predictor, data)
-            elif class_var.is_continuous:
+            else:
                 return cls.predict_continuous(predictor, data)
+        return None
 
     @staticmethod
     def predict_discrete(predictor, data):
@@ -587,12 +588,12 @@ class PredictionsItemDelegate(QStyledItemDelegate):
     def setColors(self, colortable):
         if colortable is not None:
             colortable = list(colortable)
-            if not all(isinstance(c, QtGui.QColor) for c in colortable):
+            if not all(isinstance(c, QColor) for c in colortable):
                 raise TypeError
 
         self.__colors = colortable
 
-    def displayText(self, value, locale):
+    def displayText(self, value, _locale):
         try:
             value, dist = value
         except ValueError:
@@ -642,7 +643,8 @@ class PredictionsItemDelegate(QStyledItemDelegate):
         height = sh.height() + metrics.leading() + 2 * margin
         return QSize(sh.width(), height)
 
-    def distribution(self, index):
+    @staticmethod
+    def distribution(index):
         value = index.data(Qt.DisplayRole)
         if isinstance(value, tuple) and len(value) == 2:
             _, dist = value
@@ -653,9 +655,11 @@ class PredictionsItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         dist = self.distribution(index)
         if dist is None or self.__colors is None:
-            return super().paint(painter, option, index)
+            super().paint(painter, option, index)
+            return
         if not numpy.isfinite(numpy.sum(dist)):
-            return super().paint(painter, option, index)
+            super().paint(painter, option, index)
+            return
 
         nvalues = len(dist)
         if len(self.__colors) < nvalues:
@@ -706,14 +710,14 @@ class PredictionsItemDelegate(QStyledItemDelegate):
             color = option.palette.highlightedText().color()
         else:
             color = option.palette.text().color()
-        painter.setPen(QtGui.QPen(color))
+        painter.setPen(QPen(color))
 
         textrect = textrect.adjusted(0, 0, 0, -distheight - spacing)
-        distrect = QtCore.QRect(
-            textrect.bottomLeft() + QtCore.QPoint(0, spacing),
-            QtCore.QSize(rect.width(), distheight)
+        distrect = QRect(
+            textrect.bottomLeft() + QPoint(0, spacing),
+            QSize(rect.width(), distheight)
         )
-        painter.setPen(QtGui.QPen(Qt.lightGray, 0.3))
+        painter.setPen(QPen(Qt.lightGray, 0.3))
         drawDistBar(painter, distrect, dist, colors)
         painter.restore()
         if text:
@@ -726,10 +730,10 @@ def drawDistBar(painter, rect, distribution, colortable):
     """
     Parameters
     ----------
-    painter : QtGui.QPainter
-    rect : QtCore.QRect
+    painter : QPainter
+    rect : QRect
     distribution : numpy.ndarray
-    colortable : List[QtGui.QColor]
+    colortable : List[QColor]
     """
     # assert numpy.isclose(numpy.sum(distribution), 1.0)
     # assert numpy.all(distribution >= 0)
@@ -739,8 +743,7 @@ def drawDistBar(painter, rect, distribution, colortable):
         if dvalue and numpy.isfinite(dvalue):
             painter.setBrush(color)
             width = rect.width() * dvalue
-            painter.drawRoundedRect(
-                QtCore.QRectF(0, 0, width, rect.height()), 1, 2)
+            painter.drawRoundedRect(QRectF(0, 0, width, rect.height()), 1, 2)
             painter.translate(width, 0.0)
     painter.restore()
 
@@ -797,7 +800,7 @@ class _TableModel(QAbstractTableModel):
         return self._table[row][column]
 
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             return self._value(index)
         else:
             return None
@@ -910,29 +913,29 @@ def tool_tip(value):
 
 if __name__ == "__main__":  # pragma: no cover
     filename = "iris.tab"
-    data = Orange.data.Table(filename)
+    test_data = Orange.data.Table(filename)
 
     def pred_error(data, *args, **kwargs):
         raise ValueError
 
-    pred_error.domain = data.domain
+    pred_error.domain = test_data.domain
     pred_error.name = "To err is human"
 
-    if data.domain.has_discrete_class:
+    if test_data.domain.has_discrete_class:
         predictors = [
-            Orange.classification.SVMLearner(probability=True)(data),
-            Orange.classification.LogisticRegressionLearner()(data),
+            Orange.classification.SVMLearner(probability=True)(test_data),
+            Orange.classification.LogisticRegressionLearner()(test_data),
             pred_error
         ]
-    elif data.domain.has_continuous_class:
+    elif test_data.domain.has_continuous_class:
         predictors = [
-            Orange.regression.RidgeRegressionLearner(alpha=1.0)(data),
-            Orange.regression.LinearRegressionLearner()(data),
+            Orange.regression.RidgeRegressionLearner(alpha=1.0)(test_data),
+            Orange.regression.LinearRegressionLearner()(test_data),
             pred_error
         ]
     else:
         predictors = [pred_error]
 
     WidgetPreview(OWPredictions).run(
-        set_data=data,
+        set_data=test_data,
         set_predictor=[(pred, i) for i, pred in enumerate(predictors)])
