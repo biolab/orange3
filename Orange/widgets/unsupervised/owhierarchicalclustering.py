@@ -10,8 +10,8 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsObject, QGraphicsLinearLayout, QGraphicsPathItem,
     QGraphicsScene, QGraphicsView, QGridLayout, QFormLayout, QSizePolicy,
-    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox
-)
+    QGraphicsSimpleTextItem, QGraphicsLayoutItem, QAction, QComboBox,
+    QGraphicsItemGroup)
 from AnyQt.QtGui import (
     QTransform, QPainterPath, QPainterPathStroker, QColor, QBrush, QPen,
     QFont, QFontMetrics, QPolygonF, QKeySequence
@@ -228,6 +228,42 @@ class DendrogramWidget(QGraphicsWidget):
                 pw = self.pen().widthF() / 2.0
                 self.__boundingRect = sh.boundingRect().adjusted(-pw, -pw, pw, pw)
             return self.__boundingRect
+
+    class SelectionItem(QGraphicsItemGroup):
+        def __init__(self, parent, path, unscaled_path, label=""):
+            super().__init__(parent)
+            self.path = QGraphicsPathItem(path, self)
+            self.path.setPen(make_pen(width=1, cosmetic=True))
+            self.addToGroup(self.path)
+
+            self.label = QGraphicsSimpleTextItem(label)
+            self._update_label_pos()
+            self.addToGroup(self.label)
+
+            self.unscaled_path = unscaled_path
+
+        def set_path(self, path):
+            self.path.setPath(path)
+            self._update_label_pos()
+
+        def set_label(self, label):
+            self.label.setText(label)
+            self.label.setBrush(Qt.blue)
+            self._update_label_pos()
+
+        def set_color(self, color):
+            self.path.setBrush(QColor(color))
+
+        def _update_label_pos(self):
+            path = self.path.path()
+            elements = (path.elementAt(i) for i in range(path.elementCount()))
+            points = ((p.x, p.y) for p in elements)
+            p1, p2, *rest = sorted(points)
+            x, y = p1[0], (p1[1] + p2[1]) / 2
+            brect = self.label.boundingRect()
+            # leaf nodes' paths are 4 pixels higher; leafs are `len(rest) == 3`
+            self.label.setPos(x - brect.width() - 4,
+                              y - brect.height() + 4 * (len(rest) == 3))
 
     #: Orientation
     Left, Top, Right, Bottom = 1, 2, 3, 4
@@ -462,29 +498,30 @@ class DendrogramWidget(QGraphicsWidget):
             self._re_enumerate_selections()
             self.selectionChanged.emit()
 
+    @staticmethod
+    def _create_path(item, path):
+        ppath = QPainterPath()
+        if item.node.is_leaf:
+            ppath.addRect(path.boundingRect().adjusted(-8, -4, 0, 4))
+        else:
+            ppath.addPolygon(path)
+            ppath = path_outline(ppath, width=-8)
+        return ppath
+
+
+    @staticmethod
+    def _create_label(i):
+        return f"C{i + 1}"
+
     def _add_selection(self, item):
         """Add selection rooted at item
         """
         outline = self._selection_poly(item)
-        selection_item = QGraphicsPathItem(self)
+        path = self._transform.map(outline)
+        ppath = self._create_path(item, path)
+        label = self._create_label(len(self._selection))
+        selection_item = self.SelectionItem(self, ppath, outline, label)
         selection_item.setPos(self.contentsRect().topLeft())
-        selection_item.setPen(make_pen(width=1, cosmetic=True))
-
-        transform = self._transform
-        path = transform.map(outline)
-        margin = 4
-
-        if item.node.is_leaf:
-            ppath = QPainterPath()
-            ppath.addRect(path.boundingRect()
-                          .adjusted(-margin, -margin, margin, margin))
-        else:
-            ppath = QPainterPath()
-            ppath.addPolygon(path)
-            ppath = path_outline(ppath, width=margin * 2,)
-
-        selection_item.setPath(ppath)
-        selection_item.unscaled_path = outline
         self._selection[item] = selection_item
 
     def _remove_selection(self, item):
@@ -531,9 +568,10 @@ class DendrogramWidget(QGraphicsWidget):
             # delete and then reinsert to update the ordering
             del self._selection[item]
             self._selection[item] = selection_item
+            selection_item.set_label(self._create_label(i))
             color = palette[i]
             color.setAlpha(150)
-            selection_item.setBrush(QColor(color))
+            selection_item.set_color(color)
 
     def _selection_poly(self, item):
         # type: (Tree) -> QPolygonF
@@ -589,15 +627,8 @@ class DendrogramWidget(QGraphicsWidget):
         transform = self._transform
         for item, selection in self._selection.items():
             path = transform.map(selection.unscaled_path)
-            ppath = QPainterPath()
-            margin = 4
-            if item.node.is_leaf:
-                ppath.addRect(path.boundingRect()
-                              .adjusted(-margin, -margin, margin, margin))
-            else:
-                ppath.addPolygon(path)
-                ppath = path_outline(ppath, width=margin * 2)
-            selection.setPath(ppath)
+            ppath = self._create_path(item, path)
+            selection.set_path(ppath)
 
     def _relayout(self):
         if not self._root:
@@ -1766,7 +1797,8 @@ class SliderLine(QGraphicsObject):
         super().__init__(parent, **kwargs)
 
         self.setAcceptedMouseButtons(Qt.LeftButton)
-        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=False))
+        self.setPen(make_pen(brush=QColor(50, 50, 50), width=1, cosmetic=False,
+                             style=Qt.DashLine))
 
         if self._orientation == Qt.Vertical:
             self.setCursor(Qt.SizeVerCursor)
