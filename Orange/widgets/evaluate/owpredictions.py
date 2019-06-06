@@ -8,9 +8,8 @@ import numpy
 from AnyQt.QtWidgets import (
     QTableView, QListWidget, QSplitter, QStyledItemDelegate,
     QToolTip, QAbstractItemView, QStyleOptionViewItem, QStyle,
-    QApplication,
-)
-from AnyQt.QtGui import QPainter, QHelpEvent
+    QApplication)
+from AnyQt.QtGui import QPainter, QHelpEvent, QStandardItem
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractTableModel, QSortFilterProxyModel,
     QLocale, pyqtSlot as Slot
@@ -24,6 +23,8 @@ from Orange.base import Model
 from Orange.data import ContinuousVariable, DiscreteVariable, Value
 from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui, settings
+from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers, \
+    learner_name, scorer_caller
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.itemmodels import TableModel
@@ -65,12 +66,16 @@ class OWPredictions(OWWidget):
     class Error(OWWidget.Error):
         predictor_failed = \
             Msg("One or more predictors failed (see more...)\n{}")
+        scorer_failed = \
+            Msg("One or more scorers failed (see more...)\n{}")
         predictors_target_mismatch = \
             Msg("Predictors do not have the same target.")
         data_target_mismatch = \
             Msg("Data does not have the same target as predictors.")
 
     settingsHandler = settings.ClassValuesContextHandler()
+    score_table = settings.SettingProvider(ScoreTable)
+
     #: Display the full input dataset or only the target variable columns (if
     #: available)
     show_attrs = settings.Setting(True)
@@ -141,6 +146,9 @@ class OWPredictions(OWWidget):
 
         gui.rubber(self.controlArea)
 
+        self.vsplitter = QSplitter(
+            orientation=Qt.Vertical, childrenCollapsible=True, handleWidth=2)
+
         self.splitter = QSplitter(
             orientation=Qt.Horizontal,
             childrenCollapsible=False,
@@ -181,7 +189,14 @@ class OWPredictions(OWWidget):
         self.splitter.addWidget(self.predictionsview)
         self.splitter.addWidget(self.dataview)
 
-        self.mainArea.layout().addWidget(self.splitter)
+        self.vsplitter.addWidget(self.splitter)
+
+        self.score_table = ScoreTable(self)
+        self.vsplitter.addWidget(self.score_table.view)
+
+        self.vsplitter.setStretchFactor(0, 5)
+        self.vsplitter.setStretchFactor(1, 1)
+        self.mainArea.layout().addWidget(self.vsplitter)
 
     @Inputs.data
     @check_sql_input
@@ -221,7 +236,7 @@ class OWPredictions(OWWidget):
             self.predictors[id] = \
                 PredictorSlot(predictor, predictor.name, None)
 
-    def set_class_var(self):
+    def _set_class_var(self):
         pred_classes = set(pred.predictor.domain.class_var
                            for pred in self.predictors.values())
         self.Error.predictors_target_mismatch.clear()
@@ -250,9 +265,9 @@ class OWPredictions(OWWidget):
             self.selected_classes = []
 
     def handleNewSignals(self):
-        self.set_class_var()
-        if self.data is not None:
-            self._call_predictors()
+        self._set_class_var()
+        self._call_predictors()
+        self._update_scores()
         self._update_predictions_model()
         self._update_prediction_delegate()
         self._set_errors()
@@ -260,23 +275,69 @@ class OWPredictions(OWWidget):
         self.commit()
 
     def _call_predictors(self):
+        if not self.data:
+            return
+        for inputid, slot in self.predictors.items():
+            if slot.results is not None \
+                    and not isinstance(slot.results, str) \
+                    and not numpy.isnan(slot.results.predicted[0]).all():
+                continue
+            try:
+                pred, prob = self.predict(slot.predictor, self.data)
+            except (ValueError, DomainTransformationError) as err:
+                results = "{}: {}".format(slot.predictor.name, err)
+            else:
+                results = Orange.evaluation.Results()
+                results.data = self.data
+                results.domain = self.data.domain
+                results.row_indices = numpy.arange(len(self.data))
+                results.folds = (Ellipsis, )
+                results.actual = self.data.Y
+                results.predicted = pred.reshape((1, len(self.data)))
+                results.probabilities = prob.reshape((1, ) + prob.shape)
+            self.predictors[inputid] = slot._replace(results=results)
+
+    def _update_scores(self):
+        model = self.score_table.model
+        model.clear()
+
+        if self.data is None or self.data.domain.class_var is None:
+            scorers = []
+        else:
+            scorers = usable_scorers(self.data.domain.class_var)
+        self.score_table.update_header(scorers)
+
+        errors = []
         for inputid, pred in self.predictors.items():
-            if pred.results is None \
-                    or isinstance(pred.results, str) \
-                    or numpy.isnan(pred.results[0]).all():
-                try:
-                    results = self.predict(pred.predictor, self.data)
-                except (ValueError, DomainTransformationError) as err:
-                    results = "{}: {}".format(pred.predictor.name, err)
-                self.predictors[inputid] = pred._replace(results=results)
+            name = learner_name(pred.predictor)
+            head = QStandardItem(name)
+            #            head.setData(key, Qt.UserRole)
+            row = [head]
+            results = self.predictors[inputid].results
+            if isinstance(results, str):
+                head.setToolTip(results)
+                head.setText("{} (error)".format(name))
+                head.setForeground(QtGui.QBrush(Qt.red))
+            else:
+                for scorer in scorers:
+                    item = QStandardItem()
+                    try:
+                        score = scorer_caller(scorer, results)()[0]
+                        item.setText(f"{score:.3f}")
+                    except Exception as exc:
+                        item.setToolTip(str(exc))
+                        if scorer.name in self.score_table.shown_scores:
+                            errors.append(str(exc))
+                    row.append(item)
+            self.score_table.model.appendRow(row)
+        self.Error.scorer_failed("\n".join(errors), shown=bool(errors))
 
     def _set_errors(self):
+        # Not all predictors are run every time, so errors can't be collected
+        # in _call_predictors
         errors = "\n".join(p.results for p in self.predictors.values()
                            if isinstance(p.results, str))
-        if errors:
-            self.Error.predictor_failed(errors)
-        else:
-            self.Error.predictor_failed.clear()
+        self.Error.predictor_failed(errors, shown=bool(errors))
 
     def _update_info(self):
         info = []
@@ -311,8 +372,7 @@ class OWPredictions(OWWidget):
             self.predictors[inputid] = pred._replace(results=None)
 
     def _valid_predictors(self):
-        if self.class_var is not None and \
-                self.data is not None:
+        if self.class_var is not None and self.data is not None:
             return [p for p in self.predictors.values()
                     if p.results is not None and not isinstance(p.results, str)]
         else:
@@ -325,15 +385,21 @@ class OWPredictions(OWWidget):
             results = []
             class_var = self.class_var
             for p in slots:
-                values, prob = p.results
+                if isinstance(p.results, str):
+                    continue
+                values = p.results.predicted[0]
                 if self.class_var.is_discrete:
                     # if values were added to class_var between building the
                     # model and predicting, add zeros for new class values,
                     # which are always at the end
+                    prob = p.results.probabilities[0]
                     prob = numpy.c_[
                         prob,
-                        numpy.zeros((prob.shape[0], len(class_var.values) - prob.shape[1]))]
+                        numpy.zeros((prob.shape[0],
+                                     len(class_var.values) - prob.shape[1]))]
                     values = [Value(class_var, v) for v in values]
+                else:
+                    prob = numpy.zeros((len(values), 0))
                 results.append((values, prob))
             results = list(zip(*(zip(*res) for res in results)))
             headers = [p.name for p in slots]
@@ -458,16 +524,15 @@ class OWPredictions(OWWidget):
         class_var = self.class_var
         nanmask = numpy.isnan(self.data.get_column_view(class_var)[0])
         data = self.data[~nanmask]
-        N = len(data)
         results = Orange.evaluation.Results(data, store_data=True)
         results.folds = None
-        results.row_indices = numpy.arange(N)
+        results.row_indices = numpy.arange(len(data))
         results.actual = data.Y.ravel()
         results.predicted = numpy.vstack(
-            tuple(p.results[0][~nanmask] for p in slots))
+            tuple(p.results.predicted[0][~nanmask] for p in slots))
         if class_var and class_var.is_discrete:
             results.probabilities = numpy.array(
-                [p.results[1][~nanmask] for p in slots])
+                [p.results.probabilities[0][~nanmask] for p in slots])
         results.learner_names = [p.name for p in slots]
         self.Outputs.evaluation_results.send(results)
 
@@ -500,18 +565,19 @@ class OWPredictions(OWWidget):
         if self.output_predictions:
             newmetas += [DiscreteVariable(name=p.name, values=self.class_values)
                          for p in slots]
-            newcolumns += [p.results[0].reshape((-1, 1)) for p in slots]
+            newcolumns += [p.results.predicted[0].reshape((-1, 1))
+                           for p in slots]
 
         if self.output_probabilities:
             newmetas += [ContinuousVariable(name="%s (%s)" % (p.name, value))
                          for p in slots for value in self.class_values]
-            newcolumns += [p.results[1] for p in slots]
+            newcolumns += [p.results.probabilities[0] for p in slots]
         return newmetas, newcolumns
 
     def _regression_output_columns(self):
         slots = self._valid_predictors()
         newmetas = [ContinuousVariable(name=p.name) for p in slots]
-        newcolumns = [p.results[0].reshape((-1, 1)) for p in slots]
+        newcolumns = [p.results.predicted[0].reshape((-1, 1)) for p in slots]
         return newmetas, newcolumns
 
     def send_report(self):
@@ -567,7 +633,7 @@ class OWPredictions(OWWidget):
     @staticmethod
     def predict_continuous(predictor, data):
         values = predictor(data, Model.Value)
-        return values, [None] * len(data)
+        return values, numpy.zeros((len(data), 0))
 
 
 class PredictionsItemDelegate(QStyledItemDelegate):
