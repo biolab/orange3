@@ -93,6 +93,7 @@ class OWSGD(OWBaseLearner):
         self._add_learning_params_to_layout()
 
     def _add_algorithm_to_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.widgetBox(self.controlArea, 'Algorithm')
         # Classfication loss function
         self.cls_loss_function_combo = gui.comboBox(
@@ -124,6 +125,7 @@ class OWSGD(OWBaseLearner):
         self._on_reg_loss_change()
 
     def _add_regularization_to_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.widgetBox(self.controlArea, 'Regularization')
         self.penalty_combo = gui.comboBox(
             box, self, 'penalty_index', label='Regularization method: ',
@@ -142,6 +144,7 @@ class OWSGD(OWBaseLearner):
         self._on_regularization_change()
 
     def _add_learning_params_to_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.widgetBox(self.controlArea, 'Learning parameters')
         self.learning_rate_combo = gui.comboBox(
             box, self, 'learning_rate_index', label='Learning rate: ',
@@ -324,10 +327,10 @@ class OWSGD(OWBaseLearner):
         self.Outputs.coefficients.send(coeffs)
 
     @classmethod
-    def migrate_settings(cls, settings_, version):
+    def migrate_settings(cls, settings, version):
         if version < 2:
-            settings_["max_iter"] = settings_.pop("n_iter", 5)
-            settings_["tol_enabled"] = False
+            settings["max_iter"] = settings.pop("n_iter", 5)
+            settings["tol_enabled"] = False
 
 
 if __name__ == "__main__":  # pragma: no cover

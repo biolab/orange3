@@ -35,6 +35,7 @@ class OWRandomForest(OWBaseLearner):
         not_enough_features = Msg("Insufficient number of attributes ({})")
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.vBox(self.controlArea, 'Basic Properties')
         self.n_estimators_spin = gui.spin(
             box, self, "n_estimators", minv=1, maxv=10000, controlWidth=80,

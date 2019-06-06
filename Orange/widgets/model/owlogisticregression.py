@@ -45,6 +45,7 @@ class OWLogisticRegression(OWBaseLearner):
     penalty_types_short = ["l1", "l2"]
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.widgetBox(self.controlArea, box=True)
         self.penalty_combo = gui.comboBox(
             box, self, "penalty_type", label="Regularization type: ",
@@ -64,6 +65,7 @@ class OWLogisticRegression(OWBaseLearner):
         self.set_c()
 
     def set_c(self):
+        # called from init, pylint: disable=attribute-defined-outside-init
         self.strength_C = self.C_s[self.C_index]
         fmt = "C={}" if self.strength_C >= 1 else "C={:.3f}"
         self.c_label.setText(fmt.format(self.strength_C))

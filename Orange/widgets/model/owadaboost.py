@@ -45,6 +45,7 @@ class OWAdaBoost(OWBaseLearner):
         no_weight_support = Msg('The base learner does not support weights.')
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.widgetBox(self.controlArea, "Parameters")
         self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
         self.base_label = gui.label(
@@ -89,6 +90,8 @@ class OWAdaBoost(OWBaseLearner):
 
     @Inputs.learner
     def set_base_learner(self, learner):
+        # base_estimator is defined in add_main_layout
+        # pylint: disable=attribute-defined-outside-init
         self.Error.no_weight_support.clear()
         if learner and not learner.supports_weights:
             # Clear the error and reset to default base learner

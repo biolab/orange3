@@ -95,6 +95,7 @@ class OWNNLearner(OWBaseLearner):
                         range(100, 1001, 50)))
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         form = QFormLayout()
         form.setFieldGrowthPolicy(form.AllNonFixedFieldsGrow)
         form.setVerticalSpacing(25)
@@ -141,10 +142,12 @@ class OWNNLearner(OWBaseLearner):
         form.addRow(gui.separator(None))
         form.addRow(
             gui.checkBox(
-                None, self, "replicable", label="Replicable training", callback=self.settings_changed),
+                None, self, "replicable", label="Replicable training",
+                callback=self.settings_changed),
         )
 
     def set_alpha(self):
+        # called from init, pylint: disable=attribute-defined-outside-init
         self.strength_C = self.alphas[self.alpha_index]
         self.reg_label.setText("Regularization, α={}:".format(self.strength_C))
 
@@ -153,6 +156,7 @@ class OWNNLearner(OWBaseLearner):
         return self.alphas[self.alpha_index]
 
     def setup_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         super().setup_layout()
 
         self._task = None  # type: Optional[Task]
@@ -212,7 +216,7 @@ class OWNNLearner(OWBaseLearner):
         lastemitted = 0.
 
         def callback(iteration):
-            nonlocal task  # type: Task
+            nonlocal task
             nonlocal lastemitted
             if task.isInterruptionRequested():
                 raise CancelTaskException()
@@ -238,7 +242,9 @@ class OWNNLearner(OWBaseLearner):
         task.done.connect(self._task_finished)
         task.progressChanged.connect(self.setProgressValue)
 
+        # set in setup_layout; pylint: disable=attribute-defined-outside-init
         self._task = task
+
         self.progressBarInit()
         self.setBlocking(True)
 
@@ -255,7 +261,7 @@ class OWNNLearner(OWBaseLearner):
         assert self._task.future is f
         assert f.done()
         self._task.deleteLater()
-        self._task = None
+        self._task = None  # pylint: disable=attribute-defined-outside-init
         self.setBlocking(False)
         self.progressBarFinished()
 
@@ -284,7 +290,7 @@ class OWNNLearner(OWBaseLearner):
             self._task.done.disconnect(self._task_finished)
             self._task.progressChanged.disconnect(self.setProgressValue)
             self._task.deleteLater()
-            self._task = None
+            self._task = None  # pylint: disable=attribute-defined-outside-init
 
         self.progressBarFinished()
         self.setBlocking(False)
