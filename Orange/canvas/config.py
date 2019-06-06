@@ -58,6 +58,9 @@ spec = \
 
      ("startup/launch-count", int, 0, ""),
 
+     ("startup/show-short-survey", bool, True,
+      "Has the user not been asked to take a short survey yet"),
+
      ("stylesheet", str, "orange",
       "QSS stylesheet to use"),
 

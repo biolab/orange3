@@ -19,7 +19,7 @@ from urllib.request import urlopen, Request, getproxies
 
 import pkg_resources
 
-from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices
+from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
@@ -39,6 +39,7 @@ from Orange.canvas.document.usagestatistics import UsageStatistics
 from Orange.canvas.registry import qt
 from Orange.canvas.registry import WidgetRegistry, set_global_registry
 from Orange.canvas.registry import cache
+from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
 
 log = logging.getLogger(__name__)
 
@@ -180,6 +181,57 @@ def make_sql_logger(level=logging.INFO):
     sql_log.addHandler(handler)
 
 
+def setup_notifications():
+    settings = config.settings()
+
+    # If run for the fifth time, prompt short survey
+    show_survey = settings["startup/show-short-survey"] and \
+                  settings["startup/launch-count"] >= 5
+    if show_survey:
+        surveyDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
+        surveyDialog = NotificationWidget(icon=QIcon("Orange/widgets/icons/information.png"),
+                                          title="Survey",
+                                          text="We want to understand our users better.\n"
+                                               "Would you like to take a short survey?",
+                                          standardButtons=surveyDialogButtons)
+
+        def handle_response(button):
+            if surveyDialog.buttonRole(button) == NotificationWidget.AcceptRole:
+                success = QDesktopServices.openUrl(
+                    QUrl("https://orange.biolab.si/survey/short.html"))
+                settings["startup/show-short-survey"] = not success
+            elif surveyDialog.buttonRole(button) == NotificationWidget.RejectRole:
+                settings["startup/show-short-survey"] = False
+
+        surveyDialog.clicked.connect(handle_response)
+
+        NotificationOverlay.registerNotification(surveyDialog)
+
+    # data collection permission
+    if not settings["error-reporting/permission-requested"]:
+        permDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
+        permDialog = NotificationWidget(icon=QIcon("distribute/icon-48.png"),
+                                        title="Anonymous Usage Statistics",
+                                        text="Do you wish to opt-in to sharing "
+                                             "statistics about how you use Orange?\n"
+                                             "All data is anonymized and used "
+                                             "exclusively for understanding how users "
+                                             "interact with Orange.",
+                                        standardButtons=permDialogButtons)
+        btnOK = permDialog.button(NotificationWidget.AcceptRole)
+        btnOK.setText("Allow")
+
+        def handle_response(button):
+            if permDialog.buttonRole(button) != permDialog.DismissRole:
+                settings["error-reporting/permission-requested"] = True
+            if permDialog.buttonRole(button) == permDialog.AcceptRole:
+                settings["error-reporting/send-statistics"] = True
+
+        permDialog.clicked.connect(handle_response)
+
+        NotificationOverlay.registerNotification(permDialog)
+
+
 def check_for_updates():
     settings = QSettings()
     check_updates = settings.value('startup/check-updates', True, type=bool)
@@ -244,8 +296,8 @@ def check_for_updates():
         thread.start()
         return thread
 
-def send_usage_statistics():
 
+def send_usage_statistics():
     class SendUsageStatistics(QThread):
         def run(self):
             try:
@@ -258,6 +310,7 @@ def send_usage_statistics():
     thread = SendUsageStatistics()
     thread.start()
     return thread
+
 
 def main(argv=None):
     if argv is None:
@@ -530,6 +583,9 @@ def main(argv=None):
         log.info("Loading a scheme from an `QFileOpenEvent` for %r",
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
+
+    # initialize notifications
+    setup_notifications()
 
     # local references prevent destruction
     update_check = check_for_updates()
