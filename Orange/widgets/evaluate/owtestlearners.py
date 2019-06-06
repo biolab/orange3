@@ -1,7 +1,5 @@
 # pylint doesn't understand the Settings magic
 # pylint: disable=invalid-sequence-index
-import warnings
-from itertools import chain
 import abc
 import enum
 import logging
@@ -17,23 +15,23 @@ from typing import Any, Optional, List, Dict, Callable
 import numpy as np
 
 from AnyQt import QtGui
-from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtGui import QStandardItem
 from AnyQt.QtCore import Qt, QSize, QThread, QMetaObject, Q_ARG
 from AnyQt.QtCore import pyqtSlot as Slot
-from sklearn.exceptions import UndefinedMetricWarning
 
 from Orange.base import Learner
 import Orange.classification
-from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, DiscreteVariable
 from Orange.data.table import DomainTransformationError
 from Orange.data.filter import HasClass
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 import Orange.evaluation
-from Orange.evaluation import scoring, Results
+from Orange.evaluation import Results
 from Orange.preprocess.preprocess import Preprocess
 import Orange.regression
 from Orange.widgets import gui, settings, widget
+from Orange.widgets.evaluate.utils import \
+    usable_scorers, ScoreTable, learner_name, scorer_caller
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
@@ -48,12 +46,6 @@ InputLearner = namedtuple(
      "results",  # :: Option[Try[Orange.evaluation.Results]]
      "stats"]    # :: Option[Sequence[Try[float]]]
 )
-
-
-class ItemDelegate(QStyledItemDelegate):
-    def sizeHint(self, *args):
-        size = super().sizeHint(*args)
-        return QSize(size.width(), size.height() + 6)
 
 
 class Try(abc.ABC):
@@ -156,6 +148,7 @@ class OWTestLearners(OWWidget):
             "click_header")]
 
     settingsHandler = settings.PerfectDomainContextHandler()
+    score_table = settings.SettingProvider(ScoreTable)
 
     #: Resampling/testing types
     KFold, FeatureFold, ShuffleSplit, LeaveOneOut, TestOnTrain, TestOnTest \
@@ -185,13 +178,6 @@ class OWTestLearners(OWWidget):
 
     TARGET_AVERAGE = "(Average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
-
-    BUILTIN_ORDER = {
-        DiscreteVariable: ("AUC", "CA", "F1", "Precision", "Recall"),
-        ContinuousVariable: ("MSE", "RMSE", "MAE", "R2")}
-
-    shown_scores = \
-        settings.Setting(set(chain(*BUILTIN_ORDER.values())))
 
     class Error(OWWidget.Error):
         train_data_empty = Msg("Train dataset is empty.")
@@ -291,25 +277,11 @@ class OWTestLearners(OWWidget):
             contentsLength=8)
 
         gui.rubber(self.controlArea)
-
-        self.view = gui.TableView(
-            wordWrap=True,
-            editTriggers=gui.TableView.NoEditTriggers
-        )
-        header = self.view.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeToContents)
-        header.setDefaultAlignment(Qt.AlignCenter)
-        header.setStretchLastSection(False)
-        header.setContextMenuPolicy(Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_column_chooser)
-
-        self.result_model = QStandardItemModel(self)
-        self.result_model.setHorizontalHeaderLabels(["Method"])
-        self.view.setModel(self.result_model)
-        self.view.setItemDelegate(ItemDelegate())
+        self.score_table = ScoreTable(self)
+        self.score_table.shownScoresChanged.connect(self.update_stats_model)
 
         box = gui.vBox(self.mainArea, "Evaluation Results")
-        box.layout().addWidget(self.view)
+        box.layout().addWidget(self.score_table.view)
 
     def sizeHint(self):
         return QSize(780, 1)
@@ -466,14 +438,7 @@ class OWTestLearners(OWWidget):
         if self.data is None or self.data.domain.class_var is None:
             self.scorers = []
             return
-        class_var = self.data and self.data.domain.class_var
-        order = {name: i
-                 for i, name in enumerate(self.BUILTIN_ORDER[type(class_var)])}
-        # 'abstract' is retrieved from __dict__ to avoid inheriting
-        usable = (cls for cls in scoring.Score.registry.values()
-                  if cls.is_scalar and not cls.__dict__.get("abstract")
-                  and isinstance(class_var, cls.class_types))
-        self.scorers = sorted(usable, key=lambda cls: order.get(cls.name, 99))
+        self.scorers = usable_scorers(self.data.domain.class_var)
 
     @Inputs.preprocessor
     def set_preprocessor(self, preproc):
@@ -486,8 +451,8 @@ class OWTestLearners(OWWidget):
     def handleNewSignals(self):
         """Reimplemented from OWWidget.handleNewSignals."""
         self._update_class_selection()
-        self._update_header()
-        self._update_stats_model()
+        self.score_table.update_header(self.scorers)
+        self.update_stats_model()
         if self.__needupdate:
             self.__update()
 
@@ -507,32 +472,11 @@ class OWTestLearners(OWWidget):
         self._invalidate()
         self.__update()
 
-    def _update_header(self):
-        # Set the correct horizontal header labels on the results_model.
-        model = self.result_model
-        model.setColumnCount(1 + len(self.scorers))
-        for col, score in enumerate(self.scorers):
-            item = QStandardItem(score.name)
-            item.setToolTip(score.long_name)
-            model.setHorizontalHeaderItem(col + 1, item)
-        self._update_shown_columns()
-
-    def _update_shown_columns(self):
-        # pylint doesn't know that self.shown_scores is a set, not a Setting
-        # pylint: disable=unsupported-membership-test
-        model = self.result_model
-        header = self.view.horizontalHeader()
-        for section in range(1, model.columnCount()):
-            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
-            header.setSectionHidden(section, col_name not in self.shown_scores)
-        self.view.resizeColumnsToContents()
-        self._update_stats_model()  # updates warnings for displayed columns
-
-    def _update_stats_model(self):
+    def update_stats_model(self):
         # Update the results_model with up to date scores.
         # Note: The target class specific scores (if requested) are
         # computed as needed in this method.
-        model = self.view.model()
+        model = self.score_table.model
         # clear the table model, but preserving the header labels
         for r in reversed(range(model.rowCount())):
             model.takeRow(r)
@@ -591,14 +535,14 @@ class OWTestLearners(OWWidget):
                         item.setText("{:.3f}".format(stat.value[0]))
                     else:
                         item.setToolTip(str(stat.exception))
-                        if scorer.name in self.shown_scores:
+                        if scorer.name in self.score_table.shown_scores:
                             has_missing_scores = True
                     row.append(item)
 
             model.appendRow(row)
 
         # Resort rows based on current sorting
-        header = self.view.horizontalHeader()
+        header = self.score_table.view.horizontalHeader()
         model.sort(
             header.sortIndicatorSection(),
             header.sortIndicatorOrder()
@@ -629,7 +573,7 @@ class OWTestLearners(OWWidget):
             self.cbox.setVisible(False)
 
     def _on_target_class_changed(self):
-        self._update_stats_model()
+        self.update_stats_model()
 
     def _invalidate(self, which=None):
         self.fold_feature_selected = \
@@ -639,7 +583,7 @@ class OWTestLearners(OWWidget):
         if which is None:
             which = self.learners.keys()
 
-        model = self.view.model()
+        model = self.score_table.model
         statmodelkeys = [model.item(row, 0).data(Qt.UserRole)
                          for row in range(model.rowCount())]
 
@@ -656,27 +600,6 @@ class OWTestLearners(OWWidget):
                         item.setData(None, Qt.ToolTipRole)
 
         self.__needupdate = True
-
-    def show_column_chooser(self, pos):
-        # pylint doesn't know that self.shown_scores is a set, not a Setting
-        # pylint: disable=unsupported-membership-test
-        def update(col_name, checked):
-            if checked:
-                self.shown_scores.add(col_name)
-            else:
-                self.shown_scores.remove(col_name)
-            self._update_shown_columns()
-
-        menu = QMenu()
-        model = self.result_model
-        header = self.view.horizontalHeader()
-        for section in range(1, model.columnCount()):
-            col_name = model.horizontalHeaderItem(section).data(Qt.DisplayRole)
-            action = menu.addAction(col_name)
-            action.setCheckable(True)
-            action.setChecked(col_name in self.shown_scores)
-            action.triggered.connect(partial(update, col_name))
-        menu.exec(header.mapToGlobal(pos))
 
     def commit(self):
         """
@@ -728,7 +651,7 @@ class OWTestLearners(OWWidget):
             items += [("Target class", self.class_selection.strip("()"))]
         if items:
             self.report_items("Settings", items)
-        self.report_table("Scores", self.view)
+        self.report_table("Scores", self.score_table.view)
 
     @classmethod
     def migrate_settings(cls, settings_, version):
@@ -864,7 +787,7 @@ class OWTestLearners(OWWidget):
         self.__submit(test_f)
 
     def __submit(self, testfunc):
-        # type: (Callable[[Callable[float]], Results]) -> None
+        # type: (Callable[[Callable[[float], None]], Results]) -> None
         """
         Submit a testing function for evaluation
 
@@ -953,8 +876,8 @@ class OWTestLearners(OWWidget):
             self.learners[key] = \
                 self.learners[key]._replace(results=result, stats=stats)
 
-        self._update_header()
-        self._update_stats_model()
+        self.score_table.update_header(self.scorers)
+        self.update_stats_model()
 
         self.commit()
 
@@ -974,33 +897,11 @@ class OWTestLearners(OWWidget):
         super().onDeleteWidget()
 
 
-def scorer_caller(scorer, ovr_results, target=None):
-    def thunked():
-        with warnings.catch_warnings():
-            # F-score and Precision return 0 for labels with no predicted
-            # samples. We're OK with that.
-            warnings.filterwarnings(
-                "ignore", "((F-score|Precision)) is ill-defined.*",
-                UndefinedMetricWarning)
-            if scorer.is_binary:
-                return scorer(ovr_results, target=target, average='weighted')
-            else:
-                return scorer(ovr_results)
-
-    return thunked
-
-
 class UserInterrupt(BaseException):
     """
     A BaseException subclass used for cooperative task/thread cancellation
     """
     pass
-
-
-def learner_name(learner):
-    """Return the value of `learner.name` if it exists, or the learner's type
-    name otherwise"""
-    return getattr(learner, "name", type(learner).__name__)
 
 
 def results_add_by_model(x, y):
@@ -1083,7 +984,7 @@ class Task:
     #: True if the task was cancelled
     cancelled = False   # type: bool
     #: A function to call. Filled by the client.
-    func = ...          # type: Callable[Callable[float], Results]
+    func = ...          # type: Callable[[Callable[[float], None]], Results]
 
     def cancel(self):
         """
