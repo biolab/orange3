@@ -18,6 +18,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
 
         bayes = NaiveBayesLearner()
         tree = TreeLearner()
+        # `data` is defined in WidgetOutputsTestMixin, pylint: disable=no-member
         cls.iris = cls.data
         titanic = Table("titanic")
         common = dict(k=3, store_data=True)
@@ -78,6 +79,7 @@ class TestOWConfusionMatrix(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.evaluation_results, results)
         self.widget.select_correct()
         selected = self.get_output(self.widget.Outputs.selected_data)
+        # pylint: disable=unsubscriptable-object
         correct = np.equal(results.actual, results.predicted)[0]
         correct_indices = results.row_indices[correct]
         self.assertSetEqual(set(self.iris[correct_indices].ids),

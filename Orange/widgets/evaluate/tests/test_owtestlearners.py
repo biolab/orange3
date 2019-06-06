@@ -194,8 +194,8 @@ class TestOWTestLearners(WidgetTest):
         self.assertFalse(self.widget.Error.memory_error.is_shown())
 
         with unittest.mock.patch(
-            "Orange.evaluation.testing.Results.get_augmented_data",
-            side_effect=MemoryError):
+                "Orange.evaluation.testing.Results.get_augmented_data",
+                side_effect=MemoryError):
             self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=5000)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
 
@@ -237,6 +237,7 @@ class TestOWTestLearners(WidgetTest):
 
     def test_addon_scorers(self):
         try:
+            # These classes are registered, pylint: disable=unused-variable
             class NewScore(Score):
                 class_types = (DiscreteVariable, ContinuousVariable)
 
@@ -268,9 +269,9 @@ class TestOWTestLearners(WidgetTest):
             self.send_signal("Data", None)
             self.assertEqual(self.widget.scorers, [])
         finally:
-            del Score.registry["NewScore"]
-            del Score.registry["NewClassificationScore"]
-            del Score.registry["NewRegressionScore"]
+            del Score.registry["NewScore"]  # pylint: disable=no-member
+            del Score.registry["NewClassificationScore"]  # pylint: disable=no-member
+            del Score.registry["NewRegressionScore"]  # pylint: disable=no-member
 
     def test_target_changing(self):
         data = Table("iris")

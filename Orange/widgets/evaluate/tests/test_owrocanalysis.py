@@ -40,6 +40,7 @@ class TestROC(unittest.TestCase):
 
         # fixed random seed because otherwise it could happen that data sample
         # contained only instances of two classes (and the test then fails)
+        # Pylint complains about RandomState; pylint: disable=no-member
         data = data[np.random.RandomState(0).choice(len(data), size=20)]
         res = Orange.evaluation.LeaveOneOut(data, learners)
 
