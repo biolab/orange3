@@ -273,23 +273,32 @@ def check_for_updates():
 
         def compare_versions(latest):
             version = pkg_resources.parse_version
-            if version(latest) <= version(current):
+            skipped = settings.value('startup/latest-skipped-version', "", type=str)
+            if version(latest) <= version(current) or \
+                    latest == skipped:
                 return
-            question = QMessageBox(
-                QMessageBox.Information,
-                'Orange Update Available',
-                'A newer version of Orange is available.<br><br>'
-                '<b>Current version:</b> {}<br>'
-                '<b>Latest version:</b> {}'.format(current, latest),
-                textFormat=Qt.RichText)
-            ok = question.addButton('Download Now', question.AcceptRole)
-            question.setDefaultButton(ok)
-            question.addButton('Remind Later', question.RejectRole)
-            question.finished.connect(
-                lambda:
-                question.clickedButton() == ok and
-                QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/")))
-            question.show()
+
+            from Orange.canvas.utils.overlay import NotificationWidget
+
+            questionButtons = NotificationWidget.Ok | NotificationWidget.Close
+            question = NotificationWidget(icon=QIcon('Orange/widgets/icons/Dlg_down3.png'),
+                                          title='Orange Update Available',
+                                          text='Current version: <b>{}</b><br>'
+                                               'Latest version: <b>{}</b>'.format(current, latest),
+                                          textFormat=Qt.RichText,
+                                          standardButtons=questionButtons,
+                                          acceptLabel="Download",
+                                          rejectLabel="Skip this Version")
+
+            def handle_click(b):
+                if question.buttonRole(b) != question.DismissRole:
+                    settings.setValue('startup/latest-skipped-version', latest)
+                if question.buttonRole(b) == question.AcceptRole:
+                    QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
+
+            question.clicked.connect(handle_click)
+
+            NotificationOverlay.registerNotification(question)
 
         thread = GetLatestVersion()
         thread.resultReady.connect(compare_versions)

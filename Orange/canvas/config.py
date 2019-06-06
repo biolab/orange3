@@ -56,7 +56,8 @@ spec = \
      ("startup/check-updates", bool, True,
       "Check for updates"),
 
-     ("startup/launch-count", int, 0, ""),
+     ("startup/launch-count", int, 0,
+      ""),
 
      ("startup/show-short-survey", bool, True,
       "Has the user not been asked to take a short survey yet"),

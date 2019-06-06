@@ -35,7 +35,7 @@ class NotificationMessageWidget(QWidget):
     _Button = namedtuple("_Button", ["button", "role", "stdbutton"])
 
     def __init__(self, parent=None, icon=QIcon(), title="", text="", wordWrap=False,
-                 textFormat=Qt.AutoText, standardButtons=NoButton, acceptLabel="Ok",
+                 textFormat=Qt.PlainText, standardButtons=NoButton, acceptLabel="Ok",
                  rejectLabel="No", **kwargs):
         super().__init__(parent, **kwargs)
         self._title = title
@@ -52,7 +52,6 @@ class NotificationMessageWidget(QWidget):
                                   wordWrap=wordWrap, textFormat=textFormat)
         self._textlabel = QLabel(objectName="text-label", text=text,
                                  wordWrap=wordWrap, textFormat=textFormat)
-        self._textlabel.setTextFormat(Qt.RichText)
         self._textlabel.setTextInteractionFlags(Qt.TextBrowserInteraction)
         self._textlabel.setOpenExternalLinks(True)
 
