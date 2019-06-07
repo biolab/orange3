@@ -58,12 +58,19 @@ class VariableSelectionModel(VariableListModel):
     SortRole = next(OrangeUserRole)
     selection_changed = pyqtSignal()
 
-    def __init__(self, selected_vars):
+    def __init__(self, selected_vars, max_vars=None):
         super().__init__(enable_dnd=True)
         self.selected_vars = selected_vars
+        self.max_vars = max_vars
 
     def is_selected(self, index):
         return self[index.row()] in self.selected_vars
+
+    def is_full(self):
+        if self.max_vars is None:
+            return False
+        else:
+            return len(self.selected_vars) >= self.max_vars
 
     def data(self, index, role):
         if role == self.IsSelected:
@@ -84,7 +91,7 @@ class VariableSelectionModel(VariableListModel):
         var = self[index.row()]
         if var in self.selected_vars:
             self.selected_vars.remove(var)
-        else:
+        elif not self.is_full():
             self.selected_vars.append(var)
         self.selection_changed.emit()
 
@@ -131,17 +138,19 @@ class VariablesDelegate(QStyledItemDelegate):
         rect = QRect(option.rect)
 
         is_selected = index.data(VariableSelectionModel.IsSelected)
+        full_selection = index.model().sourceModel().is_full()
         if option.state & QStyle.State_MouseOver:
-            txt = [" Add ", " Remove "][is_selected]
-            txtw = painter.fontMetrics().width(txt)
-            painter.save()
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor("#ccc"))
-            brect = QRect(rect.x() + rect.width() - 8 - txtw, rect.y(),
-                          txtw, rect.height())
-            painter.drawRoundedRect(brect, 4, 4)
-            painter.restore()
-            painter.drawText(brect, Qt.AlignCenter, txt)
+            if not full_selection or (full_selection and is_selected):
+                txt = [" Add ", " Remove "][is_selected]
+                txtw = painter.fontMetrics().width(txt)
+                painter.save()
+                painter.setPen(Qt.NoPen)
+                painter.setBrush(QColor("#ccc"))
+                brect = QRect(rect.x() + rect.width() - 8 - txtw, rect.y(),
+                              txtw, rect.height())
+                painter.drawRoundedRect(brect, 4, 4)
+                painter.restore()
+                painter.drawText(brect, Qt.AlignCenter, txt)
 
         painter.save()
         double_pen = painter.pen()
