@@ -72,8 +72,8 @@ class Results:
     score_by_folds = True
     # noinspection PyBroadException
     # noinspection PyNoneFunctionAssignment
-    def __init__(self, data=None, nmethods=0, *, learners=None, train_data=None,
-                 nrows=None, nclasses=None,
+    def __init__(self, data=None, nmethods=None, *, learners=None,
+                 train_data=None, nrows=None, nclasses=None,
                  store_data=False, store_models=False,
                  domain=None, actual=None, row_indices=None,
                  predicted=None, probabilities=None,
@@ -171,7 +171,7 @@ class Results:
                        else None,
                        probabilities is not None and probabilities.shape[2]],
             "mismatching number of class values")
-        if nclasses is not None and probabilities is not None:
+        if nclasses is None and probabilities is not None:
             raise ValueError("regression results cannot have 'probabilities'")
         nmethods = set_or_raise(
             nmethods, [predicted is not None and predicted.shape[0],
