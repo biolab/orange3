@@ -1,6 +1,6 @@
 from collections import defaultdict
 from functools import reduce
-from itertools import product, chain
+from itertools import product, chain, repeat
 from math import sqrt, log
 from operator import mul, attrgetter
 
@@ -9,7 +9,8 @@ from scipy.stats import distributions
 from scipy.special import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
-from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem
+from AnyQt.QtWidgets import (
+    QGraphicsScene, QGraphicsLineItem, QGraphicsItemGroup)
 
 from Orange.data import Table, filter, Variable, Domain
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -28,6 +29,7 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
+from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
@@ -813,42 +815,29 @@ class OWMosaicDisplay(OWWidget):
                     "{}<hr>Instances: {}<br><br>{}".format(
                         condition, n_actual, text[:-4]))
 
-        def draw_legend(x0_x1, y0_y1):
-            x0, x1 = x0_x1
-            _, y1 = y0_y1
+        def create_legend():
             if self.variable_color is None:
                 names = ["<-8", "-8:-4", "-4:-2", "-2:2", "2:4", "4:8", ">8",
                          "Residuals:"]
                 colors = self.RED_COLORS[::-1] + self.BLUE_COLORS[1:]
+                edges = repeat(Qt.black)
             else:
-                names = get_variable_values_sorted(class_var) + \
-                        [class_var.name + ":"]
-                colors = [QColor(*col) for col in class_var.colors]
+                names = get_variable_values_sorted(class_var)
+                edges = colors = [QColor(*col) for col in class_var.colors]
 
-            names = [CanvasText(self.canvas, name, alignment=Qt.AlignVCenter)
-                     for name in names]
-            totalwidth = sum(text.boundingRect().width() for text in names)
-
-            # compute the x position of the center of the legend
-            y = y1 + self.ATTR_NAME_OFFSET + self.ATTR_VAL_OFFSET + 35
-            distance = 30
-            startx = (x0 + x1) / 2 - (totalwidth + (len(names)) * distance) / 2
-
-            names[-1].setPos(startx + 15, y)
-            names[-1].show()
-            xoffset = names[-1].boundingRect().width() + distance
-
+            items = []
             size = 8
-            for i in range(len(names) - 1):
-                if self.variable_color is None:
-                    edgecolor = Qt.black
-                else:
-                    edgecolor = colors[i]
-
-                CanvasRectangle(self.canvas, startx + xoffset, y - size / 2,
-                                size, size, edgecolor, colors[i])
-                names[i].setPos(startx + xoffset + 10, y)
-                xoffset += distance + names[i].boundingRect().width()
+            for name, color, edgecolor in zip(names, colors, edges):
+                item = QGraphicsItemGroup()
+                item.addToGroup(
+                    CanvasRectangle(None, -size / 2, -size / 2, size, size,
+                                    edgecolor, color))
+                item.addToGroup(
+                    CanvasText(None, name, size, 0, Qt.AlignVCenter))
+                items.append(item)
+            return wrap_legend_items(
+                items, hspacing=20, vspacing=16 + size,
+                max_width=self.canvas_view.width() - xoff)
 
         self.canvas.clear()
         self.areas = []
@@ -896,8 +885,9 @@ class OWMosaicDisplay(OWWidget):
                 maxw = max(int(t.boundingRect().width()), maxw)
             return maxw
 
-        # get the maximum width of rectangle
         xoff = 20
+
+        # get the maximum width of rectangle
         width = 20
         max_ylabel_w1 = max_ylabel_w2 = 0
         if len(attr_list) > 1:
@@ -912,11 +902,14 @@ class OWMosaicDisplay(OWWidget):
                 width += text.boundingRect().height() + \
                     self.ATTR_VAL_OFFSET + max_ylabel_w2 - 10
 
+        legend = create_legend()
+
         # get the maximum height of rectangle
-        height = 100
         yoff = 45
+        legendoff = yoff + self.ATTR_NAME_OFFSET + self.ATTR_VAL_OFFSET + 35
         square_size = min(self.canvas_view.width() - width - 20,
-                          self.canvas_view.height() - height - 20)
+                          self.canvas_view.height() - legendoff
+                          - legend.boundingRect().height())
 
         if square_size < 0:
             return  # canvas is too small to draw rectangles
@@ -937,7 +930,12 @@ class OWMosaicDisplay(OWWidget):
         draw_data(
             attr_list, (xoff, xoff + square_size), (yoff, yoff + square_size),
             0, "", len(attr_list), [], [])
-        draw_legend((xoff, xoff + square_size), (yoff, yoff + square_size))
+
+        self.canvas.addItem(legend)
+        legend.setPos(
+            xoff - legend.boundingRect().x()
+            + max(0, (square_size - legend.boundingRect().width()) / 2),
+            legendoff + square_size)
         self.update_selection_rects()
 
     @classmethod

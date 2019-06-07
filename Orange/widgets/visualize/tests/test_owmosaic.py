@@ -98,7 +98,8 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         assertCount(1, [0, 1, 1, 1], 0)
 
     @patch('Orange.widgets.visualize.owmosaic.CanvasRectangle')
-    def test_different_number_of_attributes(self, canvas_rectangle):
+    @patch('Orange.widgets.visualize.owmosaic.QGraphicsItemGroup.addToGroup')
+    def test_different_number_of_attributes(self, _, canvas_rectangle):
         domain = Domain([DiscreteVariable(c, values="01") for c in "abcd"])
         data = Table.from_list(
             domain,
