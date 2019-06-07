@@ -204,6 +204,8 @@ class Table(MutableSequence, Storage):
             value = value[:, None]
         if sp.issparse(value) and len(self) != value.shape[0]:
             value = value.T
+        if sp.issparse(value):
+            value = value.toarray()
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
