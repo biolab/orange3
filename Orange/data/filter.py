@@ -255,11 +255,6 @@ class ValueFilter(Filter):
     def __init__(self, column):
         super().__init__()
         self.column = column
-        self.last_domain = None
-
-    def cache_position(self, domain):
-        self.pos_cache = domain.index(self.column)
-        self.last_domain = domain
 
 
 class FilterDiscrete(ValueFilter):
@@ -283,9 +278,7 @@ class FilterDiscrete(ValueFilter):
         self.values = values
 
     def __call__(self, inst):
-        if inst.domain is not self.last_domain:
-            self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst[inst.domain.index(self.column)]
         if self.values is None:
             return not isnan(value)
         else:
@@ -342,9 +335,7 @@ class FilterContinuous(ValueFilter):
         self.ref = value
 
     def __call__(self, inst):
-        if inst.domain is not self.last_domain:
-            self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst[inst.domain.index(self.column)]
         if isnan(value):
             return self.oper == self.Equal and isnan(self.ref)
         if self.oper == self.Equal:
@@ -453,9 +444,8 @@ class FilterString(ValueFilter):
         self.ref = value
 
     def __call__(self, inst):
-        if inst.domain is not self.last_domain:
-            self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        # the function is a large 'switch'; pylint: disable=too-many-branches
+        value = inst[inst.domain.index(self.column)]
         if self.oper == self.IsDefined:
             return not np.isnan(value)
         if self.case_sensitive:
@@ -524,9 +514,7 @@ class FilterStringList(ValueFilter):
         self.values_lower = [x.lower() for x in values]
 
     def __call__(self, inst):
-        if inst.domain is not self.last_domain:
-            self.cache_position(inst.domain)
-        value = inst[self.pos_cache]
+        value = inst[inst.domain.index(self.column)]
         if self.case_sensitive:
             return value in self._values
         else:
