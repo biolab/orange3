@@ -51,7 +51,7 @@ class DistMatrix(np.ndarray):
 
     def __array_wrap__(self, out_arr, context=None):
         if out_arr.ndim == 0:  # a single scalar
-            return out_arr.item()
+            return out_arr[()]
         return np.ndarray.__array_wrap__(self, out_arr, context)
 
     """
