@@ -275,6 +275,11 @@ class OWRadvizGraph(OWGraphWithAnchors):
                 anchor.setAngle(angle + 180)
                 anchor.setAnchor((1, 0.5))
 
+                anchor.textItem.setTextWidth(anchor.textItem.boundingRect().width())
+                option = anchor.textItem.document().defaultTextOption()
+                option.setAlignment(Qt.AlignRight)
+                anchor.textItem.document().setDefaultTextOption(option)
+
             self.plot_widget.addItem(anchor)
             self.anchor_items.append(anchor)
 
