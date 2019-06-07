@@ -6,7 +6,7 @@ import scipy.sparse as sp
 from Orange.data import DiscreteVariable, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.preprocess.util import _RefuseDataInConstructor
-from Orange.statistics import distribution, contingency
+from Orange.statistics import distribution, contingency, util as ut
 from Orange.statistics.basic_stats import BasicStats
 from Orange.util import Reprable
 from .transformation import Transformation
@@ -160,7 +160,7 @@ class EqualWidth(Discretization):
             else:
                 values = data[:, attribute]
                 values = values.X if values.X.size else values.Y
-                min, max = np.nanmin(values), np.nanmax(values)
+                min, max = ut.nanmin(values), ut.nanmax(values)
                 points = self._split_eq_width(min, max)
         return Discretizer.create_discretized_var(
             data.domain[attribute], points)
