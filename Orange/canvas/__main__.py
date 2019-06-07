@@ -2,6 +2,7 @@
 Orange Canvas main entry point
 
 """
+from contextlib import closing
 
 import os
 import sys
@@ -455,7 +456,9 @@ def main(argv=None):
     excepthook = ExceptHook(stream=stderr)
     excepthook.handledException.connect(handle_exception)
     try:
-        with patch('sys.excepthook', excepthook),\
+        with closing(stdout),\
+             closing(stderr),\
+             patch('sys.excepthook', excepthook),\
              patch('sys.stderr', stderr),\
              patch('sys.stdout', stdout):
             status = app.exec_()
