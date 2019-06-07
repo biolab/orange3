@@ -376,6 +376,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
     graph = SettingProvider(OWScatterPlotBase)
     graph_name = "graph.plot_widget.plotItem"
     embedding_variables_names = ("proj-x", "proj-y")
+    left_side_scrolling = True
 
     def __init__(self):
         super().__init__()

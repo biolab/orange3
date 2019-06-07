@@ -181,8 +181,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     graph = SettingProvider(OWMDSGraph)
     embedding_variables_names = ("mds-x", "mds-y")
 
-    left_side_scrolling = True
-
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
         matrix_too_small = Msg("Input matrix must be at least 2x2")
