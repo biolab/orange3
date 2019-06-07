@@ -278,8 +278,6 @@ class OWRadviz(OWAnchorProjectionWidget):
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
 
-    left_side_scrolling = True
-
     class Warning(OWAnchorProjectionWidget.Warning):
         invalid_embedding = widget.Msg("No projection for selected features")
         removed_vars = widget.Msg("Categorical variables with more than"

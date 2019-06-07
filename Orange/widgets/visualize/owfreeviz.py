@@ -136,8 +136,6 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     GRAPH_CLASS = OWFreeVizGraph
     graph = settings.SettingProvider(OWFreeVizGraph)
 
-    left_side_scrolling = True
-
     class Error(OWAnchorProjectionWidget.Error):
         no_class_var = widget.Msg("Data has no target variable")
         not_enough_class_vars = widget.Msg(
