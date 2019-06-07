@@ -31,7 +31,7 @@ class OWStackedLearner(OWBaseLearner):
         pass
 
     @Inputs.learners
-    def set_learners(self, learner, id):
+    def set_learners(self, learner, id):  # pylint: disable=redefined-builtin
         if id in self.learners and learner is None:
             del self.learners[id]
         elif learner is not None:

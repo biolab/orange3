@@ -34,10 +34,10 @@ class OWSVM(OWBaseLearner):
     #: SVM type
     svm_type = Setting(SVM)
 
-    C = Setting(1.)
+    C = Setting(1.)  # pylint: disable=invalid-name
     epsilon = Setting(.1)
     nu_C = Setting(1.)
-    nu = Setting(.5)
+    nu = Setting(.5)  # pylint: disable=invalid-name
 
     #: Kernel types
     Linear, Poly, RBF, Sigmoid = range(4)
@@ -70,6 +70,7 @@ class OWSVM(OWBaseLearner):
         self._show_right_kernel()
 
     def _add_type_box(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         form = QGridLayout()
         self.type_box = box = gui.radioButtonsInBox(
             self.controlArea, self, "svm_type", [], box="SVM Type",
@@ -77,7 +78,7 @@ class OWSVM(OWBaseLearner):
 
         self.epsilon_radio = gui.appendRadioButton(
             box, "SVM", addToLayout=False)
-        self.C_spin = gui.doubleSpin(
+        self.c_spin = gui.doubleSpin(
             box, self, "C", 0.1, 512.0, 0.1, decimals=2,
             alignment=Qt.AlignRight, addToLayout=False,
             callback=self.settings_changed)
@@ -87,7 +88,7 @@ class OWSVM(OWBaseLearner):
             callback=self.settings_changed)
         form.addWidget(self.epsilon_radio, 0, 0, Qt.AlignLeft)
         form.addWidget(QLabel("Cost (C):"), 0, 1, Qt.AlignRight)
-        form.addWidget(self.C_spin, 0, 2)
+        form.addWidget(self.c_spin, 0, 2)
         form.addWidget(QLabel(
             "Regression loss epsilon (ε):"), 1, 1, Qt.AlignRight)
         form.addWidget(self.epsilon_spin, 1, 2)
@@ -113,18 +114,19 @@ class OWSVM(OWBaseLearner):
     def _update_type(self):
         # Enable/disable SVM type parameters depending on selected SVM type
         if self.svm_type == self.SVM:
-            self.C_spin.setEnabled(True)
+            self.c_spin.setEnabled(True)
             self.epsilon_spin.setEnabled(True)
             self.nu_C_spin.setEnabled(False)
             self.nu_spin.setEnabled(False)
         else:
-            self.C_spin.setEnabled(False)
+            self.c_spin.setEnabled(False)
             self.epsilon_spin.setEnabled(False)
             self.nu_C_spin.setEnabled(True)
             self.nu_spin.setEnabled(True)
         self.settings_changed()
 
     def _add_kernel_box(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         # Initialize with the widest label to measure max width
         self.kernel_eq = self.kernels[-1][1]
 
@@ -160,6 +162,7 @@ class OWSVM(OWBaseLearner):
         box.setMinimumWidth(box.sizeHint().width())
 
     def _add_optimization_box(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         self.optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
         self.tol_spin = gui.doubleSpin(
@@ -180,6 +183,7 @@ class OWSVM(OWBaseLearner):
                    [True, False, False],  # rbf
                    [True, True, False]]  # sigmoid
 
+        # set in _add_kernel_box, pylint: disable=attribute-defined-outside-init
         self.kernel_eq = self.kernels[self.kernel_type][1]
         mask = enabled[self.kernel_type]
         for spin, enabled in zip(self._kernel_params, mask):

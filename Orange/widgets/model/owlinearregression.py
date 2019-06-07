@@ -52,6 +52,7 @@ class OWLinearRegression(OWBaseLearner):
                         range(100, 1001, 100)))
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.hBox(self.controlArea, "Regularization")
         gui.radioButtons(box, self, "reg_type",
                          btnLabels=self.REGULARIZATION_TYPES,
@@ -156,7 +157,7 @@ class OWLinearRegression(OWBaseLearner):
                               .format(self.alphas[self.alpha_index],
                                       self.l2_ratio,
                                       1 - self.l2_ratio))
-        return ("Regularization", regularization),
+        return (("Regularization", regularization), )
 
 
 if __name__ == "__main__":  # pragma: no cover
