@@ -52,6 +52,12 @@ class OWMergeData(widget.OWWidget):
 
     class Warning(widget.OWWidget.Warning):
         duplicate_names = widget.Msg("Duplicate variable names in output.")
+        non_unique_variables = widget.Msg(
+            "Columns with non-unique values can't be used for matching.\n"
+            "The second variable must uniquely define the row in the second "
+            "table. Variables with non-unique values ({}) "
+            "are thus unsuitable as keys for merging."
+        )
 
     def __init__(self):
         super().__init__()
@@ -128,12 +134,13 @@ class OWMergeData(widget.OWWidget):
         self.set_merging()
         self._invalidate()
 
-    @staticmethod
-    def _set_unique_model(data, model):
+    def _set_unique_model(self, data, model):
+        self.Warning.non_unique_variables.clear()
         if data is None:
             model[:] = []
             return
         m = [INDEX]
+        non_unique = []
         for attr in chain(data.domain.variables, data.domain.metas):
             col = data.get_column_view(attr)[0]
             if attr.is_primitive():
@@ -143,6 +150,10 @@ class OWMergeData(widget.OWWidget):
                 col = col[~(col == "")]
             if len(np.unique(col)) == len(col):
                 m.append(attr)
+            else:
+                non_unique.append(attr.name)
+        if non_unique:
+            self.Warning.non_unique_variables(", ".join(non_unique))
         model[:] = m
 
     @staticmethod

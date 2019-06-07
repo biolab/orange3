@@ -473,3 +473,13 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+    def test_non_unique_warning(self):
+        self.widget.auto_apply = True
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        self.assertFalse(self.widget.Warning.non_unique_variables.is_shown())
+        self.send_signal(self.widget.Inputs.data, Table("iris"))
+        self.assertTrue(self.widget.Warning.non_unique_variables.is_shown())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.non_unique_variables.is_shown())
