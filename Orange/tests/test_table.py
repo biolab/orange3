@@ -2810,7 +2810,7 @@ class TestTableSparseDense(unittest.TestCase):
 
         iris_sparse = iris.to_sparse(sparse_attributes=True, sparse_class=True)
         self.assertTrue(sp.issparse(iris_sparse.X))
-        self.assertTrue(sp.issparse(iris_sparse.Y))
+        self.assertFalse(sp.issparse(iris_sparse.Y))
         self.assertFalse(sp.issparse(iris_sparse.metas))
 
         dense_iris = iris_sparse.to_dense()
