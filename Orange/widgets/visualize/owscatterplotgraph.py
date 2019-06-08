@@ -43,7 +43,7 @@ MAX_N_VALID_SIZE_ANIMATE = 1000
 class PaletteItemSample(ItemSample):
     """A color strip to insert into legends for discretized continuous values"""
 
-    def __init__(self, palette, scale):
+    def __init__(self, palette, scale, label_formatter=None):
         """
         :param palette: palette used for showing continuous values
         :type palette: ContinuousPaletteGenerator
@@ -54,7 +54,9 @@ class PaletteItemSample(ItemSample):
         super().__init__(None)
         self.palette = palette
         self.scale = scale
-        cuts = ["{0:.{1}f}".format(scale.offset + i * scale.width, scale.decimals)
+        if label_formatter is None:
+            label_formatter = "{{:.{}f}}".format(scale.decimals).format
+        cuts = [label_formatter(scale.offset + i * scale.width)
                 for i in range(scale.bins + 1)]
         self.labels = [QStaticText("{} - {}".format(fr, to))
                        for fr, to in zip(cuts, cuts[1:])]
@@ -266,8 +268,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
       `get_shape_data`, `get_label_data`, which return a 1d array (or two
       arrays, for `get_coordinates_data`) of `dtype` `float64`, except for
       `get_label_data`, which returns formatted labels;
-    - `get_color_labels`, `get_shape_labels`, which are return lists of
-       strings used for the color and shape legend;
+    - `get_shape_labels` returns a list of strings for shape legend
+    - `get_color_labels` returns strings for color legend, or a function for
+       formatting numbers if the legend is continuous, or None for default
+       formatting
     - `get_tooltip`, which gives a tooltip for a single data point
     - (optional) `impute_sizes`, `impute_shapes` get final coordinates and
       shapes, and replace nans;
@@ -1166,13 +1170,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         """Update content of legends and their visibility"""
         cont_color = self.master.is_continuous_color()
         shape_labels = self.master.get_shape_labels()
-        color_labels = None if cont_color else self.master.get_color_labels()
+        color_labels = self.master.get_color_labels()
         if shape_labels == color_labels and shape_labels is not None:
             self._update_combined_legend(shape_labels)
         else:
             self._update_shape_legend(shape_labels)
             if cont_color:
-                self._update_continuous_color_legend()
+                self._update_continuous_color_legend(color_labels)
             else:
                 self._update_color_legend(color_labels)
         self.update_legend_visibility()
@@ -1188,11 +1192,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 ScatterPlotItem(pen=color, brush=color, size=10, symbol=symbol),
                 escape(label))
 
-    def _update_continuous_color_legend(self):
+    def _update_continuous_color_legend(self, label_formatter):
         self.color_legend.clear()
         if self.scale is None or self.scatterplot_item is None:
             return
-        label = PaletteItemSample(self.palette, self.scale)
+        label = PaletteItemSample(self.palette, self.scale, label_formatter)
         self.color_legend.addItem(label, "")
         self.color_legend.setGeometry(label.boundingRect())
 

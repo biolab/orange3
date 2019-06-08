@@ -196,6 +196,10 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
         Returns:
             (list of str): labels
         """
+        if self.attr_color is None:
+            return None
+        if not self.attr_color.is_discrete:
+            return self.attr_color.str_val
         return self.get_column(self.attr_color, merge_infrequent=True,
                                return_labels=True)
 

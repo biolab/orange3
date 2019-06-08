@@ -1093,6 +1093,7 @@ class TestOWScatterPlotBase(WidgetTest):
 
         master.is_continuous_color = lambda: True
         master.get_color_data = lambda: np.arange(10, dtype=float)
+        master.get_color_labels = lambda: None
         graph.update_colors()
         self.assertTrue(shape_legend.call_args[0][0])
         self.assertTrue(color_legend.call_args[0][0])
