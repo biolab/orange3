@@ -135,8 +135,10 @@ class TestOWCreateClass(WidgetTest):
             self.assertEqual(label.placeholderText(), f"C{i}")
             self.assertEqual(pattern.text(), "")
 
-    def _set_attr(self, attr):
-        attr_combo = self.widget.controls.attribute
+    def _set_attr(self, attr, widget=None):
+        if widget is None:
+            widget = self.widget
+        attr_combo = widget.controls.attribute
         idx = attr_combo.model().indexOf(attr)
         attr_combo.setCurrentIndex(idx)
         attr_combo.activated.emit(idx)
@@ -384,6 +386,24 @@ class TestOWCreateClass(WidgetTest):
         widget.class_name = "  class "
         widget.apply()
         self.assertEqual(widget.class_name, "class")
+
+    def test_same_class(self):
+        widget1 = self.create_widget(OWCreateClass)
+        self.send_signal(widget1.Inputs.data, self.zoo, widget=widget1)
+        self._set_attr(self.zoo.domain.metas[0], widget=widget1)
+        widget1.line_edits[0][1].setText("a")
+        widget1.apply()
+
+        widget2 = self.create_widget(OWCreateClass)
+        self.send_signal(widget2.Inputs.data, self.zoo, widget=widget2)
+        self._set_attr(self.zoo.domain.metas[0], widget=widget2)
+        widget2.line_edits[0][1].setText("a")
+        widget2.apply()
+
+        self.assertIs(
+            self.get_output(widget1.Outputs.data, widget=widget1).domain.class_var,
+            self.get_output(widget2.Outputs.data, widget=widget2).domain.class_var
+        )
 
 
 if __name__ == "__main__":
