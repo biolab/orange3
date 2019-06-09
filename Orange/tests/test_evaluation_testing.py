@@ -198,7 +198,8 @@ class TestCrossValidation(TestSampling):
 
     def test_too_many_folds(self):
         w = []
-        res = CrossValidation(self.iris, [MajorityLearner()], k=len(self.iris)/2, warnings=w)
+        res = CrossValidation(self.iris, [MajorityLearner()],
+                              k=len(self.iris) // 2, warnings=w)
         self.assertGreater(len(w), 0)
 
     def test_failed(self):
@@ -603,12 +604,9 @@ class TestShuffleSplit(TestSampling):
                            train_size=.5, test_size=.5,
                            n_resamples=3, stratified=True, random_state=0)
 
-        strata_samples = []
-        for train, test in res.indices:
-            strata_samples.append(np.count_nonzero(train < n) == n/2)
-            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
-
-        self.assertTrue(all(strata_samples))
+        for fold in res.folds:
+            self.assertEqual(np.count_nonzero(res.row_indices[fold] < n), n // 2)
+            self.assertEqual(np.count_nonzero(res.row_indices[fold] < 2 * n), n)
 
     def test_not_stratified(self):
         # strata size
@@ -618,8 +616,9 @@ class TestShuffleSplit(TestSampling):
                            n_resamples=3, stratified=False, random_state=0)
 
         strata_samples = []
-        for train, test in res.indices:
-            strata_samples.append(np.count_nonzero(train < n) == n/2)
-            strata_samples.append(np.count_nonzero(train < 2 * n) == n)
+        for fold in res.folds:
+            strata_samples += [
+                np.count_nonzero(res.row_indices[fold] < n) == n // 2,
+                np.count_nonzero(res.row_indices[fold] < 2 * n) == n]
 
         self.assertTrue(not all(strata_samples))

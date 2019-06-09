@@ -1,3 +1,8 @@
+# __init__ methods have all kinds of unused arguments to match signatures
+# pylint: disable=unused-argument
+# __new__ methods have different arguments
+# pylint: disable=arguments-differ
+
 from collections import namedtuple
 
 import numpy as np
@@ -40,8 +45,7 @@ class Results:
     Class for storing predictions in model testing.
 
     Attributes:
-        data (Optional[Table]):  Data used for testing. When data is stored,
-            this is typically not a copy but a reference.
+        data (Optional[Table]):  Data used for testing.
 
         models (Optional[List[Model]]): A list of induced models.
 
@@ -69,82 +73,69 @@ class Results:
         folds (List[Slice or List[int]]): A list of indices (or slice objects)
             corresponding to rows of each fold.
     """
-    score_by_folds = True
-    # noinspection PyBroadException
-    # noinspection PyNoneFunctionAssignment
-    def __init__(self, data=None, nmethods=None, *, learners=None,
-                 train_data=None, nrows=None, nclasses=None,
-                 store_data=False, store_models=False,
-                 domain=None, actual=None, row_indices=None,
-                 predicted=None, probabilities=None,
-                 preprocessor=None, callback=None, n_jobs=1):
+    def __init__(self, data=None, *,
+                 nmethods=None, nrows=None, nclasses=None,
+                 domain=None,
+                 row_indices=None, folds=None, score_by_folds=True,
+                 learners=None, models=None, failed=None,
+                 actual=None, predicted=None, probabilities=None,
+                 store_data=None, store_models=None):
         """
-        Construct an instance with default values: `None` for :obj:`data` and
-        :obj:`models`.
+        Construct an instance.
 
-        If the number of rows and/or the number of classes is not given, it is
-        inferred from :obj:`data`, if provided. The data type for
-        :obj:`actual` and :obj:`predicted` is determined from the data; if the
-        latter cannot be find, `np.float32` is used.
+        The constructor is a bit too smart to ensure backward compabitility.
+        It consists of three steps.
 
-        Attribute :obj:`actual` and :obj:`row_indices` are constructed as empty
-        (uninitialized) arrays of the appropriate size, if the number of rows
-        is known. Attribute :obj:`predicted` is constructed if the number of
-        rows and of methods is given; :obj:`probabilities` also requires
-        knowing the number of classes.
+        - Set any attributes specified directly through arguments.
+        - Infer the domain, nmethods, nrows and nclasses from other data and/or
+          check their overall consistency.
+        - Prepare empty arrays `actual`, `predicted`, `probabilities` and
+          `failed`. If not enough data is available, the corresponding arrays
+          are `None`.
 
-        :param data: Data or domain
-        :type data: Orange.data.Table or Orange.data.Domain
-        :param nmethods: The number of methods that will be tested
-        :type nmethods: int
-        :param nrows: The number of test instances (including duplicates)
-        :type nrows: int
-        :param nclasses: The number of class values
-        :type nclasses: int
-        :param store_data: A flag that tells whether to store the data;
-            this argument can be given only as keyword argument
-        :type store_data: bool
-        :param store_models: A flag that tells whether to store the models;
-            this argument can be given only as keyword argument
-        :type store_models: bool
-        :param preprocessor: Preprocessor for training data
-        :type preprocessor: Orange.preprocess.Preprocess
-        :param callback: Function for reporting back the progress as a value
-            between 0 and 1
-        :type callback: callable
-        :param n_jobs:
-            Ignored.
-        :type n_jobs: int
+        Args:
+            data (Orange.data.Table): stored data from which test was sampled
+            nmethods (int): number of methods; can be inferred (or must match)
+                the size of `learners`, `models`, `failed`, `predicted` and
+                `probabilities`
+            nrows (int): number of data instances; can be inferred (or must
+                match) `data`, `row_indices`, `actual`, `predicted` and
+                `probabilities`
+            nclasses (int): number of class values (`None` if continuous); can
+                be inferred (or must match) from `domain.class_var` or
+                `probabilities`
+            domain (Orange.data.Domain): data domain; can be inferred (or must)
+                match `data.domain`
+            row_indices (np.ndarray): see class documentation
+            folds (np.ndarray): see class documentation
+            score_by_folds (np.ndarray): see class documentation
+            learners (np.ndarray): see class documentation
+            models (np.ndarray): see class documentation
+            failed (list of str): see class documentation
+            actual (np.ndarray): see class documentation
+            predicted (np.ndarray): see class documentation
+            probabilities (np.ndarray): see class documentation
+            store_data (bool): ignored; kept for backward compabitility
+            store_models (bool): ignored; kept for backward compabitility
         """
-        self.store_data = store_data
-        self.store_models = store_models
-        self.dtype = np.float32
-        self.n_jobs = 1
 
-        self.models = None
-        self.folds = None
-        self.indices = None
+        # Set given data directly from arguments
+        self.data = data
+        self.domain = domain
 
         self.row_indices = row_indices
-        self.preprocessor = preprocessor or _identity
-        self._callback = callback or _identity
+        self.folds = folds
+        self.score_by_folds = score_by_folds
+
         self.learners = learners
-        if learners:
-            nmethods = len(learners)
+        self.models = models
 
-        if nmethods is not None:
-            self.failed = [False] * nmethods
+        self.actual = actual
+        self.predicted = predicted
+        self.probabilities = probabilities
+        self.failed = failed
 
-        if data is not None:
-            self.data = data if self.store_data else None
-            self.domain = data.domain
-            self.dtype = getattr(data.Y, 'dtype', self.dtype)
-
-        if learners:
-            train_data = train_data or data
-            self.fit(train_data, data)
-            return
-
+        # Guess the rest -- or check for ambguities
         def set_or_raise(value, exp_values, msg):
             for exp_value in exp_values:
                 if exp_value is False:
@@ -154,7 +145,6 @@ class Results:
                 elif value != exp_value:
                     raise ValueError(msg)
             return value
-
         domain = self.domain = set_or_raise(
             domain, [data is not None and data.domain],
             "mismatching domain")
@@ -174,39 +164,31 @@ class Results:
         if nclasses is None and probabilities is not None:
             raise ValueError("regression results cannot have 'probabilities'")
         nmethods = set_or_raise(
-            nmethods, [predicted is not None and predicted.shape[0],
+            nmethods, [learners is not None and len(learners),
+                       models is not None and len(models),
+                       failed is not None and len(failed),
+                       predicted is not None and predicted.shape[0],
                        probabilities is not None and probabilities.shape[0]],
             "mismatching number of methods")
 
-        if actual is not None:
-            self.actual = actual
-        elif nrows is not None:
-            self.actual = np.empty(nrows, dtype=self.dtype)
+        # Prepare empty arrays
+        if actual is None \
+                and nrows is not None:
+            self.actual = np.empty(nrows)
 
-        if predicted is not None:
-            self.predicted = predicted
-        elif nmethods is not None and nrows is not None:
-            self.predicted = np.empty((nmethods, nrows), dtype=self.dtype)
+        if predicted is None \
+                and nmethods is not None and nrows is not None:
+            self.predicted = np.empty((nmethods, nrows))
 
-        if probabilities is not None:
-            self.probabilities = probabilities
-        elif nmethods is not None and nrows is not None and \
-                nclasses is not None:
+        if probabilities is None \
+                and nmethods is not None and nrows is not None \
+                and nclasses is not None:
             self.probabilities = \
-                np.empty((nmethods, nrows, nclasses), dtype=np.float32)
+                np.empty((nmethods, nrows, nclasses))
 
-    def _prepare_arrays(self, data):
-        """Initialize some mandatory arrays for results"""
-        nmethods = len(self.learners)
-        self.nrows = len(self.row_indices)
-        if self.store_models:
-            self.models = np.tile(None, (len(self.indices), nmethods))
-        # Initialize `predicted` and `probabilities` (only for discrete classes)
-        self.predicted = np.empty((nmethods, self.nrows), dtype=self.dtype)
-        if data.domain.has_discrete_class:
-            nclasses = len(data.domain.class_var.values)
-            self.probabilities = np.empty((nmethods, self.nrows, nclasses),
-                                          dtype=np.float32)
+        if failed is None \
+                and nmethods is not None:
+            self.failed = [False] * nmethods
 
     def get_fold(self, fold):
         results = Results()
@@ -296,87 +278,6 @@ class Results:
         predictions.name = data.name
         return predictions
 
-    def fit(self, train_data, test_data=None):
-        """Fits `self.learners` using folds sampled from the provided data.
-
-        Parameters
-        ----------
-        train_data : Table
-            table to sample train folds
-        test_data : Optional[Table]
-            tap to sample test folds of None then `train_data` will be used
-        """
-        test_data = test_data or train_data
-        self.setup_indices(train_data, test_data)
-        self.prepare_arrays(test_data)
-        self._prepare_arrays(test_data)
-
-        n_callbacks = len(self.learners) * len(self.indices)
-
-        data_splits = (
-            (fold_i, self.preprocessor(train_data[train_i]), test_data[test_i])
-            for fold_i, (train_i, test_i) in enumerate(self.indices))
-        args_iter = (
-            (fold_i, train_data, test_data, learner_i, learner,
-             self.store_models)
-            for (fold_i, train_data, test_data) in data_splits
-            for (learner_i, learner) in enumerate(self.learners))
-
-        results = []
-        parts = np.linspace(.0, .99, n_callbacks + 1)[1:]
-        for progress, part in zip(parts, args_iter):
-            results.append(_mp_worker(*(part + ())))
-            self._callback(progress)
-
-        results = sorted(results)
-
-        ptr, prev_fold_i, prev_n_values = 0, 0, 0
-        for res in results:
-            if res.fold_i != prev_fold_i:
-                ptr += prev_n_values
-                prev_fold_i = res.fold_i
-            result_slice = slice(ptr, ptr + res.n_values)
-            prev_n_values = res.n_values
-
-            if res.failed:
-                self.failed[res.learner_i] = res.failed
-                continue
-
-            if self.store_models:
-                self.models[res.fold_i][res.learner_i] = res.model
-
-            self.predicted[res.learner_i][result_slice] = res.values
-            if train_data.domain.has_discrete_class:
-                self.probabilities[res.learner_i][result_slice, :] = res.probs
-
-        self._callback(1)
-        return self
-
-    def prepare_arrays(self, test_data):
-        """Initialize arrays that will be used by `fit` method.
-        """
-        self.folds = []
-        row_indices = []
-
-        ptr = 0
-        for _, test in self.indices:
-            self.folds.append(slice(ptr, ptr + len(test)))
-            row_indices.append(test)
-            ptr += len(test)
-
-        self.row_indices = np.concatenate(row_indices, axis=0)
-        self.actual = test_data[self.row_indices].Y.ravel()
-
-    def setup_indices(self, train_data, test_data):
-        """Initializes `self.indices` with iterable objects with slices
-        (or indices) for each fold.
-
-        Args:
-            train_data (Table): train table
-            test_data (Table): test table
-        """
-        raise NotImplementedError()
-
     def split_by_model(self):
         """Split evaluation results by models
         """
@@ -403,7 +304,148 @@ class Results:
             yield res
 
 
-class CrossValidation(Results):
+class Validation:
+    score_by_folds = False
+
+    def __new__(cls,
+                data=None, learners=None, preprocessor=None, test_data=None,
+                *, callback=None, store_data=False, store_models=False,
+                **kwargs):
+        """
+        Base class for different testing schemata such as cross validation and
+        testing on separate data set.
+
+        If the constructor is given data and learning algorithms, it
+        automagically calls `fit` and returns `Results` instead of an
+        instance of `Validation`.
+
+        Args:
+            data (Orange.data.Table): data to be used (usually split) into
+                training and testing
+            learners (list of Orange.Learner): a list of learning algorithms
+            preprocessor (Orange.preprocess.Preprocess): preprocessor applied
+                on training data
+            test_data (Orange.data.Table): separate test data, if supported
+                by the method; must be `None` otherwise
+            callback (Callable): a function called to notify about the progress
+            store_data (bool): a flag defining whether the data is stored
+            store_models (bool): a flag defining whether the models are stored
+        """
+        self = super().__new__(cls)
+        self.store_data = store_data
+        self.store_models = store_models
+        self.__dict__.update(kwargs)
+
+        if learners is None != data is None:
+            raise ValueError(
+                "learners and train_data must both be present or not")
+        if learners is None:
+            if preprocessor is not None:
+                raise ValueError("preprocessor cannot be given if learners "
+                                 "and train_data are omitted")
+            if test_data is not None:
+                raise ValueError("test_data cannot be given if learners "
+                                 "and train_data are omitted")
+            if callback is not None:
+                raise ValueError("callback cannot be given if learners "
+                                 "and train_data are omitted")
+            return self
+
+        return self.fit(learners, preprocessor, data, test_data,
+                        callback=callback)
+
+    def fit(self, learners, preprocessor, data, test_data=None,
+            *, callback=None):
+        if preprocessor is None:
+            preprocessor = _identity
+        if callback is None:
+            callback = _identity
+        indices = self.get_indices(data, test_data)
+        folds, row_indices, actual = \
+            self.prepare_arrays(data, test_data, indices)
+        stored_data = test_data or data
+        results = Results(
+            stored_data if self.store_data else None,
+            domain=stored_data and stored_data.domain,
+            nrows=len(row_indices), learners=learners,
+            row_indices=row_indices, folds=folds, actual=actual,
+            score_by_folds=self.score_by_folds)
+
+        if test_data is None:
+            test_data = data
+        data_splits = (
+            (fold_i, preprocessor(data[train_i]), test_data[test_i])
+            for fold_i, (train_i, test_i) in enumerate(indices))
+        args_iter = (
+            (fold_i, data, test_data, learner_i, learner, self.store_models)
+            for (fold_i, data, test_data) in data_splits
+            for (learner_i, learner) in enumerate(learners))
+
+        if self.store_models:
+            results.models = np.tile(None, (len(indices), len(learners)))
+
+        part_results = []
+        parts = np.linspace(.0, .99, len(learners) * len(indices) + 1)[1:]
+        for progress, part in zip(parts, args_iter):
+            part_results.append(_mp_worker(*(part + ())))
+            callback(progress)
+
+        part_results = sorted(part_results)
+
+        ptr, prev_fold_i, prev_n_values = 0, 0, 0
+        for res in part_results:
+            if res.fold_i != prev_fold_i:
+                ptr += prev_n_values
+                prev_fold_i = res.fold_i
+            result_slice = slice(ptr, ptr + res.n_values)
+            prev_n_values = res.n_values
+
+            if res.failed:
+                results.failed[res.learner_i] = res.failed
+                continue
+
+            if self.store_models:
+                results.models[res.fold_i][res.learner_i] = res.model
+
+            results.predicted[res.learner_i][result_slice] = res.values
+            if data.domain.has_discrete_class:
+                results.probabilities[res.learner_i][result_slice, :] = res.probs
+
+        callback(1)
+        return results
+
+    @classmethod
+    def prepare_arrays(cls, data, test_data, indices):
+        """Prepare data for `fit` method."""
+        if test_data is not None:
+            raise ValueError(f"{cls.__name__} can't use separate test_data")
+
+        folds = []
+        row_indices = []
+
+        ptr = 0
+        for _, test in indices:
+            folds.append(slice(ptr, ptr + len(test)))
+            row_indices.append(test)
+            ptr += len(test)
+
+        row_indices = np.concatenate(row_indices, axis=0)
+        actual = data[row_indices].Y.ravel()
+        return folds, row_indices, actual
+
+    @staticmethod
+    def get_indices(data, test_data):
+        """Initializes `self.indices` with iterable objects with slices
+        (or indices) for each fold.
+
+        Args:
+            data (Table): data table
+            test_data (Table): separate test table
+        """
+        raise NotImplementedError()
+
+
+class CrossValidation(Validation):
     """
     K-fold cross validation.
 
@@ -418,42 +460,45 @@ class CrossValidation(Results):
     .. attribute:: random_state
 
     """
-    def __init__(self, data, learners, k=10, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, warnings=None,
-                 n_jobs=1):
-        self.k = int(k)
+    def __new__(cls, data, learners, k=10, stratified=True, random_state=0,
+                store_data=False, store_models=False, preprocessor=None,
+                callback=None, warnings=None, n_jobs=1):
+        return super().__new__(
+            cls,
+            data, learners, preprocessor=preprocessor, callback=callback,
+            k=k, stratified=stratified, random_state=random_state,
+            store_data=store_data, store_models=store_models,
+            warnings=[] if warnings is None else warnings)
+
+    # __init__ will be called only if __new__ doesn't have data and learners
+    # Also, attributes are already set in __new__; __init__ is here only so that
+    # IDE's and pylint know about attributes
+    def __init__(self, data, learners, k=10, stratified=True, random_state=0,
+                 store_data=False, store_models=False, preprocessor=None,
+                 callback=None, warnings=None, n_jobs=1):
+        super().__init__(store_data=store_data, store_models=store_models)
+        self.k = k
         self.stratified = stratified
         self.random_state = random_state
-        if warnings is None:
-            self.warnings = []
-        else:
-            self.warnings = warnings
 
-        super().__init__(data, learners=learners, store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback, n_jobs=n_jobs)
-
-    def setup_indices(self, train_data, test_data):
-        self.indices = None
-        if self.stratified and test_data.domain.has_discrete_class:
+    def get_indices(self, data, test_data):
+        if self.stratified and data.domain.has_discrete_class:
             try:
                 splitter = skl.StratifiedKFold(
                     self.k, shuffle=True, random_state=self.random_state
                 )
-                splitter.get_n_splits(test_data.X, test_data.Y)
-                self.indices = list(splitter.split(test_data.X, test_data.Y))
+                splitter.get_n_splits(data.X, data.Y)
+                return list(splitter.split(data.X, data.Y))
             except ValueError:
                 self.warnings.append("Using non-stratified sampling.")
-                self.indices = None
-        if self.indices is None:
-            splitter = skl.KFold(
-                self.k, shuffle=True, random_state=self.random_state
-            )
-            splitter.get_n_splits(test_data)
-            self.indices = list(splitter.split(test_data))
+
+        splitter = skl.KFold(
+            self.k, shuffle=True, random_state=self.random_state)
+        splitter.get_n_splits(data)
+        return list(splitter.split(data))
 
 
-class CrossValidationFeature(Results):
+class CrossValidationFeature(Validation):
     """
     Cross validation with folds according to values of a feature.
 
@@ -462,115 +507,147 @@ class CrossValidationFeature(Results):
         The feature defining the folds.
 
     """
-    def __init__(self, data, learners, feature, store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=1):
-        self.feature = feature
-        super().__init__(data, learners=learners, store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback, n_jobs=n_jobs)
+    def __new__(cls, data, learners, feature,
+                store_data=False, store_models=False, preprocessor=None,
+                callback=None, warnings=None, n_jobs=1):
+        return super().__new__(
+            cls,
+            data, learners, preprocessor=preprocessor, callback=callback,
+            feature=feature,
+            store_data=store_data, store_models=store_models,
+            warnings=warnings or [])
 
-    def setup_indices(self, train_data, test_data):
-        data = Table(Domain([self.feature], None), test_data)
+    # __init__ will be called only if __new__ doesn't have data and learners
+    # Also, attributes are already set in __new__; __init__ is here only so that
+    # IDE's and pylint know about attributes
+    def __init__(self, data, learners, feature,
+                 store_data=False, store_models=False, preprocessor=None,
+                 callback=None, warnings=None, n_jobs=1):
+        super().__init__(store_data=store_data, store_models=store_models)
+        self.feature = feature
+
+    def get_indices(self, data, _test_data):
+        data = Table(Domain([self.feature], None), data)
         values = data[:, self.feature].X
-        self.indices = []
+        indices = []
         for v in range(len(self.feature.values)):
             test_index = np.where(values == v)[0]
             train_index = np.where((values != v) & (~np.isnan(values)))[0]
             if len(test_index) and len(train_index):
-                self.indices.append((train_index, test_index))
-        if not self.indices:
+                indices.append((train_index, test_index))
+        if not indices:
             raise ValueError("No folds could be created from the given feature.")
+        return indices
 
 
-class LeaveOneOut(Results):
+class LeaveOneOut(Validation):
     """Leave-one-out testing"""
     score_by_folds = False
 
-    def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=1):
-        super().__init__(data, learners=learners, store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback, n_jobs=n_jobs)
+    def get_indices(self, data, test_data):
+        if test_data is not None:
+            raise ValueError("Leave one out can't use separate test_data")
 
-    def setup_indices(self, train_data, test_data):
         splitter = skl.LeaveOneOut()
-        splitter.get_n_splits(test_data)
-        self.indices = list(splitter.split(test_data))
+        splitter.get_n_splits(data)
+        return list(splitter.split(data))
 
-    def prepare_arrays(self, test_data):
+    def prepare_arrays(self, data, test_data, indices):
         # sped up version of super().prepare_arrays(data)
-        self.row_indices = np.arange(len(test_data))
-        self.folds = self.row_indices
-        self.actual = test_data.Y.flatten()
+        if test_data is not None:
+            raise ValueError("Leave one out can't use separate test_data")
+        row_indices = np.arange(len(data))
+        return row_indices, row_indices, data.Y.flatten()
 
 
-class ShuffleSplit(Results):
-    def __init__(self, data, learners, n_resamples=10, train_size=None,
-                 test_size=0.1, stratified=True, random_state=0, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, n_jobs=1):
+class ShuffleSplit(Validation):
+    def __new__(cls, data, learners,
+                n_resamples=10, train_size=None, test_size=0.1,
+                stratified=True, random_state=0,
+                store_data=False, store_models=False, preprocessor=None,
+                callback=None, n_jobs=1):
+        return super().__new__(
+            cls,
+            data, learners, preprocessor=preprocessor, callback=callback,
+            n_resamples=n_resamples, train_size=train_size, test_size=test_size,
+            stratified=stratified, random_state=random_state,
+            store_data=store_data, store_models=store_models)
+
+    # __init__ will be called only if __new__ doesn't have data and learners
+    # Also, attributes are already set in __new__; __init__ is here only so that
+    # IDE's and pylint know about attributes
+    def __init__(self, data, learners,
+                 n_resamples=10, train_size=None, test_size=0.1,
+                 stratified=True, random_state=0,
+                 store_data=False, store_models=False, preprocessor=None,
+                 callback=None, n_jobs=1):
+        super().__init__(store_data=store_data, store_models=store_models)
         self.n_resamples = n_resamples
         self.train_size = train_size
         self.test_size = test_size
         self.stratified = stratified
         self.random_state = random_state
 
-        super().__init__(data, learners=learners, store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback, n_jobs=n_jobs)
+    def get_indices(self, data, test_data):
+        if test_data is not None:
+            raise ValueError("Shuffle split can't use separate test_data")
 
-    def setup_indices(self, train_data, test_data):
-        if self.stratified and test_data.domain.has_discrete_class:
+        if self.stratified and data.domain.has_discrete_class:
             splitter = skl.StratifiedShuffleSplit(
                 n_splits=self.n_resamples, train_size=self.train_size,
                 test_size=self.test_size, random_state=self.random_state
             )
-            splitter.get_n_splits(test_data.X, test_data.Y)
-            self.indices = list(splitter.split(test_data.X, test_data.Y))
+            splitter.get_n_splits(data.X, data.Y)
+            return list(splitter.split(data.X, data.Y))
 
+        splitter = skl.ShuffleSplit(
+            n_splits=self.n_resamples, train_size=self.train_size,
+            test_size=self.test_size, random_state=self.random_state
+        )
+        splitter.get_n_splits(data)
+        return list(splitter.split(data))
+
+
+class TestOnTestData(Validation):
+    def __new__(cls, data=None, *args, **kwargs):
+        # Backward compatibility. Don't ask.
+        # Old signature didn't match that of the super class
+        if args and isinstance(args[0], Table):
+            test_data, learners, preprocessor, *_ = args + (None, ) * 3
         else:
-            splitter = skl.ShuffleSplit(
-                n_splits=self.n_resamples, train_size=self.train_size,
-                test_size=self.test_size, random_state=self.random_state
-            )
-            splitter.get_n_splits(test_data)
-            self.indices = list(splitter.split(test_data))
+            learners, preprocessor, test_data, *_ = args + (None, ) * 3
+        if "train_data" in kwargs:
+            if data is None:
+                data = kwargs.pop("train_data")
+            else:
+                raise TypeError("argument 'data' is given twice")
+        elif data is None:
+            raise TypeError("missing required argument 'data'")
+        if "test_data" in kwargs:
+            test_data = kwargs.pop("test_data")
+        if "preprocessor" in kwargs:
+            preprocessor = kwargs.pop("preprocessor")
+        if "learners" in kwargs:
+            learners = kwargs.pop("learners")
+        return super().__new__(
+            cls,
+            data, learners, preprocessor=preprocessor, test_data=test_data,
+            **kwargs)
 
+    def get_indices(self, _train_data, _test_data):
+        return ((Ellipsis, Ellipsis),)
 
-class TestOnTestData(Results):
-    """
-    Test on a separate test dataset.
-    """
-    def __init__(self, train_data, test_data, learners, store_data=False,
-                 store_models=False, preprocessor=None, callback=None, n_jobs=1):
-        super().__init__(test_data, train_data=train_data, learners=learners,
-                         store_data=store_data,
-                         store_models=store_models, preprocessor=preprocessor,
-                         callback=callback, n_jobs=n_jobs)
-
-    def setup_indices(self, train_data, test_data):
-        self.indices = ((Ellipsis, Ellipsis),)
-
-    def prepare_arrays(self, test_data):
-        self.row_indices = np.arange(len(test_data))
-        self.folds = (Ellipsis, )
-        self.actual = test_data.Y.ravel()
+    def prepare_arrays(self, data, test_data, indices):
+        return (Ellipsis, ), np.arange(len(test_data)), test_data.Y.ravel()
 
 
 class TestOnTrainingData(TestOnTestData):
-    """
-    Trains and test on the same data
-    """
-
-    def __init__(self, data, learners, store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=1):
-
+    def __new__(cls,
+                data=None, learners=None, preprocessor=None, **kwargs):
         if preprocessor is not None:
             data = preprocessor(data)
-
-        super().__init__(train_data=data, test_data=data, learners=learners,
-                         store_data=store_data, store_models=store_models,
-                         preprocessor=None, callback=callback, n_jobs=n_jobs)
-        self.preprocessor = preprocessor
+        return super().__new__(
+            cls, data, learners, preprocessor=None, test_data=data, **kwargs)
 
 
 def sample(table, n=0.7, stratified=False, replace=False,
@@ -601,7 +678,7 @@ def sample(table, n=0.7, stratified=False, replace=False,
         Pseudo-random number generator state used for random sampling.
     """
 
-    if type(n) == float:
+    if isinstance(n, float):
         n = int(n * len(table))
 
     if replace:
