@@ -61,7 +61,7 @@ confidence=
 # --disable=W"
 disable=
     missing-docstring,  # I guess not
-    no-name-in-module, no-member  # too many false positives from Qt
+    no-name-in-module, no-member,  # too many false positives from Qt
     too-many-ancestors, # I don't think this is a problem
     no-else-return      # else's may actually improve readability
 
