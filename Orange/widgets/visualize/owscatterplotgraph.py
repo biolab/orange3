@@ -714,6 +714,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         The method is called by `update_sizes`. It gets the sizes
         from the widget and performs the necessary scaling and sizing.
+        The output is rounded to half a pixel for faster drawing.
 
         Returns:
             (np.ndarray): sizes
@@ -732,7 +733,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             size_column /= mx
         else:
             size_column[:] = 0.5
-        return self.MinShapeSize + (5 + self.point_width) * size_column
+
+        sizes = self.MinShapeSize + (5 + self.point_width) * size_column
+        # round sizes to half pixel for smaller pyqtgraph's symbol pixmap atlas
+        sizes = (sizes * 2).round() / 2
+        return sizes
 
     def update_sizes(self):
         """

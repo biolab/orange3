@@ -202,13 +202,9 @@ class TestOWScatterPlotBase(WidgetTest):
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
-        s0, s1, s2, s3 = data["size"] - graph.MinShapeSize
-        np.testing.assert_almost_equal(
-            (s2 - s1) / (s1 - s0),
-            (x[2] - x[1]) / (x[1] - x[0]))
-        np.testing.assert_almost_equal(
-            (s2 - s1) / (s1 - s3),
-            (x[2] - x[1]) / (x[1] - x[3]))
+        s = data["size"] - graph.MinShapeSize
+        precise_s = (x - min(x)) / (max(x) - min(x)) * max(s)
+        np.testing.assert_almost_equal(s, precise_s, decimal=0)
         self.assertEqual(
             list(data["symbol"]),
             [graph.CurveSymbols[int(xi)] for xi in x])
@@ -358,16 +354,24 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.reset_graph()
         scatterplot_item = graph.scatterplot_item
         size = scatterplot_item.data["size"]
-        diffs = [round(y - x, 2) for x, y in zip(size, size[1:])]
-        self.assertEqual(len(set(diffs)), 1)
-        self.assertGreater(diffs[0], 0)
+        np.testing.assert_equal(size, [6, 7.5, 9.5, 11, 12.5, 14.5, 16, 17.5, 19.5, 21])
 
         d = np.arange(10, 20, dtype=float)
         graph.update_sizes()
         self.assertIs(scatterplot_item, graph.scatterplot_item)
+        size2 = scatterplot_item.data["size"]
+        np.testing.assert_equal(size, size2)
+
+    def test_size_rounding_half_pixel(self):
+        graph = self.graph
+
+        self.master.get_size_data = lambda: d
+        d = np.arange(10, dtype=float)
+
+        graph.reset_graph()
+        scatterplot_item = graph.scatterplot_item
         size = scatterplot_item.data["size"]
-        diffs2 = [round(y - x, 2) for x, y in zip(size, size[1:])]
-        self.assertEqual(diffs, diffs2)
+        np.testing.assert_equal(size*2 - (size*2).round(), 0)
 
     def test_size_with_nans(self):
         graph = self.graph
