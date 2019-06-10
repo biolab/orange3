@@ -221,7 +221,20 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
+    """PyQtGraph's ScatterPlotItem calls updateSpots at any change of sizes/colors/symbols,
+    which then rebuilds the stored pixmaps for each symbol. Because Orange calls
+    set* function in succession, we postpone updateSpots() to paint()."""
+
+    _update_spots_in_paint = False
+
+    def updateSpots(self, dataSet=None):  # pylint: disable=unused-argument
+        self._update_spots_in_paint = True
+        self.update()
+
     def paint(self, painter, option, widget=None):
+        if self._update_spots_in_paint:
+            self._update_spots_in_paint = False
+            super().updateSpots()
         painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
         super().paint(painter, option, widget)
 

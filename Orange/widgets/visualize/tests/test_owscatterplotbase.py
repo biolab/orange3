@@ -1278,6 +1278,11 @@ class TestOWScatterPlotBase(WidgetTest):
         self.assertFalse(spy[-1][0])
         self.assertFalse(bool(self.graph.labels))
 
+    def test_no_needless_buildatlas(self):
+        graph = self.graph
+        graph.reset_graph()
+        self.assertIsNone(graph.scatterplot_item.fragmentAtlas.atlas)
+
 
 if __name__ == "__main__":
     import unittest
