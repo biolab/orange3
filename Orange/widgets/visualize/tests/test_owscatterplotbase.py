@@ -497,12 +497,17 @@ class TestOWScatterPlotBase(WidgetTest):
         d = np.arange(10, dtype=float) % 2
 
         graph.reset_graph()
+        data = graph.scatterplot_item.data
         self.assertTrue(
             all(pen.color().hue() is palette[i % 2].hue()
-                for i, pen in enumerate(graph.scatterplot_item.data["pen"])))
+                for i, pen in enumerate(data["pen"])))
         self.assertTrue(
             all(pen.color().hue() is palette[i % 2].hue()
-                for i, pen in enumerate(graph.scatterplot_item.data["brush"])))
+                for i, pen in enumerate(data["brush"])))
+
+        # confirm that QPen/QBrush were reused
+        self.assertEqual(len(set(map(id, data["pen"]))), 2)
+        self.assertEqual(len(set(map(id, data["brush"]))), 2)
 
     def test_colors_discrete_nan(self):
         self.master.is_continuous_color = lambda: False
@@ -532,6 +537,24 @@ class TestOWScatterPlotBase(WidgetTest):
 
         d[4] = np.nan
         graph.update_colors()  # Ditto
+
+    def test_colors_continuous_reused(self):
+        self.master.is_continuous_color = lambda: True
+        graph = self.graph
+
+        self.xy = (np.arange(100, dtype=float),
+                   np.arange(100, dtype=float))
+
+        d = np.arange(100, dtype=float)
+        self.master.get_color_data = lambda: d
+        graph.reset_graph()
+
+        data = graph.scatterplot_item.data
+
+        self.assertEqual(len(data["pen"]), 100)
+        self.assertLessEqual(len(set(map(id, data["pen"]))), 10)
+        self.assertEqual(len(data["brush"]), 100)
+        self.assertLessEqual(len(set(map(id, data["brush"]))), 10)
 
     def test_colors_continuous_nan(self):
         self.master.is_continuous_color = lambda: True
@@ -606,12 +629,16 @@ class TestOWScatterPlotBase(WidgetTest):
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
+        self.assertEqual(len(set(map(id, data["pen"]))), 1)  # test QPen/QBrush reuse
+        self.assertEqual(len(set(map(id, data["brush"]))), 1)
 
         self.master.get_subset_mask = lambda: np.arange(10) < 5
         graph.update_colors()
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
+        self.assertEqual(len(set(map(id, data["pen"]))), 1)
+        self.assertEqual(len(set(map(id, data["brush"]))), 2)  # transparent and colored
 
     def test_colors_update_legend_and_density(self):
         graph = self.graph
