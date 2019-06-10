@@ -97,7 +97,8 @@ class TestSampling(unittest.TestCase):
             for model, learner in zip(models, learners):
                 self.assertIsInstance(model, learner.__returns__)
 
-    def _callback_values(self, iterations):
+    @staticmethod
+    def _callback_values(iterations):
         return np.hstack((np.linspace(0., .99, iterations + 1)[1:], [1]))
 
 
@@ -111,7 +112,7 @@ class TestCrossValidation(TestSampling):
         cls.random_table = random_data(cls.nrows, cls.ncols)
 
     def test_results(self):
-        nrows, ncols = self.random_table.X.shape
+        nrows, _ = self.random_table.X.shape
         res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=10,
                               stratified=False)
         y = self.random_table.Y
@@ -131,7 +132,7 @@ class TestCrossValidation(TestSampling):
         self.check_folds(res, 5, self.nrows)
 
     def test_call_5(self):
-        nrows, ncols = self.random_table.X.shape
+        nrows, _ = self.random_table.X.shape
         res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5,
                               stratified=False)
         y = self.random_table.Y
@@ -184,7 +185,8 @@ class TestCrossValidation(TestSampling):
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
-    def test_miss_majority(self):
+    @staticmethod
+    def test_miss_majority():
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[-4:] = np.ones((4, 3))
@@ -198,8 +200,8 @@ class TestCrossValidation(TestSampling):
 
     def test_too_many_folds(self):
         w = []
-        res = CrossValidation(self.iris, [MajorityLearner()],
-                              k=len(self.iris) // 2, warnings=w)
+        CrossValidation(self.iris, [MajorityLearner()],
+                        k=len(self.iris) // 2, warnings=w)
         self.assertGreater(len(w), 0)
 
     def test_failed(self):
@@ -262,7 +264,8 @@ class TestCrossValidation(TestSampling):
 
 class TestCrossValidationFeature(TestSampling):
 
-    def add_meta_fold(self, data, f):
+    @staticmethod
+    def add_meta_fold(data, f):
         fat = DiscreteVariable(name="fold", values=[str(a) for a in range(f)])
         domain = Domain(data.domain.attributes, data.domain.class_var, metas=[fat])
         ndata = Table(domain, data)
@@ -347,7 +350,8 @@ class TestLeaveOneOut(TestSampling):
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
-    def test_miss_majority(self):
+    @staticmethod
+    def test_miss_majority():
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
@@ -377,7 +381,7 @@ class TestLeaveOneOut(TestSampling):
 
 class TestTestOnTrainingData(TestSampling):
     def test_results(self):
-        nrows, ncols = self.random_table.X.shape
+        nrows, _ = self.random_table.X.shape
         t = self.random_table
         res = TestOnTrainingData(t, [NaiveBayesLearner()])
         y = t.Y
@@ -418,7 +422,8 @@ class TestTestOnTrainingData(TestSampling):
         self.assertTrue((probs[:, :, 0] < probs[:, :, 2]).all())
         self.assertTrue((probs[:, :, 2] < probs[:, :, 1]).all())
 
-    def test_miss_majority(self):
+    @staticmethod
+    def test_miss_majority():
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1
@@ -447,7 +452,7 @@ class TestTestOnTrainingData(TestSampling):
 
 class TestTestOnTestData(TestSampling):
     def test_results(self):
-        nrows, ncols = self.random_table.X.shape
+        nrows, _ = self.random_table.X.shape
         t = self.random_table
         res = TestOnTestData(t, t, [NaiveBayesLearner()])
         y = t.Y
@@ -501,7 +506,8 @@ class TestTestOnTestData(TestSampling):
         res = TestOnTestData(train, test, learners, store_models=True)
         self.check_models(res, learners, 1)
 
-    def test_miss_majority(self):
+    @staticmethod
+    def test_miss_majority():
         x = np.zeros((50, 3))
         y = x[:, -1]
         x[49] = 1

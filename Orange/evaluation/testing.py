@@ -26,7 +26,7 @@ def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
                store_models):
     predicted, probs, model, failed = None, None, None, False
     try:
-        if len(train_data) == 0 or len(test_data) == 0:
+        if not train_data or not test_data:
             raise RuntimeError('Test fold is empty')
         model = learner(train_data)
         if train_data.domain.has_discrete_class:
@@ -526,14 +526,14 @@ class CrossValidationFeature(Validation):
         super().__init__(store_data=store_data, store_models=store_models)
         self.feature = feature
 
-    def get_indices(self, data, _test_data):
+    def get_indices(self, data, test_data):
         data = Table(Domain([self.feature], None), data)
         values = data[:, self.feature].X
         indices = []
         for v in range(len(self.feature.values)):
             test_index = np.where(values == v)[0]
             train_index = np.where((values != v) & (~np.isnan(values)))[0]
-            if len(test_index) and len(train_index):
+            if test_index.size and train_index.size:
                 indices.append((train_index, test_index))
         if not indices:
             raise ValueError("No folds could be created from the given feature.")
@@ -686,11 +686,11 @@ def sample(table, n=0.7, stratified=False, replace=False,
             rgen = np.random
         else:
             rgen = np.random.mtrand.RandomState(random_state)
-        sample = rgen.randint(0, len(table), n)
+        a_sample = rgen.randint(0, len(table), n)
         o = np.ones(len(table))
-        o[sample] = 0
+        o[a_sample] = 0
         others = np.nonzero(o)[0]
-        return table[sample], table[others]
+        return table[a_sample], table[others]
 
     n = len(table) - n
     if stratified and table.domain.has_discrete_class:

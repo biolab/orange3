@@ -32,12 +32,13 @@ class ClusteringResults(Results):
 class ClusteringScore(Score):
     considers_actual = False
 
+    # pylint: disable=arguments-differ
     def from_predicted(self, results, score_function):
         # Clustering scores from labels
         # This warning filter can be removed in scikit 0.22
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "ignore", "The behavior of AMI will change in version 0\.22.*")
+                "ignore", "The behavior of AMI will change in version 0\\.22.*")
             if self.considers_actual:
                 return np.fromiter(
                     (score_function(results.actual.flatten(),
