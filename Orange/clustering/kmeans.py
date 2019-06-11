@@ -33,7 +33,9 @@ class KMeans(Clustering):
                 "compute_silhouette_score is deprecated. Please use "
                 "sklearn.metrics.silhouette_score to compute silhouettes.",
                 DeprecationWarning)
-        super().__init__(preprocessors, vars())
+        super().__init__(
+            preprocessors, {k: v for k, v in vars().items()
+                            if k != "compute_silhouette_score"})
 
 
 if __name__ == "__main__":
