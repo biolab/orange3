@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
+from Orange.evaluation.testing import Validation
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
@@ -25,7 +26,7 @@ def random_data(nrows, ncols):
 
 class TestingTestCase(unittest.TestCase):
     def test_no_data(self):
-        self.assertRaises(TypeError, CrossValidation,
+        self.assertRaises(ValueError, CrossValidation,
                           learners=[NaiveBayesLearner()])
 
 
@@ -102,6 +103,17 @@ class TestSampling(unittest.TestCase):
         return np.hstack((np.linspace(0., .99, iterations + 1)[1:], [1]))
 
 
+class TestValidation(unittest.TestCase):
+    def test_invalid_argument_combination(self):
+        data = Table('iris')
+
+        self.assertRaises(ValueError, Validation, data)
+        self.assertRaises(ValueError, Validation, None, [MajorityLearner()])
+        self.assertRaises(ValueError, Validation, preprocessor=lambda x: x)
+        self.assertRaises(ValueError, Validation, test_data=data)
+        self.assertRaises(ValueError, Validation, callback=lambda x: x)
+
+
 class TestCrossValidation(TestSampling):
     @classmethod
     def setUpClass(cls):
@@ -110,6 +122,12 @@ class TestCrossValidation(TestSampling):
         cls.nrows = 50
         cls.ncols = 5
         cls.random_table = random_data(cls.nrows, cls.ncols)
+
+    def test_init(self):
+        res = CrossValidation(k=42, stratified=False, random_state=43)
+        self.assertEqual(res.k, 42)
+        self.assertFalse(res.stratified)
+        self.assertEqual(res.random_state, 43)
 
     def test_results(self):
         nrows, _ = self.random_table.X.shape
@@ -274,6 +292,11 @@ class TestCrossValidationFeature(TestSampling):
         ndata[:, fat] = vals
         return ndata
 
+    def test_init(self):
+        var = DiscreteVariable(name="fold", values="abc")
+        res = CrossValidationFeature(feature=var)
+        self.assertIs(res.feature, var)
+
     def test_call(self):
         t = self.random_table
         t = self.add_meta_fold(t, 3)
@@ -292,6 +315,22 @@ class TestCrossValidationFeature(TestSampling):
         t[0][fat] = float("nan")
         res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=fat)
         self.assertNotIn(0, res.row_indices)
+
+    def test_bad_feature(self):
+        feat = DiscreteVariable(name="fold", values="abc")
+        domain = Domain([DiscreteVariable("x", values="ab")],
+                        DiscreteVariable("y", values="cd"),
+                        metas=[feat])
+        t = Table.from_numpy(
+            domain,
+            np.zeros((10, 1)), np.ones((10, 1)), np.full((10, 1), np.nan))
+        self.assertRaises(
+            ValueError,
+            CrossValidationFeature, t, [NaiveBayesLearner()], feature=feat)
+
+    def test_no_test_data(self):
+        self.assertRaises(ValueError, CrossValidation.prepare_arrays,
+                          self.random_table, self.random_table, [])
 
 
 class TestLeaveOneOut(TestSampling):
@@ -378,6 +417,10 @@ class TestLeaveOneOut(TestSampling):
     def test_preprocessor(self):
         self.run_test_preprocessor(LeaveOneOut, [149] * 150)
 
+    def test_no_test_data(self):
+        self.assertRaises(ValueError, LeaveOneOut.prepare_arrays,
+                          self.random_table, self.random_table, [])
+
 
 class TestTestOnTrainingData(TestSampling):
     def test_results(self):
@@ -448,6 +491,11 @@ class TestTestOnTrainingData(TestSampling):
 
     def test_preprocessor(self):
         self.run_test_preprocessor(TestOnTrainingData, [150])
+
+    def test_no_test_data(self):
+        self.assertRaises(ValueError, TestOnTrainingData,
+                          self.random_table, [MajorityLearner()],
+                          test_data=self.random_table)
 
 
 class TestTestOnTestData(TestSampling):
@@ -595,6 +643,15 @@ class TestTrainTestSplit(unittest.TestCase):
 
 
 class TestShuffleSplit(TestSampling):
+    def test_init(self):
+        res = ShuffleSplit(n_resamples=1, train_size=0.1, test_size=0.2,
+                           stratified=False, random_state=42)
+        self.assertEqual(res.n_resamples, 1)
+        self.assertEqual(res.train_size, 0.1)
+        self.assertEqual(res.test_size, 0.2)
+        self.assertFalse(res.stratified)
+        self.assertEqual(res.random_state, 42)
+
     def test_results(self):
         data = self.random_table
         train_size, n_resamples = 0.6, 10
@@ -628,3 +685,7 @@ class TestShuffleSplit(TestSampling):
                 np.count_nonzero(res.row_indices[fold] < 2 * n) == n]
 
         self.assertTrue(not all(strata_samples))
+
+    def test_no_test_data(self):
+        self.assertRaises(ValueError, ShuffleSplit.prepare_arrays,
+                          self.random_table, self.random_table, [])

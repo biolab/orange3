@@ -79,7 +79,7 @@ class ClusteringEvaluation(Validation):
 
     """
     # pylint: disable=arguments-differ, unused-argument
-    def __new__(cls, data, learners, k=1,
+    def __new__(cls, data=None, learners=None, k=1,
                 store_data=False, store_models=False, preprocessor=None,
                 callback=None, n_jobs=1):
         return super().__new__(
@@ -88,10 +88,10 @@ class ClusteringEvaluation(Validation):
             store_data=True, store_models=store_models)
 
     # pylint: disable=unused-argument
-    def __init__(self, data, learners, k=1,
+    def __init__(self, data=None, learners=None, k=1,
                  store_data=False, store_models=False, preprocessor=None,
                  callback=None, n_jobs=1):
-        super().__init__(self)
+        super().__init__()
         self.k = k
 
     def fit(self, learners, preprocessor, data, test_data=None,

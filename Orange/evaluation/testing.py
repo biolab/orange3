@@ -336,7 +336,7 @@ class Validation:
         self.store_models = store_models
         self.__dict__.update(kwargs)
 
-        if learners is None != data is None:
+        if (learners is None) != (data is None):
             raise ValueError(
                 "learners and train_data must both be present or not")
         if learners is None:
@@ -353,6 +353,16 @@ class Validation:
 
         return self.fit(learners, preprocessor, data, test_data,
                         callback=callback)
+
+    # __init__ will be called only if __new__ doesn't have data and learners
+    # Also, attributes are already set in __new__; __init__ is here only so that
+    # IDE's and pylint know about attributes store_data and store_models
+    def __init__(self,
+                 data=None, learners=None, preprocessor=None, test_data=None,
+                 *, callback=None, store_data=False, store_models=False,
+                 **kwargs):
+        self.store_data = store_data
+        self.store_models = store_models
 
     def fit(self, learners, preprocessor, data, test_data=None,
             *, callback=None):
@@ -460,7 +470,8 @@ class CrossValidation(Validation):
     .. attribute:: random_state
 
     """
-    def __new__(cls, data, learners, k=10, stratified=True, random_state=0,
+    def __new__(cls, data=None, learners=None,
+                k=10, stratified=True, random_state=0,
                 store_data=False, store_models=False, preprocessor=None,
                 callback=None, warnings=None, n_jobs=1):
         return super().__new__(
@@ -473,7 +484,8 @@ class CrossValidation(Validation):
     # __init__ will be called only if __new__ doesn't have data and learners
     # Also, attributes are already set in __new__; __init__ is here only so that
     # IDE's and pylint know about attributes
-    def __init__(self, data, learners, k=10, stratified=True, random_state=0,
+    def __init__(self, data=None, learners=None,
+                 k=10, stratified=True, random_state=0,
                  store_data=False, store_models=False, preprocessor=None,
                  callback=None, warnings=None, n_jobs=1):
         super().__init__(store_data=store_data, store_models=store_models)
@@ -507,7 +519,7 @@ class CrossValidationFeature(Validation):
         The feature defining the folds.
 
     """
-    def __new__(cls, data, learners, feature,
+    def __new__(cls, data=None, learners=None, feature=None,
                 store_data=False, store_models=False, preprocessor=None,
                 callback=None, warnings=None, n_jobs=1):
         return super().__new__(
@@ -520,7 +532,7 @@ class CrossValidationFeature(Validation):
     # __init__ will be called only if __new__ doesn't have data and learners
     # Also, attributes are already set in __new__; __init__ is here only so that
     # IDE's and pylint know about attributes
-    def __init__(self, data, learners, feature,
+    def __init__(self, data=None, learners=None, feature=None,
                  store_data=False, store_models=False, preprocessor=None,
                  callback=None, warnings=None, n_jobs=1):
         super().__init__(store_data=store_data, store_models=store_models)
@@ -552,7 +564,8 @@ class LeaveOneOut(Validation):
         splitter.get_n_splits(data)
         return list(splitter.split(data))
 
-    def prepare_arrays(self, data, test_data, indices):
+    @staticmethod
+    def prepare_arrays(data, test_data, indices):
         # sped up version of super().prepare_arrays(data)
         if test_data is not None:
             raise ValueError("Leave one out can't use separate test_data")
@@ -561,26 +574,27 @@ class LeaveOneOut(Validation):
 
 
 class ShuffleSplit(Validation):
-    def __new__(cls, data, learners,
+    def __new__(cls, data=None, learners=None,
                 n_resamples=10, train_size=None, test_size=0.1,
                 stratified=True, random_state=0,
-                store_data=False, store_models=False, preprocessor=None,
-                callback=None, n_jobs=1):
+                store_data=False, store_models=False,
+                preprocessor=None, callback=None, n_jobs=1):
         return super().__new__(
             cls,
-            data, learners, preprocessor=preprocessor, callback=callback,
+            data, learners,
             n_resamples=n_resamples, train_size=train_size, test_size=test_size,
             stratified=stratified, random_state=random_state,
-            store_data=store_data, store_models=store_models)
+            store_data=store_data, store_models=store_models,
+        )
 
     # __init__ will be called only if __new__ doesn't have data and learners
     # Also, attributes are already set in __new__; __init__ is here only so that
     # IDE's and pylint know about attributes
-    def __init__(self, data, learners,
+    def __init__(self, data=None, learners=None,
                  n_resamples=10, train_size=None, test_size=0.1,
                  stratified=True, random_state=0,
-                 store_data=False, store_models=False, preprocessor=None,
-                 callback=None, n_jobs=1):
+                 store_data=False, store_models=False,
+                 preprocessor=None, callback=None, n_jobs=1):
         super().__init__(store_data=store_data, store_models=store_models)
         self.n_resamples = n_resamples
         self.train_size = train_size
@@ -620,9 +634,9 @@ class TestOnTestData(Validation):
             if data is None:
                 data = kwargs.pop("train_data")
             else:
-                raise TypeError("argument 'data' is given twice")
+                raise ValueError("argument 'data' is given twice")
         elif data is None:
-            raise TypeError("missing required argument 'data'")
+            raise ValueError("missing required argument 'data'")
         if "test_data" in kwargs:
             test_data = kwargs.pop("test_data")
         if "preprocessor" in kwargs:
@@ -637,7 +651,8 @@ class TestOnTestData(Validation):
     def get_indices(self, _train_data, _test_data):
         return ((Ellipsis, Ellipsis),)
 
-    def prepare_arrays(self, data, test_data, indices):
+    @staticmethod
+    def prepare_arrays(data, test_data, indices):
         return (Ellipsis, ), np.arange(len(test_data)), test_data.Y.ravel()
 
 
@@ -646,6 +661,8 @@ class TestOnTrainingData(TestOnTestData):
                 data=None, learners=None, preprocessor=None, **kwargs):
         if preprocessor is not None:
             data = preprocessor(data)
+        if "test_data" in kwargs:
+            raise ValueError(f"{cls.__name__} can't use separate test_data")
         return super().__new__(
             cls, data, learners, preprocessor=None, test_data=data, **kwargs)
 
