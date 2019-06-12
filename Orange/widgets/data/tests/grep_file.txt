@@ -1,0 +1,15 @@
+abc
+def
+a longer line
+---
+a b c
+1 2.123 blue
+2.4 1.1 red
+2.5 1.235 red
+jkl
+def
+another long line
+---
+d e f
+3.1 1 red
+1.3 ? blue
