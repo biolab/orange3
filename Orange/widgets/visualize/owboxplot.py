@@ -796,17 +796,21 @@ class OWBoxPlot(widget.OWWidget):
         self.scene_width = (gtop - gbottom) * scale_x
 
         val = first_val
+        last_text = None
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
-            t = self.box_scene.addSimpleText(
-                self.attribute.str_val(val) if not misssing_stats else "?",
-                self._axis_font)
-            t.setFlags(
-                t.flags() | QGraphicsItem.ItemIgnoresTransformations)
+            t = QGraphicsSimpleTextItem(
+                self.attribute.str_val(val) if not misssing_stats else "?")
+            t.setFont(self._axis_font)
+            t.setFlags(t.flags() | QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
-            t.setPos(val * scale_x - r.width() / 2, 8)
+            x_start = val * scale_x - r.width() / 2
+            if last_text is None or x_start > last_text + 10:
+                t.setPos(x_start, 8)
+                self.box_scene.addItem(t)
+                last_text = x_start + r.width()
             if val >= top:
                 break
             val += step
