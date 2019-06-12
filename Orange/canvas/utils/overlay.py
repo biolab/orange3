@@ -243,7 +243,7 @@ class NotificationMessageWidget(QWidget):
                                 "addButton(QAbstractButton, role)")
             role = rolearg[0]
         elif isinstance(button, NotificationMessageWidget.StandardButton):
-            if len(rolearg) != 0:
+            if rolearg:
                 raise TypeError("Wrong number of arguments for "
                                 "addButton(StandardButton)")
             stdbutton = button
@@ -318,8 +318,7 @@ class NotificationMessageWidget(QWidget):
         for slot in self._buttons:
             if slot.stdbutton == standardButton:
                 return slot.button
-        else:
-            return None
+        return None
 
     def _button_clicked(self):
         button = self.sender()
@@ -420,12 +419,15 @@ class NotificationWidget(QWidget):
                                     textFormat=self._msgwidget.textFormat(),
                                     icon=self.icon(),
                                     standardButtons=self._msgwidget.standardButtons(),
-                                    acceptLabel=self._msgwidget._acceptLabel,
-                                    rejectLabel=self._msgwidget._rejectLabel)
+                                    acceptLabel=self._msgwidget.acceptLabel(),
+                                    rejectLabel=self._msgwidget.rejectLabel())
         cloned.accepted.connect(self.accepted)
         cloned.rejected.connect(self.rejected)
         cloned.dismissed.connect(self.dismissed)
 
+        # each canvas displays a clone of the original notification,
+        # therefore the cloned buttons' events are connected to the original's
+        # pylint: disable=protected-access
         button_map = dict(zip(
             [b.button for b in cloned._msgwidget._buttons] + [cloned._dismiss_button],
             [b.button for b in self._msgwidget._buttons] + [self._dismiss_button]))

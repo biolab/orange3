@@ -20,7 +20,6 @@ from urllib.request import urlopen, Request, getproxies
 import pkg_resources
 
 from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
-from AnyQt.QtWidgets import QMessageBox
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
 )
@@ -195,7 +194,7 @@ def setup_notifications():
                                                "Would you like to take a short survey?",
                                           standardButtons=surveyDialogButtons)
 
-        def handle_response(button):
+        def handle_survey_response(button):
             if surveyDialog.buttonRole(button) == NotificationWidget.AcceptRole:
                 success = QDesktopServices.openUrl(
                     QUrl("https://orange.biolab.si/survey/short.html"))
@@ -203,7 +202,7 @@ def setup_notifications():
             elif surveyDialog.buttonRole(button) == NotificationWidget.RejectRole:
                 settings["startup/show-short-survey"] = False
 
-        surveyDialog.clicked.connect(handle_response)
+        surveyDialog.clicked.connect(handle_survey_response)
 
         NotificationOverlay.registerNotification(surveyDialog)
 
@@ -221,13 +220,13 @@ def setup_notifications():
         btnOK = permDialog.button(NotificationWidget.AcceptRole)
         btnOK.setText("Allow")
 
-        def handle_response(button):
+        def handle_permission_response(button):
             if permDialog.buttonRole(button) != permDialog.DismissRole:
                 settings["error-reporting/permission-requested"] = True
             if permDialog.buttonRole(button) == permDialog.AcceptRole:
                 settings["error-reporting/send-statistics"] = True
 
-        permDialog.clicked.connect(handle_response)
+        permDialog.clicked.connect(handle_permission_response)
 
         NotificationOverlay.registerNotification(permDialog)
 
@@ -278,8 +277,6 @@ def check_for_updates():
                     latest == skipped:
                 return
 
-            from Orange.canvas.utils.overlay import NotificationWidget
-
             questionButtons = NotificationWidget.Ok | NotificationWidget.Close
             question = NotificationWidget(icon=QIcon('Orange/widgets/icons/Dlg_down3.png'),
                                           title='Orange Update Available',
@@ -304,6 +301,7 @@ def check_for_updates():
         thread.resultReady.connect(compare_versions)
         thread.start()
         return thread
+    return None
 
 
 def send_usage_statistics():

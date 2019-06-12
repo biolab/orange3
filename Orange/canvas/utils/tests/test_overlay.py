@@ -1,3 +1,5 @@
+# pylint: disable=protected-access
+
 import unittest.mock
 
 from AnyQt.QtCore import Qt, QEvent
@@ -73,7 +75,7 @@ class TestOverlay(GuiTest):
                                           standardButtons=surveyDialogButtons)
 
         def handle_survey_response(b):
-            self.assertEquals(self.notif.buttonRole(b), NotificationWidget.DismissRole)
+            self.assertEqual(self.notif.buttonRole(b), NotificationWidget.DismissRole)
 
         self.notif.clicked.connect(handle_survey_response)
 
@@ -91,4 +93,3 @@ class TestOverlay(GuiTest):
 
         self.assertFalse(notif1.isVisible())
         self.assertTrue(notif2.isVisible())
-

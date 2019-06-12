@@ -117,11 +117,14 @@ spec = \
      ("quickmenu/trigger-on-any-key", bool, False,
       "Show quick menu on double click."),
 
-     ("logging/level", int, 1, "Logging level"),
+     ("logging/level", int, 1,
+      "Logging level"),
 
-     ("logging/show-on-error", bool, True, "Show log window on error"),
+     ("logging/show-on-error", bool, True,
+      "Show log window on error"),
 
-     ("logging/dockable", bool, True, "Allow log window to be docked"),
+     ("logging/dockable", bool, True,
+      "Allow log window to be docked"),
 
      ("help/open-in-external-browser", bool, False,
       "Open help in an external browser"),
@@ -141,9 +144,11 @@ spec = \
      ("add-ons/pip-install-arguments", str, '',
       'Arguments to pass to "pip install" when installing add-ons.'),
 
-     ("network/http-proxy", str, '', 'HTTP proxy.'),
+     ("network/http-proxy", str, '',
+      'HTTP proxy.'),
 
-     ("network/https-proxy", str, '', 'HTTPS proxy.'),
+     ("network/https-proxy", str, '',
+      'HTTPS proxy.'),
      ]
 
 spec = [config_slot(*t) for t in spec]

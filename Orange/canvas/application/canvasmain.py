@@ -59,7 +59,7 @@ from ..gui.quickhelp import QuickHelpTipEvent
 from ..gui.utils import message_critical, message_question, \
                         message_warning, message_information
 
-from ..utils.overlay import NotificationWidget, NotificationOverlay
+from ..utils.overlay import NotificationOverlay
 
 from ..document.usagestatistics import UsageStatistics
 
