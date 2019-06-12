@@ -741,8 +741,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
-        t = QGraphicsSimpleTextItem(
-            "%.*f" % (attr.number_of_decimals + 1, stat.mean), label)
+        t = QGraphicsSimpleTextItem(attr.str_val(stat.mean), label)
         t.setFont(self._label_font)
         bbox = t.boundingRect()
         w2, h = bbox.width() / 2, bbox.height()
@@ -797,13 +796,12 @@ class OWBoxPlot(widget.OWWidget):
         self.scene_width = (gtop - gbottom) * scale_x
 
         val = first_val
-        decimals = max(3, 4 - int(math.log10(step)))
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
             t = self.box_scene.addSimpleText(
-                repr(round(val, decimals)) if not misssing_stats else "?",
+                self.attribute.str_val(val) if not misssing_stats else "?",
                 self._axis_font)
             t.setFlags(
                 t.flags() | QGraphicsItem.ItemIgnoresTransformations)
@@ -875,8 +873,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def label_group(self, stat, attr, mean_lab):
         def centered_text(val, pos):
-            t = QGraphicsSimpleTextItem(
-                "%.*f" % (attr.number_of_decimals + 1, val), labels)
+            t = QGraphicsSimpleTextItem(attr.str_val(val), labels)
             t.setFont(self._label_font)
             bbox = t.boundingRect()
             t.setPos(pos - bbox.width() / 2, 22)
