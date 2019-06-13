@@ -47,7 +47,7 @@ def results_for_preview(data_name=""):
     from Orange.classification import \
         LogisticRegressionLearner, SVMLearner, NuSVMLearner
 
-    data = Table(data_name or "ionosphere")
+    data = Table(data_name or "heart_disease")
     results = CrossValidation(
         data,
         [LogisticRegressionLearner(penalty="l2"),
