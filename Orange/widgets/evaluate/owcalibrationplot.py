@@ -7,13 +7,14 @@ from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
 
+from Orange.classification import ModelWithThreshold
 from Orange.evaluation import Results
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_preview
 from Orange.widgets.utils import colorpalette, colorbrewer
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input
+from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
 
@@ -98,9 +99,23 @@ class OWCalibrationPlot(widget.OWWidget):
     class Inputs:
         evaluation_results = Input("Evaluation Results", Results)
 
+    class Outputs:
+        calibrated_model = Output("Calibrated Model", ModelWithThreshold)
+
     class Warning(widget.OWWidget.Warning):
         empty_input = widget.Msg(
             "Empty result on input. Nothing to display.")
+
+    class Information(widget.OWWidget.Information):
+        no_out = "Can't output a model: "
+        no_output_multiple_folds = Msg(
+            no_out + "every training data sample produced a different model")
+        no_output_no_models = Msg(
+            no_out + "test results do not contain stored models;\n"
+            "try testing on separate data or on training data")
+        no_output_multiple_selected = Msg(
+            no_out + "select a single model - the widget can output only one")
+
 
     target_index = settings.Setting(0)
     selected_classifiers = settings.Setting([])
@@ -108,6 +123,7 @@ class OWCalibrationPlot(widget.OWWidget):
     fold_curves = settings.Setting(False)
     display_rug = settings.Setting(True)
     threshold = settings.Setting(0.5)
+    auto_commit = settings.Setting(True)
 
     graph_name = "plot"
 
@@ -136,7 +152,7 @@ class OWCalibrationPlot(widget.OWWidget):
             box="Classifier", selectionMode=QListWidget.ExtendedSelection,
             sizePolicy=(QSizePolicy.Preferred, QSizePolicy.Preferred),
             sizeHint=QSize(150, 40),
-            callback=self._replot)
+            callback=self._on_selection_changed)
 
         box = gui.vBox(self.controlArea, "Metrics")
         combo = gui.comboBox(
@@ -152,6 +168,9 @@ class OWCalibrationPlot(widget.OWWidget):
 
         box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(box)
+
+        gui.auto_commit(
+            self.controlArea, self, "auto_commit", "Apply", commit=self.apply)
 
         self.plotview = pg.GraphicsView(background="w")
         self.plot = pg.PlotItem(enableMenu=False)
@@ -182,6 +201,7 @@ class OWCalibrationPlot(widget.OWWidget):
         if self.results is not None:
             self._initialize(results)
             self._replot()
+        self.apply()
 
     def clear(self):
         self.plot.clear()
@@ -326,13 +346,16 @@ class OWCalibrationPlot(widget.OWWidget):
     def _on_display_rug_changed(self):
         self._replot()
 
+    def _on_selection_changed(self):
+        self._replot()
+        self.apply()
+
     def threshold_change(self):
         self.threshold = round(self.line.pos().x(), 2)
         self.line.setPos(self.threshold)
         self._update_info()
 
     def _update_info(self):
-
         text = f"""<table>
                         <tr>
                             <th align='right'>Threshold: p=</th>
@@ -357,7 +380,26 @@ class OWCalibrationPlot(widget.OWWidget):
         self.info_label.setText(text)
 
     def threshold_change_done(self):
-        ...
+        self.apply()
+
+    def apply(self):
+        info = self.Information
+        wrapped = None
+        problems = {}
+        if self.results is not None:
+            problems = {
+                info.no_output_multiple_folds: len(self.results.folds) > 1,
+                info.no_output_no_models: self.results.models is None,
+                info.no_output_multiple_selected:
+                    len(self.selected_classifiers) != 1}
+            if not any(problems.values()):
+                model = self.results.models[0][self.selected_classifiers[0]]
+                wrapped = ModelWithThreshold(model, self.threshold)
+
+        self.Outputs.calibrated_model.send(wrapped)
+        for info, shown in problems.items():
+            if info.is_shown() != shown:
+                info(shown=shown)
 
     def send_report(self):
         if self.results is None:
