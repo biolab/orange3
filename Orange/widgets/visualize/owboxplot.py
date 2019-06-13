@@ -200,7 +200,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.label_txts = self.mean_labels = self.boxes = self.labels = \
             self.label_txts_all = self.attr_labels = self.order = []
-        self.scale_x = self.scene_min_x = self.scene_width = 0
+        self.scale_x = 1
+        self.scene_min_x = self.scene_max_x = self.scene_width = 0
         self.label_width = 0
 
         self.attrs = VariableListModel()
@@ -741,8 +742,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def mean_label(self, stat, attr, val_name):
         label = QGraphicsItemGroup()
-        t = QGraphicsSimpleTextItem(
-            "%.*f" % (attr.number_of_decimals + 1, stat.mean), label)
+        t = QGraphicsSimpleTextItem(attr.str_val(stat.mean), label)
         t.setFont(self._label_font)
         bbox = t.boundingRect()
         w2, h = bbox.width() / 2, bbox.height()
@@ -794,21 +794,26 @@ class OWBoxPlot(widget.OWWidget):
             self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
         self.scene_min_x = gbottom * scale_x
-        self.scene_width = (gtop - gbottom) * scale_x
+        self.scene_max_x = gtop * scale_x
+        self.scene_width = self.scene_max_x - self.scene_min_x
 
         val = first_val
-        decimals = max(3, 4 - int(math.log10(step)))
+        last_text = self.scene_min_x
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
             l.setZValue(100)
-            t = self.box_scene.addSimpleText(
-                repr(round(val, decimals)) if not misssing_stats else "?",
-                self._axis_font)
-            t.setFlags(
-                t.flags() | QGraphicsItem.ItemIgnoresTransformations)
+            t = QGraphicsSimpleTextItem(
+                self.attribute.str_val(val) if not misssing_stats else "?")
+            t.setFont(self._axis_font)
+            t.setFlags(t.flags() | QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
-            t.setPos(val * scale_x - r.width() / 2, 8)
+            x_start = val * scale_x - r.width() / 2
+            x_finish = x_start + r.width()
+            if x_start > last_text + 10 and x_finish < self.scene_max_x:
+                t.setPos(x_start, 8)
+                self.box_scene.addItem(t)
+                last_text = x_finish
             if val >= top:
                 break
             val += step
@@ -875,8 +880,7 @@ class OWBoxPlot(widget.OWWidget):
 
     def label_group(self, stat, attr, mean_lab):
         def centered_text(val, pos):
-            t = QGraphicsSimpleTextItem(
-                "%.*f" % (attr.number_of_decimals + 1, val), labels)
+            t = QGraphicsSimpleTextItem(attr.str_val(val), labels)
             t.setFont(self._label_font)
             bbox = t.boundingRect()
             t.setPos(pos - bbox.width() / 2, 22)
