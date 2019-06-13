@@ -317,7 +317,7 @@ class Results:
                 res.probabilities = self.probabilities[(i,), :, :]
 
             if self.models is not None:
-                res.models = self.models[:, i]
+                res.models = self.models[:, i:i+1]
 
             res.failed = [self.failed[i]]
             yield res
