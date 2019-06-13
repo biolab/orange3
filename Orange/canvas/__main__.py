@@ -39,6 +39,7 @@ from Orange.canvas.registry import qt
 from Orange.canvas.registry import WidgetRegistry, set_global_registry
 from Orange.canvas.registry import cache
 from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
+from Orange.widgets import gui
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +189,7 @@ def setup_notifications():
                   settings["startup/launch-count"] >= 5
     if show_survey:
         surveyDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        surveyDialog = NotificationWidget(icon=QIcon("Orange/widgets/icons/information.png"),
+        surveyDialog = NotificationWidget(icon=QIcon(gui.resource_filename("icons/information.png")),
                                           title="Survey",
                                           text="We want to understand our users better.\n"
                                                "Would you like to take a short survey?",
@@ -209,7 +210,8 @@ def setup_notifications():
     # data collection permission
     if not settings["error-reporting/permission-requested"]:
         permDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
-        permDialog = NotificationWidget(icon=QIcon("distribute/icon-48.png"),
+        permDialog = NotificationWidget(icon=QIcon(gui.resource_filename(
+                                                                "../../distribute/icon-48.png")),
                                         title="Anonymous Usage Statistics",
                                         text="Do you wish to opt-in to sharing "
                                              "statistics about how you use Orange?\n"
@@ -278,7 +280,7 @@ def check_for_updates():
                 return
 
             questionButtons = NotificationWidget.Ok | NotificationWidget.Close
-            question = NotificationWidget(icon=QIcon('Orange/widgets/icons/Dlg_down3.png'),
+            question = NotificationWidget(icon=QIcon(gui.resource_filename('icons/Dlg_down3.png')),
                                           title='Orange Update Available',
                                           text='Current version: <b>{}</b><br>'
                                                'Latest version: <b>{}</b>'.format(current, latest),
