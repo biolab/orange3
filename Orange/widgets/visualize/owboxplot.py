@@ -200,7 +200,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.label_txts = self.mean_labels = self.boxes = self.labels = \
             self.label_txts_all = self.attr_labels = self.order = []
-        self.scale_x = self.scene_min_x = self.scene_width = 0
+        self.scale_x = 1
+        self.scene_min_x = self.scene_max_x = self.scene_width = 0
         self.label_width = 0
 
         self.attrs = VariableListModel()
@@ -793,10 +794,11 @@ class OWBoxPlot(widget.OWWidget):
             self.scale_x = scale_x = viewrect.width() / (gtop - gbottom)
 
         self.scene_min_x = gbottom * scale_x
-        self.scene_width = (gtop - gbottom) * scale_x
+        self.scene_max_x = gtop * scale_x
+        self.scene_width = self.scene_max_x - self.scene_min_x
 
         val = first_val
-        last_text = None
+        last_text = self.scene_min_x
         while True:
             l = self.box_scene.addLine(val * scale_x, -1, val * scale_x, 1,
                                        self._pen_axis_tick)
@@ -807,10 +809,11 @@ class OWBoxPlot(widget.OWWidget):
             t.setFlags(t.flags() | QGraphicsItem.ItemIgnoresTransformations)
             r = t.boundingRect()
             x_start = val * scale_x - r.width() / 2
-            if last_text is None or x_start > last_text + 10:
+            x_finish = x_start + r.width()
+            if x_start > last_text + 10 and x_finish < self.scene_max_x:
                 t.setPos(x_start, 8)
                 self.box_scene.addItem(t)
-                last_text = x_start + r.width()
+                last_text = x_finish
             if val >= top:
                 break
             val += step
