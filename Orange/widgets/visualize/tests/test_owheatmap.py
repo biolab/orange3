@@ -151,3 +151,20 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
 
         self.assertTrue(self.widget.Warning.empty_clusters.is_shown())
         self.assertEqual(len(self.widget.merge_indices), 3)
+
+    def test_use_enough_colors(self):
+        # Before 201906 thresholds modified the palette and decreased
+        # the number of colors used.
+        data = np.arange(1000).reshape(-1, 1)
+        table = Table.from_numpy(Domain([ContinuousVariable()]), data)
+        self.send_signal(self.widget.Inputs.data, table)
+        self.widget.threshold_high = 0.05
+        self.widget.update_color_schema()
+        heatmap_widget = self.widget.heatmap_widget_grid[0][0]
+        image = heatmap_widget.heatmap_item.pixmap().toImage()
+        colors = np.full((len(data), 3), np.nan)
+        for r in range(len(data)):
+            c = image.pixelColor(0, r)
+            colors[r] = c.red(), c.green(), c.blue()
+        unique_colors = len(np.unique(colors, axis=0))
+        self.assertLessEqual(len(data)*self.widget.threshold_low, unique_colors)

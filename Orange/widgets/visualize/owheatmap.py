@@ -182,14 +182,11 @@ def color_palette_model(palettes, iconsize=QSize(64, 16)):
     return model
 
 
-def color_palette_table(colors, samples=255,
-                        threshold_low=0.0, threshold_high=1.0,
+def color_palette_table(colors,
                         underflow=None, overflow=None,
                         gamma=None):
-    N = len(colors)
     colors = np.array(colors, dtype=np.ubyte)
-    low, high = threshold_low * 255, threshold_high * 255
-    points = np.linspace(low, high, N)
+    points = np.linspace(0, 255, len(colors))
     space = np.linspace(0, 255, 255)
 
     if underflow is None:
@@ -213,6 +210,12 @@ def color_palette_table(colors, samples=255,
         b = interp_exp(space, points, colors[:, 2], gamma=gamma,
                        left=underflow[0], right=overflow[0])
     return np.c_[r, g, b]
+
+
+def levels_with_thresholds(low, high, threshold_low, threshold_high):
+    lt = low + (high - low) * threshold_low
+    ht = low + (high - low) * threshold_high
+    return lt, ht
 
 
 def interp_exp(x, xp, fp, gamma=0.0, left=None, right=None,):
@@ -614,10 +617,7 @@ class OWHeatMap(widget.OWWidget):
             return []
         else:
             _, colors = max(data.items())
-            return color_palette_table(
-                colors, threshold_low=self.threshold_low,
-                threshold_high=self.threshold_high,
-                gamma=self.gamma)
+            return color_palette_table(colors, gamma=self.gamma)
 
     def clear(self):
         self.data = None
@@ -1044,6 +1044,7 @@ class OWHeatMap(widget.OWWidget):
                     X_part = X_part[:, sort_j[j]]
 
                 hw.set_levels(parts.levels)
+                hw.set_thresholds(self.threshold_low, self.threshold_high)
                 hw.set_color_table(palette)
                 hw.set_show_averages(self.averages)
                 hw.set_heatmap_data(X_part)
@@ -1116,7 +1117,7 @@ class OWHeatMap(widget.OWWidget):
             col_annotation_widgets_bottom.append(labelslist)
 
         legend = GradientLegendWidget(
-            parts.levels[0], parts.levels[1],
+            parts.levels[0], parts.levels[1], self.threshold_low, self.threshold_high,
             parent=widget)
 
         legend.set_color_table(palette)
@@ -1346,9 +1347,11 @@ class OWHeatMap(widget.OWWidget):
     def update_color_schema(self):
         palette = self.color_palette()
         for heatmap in self.heatmap_widgets():
+            heatmap.set_thresholds(self.threshold_low, self.threshold_high)
             heatmap.set_color_table(palette)
 
         for legend in self.legend_widgets():
+            legend.set_thresholds(self.threshold_low, self.threshold_high)
             legend.set_color_table(palette)
 
     def update_sorting_examples(self):
@@ -1630,6 +1633,7 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
         self.setAcceptHoverEvents(True)
 
         self.__levels = None
+        self.__threshold_low, self.__threshold_high = 0., 1.
         self.__colortable = None
         self.__data = data
 
@@ -1711,6 +1715,12 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
         self._update_pixmap()
         self.update()
 
+    def set_thresholds(self, threshold_low, threshold_high):
+        self.__threshold_low = threshold_low
+        self.__threshold_high = threshold_high
+        self._update_pixmap()
+        self.update()
+
     def _update_pixmap(self):
         """
         Update the pixmap if its construction arguments changed.
@@ -1720,15 +1730,19 @@ class GraphicsHeatmapWidget(QGraphicsWidget):
                 lut = self.__colortable
             else:
                 lut = None
+
+            ll, lh = self.__levels
+            ll, lh = levels_with_thresholds(ll, lh, self.__threshold_low, self.__threshold_high)
+
             argb, _ = pg.makeARGB(
-                self.__data, lut=lut, levels=self.__levels, scale=250)
+                self.__data, lut=lut, levels=(ll, lh))
             argb[np.isnan(self.__data)] = (100, 100, 100, 255)
 
             qimage = pg.makeQImage(argb, transpose=False)
             self.__pixmap = QPixmap.fromImage(qimage)
             avg = np.nanmean(self.__data, axis=1, keepdims=True)
             argb, _ = pg.makeARGB(
-                avg, lut=lut, levels=self.__levels, scale=250)
+                avg, lut=lut, levels=(ll, lh))
             qimage = pg.makeQImage(argb, transpose=False)
             self.__avgpixmap = QPixmap.fromImage(qimage)
         else:
@@ -2071,10 +2085,12 @@ class GraphicsSimpleTextList(QGraphicsWidget):
 
 
 class GradientLegendWidget(QGraphicsWidget):
-    def __init__(self, low, high, parent=None):
+    def __init__(self, low, high, threshold_low, threshold_high, parent=None):
         super().__init__(parent)
         self.low = low
         self.high = high
+        self.threshold_low = threshold_low
+        self.threshold_high = threshold_high
         self.color_table = None
 
         layout = QGraphicsLinearLayout(Qt.Vertical)
@@ -2105,11 +2121,18 @@ class GradientLegendWidget(QGraphicsWidget):
         self.color_table = color_table
         self.__update()
 
+    def set_thresholds(self, threshold_low, threshold_high):
+        self.threshold_low = threshold_low
+        self.threshold_high = threshold_high
+        self.__update()
+
     def __update(self):
-        data = np.linspace(self.low, self.high, num=50, endpoint=True)
+        data = np.linspace(self.low, self.high, num=1000)
         data = data.reshape((1, -1))
+        ll, lh = levels_with_thresholds(self.low, self.high,
+                                        self.threshold_low, self.threshold_high)
         argb, _ = pg.makeARGB(data, lut=self.color_table,
-                              levels=(self.low, self.high))
+                              levels=(ll, lh))
         qimg = pg.makeQImage(argb, transpose=False)
         self.__pixitem.setPixmap(QPixmap.fromImage(qimg))
 
