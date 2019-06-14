@@ -2,7 +2,7 @@
 # pylint: disable=unused-argument
 # __new__ methods have different arguments
 # pylint: disable=arguments-differ
-import warnings
+from warnings import warn
 from collections import namedtuple
 
 import numpy as np
@@ -345,9 +345,9 @@ class Validation:
                                  "and train_data are omitted")
             return self
 
-        warnings.warn("calling Validation's constructor with data and learners"
-                      "is deprecated;\nconstruct an instance and call it",
-                      DeprecationWarning, stacklevel=2)
+        warn("calling Validation's constructor with data and learners"
+             "is deprecated;\nconstruct an instance and call it",
+             DeprecationWarning, stacklevel=2)
 
         # Explicitly call __init__ because Python won't
         self.__init__(store_data=store_data, store_models=store_models,
@@ -367,8 +367,8 @@ class Validation:
         self.store_models = store_models
 
     def fit(self, *args, **kwargs):
-        warnings.warn("Validation.fit is deprecated; use the call operator",
-                      DeprecationWarning)
+        warn("Validation.fit is deprecated; use the call operator",
+             DeprecationWarning)
         return self(*args, **kwargs)
 
     def __call__(self, data, learners, preprocessor=None, *, callback=None):
@@ -574,6 +574,7 @@ class ShuffleSplit(Validation):
 
 
 class TestOnTestData(Validation):
+    # get_indices is not needed in this class, pylint: disable=abstract-method
     def __new__(cls, data=None, test_data=None, learners=None,
                 preprocessor=None, **kwargs):
         if "train_data" in kwargs:
@@ -618,6 +619,8 @@ class TestOnTestData(Validation):
 
 
 class TestOnTrainingData(TestOnTestData):
+    # get_indices is not needed in this class, pylint: disable=abstract-method
+    # signature is such as on the base class, pylint: disable=signature-differs
     def __new__(cls, data=None, learners=None, preprocessor=None, **kwargs):
         return super().__new__(
             cls,

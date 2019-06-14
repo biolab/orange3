@@ -88,7 +88,7 @@ class Try(abc.ABC):
             return "{}({!r})".format(self.__class__.__qualname__,
                                      self.exception)
 
-        def map(self, fn):
+        def map(self, _fn):
             return self
 
     def __new__(cls, f, *args, **kwargs):
@@ -283,7 +283,8 @@ class OWTestLearners(OWWidget):
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(780, 1)
 
     def _update_controls(self):
@@ -333,7 +334,7 @@ class OWTestLearners(OWWidget):
         self.Error.too_many_classes.clear()
         self.Error.no_class_values.clear()
         self.Error.only_one_class_var_value.clear()
-        if data is not None and not len(data):
+        if data is not None and not data:
             self.Error.train_data_empty()
             data = None
         if data:
@@ -392,7 +393,7 @@ class OWTestLearners(OWWidget):
         """
         self.Information.test_data_sampled.clear()
         self.Error.test_data_empty.clear()
-        if data is not None and not len(data):
+        if data is not None and not data:
             self.Error.test_data_empty()
             data = None
         if data and not data.domain.class_var:
@@ -888,7 +889,6 @@ class UserInterrupt(BaseException):
     """
     A BaseException subclass used for cooperative task/thread cancellation
     """
-    pass
 
 
 def results_add_by_model(x, y):
@@ -991,21 +991,20 @@ class Task:
 
 if __name__ == "__main__":  # pragma: no cover
     filename = "iris"
-    data = Table(filename)
-    class_var = data.domain.class_var
-    if class_var.is_discrete:
-        learners = [lambda data: 1 / 0,
-                    Orange.classification.LogisticRegressionLearner(),
-                    Orange.classification.MajorityLearner(),
-                    Orange.classification.NaiveBayesLearner()]
+    preview_data = Table(filename)
+    if preview_data.domain.class_var.is_discrete:
+        prev_learners = [lambda data: 1 / 0,
+                         Orange.classification.LogisticRegressionLearner(),
+                         Orange.classification.MajorityLearner(),
+                         Orange.classification.NaiveBayesLearner()]
     else:
-        learners = [lambda data: 1 / 0,
-                    Orange.regression.MeanLearner(),
-                    Orange.regression.KNNRegressionLearner(),
-                    Orange.regression.RidgeRegressionLearner()]
+        prev_learners = [lambda data: 1 / 0,
+                         Orange.regression.MeanLearner(),
+                         Orange.regression.KNNRegressionLearner(),
+                         Orange.regression.RidgeRegressionLearner()]
 
     WidgetPreview(OWTestLearners).run(
-        set_train_data=data,
-        set_test_data=data,
-        set_learner=[(learner, i) for i, learner in enumerate(learners)]
+        set_train_data=preview_data,
+        set_test_data=preview_data,
+        set_learner=[(learner, i) for i, learner in enumerate(prev_learners)]
     )
