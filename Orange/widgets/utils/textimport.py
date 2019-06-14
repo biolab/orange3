@@ -1634,7 +1634,7 @@ class TablePreviewModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             return value
         elif role == TablePreviewModel.ColumnTypeRole:
-            self.__headerData[Qt.Horizontal][index.column()].get(role, None)
+            return self.__headerData[Qt.Horizontal][index.column()].get(role)
         else:
             return None
 
