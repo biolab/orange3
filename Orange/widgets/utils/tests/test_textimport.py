@@ -2,10 +2,11 @@ import unittest
 import csv
 import io
 
-from PyQt5.QtWidgets import QApplication, QComboBox, QWidget
+from PyQt5.QtWidgets import QComboBox, QWidget
 from PyQt5.QtTest import QSignalSpy
 
 from Orange.widgets.utils import textimport
+from Orange.widgets.tests.base import GuiTest
 
 ColumnTypes = textimport.ColumnType
 
@@ -18,21 +19,7 @@ DATA4 = b'A, B, C, D\n' \
 DATA5 = b'a\tb\n' * 1000
 
 
-class WidgetsTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        app = QApplication.instance()
-        if app is None:
-            app = QApplication([])
-        cls.app = app
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.app.quit()
-        del cls.app
-        super().tearDownClass()
-
+class WidgetsTests(GuiTest):
     def test_options_widget(self):
         w = textimport.CSVOptionsWidget()
         schanged = QSignalSpy(w.optionsChanged)
