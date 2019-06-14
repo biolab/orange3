@@ -13,6 +13,13 @@ import traceback
 import warnings
 import logging
 import weakref
+import json
+
+import gzip
+import lzma
+import bz2
+import zipfile
+
 from xml.sax.saxutils import escape
 from functools import singledispatch
 from concurrent import futures
@@ -35,7 +42,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
-import json
 import numpy as np
 import pandas.errors
 import pandas as pd
@@ -53,6 +59,7 @@ from Orange.widgets.utils.settings import (
 
 
 if typing.TYPE_CHECKING:
+    # pylint: disable=invalid-name
     T = typing.TypeVar("T")
     K = typing.TypeVar("K")
 
@@ -96,11 +103,11 @@ class Options:
         A encoding to use for reading.
     dialect : csv.Dialect
         A csv.Dialect instance.
-    columntypes: List[Tuple[range, ColumnType]]
+    columntypes: Iterable[Tuple[range, ColumnType]]
         A list of column type ranges specifying the types for columns.
         Need not list all columns. Columns not listed are assumed to have auto
         type inference.
-    rowspec : List[Tuple[range, RowSpec]]
+    rowspec : Iterable[Tuple[range, RowSpec]]
          A list of row spec ranges.
     decimal_separator : str
         Decimal separator - a single character string; default: `"."`
@@ -112,13 +119,13 @@ class Options:
     ColumnType = ColumnType
 
     def __init__(self, encoding='utf-8', dialect=csv.excel(), columntypes=[],
-                 rowspec=[(range(0, 1), RowSpec.Header)],
+                 rowspec=((range(0, 1), RowSpec.Header),),
                  decimal_separator=".", group_separator=""):
         # type: (str, csv.Dialect, List[Tuple[range, ColumnType]], ...) -> None
         self.encoding = encoding
         self.dialect = dialect
-        self.columntypes = columntypes
-        self.rowspec = rowspec  # type: List[Tuple[range, Options.RowSpec]]
+        self.columntypes = list(columntypes)
+        self.rowspec = list(rowspec)  # type: List[Tuple[range, Options.RowSpec]]
         self.decimal_separator = decimal_separator
         self.group_separator = group_separator
 
@@ -327,7 +334,7 @@ class CSVImportDialog(QDialog):
             if closeexisting is not None:
                 self.destroyed.disconnect(closeexisting)
                 closeexisting()
-            self.__finalizer = weakref.finalize(self, lambda: f.close())
+            self.__finalizer = weakref.finalize(self, f.close)
             self.destroyed.connect(self.__finalizer)
 
     def __set_error(self, text, format=Qt.PlainText):
@@ -550,11 +557,11 @@ class OWCSVFileImport(widget.OWWidget):
             clicked=self._activate_import_dialog
         )
 
-        self.recent_combo.currentIndexChanged.connect(
-            lambda idx:
-                self.import_options_button.setEnabled(idx != -1) or
-                self.load_button.setEnabled(idx != -1)
-        )
+        def update_buttons(cbindex):
+            self.import_options_button.setEnabled(cbindex != -1)
+            self.load_button.setEnabled(cbindex != -1)
+        self.recent_combo.currentIndexChanged.connect(update_buttons)
+
         button_box.addButton(
             self.import_options_button, QDialogButtonBox.ActionRole
         )
@@ -627,7 +634,7 @@ class OWCSVFileImport(widget.OWWidget):
                     icon=QMessageBox.Question,
                     text="The '{basename}' may be a binary file.\n"
                          "Are you sure you want to continue?".format(
-                            basename=os.path.basename(path)),
+                             basename=os.path.basename(path)),
                     standardButtons=QMessageBox.Cancel | QMessageBox.Yes
                 )
                 mb.setWindowModality(Qt.WindowModal)
@@ -647,7 +654,7 @@ class OWCSVFileImport(widget.OWWidget):
             else:
                 try:
                     dialect, header = sniff_csv_with_path(path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     dialect, header = csv.excel(), True
 
             options = None
@@ -669,7 +676,7 @@ class OWCSVFileImport(widget.OWWidget):
                     encoding="utf-8", dialect=dialect, rowspec=rowspec)
 
             dlg = CSVImportDialog(
-                self, windowTitle="Import Options",  sizeGripEnabled=True)
+                self, windowTitle="Import Options", sizeGripEnabled=True)
             dlg.setWindowModality(Qt.WindowModal)
             dlg.setPath(path)
             dlg.setOptions(options)
@@ -939,7 +946,7 @@ class OWCSVFileImport(widget.OWWidget):
         try:
             df = f.result()
             assert isinstance(df, pd.DataFrame)
-        except pd.errors.EmptyDataError:
+        except pandas.errors.EmptyDataError:
             df = pd.DataFrame({})
         except Exception as e:  # pylint: disable=broad-except
             self.__set_error_state(e)
@@ -965,11 +972,11 @@ class OWCSVFileImport(widget.OWWidget):
         summary = ("{n_instances} row{plural_1}, "
                    "{n_features} feature{plural_2}, "
                    "{n_meta} meta{plural_3}").format(
-                        n_instances=len(data), plural_1=pluralize(data),
-                        n_features=len(data.domain.attributes),
-                        plural_2=pluralize(data.domain.attributes),
-                        n_meta=len(data.domain.metas),
-                        plural_3=pluralize(data.domain.metas))
+                       n_instances=len(data), plural_1=pluralize(data),
+                       n_features=len(data.domain.attributes),
+                       plural_2=pluralize(data.domain.attributes),
+                       n_meta=len(data.domain.metas),
+                       plural_3=pluralize(data.domain.metas))
         self.summary_text.setText(summary)
 
     def itemsFromSettings(self):
@@ -990,7 +997,6 @@ class OWCSVFileImport(widget.OWWidget):
             except (csv.Error, LookupError, TypeError, json.JSONDecodeError):
                 _log.error("Could not reconstruct options for '%s'", path,
                            exc_info=True)
-                pass
             else:
                 items.append((path, opts))
         return items[::-1]
@@ -1006,7 +1012,7 @@ class OWCSVFileImport(widget.OWWidget):
         for p, m in self._session_items:
             try:
                 item_ = (p, Options.from_dict(m))
-            except (csv.Error, LookupError) as e:
+            except (csv.Error, LookupError):
                 # Is it better to fail then to lose a item slot?
                 _log.error("Failed to restore '%s'", p, exc_info=True)
             else:
@@ -1050,12 +1056,6 @@ def sniff_csv(file, samplesize=2 ** 20):
 def sniff_csv_with_path(path, encoding="utf-8", samplesize=2 ** 20):
     with _open(path, "rt", encoding=encoding) as f:
         return sniff_csv(f, samplesize)
-
-
-import gzip
-import lzma
-import bz2
-import zipfile
 
 
 def _open(path, mode, encoding=None):
@@ -1136,7 +1136,7 @@ def _mime_type_for_path(path):
         try:
             with _open(path, "rb") as f:
                 sample = f.read(4096)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             sample = b''
         mtype = db.mimeTypeForData(sample)
     return mtype
@@ -1153,7 +1153,7 @@ NA_VALUES = {
 }
 
 
-def load_csv(path, opts, progres_callback=None):
+def load_csv(path, opts, progress_callback=None):
     # type: (Union[AnyStr, BinaryIO], Options, ...) -> pd.DataFrame
     def dtype(coltype):
         # type: (ColumnType) -> Optional[str]
@@ -1170,7 +1170,7 @@ def load_csv(path, opts, progres_callback=None):
         elif coltype == ColumnType.Auto:
             return None
         else:
-            assert False
+            raise TypeError
 
     def expand(ranges):
         # type: (Iterable[Tuple[range, T]]) -> Iterable[Tuple[int, T]]
@@ -1238,7 +1238,7 @@ def load_csv(path, opts, progres_callback=None):
             raise TypeError()
         file = TextReadWrapper(
             f, encoding=opts.encoding,
-            progress_callback=progres_callback)
+            progress_callback=progress_callback)
         stack.callback(file.detach)
         df = pd.read_csv(
             file, sep=opts.dialect.delimiter, dialect=opts.dialect,
@@ -1306,7 +1306,6 @@ class TaskState(QObject):
         """
         Emit the progressChanged signal with `current` and `total`.
         """
-
         if self.cancel:
             raise TaskState.UserCancelException()
         else:
@@ -1328,7 +1327,8 @@ class TextReadWrapper(io.TextIOWrapper):
     def __init__(self, buffer, *args, progress_callback=None, **kwargs):
         super().__init__(buffer, *args, **kwargs)
         if progress_callback is None:
-            def progress_callback(i, j): pass
+            def progress_callback(i, j):  # pylint: disable=unused-argument
+                pass
         self.progress_callback = progress_callback
         try:
             self.__size = os.fstat(buffer.fileno()).st_size
@@ -1476,7 +1476,6 @@ def pandas_to_table(df):
         elif pdtypes.is_numeric_dtype(series):
             orangecol = series.values.astype(np.float64)
             var = Orange.data.ContinuousVariable.make(str(header))
-            var._out_format = "%.15g"
         else:
             warnings.warn(
                 "Column '{}' with dtype: {} skipped."
@@ -1504,8 +1503,8 @@ def pandas_to_table(df):
     return Orange.data.Table.from_numpy(domain, X, None, M)
 
 
-def main(argv=[]):  # pragma: no cover
-    app = QApplication(argv)
+def main(argv=None):  # pragma: no cover
+    app = QApplication(argv or [])
     w = OWCSVFileImport()
     w.show()
     w.raise_()
