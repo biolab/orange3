@@ -721,10 +721,6 @@ class OWTestLearners(OWWidget):
             self.Warning.test_data_unused()
 
         rstate = 42
-        common_args = dict(
-            store_data=True,
-            preprocessor=self.preprocessor,
-        )
         # items in need of an update
         items = [(key, slot) for key, slot in self.learners.items()
                  if slot.results is None]
@@ -736,45 +732,36 @@ class OWTestLearners(OWWidget):
         # learners bellow)
         learners_c = [copy.deepcopy(learner) for learner in learners]
 
-        if self.resampling == OWTestLearners.KFold:
-            folds = self.NFolds[self.n_folds]
+        if self.resampling == OWTestLearners.TestOnTest:
             test_f = partial(
-                Orange.evaluation.CrossValidation,
-                self.data, learners_c, k=folds,
-                random_state=rstate, **common_args)
-        elif self.resampling == OWTestLearners.FeatureFold:
-            test_f = partial(
-                Orange.evaluation.CrossValidationFeature,
-                self.data, learners_c, self.fold_feature,
-                **common_args
-            )
-        elif self.resampling == OWTestLearners.LeaveOneOut:
-            test_f = partial(
-                Orange.evaluation.LeaveOneOut,
-                self.data, learners_c, **common_args
-            )
-        elif self.resampling == OWTestLearners.ShuffleSplit:
-            train_size = self.SampleSizes[self.sample_size] / 100
-            test_f = partial(
-                Orange.evaluation.ShuffleSplit,
-                self.data, learners_c,
-                n_resamples=self.NRepeats[self.n_repeats],
-                train_size=train_size, test_size=None,
-                stratified=self.shuffle_stratified,
-                random_state=rstate, **common_args
-            )
-        elif self.resampling == OWTestLearners.TestOnTrain:
-            test_f = partial(
-                Orange.evaluation.TestOnTrainingData,
-                self.data, learners_c, **common_args
-            )
-        elif self.resampling == OWTestLearners.TestOnTest:
-            test_f = partial(
-                Orange.evaluation.TestOnTestData,
-                self.data, self.test_data, learners_c, **common_args
+                Orange.evaluation.TestOnTestData(store_data=True),
+                self.data, self.test_data, learners_c, self.preprocessor
             )
         else:
-            assert False, "self.resampling %s" % self.resampling
+            if self.resampling == OWTestLearners.KFold:
+                sampler = Orange.evaluation.CrossValidation(
+                    k=self.NFolds[self.n_folds],
+                    random_state=rstate)
+            elif self.resampling == OWTestLearners.FeatureFold:
+                sampler = Orange.evaluation.CrossValidationFeature(
+                    feature=self.fold_feature)
+            elif self.resampling == OWTestLearners.LeaveOneOut:
+                sampler = Orange.evaluation.LeaveOneOut()
+            elif self.resampling == OWTestLearners.ShuffleSplit:
+                sampler = Orange.evaluation.ShuffleSplit(
+                    n_resamples=self.NRepeats[self.n_repeats],
+                    train_size=self.SampleSizes[self.sample_size] / 100,
+                    test_size=None,
+                    stratified=self.shuffle_stratified,
+                    random_state=rstate)
+            elif self.resampling == OWTestLearners.TestOnTrain:
+                sampler = Orange.evaluation.TestOnTrainingData()
+            else:
+                assert False, "self.resampling %s" % self.resampling
+
+            sampler.store_data = True
+            test_f = partial(
+                sampler, self.data, learners_c, self.preprocessor)
 
         def replace_learners(evalfunc, *args, **kwargs):
             res = evalfunc(*args, **kwargs)

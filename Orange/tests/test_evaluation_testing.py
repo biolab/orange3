@@ -61,7 +61,7 @@ class TestSampling(unittest.TestCase):
 
         major_call = 0
         fail_calls = 0
-        res = method(random_data(50, 4), [major, fails, major])
+        res = method()(random_data(50, 4), [major, fails, major])
         self.assertFalse(res.failed[0])
         self.assertIsInstance(res.failed[1], Exception)
         self.assertFalse(res.failed[2])
@@ -72,8 +72,9 @@ class TestSampling(unittest.TestCase):
         def record_progress(p):
             progress.append(p)
         progress = []
-        method(self.random_table, [MajorityLearner(), MajorityLearner()],
-               callback=record_progress)
+        method()(
+            self.random_table, [MajorityLearner(), MajorityLearner()],
+            callback=record_progress)
         np.testing.assert_almost_equal(np.array(progress), expected_progresses)
 
     def run_test_preprocessor(self, method, expected_sizes):
@@ -81,8 +82,8 @@ class TestSampling(unittest.TestCase):
             data_sizes.append(len(data))
             return data
         data_sizes = []
-        method(Table('iris'), [MajorityLearner(), MajorityLearner()],
-               preprocessor=preprocessor)
+        method()(Table('iris'), [MajorityLearner(), MajorityLearner()],
+                 preprocessor=preprocessor)
         self.assertEqual(data_sizes, expected_sizes)
 
     def check_folds(self, result, folds_count, rows):
@@ -110,7 +111,6 @@ class TestValidation(unittest.TestCase):
         self.assertRaises(ValueError, Validation, data)
         self.assertRaises(ValueError, Validation, None, [MajorityLearner()])
         self.assertRaises(ValueError, Validation, preprocessor=lambda x: x)
-        self.assertRaises(ValueError, Validation, test_data=data)
         self.assertRaises(ValueError, Validation, callback=lambda x: x)
 
 
@@ -131,8 +131,8 @@ class TestCrossValidation(TestSampling):
 
     def test_results(self):
         nrows, _ = self.random_table.X.shape
-        res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=10,
-                              stratified=False)
+        res = CrossValidation(k=10, stratified=False)(
+            self.random_table, [NaiveBayesLearner()])
         y = self.random_table.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -142,17 +142,18 @@ class TestCrossValidation(TestSampling):
         self.check_folds(res, 10, nrows)
 
     def test_continuous(self):
-        res = CrossValidation(self.housing, [LinearRegressionLearner()], k=3, n_jobs=1)
+        res = CrossValidation(k=3, n_jobs=1)(
+            self.housing, [LinearRegressionLearner()])
         self.assertLess(RMSE(res), 5)
 
     def test_folds(self):
-        res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5)
+        res = CrossValidation(k=5)(self.random_table, [NaiveBayesLearner()])
         self.check_folds(res, 5, self.nrows)
 
     def test_call_5(self):
         nrows, _ = self.random_table.X.shape
-        res = CrossValidation(self.random_table, [NaiveBayesLearner()], k=5,
-                              stratified=False)
+        res = CrossValidation(k=5, stratified=False)(
+            self.random_table, [NaiveBayesLearner()])
         y = self.random_table.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -163,25 +164,26 @@ class TestCrossValidation(TestSampling):
 
     def test_store_data(self):
         learners = [NaiveBayesLearner()]
-        res = CrossValidation(self.random_table, learners, store_data=False)
+        res = CrossValidation(store_data=False)(self.random_table, learners)
         self.assertIsNone(res.data)
 
-        res = CrossValidation(self.random_table, learners, store_data=True)
+        res = CrossValidation(store_data=True)(self.random_table, learners)
         self.assertIs(res.data, self.random_table)
 
     def test_store_models(self):
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = CrossValidation(self.random_table, learners, k=5, store_models=False)
+        res = CrossValidation(store_models=False, k=5)(
+            self.random_table, learners)
         self.assertIsNone(res.models)
 
-        res = CrossValidation(self.random_table, learners, k=5, store_models=True)
+        res = CrossValidation(k=5, store_models=True)(self.random_table, learners)
         self.assertEqual(len(res.models), 5)
         self.check_models(res, learners, 5)
 
     def test_split_by_model(self):
         learners = [NaiveBayesLearner(), MajorityLearner()]
-        res = CrossValidation(self.random_table, learners, k=5, store_models=True)
+        res = CrossValidation(k=5, store_models=True)(self.random_table, learners)
 
         for i, result in enumerate(res.split_by_model()):
             self.assertIsInstance(result, Results)
@@ -195,7 +197,7 @@ class TestCrossValidation(TestSampling):
     def test_10_fold_probs(self):
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = CrossValidation(self.iris[30:130], learners, k=10)
+        results = CrossValidation(k=10)(self.iris[30:130], learners)
 
         self.assertEqual(results.predicted.shape, (2, len(self.iris[30:130])))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -209,17 +211,18 @@ class TestCrossValidation(TestSampling):
         y = x[:, -1]
         x[-4:] = np.ones((4, 3))
         data = Table(x, y)
-        res = CrossValidation(data, [MajorityLearner()], k=3)
+        cv = CrossValidation(k=3)
+        res = cv(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[-4:] = np.zeros((4, 3))
-        res = CrossValidation(data, [MajorityLearner()], k=3)
+        res = cv(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
     def test_too_many_folds(self):
         w = []
-        CrossValidation(self.iris, [MajorityLearner()],
-                        k=len(self.iris) // 2, warnings=w)
+        CrossValidation(k=len(self.iris) // 2, warnings=w)(
+            self.iris, [MajorityLearner()])
         self.assertGreater(len(w), 0)
 
     def test_failed(self):
@@ -234,7 +237,7 @@ class TestCrossValidation(TestSampling):
     def test_augmented_data_classification(self):
         data = Table("iris")
         n_classes = len(data.domain.class_var.values)
-        res = CrossValidation(data, [NaiveBayesLearner()], store_data=True)
+        res = CrossValidation(store_data=True)(data, [NaiveBayesLearner()])
         table = res.get_augmented_data(['Naive Bayes'])
 
         self.assertEqual(len(table), len(data))
@@ -246,7 +249,7 @@ class TestCrossValidation(TestSampling):
         self.assertEqual(
             table.domain.metas[len(data.domain.metas)].values, data.domain.class_var.values)
 
-        res = CrossValidation(data, [NaiveBayesLearner(), MajorityLearner()], store_data=True)
+        res = CrossValidation(store_data=True)(data, [NaiveBayesLearner(), MajorityLearner()])
         table = res.get_augmented_data(['Naive Bayes', 'Majority'])
 
         self.assertEqual(len(table), len(data))
@@ -261,7 +264,7 @@ class TestCrossValidation(TestSampling):
 
     def test_augmented_data_regression(self):
         data = Table("housing")
-        res = CrossValidation(data, [LinearRegressionLearner(), ], store_data=True)
+        res = CrossValidation(store_data=True)(data, [LinearRegressionLearner()])
         table = res.get_augmented_data(['Linear Regression'])
 
         self.assertEqual(len(table), len(data))
@@ -270,7 +273,7 @@ class TestCrossValidation(TestSampling):
         # +1 for class, +1 for fold
         self.assertEqual(len(table.domain.metas), len(data.domain.metas) + 1 + 1)
 
-        res = CrossValidation(data, [LinearRegressionLearner(), MeanLearner()], store_data=True)
+        res = CrossValidation(store_data=True)(data, [LinearRegressionLearner(), MeanLearner()])
         table = res.get_augmented_data(['Linear Regression', 'Mean Learner'])
 
         self.assertEqual(len(table), len(data))
@@ -300,7 +303,7 @@ class TestCrossValidationFeature(TestSampling):
     def test_call(self):
         t = self.random_table
         t = self.add_meta_fold(t, 3)
-        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=t.domain.metas[0])
+        res = CrossValidationFeature(feature=t.domain.metas[0])(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(len(t)))
         np.testing.assert_equal(res.predicted[0],
@@ -313,7 +316,7 @@ class TestCrossValidationFeature(TestSampling):
         t = self.add_meta_fold(t, 3)
         fat = t.domain.metas[0]
         t[0][fat] = float("nan")
-        res = CrossValidationFeature(t, [NaiveBayesLearner()], feature=fat)
+        res = CrossValidationFeature(feature=fat)(t, [NaiveBayesLearner()])
         self.assertNotIn(0, res.row_indices)
 
     def test_bad_feature(self):
@@ -326,18 +329,14 @@ class TestCrossValidationFeature(TestSampling):
             np.zeros((10, 1)), np.ones((10, 1)), np.full((10, 1), np.nan))
         self.assertRaises(
             ValueError,
-            CrossValidationFeature, t, [NaiveBayesLearner()], feature=feat)
-
-    def test_no_test_data(self):
-        self.assertRaises(ValueError, CrossValidation.prepare_arrays,
-                          self.random_table, self.random_table, [])
+            CrossValidationFeature(feature=feat), t, [NaiveBayesLearner()])
 
 
 class TestLeaveOneOut(TestSampling):
     def test_results(self):
         nrows = self.nrows
         t = self.random_table
-        res = LeaveOneOut(t, [NaiveBayesLearner()])
+        res = LeaveOneOut()(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -349,7 +348,7 @@ class TestLeaveOneOut(TestSampling):
     def test_call(self):
         nrows = self.nrows
         t = self.random_table
-        res = LeaveOneOut(t, [NaiveBayesLearner()])
+        res = LeaveOneOut()(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -361,27 +360,27 @@ class TestLeaveOneOut(TestSampling):
         t = self.random_table
         learners = [NaiveBayesLearner()]
 
-        res = LeaveOneOut(t, learners, store_data=False)
+        res = LeaveOneOut(store_data=False)(t, learners)
         self.assertIsNone(res.data)
 
-        res = LeaveOneOut(t, learners, store_data=True)
+        res = LeaveOneOut(store_data=True)(t, learners)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
         t = self.random_table
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = LeaveOneOut(t, learners)
+        res = LeaveOneOut()(t, learners)
         self.assertIsNone(res.models)
 
-        res = LeaveOneOut(t, learners, store_models=True)
+        res = LeaveOneOut(store_models=True)(t, learners)
         self.check_models(res, learners, self.nrows)
 
     def test_probs(self):
         data = Table('iris')[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = LeaveOneOut(data, learners)
+        results = LeaveOneOut()(data, learners)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -395,16 +394,16 @@ class TestLeaveOneOut(TestSampling):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = LeaveOneOut(data, [MajorityLearner()])
+        res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = LeaveOneOut(data, [MajorityLearner()])
+        res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         data = Table(x, y)
-        res = LeaveOneOut(data, [MajorityLearner()])
+        res = LeaveOneOut()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0],
                                 1 - data.Y[res.row_indices].flatten())
 
@@ -417,16 +416,16 @@ class TestLeaveOneOut(TestSampling):
     def test_preprocessor(self):
         self.run_test_preprocessor(LeaveOneOut, [149] * 150)
 
-    def test_no_test_data(self):
-        self.assertRaises(ValueError, LeaveOneOut.prepare_arrays,
-                          self.random_table, self.random_table, [])
-
 
 class TestTestOnTrainingData(TestSampling):
+    @staticmethod
+    def _callback_values(iterations):
+        return np.hstack(((np.arange(iterations) + 1) / iterations, [1]))
+
     def test_results(self):
         nrows, _ = self.random_table.X.shape
         t = self.random_table
-        res = TestOnTrainingData(t, [NaiveBayesLearner()])
+        res = TestOnTrainingData()(t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -438,26 +437,26 @@ class TestTestOnTrainingData(TestSampling):
     def test_store_data(self):
         t = self.random_table
         learners = [NaiveBayesLearner()]
-        res = TestOnTrainingData(t, learners)
+        res = TestOnTrainingData()(t, learners)
         self.assertIsNone(res.data)
-        res = TestOnTrainingData(t, learners, store_data=True)
+        res = TestOnTrainingData(store_data=True)(t, learners)
         self.assertIs(res.data, t)
 
     def test_store_models(self):
         t = self.random_table
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = TestOnTrainingData(t, learners)
+        res = TestOnTrainingData()(t, learners)
         self.assertIsNone(res.models)
 
-        res = TestOnTrainingData(t, learners, store_models=True)
+        res = TestOnTrainingData(store_models=True)(t, learners)
         self.check_models(res, learners, 1)
 
     def test_probs(self):
         data = self.iris[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
 
-        results = TestOnTrainingData(data, learners)
+        results = TestOnTrainingData()(data, learners)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -471,16 +470,16 @@ class TestTestOnTrainingData(TestSampling):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         data = Table(x, y)
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
 
     def test_failed(self):
@@ -492,17 +491,16 @@ class TestTestOnTrainingData(TestSampling):
     def test_preprocessor(self):
         self.run_test_preprocessor(TestOnTrainingData, [150])
 
-    def test_no_test_data(self):
-        self.assertRaises(ValueError, TestOnTrainingData,
-                          self.random_table, [MajorityLearner()],
-                          test_data=self.random_table)
-
 
 class TestTestOnTestData(TestSampling):
+    @staticmethod
+    def _callback_values(iterations):
+        return np.hstack(((np.arange(iterations) + 1) / iterations, [1]))
+
     def test_results(self):
         nrows, _ = self.random_table.X.shape
         t = self.random_table
-        res = TestOnTestData(t, t, [NaiveBayesLearner()])
+        res = TestOnTestData()(t, t, [NaiveBayesLearner()])
         y = t.Y
         np.testing.assert_equal(res.actual, y[res.row_indices].reshape(nrows))
         np.testing.assert_equal(res.predicted[0],
@@ -514,7 +512,7 @@ class TestTestOnTestData(TestSampling):
     def test_probs(self):
         data = self.iris[30:130]
         learners = [MajorityLearner(), MajorityLearner()]
-        results = TestOnTestData(data, data, learners)
+        results = TestOnTestData()(data, data, learners)
 
         self.assertEqual(results.predicted.shape, (2, len(data)))
         np.testing.assert_equal(results.predicted, np.ones((2, 100)))
@@ -524,7 +522,7 @@ class TestTestOnTestData(TestSampling):
 
         train = self.iris[50:120]
         test = self.iris[:50]
-        results = TestOnTestData(train, test, learners)
+        results = TestOnTestData()(train, test, learners)
         self.assertEqual(results.predicted.shape, (2, len(test)))
         np.testing.assert_equal(results.predicted, np.ones((2, 50)))
         probs = results.probabilities
@@ -536,10 +534,10 @@ class TestTestOnTestData(TestSampling):
         test = data[int(self.nrows*.75):]
         learners = [MajorityLearner()]
 
-        res = TestOnTestData(train, test, learners)
+        res = TestOnTestData()(train, test, learners)
         self.assertIsNone(res.data)
 
-        res = TestOnTestData(train, test, learners, store_data=True)
+        res = TestOnTestData(store_data=True)(train, test, learners)
         self.assertIs(res.data, test)
 
     def test_store_models(self):
@@ -548,10 +546,10 @@ class TestTestOnTestData(TestSampling):
         test = data[int(self.nrows*.75):]
         learners = [NaiveBayesLearner(), MajorityLearner()]
 
-        res = TestOnTestData(train, test, learners)
+        res = TestOnTestData()(train, test, learners)
         self.assertIsNone(res.models)
 
-        res = TestOnTestData(train, test, learners, store_models=True)
+        res = TestOnTestData(store_models=True)(train, test, learners)
         self.check_models(res, learners, 1)
 
     @staticmethod
@@ -560,17 +558,17 @@ class TestTestOnTestData(TestSampling):
         y = x[:, -1]
         x[49] = 1
         data = Table(x, y)
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[49] = 0
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0][:49], 0)
 
         x[25:] = 1
         y = x[:, -1]
         data = Table(x, y)
-        res = TestOnTrainingData(data, [MajorityLearner()])
+        res = TestOnTrainingData()(data, [MajorityLearner()])
         np.testing.assert_equal(res.predicted[0], res.predicted[0][0])
 
     def run_test_failed(self, method, succ_calls):
@@ -589,7 +587,7 @@ class TestTestOnTestData(TestSampling):
         major_call = 0
         fail_calls = 0
         data = random_data(50, 4)
-        res = TestOnTestData(data, data, [major, fails, major])
+        res = TestOnTestData()(data, data, [major, fails, major])
         self.assertFalse(res.failed[0])
         self.assertIsInstance(res.failed[1], Exception)
         self.assertFalse(res.failed[2])
@@ -602,8 +600,8 @@ class TestTestOnTestData(TestSampling):
 
         progress = []
         data = random_data(50, 4)
-        TestOnTestData(data, data, [MajorityLearner(), MajorityLearner()],
-                       callback=record_progress)
+        TestOnTestData()(data, data, [MajorityLearner(), MajorityLearner()],
+                         callback=record_progress)
         np.testing.assert_almost_equal(progress, self._callback_values(2))
 
     def test_preprocessor(self):
@@ -613,9 +611,9 @@ class TestTestOnTestData(TestSampling):
 
         data_sizes = []
         data = random_data(50, 5)
-        TestOnTestData(data[:30], data[-20:],
-                       [MajorityLearner(), MajorityLearner()],
-                       preprocessor=preprocessor)
+        TestOnTestData()(data[:30], data[-20:],
+                         [MajorityLearner(), MajorityLearner()],
+                         preprocessor=preprocessor)
         self.assertEqual(data_sizes, [30])
 
 
@@ -655,17 +653,18 @@ class TestShuffleSplit(TestSampling):
     def test_results(self):
         data = self.random_table
         train_size, n_resamples = 0.6, 10
-        res = ShuffleSplit(data, [NaiveBayesLearner()], train_size=train_size,
-                           test_size=1 - train_size, n_resamples=n_resamples)
+        res = ShuffleSplit(
+            train_size=train_size, test_size=1 - train_size,
+            n_resamples=n_resamples)(data, [NaiveBayesLearner()])
         self.assertEqual(len(res.predicted[0]),
                          n_resamples * self.nrows * (1 - train_size))
 
     def test_stratified(self):
         # strata size
         n = 50
-        res = ShuffleSplit(self.iris, [NaiveBayesLearner()],
-                           train_size=.5, test_size=.5,
-                           n_resamples=3, stratified=True, random_state=0)
+        res = ShuffleSplit(
+            train_size=.5, test_size=.5, n_resamples=3, stratified=True,
+            random_state=0)(self.iris, [NaiveBayesLearner()])
 
         for fold in res.folds:
             self.assertEqual(np.count_nonzero(res.row_indices[fold] < n), n // 2)
@@ -674,9 +673,9 @@ class TestShuffleSplit(TestSampling):
     def test_not_stratified(self):
         # strata size
         n = 50
-        res = ShuffleSplit(self.iris, [NaiveBayesLearner()],
-                           train_size=.5, test_size=.5,
-                           n_resamples=3, stratified=False, random_state=0)
+        res = ShuffleSplit(
+            train_size=.5, test_size=.5, n_resamples=3, stratified=False,
+            random_state=0)(self.iris, [NaiveBayesLearner()])
 
         strata_samples = []
         for fold in res.folds:
@@ -685,7 +684,3 @@ class TestShuffleSplit(TestSampling):
                 np.count_nonzero(res.row_indices[fold] < 2 * n) == n]
 
         self.assertTrue(not all(strata_samples))
-
-    def test_no_test_data(self):
-        self.assertRaises(ValueError, ShuffleSplit.prepare_arrays,
-                          self.random_table, self.random_table, [])

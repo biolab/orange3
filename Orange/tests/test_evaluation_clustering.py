@@ -30,9 +30,9 @@ class TestClusteringEvaluation(unittest.TestCase):
 
     def test_kmeans(self):
         table = Orange.data.Table('iris')
-        cr = ClusteringEvaluation(table, learners=[KMeans(n_clusters=2),
-                                                   KMeans(n_clusters=3),
-                                                   KMeans(n_clusters=5)], k=3)
+        cr = ClusteringEvaluation(k=3)(table, learners=[KMeans(n_clusters=2),
+                                                        KMeans(n_clusters=3),
+                                                        KMeans(n_clusters=5)])
         expected = [0.68081362, 0.55259194, 0.48851755]
         np.testing.assert_almost_equal(Silhouette(cr), expected, decimal=2)
         expected = [0.51936073, 0.74837231, 0.59178896]
@@ -40,8 +40,8 @@ class TestClusteringEvaluation(unittest.TestCase):
                                        expected, decimal=2)
         self.assertIsNone(cr.models)
 
-        cr = ClusteringEvaluation(table, learners=[KMeans(n_clusters=2)], k=3,
-                                  store_models=True)
+        cr = ClusteringEvaluation(k=3, store_models=True)(
+            table, learners=[KMeans(n_clusters=2)])
         self.assertEqual(cr.models.shape, (3, 1))
         self.assertTrue(all(isinstance(m, KMeansModel)
                             for m in cr.models.flatten()))

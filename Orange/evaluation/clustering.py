@@ -78,24 +78,14 @@ class ClusteringEvaluation(Validation):
         The number of runs.
 
     """
-    # pylint: disable=arguments-differ, unused-argument
-    def __new__(cls, data=None, learners=None, k=1,
-                store_data=False, store_models=False, preprocessor=None,
-                callback=None, n_jobs=1):
-        return super().__new__(
-            cls,
-            data, learners, preprocessor=preprocessor, callback=callback, k=k,
-            store_data=True, store_models=store_models)
-
     # pylint: disable=unused-argument
     def __init__(self, data=None, learners=None, k=1,
                  store_data=False, store_models=False, preprocessor=None,
                  callback=None, n_jobs=1):
-        super().__init__()
+        super().__init__(store_data=store_data, store_models=store_models)
         self.k = k
 
-    def fit(self, learners, preprocessor, data, test_data=None,
-            *, callback=None):
+    def __call__(self, data, learners, preprocessor=None, *, callback=None):
         res = ClusteringResults()
         res.data = data
         res.predicted = np.empty((len(learners), self.k, len(data)))
