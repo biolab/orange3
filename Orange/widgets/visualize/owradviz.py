@@ -29,6 +29,10 @@ from Orange.widgets.visualize.utils.plotutils import TextItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
 
 
+MAX_DISPLAYED_VARS = 20
+MAX_LABEL_LEN = 16
+
+
 class RadvizVizRank(VizRankDialog, OWComponent):
     captionTitle = "Score Plots"
     n_attrs = Setting(3)
@@ -48,8 +52,9 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.n_neighbors = 10
 
         box = gui.hBox(self)
+        max_n_attrs = min(MAX_DISPLAYED_VARS, len(master.model_selected))
         self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, 99, label="Maximum number of variables: ",
+            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
             controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
         gui.rubber(box)
         self.last_run_n_attrs = None
@@ -130,7 +135,8 @@ class RadvizVizRank(VizRankDialog, OWComponent):
             return False
         elif not master.btn_vizrank.isEnabled():
             return False
-        self.n_attrs_spin.setMaximum(len(master.model_selected))
+        self.n_attrs_spin.setMaximum(min(MAX_DISPLAYED_VARS,
+                                         len(master.model_selected)))
         return True
 
     def on_row_clicked(self, index):
@@ -203,9 +209,6 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
     def stopped(self):
         self.n_attrs_spin.setDisabled(False)
-
-
-MAX_LABEL_LEN = 16
 
 
 class OWRadvizGraph(OWGraphWithAnchors):
