@@ -5,8 +5,8 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtGui import QTransform
 from AnyQt.QtWidgets import (
-    QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture
-)
+    QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture,
+    QGraphicsItemGroup)
 
 import pyqtgraph as pg
 
@@ -348,3 +348,41 @@ class DraggableItemsViewBox(InteractiveViewBox):
             else:
                 self.moved.emit(self.item_id, pos.x(), pos.y())
             self.graph.show_indicator(self.item_id)
+
+
+def wrap_legend_items(items, max_width, hspacing, vspacing):
+    def line_width(line):
+        return sum(item.boundingRect().width() for item in line) \
+            + hspacing * (len(line) - 1)
+
+    def create_line(line, yi, fixed_width=None):
+        x = 0
+        for item in line:
+            item.setPos(x, yi * vspacing)
+            paragraph.addToGroup(item)
+            if fixed_width:
+                x += fixed_width
+            else:
+                x += item.boundingRect().width() + hspacing
+
+    max_item = max(item.boundingRect().width() + hspacing for item in items)
+    in_line = int(max_width // max_item)
+    if line_width(items) < max_width:  # single line
+        lines = [items]
+        fixed_width = None
+    elif in_line < 2:
+        lines = [[]]
+        for i, item in enumerate(items):  # just a single column - free wrap
+            lines[-1].append(item)
+            if line_width(lines[-1]) > max_width and len(lines[-1]) > 1:
+                lines.append([lines[-1].pop()])
+        fixed_width = None
+    else:  # arrange into grid
+        lines = [items[i:i + in_line]
+                 for i in range(0, len(items) + in_line - 1, in_line)]
+        fixed_width = max_item
+
+    paragraph = QGraphicsItemGroup()
+    for yi, line in enumerate(lines):
+        create_line(line, yi, fixed_width=fixed_width)
+    return paragraph
