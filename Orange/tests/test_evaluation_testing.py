@@ -2,6 +2,8 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import Mock, patch
+
 import numpy as np
 
 from Orange.classification import NaiveBayesLearner, MajorityLearner
@@ -105,13 +107,52 @@ class TestSampling(unittest.TestCase):
 
 
 class TestValidation(unittest.TestCase):
-    def test_invalid_argument_combination(self):
-        data = Table('iris')
+    def setUp(self):
+        self.data = Table('iris')
 
-        self.assertRaises(ValueError, Validation, data)
+    def test_invalid_argument_combination(self):
+        self.assertRaises(ValueError, Validation, self.data)
         self.assertRaises(ValueError, Validation, None, [MajorityLearner()])
         self.assertRaises(ValueError, Validation, preprocessor=lambda x: x)
         self.assertRaises(ValueError, Validation, callback=lambda x: x)
+
+    @patch("Orange.evaluation.testing.Validation.__call__")
+    def test_warn_deprecations(self, _):
+        self.assertWarns(
+            DeprecationWarning,
+            Validation, self.data, [MajorityLearner()])
+
+        self.assertWarns(DeprecationWarning, Validation().fit)
+
+    @patch("Orange.evaluation.testing.Validation.__call__")
+    def test_obsolete_call_constructor(self, validation_call):
+
+        class MockValidation(Validation):
+            args = kwargs = None
+
+            def __init__(self, *args, **kwargs):
+                super().__init__()
+                MockValidation.args = args
+                MockValidation.kwargs = kwargs
+
+            def get_indices(self, data):
+                pass
+
+        data = self.data
+        learners = [MajorityLearner(), MajorityLearner()]
+        kwargs = dict(foo=42, store_data=43, store_models=44, callback=45)
+        self.assertWarns(
+            DeprecationWarning,
+            MockValidation, data, learners=learners,
+            **kwargs)
+        self.assertEqual(MockValidation.args, ())
+        self.assertEqual(MockValidation.kwargs, kwargs)
+
+        cargs, ckwargs = validation_call.call_args
+        self.assertEqual(len(cargs), 1)
+        self.assertIs(cargs[0], data)
+        self.assertIs(ckwargs["learners"], learners)
+        self.assertEqual(ckwargs["callback"], 45)
 
 
 class TestCrossValidation(TestSampling):
@@ -616,6 +657,26 @@ class TestTestOnTestData(TestSampling):
                          preprocessor=preprocessor)
         self.assertEqual(data_sizes, [30])
 
+    @patch("Orange.evaluation.testing.Validation.__new__")
+    def test_train_data_argument(self, validation_new):
+        data = Mock()
+        test_data = Mock()
+        TestOnTestData(data, test_data)
+        args = validation_new.call_args[1]
+        self.assertIs(args["data"], data)
+        self.assertIs(args["test_data"], test_data)
+        validation_new.reset_mock()
+
+        TestOnTestData(test_data=test_data, train_data=data)
+        args = validation_new.call_args[1]
+        self.assertIs(args["data"], data)
+        self.assertIs(args["test_data"], test_data)
+        validation_new.reset_mock()
+
+        self.assertRaises(
+            ValueError,
+            TestOnTestData, data, train_data=data, test_data=test_data)
+
 
 class TestTrainTestSplit(unittest.TestCase):
     def test_fixed_training_size(self):
@@ -684,3 +745,140 @@ class TestShuffleSplit(TestSampling):
                 np.count_nonzero(res.row_indices[fold] < 2 * n) == n]
 
         self.assertTrue(not all(strata_samples))
+
+
+class TestResults(unittest.TestCase):
+    def setUp(self):
+        self.data = Table("iris")
+        self.actual = np.zeros(100)
+        self.row_indices = np.arange(100)
+        self.folds = (range(50), range(10, 60)), (range(50, 100), range(50))
+        self.learners = [MajorityLearner(), MajorityLearner()]
+        self.models = [Mock(), Mock()]
+        self.predicted = np.zeros((2, 100))
+        self.probabilities = np.zeros((2, 100, 3))
+        self.failed = [False, True]
+
+    def test_store_attributes(self):
+        res = Results(
+            self.data,
+            row_indices=self.row_indices, folds=self.folds,
+            score_by_folds=False, learners=self.learners, models=self.models,
+            failed=self.failed, actual=self.actual, predicted=self.predicted,
+            probabilities=self.probabilities, store_data=42, store_models=43)
+        self.assertIs(res.data, self.data)
+        self.assertEqual(res.nrows, 100)
+        self.assertIs(res.row_indices, self.row_indices)
+        self.assertIs(res.folds, self.folds)
+        self.assertFalse(res.score_by_folds)
+        self.assertIs(res.learners, self.learners)
+        self.assertIs(res.models, self.models)
+        self.assertIs(res.failed, self.failed)
+        self.assertIs(res.actual, self.actual)
+        self.assertIs(res.predicted, self.predicted)
+        self.assertIs(res.probabilities, self.probabilities)
+
+    def test_guess_sizes(self):
+        res = Results(self.data, actual=self.actual)
+        self.assertEqual(res.nrows, 100)
+        self.assertIsNone(res.row_indices)
+        self.assertIsNone(res.predicted)
+        self.assertIsNone(res.probabilities)
+        self.assertIsNone(res.models)
+        self.assertIsNone(res.failed)
+
+        res = Results(self.data, models=self.models)
+        self.assertIsNone(res.nrows)
+        self.assertIsNone(res.predicted)
+        self.assertIsNone(res.probabilities)
+        self.assertIs(res.models, self.models)
+        self.assertEqual(res.failed, [False, False])
+
+        res = Results(self.data, actual=self.actual, learners=self.learners)
+        self.assertIs(res.data, self.data)
+        self.assertIsNone(res.row_indices)
+        self.assertEqual(res.nrows, 100)
+        self.assertIsNone(res.folds, self.folds)
+        self.assertEqual(res.predicted.shape, (2, 100))
+        self.assertEqual(res.probabilities.shape, (2, 100, 3))
+        self.assertEqual(res.failed, [False, False])
+
+        res = Results(nrows=100, nmethods=2, nclasses=3)
+        self.assertIsNone(res.data)
+        self.assertIsNone(res.row_indices)
+        self.assertIsNone(res.folds, self.folds)
+        self.assertEqual(res.nrows, 100)
+        self.assertEqual(res.predicted.shape, (2, 100))
+        self.assertEqual(res.probabilities.shape, (2, 100, 3))
+        self.assertEqual(res.failed, [False, False])
+
+    def test_check_consistency_domain(self):
+        self.assertRaises(
+            ValueError,
+            Results, self.data, domain=Domain([], []))
+
+    def test_check_consistency_nrows(self):
+        self.assertRaises(
+            ValueError,
+            Results, nrows=10, actual=self.actual)
+        self.assertRaises(
+            ValueError,
+            Results, nrows=10, row_indices=self.row_indices)
+        self.assertRaises(
+            ValueError,
+            Results, actual=self.actual, row_indices=self.row_indices[:5])
+        self.assertRaises(
+            ValueError,
+            Results, nrows=10, predicted=self.predicted)
+        self.assertRaises(
+            ValueError,
+            Results, nrows=10, probabilities=self.probabilities)
+
+    def test_check_consistency_nclasses(self):
+        self.assertRaises(
+            ValueError,
+            Results, self.data, nclasses=10)
+        self.assertRaises(
+            ValueError,
+            Results, domain=self.data.domain, nclasses=10)
+        self.assertRaises(
+            ValueError,
+            Results,
+            nclasses=10,
+            probabilities=self.probabilities, learners=self.learners, nrows=100)
+
+        attributes = self.data.domain.attributes
+        reg_domain = Domain(attributes[:3], attributes[3])
+        self.assertRaises(
+            ValueError,
+            Results, nclasses=5, domain=self.data.domain)
+        self.assertRaises(
+            ValueError,
+            Results, nclasses=5, probabilities=self.probabilities)
+        self.assertRaises(
+            ValueError,
+            Results, nclasses=5, domain=reg_domain)
+        self.assertRaises(
+            ValueError,
+            Results, domain=reg_domain, probabilities=self.probabilities)
+
+    def test_check_consistency_nmethods(self):
+        self.assertRaises(
+            ValueError,
+            Results, nmethods=10, learners=self.learners)
+        self.assertRaises(
+            ValueError,
+            Results, nmethods=10, models=self.models)
+        self.assertRaises(
+            ValueError,
+            Results, nmethods=10, failed=self.failed)
+        self.assertRaises(
+            ValueError,
+            Results, nmethods=10, predicted=self.predicted)
+        self.assertRaises(
+            ValueError,
+            Results, nmethods=10, probabilities=self.probabilities)
+        self.assertRaises(
+            ValueError,
+            Results,
+            probabilities=self.probabilities[:1], predicted=self.predicted)

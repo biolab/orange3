@@ -149,20 +149,23 @@ class Results:
             domain, [data is not None and data.domain],
             "mismatching domain")
         self.nrows = nrows = set_or_raise(
-            nrows, [data is not None and len(data),
-                    actual is not None and len(actual),
+            nrows, [actual is not None and len(actual),
                     row_indices is not None and len(row_indices),
                     predicted is not None and predicted.shape[1],
                     probabilities is not None and probabilities.shape[1]],
             "mismatching number of rows")
+        if domain is not None and domain.has_continuous_class:
+            if nclasses is not None:
+                raise ValueError(
+                    "regression results cannot have non-None 'nclasses'")
+            if probabilities is not None:
+                raise ValueError(
+                    "regression results cannot have 'probabilities'")
         nclasses = set_or_raise(
-            nclasses, [len(domain.class_var.values)
-                       if domain is not None and domain.has_discrete_class
-                       else None,
+            nclasses, [domain is not None and domain.has_discrete_class and
+                       len(domain.class_var.values),
                        probabilities is not None and probabilities.shape[2]],
             "mismatching number of class values")
-        if nclasses is None and probabilities is not None:
-            raise ValueError("regression results cannot have 'probabilities'")
         nmethods = set_or_raise(
             nmethods, [learners is not None and len(learners),
                        models is not None and len(models),
