@@ -67,7 +67,7 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertEqual(self.widget.run_button.text(), "Stop")
 
     def test_optimization_finish(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, self.data[::10].copy())
         output1 = self.get_output(self.widget.Outputs.components)
         self.widget.run_button.click()
         self.assertEqual(self.widget.run_button.text(), "Stop")
