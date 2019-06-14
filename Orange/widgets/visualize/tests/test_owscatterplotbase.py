@@ -202,13 +202,9 @@ class TestOWScatterPlotBase(WidgetTest):
         scatterplot_item = graph.scatterplot_item
         x, y = scatterplot_item.getData()
         data = scatterplot_item.data
-        s0, s1, s2, s3 = data["size"] - graph.MinShapeSize
-        np.testing.assert_almost_equal(
-            (s2 - s1) / (s1 - s0),
-            (x[2] - x[1]) / (x[1] - x[0]))
-        np.testing.assert_almost_equal(
-            (s2 - s1) / (s1 - s3),
-            (x[2] - x[1]) / (x[1] - x[3]))
+        s = data["size"] - graph.MinShapeSize
+        precise_s = (x - min(x)) / (max(x) - min(x)) * max(s)
+        np.testing.assert_almost_equal(s, precise_s, decimal=0)
         self.assertEqual(
             list(data["symbol"]),
             [graph.CurveSymbols[int(xi)] for xi in x])
@@ -358,16 +354,24 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.reset_graph()
         scatterplot_item = graph.scatterplot_item
         size = scatterplot_item.data["size"]
-        diffs = [round(y - x, 2) for x, y in zip(size, size[1:])]
-        self.assertEqual(len(set(diffs)), 1)
-        self.assertGreater(diffs[0], 0)
+        np.testing.assert_equal(size, [6, 7.5, 9.5, 11, 12.5, 14.5, 16, 17.5, 19.5, 21])
 
         d = np.arange(10, 20, dtype=float)
         graph.update_sizes()
         self.assertIs(scatterplot_item, graph.scatterplot_item)
+        size2 = scatterplot_item.data["size"]
+        np.testing.assert_equal(size, size2)
+
+    def test_size_rounding_half_pixel(self):
+        graph = self.graph
+
+        self.master.get_size_data = lambda: d
+        d = np.arange(10, dtype=float)
+
+        graph.reset_graph()
+        scatterplot_item = graph.scatterplot_item
         size = scatterplot_item.data["size"]
-        diffs2 = [round(y - x, 2) for x, y in zip(size, size[1:])]
-        self.assertEqual(diffs, diffs2)
+        np.testing.assert_equal(size*2 - (size*2).round(), 0)
 
     def test_size_with_nans(self):
         graph = self.graph
@@ -493,12 +497,17 @@ class TestOWScatterPlotBase(WidgetTest):
         d = np.arange(10, dtype=float) % 2
 
         graph.reset_graph()
+        data = graph.scatterplot_item.data
         self.assertTrue(
             all(pen.color().hue() is palette[i % 2].hue()
-                for i, pen in enumerate(graph.scatterplot_item.data["pen"])))
+                for i, pen in enumerate(data["pen"])))
         self.assertTrue(
             all(pen.color().hue() is palette[i % 2].hue()
-                for i, pen in enumerate(graph.scatterplot_item.data["brush"])))
+                for i, pen in enumerate(data["brush"])))
+
+        # confirm that QPen/QBrush were reused
+        self.assertEqual(len(set(map(id, data["pen"]))), 2)
+        self.assertEqual(len(set(map(id, data["brush"]))), 2)
 
     def test_colors_discrete_nan(self):
         self.master.is_continuous_color = lambda: False
@@ -528,6 +537,24 @@ class TestOWScatterPlotBase(WidgetTest):
 
         d[4] = np.nan
         graph.update_colors()  # Ditto
+
+    def test_colors_continuous_reused(self):
+        self.master.is_continuous_color = lambda: True
+        graph = self.graph
+
+        self.xy = (np.arange(100, dtype=float),
+                   np.arange(100, dtype=float))
+
+        d = np.arange(100, dtype=float)
+        self.master.get_color_data = lambda: d
+        graph.reset_graph()
+
+        data = graph.scatterplot_item.data
+
+        self.assertEqual(len(data["pen"]), 100)
+        self.assertLessEqual(len(set(map(id, data["pen"]))), 10)
+        self.assertEqual(len(data["brush"]), 100)
+        self.assertLessEqual(len(set(map(id, data["brush"]))), 10)
 
     def test_colors_continuous_nan(self):
         self.master.is_continuous_color = lambda: True
@@ -602,12 +629,16 @@ class TestOWScatterPlotBase(WidgetTest):
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
+        self.assertEqual(len(set(map(id, data["pen"]))), 1)  # test QPen/QBrush reuse
+        self.assertEqual(len(set(map(id, data["brush"]))), 1)
 
         self.master.get_subset_mask = lambda: np.arange(10) < 5
         graph.update_colors()
         data = graph.scatterplot_item.data
         self.assertTrue(all(pen.color().hue() == hue for pen in data["pen"]))
         self.assertTrue(all(pen.color().hue() == hue for pen in data["brush"]))
+        self.assertEqual(len(set(map(id, data["pen"]))), 1)
+        self.assertEqual(len(set(map(id, data["brush"]))), 2)  # transparent and colored
 
     def test_colors_update_legend_and_density(self):
         graph = self.graph
@@ -1246,6 +1277,11 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.clear()
         self.assertFalse(spy[-1][0])
         self.assertFalse(bool(self.graph.labels))
+
+    def test_no_needless_buildatlas(self):
+        graph = self.graph
+        graph.reset_graph()
+        self.assertIsNone(graph.scatterplot_item.fragmentAtlas.atlas)
 
 
 if __name__ == "__main__":

@@ -221,7 +221,20 @@ class OWScatterPlotGraph(OWScatterPlotGraphObs):
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
+    """PyQtGraph's ScatterPlotItem calls updateSpots at any change of sizes/colors/symbols,
+    which then rebuilds the stored pixmaps for each symbol. Because Orange calls
+    set* function in succession, we postpone updateSpots() to paint()."""
+
+    _update_spots_in_paint = False
+
+    def updateSpots(self, dataSet=None):  # pylint: disable=unused-argument
+        self._update_spots_in_paint = True
+        self.update()
+
     def paint(self, painter, option, widget=None):
+        if self._update_spots_in_paint:
+            self._update_spots_in_paint = False
+            super().updateSpots()
         painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
         super().paint(painter, option, widget)
 
@@ -714,6 +727,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
         The method is called by `update_sizes`. It gets the sizes
         from the widget and performs the necessary scaling and sizing.
+        The output is rounded to half a pixel for faster drawing.
 
         Returns:
             (np.ndarray): sizes
@@ -732,7 +746,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             size_column /= mx
         else:
             size_column[:] = 0.5
-        return self.MinShapeSize + (5 + self.point_width) * size_column
+
+        sizes = self.MinShapeSize + (5 + self.point_width) * size_column
+        # round sizes to half pixel for smaller pyqtgraph's symbol pixmap atlas
+        sizes = (sizes * 2).round() / 2
+        return sizes
 
     def update_sizes(self):
         """
@@ -861,7 +879,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             (tuple): a list of pens and list of brushes
         """
         color = self.plot_widget.palette().color(OWPalette.Data)
-        pen = [_make_pen(color, 1.5) for _ in range(self.n_shown)]
+        pen = [_make_pen(color, 1.5)] * self.n_shown  # use a single QPen instance
         if subset is not None:
             brush = np.where(
                 subset,
@@ -870,7 +888,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         else:
             color = QColor(*self.COLOR_DEFAULT)
             color.setAlpha(self.alpha_value)
-            brush = [QBrush(color) for _ in range(self.n_shown)]
+            brush = [QBrush(color)] * self.n_shown  # use a single QBrush instance
         return pen, brush
 
     def _get_continuous_colors(self, c_data, subset):
@@ -894,12 +912,31 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             [pen, np.full((len(pen), 1), self.alpha_value, dtype=int)])
         pen *= 100
         pen //= self.DarkerValue
-        pen = [_make_pen(QColor(*col), 1.5) for col in pen.tolist()]
+
+        # Reuse pens and brushes with the same colors because PyQtGraph then builds
+        # smaller pixmap atlas, which makes the drawing faster
+
+        def reuse(cache, fn, *args):
+            if args not in cache:
+                cache[args] = fn(args)
+            return cache[args]
+
+        def create_pen(col):
+            return _make_pen(QColor(*col), 1.5)
+
+        def create_brush(col):
+            return QBrush(QColor(*col))
+
+        cached_pens = {}
+        pen = [reuse(cached_pens, create_pen, *col) for col in pen.tolist()]
 
         if subset is not None:
             brush[:, 3] = 0
             brush[subset, 3] = 255
-        brush = np.array([QBrush(QColor(*col)) for col in brush.tolist()])
+
+        cached_brushes = {}
+        brush = np.array([reuse(cached_brushes, create_brush, *col) for col in brush.tolist()])
+
         return pen, brush
 
     def _get_discrete_colors(self, c_data, subset):
