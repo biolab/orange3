@@ -52,26 +52,28 @@ class Results:
         row_indices (np.ndarray): Indices of rows in `data` that were used in
             testing, stored as a numpy vector of length `nrows`.
             Values of `actual[i]`, `predicted[i]` and `probabilities[i]` refer
-            to the target value of instance `data[row_indices[i]]`.
+            to the target value of instance, that is, the i-th test instance
+            is `data[row_indices[i]]`, its actual class is `actual[i]`, and
+            the prediction by m-th method is `predicted[m, i]`.
 
-        nrows (int): The number of test instances (including duplicates).
+        nrows (int): The number of test instances (including duplicates);
+            `nrows` equals the length of `row_indices` and `actual`, and the
+            second dimension of `predicted` and `probabilities`.
 
-        actual (np.ndarray): Actual values of target variable;
-            a numpy vector of length `nrows` and of the same type as `data`
-            (or `np.float32` if the type of data cannot be determined).
+        actual (np.ndarray): true values of target variable in a vector of
+            length `nrows`.
 
-        predicted (np.ndarray): Predicted values of target variable;
-            a numpy array of shape (number-of-methods, `nrows`) and
-            of the same type as `data` (or `np.float32` if the type of data
-            cannot be determined).
+        predicted (np.ndarray): predicted values of target variable in an array
+            of shape (number-of-methods, `nrows`)
 
-        probabilities (Optional[np.ndarray]): Predicted probabilities
-            (for discrete target variables);
-            a numpy array of shape (number-of-methods, `nrows`, number-of-classes)
-            of type `np.float32`.
+        probabilities (Optional[np.ndarray]): predicted probabilities
+            (for discrete target variables) in an array of shape
+            (number-of-methods, `nrows`, number-of-classes)
 
-        folds (List[Slice or List[int]]): A list of indices (or slice objects)
-            corresponding to rows of each fold.
+        folds (List[Slice or List[int]]): a list of indices (or slice objects)
+            corresponding to testing data subsets, that is,
+            `row_indices[folds[i]]` contains row indices used in fold i, so
+            `data[row_indices[folds[i]]]` is the corresponding testing data
     """
     def __init__(self, data=None, *,
                  nmethods=None, nrows=None, nclasses=None,
@@ -83,15 +85,18 @@ class Results:
         """
         Construct an instance.
 
-        The constructor is a bit too smart to ensure backward compabitility.
-        It consists of three steps.
+        The constructor stores the given data, and creates empty arrays
+        `actual`, `predicted` and `probabilities` if ther are not given but
+        sufficient data is provided to deduct their shapes.
 
-        - Set any attributes specified directly through arguments.
-        - Infer the domain, nmethods, nrows and nclasses from other data and/or
-          check their overall consistency.
+        The function
+
+        - set any attributes specified directly through arguments.
+        - infers the number of methods, rows and classes from other data
+           and/or check their overall consistency.
         - Prepare empty arrays `actual`, `predicted`, `probabilities` and
-          `failed`. If not enough data is available, the corresponding arrays
-          are `None`.
+          `failed` if the are not given. If not enough data is available,
+          the corresponding arrays are `None`.
 
         Args:
             data (Orange.data.Table): stored data from which test was sampled
@@ -213,20 +218,26 @@ class Results:
 
         return results
 
-    def get_augmented_data(self, model_names, include_attrs=True, include_predictions=True,
+    def get_augmented_data(self, model_names,
+                           include_attrs=True, include_predictions=True,
                            include_probabilities=True):
         """
-        Return the data, augmented with predictions, probabilities (if the task is classification)
-        and folds info. Predictions, probabilities and folds are inserted as meta attributes.
+        Return the test data table augmented with meta attributes containing
+        predictions, probabilities (if the task is classification) and fold
+        indices.
 
         Args:
-            model_names (list): A list of strings containing learners' names.
-            include_attrs (bool): Flag that tells whether to include original attributes.
-            include_predictions (bool): Flag that tells whether to include predictions.
-            include_probabilities (bool): Flag that tells whether to include probabilities.
+            model_names (list of str): names of models
+            include_attrs (bool):
+                if set to `False`, original attributes are removed
+            include_predictions (bool):
+                if set to `False`, predictions are not added
+            include_probabilities (bool):
+                if set to `False`, probabilities are not added
 
         Returns:
-            Orange.data.Table: Data augmented with predictions, (probabilities) and (fold).
+            augmented_data (Orange.data.Table):
+                data augmented with predictions, probabilities and fold indices
 
         """
         assert self.predicted.shape[0] == len(model_names)
@@ -241,30 +252,33 @@ class Results:
         if classification:
             # predictions
             if include_predictions:
-                new_meta_attr.extend(DiscreteVariable(name=name, values=class_var.values)
-                                     for name in model_names)
+                new_meta_attr += (
+                    DiscreteVariable(name=name, values=class_var.values)
+                    for name in model_names)
                 new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
             # probabilities
             if include_probabilities:
                 for name in model_names:
-                    new_meta_attr.extend(ContinuousVariable(name="%s (%s)" % (name, value))
-                                         for value in class_var.values)
+                    new_meta_attr += (
+                        ContinuousVariable(name=f"{name} ({value})")
+                        for value in class_var.values)
 
                 for i in self.probabilities:
                     new_meta_vals = np.hstack((new_meta_vals, i))
 
         elif include_predictions:
             # regression
-            new_meta_attr.extend(ContinuousVariable(name=name)
-                                 for name in model_names)
+            new_meta_attr += (ContinuousVariable(name=name)
+                              for name in model_names)
             new_meta_vals = np.hstack((new_meta_vals, self.predicted.T))
 
         # add fold info
         if self.folds is not None:
             new_meta_attr.append(
-                DiscreteVariable(name="Fold",
-                                 values=[str(i+1) for i, _ in enumerate(self.folds)]))
+                DiscreteVariable(
+                    name="Fold",
+                    values=[str(i + 1) for i in range(len(self.folds))]))
             fold = np.empty((len(data), 1))
             for i, s in enumerate(self.folds):
                 fold[s, 0] = i
@@ -282,7 +296,11 @@ class Results:
         return predictions
 
     def split_by_model(self):
-        """Split evaluation results by models
+        """
+        Split evaluation results by models.
+
+        The method generates instances of `Results` containing data for single
+        models
         """
         data = self.data
         nmethods = len(self.predicted)
@@ -308,32 +326,33 @@ class Results:
 
 
 class Validation:
+    """
+    Base class for different testing schemata such as cross validation and
+    testing on separate data set.
+
+    If `data` is some data table and `learners` is a list of learning
+    algorithms. This will run 5-fold cross validation and store the results
+    in `res`.
+
+        cv = CrossValidation(k=5)
+        res = cv(data, learners)
+
+    If constructor was given data and learning algorithms (as in
+    `res = CrossValidation(data, learners, k=5)`, it used to automagically
+    call the instance after constructing it and return `Results` instead
+    of an instance of `Validation`. This functionality
+    is deprecated and will be removed in the future.
+
+    Attributes:
+        store_data (bool): a flag defining whether the data is stored
+        store_models (bool): a flag defining whether the models are stored
+    """
     score_by_folds = False
 
     def __new__(cls,
                 data=None, learners=None, preprocessor=None, test_data=None,
                 *, callback=None, store_data=False, store_models=False,
                 **kwargs):
-        """
-        Base class for different testing schemata such as cross validation and
-        testing on separate data set.
-
-        If the constructor is given data and learning algorithms, it
-        automagically calls `fit` and returns `Results` instead of an
-        instance of `Validation`.
-
-        Args:
-            data (Orange.data.Table): data to be used (usually split) into
-                training and testing
-            learners (list of Orange.Learner): a list of learning algorithms
-            preprocessor (Orange.preprocess.Preprocess): preprocessor applied
-                on training data
-            test_data (Orange.data.Table): separate test data, if supported
-                by the method; must be `None` otherwise
-            callback (Callable): a function called to notify about the progress
-            store_data (bool): a flag defining whether the data is stored
-            store_models (bool): a flag defining whether the models are stored
-        """
         self = super().__new__(cls)
 
         if (learners is None) != (data is None):
@@ -362,9 +381,7 @@ class Validation:
         return self(data, learners=learners, preprocessor=preprocessor,
                     callback=callback, **test_data_kwargs)
 
-    # __init__ will be called only if __new__ doesn't have data and learners
-    # Also, attributes are already set in __new__; __init__ is here only so that
-    # IDE's and pylint know about attributes store_data and store_models
+    # Note: this will be called only if __new__ doesn't have data and learners
     def __init__(self, *, store_data=False, store_models=False, **kwargs):
         self.store_data = store_data
         self.store_models = store_models
@@ -375,6 +392,18 @@ class Validation:
         return self(*args, **kwargs)
 
     def __call__(self, data, learners, preprocessor=None, *, callback=None):
+        """
+        Args:
+            data (Orange.data.Table): data to be used (usually split) into
+                training and testing
+            learners (list of Orange.Learner): a list of learning algorithms
+            preprocessor (Orange.preprocess.Preprocess): preprocessor applied
+                on training data
+            callback (Callable): a function called to notify about the progress
+
+        Returns:
+            results (Result): results of testing
+        """
         if preprocessor is None:
             preprocessor = _identity
         if callback is None:
@@ -405,12 +434,26 @@ class Validation:
             score_by_folds=self.score_by_folds)
         if self.store_models:
             results.models = np.tile(None, (len(indices), len(learners)))
-        self.collect_part_results(results, part_results)
+        self._collect_part_results(results, part_results)
         return results
 
     @classmethod
     def prepare_arrays(cls, data, indices):
-        """Prepare data for `__call__` method."""
+        """Prepare `folds`, `row_indices` and `actual`.
+
+        The method is used by `__call__`. While functional, it may be
+        overriden in subclasses for speed-ups.
+
+        Args:
+            data (Orange.data.Table): data use for testing
+            indices (list of vectors):
+                indices of data instances in each test sample
+
+        Returns:
+            folds: (np.ndarray): see class documentation
+            row_indices: (np.ndarray): see class documentation
+            actual: (np.ndarray): see class documentation
+        """
         folds = []
         row_indices = []
 
@@ -426,16 +469,27 @@ class Validation:
 
     @staticmethod
     def get_indices(data):
-        """Initializes `self.indices` with iterable objects with slices
-        (or indices) for each fold.
+        """
+        Return a list of arrays of indices of test data instance
+
+        For example, in k-fold CV, the result is a list with `k` elements,
+        each containing approximately `len(data) / k` nonoverlapping indices
+        into `data`.
+
+        This method is abstract and must be implemented in derived classes
+        unless they provide their own implementation of the `__call__`
+        method.
 
         Args:
-            data (Table): data table
-            test_data (Table): separate test table
+            data (Orange.data.Table): test data
+
+        Returns:
+            indices (list of np.ndarray):
+                a list of arrays of indices into `data`
         """
         raise NotImplementedError()
 
-    def collect_part_results(self, results, part_results):
+    def _collect_part_results(self, results, part_results):
         part_results = sorted(part_results)
 
         ptr, prev_fold_i, prev_n_values = 0, 0, 0
@@ -455,25 +509,28 @@ class Validation:
 
             results.predicted[res.learner_i][result_slice] = res.values
             if res.probs is not None:
-                results.probabilities[res.learner_i][result_slice, :] = res.probs
+                results.probabilities[res.learner_i][result_slice, :] = \
+                    res.probs
 
 
 class CrossValidation(Validation):
     """
-    K-fold cross validation.
+    K-fold cross validation
 
-    If the constructor is given the data and a list of learning algorithms, it
-    runs cross validation and returns an instance of `Results` containing the
-    predicted values and probabilities.
-
-    .. attribute:: k
-
-        The number of folds.
-
-    .. attribute:: random_state
-
+    Attributes:
+        k (int): number of folds (default: 10)
+        random_state (int):
+            seed for random number generator (default: 0). If set to `None`,
+            a different seed is used each time
+        stratified (bool):
+            flag deciding whether to perform stratified cross-validation.
+            If `True` but the class sizes don't allow it, it uses non-stratified
+            validataion and adds a list `warning` with a warning message(s) to
+            the `Result`.
     """
     # TODO: Remove arguments that go to call and swallow them in **kwargs?
+    # TODO: list `warning` contains just repetitions of the same message
+    #       replace with a flag in `Results`?
     def __init__(self, data=None, learners=None,
                  k=10, stratified=True, random_state=0,
                  store_data=False, store_models=False, preprocessor=None,
@@ -505,10 +562,8 @@ class CrossValidationFeature(Validation):
     """
     Cross validation with folds according to values of a feature.
 
-    .. attribute:: feature
-
-        The feature defining the folds.
-
+    Attributes:
+        feature (Orange.data.Variable): the feature defining the folds
     """
     def __init__(self, data=None, learners=None, feature=None,
                  store_data=False, store_models=False, preprocessor=None,
@@ -526,7 +581,9 @@ class CrossValidationFeature(Validation):
             if test_index.size and train_index.size:
                 indices.append((train_index, test_index))
         if not indices:
-            raise ValueError("No folds could be created from the given feature.")
+            raise ValueError(
+                f"'{self.feature.name}' does not have at least two distinct "
+                "values on the data")
         return indices
 
 
@@ -547,6 +604,36 @@ class LeaveOneOut(Validation):
 
 
 class ShuffleSplit(Validation):
+    """
+    Test by repeated random sampling
+
+    Attributes:
+        n_resamples (int): number of repetitions
+        test_size (float, int, None):
+            If float, should be between 0.0 and 1.0 and represent the proportion
+            of the dataset to include in the test split. If int, represents the
+            absolute number of test samples. If None, the value is set to the
+            complement of the train size. By default, the value is set to 0.1.
+            The default will change in version 0.21. It will remain 0.1 only
+            if ``train_size`` is unspecified, otherwise it will complement
+            the specified ``train_size``.
+            (from documentation of scipy.sklearn.StratifiedShuffleSplit)
+
+        train_size : float, int, or None, default is None
+            If float, should be between 0.0 and 1.0 and represent the
+            proportion of the dataset to include in the train split. If
+            int, represents the absolute number of train samples. If None,
+            the value is automatically set to the complement of the test size.
+            (from documentation of scipy.sklearn.StratifiedShuffleSplit)
+
+        stratified (bool):
+            flag deciding whether to perform stratified cross-validation.
+
+        random_state (int):
+            seed for random number generator (default: 0). If set to `None`,
+            a different seed is used each time
+
+    """
     def __init__(self, data=None, learners=None,
                  n_resamples=10, train_size=None, test_size=0.1,
                  stratified=True, random_state=0,
@@ -577,7 +664,13 @@ class ShuffleSplit(Validation):
 
 
 class TestOnTestData(Validation):
+    """
+    Test on separately provided test data
+
+    Note that the class has a different signature for `__call__`.
+    """
     # get_indices is not needed in this class, pylint: disable=abstract-method
+
     def __new__(cls, data=None, test_data=None, learners=None,
                 preprocessor=None, **kwargs):
         if "train_data" in kwargs:
@@ -593,6 +686,18 @@ class TestOnTestData(Validation):
 
     def __call__(self, data, test_data, learners, preprocessor=None,
                  *, callback=None):
+        """
+        Args:
+            data (Orange.data.Table): training data
+            test_data (Orange.data.Table): test_data
+            learners (list of Orange.Learner): a list of learning algorithms
+            preprocessor (Orange.preprocess.Preprocess): preprocessor applied
+                on training data
+            callback (Callable): a function called to notify about the progress
+
+        Returns:
+            results (Result): results of testing
+        """
         if preprocessor is None:
             preprocessor = _identity
         if callback is None:
@@ -617,11 +722,12 @@ class TestOnTestData(Validation):
             score_by_folds=self.score_by_folds)
         if self.store_models:
             results.models = np.tile(None, (1, len(learners)))
-        self.collect_part_results(results, part_results)
+        self._collect_part_results(results, part_results)
         return results
 
 
 class TestOnTrainingData(TestOnTestData):
+    """Test on training data"""
     # get_indices is not needed in this class, pylint: disable=abstract-method
     # signature is such as on the base class, pylint: disable=signature-differs
     def __new__(cls, data=None, learners=None, preprocessor=None, **kwargs):
