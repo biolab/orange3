@@ -9,6 +9,7 @@ import pyqtgraph as pg
 
 from Orange.classification import ModelWithThreshold
 from Orange.evaluation import Results
+from Orange.evaluation.performance_curves import Curves
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_preview
@@ -18,71 +19,37 @@ from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
 
-class Data:
-    def __init__(self, ytrue, probs):
-        sortind = np.argsort(probs)
-        self.probs = probs[sortind]
-        self.ytrue = ytrue[sortind]
-        self.fn = np.cumsum(self.ytrue)
-        self.tot = len(probs)
-        self.p = self.fn[-1]
-        self.n = self.tot - self.p
-
-    @property
-    def tn(self):
-        return np.arange(self.tot) - self.fn
-
-    @property
-    def tp(self):
-        return self.p - self.fn
-
-    @property
-    def fp(self):
-        return self.n - self.tn
-
-
 MetricDefinition = namedtuple(
     "metric_definition",
-    ("name", "function", "short_names", "explanation"))
+    ("name", "functions", "short_names", "explanation"))
 
 Metrics = [MetricDefinition(*args) for args in (
-    ("Actual probability",
-     None,
-     (),
-     ""),
-    ("Classification accuracy",
-     lambda d: (d.probs, ((d.tp + d.tn) / d.tot,)),
-     (),
-     ""),
-    ("F1",
-     lambda d: (d.probs, (2 * d.tp / (2 * d.tp + d.fp + d.fn),)),
-     (),
-     ""),
+    ("Calibration curve", None, (), ""),
+    ("Classification accuracy", (Curves.ca, ), (), ""),
+    ("F1", (Curves.f1, ), (), ""),
     ("Sensitivity and specificity",
-     lambda d: (d.probs, (d.tp / d.p, d.tn / d.n)),
+     (Curves.sensitivity, Curves.specificity),
      ("sens", "spec"),
      "<p><b>Sensitivity</b> (falling) is the proportion of correctly "
      "detected positive instances (TP&nbsp;/&nbsp;P).</p>"
      "<p><b>Specificity</b> (rising) is the proportion of detected "
      "negative instances (TP&nbsp;/&nbsp;N).</p>"),
     ("Precision and recall",
-     lambda d: (d.probs[:-1], (d.tp[:-1] / np.arange(d.tot, 1, -1),
-                               d.tp[:-1] / d.p)),
+     (Curves.precision, Curves.recall),
      ("prec", "recall"),
      "<p><b>Precision</b> (rising) is the fraction of retrieved instances "
      "that are relevant, TP&nbsp;/&nbsp;(TP&nbsp;+&nbsp;FP).</p>"
      "<p><b>Recall</b> (falling) is the proportion of discovered relevant "
      "instances, TP&nbsp;/&nbsp;P.</p>"),
     ("Pos and neg predictive value",
-     lambda d: (d.probs[:-1], (d.tp[:-1] / np.arange(d.tot, 1, -1),
-                               d.tn[:-1] / np.arange(1, d.tot))),
+     (Curves.ppv, Curves.npv),
      ("PPV", "TPV"),
      "<p><b>Positive predictive value</b> (rising) is the proportion of "
      "correct positives, TP&nbsp;/&nbsp;(TP&nbsp;+&nbsp;FP).</p>"
      "<p><b>Negative predictive value</b> is the proportion of correct "
      "negatives, TN&nbsp;/&nbsp;(TN&nbsp;+&nbsp;FN).</p>"),
     ("True and false positive rate",
-     lambda d: (d.probs, (d.tp / d.p, d.fp / d.n)),
+     (Curves.tpr, Curves.fpr),
      ("TPR", "FPR"),
      "<p><b>True and false positive rate</b> are proportions of detected "
      "and omitted positive instances</p>"),
@@ -253,7 +220,7 @@ class OWCalibrationPlot(widget.OWWidget):
     def _rug(self, data, pen_args):
         color = pen_args["pen"].color()
         rh = 0.025
-        rug_x = np.c_[data.probs, data.probs]
+        rug_x = np.c_[data.probs[:-1], data.probs[:-1]]
         rug_x_true = rug_x[data.ytrue].ravel()
         rug_x_false = rug_x[~data.ytrue].ravel()
 
@@ -271,11 +238,11 @@ class OWCalibrationPlot(widget.OWWidget):
 
     def plot_metrics(self, data, metrics, pen_args):
         if metrics is None:
-            return self._prob_curve(data.ytrue, data.probs, pen_args)
-        x, ys = metrics(data)
+            return self._prob_curve(data.ytrue, data.probs[:-1], pen_args)
+        ys = [metric(data) for metric in metrics]
         for y in ys:
-            self.plot.plot(x, y, **pen_args)
-        return x, ys
+            self.plot.plot(data.probs, y, **pen_args)
+        return data.probs, ys
 
     def _prob_curve(self, ytrue, probs, pen_args):
         if not probs.size:
@@ -296,7 +263,7 @@ class OWCalibrationPlot(widget.OWWidget):
     def _setup_plot(self):
         target = self.target_index
         results = self.results
-        metrics = Metrics[self.score].function
+        metrics = Metrics[self.score].functions
         plot_folds = self.fold_curves and results.folds is not None
         self.scores = []
 
@@ -309,7 +276,7 @@ class OWCalibrationPlot(widget.OWWidget):
                 shadowPen=pg.mkPen(color.lighter(160),
                                    width=4 + 4 * plot_folds),
                 antiAlias=True)
-            data = Data(ytrue, probs)
+            data = Curves(ytrue, probs)
             self.scores.append(
                 (self.classifier_names[clsf],
                  self.plot_metrics(data, metrics, pen_args)))
