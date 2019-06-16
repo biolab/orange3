@@ -9,3 +9,4 @@ Evaluation (``evaluation``)
 
    evaluation.testing
    evaluation.cd
+   evaluation.performance_curves
