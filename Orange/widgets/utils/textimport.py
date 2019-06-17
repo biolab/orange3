@@ -29,10 +29,11 @@ import itertools
 
 from functools import singledispatch
 from collections import defaultdict
+from types import MappingProxyType
 
 import typing
 from typing import (
-    List, Tuple, Dict, Iterator, Optional, Any, Union, Callable
+    List, Tuple, Dict, Iterator, Optional, Any, Union, Callable, Mapping
 )
 
 from PyQt5.QtCore import (
@@ -59,8 +60,9 @@ from Orange.widgets.utils.overlay import OverlayWidget
 __all__ = ["ColumnType", "RowSpec", "CSVOptionsWidget", "CSVImportWidget"]
 
 if typing.TYPE_CHECKING:
-    _A = typing.TypeVar("A")
-    _B = typing.TypeVar("B")
+    # pylint: disable=invalid-name
+    _A = typing.TypeVar("_A")
+    _B = typing.TypeVar("_B")
 
 
 class StampIconEngine(QIconEngine):
@@ -132,7 +134,7 @@ class Dialect(csv.Dialect):
         super().__init__()
 
     def __repr__(self):
-        t, args, *rest = self.__reduce__()
+        _, args, *_ = self.__reduce__()
         args = ", ".join(map("{!r}".format, args))
         return "Dialect(" + args + ")"
 
@@ -160,9 +162,6 @@ class ColumnType(enum.Enum):
     Time = "Time"
 
 
-# Skip, Auto, Numeric, Categorical, Text, Time = ColumnType
-
-
 class LineEdit(QLineEdit):
     """
     A line edit widget with a `minimumContentsLength` property.
@@ -173,7 +172,7 @@ class LineEdit(QLineEdit):
     _verticalMargin = 1
     _horizontalMargin = 2
 
-    def __init__(self, *args, minimumContentsLength=0,  **kwargs):
+    def __init__(self, *args, minimumContentsLength=0, **kwargs):
         self.__minimumContentsLength = minimumContentsLength
         super().__init__(*args, **kwargs)
 
@@ -540,8 +539,8 @@ class Item(QStandardItem):
     `Qt.EditRole` to the same value. Also, accessing or setting via
     `model.itemData` `model.setItemData` and will not work.
     """
-    def __init__(self, data={}):
-        # type: (Dict[Qt.ItemDataRole, Any]) -> None
+    def __init__(self, data=MappingProxyType({})):
+        # type: (Mapping[Qt.ItemDataRole, Any]) -> None
         super().__init__()
         self.__data = dict(data)
 
@@ -714,7 +713,7 @@ class CSVImportWidget(QWidget):
              Qt.ToolTipRole: "The column will not be loaded"}
         ]
         typemodel = QStandardItemModel(self)
-        for i, itemdata in enumerate(types):
+        for itemdata in types:
             item = Item(itemdata)
             if itemdata.get(Qt.AccessibleDescriptionRole) == "separator":
                 item.setFlags(Qt.NoItemFlags)
@@ -1328,8 +1327,6 @@ class RowSpec(enum.IntEnum):
 
 
 class TablePreview(QTableView):
-    """
-    """
     RowSpec = RowSpec
     Header, Skipped = RowSpec
 
@@ -1590,7 +1587,7 @@ class TablePreviewModel(QAbstractTableModel):
         Fetch and return a maximum of `n` rows from the source preview stream.
         """
         rows = []
-        for i in range(n):
+        for _ in range(n):
             try:
                 row = next(self.__iter)
             except StopIteration:
@@ -1634,7 +1631,7 @@ class TablePreviewModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             return value
         elif role == TablePreviewModel.ColumnTypeRole:
-            self.__headerData[Qt.Horizontal][index.column()].get(role, None)
+            return self.__headerData[Qt.Horizontal][index.column()].get(role)
         else:
             return None
 
@@ -1691,6 +1688,7 @@ class TablePreviewModel(QAbstractTableModel):
     def flags(self, index):
         # type: (QModelIndex) -> Qt.ItemFlags
         """Reimplemented."""
+        # pylint: disable=unused-argument,no-self-use
         return Qt.ItemFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
     def errorString(self):
@@ -1709,7 +1707,6 @@ def format_exception(err):
 @format_exception.register(csv.Error)
 def format_exception_csv(err):
     return "CSV parsing error: " + str(err)
-
 
 
 _to_datetime = None
