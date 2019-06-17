@@ -1,7 +1,6 @@
 import copy
 import warnings
 
-import numpy as np
 from sklearn.exceptions import ConvergenceWarning
 
 from Orange.data import Table
@@ -42,15 +41,3 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         res.predicted = res.predicted[:, 0]
         res.probabilities = res.probabilities[:, :0, :]
         self.send_signal(self.widget.Inputs.evaluation_results, res)
-
-    def test_nan_input(self):
-        res = copy.copy(self.res)
-        res.actual = res.actual.copy()
-        res.probabilities = res.probabilities.copy()
-
-        res.actual[0] = np.nan
-        res.probabilities[:, [0, 3], :] = np.nan
-        self.send_signal(self.widget.Inputs.evaluation_results, res)
-        self.assertTrue(self.widget.Error.invalid_results.is_shown())
-        self.send_signal(self.widget.Inputs.evaluation_results, None)
-        self.assertFalse(self.widget.Error.invalid_results.is_shown())

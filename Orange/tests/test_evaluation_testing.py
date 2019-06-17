@@ -233,7 +233,7 @@ class TestCrossValidation(TestSampling):
             self.assertTrue((result.predicted == res.predicted[i]).all())
             self.assertTrue((result.probabilities == res.probabilities[i]).all())
             self.assertEqual(len(result.models), 5)
-            for model in result.models:
+            for model in result.models[0]:
                 self.assertIsInstance(model, learners[i].__returns__)
             self.assertSequenceEqual(result.learners, [res.learners[i]])
 
