@@ -88,7 +88,7 @@ class Try(abc.ABC):
             return "{}({!r})".format(self.__class__.__qualname__,
                                      self.exception)
 
-        def map(self, fn):
+        def map(self, _fn):
             return self
 
     def __new__(cls, f, *args, **kwargs):
@@ -283,7 +283,8 @@ class OWTestLearners(OWWidget):
         box = gui.vBox(self.mainArea, "Evaluation Results")
         box.layout().addWidget(self.score_table.view)
 
-    def sizeHint(self):
+    @staticmethod
+    def sizeHint():
         return QSize(780, 1)
 
     def _update_controls(self):
@@ -333,7 +334,7 @@ class OWTestLearners(OWWidget):
         self.Error.too_many_classes.clear()
         self.Error.no_class_values.clear()
         self.Error.only_one_class_var_value.clear()
-        if data is not None and not len(data):
+        if data is not None and not data:
             self.Error.train_data_empty()
             data = None
         if data:
@@ -392,7 +393,7 @@ class OWTestLearners(OWWidget):
         """
         self.Information.test_data_sampled.clear()
         self.Error.test_data_empty.clear()
-        if data is not None and not len(data):
+        if data is not None and not data:
             self.Error.test_data_empty()
             data = None
         if data and not data.domain.class_var:
@@ -721,10 +722,6 @@ class OWTestLearners(OWWidget):
             self.Warning.test_data_unused()
 
         rstate = 42
-        common_args = dict(
-            store_data=True,
-            preprocessor=self.preprocessor,
-        )
         # items in need of an update
         items = [(key, slot) for key, slot in self.learners.items()
                  if slot.results is None]
@@ -736,45 +733,36 @@ class OWTestLearners(OWWidget):
         # learners bellow)
         learners_c = [copy.deepcopy(learner) for learner in learners]
 
-        if self.resampling == OWTestLearners.KFold:
-            folds = self.NFolds[self.n_folds]
+        if self.resampling == OWTestLearners.TestOnTest:
             test_f = partial(
-                Orange.evaluation.CrossValidation,
-                self.data, learners_c, k=folds,
-                random_state=rstate, **common_args)
-        elif self.resampling == OWTestLearners.FeatureFold:
-            test_f = partial(
-                Orange.evaluation.CrossValidationFeature,
-                self.data, learners_c, self.fold_feature,
-                **common_args
-            )
-        elif self.resampling == OWTestLearners.LeaveOneOut:
-            test_f = partial(
-                Orange.evaluation.LeaveOneOut,
-                self.data, learners_c, **common_args
-            )
-        elif self.resampling == OWTestLearners.ShuffleSplit:
-            train_size = self.SampleSizes[self.sample_size] / 100
-            test_f = partial(
-                Orange.evaluation.ShuffleSplit,
-                self.data, learners_c,
-                n_resamples=self.NRepeats[self.n_repeats],
-                train_size=train_size, test_size=None,
-                stratified=self.shuffle_stratified,
-                random_state=rstate, **common_args
-            )
-        elif self.resampling == OWTestLearners.TestOnTrain:
-            test_f = partial(
-                Orange.evaluation.TestOnTrainingData,
-                self.data, learners_c, **common_args
-            )
-        elif self.resampling == OWTestLearners.TestOnTest:
-            test_f = partial(
-                Orange.evaluation.TestOnTestData,
-                self.data, self.test_data, learners_c, **common_args
+                Orange.evaluation.TestOnTestData(store_data=True),
+                self.data, self.test_data, learners_c, self.preprocessor
             )
         else:
-            assert False, "self.resampling %s" % self.resampling
+            if self.resampling == OWTestLearners.KFold:
+                sampler = Orange.evaluation.CrossValidation(
+                    k=self.NFolds[self.n_folds],
+                    random_state=rstate)
+            elif self.resampling == OWTestLearners.FeatureFold:
+                sampler = Orange.evaluation.CrossValidationFeature(
+                    feature=self.fold_feature)
+            elif self.resampling == OWTestLearners.LeaveOneOut:
+                sampler = Orange.evaluation.LeaveOneOut()
+            elif self.resampling == OWTestLearners.ShuffleSplit:
+                sampler = Orange.evaluation.ShuffleSplit(
+                    n_resamples=self.NRepeats[self.n_repeats],
+                    train_size=self.SampleSizes[self.sample_size] / 100,
+                    test_size=None,
+                    stratified=self.shuffle_stratified,
+                    random_state=rstate)
+            elif self.resampling == OWTestLearners.TestOnTrain:
+                sampler = Orange.evaluation.TestOnTrainingData()
+            else:
+                assert False, "self.resampling %s" % self.resampling
+
+            sampler.store_data = True
+            test_f = partial(
+                sampler, self.data, learners_c, self.preprocessor)
 
         def replace_learners(evalfunc, *args, **kwargs):
             res = evalfunc(*args, **kwargs)
@@ -901,7 +889,6 @@ class UserInterrupt(BaseException):
     """
     A BaseException subclass used for cooperative task/thread cancellation
     """
-    pass
 
 
 def results_add_by_model(x, y):
@@ -1004,21 +991,20 @@ class Task:
 
 if __name__ == "__main__":  # pragma: no cover
     filename = "iris"
-    data = Table(filename)
-    class_var = data.domain.class_var
-    if class_var.is_discrete:
-        learners = [lambda data: 1 / 0,
-                    Orange.classification.LogisticRegressionLearner(),
-                    Orange.classification.MajorityLearner(),
-                    Orange.classification.NaiveBayesLearner()]
+    preview_data = Table(filename)
+    if preview_data.domain.class_var.is_discrete:
+        prev_learners = [lambda data: 1 / 0,
+                         Orange.classification.LogisticRegressionLearner(),
+                         Orange.classification.MajorityLearner(),
+                         Orange.classification.NaiveBayesLearner()]
     else:
-        learners = [lambda data: 1 / 0,
-                    Orange.regression.MeanLearner(),
-                    Orange.regression.KNNRegressionLearner(),
-                    Orange.regression.RidgeRegressionLearner()]
+        prev_learners = [lambda data: 1 / 0,
+                         Orange.regression.MeanLearner(),
+                         Orange.regression.KNNRegressionLearner(),
+                         Orange.regression.RidgeRegressionLearner()]
 
     WidgetPreview(OWTestLearners).run(
-        set_train_data=data,
-        set_test_data=data,
-        set_learner=[(learner, i) for i, learner in enumerate(learners)]
+        set_train_data=preview_data,
+        set_test_data=preview_data,
+        set_learner=[(learner, i) for i, learner in enumerate(prev_learners)]
     )

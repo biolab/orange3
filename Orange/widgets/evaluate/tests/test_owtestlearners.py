@@ -386,7 +386,7 @@ class TestHelpers(unittest.TestCase):
     def test_results_one_vs_rest(self):
         data = Table(test_filename("datasets/lenses.tab"))
         learners = [MajorityLearner()]
-        res = TestOnTestData(data[1::2], data[::2], learners=learners)
+        res = TestOnTestData()(data[1::2], data[::2], learners=learners)
         r1 = results_one_vs_rest(res, pos_index=0)
         r2 = results_one_vs_rest(res, pos_index=1)
         r3 = results_one_vs_rest(res, pos_index=2)
