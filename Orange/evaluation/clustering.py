@@ -78,10 +78,7 @@ class ClusteringEvaluation(Validation):
         The number of runs.
 
     """
-    # pylint: disable=unused-argument
-    def __init__(self, data=None, learners=None, k=1,
-                 store_data=False, store_models=False, preprocessor=None,
-                 callback=None, n_jobs=1):
+    def __init__(self, k=1, store_data=False, store_models=False):
         super().__init__(store_data=store_data, store_models=store_models)
         self.k = k
 

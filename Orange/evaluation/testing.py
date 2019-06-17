@@ -1,5 +1,3 @@
-# __init__ methods have all kinds of unused arguments to match signatures
-# pylint: disable=unused-argument
 # __new__ methods have different arguments
 # pylint: disable=arguments-differ
 from warnings import warn
@@ -120,8 +118,8 @@ class Results:
             actual (np.ndarray): see class documentation
             predicted (np.ndarray): see class documentation
             probabilities (np.ndarray): see class documentation
-            store_data (bool): ignored; kept for backward compabitility
-            store_models (bool): ignored; kept for backward compabitility
+            store_data (bool): ignored; kept for backward compatibility
+            store_models (bool): ignored; kept for backward compatibility
         """
 
         # Set given data directly from arguments
@@ -352,7 +350,7 @@ class Validation:
     def __new__(cls,
                 data=None, learners=None, preprocessor=None, test_data=None,
                 *, callback=None, store_data=False, store_models=False,
-                **kwargs):
+                n_jobs=None, **kwargs):
         self = super().__new__(cls)
 
         if (learners is None) != (data is None):
@@ -373,7 +371,7 @@ class Validation:
 
         # Explicitly call __init__ because Python won't
         self.__init__(store_data=store_data, store_models=store_models,
-                      callback=callback, **kwargs)
+                      **kwargs)
         if test_data is not None:
             test_data_kwargs = {"test_data": test_data}
         else:
@@ -382,7 +380,7 @@ class Validation:
                     callback=callback, **test_data_kwargs)
 
     # Note: this will be called only if __new__ doesn't have data and learners
-    def __init__(self, *, store_data=False, store_models=False, **kwargs):
+    def __init__(self, *, store_data=False, store_models=False):
         self.store_data = store_data
         self.store_models = store_models
 
@@ -528,13 +526,10 @@ class CrossValidation(Validation):
             validataion and adds a list `warning` with a warning message(s) to
             the `Result`.
     """
-    # TODO: Remove arguments that go to call and swallow them in **kwargs?
     # TODO: list `warning` contains just repetitions of the same message
     #       replace with a flag in `Results`?
-    def __init__(self, data=None, learners=None,
-                 k=10, stratified=True, random_state=0,
-                 store_data=False, store_models=False, preprocessor=None,
-                 callback=None, warnings=None, n_jobs=1):
+    def __init__(self, k=10, stratified=True, random_state=0,
+                 store_data=False, store_models=False, warnings=None):
         super().__init__(store_data=store_data, store_models=store_models)
         self.k = k
         self.stratified = stratified
@@ -565,9 +560,8 @@ class CrossValidationFeature(Validation):
     Attributes:
         feature (Orange.data.Variable): the feature defining the folds
     """
-    def __init__(self, data=None, learners=None, feature=None,
-                 store_data=False, store_models=False, preprocessor=None,
-                 callback=None, warnings=None, n_jobs=1):
+    def __init__(self, feature=None,
+                 store_data=False, store_models=False, warnings=None):
         super().__init__(store_data=store_data, store_models=store_models)
         self.feature = feature
 
@@ -634,11 +628,9 @@ class ShuffleSplit(Validation):
             a different seed is used each time
 
     """
-    def __init__(self, data=None, learners=None,
-                 n_resamples=10, train_size=None, test_size=0.1,
+    def __init__(self, n_resamples=10, train_size=None, test_size=0.1,
                  stratified=True, random_state=0,
-                 store_data=False, store_models=False,
-                 preprocessor=None, callback=None, n_jobs=1):
+                 store_data=False, store_models=False):
         super().__init__(store_data=store_data, store_models=store_models)
         self.n_resamples = n_resamples
         self.train_size = train_size

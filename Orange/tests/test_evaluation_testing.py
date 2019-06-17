@@ -140,12 +140,14 @@ class TestValidation(unittest.TestCase):
 
         data = self.data
         learners = [MajorityLearner(), MajorityLearner()]
-        kwargs = dict(foo=42, store_data=43, store_models=44, callback=45)
+        kwargs = dict(foo=42, store_data=43, store_models=44, callback=45, n_jobs=46)
         self.assertWarns(
             DeprecationWarning,
             MockValidation, data, learners=learners,
             **kwargs)
         self.assertEqual(MockValidation.args, ())
+        kwargs.pop("n_jobs")  # do not pass n_jobs and callback from __new__ to __init__
+        kwargs.pop("callback")
         self.assertEqual(MockValidation.kwargs, kwargs)
 
         cargs, ckwargs = validation_call.call_args
@@ -183,7 +185,7 @@ class TestCrossValidation(TestSampling):
         self.check_folds(res, 10, nrows)
 
     def test_continuous(self):
-        res = CrossValidation(k=3, n_jobs=1)(
+        res = CrossValidation(k=3)(
             self.housing, [LinearRegressionLearner()])
         self.assertLess(RMSE(res), 5)
 
