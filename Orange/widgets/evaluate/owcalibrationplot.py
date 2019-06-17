@@ -12,6 +12,8 @@ from Orange.classification import ThresholdClassifier, CalibratedLearner
 from Orange.evaluation import Results
 from Orange.evaluation.performance_curves import Curves
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.evaluate.contexthandlers import \
+    EvaluationResultsContextHandler
 from Orange.widgets.evaluate.utils import \
     check_results_adequacy, results_for_preview
 from Orange.widgets.utils import colorpalette, colorbrewer
@@ -84,9 +86,9 @@ class OWCalibrationPlot(widget.OWWidget):
             no_out + "select a single model - the widget can output only one")
         non_binary_class = Msg(no_out + "cannot calibrate non-binary classes")
 
-
-    target_index = settings.Setting(0)
-    selected_classifiers = settings.Setting([])
+    settingsHandler = EvaluationResultsContextHandler()
+    target_index = settings.ContextSetting(0)
+    selected_classifiers = settings.ContextSetting([])
     score = settings.Setting(0)
     output_calibration = settings.Setting(0)
     fold_curves = settings.Setting(False)
@@ -168,6 +170,7 @@ class OWCalibrationPlot(widget.OWWidget):
 
     @Inputs.evaluation_results
     def set_results(self, results):
+        self.closeContext()
         self.clear()
         results = check_results_adequacy(results, self.Error, check_nan=False)
         if results is not None and not results.actual.size:
@@ -177,6 +180,9 @@ class OWCalibrationPlot(widget.OWWidget):
         self.results = results
         if self.results is not None:
             self._initialize(results)
+            class_var = self.results.domain.class_var
+            self.target_index = int(len(class_var.values) == 2)
+            self.openContext(class_var, self.classifier_names)
             self._replot()
         self.apply()
 
