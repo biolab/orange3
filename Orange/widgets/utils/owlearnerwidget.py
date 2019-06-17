@@ -1,12 +1,11 @@
 from copy import deepcopy
 
-import numpy as np
-
 from AnyQt.QtCore import QTimer, Qt
 
 from Orange.data import Table
 from Orange.modelling import Fitter, Learner, Model
 from Orange.preprocess.preprocess import Preprocess
+from Orange.statistics import util as ut
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import getmembers
@@ -133,6 +132,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
         """Set the input train dataset."""
         self.Error.data_error.clear()
         self.data = data
+
         if data is not None and data.domain.class_var is None:
             self.Error.data_error("Data has no target variable.")
             self.data = None
@@ -181,7 +181,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
                 self.Error.data_error(self.learner.learner_adequacy_err_msg)
             elif not len(self.data):
                 self.Error.data_error("Dataset is empty.")
-            elif len(np.unique(self.data.Y)) < 2:
+            elif len(ut.unique(self.data.Y)) < 2:
                 self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:
                 self.Error.data_error("Data has no features to learn from.")

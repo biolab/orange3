@@ -3,7 +3,6 @@
 
 import random
 from unittest import TestCase
-from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
@@ -14,6 +13,9 @@ from Orange.data import Table, Instance, Domain, ContinuousVariable, DiscreteVar
 
 
 # noinspection PyPep8Naming
+from Orange.widgets.tests.utils import table_dense_sparse
+
+
 class TestEqualFreq(TestCase):
     def test_equifreq_with_too_few_values(self):
         s = [0] * 50 + [1] * 50
@@ -54,9 +56,10 @@ class TestEqualWidth(TestCase):
         self.assertEqual(len(dvar.values), 4)
         self.assertEqual(dvar.compute_value.points, [0.25, 0.5, 0.75])
 
-    def test_equalwidth_100_to_4(self):
+    @table_dense_sparse
+    def test_equalwidth_100_to_4(self, prepare_table):
         X = np.arange(101).reshape((101, 1))
-        table = data.Table(X)
+        table = prepare_table(data.Table(X))
         disc = discretize.EqualWidth(n=4)
         dvar = disc(table, table.domain[0])
         self.assertEqual(len(dvar.values), 4)
@@ -116,9 +119,7 @@ class TestEntropyMDL(TestCase):
 # noinspection PyPep8Naming
 class TestDiscretizer(TestCase):
     def setUp(self):
-        self.var = Mock(data.ContinuousVariable, number_of_decimals=1)
-        self.var.name = "x"
-        self.var.sparse = False
+        self.var = data.ContinuousVariable("x", number_of_decimals=1)
 
     def test_create_discretized_var(self):
         dvar = discretize.Discretizer.create_discretized_var(

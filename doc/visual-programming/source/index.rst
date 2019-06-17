@@ -23,6 +23,7 @@ Data
    :maxdepth: 1
 
    widgets/data/file
+   widgets/data/csvfileimport
    widgets/data/datasets
    widgets/data/sqltable
    widgets/data/save
@@ -39,6 +40,7 @@ Data
    widgets/data/concatenate
    widgets/data/select-by-data-index
    widgets/data/paintdata
+   widgets/data/pivot
    widgets/data/pythonscript
    widgets/data/featureconstructor
    widgets/data/editdomain

@@ -30,6 +30,7 @@ class OWKNNLearner(OWBaseLearner):
     weight_index = Setting(0)
 
     def add_main_layout(self):
+        # this is part of init, pylint: disable=attribute-defined-outside-init
         box = gui.vBox(self.controlArea, "Neighbors")
         self.n_neighbors_spin = gui.spin(
             box, self, "n_neighbors", 1, 100, label="Number of neighbors:",

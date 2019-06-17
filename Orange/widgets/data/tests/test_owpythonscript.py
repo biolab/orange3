@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import sys
+
 from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 
@@ -7,7 +9,7 @@ from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
 from Orange.tests import named_file
 from Orange.widgets.data.owpythonscript import OWPythonScript, read_file_content
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.base import WidgetTest, DummySignalManager
 from Orange.widgets.widget import OWWidget
 
 
@@ -212,3 +214,30 @@ class TestOWPythonScript(WidgetTest):
         return QDropEvent(
             QPoint(0, 0), Qt.MoveAction, data,
             Qt.NoButton, Qt.NoModifier, QDropEvent.Drop)
+
+    def test_shared_namespaces(self):
+        widget1 = self.create_widget(OWPythonScript)
+        widget2 = self.create_widget(OWPythonScript)
+        self.signal_manager = DummySignalManager()
+        widget3 = self.create_widget(OWPythonScript)
+
+        self.send_signal(widget1.Inputs.data, self.iris, (1,), widget=widget1)
+        widget1.text.setPlainText("x = 42\n"
+                                  "out_data = in_data\n")
+        widget1.execute_button.click()
+        self.assertIs(
+            self.get_output(widget1.Outputs.data, widget=widget1),
+            self.iris)
+
+        widget2.text.setPlainText("out_object = 2 * x\n"
+                                  "out_data = in_data")
+        widget2.execute_button.click()
+        self.assertEqual(
+            self.get_output(widget1.Outputs.object, widget=widget2),
+            84)
+        self.assertIsNone(self.get_output(widget1.Outputs.data, widget=widget2))
+
+        sys.last_traceback = None
+        widget3.text.setPlainText("out_object = 2 * x")
+        widget3.execute_button.click()
+        self.assertIsNotNone(sys.last_traceback)

@@ -204,6 +204,8 @@ class Table(MutableSequence, Storage):
             value = value[:, None]
         if sp.issparse(value) and len(self) != value.shape[0]:
             value = value.T
+        if sp.issparse(value):
+            value = value.toarray()
         self._Y = value
 
     def __new__(cls, *args, **kwargs):
@@ -1184,25 +1186,38 @@ class Table(MutableSequence, Storage):
             return rx(self.metas[:, -1 - index])
 
     def _filter_is_defined(self, columns=None, negate=False):
+        # structure of function is obvious; pylint: disable=too-many-branches
+        def _sp_anynan(a):
+            return a.indptr[1:] != a[-1:] + a.shape[1]
+
         if columns is None:
             if sp.issparse(self.X):
-                remove = (self.X.indptr[1:] !=
-                          self.X.indptr[-1:] + self.X.shape[1])
+                remove = _sp_anynan(self.X)
             else:
                 remove = bn.anynan(self.X, axis=1)
             if sp.issparse(self._Y):
-                remove = np.logical_or(remove, self._Y.indptr[1:] !=
-                                       self._Y.indptr[-1:] + self._Y.shape[1])
+                remove += _sp_anynan(self._Y)
             else:
-                remove = np.logical_or(remove, bn.anynan(self._Y, axis=1))
+                remove += bn.anynan(self._Y, axis=1)
+            if sp.issparse(self.metas):
+                remove += _sp_anynan(self._metas)
+            else:
+                for i, var in enumerate(self.domain.metas):
+                    col = self.metas[:, i].flatten()
+                    if var.is_primitive():
+                        remove += np.isnan(col.astype(float))
+                    else:
+                        remove += ~col.astype(bool)
         else:
             remove = np.zeros(len(self), dtype=bool)
             for column in columns:
                 col, sparse = self.get_column_view(column)
                 if sparse:
-                    remove = np.logical_or(remove, col == 0)
+                    remove += col == 0
+                elif self.domain[column].is_primitive():
+                    remove += bn.anynan([col.astype(float)], axis=0)
                 else:
-                    remove = np.logical_or(remove, bn.anynan([col], axis=0))
+                    remove += col.astype(bool)
         retain = remove if negate else np.logical_not(remove)
         return self.from_table_rows(self, retain)
 
@@ -1283,34 +1298,60 @@ class Table(MutableSequence, Storage):
         """
         from Orange.data.filter import (
             FilterContinuous, FilterDiscrete, FilterRegex, FilterString,
-            FilterStringList, Values
+            FilterStringList, IsDefined, Values
         )
         if isinstance(filter, Values):
             return self._values_filter_to_indicator(filter)
 
-        col = self.get_column_view(filter.column)[0]
+        def get_col_indices():
+            cols = chain(self.domain.variables, self.domain.metas)
+            if isinstance(filter, IsDefined):
+                return list(cols)
 
-        if isinstance(filter, FilterDiscrete):
-            return self._discrete_filter_to_indicator(filter, col)
+            if filter.column is not None:
+                return [filter.column]
 
-        if isinstance(filter, FilterContinuous):
-            return self._continuous_filter_to_indicator(filter, col)
+            if isinstance(filter, FilterDiscrete):
+                raise ValueError("Discrete filter can't be applied across rows")
+            if isinstance(filter, FilterContinuous):
+                return [col for col in cols if col.is_continuous]
+            if isinstance(filter,
+                          (FilterString, FilterStringList, FilterRegex)):
+                return [col for col in cols if col.is_string]
+            raise TypeError("Invalid filter")
 
-        if isinstance(filter, FilterString):
-            return self._string_filter_to_indicator(filter, col)
+        def col_filter(col_idx):
+            col = self.get_column_view(col_idx)[0]
+            if isinstance(filter, IsDefined):
+                if self.domain[col_idx].is_primitive():
+                    return ~np.isnan(col.astype(float))
+                else:
+                    return col.astype(np.bool)
+            if isinstance(filter, FilterDiscrete):
+                return self._discrete_filter_to_indicator(filter, col)
+            if isinstance(filter, FilterContinuous):
+                return self._continuous_filter_to_indicator(filter, col)
+            if isinstance(filter, FilterString):
+                return self._string_filter_to_indicator(filter, col)
+            if isinstance(filter, FilterStringList):
+                if not filter.case_sensitive:
+                    col = np.char.lower(np.array(col, dtype=str))
+                    vals = [val.lower() for val in filter.values]
+                else:
+                    vals = filter.values
+                return reduce(operator.add, (col == val for val in vals))
+            if isinstance(filter, FilterRegex):
+                return np.vectorize(filter)(col)
+            raise TypeError("Invalid filter")
 
-        if isinstance(filter, FilterStringList):
-            if not filter.case_sensitive:
-                col = np.char.lower(np.array(col, dtype=str))
-                vals = [val.lower() for val in filter.values]
-            else:
-                vals = filter.values
-            return reduce(operator.add, (col == val for val in vals))
+        col_indices = get_col_indices()
+        if len(col_indices) == 1:
+            return col_filter(col_indices[0])
 
-        if isinstance(filter, FilterRegex):
-            return np.vectorize(filter)(col)
-
-        raise TypeError("Invalid filter")
+        sel = np.ones(len(self), dtype=bool)
+        for col_idx in col_indices:
+            sel *= col_filter(col_idx)
+        return sel
 
     def _discrete_filter_to_indicator(self, filter, col):
         """Return selection of rows matched by the given discrete filter.
@@ -1392,24 +1433,25 @@ class Table(MutableSequence, Storage):
 
     @staticmethod
     def _range_filter_to_indicator(filter, col, fmin, fmax):
-        if filter.oper == filter.Equal:
-            return col == fmin
-        if filter.oper == filter.NotEqual:
-            return col != fmin
-        if filter.oper == filter.Less:
-            return col < fmin
-        if filter.oper == filter.LessEqual:
-            return col <= fmin
-        if filter.oper == filter.Greater:
-            return col > fmin
-        if filter.oper == filter.GreaterEqual:
-            return col >= fmin
-        if filter.oper == filter.Between:
-            return (col >= fmin) * (col <= fmax)
-        if filter.oper == filter.Outside:
-            return (col < fmin) + (col > fmax)
+        with np.errstate(invalid="ignore"):   # nan's are properly discarded
+            if filter.oper == filter.Equal:
+                return col == fmin
+            if filter.oper == filter.NotEqual:
+                return col != fmin
+            if filter.oper == filter.Less:
+                return col < fmin
+            if filter.oper == filter.LessEqual:
+                return col <= fmin
+            if filter.oper == filter.Greater:
+                return col > fmin
+            if filter.oper == filter.GreaterEqual:
+                return col >= fmin
+            if filter.oper == filter.Between:
+                return (col >= fmin) * (col <= fmax)
+            if filter.oper == filter.Outside:
+                return (col < fmin) + (col > fmax)
 
-        raise TypeError("Invalid operator")
+            raise TypeError("Invalid operator")
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):

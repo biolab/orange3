@@ -244,6 +244,12 @@ class TestOWNomogram(WidgetTest):
         attrs = self.get_output(self.widget.Outputs.features)
         self.assertIsNone(attrs)
 
+    def test_reset_settings(self):
+        self.widget.n_attributes = 5
+        self.widget.n_spin.valueChanged.emit(5)
+        self.widget.reset_settings()
+        self.assertEqual(10, self.widget.n_attributes)
+
 
 if __name__ == "__main__":
     unittest.main()

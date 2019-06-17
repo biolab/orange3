@@ -1191,6 +1191,10 @@ class OWNomogram(OWWidget):
         return sorted_coefficients[i - 1] * sorted_values[i - 1] * k + \
                sorted_coefficients[i] * sorted_values[i] * (1 - k)
 
+    def reset_settings(self):
+        self._reset_settings()
+        self.update_scene()
+
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import NaiveBayesLearner  #, LogisticRegressionLearner

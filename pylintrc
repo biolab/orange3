@@ -28,7 +28,7 @@ unsafe-load-any-extension=no
 # A comma-separated list of package or module names from where C extensions may
 # be loaded. Extensions are loading into the active Python interpreter and may
 # run arbitrary code
-extension-pkg-whitelist=
+extension-pkg-whitelist=Orange.distance._distance
 
 # Allow optimization of some AST trees. This will activate a peephole AST
 # optimizer, which will apply various small optimizations. For instance, it can
@@ -60,20 +60,11 @@ confidence=
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
 disable=
-    global-statement,unnecessary-lambda,arguments-differ,unused-argument,
-    no-self-use,fixme,no-name-in-module,no-member,
-    round-builtin,next-method-called,cmp-builtin,filter-builtin-not-iterating,
-    nonzero-method,old-division,input-builtin,intern-builtin,
-    map-builtin-not-iterating,suppressed-message,buffer-builtin,
-    unpacking-in-except,no-absolute-import,range-builtin-not-iterating,
-    coerce-method,zip-builtin-not-iterating,reload-builtin,
-    standarderror-builtin,import-star-module-level,old-octal-literal,
-    metaclass-assignment,reduce-builtin,indexing-exception,
-    parameter-unpacking,long-suffix,cmp-method,using-cmp-argument,
-    useless-suppression,import-error,
-    empty-docstring,missing-docstring,redefined-outer-name,redefined-builtin,
-    attribute-defined-outside-init, no-else-return, len-as-condition, invalid-sequence-index,
-    unsubscriptable-object
+    missing-docstring,  # I guess not
+    no-name-in-module, no-member,  # too many false positives from Qt
+    import-error,       # false positives, and we don't expect any true positives
+    too-many-ancestors, # I don't think this is a problem
+    no-else-return      # else's may actually improve readability
 
 
 [REPORTS]

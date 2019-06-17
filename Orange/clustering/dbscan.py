@@ -1,5 +1,5 @@
 import sklearn.cluster as skl_cluster
-from numpy import ndarray
+from numpy import ndarray, unique
 
 from Orange.data import Table, DiscreteVariable, Domain, Instance
 from Orange.projection import SklProjector, Projection
@@ -38,11 +38,11 @@ class DBSCANModel(Projection):
             if data.domain is not self.pre_domain:
                 data = data.transform(self.pre_domain)
             y = self.proj.fit_predict(data.X)
-            vals = [-1] + list(self.proj.core_sample_indices_)
+            vals, indices = unique(y, return_inverse=True)
             c = DiscreteVariable(name='Core sample index',
                                  values=[str(v) for v in vals])
             domain = Domain([c])
-            return Table(domain, y.reshape(len(y), 1))
+            return Table(domain, indices.reshape(len(y), 1))
 
         elif isinstance(data, Instance):
             if data.domain is not self.pre_domain:

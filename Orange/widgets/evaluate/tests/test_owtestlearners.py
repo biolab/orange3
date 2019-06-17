@@ -1,11 +1,9 @@
 # pylint: disable=missing-docstring
 # pylint: disable=protected-access
-import collections
 import unittest
 
 import numpy as np
-from AnyQt.QtWidgets import QMenu
-from AnyQt.QtCore import QPoint, Qt
+from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 
 from Orange.classification import MajorityLearner, LogisticRegressionLearner
@@ -18,6 +16,7 @@ from Orange.modelling import ConstantLearner
 from Orange.regression import MeanLearner
 from Orange.widgets.evaluate.owtestlearners import (
     OWTestLearners, results_one_vs_rest)
+from Orange.widgets.evaluate.utils import BUILTIN_SCORERS_ORDER
 from Orange.widgets.settings import (
     ClassValuesContextHandler, PerfectDomainContextHandler)
 from Orange.widgets.tests.base import WidgetTest
@@ -120,63 +119,6 @@ class TestOWTestLearners(WidgetTest):
         self.assertEqual(self.widget.resampling, OWTestLearners.KFold)
         self.assertFalse(self.widget.features_combo.isEnabled())
 
-    def test_update_shown_columns(self):
-        w = self.widget  #: OWTestLearners
-        all, shown = "MABDEFG", "ABDF"
-        header = w.view.horizontalHeader()
-        w.shown_scores = set(shown)
-        w.result_model.setHorizontalHeaderLabels(list(all))
-        w._update_shown_columns()
-        for i, name in enumerate(all):
-            self.assertEqual(name == "M" or name in shown,
-                             not header.isSectionHidden(i),
-                             msg="error in section {}({})".format(i, name))
-
-        w.shown_scores = set()
-        w._update_shown_columns()
-        for i, name in enumerate(all):
-            self.assertEqual(i == 0,
-                             not header.isSectionHidden(i),
-                             msg="error in section {}({})".format(i, name))
-
-    def test_show_column_chooser(self):
-        w = self.widget  #: OWTestLearners
-        all, shown = "MABDEFG", "ABDF"
-        header = w.view.horizontalHeader()
-        w.shown_scores = set(shown)
-        w.result_model.setHorizontalHeaderLabels(list(all))
-        w._update_shown_columns()
-
-        actions = collections.OrderedDict()
-        menu_add_action = QMenu.addAction
-
-        def addAction(menu, a):
-            action = menu_add_action(menu, a)
-            actions[a] = action
-            return action
-
-        def execmenu(*_):
-            self.assertEqual(list(actions), list(all)[1:])
-            for name, action in actions.items():
-                self.assertEqual(action.isChecked(), name in shown)
-            actions["E"].triggered.emit(True)
-            self.assertEqual(w.shown_scores, set("ABDEF"))
-            actions["B"].triggered.emit(False)
-            self.assertEqual(w.shown_scores, set("ADEF"))
-            for i, name in enumerate(all):
-                self.assertEqual(name == "M" or name in "ADEF",
-                                 not header.isSectionHidden(i),
-                                 msg="error in section {}({})".format(i, name))
-
-        # We must patch `QMenu.exec` because the Qt would otherwise (invisibly)
-        # show the popup and wait for the user.
-        # Assertions are made within `menuexec` since they check the
-        # instances of `QAction`, which are invalid (destroyed by Qt?) after
-        # `menuexec` finishes.
-        with unittest.mock.patch("AnyQt.QtWidgets.QMenu.addAction", addAction),\
-                unittest.mock.patch("AnyQt.QtWidgets.QMenu.exec", execmenu):
-            w.show_column_chooser(QPoint(0, 0))
-
     def test_migrate_removes_invalid_contexts(self):
         context_invalid = ClassValuesContextHandler().new_context([0, 1, 2])
         context_valid = PerfectDomainContextHandler().new_context(*[[]] * 4)
@@ -194,8 +136,8 @@ class TestOWTestLearners(WidgetTest):
         self.assertFalse(self.widget.Error.memory_error.is_shown())
 
         with unittest.mock.patch(
-            "Orange.evaluation.testing.Results.get_augmented_data",
-            side_effect=MemoryError):
+                "Orange.evaluation.testing.Results.get_augmented_data",
+                side_effect=MemoryError):
             self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=5000)
             self.assertTrue(self.widget.Error.memory_error.is_shown())
 
@@ -237,6 +179,7 @@ class TestOWTestLearners(WidgetTest):
 
     def test_addon_scorers(self):
         try:
+            # These classes are registered, pylint: disable=unused-variable
             class NewScore(Score):
                 class_types = (DiscreteVariable, ContinuousVariable)
 
@@ -246,7 +189,7 @@ class TestOWTestLearners(WidgetTest):
             class NewRegressionScore(RegressionScore):
                 pass
 
-            builtins = self.widget.BUILTIN_ORDER
+            builtins = BUILTIN_SCORERS_ORDER
             self.send_signal("Data", Table("iris"))
             scorer_names = [scorer.name for scorer in self.widget.scorers]
             self.assertEqual(
@@ -268,29 +211,30 @@ class TestOWTestLearners(WidgetTest):
             self.send_signal("Data", None)
             self.assertEqual(self.widget.scorers, [])
         finally:
-            del Score.registry["NewScore"]
-            del Score.registry["NewClassificationScore"]
-            del Score.registry["NewRegressionScore"]
+            del Score.registry["NewScore"]  # pylint: disable=no-member
+            del Score.registry["NewClassificationScore"]  # pylint: disable=no-member
+            del Score.registry["NewRegressionScore"]  # pylint: disable=no-member
 
     def test_target_changing(self):
         data = Table("iris")
         w = self.widget  #: OWTestLearners
+        model = w.score_table.model
 
         w.n_folds = 2
         self.send_signal(self.widget.Inputs.train_data, data)
         self.send_signal(self.widget.Inputs.learner,
                          LogisticRegressionLearner(), 0, wait=5000)
 
-        average_auc = float(w.view.model().item(0, 1).text())
+        average_auc = float(model.item(0, 1).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-setosa")
-        setosa_auc = float(w.view.model().item(0, 1).text())
+        setosa_auc = float(model.item(0, 1).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-versicolor")
-        versicolor_auc = float(w.view.model().item(0, 1).text())
+        versicolor_auc = float(model.item(0, 1).text())
 
         simulate.combobox_activate_item(w.controls.class_selection, "Iris-virginica")
-        virginica_auc = float(w.view.model().item(0, 1).text())
+        virginica_auc = float(model.item(0, 1).text())
 
         self.assertGreater(average_auc, versicolor_auc)
         self.assertGreater(average_auc, virginica_auc)
@@ -326,31 +270,29 @@ class TestOWTestLearners(WidgetTest):
         self.send_signal(self.widget.Inputs.test_data, setosa, wait=5000)
 
         self.widget.show()
-        header = self.widget.view.horizontalHeader()
+        view = self.widget.score_table.view
+        header = view.horizontalHeader()
         QTest.mouseClick(header.viewport(), Qt.LeftButton)
 
         # Ensure that the click on header caused an ascending sort
         # Ascending sort means that wrong model should be listed first
         self.assertEqual(header.sortIndicatorOrder(), Qt.AscendingOrder)
-        self.assertEqual(
-            self.widget.view.model().item(0, 0).text(),
-            "VersicolorLearner")
+        self.assertEqual(view.model().item(0, 0).text(), "VersicolorLearner")
 
         self.send_signal(self.widget.Inputs.test_data, versicolor, wait=5000)
-        self.assertEqual(
-            self.widget.view.model().item(0, 0).text(),
-            "SetosaLearner")
+        self.assertEqual(view.model().item(0, 0).text(), "SetosaLearner")
 
         self.widget.hide()
 
     def _retrieve_scores(self):
         w = self.widget
-        auc = w.view.model().item(0, 1).text()
+        model = w.score_table.model
+        auc = model.item(0, 1).text()
         auc = float(auc) if auc != "" else None
-        ca = float(w.view.model().item(0, 2).text())
-        f1 = float(w.view.model().item(0, 3).text())
-        precision = float(w.view.model().item(0, 4).text())
-        recall = float(w.view.model().item(0, 5).text())
+        ca = float(model.item(0, 2).text())
+        f1 = float(model.item(0, 3).text())
+        precision = float(model.item(0, 4).text())
+        recall = float(model.item(0, 5).text())
         return auc, ca, f1, precision, recall
 
     def _test_scores(self, train_data, test_data, learner, sampling, n_folds):

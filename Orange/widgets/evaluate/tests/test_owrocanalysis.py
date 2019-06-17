@@ -31,7 +31,7 @@ class TestROC(unittest.TestCase):
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 10)
                 self.assertTrue(all(c.is_valid for c in rocdata.folds))
@@ -40,12 +40,13 @@ class TestROC(unittest.TestCase):
 
         # fixed random seed because otherwise it could happen that data sample
         # contained only instances of two classes (and the test then fails)
+        # Pylint complains about RandomState; pylint: disable=no-member
         data = data[np.random.RandomState(0).choice(len(data), size=20)]
         res = Orange.evaluation.LeaveOneOut(data, learners)
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 20)
                 # all individual fold curves and averaged curve data
@@ -60,7 +61,7 @@ class TestROC(unittest.TestCase):
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 20)
                 # all individual fold curves and averaged curve data

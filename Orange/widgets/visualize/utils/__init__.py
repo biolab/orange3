@@ -558,7 +558,8 @@ class CanvasText(QGraphicsTextItem):
     """
     def __init__(self, scene, text="", x=0, y=0,
                  alignment=Qt.AlignLeft | Qt.AlignTop, bold=False, font=None,
-                 z=0, html_text=None, tooltip=None, show=True, vertical=False):
+                 z=0, html_text=None, tooltip=None, show=True, vertical=False,
+                 max_width=None):
         QGraphicsTextItem.__init__(self, text, None)
 
         if font:
@@ -580,6 +581,10 @@ class CanvasText(QGraphicsTextItem):
         self.setZValue(z)
         if tooltip:
             self.setToolTip(tooltip)
+        if max_width is not None:
+            assert not html_text
+            self.elide(max_width)
+
         if show:
             self.show()
         else:
@@ -587,6 +592,18 @@ class CanvasText(QGraphicsTextItem):
 
         if scene is not None:
             scene.addItem(self)
+
+    def elide(self, max_width):
+        if self.boundingRect().width() <= max_width:
+            return
+        short = self.toPlainText()
+        if not self.toolTip():
+            self.setToolTip(short)
+        while short and self.boundingRect().width() > max_width:
+            short = short[:-1]
+            self.setPlainText(short + "...")
+            # apparently this has to be called to reset position
+            self.setPos(self.x, self.y)
 
     def setPos(self, x, y):
         """setPos with adjustment for alignment"""

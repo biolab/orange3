@@ -45,7 +45,6 @@ class Config(config.Config):
 
     @staticmethod
     def splash_screen():
-
         path = pkg_resources.resource_filename(
             __name__, "icons/orange-splash-screen.png")
         pm = QPixmap(path)

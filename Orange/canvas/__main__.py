@@ -21,8 +21,7 @@ from urllib.request import urlopen, Request
 
 import pkg_resources
 
-from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices
-from AnyQt.QtWidgets import QMessageBox
+from AnyQt.QtGui import QFont, QColor, QPalette, QDesktopServices, QIcon
 from AnyQt.QtCore import (
     Qt, QDir, QUrl, QSettings, QThread, pyqtSignal, QT_VERSION
 )
@@ -42,9 +41,12 @@ from orangecanvas.main import (
 )
 
 from orangewidget.workflow.errorreporting import handle_exception
-from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 
 from Orange.canvas import config
+from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
+from Orange.canvas.mainwindow import MainWindow
+from Orange.widgets import gui
+
 
 log = logging.getLogger(__name__)
 
@@ -65,32 +67,55 @@ def make_stdout_handler(level, fmt=None):
     return handler
 
 
-def show_survey():
-    # If run for the first time, open a browser tab with a survey
+def setup_notifications():
     settings = QSettings()
-    show_survey = settings.value("startup/show-survey", True, type=bool)
+    # If run for the fifth time, prompt short survey
+    show_survey = settings.value("startup/show-short-survey", True, type=bool) and \
+                  settings.value("startup/launch-count", 0, type=int) >= 5
     if show_survey:
-        question = QMessageBox(
-            QMessageBox.Question,
-            'Orange Survey',
-            'We would like to know more about how our software is used.\n\n'
-            'Would you care to fill our short 1-minute survey?',
-            QMessageBox.Yes | QMessageBox.No)
-        question.setDefaultButton(QMessageBox.Yes)
-        later = question.addButton('Ask again later', QMessageBox.NoRole)
-        question.setEscapeButton(later)
+        surveyDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
+        surveyDialog = NotificationWidget(icon=QIcon(gui.resource_filename("icons/information.png")),
+                                          title="Survey",
+                                          text="We want to understand our users better.\n"
+                                               "Would you like to take a short survey?",
+                                          standardButtons=surveyDialogButtons)
 
-        def handle_response(result):
-            if result == QMessageBox.Yes:
+        def handle_survey_response(button):
+            if surveyDialog.buttonRole(button) == NotificationWidget.AcceptRole:
                 success = QDesktopServices.openUrl(
                     QUrl("https://orange.biolab.si/survey/short.html"))
-                settings.setValue("startup/show-survey", not success)
-            else:
-                settings.setValue("startup/show-survey", result != QMessageBox.No)
+                settings.setValue("startup/show-short-survey", not success)
+            elif surveyDialog.buttonRole(button) == NotificationWidget.RejectRole:
+                settings.setValue("startup/show-short-survey", False)
 
-        question.finished.connect(handle_response)
-        question.show()
-        return question
+        surveyDialog.clicked.connect(handle_survey_response)
+
+        NotificationOverlay.registerNotification(surveyDialog)
+
+    # data collection permission
+    if not settings.value("error-reporting/permission-requested", False, type=bool):
+        permDialogButtons = NotificationWidget.Ok | NotificationWidget.Close
+        permDialog = NotificationWidget(icon=QIcon(gui.resource_filename(
+                                                                "../../distribute/icon-48.png")),
+                                        title="Anonymous Usage Statistics",
+                                        text="Do you wish to opt-in to sharing "
+                                             "statistics about how you use Orange?\n"
+                                             "All data is anonymized and used "
+                                             "exclusively for understanding how users "
+                                             "interact with Orange.",
+                                        standardButtons=permDialogButtons)
+        btnOK = permDialog.button(NotificationWidget.AcceptRole)
+        btnOK.setText("Allow")
+
+        def handle_permission_response(button):
+            if permDialog.buttonRole(button) != permDialog.DismissRole:
+                settings.setValue("error-reporting/permission-requested", True)
+            if permDialog.buttonRole(button) == permDialog.AcceptRole:
+                settings.setValue("error-reporting/send-statistics", True)
+
+        permDialog.clicked.connect(handle_permission_response)
+
+        NotificationOverlay.registerNotification(permDialog)
 
 
 def check_for_updates():
@@ -134,29 +159,36 @@ def check_for_updates():
 
         def compare_versions(latest):
             version = pkg_resources.parse_version
-            if version(latest) <= version(current):
+            skipped = settings.value('startup/latest-skipped-version', "", type=str)
+            if version(latest) <= version(current) or \
+                    latest == skipped:
                 return
-            question = QMessageBox(
-                QMessageBox.Information,
-                'Orange Update Available',
-                'A newer version of Orange is available.<br><br>'
-                '<b>Current version:</b> {}<br>'
-                '<b>Latest version:</b> {}'.format(current, latest),
-                textFormat=Qt.RichText)
-            ok = question.addButton('Download Now', question.AcceptRole)
-            question.setDefaultButton(ok)
-            question.addButton('Remind Later', question.RejectRole)
-            question.finished.connect(
-                lambda:
-                question.clickedButton() == ok and
-                QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/")))
-            question.show()
+
+            questionButtons = NotificationWidget.Ok | NotificationWidget.Close
+            question = NotificationWidget(icon=QIcon(gui.resource_filename('icons/Dlg_down3.png')),
+                                          title='Orange Update Available',
+                                          text='Current version: <b>{}</b><br>'
+                                               'Latest version: <b>{}</b>'.format(current, latest),
+                                          textFormat=Qt.RichText,
+                                          standardButtons=questionButtons,
+                                          acceptLabel="Download",
+                                          rejectLabel="Skip this Version")
+
+            def handle_click(b):
+                if question.buttonRole(b) != question.DismissRole:
+                    settings.setValue('startup/latest-skipped-version', latest)
+                if question.buttonRole(b) == question.AcceptRole:
+                    QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
+
+            question.clicked.connect(handle_click)
+
+            NotificationOverlay.registerNotification(question)
 
         thread = GetLatestVersion()
         thread.resultReady.connect(compare_versions)
         thread.start()
         return thread
-
+    return None
 
 
 def main(argv=None):
@@ -310,6 +342,8 @@ def main(argv=None):
 
     settings = QSettings()
 
+    settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
+
     stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
 
@@ -352,7 +386,7 @@ def main(argv=None):
     dirpath = os.path.abspath(os.path.dirname(orangecanvas.__file__))
     QDir.addSearchPath("canvas_icons", os.path.join(dirpath, "icons"))
 
-    canvas_window = OWCanvasMainWindow()
+    canvas_window = MainWindow()
     canvas_window.setAttribute(Qt.WA_DeleteOnClose)
     canvas_window.setWindowIcon(config.application_icon())
 
@@ -432,8 +466,10 @@ def main(argv=None):
                  open_requests[-1])
         canvas_window.load_scheme(open_requests[-1].toLocalFile())
 
+    # initialize notifications
+    setup_notifications()
+
     # local references prevent destruction
-    survey = show_survey()
     update_check = check_for_updates()
 
     # Tee stdout and stderr into Output dock
@@ -467,7 +503,6 @@ def main(argv=None):
         status = 42
 
     del canvas_window
-    del survey
     del update_check
 
     app.processEvents()

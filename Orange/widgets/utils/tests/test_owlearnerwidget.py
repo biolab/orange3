@@ -1,9 +1,12 @@
+import scipy.sparse as sp
+
 # pylint: disable=missing-docstring
 from Orange.base import Learner, Model
 from Orange.classification import KNNLearner
 from Orange.data import Table, Domain
 from Orange.modelling import TreeLearner
-from Orange.regression import MeanLearner
+from Orange.preprocess import continuize
+from Orange.regression import MeanLearner, LinearRegressionLearner
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.signals import Output
@@ -108,3 +111,24 @@ class TestOWBaseLearner(WidgetTest):
         settings = w1.settingsHandler.pack_data(w1)
         w2 = self.create_widget(WidgetA, settings)
         self.assertEqual(w2.learner_name, w1.learner_name)
+
+    def test_converts_sparse_targets_to_dense(self):
+        class WidgetLR(OWBaseLearner):
+            name = "lr"
+            LEARNER = LinearRegressionLearner
+
+        w = self.create_widget(WidgetLR)
+
+        # Orange will want do do one-hot encoding when continuizing discrete variable
+        pp = continuize.DomainContinuizer(
+            multinomial_treatment=continuize.Continuize.AsOrdinal,
+            transform_class=True,
+        )
+        data = self.iris.transform(pp(self.iris))
+        data.Y = sp.csr_matrix(data.Y)
+
+        self.send_signal(w.Inputs.data, data, widget=w)
+        self.assertFalse(any(w.Error.active))
+
+        model = self.get_output(w.Outputs.model, widget=w)
+        self.assertIsNotNone(model)

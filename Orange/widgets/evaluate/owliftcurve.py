@@ -8,7 +8,7 @@ from collections import namedtuple
 import numpy as np
 import sklearn.metrics as skl_metrics
 
-from AnyQt import QtWidgets
+from AnyQt.QtWidgets import QListView, QFrame
 from AnyQt.QtGui import QColor, QPen, QPalette, QFont
 from AnyQt.QtCore import Qt
 
@@ -96,14 +96,14 @@ class OWLiftCurve(widget.OWWidget):
         cbox.setFlat(True)
         self.classifiers_list_box = gui.listBox(
             cbox, self, "selected_classifiers", "classifier_names",
-            selectionMode=QtWidgets.QListView.MultiSelection,
+            selectionMode=QListView.MultiSelection,
             callback=self._on_classifiers_changed)
 
         gui.checkBox(box, self, "display_convex_hull",
                      "Show lift convex hull", callback=self._replot)
 
         self.plotview = pg.GraphicsView(background="w")
-        self.plotview.setFrameStyle(QtWidgets.QFrame.StyledPanel)
+        self.plotview.setFrameStyle(QFrame.StyledPanel)
 
         self.plot = pg.PlotItem(enableMenu=False)
         self.plot.setMouseEnabled(False, False)
