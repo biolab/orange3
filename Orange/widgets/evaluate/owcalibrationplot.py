@@ -7,7 +7,8 @@ from AnyQt.QtWidgets import QListWidget, QSizePolicy
 
 import pyqtgraph as pg
 
-from Orange.classification import ModelWithThreshold
+from Orange.base import Model
+from Orange.classification import ThresholdClassifier, CalibratedLearner
 from Orange.evaluation import Results
 from Orange.evaluation.performance_curves import Curves
 from Orange.widgets import widget, gui, settings
@@ -67,26 +68,27 @@ class OWCalibrationPlot(widget.OWWidget):
         evaluation_results = Input("Evaluation Results", Results)
 
     class Outputs:
-        calibrated_model = Output("Calibrated Model", ModelWithThreshold)
+        calibrated_model = Output("Calibrated Model", Model)
 
     class Warning(widget.OWWidget.Warning):
-        empty_input = widget.Msg(
-            "Empty result on input. Nothing to display.")
+        empty_input = widget.Msg("Empty result on input. Nothing to display.")
 
     class Information(widget.OWWidget.Information):
         no_out = "Can't output a model: "
         no_output_multiple_folds = Msg(
-            no_out + "every training data sample produced a different model")
+            no_out + "each training data sample produces a different model")
         no_output_no_models = Msg(
             no_out + "test results do not contain stored models;\n"
             "try testing on separate data or on training data")
         no_output_multiple_selected = Msg(
             no_out + "select a single model - the widget can output only one")
+        non_binary_class = Msg(no_out + "cannot calibrate non-binary classes")
 
 
     target_index = settings.Setting(0)
     selected_classifiers = settings.Setting([])
     score = settings.Setting(0)
+    output_calibration = settings.Setting(0)
     fold_curves = settings.Setting(False)
     display_rug = settings.Setting(True)
     threshold = settings.Setting(0.5)
@@ -103,10 +105,13 @@ class OWCalibrationPlot(widget.OWWidget):
         self.colors = []
         self.line = None
 
+        self._last_score_value = -1
+
         box = gui.vBox(self.controlArea, box="Settings")
         self.target_cb = gui.comboBox(
             box, self, "target_index", label="Target:",
-            orientation=Qt.Horizontal, callback=self._replot, contentsLength=8)
+            orientation=Qt.Horizontal, callback=self.target_index_changed,
+            contentsLength=8)
         gui.checkBox(
             box, self, "display_rug", "Show rug",
             callback=self._on_display_rug_changed)
@@ -132,6 +137,11 @@ class OWCalibrationPlot(widget.OWWidget):
         font = self.explanation.font()
         font.setPointSizeF(0.85 * font.pointSizeF())
         self.explanation.setFont(font)
+
+        gui.radioButtons(
+            box, self, value="output_calibration",
+            btnLabels=("Sigmoid calibration", "Isotonic calibration"),
+            label="Output model calibration", callback=self.apply)
 
         box = gui.widgetBox(self.controlArea, "Info")
         self.info_label = gui.widgetLabel(box)
@@ -159,7 +169,7 @@ class OWCalibrationPlot(widget.OWWidget):
     @Inputs.evaluation_results
     def set_results(self, results):
         self.clear()
-        results = check_results_adequacy(results, self.Error)
+        results = check_results_adequacy(results, self.Error, check_nan=False)
         if results is not None and not results.actual.size:
             self.Warning.empty_input()
         else:
@@ -179,9 +189,19 @@ class OWCalibrationPlot(widget.OWWidget):
         self.target_index = 0
         self.colors = []
 
+    def target_index_changed(self):
+        if len(self.results.domain.class_var.values) == 2:
+            self.threshold = 1 - self.threshold
+        self._set_explanation()
+        self._replot()
+        self.apply()
+
     def score_changed(self):
         self._set_explanation()
         self._replot()
+        if self._last_score_value != self.score:
+            self.apply()
+            self._last_score_value = self.score
 
     def _set_explanation(self):
         explanation = Metrics[self.score].explanation
@@ -190,6 +210,11 @@ class OWCalibrationPlot(widget.OWWidget):
             self.explanation.show()
         else:
             self.explanation.hide()
+
+        if self.score == 0:
+            self.controls.output_calibration.show()
+        else:
+            self.controls.output_calibration.hide()
 
         axis = self.plot.getAxis("bottom")
         axis.setLabel("Predicted probability" if self.score == 0
@@ -292,22 +317,23 @@ class OWCalibrationPlot(widget.OWWidget):
                     fold_results = results.get_fold(fold)
                     fold_ytrue = fold_results.actual == target
                     fold_probs = fold_results.probabilities[clsf, :, target]
-                    self.plot_metrics(Data(fold_ytrue, fold_probs),
+                    self.plot_metrics(Curves(fold_ytrue, fold_probs),
                                       metrics, pen_args)
 
     def _replot(self):
         self.plot.clear()
         if self.results is not None:
             self._setup_plot()
-        self.line = pg.InfiniteLine(
-            pos=self.threshold, movable=True,
-            pen=pg.mkPen(color="k", style=Qt.DashLine, width=2),
-            hoverPen=pg.mkPen(color="k", style=Qt.DashLine, width=3),
-            bounds=(0, 1),
-        )
-        self.line.sigPositionChanged.connect(self.threshold_change)
-        self.line.sigPositionChangeFinished.connect(self.threshold_change_done)
-        self.plot.addItem(self.line)
+        if self.score != 0:
+            self.line = pg.InfiniteLine(
+                pos=self.threshold, movable=True,
+                pen=pg.mkPen(color="k", style=Qt.DashLine, width=2),
+                hoverPen=pg.mkPen(color="k", style=Qt.DashLine, width=3),
+                bounds=(0, 1),
+            )
+            self.line.sigPositionChanged.connect(self.threshold_change)
+            self.line.sigPositionChangeFinished.connect(self.threshold_change_done)
+            self.plot.addItem(self.line)
         self._update_info()
 
     def _on_display_rug_changed(self):
@@ -336,7 +362,10 @@ class OWCalibrationPlot(widget.OWWidget):
                                 {"<td></td>".join(f"<td align='right'>{n}</td>"
                                                   for n in short_names)}
                             </tr>"""
-            for name, (probs, curves) in self.scores:
+            for name, probs_curves in self.scores:
+                if probs_curves is None:
+                    continue
+                probs, curves = probs_curves
                 ind = min(np.searchsorted(probs, self.threshold),
                           len(probs) - 1)
                 text += f"<tr><th align='right'>{name}:</th>"
@@ -353,15 +382,28 @@ class OWCalibrationPlot(widget.OWWidget):
         info = self.Information
         wrapped = None
         problems = {}
-        if self.results is not None:
+        results = self.results
+        if results is not None:
             problems = {
-                info.no_output_multiple_folds: len(self.results.folds) > 1,
-                info.no_output_no_models: self.results.models is None,
+                info.no_output_multiple_folds: len(results.folds) > 1,
+                info.no_output_no_models: results.models is None,
                 info.no_output_multiple_selected:
-                    len(self.selected_classifiers) != 1}
+                    len(self.selected_classifiers) != 1,
+                info.non_binary_class:
+                    self.score != 0
+                    and len(results.domain.class_var.values) != 2}
             if not any(problems.values()):
-                model = self.results.models[0][self.selected_classifiers[0]]
-                wrapped = ModelWithThreshold(model, self.threshold)
+                clsf_idx = self.selected_classifiers[0]
+                model = results.models[0, clsf_idx]
+                if self.score == 0:
+                    cal_learner = CalibratedLearner(
+                        None, self.output_calibration)
+                    wrapped = cal_learner.get_model(
+                        model, results.actual, results.probabilities[clsf_idx])
+                else:
+                    threshold = [1 - self.threshold,
+                                 self.threshold][self.target_index]
+                    wrapped = ThresholdClassifier(model, threshold)
 
         self.Outputs.calibrated_model.send(wrapped)
         for info, shown in problems.items():
