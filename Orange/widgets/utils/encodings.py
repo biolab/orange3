@@ -1,7 +1,7 @@
 import sys
 import codecs
 
-from typing import List
+from typing import List, Iterable
 
 from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel, QSettings
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
@@ -21,6 +21,7 @@ DEFAULT_ENCODINGS = [
 ]
 
 ENCODING_DISPLAY_NAME = (
+    # pylint: disable=bad-whitespace
     ("utf-8",           "Unicode (UTF-8)"),
     ("utf-16",          "Unicode (UTF-16)"),
     ("utf-16-le",       "Unicode (UTF-16LE)"),
@@ -157,7 +158,7 @@ class EncodingsView(QListView):
         sh.setWidth(max(sh.width(), width,))
         return sh
 
-    def dataChanged(self, topLeft, bottomRight, roles=[]):
+    def dataChanged(self, topLeft, bottomRight, roles=()):
         super().dataChanged(topLeft, bottomRight, roles)
         self.updateGeometry()
 
@@ -344,8 +345,8 @@ def encodings_model():
         item.setCheckState(Qt.Checked if is_selected(co) else Qt.Unchecked)
         items.append(item)
 
-    def on_data_changed(first, last, roles=[]):
-        # type: (QModelIndex, QModelIndex, List[int]) -> None
+    def on_data_changed(first, last, roles=()):
+        # type: (QModelIndex, QModelIndex, Iterable[int]) -> None
         if roles and Qt.CheckStateRole not in roles:
             return
         assert first.column() == last.column()
