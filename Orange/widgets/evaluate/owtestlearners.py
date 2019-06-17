@@ -315,7 +315,7 @@ class OWTestLearners(OWWidget):
             # Removed
             self._invalidate([key])
             del self.learners[key]
-        else:
+        elif learner is not None:
             self.learners[key] = InputLearner(learner, None, None)
             self._invalidate([key])
 
