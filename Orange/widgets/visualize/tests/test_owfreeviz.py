@@ -28,7 +28,12 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         cls.heart_disease = Table("heart_disease")
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWFreeViz)
+
+    def tearDown(self):
+        self.widget.onDeleteWidget()
+        super().tearDown()
 
     def test_error_msg(self):
         data = self.data[:, list(range(len(self.data.domain.attributes)))]
@@ -62,7 +67,7 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.assertEqual(self.widget.run_button.text(), "Stop")
 
     def test_optimization_finish(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, self.data[::10].copy())
         output1 = self.get_output(self.widget.Outputs.components)
         self.widget.run_button.click()
         self.assertEqual(self.widget.run_button.text(), "Stop")
