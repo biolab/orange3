@@ -171,7 +171,7 @@ class Results:
             "mismatching number of class values")
         nmethods = set_or_raise(
             nmethods, [learners is not None and len(learners),
-                       models is not None and len(models),
+                       models is not None and models.shape[1],
                        failed is not None and len(failed),
                        predicted is not None and predicted.shape[0],
                        probabilities is not None and probabilities.shape[0]],
@@ -365,7 +365,7 @@ class Validation:
                                  "and train_data are omitted")
             return self
 
-        warn("calling Validation's constructor with data and learners"
+        warn("calling Validation's constructor with data and learners "
              "is deprecated;\nconstruct an instance and call it",
              DeprecationWarning, stacklevel=2)
 

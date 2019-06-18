@@ -756,7 +756,7 @@ class TestResults(unittest.TestCase):
         self.row_indices = np.arange(100)
         self.folds = (range(50), range(10, 60)), (range(50, 100), range(50))
         self.learners = [MajorityLearner(), MajorityLearner()]
-        self.models = [Mock(), Mock()]
+        self.models = np.array([[Mock(), Mock()]])
         self.predicted = np.zeros((2, 100))
         self.probabilities = np.zeros((2, 100, 3))
         self.failed = [False, True]
