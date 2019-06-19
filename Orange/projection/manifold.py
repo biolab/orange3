@@ -8,6 +8,10 @@ from scipy.linalg import eigh as lapack_eigh
 from scipy.sparse.linalg import eigsh as arpack_eigh
 import sklearn.manifold as skl_manifold
 
+import openTSNE
+import openTSNE.affinity
+import openTSNE.initialization
+
 import Orange
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.distance import Distance, DistanceModel, Euclidean
@@ -16,6 +20,10 @@ from Orange.projection.base import TransformDomain, ComputeValueProjector
 
 __all__ = ["MDS", "Isomap", "LocallyLinearEmbedding", "SpectralEmbedding",
            "TSNE"]
+
+# Disable t-SNE user warnings
+openTSNE.tsne.log.setLevel(logging.ERROR)
+openTSNE.affinity.log.setLevel(logging.ERROR)
 
 
 def torgerson(distances, n_components=2, eigen_solver="auto"):
@@ -182,23 +190,6 @@ class SpectralEmbedding(SklProjector):
         self.params = vars()
 
 
-class lazy_openTSNE:
-    """openTSNE uses numba, which is slow to load, so load it lazily."""
-    def __getattr__(self, item):
-        import sys
-        import openTSNE
-        import openTSNE.affinity
-        import openTSNE.initialization
-        if "openTSNE" in sys.modules:
-            # Disable t-SNE user warnings
-            openTSNE.tsne.log.setLevel(logging.ERROR)
-            openTSNE.affinity.log.setLevel(logging.ERROR)
-        return getattr(openTSNE, item)
-
-
-openTSNE = lazy_openTSNE()
-
-
 class TSNEModel(Projection):
     """A t-SNE embedding object. Supports further optimization as well as
     adding new data into the existing embedding.
@@ -213,8 +204,8 @@ class TSNEModel(Projection):
     pre_domain : Domain
         Original data domain
     """
-    def __init__(self, embedding, table, pre_domain):
-        # type: (openTSNE.TSNEEmbedding, Table, Domain) -> None
+    def __init__(self, embedding: openTSNE.TSNEEmbedding, table: Table,
+                 pre_domain: Domain):
         transformer = TransformDomain(self)
 
         def proj_variable(i):
@@ -230,8 +221,7 @@ class TSNEModel(Projection):
             class_vars=table.domain.class_vars,
             metas=table.domain.metas)
 
-    def transform(self, X, learning_rate=1, **kwargs):
-        # type: (np.ndarray, int, ...) -> openTSNE.PartialTSNEEmbedding
+    def transform(self, X: np.ndarray, learning_rate=1, **kwargs) -> openTSNE.PartialTSNEEmbedding:
         if sp.issparse(X):
             raise TypeError(
                 "A sparse matrix was passed, but dense data is required. Use "
@@ -491,8 +481,7 @@ class TSNE(Projector):
             callbacks_every_iters=self.callbacks_every_iters,
         )
 
-    def fit(self, X, Y=None):
-        # type: (np.ndarray, Optional[np.ndarray]) -> openTSNE.TSNEEmbedding
+    def fit(self, X: np.ndarray, Y: np.ndarray = None) -> openTSNE.TSNEEmbedding:
         # Compute affinities and initial positions and prepare the embedding object
         affinities = self.compute_affinities(X)
         initialization = self.compute_initialization(X)
