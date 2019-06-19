@@ -74,18 +74,23 @@ class OWCalibrationPlot(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         non_discrete_target = Msg("Calibration plot requires a discrete target")
         empty_input = widget.Msg("Empty result on input. Nothing to display.")
+        nan_classes = \
+            widget.Msg("Remove test data instances with unknown classes")
+        all_target_class = widget.Msg(
+            "All data instances belong to target class")
+        no_target_class = widget.Msg(
+            "No data instances belong to target class")
+
+    class Warning(widget.OWWidget.Warning):
+        omitted_folds = widget.Msg(
+            "Test folds where all data belongs to (non)-target are not shown")
+        omitted_nan_prob_points = widget.Msg(
+            "Instance for which the model couldn't compute probabilities are"
+            "skipped")
+        no_valid_data = widget.Msg("No valid data for model(s) {}")
 
     class Information(widget.OWWidget.Information):
-        no_out = "Can't output a model: "
-        no_output_multiple_folds = Msg(
-            no_out + "each training data sample produces a different model")
-        no_output_no_models = Msg(
-            no_out + "test results do not contain stored models;\n"
-            "try testing on separate data or on training data")
-        no_output_multiple_selected = Msg(
-            no_out + "select a single model - the widget can output only one")
-        no_output_non_binary_class = Msg(
-            no_out + "cannot calibrate non-binary classes")
+        no_output = Msg("Can't output a model: {}")
 
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
@@ -179,19 +184,23 @@ class OWCalibrationPlot(widget.OWWidget):
         self.clear()
         self.Error.clear()
         self.Information.clear()
-        if results is not None and not results.domain.has_discrete_class:
-            self.Error.non_discrete_target()
-            results = None
-        if results is not None and not results.actual.size:
-            self.Error.empty_input()
-            results = None
-        self.results = results
-        if self.results is not None:
-            self._initialize(results)
-            class_var = self.results.domain.class_var
-            self.target_index = int(len(class_var.values) == 2)
-            self.openContext(class_var, self.classifier_names)
-            self._replot()
+
+        self.results = None
+        if results is not None:
+            if not results.domain.has_discrete_class:
+                self.Error.non_discrete_target()
+            elif not results.actual.size:
+                self.Error.empty_input()
+            elif np.any(np.isnan(results.actual)):
+                self.Error.nan_classes()
+            else:
+                self.results = results
+                self._initialize(results)
+                class_var = self.results.domain.class_var
+                self.target_index = int(len(class_var.values) == 2)
+                self.openContext(class_var, self.classifier_names)
+                self._replot()
+
         self.apply()
 
     def clear(self):
@@ -286,9 +295,6 @@ class OWCalibrationPlot(widget.OWWidget):
         return data.probs, ys
 
     def _prob_curve(self, ytrue, probs, pen_args):
-        if not probs.size:
-            return None
-
         xmin, xmax = probs.min(), probs.max()
         x = np.linspace(xmin, xmax, 100)
         if xmax != xmin:
@@ -307,16 +313,25 @@ class OWCalibrationPlot(widget.OWWidget):
         plot_folds = self.fold_curves and results.folds is not None
         self.scores = []
 
-        ytrue = results.actual == target
+        if not self._check_class_presence(results.actual == target):
+            return
+
+        self.Warning.omitted_folds.clear()
+        self.Warning.omitted_nan_prob_points.clear()
+        no_valid_models = []
+        shadow_width = 4 + 4 * plot_folds
         for clsf in self.selected_classifiers:
-            probs = results.probabilities[clsf, :, target]
+            data = Curves.from_results(results, target, clsf)
+            if data.tot == 0:  # all probabilities are nan
+                no_valid_models.append(clsf)
+                continue
+            if data.tot != results.probabilities.shape[1]:  # some are nan
+                self.Warning.omitted_nan_prob_points()
+
             color = self.colors[clsf]
             pen_args = dict(
-                pen=pg.mkPen(color, width=1),
-                shadowPen=pg.mkPen(color.lighter(160),
-                                   width=4 + 4 * plot_folds),
-                antiAlias=True)
-            data = Curves(ytrue, probs)
+                pen=pg.mkPen(color, width=1), antiAlias=True,
+                shadowPen=pg.mkPen(color.lighter(160), width=shadow_width))
             self.scores.append(
                 (self.classifier_names[clsf],
                  self.plot_metrics(data, metrics, pen_args)))
@@ -330,19 +345,20 @@ class OWCalibrationPlot(widget.OWWidget):
                     antiAlias=True)
                 for fold in range(len(results.folds)):
                     fold_results = results.get_fold(fold)
-                    fold_ytrue = fold_results.actual == target
-                    fold_probs = fold_results.probabilities[clsf, :, target]
-                    self.plot_metrics(Curves(fold_ytrue, fold_probs),
-                                      metrics, pen_args)
+                    fold_curve = Curves.from_results(fold_results, target, clsf)
+                    # Can't check this before: p and n can be 0 because of
+                    # nan probabilities
+                    if fold_curve.p * fold_curve.n == 0:
+                        self.Warning.omitted_folds()
+                    self.plot_metrics(fold_curve, metrics, pen_args)
+
+        if no_valid_models:
+            self.Warning.no_valid_data(
+                ", ".join(self.classifier_names[i] for i in no_valid_models))
 
         if self.score == 0:
             self.plot.plot([0, 1], [0, 1], antialias=True)
-
-    def _replot(self):
-        self.plot.clear()
-        if self.results is not None:
-            self._setup_plot()
-        if self.score != 0:
+        else:
             self.line = pg.InfiniteLine(
                 pos=self.threshold, movable=True,
                 pen=pg.mkPen(color="k", style=Qt.DashLine, width=2),
@@ -350,8 +366,25 @@ class OWCalibrationPlot(widget.OWWidget):
                 bounds=(0, 1),
             )
             self.line.sigPositionChanged.connect(self.threshold_change)
-            self.line.sigPositionChangeFinished.connect(self.threshold_change_done)
+            self.line.sigPositionChangeFinished.connect(
+                self.threshold_change_done)
             self.plot.addItem(self.line)
+
+    def _check_class_presence(self, ytrue):
+        self.Error.all_target_class.clear()
+        self.Error.no_target_class.clear()
+        if np.max(ytrue) == 0:
+            self.Error.no_target_class()
+            return False
+        if np.min(ytrue) == 1:
+            self.Error.all_target_class()
+            return False
+        return True
+
+    def _replot(self):
+        self.plot.clear()
+        if self.results is not None:
+            self._setup_plot()
         self._update_info()
 
     def _on_display_rug_changed(self):
@@ -380,10 +413,7 @@ class OWCalibrationPlot(widget.OWWidget):
                                 {"<td></td>".join(f"<td align='right'>{n}</td>"
                                                   for n in short_names)}
                             </tr>"""
-            for name, probs_curves in self.scores:
-                if probs_curves is None:
-                    continue
-                probs, curves = probs_curves
+            for name, (probs, curves) in self.scores:
                 ind = min(np.searchsorted(probs, self.threshold),
                           len(probs) - 1)
                 text += f"<tr><th align='right'>{name}:</th>"
@@ -397,20 +427,28 @@ class OWCalibrationPlot(widget.OWWidget):
         self.apply()
 
     def apply(self):
-        info = self.Information
+        self.Information.no_output.clear()
         wrapped = None
-        problems = {}
         results = self.results
         if results is not None:
-            problems = {
-                info.no_output_multiple_folds: len(results.folds) > 1,
-                info.no_output_no_models: results.models is None,
-                info.no_output_multiple_selected:
-                    len(self.selected_classifiers) != 1,
-                info.no_output_non_binary_class:
-                    self.score != 0
-                    and len(results.domain.class_var.values) != 2}
-            if not any(problems.values()):
+            problems = [
+                msg for condition, msg in (
+                    (len(results.folds) > 1,
+                     "each training data sample produces a different model"),
+                    (results.models is None,
+                     "test results do not contain stored models - try testing on"
+                     "separate data or on training data"),
+                    (len(self.selected_classifiers) != 1,
+                     "select a single model - the widget can output only one"),
+                    (self.score != 0 and len(results.domain.class_var.values) != 2,
+                     "cannot calibrate non-binary classes"))
+                if condition]
+            if len(problems) == 1:
+                self.Information.no_output(problems[0])
+            elif problems:
+                self.Information.no_output(
+                    "".join(f"\n - {problem}" for problem in problems))
+            else:
                 clsf_idx = self.selected_classifiers[0]
                 model = results.models[0, clsf_idx]
                 if self.score == 0:
@@ -424,9 +462,6 @@ class OWCalibrationPlot(widget.OWWidget):
                     wrapped = ThresholdClassifier(model, threshold)
 
         self.Outputs.calibrated_model.send(wrapped)
-        for info, shown in problems.items():
-            if info.is_shown() != shown:
-                info(shown=shown)
 
     def send_report(self):
         if self.results is None:

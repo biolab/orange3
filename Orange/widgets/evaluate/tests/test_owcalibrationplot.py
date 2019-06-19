@@ -21,22 +21,6 @@ from Orange.tests import test_filename
 
 
 class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.lenses = data = Table(test_filename("datasets/lenses.tab"))
-        majority = Orange.classification.MajorityLearner()
-        majority.name = "majority"
-        knn3 = Orange.classification.KNNLearner(n_neighbors=3)
-        knn3.name = "knn-3"
-        knn1 = Orange.classification.KNNLearner(n_neighbors=1)
-        knn1.name = "knn-1"
-        cls.lenses_results = Orange.evaluation.TestOnTestData(
-            store_data=True, store_models=True)(
-                data=data[::2], test_data=data[1::2],
-                learners=[majority, knn3, knn1])
-        cls.lenses_results.learner_names = ["majority", "knn-3", "knn-1"]
-
     def setUp(self):
         super().setUp()
 
@@ -56,11 +40,24 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         self.results = Results(
             domain=domain,
             actual=actual,
-            folds=(Ellipsis, ),
+            folds=np.array([Ellipsis]),
             models=np.array([[Mock(), Mock()]]),
             row_indices=np.arange(19),
             predicted=np.array((pred, pred2)),
             probabilities=np.array([probs, probs2]))
+
+        self.lenses = data = Table(test_filename("datasets/lenses.tab"))
+        majority = Orange.classification.MajorityLearner()
+        majority.name = "majority"
+        knn3 = Orange.classification.KNNLearner(n_neighbors=3)
+        knn3.name = "knn-3"
+        knn1 = Orange.classification.KNNLearner(n_neighbors=1)
+        knn1.name = "knn-1"
+        self.lenses_results = Orange.evaluation.TestOnTestData(
+            store_data=True, store_models=True)(
+                data=data[::2], test_data=data[1::2],
+                learners=[majority, knn3, knn1])
+        self.lenses_results.learner_names = ["majority", "knn-3", "knn-1"]
 
         self.widget = self.create_widget(OWCalibrationPlot)  # type: OWCalibrationPlot
         warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
@@ -389,24 +386,31 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         widget = self.widget
         model_list = widget.controls.selected_classifiers
 
-        info = widget.Information
-        infos = (info.no_output_multiple_folds,
-                 info.no_output_no_models,
-                 info.no_output_multiple_selected,
-                 info.no_output_non_binary_class)
-        multiple_folds, no_models, multiple_selected, non_binary_class = infos
+        multiple_folds, multiple_selected, no_models, non_binary_class = "abcd"
+        messages = {
+            multiple_folds:
+                "each training data sample produces a different model",
+            no_models:
+                "test results do not contain stored models - try testing on"
+                "separate data or on training data",
+            multiple_selected:
+                "select a single model - the widget can output only one",
+            non_binary_class:
+                "cannot calibrate non-binary classes"}
 
         def test_shown(shown):
-            for info in infos:
-                self.assertEqual(
-                    info.is_shown(), info in shown,
-                    f"{info} is unexpectedly "
-                    f"{'' if info.is_shown() else 'not'} shown")
+            widget_msg = widget.Information.no_output
             output = self.get_output(widget.Outputs.calibrated_model)
-            if shown:
-                self.assertIsNone(output)
-            else:
+            if not shown:
+                self.assertFalse(widget_msg.is_shown())
                 self.assertIsNotNone(output)
+            else:
+                self.assertTrue(widget_msg.is_shown())
+                self.assertIsNone(output)
+                for msg_id in shown:
+                    msg = messages[msg_id]
+                    self.assertIn(msg, widget_msg.formatted,
+                                  f"{msg} not included in the message")
 
         self.send_signal(widget.Inputs.evaluation_results, self.results)
         self._set_combo(widget.controls.score, 1)  # CA
@@ -558,3 +562,79 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
         widget = self.widget
         self.send_signal(widget.Inputs.evaluation_results, self.lenses_results)
         widget.send_report()
+
+    @patch("Orange.widgets.evaluate.owcalibrationplot.ThresholdClassifier")
+    @patch("Orange.widgets.evaluate.owcalibrationplot.CalibratedLearner")
+    def test_single_class(self, *_):
+        """Curves are not plotted if all data belongs to (non)-target"""
+        def check_error(shown):
+            for error in (errors.no_target_class, errors.all_target_class,
+                          errors.nan_classes):
+                self.assertEqual(error.is_shown(), error is shown,
+                                 f"{error} is unexpectedly"
+                                 f"{'' if error.is_shown() else ' not'} shown")
+            if shown is not None:
+                self.assertEqual(len(widget.plot.items), 0)
+            else:
+                self.assertGreater(len(widget.plot.items), 0)
+
+        widget = self.widget
+        errors = widget.Error
+        widget.display_rug = True
+        combo = widget.controls.score
+
+        original_actual = self.results.actual.copy()
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        widget.selected_classifiers = [0]
+        for idx in range(combo.count()):
+            self._set_combo(combo, idx)
+            self.results.actual[:] = 0
+            self.send_signal(widget.Inputs.evaluation_results, self.results)
+            check_error(errors.no_target_class)
+
+            self.results.actual[:] = 1
+            self.send_signal(widget.Inputs.evaluation_results, self.results)
+            check_error(errors.all_target_class)
+
+            self.results.actual[:] = original_actual
+            self.results.actual[3] = np.nan
+            self.send_signal(widget.Inputs.evaluation_results, self.results)
+            check_error(errors.nan_classes)
+
+            self.results.actual[:] = original_actual
+            self.send_signal(widget.Inputs.evaluation_results, self.results)
+            check_error(None)
+
+    @patch("Orange.widgets.evaluate.owcalibrationplot.ThresholdClassifier")
+    @patch("Orange.widgets.evaluate.owcalibrationplot.CalibratedLearner")
+    def test_single_class_folds(self, *_):
+        """Curves for single-class folds are not plotted"""
+        widget = self.widget
+        widget.display_rug = False
+        widget.fold_curves = False
+
+        results = self.lenses_results
+        results.folds = [slice(0, 5), slice(5, 19)]
+        results.models = results.models.repeat(2, axis=0)
+        results.actual[:3] = 0
+        results.probabilities[1, 3:5] = np.nan
+        # after this, model 1 has just negative instances in fold 0
+        self.send_signal(widget.Inputs.evaluation_results, results)
+        self._set_combo(widget.controls.score, 1)  # CA
+        self.assertFalse(widget.Warning.omitted_folds.is_shown())
+        widget.controls.fold_curves.click()
+        self.assertTrue(widget.Warning.omitted_folds.is_shown())
+
+    @patch("Orange.widgets.evaluate.owcalibrationplot.ThresholdClassifier")
+    @patch("Orange.widgets.evaluate.owcalibrationplot.CalibratedLearner")
+    def test_warn_nan_probabilities(self, *_):
+        """Warn about omitted points with nan probabiities"""
+        widget = self.widget
+        widget.display_rug = False
+        widget.fold_curves = False
+
+        self.results.probabilities[1, 3] = np.nan
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        self.assertTrue(widget.Warning.omitted_nan_prob_points.is_shown())
+        self._set_list_selection(widget.controls.selected_classifiers, [0, 2])
+        self.assertFalse(widget.Warning.omitted_folds.is_shown())
