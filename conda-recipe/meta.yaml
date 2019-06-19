@@ -52,6 +52,7 @@ requirements:
     - serverfiles
     - matplotlib    >=2.0.0
     - opentsne      >=0.3.0
+    - pandas
 
 test:
   # Python imports
