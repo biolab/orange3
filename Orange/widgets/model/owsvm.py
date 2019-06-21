@@ -10,6 +10,8 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.classification import SklLearner
+from Orange.preprocess import Scale
 
 
 class OWSVM(OWBaseLearner):
@@ -25,6 +27,12 @@ class OWSVM(OWBaseLearner):
     keywords = ["support vector machines"]
 
     LEARNER = SVMLearner
+
+    pps = SklLearner.preprocessors
+    scaling = [Scale(center=Scale.NoCentering)]
+
+    def __init__(self):
+        super().__init__(SklLearner.preprocessors)
 
     class Outputs(OWBaseLearner.Outputs):
         support_vectors = Output("Support vectors", Table, explicit=True)
@@ -56,12 +64,21 @@ class OWSVM(OWBaseLearner):
     limit_iter = Setting(True)
     #: maximum number of iterations
     max_iter = Setting(100)
+    #: scaling of data
+    scale_data = Setting(True)
 
     _default_gamma = "auto"
     kernels = (("Linear", "x⋅y"),
                ("Polynomial", "(g x⋅y + c)<sup>d</sup>"),
                ("RBF", "exp(-g|x-y|²)"),
                ("Sigmoid", "tanh(g x⋅y + c)"))
+
+    def set_preprocessor(self, preprocessor):
+        if preprocessor is None:
+            self.preprocessors = self.pps
+        else:
+            self.preprocessors = preprocessor
+        self.apply()
 
     def add_main_layout(self):
         self._add_type_box()
@@ -176,6 +193,10 @@ class OWSVM(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
             checkCallback=self.settings_changed)
+        self.scaling_box = gui.checkBox(
+            self.optimization_box, self,
+            'scale_data', label='Scale data',
+            callback=self.settings_changed)
 
     def _show_right_kernel(self):
         enabled = [[False, False, False],  # linear
@@ -210,7 +231,7 @@ class OWSVM(OWBaseLearner):
             'probability': True,
             'tol': self.tol,
             'max_iter': self.max_iter if self.limit_iter else -1,
-            'preprocessors': self.preprocessors
+            'preprocessors': list(self.preprocessors) + self.scaling if self.scale_data else self.preprocessors
         }
         if self.svm_type == self.SVM:
             return SVMLearner(C=self.C, epsilon=self.epsilon, **common_args)
