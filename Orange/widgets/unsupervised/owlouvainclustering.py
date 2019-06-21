@@ -14,7 +14,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtWidgets import QSlider, QCheckBox, QWidget, QLabel
 
-from Orange.clustering.louvain import table_to_knn_graph, Louvain
+from Orange.clustering.louvain import matrix_to_knn_graph, Louvain
 from Orange.data import Table, DiscreteVariable
 from Orange.data.util import get_unique_names, array_equal
 from Orange import preprocess
@@ -623,10 +623,9 @@ def run_on_data(data, normalize, pca_components, k_neighbors, metric, resolution
             raise InteruptRequested()
 
     try:
-        res.graph = graph = table_to_knn_graph(
-            data, k_neighbors=k_neighbors, metric=metric,
-            progress_callback=pcallback
-        )
+        res.graph = graph = matrix_to_knn_graph(
+            data.X, k_neighbors=k_neighbors, metric=metric,
+            progress_callback=pcallback)
     except InteruptRequested:
         return res
 
@@ -638,7 +637,7 @@ def run_on_data(data, normalize, pca_components, k_neighbors, metric, resolution
     if state.is_interuption_requested():
         return res
 
-    res.partition = louvain.fit_predict(graph)
+    res.partition = louvain(graph)
     state.set_partial_results(("partition", res.partition))
     return res
 
@@ -654,7 +653,7 @@ def run_on_graph(graph, resolution, state):
     state.set_status("Detecting communities...")
     if state.is_interuption_requested():
         return res
-    partition = louvain.fit_predict(graph)
+    partition = louvain(graph)
     res.partition = partition
     state.set_partial_results(("partition", res.partition))
     return res
