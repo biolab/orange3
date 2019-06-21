@@ -1,5 +1,5 @@
-Predictions
-===========
+Confusion Matrix
+================
 
 Shows proportions between the predicted and actual class.
 

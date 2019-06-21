@@ -21,6 +21,6 @@ The widget supports the creation of a new dataset by visually placing data point
 Example
 -------
 
-In the example below, we have painted a dataset with 4 classes. Such dataset is great for demonstrating k-means and hierarchical clustering methods. In the screenshot, we see that [k-Means](../unsupervised/kmeansclustering.md), overall, recognizes clusters better than [Hierarchical Clustering](../unsupervised/hierarchicalclustering.md). It returns a score rank, where the best score (the one with the highest value) means the most likely number of clusters. Hierarchical clustering, however, doesn’t group the right classes together. This is a great tool for learning and exploring statistical concepts.
+In the example below, we have painted a dataset with 4 classes. Such dataset is great for demonstrating k-means and hierarchical clustering methods. In the screenshot, we see that [k-Means](../unsupervised/kmeans.md), overall, recognizes clusters better than [Hierarchical Clustering](../unsupervised/hierarchicalclustering.md). It returns a score rank, where the best score (the one with the highest value) means the most likely number of clusters. Hierarchical clustering, however, doesn’t group the right classes together. This is a great tool for learning and exploring statistical concepts.
 
 ![](images/PaintData-Example.png)

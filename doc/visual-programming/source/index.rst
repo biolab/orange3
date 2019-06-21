@@ -48,7 +48,7 @@ Data
    widgets/data/mergedata
    widgets/data/outliers
    widgets/data/preprocess
-   widgets/data/transform
+   widgets/data/applydomain
    widgets/data/purgedomain
    widgets/data/rank
    widgets/data/correlations
@@ -120,7 +120,7 @@ Unsupervised
    widgets/unsupervised/distancefile
    widgets/unsupervised/savedistancematrix
    widgets/unsupervised/hierarchicalclustering
-   widgets/unsupervised/kmeansclustering
+   widgets/unsupervised/kmeans
    widgets/unsupervised/louvainclustering
    widgets/unsupervised/mds
    widgets/unsupervised/tsne
