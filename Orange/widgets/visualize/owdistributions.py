@@ -1,5 +1,5 @@
 from functools import partial
-from itertools import count, groupby
+from itertools import count, groupby, repeat
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -234,13 +234,13 @@ class OWDistributions(OWWidget):
     Bins = [2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50]
 
     Fitters = (
-        ("None", None, ()),
-        ("Normal", norm, ("loc", "scale")),
-        ("Beta", beta, ("a", "b", "loc", "scale")),
-        ("Gamma", gamma, ("a", "loc", "scale")),
-        ("Rayleigh", rayleigh, ("loc", "scale")),
-        ("Pareto", pareto, ("b", "loc", "scale")),
-        ("Exponential", expon, ("loc", "scale")),
+        ("None", None, (), ()),
+        ("Normal", norm, ("loc", "scale"), ("μ", "σ²")),
+        ("Beta", beta, ("a", "b", "loc", "scale"), ("α", "β", "-loc", "-scale")),
+        ("Gamma", gamma, ("a", "loc", "scale"), ("α", "β", "-loc", "-scale")),
+        ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ²")),
+        ("Pareto", pareto, ("b", "loc", "scale"), ("α", "-loc", "-scale")),
+        ("Exponential", expon, ("loc", "scale"), ("-loc", "λ")),
     )
 
     DragNone, DragAdd, DragRemove = range(3)
@@ -252,6 +252,7 @@ class OWDistributions(OWWidget):
         self.valid_mask = self.valid_data = self.valid_group_data = None
         self.selection = set()
         self.bar_items = []
+        self.curve_descriptions = None
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
@@ -377,6 +378,7 @@ class OWDistributions(OWWidget):
         self._set_valid_data()
         self._call_plotting()
         self._show_selection()
+        self.display_legend()
 
     def _clear_plot(self):
         self.plot.clear()
@@ -422,6 +424,7 @@ class OWDistributions(OWWidget):
         self.valid_data = column[self.valid_mask]
 
     def _call_plotting(self):
+        self.curve_descriptions = None
         if self.var is None:
             return
 
@@ -563,14 +566,31 @@ class OWDistributions(OWWidget):
                "</table>"
 
     def _fit_approximation(self, y):
-        _, dist, names = self.Fitters[self.fitted_distribution]
-        params = {name: val for name, val in zip(names, dist.fit(y))}
-        return partial(dist.pdf, **params)
+        def join_pars(pairs):
+            strv = self.var.str_val
+            return ", ".join(f"{sname}={strv(val)}" for sname, val in pairs)
+
+        def str_params():
+            s = join_pars(
+                (sname, val) for sname, val in zip(str_names, fitted)
+                if sname[0] != "-")
+            par = join_pars(
+                (sname[1:], val) for sname, val in zip(str_names, fitted)
+                if sname[0] == "-")
+            if par:
+                s += f" ({par})"
+            return s
+
+        _, dist, names, str_names = self.Fitters[self.fitted_distribution]
+        fitted = dist.fit(y)
+        params = {name: val for name, val in zip(names, fitted)}
+        return partial(dist.pdf, **params), str_params()
 
     def _plot_approximations(self, x0, x1, fitters, colors, prior_probs=0):
         x = np.linspace(x0, x1, 100)
         ys = np.empty((len(fitters), 100))
-        for y, fitter, color in zip(ys, fitters, colors):
+        self.curve_descriptions = [s for _, s in fitters]
+        for y, (fitter, _), color in zip(ys, fitters, colors):
             y[:] = fitter(x)
             if self.cumulative_distr:
                 y[:] = np.cumsum(y)
@@ -586,7 +606,8 @@ class OWDistributions(OWWidget):
             plot.addItem(pg.PlotCurveItem(
                 x=x, y=y,
                 pen=pg.mkPen(width=5, color=color),
-                shadowPen=pg.mkPen(width=8, color=color.darker(120))))
+                shadowPen=pg.mkPen(width=8, color=color.darker(120))
+            ))
         if not show_probs:
             self.plot_pdf.autoRange()
 
@@ -735,13 +756,20 @@ class OWDistributions(OWWidget):
         return (col >= minx) * (col < maxx)
 
     def display_legend(self):
-        cvar_values = self.cvar.values
-        colors = [QColor(*col) for col in self.cvar.colors]
-        for color, name in zip(colors, cvar_values):
-            self._legend.addItem(
-                ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
-                escape(name)
-            )
+        if self.cvar is None:
+            if self.curve_descriptions:
+                self._legend.addItem(
+                    pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
+                    self.curve_descriptions[0])
+        else:
+            cvar_values = self.cvar.values
+            colors = [QColor(*col) for col in self.cvar.colors]
+            for color, name, desc in zip(colors, cvar_values,
+                                         self.curve_descriptions or repeat(None)):
+                self._legend.addItem(
+                    ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
+                    escape(name + (f" ({desc})" if desc else ""))
+                )
         self._legend.show()
 
     def onDeleteWidget(self):
