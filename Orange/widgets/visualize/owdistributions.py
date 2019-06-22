@@ -229,6 +229,8 @@ class OWDistributions(OWWidget):
     stacked_columns = settings.Setting(True)
     cumulative_distr = settings.Setting(False)
 
+    auto_apply = settings.Setting(True)
+
     graph_name = "plot"
 
     Bins = [2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50]
@@ -266,7 +268,7 @@ class OWDistributions(OWWidget):
             selectionMode=QListView.SingleSelection)
 
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
-        gui.hSlider(
+        slider = gui.hSlider(
             box, self, "number_of_bins",
             label="Number of bins", orientation=Qt.Horizontal,
             minValue=0, maxValue=len(self.Bins) - 1, createLabel=False,
@@ -292,6 +294,11 @@ class OWDistributions(OWWidget):
         gui.checkBox(
             box2, self, "show_probs", "Show probabilities",
             callback=self._replot)
+
+        gui.auto_commit(
+            self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
+
+        slider.sliderReleased.connect(self.apply)
 
         self.plotview = DistributionWidget(background=None)
         self.plotview.item_clicked.connect(self._on_item_clicked)
@@ -362,14 +369,18 @@ class OWDistributions(OWWidget):
         self.selection.clear()
         self.openContext(domain)
         self._replot()
+        self.apply()
 
     def _on_var_changed(self):
         self.selection.clear()
         self._replot()
+        self.apply()
 
     def _on_bins_changed(self):
         self.selection.clear()
         self._replot()
+        # this is triggered when dragging, so don't call apply here;
+        # apply is called on sliderReleased
 
     def _replot(self):
         self._clear_plot()
@@ -485,7 +496,7 @@ class OWDistributions(OWWidget):
         tot_freq = 0
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
-            tooltip = f"{self._str_int(x0, x1)} {freq} " \
+            tooltip = f"{self._str_int(x0, x1)}: {freq} " \
                 f"({100 * freq / total:.2f} %)"
             self._add_bar(
                 x0, x1 - x0, 0.5, [tot_freq if self.cumulative_distr else freq],
@@ -635,7 +646,7 @@ class OWDistributions(OWWidget):
             return
         idx = self.bar_items.index(item)
         if drag:
-            # Dragging has to add a range, otherwise fast draggin will skip bars
+            # Dragging has to add a range, otherwise fast dragging skips bars
             add_range(self.drag_operation == self.DragAdd)
         else:
             if modifiers & Qt.ShiftModifier:
@@ -746,7 +757,7 @@ class OWDistributions(OWWidget):
         col = self.data.get_column_view(self.var)[0]
         for bar_idx in range(len(self.bar_items)):
             mask = self._get_cont_baritem_indices(col, bar_idx)
-            group_indices[mask] = bar_idx
+            group_indices[mask] = bar_idx + 1
         return group_indices
 
     def _get_cont_baritem_indices(self, col, bar_idx):
