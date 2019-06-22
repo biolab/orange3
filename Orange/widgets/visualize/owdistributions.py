@@ -3,13 +3,12 @@ from itertools import count, groupby, repeat
 from xml.sax.saxutils import escape
 
 import numpy as np
-import pyqtgraph as pg
+from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
-from AnyQt.QtWidgets import \
-    QSizePolicy, QListView, QGraphicsItem, QGraphicsRectItem
+from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
-from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
+import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
 from Orange.statistics import distribution, contingency
@@ -31,31 +30,12 @@ class ScatterPlotItem(pg.ScatterPlotItem):
     def paint(self, painter, option, widget=None):
         if self.opts["pxMode"]:
             painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-
         if self.opts["antialias"]:
             painter.setRenderHint(QPainter.Antialiasing, True)
-
         super().paint(painter, option, widget)
 
 
 class LegendItem(SPGLegendItem):
-    def __init__(self):
-        super().__init__()
-        self.items = []
-
-    def clear(self):
-        items = list(self.items)
-        self.items = []
-        for sample, label in items:
-            # yes, the LegendItem shadows QGraphicsWidget.layout() with
-            # an instance attribute.
-            self.layout.removeItem(sample)
-            self.layout.removeItem(label)
-            sample.hide()
-            label.hide()
-
-        self.updateSize()
-
     @staticmethod
     def mousePressEvent(event):
         if event.button() == Qt.LeftButton:
@@ -154,6 +134,14 @@ class DistributionBarItem(pg.GraphicsObject):
             painter.setBrush(Qt.NoBrush)
             painter.drawPolygon(self.polygon)
 
+    @property
+    def x0(self):
+        return self.x
+
+    @property
+    def x1(self):
+        return self.x + self.width
+
     def boundingRect(self):
         if self.expanded:
             height = 1
@@ -223,7 +211,7 @@ class OWDistributions(OWWidget):
 
     number_of_bins = settings.Setting(5)
     fitted_distribution = settings.Setting(0)
-    show_probs = settings.ContextSetting(True)
+    show_probs = settings.Setting(True)
 
     stacked_columns = settings.Setting(True)
     cumulative_distr = settings.Setting(False)
@@ -235,7 +223,8 @@ class OWDistributions(OWWidget):
     Fitters = (
         ("None", None, (), ()),
         ("Normal", norm, ("loc", "scale"), ("μ", "σ²")),
-        ("Beta", beta, ("a", "b", "loc", "scale"), ("α", "β", "-loc", "-scale")),
+        ("Beta", beta, ("a", "b", "loc", "scale"),
+         ("α", "β", "-loc", "-scale")),
         ("Gamma", gamma, ("a", "loc", "scale"), ("α", "β", "-loc", "-scale")),
         ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ²")),
         ("Pareto", pareto, ("b", "loc", "scale"), ("α", "-loc", "-scale")),
@@ -262,9 +251,7 @@ class OWDistributions(OWWidget):
             self.controlArea, self, "var", box="Variable",
             model=DomainModel(valid_types=DomainModel.PRIMITIVE,
                               separators=False),
-            callback=self._on_var_changed,
-            sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Expanding),
-            selectionMode=QListView.SingleSelection)
+            callback=self._on_var_changed)
 
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
         slider = gui.hSlider(
@@ -276,27 +263,44 @@ class OWDistributions(OWWidget):
         gui.comboBox(
             box, self, "fitted_distribution", label="Fitted distribution",
             orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
-            callback=self._replot)
+            callback=self.replot)
         gui.checkBox(
             box, self, "cumulative_distr", "Show cumulative distribution",
-            callback=self._replot)
+            callback=self.replot)
 
         box = gui.vBox(self.controlArea, "Columns")
         gui.comboBox(
             box, self, "cvar", label="Split by", orientation=Qt.Horizontal,
             model=DomainModel(placeholder="(None)",
                               valid_types=(DiscreteVariable), ),
-            callback=self._replot, contentsLength=18)
+            callback=self.replot, contentsLength=18)
         box2 = gui.indentedBox(box, sep=12)
         gui.checkBox(
             box2, self, "stacked_columns", "Stack columns",
-            callback=self._replot)
+            callback=self.replot)
         gui.checkBox(
             box2, self, "show_probs", "Show probabilities",
-            callback=self._replot)
+            callback=self.replot)
 
         gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
+
+        self._setup_plots()
+        self._setup_legend()
+
+    def _setup_plots(self):
+        def disable_mouse(plot):
+            plot.setMouseEnabled(False, False)
+            plot.setMenuEnabled(False)
+
+        def add_new_plot(zvalue):
+            plot = pg.ViewBox()
+            self.ploti.scene().addItem(plot)
+            pg.AxisItem("right").linkToView(plot)
+            plot.setXLink(self.ploti)
+            plot.setZValue(zvalue)
+            disable_mouse(plot)
+            return plot
 
         self.plotview = DistributionWidget(background=None)
         self.plotview.item_clicked.connect(self._on_item_clicked)
@@ -306,60 +310,52 @@ class OWDistributions(OWWidget):
         self.ploti = pg.PlotItem()
         self.plot = self.ploti.vb
         self.ploti.hideButtons()
+        self.ploti.hideAxis('right')
         self.plotview.setCentralItem(self.ploti)
+        disable_mouse(self.plot)
 
-        self.plot_pdf = pg.ViewBox()
-        self.ploti.hideAxis('right')
-        self.ploti.scene().addItem(self.plot_pdf)
-        pg.AxisItem("right").linkToView(self.plot_pdf)
-        self.plot_pdf.setZValue(10)
-        self.plot_pdf.setXLink(self.ploti)
-        self.ploti.vb.sigResized.connect(self.update_views)
-
-        self.plot_mark = pg.ViewBox()
-        self.ploti.hideAxis('right')
-        self.ploti.scene().addItem(self.plot_mark)
-        pg.AxisItem("right").linkToView(self.plot_mark)
-        self.plot_mark.setZValue(-10)
-        self.plot_mark.setXLink(self.ploti)
-        self.ploti.vb.sigResized.connect(self.update_views)
+        self.plot_pdf = add_new_plot(10)
+        self.plot_mark = add_new_plot(-10)
         self.plot_mark.setYRange(0, 1)
-
+        self.ploti.vb.sigResized.connect(self.update_views)
         self.update_views()
 
-        def disable_mouse(plot):
-            plot.setMouseEnabled(False, False)
-            plot.setMenuEnabled(False)
-
-        disable_mouse(self.plot)
-        disable_mouse(self.plot_pdf)
-        disable_mouse(self.plot_mark)
-
         pen = QPen(self.palette().color(QPalette.Text))
-        for axis in ("left", "bottom"):
-            self.ploti.getAxis(axis).setPen(pen)
+        self.ploti.getAxis("bottom").setPen(pen)
+        left = self.ploti.getAxis("left")
+        left.setPen(pen)
+        left.setStyle(stopAxisAtTick=(True, True))
 
+    def _setup_legend(self):
         self._legend = LegendItem()
         self._legend.setParentItem(self.plot)
         self._legend.hide()
         self._legend.anchor((1, 0), (1, 0))
 
+    # -----------------------------
+    # Event and signal handlers
+
     def update_views(self):
-        self.plot_pdf.setGeometry(self.plot.sceneBoundingRect())
-        self.plot_pdf.linkedViewChanged(self.plot, self.plot_mark.XAxis)
-        self.plot_mark.setGeometry(self.plot.sceneBoundingRect())
-        self.plot_mark.linkedViewChanged(self.plot, self.plot_mark.XAxis)
+        for plot in (self.plot_pdf, self.plot_mark):
+            plot.setGeometry(self.plot.sceneBoundingRect())
+            plot.linkedViewChanged(self.plot, plot.XAxis)
+
+    def onDeleteWidget(self):
+        self.plot.clear()
+        self.plot_pdf.clear()
+        self.plot_mark.clear()
+        super().onDeleteWidget()
 
     @Inputs.data
     def set_data(self, data):
         self.closeContext()
+        self.var = self.cvar = None
         self.data = data
         domain = self.data.domain if self.data else None
         varmodel = self.controls.var.model()
         cvarmodel = self.controls.cvar.model()
         varmodel.set_domain(domain)
         cvarmodel.set_domain(domain)
-        self.var = self.cvar = None
         if varmodel:
             self.var = varmodel[max(len(domain.class_vars), len(varmodel) - 1)]
         if domain is not None and domain.has_discrete_class:
@@ -367,19 +363,19 @@ class OWDistributions(OWWidget):
         self.selection.clear()
         self._user_var_bins.clear()
         self.openContext(domain)
-        self._recompute_binnings()
-        self._replot()
+        self.recompute_binnings()
+        self.replot()
         self.apply()
 
     def _on_var_changed(self):
         self.selection.clear()
-        self._recompute_binnings()
-        self._replot()
+        self.recompute_binnings()
+        self.replot()
         self.apply()
 
     def _on_bins_changed(self):
         self.selection.clear()
-        self._replot()
+        self.replot()
         # this is triggered when dragging, so don't call apply here;
         # apply is called on sliderReleased
 
@@ -387,15 +383,18 @@ class OWDistributions(OWWidget):
         self._user_var_bins[self.var] = self.number_of_bins
         self.apply()
 
+    # -----------------------------
+    # Plotting
 
-    def _replot(self):
+    def replot(self):
         self._clear_plot()
         self._set_axis_names()
         self._update_controls_state()
         self._set_valid_data()
         self._call_plotting()
-        self._show_selection()
-        self.display_legend()
+        self._display_legend()
+
+        self.show_selection()
 
     def _clear_plot(self):
         self.plot.clear()
@@ -495,7 +494,7 @@ class OWDistributions(OWWidget):
     def _cont_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        y, x = np.histogram(data, bins=self._get_bins())
+        y, x = np.histogram(data, bins=self.get_bins())
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -507,8 +506,8 @@ class OWDistributions(OWWidget):
             tot_freq += freq
             tooltip = \
                 "<p style='white-space:pre;'>" \
-                f"<b>{escape(self._str_int(x0, x1, not i, i == lasti))}</b>: {freq} " \
-                f"({100 * freq / total:.2f} %)</p>"
+                f"<b>{escape(self.str_int(x0, x1, not i, i == lasti))}</b>: " \
+                f"{freq} ({100 * freq / total:.2f} %)</p>"
             self._add_bar(
                 x0, x1 - x0, 0.5, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip)
@@ -521,7 +520,7 @@ class OWDistributions(OWWidget):
     def _cont_split_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        _, bins = np.histogram(data, bins=self._get_bins())
+        _, bins = np.histogram(data, bins=self.get_bins())
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -549,88 +548,12 @@ class OWDistributions(OWWidget):
                 x0, x1 - x0, 0.5 if self.stacked_columns else 6, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
-                    self._str_int(x0, x1, not i, i == len(bins) - 1),
+                    self.str_int(x0, x1, not i, i == len(bins) - 1),
                     np.sum(plotfreqs), total, gvalues, plotfreqs))
 
         if fitters:
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
                                       prior_sizes / len(data))
-
-    def _str_int(self, x0, x1, first, last):
-        var = self.var
-        sx0, sx1 = var.repr_val(x0), var.repr_val(x1)
-        if self.cumulative_distr:
-            return f"{var.name} < {sx1}"
-        elif first and last:
-            return f"{var.name} = {sx0}"
-        elif first:
-            return f"{var.name} < {sx1}"
-        elif last:
-            return f"{var.name} ≥ {sx0}"
-        elif sx0 == sx1 \
-                or x1 - x0 <= self._min_var_resolution(self.var):
-            return f"{var.name} = {sx0}"
-        else:
-            return f"{sx0} ≤ {var.name} < {sx1}"
-
-    def _recompute_binnings(self):
-        if self.var is None:
-            self.possible_bins = []
-            return
-
-        column = self.data.get_column_view(self.var)[0]
-        column = column[~np.isnan(column)]
-        # TODO: do something if all are nan; perhaps in on_var_changed
-        unique = np.unique(column)
-        mn, mx = unique[0], unique[-1]
-        diff = mx - mn
-        f10 = 10 ** -np.floor(np.log10(diff))
-        self.possible_bins = bins = []
-        min_width = self._min_var_resolution(self.var)
-        max_bins = min(50, len(unique))
-        for f in (50, 25, 20, 10, 5, 2, 1,
-                  0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01):
-            width = f / f10
-            if width < min_width:
-                continue
-            mn_ = np.floor(mn / width) * width
-            mx_ = np.ceil(mx / width) * width
-            nbins = np.round((mx_ - mn_) / width)
-            if 1 < nbins <= max_bins and (not bins or bins[-1][1] != nbins):
-                bins.append((mn_, nbins, width))
-        if len(unique) <= 10:
-            if bins and bins[-1][1] == len(unique):
-                del bins[-1]
-            bins.append((mn, len(unique),
-                         np.hstack((unique, [2 * unique[-1] - unique[-2]]))))
-            if len(unique) < 5:
-                del bins[:-1]
-        if not bins:
-            bins = [(mx, 1, 1)]
-
-        user_bins = self._user_var_bins.get(self.var)
-        self.controls.number_of_bins.setMaximum(len(bins) - 1)
-        if user_bins is None:
-            target = len(self.bar_items) or 7
-            for user_bins, (_, nbins, _2) in enumerate(bins):
-                if nbins > target:
-                    if user_bins > 0 and \
-                            target - bins[user_bins - 1][1] < nbins - target:
-                        user_bins -= 1
-                    break
-        self.number_of_bins = user_bins
-
-    @staticmethod
-    def _min_var_resolution(var):
-        if type(var) is not ContinuousVariable:
-            return 0
-        return 10 ** -var.number_of_decimals
-
-    def _get_bins(self):
-        mx, n, step = self.possible_bins[self.number_of_bins]
-        if isinstance(step, np.ndarray):
-            return step
-        return mx + step * np.arange(n + 1)
 
     def _fit_approximation(self, y):
         def join_pars(pairs):
@@ -673,8 +596,7 @@ class OWDistributions(OWWidget):
             plot.addItem(pg.PlotCurveItem(
                 x=x, y=y,
                 pen=pg.mkPen(width=5, color=color),
-                shadowPen=pg.mkPen(width=8, color=color.darker(120))
-            ))
+                shadowPen=pg.mkPen(width=8, color=color.darker(120))))
         if not show_probs:
             self.plot_pdf.autoRange()
 
@@ -682,7 +604,6 @@ class OWDistributions(OWWidget):
     def _split_tooltip(valname, tot_group, total, gvalues, freqs):
         div_group = tot_group or 1
         cs = "white-space:pre; text-align: right;"
-        b = "border-top: 1px solid black;"
         s = f"style='{cs} padding-left: 1em'"
         snp = f"style='{cs}'"
         return f"<table style='border-collapse: collapse'>" \
@@ -701,6 +622,105 @@ class OWDistributions(OWWidget):
                    "</tr>"
                    for value, freq in zip(gvalues, freqs)) + \
                "</table>"
+
+    def _display_legend(self):
+        if self.cvar is None:
+            if self.curve_descriptions:
+                self._legend.addItem(
+                    pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
+                    self.curve_descriptions[0])
+        else:
+            cvar_values = self.cvar.values
+            colors = [QColor(*col) for col in self.cvar.colors]
+            descriptions = self.curve_descriptions or repeat(None)
+            for color, name, desc in zip(colors, cvar_values, descriptions):
+                self._legend.addItem(
+                    ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
+                    escape(name + (f" ({desc})" if desc else "")))
+        self._legend.show()
+
+    # -----------------------------
+    # Bins
+
+    def recompute_binnings(self):
+        if self.var is None:
+            self.possible_bins = []
+            return
+
+        column = self.data.get_column_view(self.var)[0]
+        column = column[~np.isnan(column)]
+        # TODO: do something if all are nan; perhaps in on_var_changed
+        unique = np.unique(column)
+        mn, mx = unique[0], unique[-1]
+        diff = mx - mn
+        f10 = 10 ** -np.floor(np.log10(diff))
+        self.possible_bins = bins = []
+        min_width = self.min_var_resolution(self.var)
+        max_bins = min(50, len(unique))
+        for f in (50, 25, 20, 10, 5, 2, 1,
+                  0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01):
+            width = f / f10
+            if width < min_width:
+                continue
+            mn_ = np.floor(mn / width) * width
+            mx_ = np.ceil(mx / width) * width
+            nbins = np.round((mx_ - mn_) / width)
+            if 1 < nbins <= max_bins and (not bins or bins[-1][1] != nbins):
+                bins.append((mn_, nbins, width))
+        if len(unique) <= 10:
+            if bins and bins[-1][1] == len(unique):
+                del bins[-1]
+            bins.append((mn, len(unique),
+                         np.hstack((unique, [2 * unique[-1] - unique[-2]]))))
+            if len(unique) < 5:
+                del bins[:-1]
+        if not bins:
+            bins = [(mx, 1, 1)]
+
+        user_bins = self._user_var_bins.get(self.var)
+        self.controls.number_of_bins.setMaximum(len(bins) - 1)
+        if user_bins is None:
+            target = max(len(self.bar_items), 7)
+            for user_bins, (_, nbins, _2) in enumerate(bins):
+                if nbins > target:
+                    if user_bins > 0 and \
+                            target - bins[user_bins - 1][1] < nbins - target:
+                        user_bins -= 1
+                    break
+        self.number_of_bins = user_bins
+
+    def get_bins(self):
+        mx, n, step = self.possible_bins[self.number_of_bins]
+        if isinstance(step, np.ndarray):
+            return step
+        return mx + step * np.arange(n + 1)
+
+    @staticmethod
+    def min_var_resolution(var):
+        # pylint: disable=unidiomatic-typecheck
+        if type(var) is not ContinuousVariable:
+            return 0
+        return 10 ** -var.number_of_decimals
+
+    def str_int(self, x0, x1, first, last):
+        var = self.var
+        sx0, sx1 = var.repr_val(x0), var.repr_val(x1)
+        if self.cumulative_distr:
+            return f"{var.name} < {sx1}"
+        elif first and last:
+            return f"{var.name} = {sx0}"
+        elif first:
+            return f"{var.name} < {sx1}"
+        elif last:
+            return f"{var.name} ≥ {sx0}"
+        elif sx0 == sx1 \
+                or x1 - x0 <= self.min_var_resolution(self.var):
+            return f"{var.name} = {sx0}"
+        else:
+            return f"{sx0} ≤ {var.name} < {sx1}"
+
+    # -----------------------------
+    # Selection
 
     def _on_item_clicked(self, item, modifiers, drag):
         def add_or_remove(idx, add):
@@ -744,28 +764,31 @@ class OWDistributions(OWWidget):
                     add_or_remove(idx, add=True)
         self.last_click_idx = idx
 
-        self._show_selection()
+        self.show_selection()
 
-    # TODO: Don't clear selection when replotting; rename _replot to
+    def _on_end_selecting(self):
+        self.apply()
+
+    # TODO: Don't clear selection when replotting; rename replot to
     # replot_histogram
-    def _show_selection(self):
+    def show_selection(self):
         blue = QColor(Qt.blue)
         pen = QPen(QBrush(blue), 3)
         pen.setCosmetic(True)
         brush = QBrush(blue.lighter(190))
 
         self.plot_mark.clear()
-        for group in self._selection_groups():
+        for group in self.grouped_selection():
             group = list(group)
             left_idx, right_idx = group[0], group[-1]
             left_pad, right_pad = self._determine_padding(left_idx, right_idx)
-            x0 = self.bar_items[left_idx].boundingRect().left() - left_pad
-            x1 = self.bar_items[right_idx].boundingRect().right() + right_pad
+            x0 = self.bar_items[left_idx].x0 - left_pad
+            x1 = self.bar_items[right_idx].x1 + right_pad
             item = QGraphicsRectItem(x0, 0, x1 - x0, 1)
             item.setPen(pen)
             item.setBrush(brush)
             if self.var.is_continuous:
-                valname = self._str_int(
+                valname = self.str_int(
                     x0, x1, not left_idx, right_idx == len(self.bar_items) - 1)
                 inside = np.sum(np.sum(self.bar_items[i].freqs) for i in group)
                 total = len(self.valid_data) or 1
@@ -775,15 +798,9 @@ class OWDistributions(OWWidget):
                     f"{inside} ({100 * inside / total:.2f} %)")
             self.plot_mark.addItem(item)
 
-    def _selection_groups(self):
-        return [[g[1] for g in group]
-                for _, group in groupby(enumerate(sorted(self.selection)),
-                                        key=lambda x: x[1] - x[0])]
-
     def _determine_padding(self, left_idx, right_idx):
         def _padding(i):
-            return (self.bar_items[i + 1].boundingRect().left()
-                    - self.bar_items[i].boundingRect().right()) / 2
+            return (self.bar_items[i + 1].x0 - self.bar_items[i].x1) / 2
 
         if len(self.bar_items) == 1:
             return 6, 6
@@ -800,8 +817,13 @@ class OWDistributions(OWWidget):
             left_pad = right_pad
         return left_pad, right_pad
 
-    def _on_end_selecting(self):
-        self.apply()
+    def grouped_selection(self):
+        return [[g[1] for g in group]
+                for _, group in groupby(enumerate(sorted(self.selection)),
+                                        key=lambda x: x[1] - x[0])]
+
+    # -----------------------------
+    # Output
 
     def apply(self):
         data = self.data
@@ -837,7 +859,7 @@ class OWDistributions(OWWidget):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
         col = self.data.get_column_view(self.var)[0]
         values = []
-        for group_idx, group in enumerate(self._selection_groups(), start=1):
+        for group_idx, group in enumerate(self.grouped_selection(), start=1):
             x0 = x1 = None
             for bar_idx in group:
                 minx, maxx, mask = self._get_cont_baritem_indices(col, bar_idx)
@@ -845,12 +867,10 @@ class OWDistributions(OWWidget):
                     x0 = minx
                 x1 = maxx
                 group_indices[mask] = group_idx
+            # pylint: disable=undefined-loop-variable
             values.append(
-                self._str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
+                self.str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
         return group_indices, values
-
-    def _is_last_bar(self, idx):
-        return idx == len(self.bar_items) - 1
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
@@ -860,35 +880,20 @@ class OWDistributions(OWWidget):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
             group_indices[mask] = bar_idx + 1
             values.append(
-                self._str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
+                self.str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
         return group_indices, values
 
     def _get_cont_baritem_indices(self, col, bar_idx):
-        rect = self.bar_items[bar_idx].boundingRect()
-        minx = rect.left()
-        maxx = rect.right() + (bar_idx == len(self.bar_items) - 1)
+        bar = self.bar_items[bar_idx]
+        minx = bar.x0
+        maxx = bar.x1 + (bar_idx == len(self.bar_items) - 1)
         return minx, maxx, (col >= minx) * (col < maxx)
 
-    def display_legend(self):
-        if self.cvar is None:
-            if self.curve_descriptions:
-                self._legend.addItem(
-                    pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
-                    self.curve_descriptions[0])
-        else:
-            cvar_values = self.cvar.values
-            colors = [QColor(*col) for col in self.cvar.colors]
-            for color, name, desc in zip(colors, cvar_values,
-                                         self.curve_descriptions or repeat(None)):
-                self._legend.addItem(
-                    ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
-                    escape(name + (f" ({desc})" if desc else ""))
-                )
-        self._legend.show()
+    def _is_last_bar(self, idx):
+        return idx == len(self.bar_items) - 1
 
-    def onDeleteWidget(self):
-        self.plot.clear()
-        super().onDeleteWidget()
+    # -----------------------------
+    # Report
 
     def get_widget_name_extension(self):
         return self.var
