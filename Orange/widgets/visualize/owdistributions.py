@@ -6,7 +6,7 @@ import numpy as np
 import pyqtgraph as pg
 
 from AnyQt.QtWidgets import \
-    QSizePolicy, QListView, QToolTip, QGraphicsItem, QGraphicsRectItem
+    QSizePolicy, QListView, QGraphicsItem, QGraphicsRectItem
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
@@ -22,7 +22,6 @@ from Orange.widgets.widget import Input, Output, OWWidget
 
 from Orange.widgets.visualize.owscatterplotgraph import \
     LegendItem as SPGLegendItem
-from Orange.widgets.visualize.utils.plotutils import HelpEventDelegate
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -233,8 +232,6 @@ class OWDistributions(OWWidget):
 
     graph_name = "plot"
 
-    Bins = [2, 3, 4, 5, 8, 10, 12, 15, 20, 30, 50]
-
     Fitters = (
         ("None", None, (), ()),
         ("Normal", norm, ("loc", "scale"), ("μ", "σ²")),
@@ -255,9 +252,11 @@ class OWDistributions(OWWidget):
         self.selection = set()
         self.bar_items = []
         self.curve_descriptions = None
+        self.possible_bins = []
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
+        self._user_var_bins = {}
 
         gui.listView(
             self.controlArea, self, "var", box="Variable",
@@ -271,8 +270,9 @@ class OWDistributions(OWWidget):
         slider = gui.hSlider(
             box, self, "number_of_bins",
             label="Number of bins", orientation=Qt.Horizontal,
-            minValue=0, maxValue=len(self.Bins) - 1, createLabel=False,
-            callback=self._on_bins_changed)
+            minValue=0, maxValue=max(1, len(self.possible_bins) - 1),
+            createLabel=False, callback=self._on_bins_changed)
+        slider.sliderReleased.connect(self._on_bin_slider_released)
         gui.comboBox(
             box, self, "fitted_distribution", label="Fitted distribution",
             orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
@@ -297,8 +297,6 @@ class OWDistributions(OWWidget):
 
         gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
-
-        slider.sliderReleased.connect(self.apply)
 
         self.plotview = DistributionWidget(background=None)
         self.plotview.item_clicked.connect(self._on_item_clicked)
@@ -367,12 +365,15 @@ class OWDistributions(OWWidget):
         if domain is not None and domain.has_discrete_class:
             self.cvar = domain.class_var
         self.selection.clear()
+        self._user_var_bins.clear()
         self.openContext(domain)
+        self._recompute_binnings()
         self._replot()
         self.apply()
 
     def _on_var_changed(self):
         self.selection.clear()
+        self._recompute_binnings()
         self._replot()
         self.apply()
 
@@ -381,6 +382,11 @@ class OWDistributions(OWWidget):
         self._replot()
         # this is triggered when dragging, so don't call apply here;
         # apply is called on sliderReleased
+
+    def _on_bin_slider_released(self):
+        self._user_var_bins[self.var] = self.number_of_bins
+        self.apply()
+
 
     def _replot(self):
         self._clear_plot()
@@ -487,7 +493,7 @@ class OWDistributions(OWWidget):
     def _cont_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        y, x = np.histogram(data, bins=self.Bins[self.number_of_bins])
+        y, x = np.histogram(data, bins=self._get_bins())
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -510,7 +516,7 @@ class OWDistributions(OWWidget):
     def _cont_split_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        _, bins = np.histogram(data, bins=self.Bins[self.number_of_bins])
+        _, bins = np.histogram(data, bins=self._get_bins())
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -552,29 +558,41 @@ class OWDistributions(OWWidget):
         else:
             return f"{var.name} in {var.repr_val(x0)} - {var.repr_val(x1)}"
 
-    @staticmethod
-    def _split_tooltip(valname, tot_group, total, gvalues, freqs):
-        div_group = tot_group or 1
-        cs = "white-space:pre; text-align: right;"
-        b = "border-top: 1px solid black;"
-        s = f"style='{cs} padding-left: 1em'"
-        snp = f"style='{cs}'"
-        return f"<table style='border-collapse: collapse'>" \
-               f"<tr><th {s}>{valname}:</th>" \
-               f"<td {snp}><b>{int(tot_group)}</b></td>" \
-               "<td/>" \
-               f"<td {s}><b>{100 * tot_group / total:.2f} %</b></td></tr>" + \
-               f"<tr><td/><td/><td {s}>(in group)</td><td {s}>(overall)</td>" \
-               "</tr>" + \
-               "".join(
-                   "<tr>"
-                   f"<th {s}>{value}:</th>"
-                   f"<td {snp}><b>{int(freq)}</b><td`>"
-                   f"<td {s}>{100 * freq / div_group:.2f} %</td>"
-                   f"<td {s}>{100 * freq / total:.2f} %</td>"
-                   "</tr>"
-                   for value, freq in zip(gvalues, freqs)) + \
-               "</table>"
+    def _recompute_binnings(self):
+        if self.var is None:
+            self.possible_bins = []
+            return
+
+        column = self.data.get_column_view(self.var)[0]
+        # TODO: do something if all are nan; perhaps in on_var_changed
+        mn, mx = np.nanmin(column), np.nanmax(column)
+        diff = mx - mn
+        f10 = 10 ** -np.floor(np.log10(diff))
+        self.possible_bins = bins = []
+        for f in (50, 25, 20, 10, 5, 2, 1,
+                  0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01):
+            width = f / f10
+            mn_ = np.floor(mn / width) * width
+            mx_ = np.ceil(mx / width) * width
+            nbins = np.round((mx_ - mn_) / width)
+            if 1 < nbins <= 50 and (not bins or bins[-1][1] != nbins):
+                bins.append((mn_, nbins, width))
+
+        user_bins = self._user_var_bins.get(self.var)
+        self.controls.number_of_bins.setMaximum(len(bins) - 1)
+        if user_bins is None:
+            target = len(self.bar_items) or 5
+            for user_bins, (_, nbins, _2) in enumerate(bins):
+                if nbins > target:
+                    if user_bins > 0 and \
+                            target - bins[user_bins - 1][1] < nbins - target:
+                        user_bins -= 1
+                    break
+        self.number_of_bins = user_bins
+
+    def _get_bins(self):
+        mx, n, step = self.possible_bins[self.number_of_bins]
+        return mx + step * np.arange(n + 1)
 
     def _fit_approximation(self, y):
         def join_pars(pairs):
@@ -621,6 +639,30 @@ class OWDistributions(OWWidget):
             ))
         if not show_probs:
             self.plot_pdf.autoRange()
+
+    @staticmethod
+    def _split_tooltip(valname, tot_group, total, gvalues, freqs):
+        div_group = tot_group or 1
+        cs = "white-space:pre; text-align: right;"
+        b = "border-top: 1px solid black;"
+        s = f"style='{cs} padding-left: 1em'"
+        snp = f"style='{cs}'"
+        return f"<table style='border-collapse: collapse'>" \
+               f"<tr><th {s}>{valname}:</th>" \
+               f"<td {snp}><b>{int(tot_group)}</b></td>" \
+               "<td/>" \
+               f"<td {s}><b>{100 * tot_group / total:.2f} %</b></td></tr>" + \
+               f"<tr><td/><td/><td {s}>(in group)</td><td {s}>(overall)</td>" \
+               "</tr>" + \
+               "".join(
+                   "<tr>"
+                   f"<th {s}>{value}:</th>"
+                   f"<td {snp}><b>{int(freq)}</b></td>"
+                   f"<td {s}>{100 * freq / div_group:.2f} %</td>"
+                   f"<td {s}>{100 * freq / total:.2f} %</td>"
+                   "</tr>"
+                   for value, freq in zip(gvalues, freqs)) + \
+               "</table>"
 
     def _on_item_clicked(self, item, modifiers, drag):
         def add_or_remove(idx, add):
@@ -724,8 +766,9 @@ class OWDistributions(OWWidget):
                 histogram_data = None
             else:
                 group_indices, values = self._get_output_indices_cont()
-                histogram_indices = self._get_histogram_indices()
-                histogram_data = create_groups_table(data, histogram_indices)
+                hist_indices, hist_values = self._get_histogram_indices()
+                histogram_data = create_groups_table(
+                    data, hist_indices, values=hist_values)
             selected_data = create_groups_table(
                 data, group_indices, include_unselected=False, values=values)
             annotated_data = create_annotated_table(
@@ -746,25 +789,33 @@ class OWDistributions(OWWidget):
     def _get_output_indices_cont(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
         col = self.data.get_column_view(self.var)[0]
+        values = []
         for group_idx, group in enumerate(self._selection_groups(), start=1):
+            x0 = x1 = None
             for bar_idx in group:
-                mask = self._get_cont_baritem_indices(col, bar_idx)
+                minx, maxx, mask = self._get_cont_baritem_indices(col, bar_idx)
+                if x0 is None:
+                    x0 = minx
+                x1 = maxx
                 group_indices[mask] = group_idx
-        return group_indices, None
+            values.append(self._str_int(x0, x1))
+        return group_indices, values
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
         col = self.data.get_column_view(self.var)[0]
+        values = []
         for bar_idx in range(len(self.bar_items)):
-            mask = self._get_cont_baritem_indices(col, bar_idx)
+            x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
             group_indices[mask] = bar_idx + 1
-        return group_indices
+            values.append(self._str_int(x0, x1))
+        return group_indices, values
 
     def _get_cont_baritem_indices(self, col, bar_idx):
         rect = self.bar_items[bar_idx].boundingRect()
         minx = rect.left()
         maxx = rect.right() + (bar_idx == len(self.bar_items) - 1)
-        return (col >= minx) * (col < maxx)
+        return minx, maxx, (col >= minx) * (col < maxx)
 
     def display_legend(self):
         if self.cvar is None:
