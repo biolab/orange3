@@ -94,11 +94,11 @@ class DistributionBarItem(pg.GraphicsObject):
         self.padding = padding
         self.stacked = stacked
         self.expanded = expanded
-        self.tooltip = tooltip
         self.__picture = None
         self.polygon = None
         self.hovered = False
         self.setAcceptHoverEvents(True)
+        self.setToolTip(tooltip)
 
     def hoverEnterEvent(self, event):
         super().hoverEnterEvent(event)
@@ -329,10 +329,6 @@ class OWDistributions(OWWidget):
         disable_mouse(self.plot_pdf)
         disable_mouse(self.plot_mark)
 
-        self.tooltip_items = []
-        self.plot.scene().installEventFilter(
-            HelpEventDelegate(self.help_event, self))
-
         pen = QPen(self.palette().color(QPalette.Text))
         for axis in ("left", "bottom"):
             self.ploti.getAxis(axis).setPen(pen)
@@ -426,7 +422,6 @@ class OWDistributions(OWWidget):
         self.valid_data = column[self.valid_mask]
 
     def _call_plotting(self):
-        self.tooltip_items = []
         if self.var is None:
             return
 
@@ -448,7 +443,6 @@ class OWDistributions(OWWidget):
             x, width, padding, freqs, colors, stacked, expanded, tooltip)
         self.plot.addItem(item)
         self.bar_items.append(item)
-        self.tooltip_items.append((self.plot, tooltip))
 
     def _disc_plot(self):
         var = self.var
@@ -456,21 +450,25 @@ class OWDistributions(OWWidget):
         colors = [QColor(0, 128, 255)]
         dist = distribution.get_distribution(self.data, self.var)
         for i, freq in enumerate(dist):
+            tooltip = f"{var.values[i]}: {int(freq)} " \
+                f"({100 * freq / len(self.data):.2f} %) "
             self._add_bar(
-                i - 0.5, 1, 20, [freq], colors, stacked=False, expanded=False,
-                tooltip="Frequency for %s: %r" % (var.values[i], freq))
+                i - 0.5, 1, 20, [freq], colors,
+                stacked=False, expanded=False, tooltip=tooltip)
 
     def _disc_split_plot(self):
         var = self.var
         self.ploti.getAxis("bottom").setTicks([list(enumerate(var.values))])
         gcolors = [QColor(*col) for col in self.cvar.colors]
+        gvalues = self.cvar.values
         conts = contingency.get_contingency(self.data, self.cvar, self.var)
-        for i, cont in enumerate(conts):
+        total = len(self.data)
+        for i, freqs in enumerate(conts):
             self._add_bar(
-                i - 0.5, 1, 20, cont, gcolors,
+                i - 0.5, 1, 20, freqs, gcolors,
                 stacked=self.stacked_columns, expanded=self.show_probs,
-                tooltip="")
-#            item.tooltip = "Frequency for %s: %r" % (var.values[i], freq)
+                tooltip=self._split_tooltip(
+                    var.values[i], np.sum(freqs), total, gvalues, freqs))
 
     def _cont_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
@@ -484,7 +482,8 @@ class OWDistributions(OWWidget):
         tot_freq = 0
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
-            tooltip = f"{self._str_int(x0, x1)} {freq} ({100 * freq / total:.2f} %)"
+            tooltip = f"{self._str_int(x0, x1)} {freq} " \
+                f"({100 * freq / total:.2f} %)"
             self._add_bar(
                 x0, x1 - x0, 0.5, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip)
@@ -521,22 +520,52 @@ class OWDistributions(OWWidget):
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
-            if self.show_probs:
-                total = np.sum(plotfreqs)
-            if total == 0:
-                total = 1
-            tooltip = \
-                self._str_int(x0, x1) + \
-                "".join(f"\n - {value}: {freq} ({100 * freq / total:.2f} %)"
-                        for value, freq in zip(gvalues, plotfreqs))
             self._add_bar(
                 x0, x1 - x0, 0.5 if self.stacked_columns else 6, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
-                tooltip=tooltip)
+                tooltip=self._split_tooltip(
+                    self._str_int(x0, x1), np.sum(plotfreqs), total,
+                    gvalues, plotfreqs))
 
         if fitters:
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
                                       prior_sizes / len(data))
+
+    def _str_int(self, x0, x1):
+        var = self.var
+        if self.cumulative_distr:
+            return f"{var.name} < {var.repr_val(x1)}"
+        else:
+            return f"{var.name} in {var.repr_val(x0)} - {var.repr_val(x1)}"
+
+    @staticmethod
+    def _split_tooltip(valname, tot_group, total, gvalues, freqs):
+        div_group = tot_group or 1
+        cs = "white-space:pre; text-align: right;"
+        b = "border-top: 1px solid black;"
+        s = f"style='{cs} padding-left: 1em'"
+        snp = f"style='{cs}'"
+        return f"<table style='border-collapse: collapse'>" \
+               f"<tr><th {s}>{valname}:</th>" \
+               f"<td {snp}><b>{int(tot_group)}</b></td>" \
+               "<td/>" \
+               f"<td {s}><b>{100 * tot_group / total:.2f} %</b></td></tr>" + \
+               f"<tr><td/><td/><td {s}>(in group)</td><td {s}>(overall)</td>" \
+               "</tr>" + \
+               "".join(
+                   "<tr>"
+                   f"<th {s}>{value}:</th>"
+                   f"<td {snp}><b>{int(freq)}</b><td`>"
+                   f"<td {s}>{100 * freq / div_group:.2f} %</td>"
+                   f"<td {s}>{100 * freq / total:.2f} %</td>"
+                   "</tr>"
+                   for value, freq in zip(gvalues, freqs)) + \
+               "</table>"
+
+    def _fit_approximation(self, y):
+        _, dist, names = self.Fitters[self.fitted_distribution]
+        params = {name: val for name, val in zip(names, dist.fit(y))}
+        return partial(dist.pdf, **params)
 
     def _plot_approximations(self, x0, x1, fitters, colors, prior_probs=0):
         x = np.linspace(x0, x1, 100)
@@ -653,18 +682,6 @@ class OWDistributions(OWWidget):
     def _on_end_selecting(self):
         self.apply()
 
-    def _str_int(self, x0, x1):
-        var = self.var
-        if self.cumulative_distr:
-            return f"{var.name} < {var.repr_val(x1)}"
-        else:
-            return f"{var.name} in {var.repr_val(x0)} - {var.repr_val(x1)}:"
-
-    def _fit_approximation(self, y):
-        _, dist, names = self.Fitters[self.fitted_distribution]
-        params = {name: val for name, val in zip(names, dist.fit(y))}
-        return partial(dist.pdf, **params)
-
     def apply(self):
         data = self.data
         if data is None:
@@ -726,21 +743,6 @@ class OWDistributions(OWWidget):
                 escape(name)
             )
         self._legend.show()
-
-    def help_event(self, ev):
-        self.plot.mapSceneToView(ev.scenePos())
-        ctooltip = []
-        for vb, item in self.tooltip_items:
-            mouse_over_curve = isinstance(item, pg.PlotCurveItem) \
-                and item.mouseShape().contains(vb.mapSceneToView(ev.scenePos()))
-            mouse_over_bar = isinstance(item, DistributionBarItem) \
-                and item.boundingRect().contains(vb.mapSceneToView(ev.scenePos()))
-            if mouse_over_curve or mouse_over_bar:
-                ctooltip.append(item.tooltip)
-        if ctooltip:
-            QToolTip.showText(ev.screenPos(), "\n\n".join(ctooltip), widget=self.plotview)
-            return True
-        return False
 
     def onDeleteWidget(self):
         self.plot.clear()
