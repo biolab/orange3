@@ -11,7 +11,7 @@ from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
-from Orange.data import Table, DiscreteVariable
+from Orange.data import Table, DiscreteVariable, ContinuousVariable
 from Orange.statistics import distribution, contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.annotated_data import \
@@ -470,7 +470,9 @@ class OWDistributions(OWWidget):
         colors = [QColor(0, 128, 255)]
         dist = distribution.get_distribution(self.data, self.var)
         for i, freq in enumerate(dist):
-            tooltip = f"{var.values[i]}: {int(freq)} " \
+            tooltip = \
+                "<p style='white-space:pre;'>" \
+                f"<b>{escape(var.values[i])}</b>: {int(freq)} " \
                 f"({100 * freq / len(self.data):.2f} %) "
             self._add_bar(
                 i - 0.5, 1, 20, [freq], colors,
@@ -500,10 +502,13 @@ class OWDistributions(OWWidget):
             colors[0] = colors[0].lighter(130)
 
         tot_freq = 0
+        lasti = len(y) - 1
         for i, (x0, x1), freq in zip(count(), zip(x, x[1:]), y):
             tot_freq += freq
-            tooltip = f"{self._str_int(x0, x1)}: {freq} " \
-                f"({100 * freq / total:.2f} %)"
+            tooltip = \
+                "<p style='white-space:pre;'>" \
+                f"<b>{escape(self._str_int(x0, x1, not i, i == lasti))}</b>: {freq} " \
+                f"({100 * freq / total:.2f} %)</p>"
             self._add_bar(
                 x0, x1 - x0, 0.5, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip)
@@ -544,19 +549,29 @@ class OWDistributions(OWWidget):
                 x0, x1 - x0, 0.5 if self.stacked_columns else 6, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
-                    self._str_int(x0, x1), np.sum(plotfreqs), total,
-                    gvalues, plotfreqs))
+                    self._str_int(x0, x1, not i, i == len(bins) - 1),
+                    np.sum(plotfreqs), total, gvalues, plotfreqs))
 
         if fitters:
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
                                       prior_sizes / len(data))
 
-    def _str_int(self, x0, x1):
+    def _str_int(self, x0, x1, first, last):
         var = self.var
+        sx0, sx1 = var.repr_val(x0), var.repr_val(x1)
         if self.cumulative_distr:
-            return f"{var.name} < {var.repr_val(x1)}"
+            return f"{var.name} < {sx1}"
+        elif first and last:
+            return f"{var.name} = {sx0}"
+        elif first:
+            return f"{var.name} < {sx1}"
+        elif last:
+            return f"{var.name} ≥ {sx0}"
+        elif sx0 == sx1 \
+                or x1 - x0 <= self._min_var_resolution(self.var):
+            return f"{var.name} = {sx0}"
         else:
-            return f"{var.name} in {var.repr_val(x0)} - {var.repr_val(x1)}"
+            return f"{sx0} ≤ {var.name} < {sx1}"
 
     def _recompute_binnings(self):
         if self.var is None:
@@ -564,24 +579,39 @@ class OWDistributions(OWWidget):
             return
 
         column = self.data.get_column_view(self.var)[0]
+        column = column[~np.isnan(column)]
         # TODO: do something if all are nan; perhaps in on_var_changed
-        mn, mx = np.nanmin(column), np.nanmax(column)
+        unique = np.unique(column)
+        mn, mx = unique[0], unique[-1]
         diff = mx - mn
         f10 = 10 ** -np.floor(np.log10(diff))
         self.possible_bins = bins = []
+        min_width = self._min_var_resolution(self.var)
+        max_bins = min(50, len(unique))
         for f in (50, 25, 20, 10, 5, 2, 1,
                   0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01):
             width = f / f10
+            if width < min_width:
+                continue
             mn_ = np.floor(mn / width) * width
             mx_ = np.ceil(mx / width) * width
             nbins = np.round((mx_ - mn_) / width)
-            if 1 < nbins <= 50 and (not bins or bins[-1][1] != nbins):
+            if 1 < nbins <= max_bins and (not bins or bins[-1][1] != nbins):
                 bins.append((mn_, nbins, width))
+        if len(unique) <= 10:
+            if bins and bins[-1][1] == len(unique):
+                del bins[-1]
+            bins.append((mn, len(unique),
+                         np.hstack((unique, [2 * unique[-1] - unique[-2]]))))
+            if len(unique) < 5:
+                del bins[:-1]
+        if not bins:
+            bins = [(mx, 1, 1)]
 
         user_bins = self._user_var_bins.get(self.var)
         self.controls.number_of_bins.setMaximum(len(bins) - 1)
         if user_bins is None:
-            target = len(self.bar_items) or 5
+            target = len(self.bar_items) or 7
             for user_bins, (_, nbins, _2) in enumerate(bins):
                 if nbins > target:
                     if user_bins > 0 and \
@@ -590,8 +620,16 @@ class OWDistributions(OWWidget):
                     break
         self.number_of_bins = user_bins
 
+    @staticmethod
+    def _min_var_resolution(var):
+        if type(var) is not ContinuousVariable:
+            return 0
+        return 10 ** -var.number_of_decimals
+
     def _get_bins(self):
         mx, n, step = self.possible_bins[self.number_of_bins]
+        if isinstance(step, np.ndarray):
+            return step
         return mx + step * np.arange(n + 1)
 
     def _fit_approximation(self, y):
@@ -648,7 +686,7 @@ class OWDistributions(OWWidget):
         s = f"style='{cs} padding-left: 1em'"
         snp = f"style='{cs}'"
         return f"<table style='border-collapse: collapse'>" \
-               f"<tr><th {s}>{valname}:</th>" \
+               f"<tr><th {s}>{escape(valname)}:</th>" \
                f"<td {snp}><b>{int(tot_group)}</b></td>" \
                "<td/>" \
                f"<td {s}><b>{100 * tot_group / total:.2f} %</b></td></tr>" + \
@@ -726,6 +764,15 @@ class OWDistributions(OWWidget):
             item = QGraphicsRectItem(x0, 0, x1 - x0, 1)
             item.setPen(pen)
             item.setBrush(brush)
+            if self.var.is_continuous:
+                valname = self._str_int(
+                    x0, x1, not left_idx, right_idx == len(self.bar_items) - 1)
+                inside = np.sum(np.sum(self.bar_items[i].freqs) for i in group)
+                total = len(self.valid_data) or 1
+                item.setToolTip(
+                    "<p style='white-space:pre;'>"
+                    f"<b>{escape(valname)}</b>: "
+                    f"{inside} ({100 * inside / total:.2f} %)")
             self.plot_mark.addItem(item)
 
     def _selection_groups(self):
@@ -798,8 +845,12 @@ class OWDistributions(OWWidget):
                     x0 = minx
                 x1 = maxx
                 group_indices[mask] = group_idx
-            values.append(self._str_int(x0, x1))
+            values.append(
+                self._str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
         return group_indices, values
+
+    def _is_last_bar(self, idx):
+        return idx == len(self.bar_items) - 1
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
@@ -808,7 +859,8 @@ class OWDistributions(OWWidget):
         for bar_idx in range(len(self.bar_items)):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
             group_indices[mask] = bar_idx + 1
-            values.append(self._str_int(x0, x1))
+            values.append(
+                self._str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
         return group_indices, values
 
     def _get_cont_baritem_indices(self, col, bar_idx):
