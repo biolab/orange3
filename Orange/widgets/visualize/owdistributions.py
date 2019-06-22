@@ -898,9 +898,12 @@ class OWDistributions(OWWidget):
         if not self.var:
             return
         self.report_plot()
-        text = f"Distribution of '{self.var.name}'"
+        if self.cumulative_distr:
+            text = f"Cummulative distribution of '{self.var.name}'"
+        else:
+            text = f"Distribution of '{self.var.name}'"
         if self.cvar:
-            text += f" grouped by '{self.cvar.name}'"
+            text += f" with columns split by '{self.cvar.name}'"
         self.report_caption(text)
 
 
