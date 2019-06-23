@@ -5,19 +5,20 @@ from xml.sax.saxutils import escape
 import numpy as np
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
-from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem, QWidget
-from AnyQt.QtGui import \
-    QColor, QPen, QBrush, QPainter, QPalette, QPolygonF, QFontMetrics
+from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem
+from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
+from Orange.preprocess.discretize import decimal_binnings
 from Orange.statistics import distribution, contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.annotated_data import \
     create_groups_table, create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis
 from Orange.widgets.widget import Input, Output, OWWidget
 
 from Orange.widgets.visualize.owscatterplotgraph import \
@@ -193,17 +194,6 @@ class DistributionWidget(pg.PlotWidget):
                 self.last_item = item
 
 
-class ElidedLabelsAxis(pg.AxisItem):
-    def generateDrawSpecs(self, painter):
-        axis_spec, tick_specs, text_specs = super().generateDrawSpecs(painter)
-        bounds = self.mapRectFromParent(self.geometry())
-        max_width = 0.9 * bounds.width() / (len(text_specs) or 1)
-        elide = QFontMetrics(QWidget().font()).elidedText
-        text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
-                      for rect, flags, text in text_specs]
-        return axis_spec, tick_specs, text_specs
-
-
 class OWDistributions(OWWidget):
     name = "Distributions"
     description = "Display value distributions of a data feature in a graph."
@@ -252,10 +242,10 @@ class OWDistributions(OWWidget):
         super().__init__()
         self.data = None
         self.var = self.cvar = None
-        self.valid_mask = self.valid_data = self.valid_group_data = None
+        self.valid_data = self.valid_group_data = None
         self.bar_items = []
         self.curve_descriptions = None
-        self.possible_bins = []
+        self.binnings = []
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
@@ -271,7 +261,7 @@ class OWDistributions(OWWidget):
         slider = gui.hSlider(
             box, self, "number_of_bins",
             label="Number of bins", orientation=Qt.Horizontal,
-            minValue=0, maxValue=max(1, len(self.possible_bins) - 1),
+            minValue=0, maxValue=max(1, len(self.binnings) - 1),
             createLabel=False, callback=self._on_bins_changed)
         slider.sliderReleased.connect(self._on_bin_slider_released)
         gui.comboBox(
@@ -435,18 +425,18 @@ class OWDistributions(OWWidget):
 
     def _set_valid_data(self):
         if self.var is None:
-            self.valid_mask = self.valid_data = self.valid_group_data = None
+            self.valid_data = self.valid_group_data = None
             return
 
         column = self.data.get_column_view(self.var)[0]
-        self.valid_mask = ~np.isnan(column)
+        valid_mask = ~np.isnan(column)
         if self.cvar:
             ccolumn = self.data.get_column_view(self.cvar)[0]
-            self.valid_mask *= ~np.isnan(ccolumn)
-            self.valid_group_data = ccolumn[self.valid_mask]
+            valid_mask *= ~np.isnan(ccolumn)
+            self.valid_group_data = ccolumn[valid_mask]
         else:
             self.valid_group_data = None
-        self.valid_data = column[self.valid_mask]
+        self.valid_data = column[valid_mask]
 
     def _call_plotting(self):
         self.curve_descriptions = None
@@ -503,7 +493,7 @@ class OWDistributions(OWWidget):
     def _cont_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        y, x = np.histogram(data, bins=self.get_bins())
+        y, x = np.histogram(data, bins=self.binnings[self.number_of_bins])
         total = len(data)
         colors = [QColor(0, 128, 255)]
         if self.fitted_distribution:
@@ -529,7 +519,7 @@ class OWDistributions(OWWidget):
     def _cont_split_plot(self):
         self.ploti.getAxis("bottom").setTicks(None)
         data = self.valid_data
-        _, bins = np.histogram(data, bins=self.get_bins())
+        _, bins = np.histogram(data, bins=self.binnings[self.number_of_bins])
         gvalues = self.cvar.values
         varcolors = [QColor(*col) for col in self.cvar.colors]
         if self.fitted_distribution:
@@ -653,49 +643,18 @@ class OWDistributions(OWWidget):
 
     def recompute_binnings(self):
         if self.var is None:
-            self.possible_bins = []
-            return
+            self.binnings = []
+            max_bins = 0
+        else:
+            column = self.data.get_column_view(self.var)[0]
+            self.binnings = decimal_binnings(
+                column, min_width=self.min_var_resolution(self.var),
+                add_unique=10, min_unique=5)
+            max_bins = len(self.binnings) - 1
 
-        column = self.data.get_column_view(self.var)[0]
-        column = column[~np.isnan(column)]
-        # TODO: do something if all are nan; perhaps in on_var_changed
-        unique = np.unique(column)
-        mn, mx = unique[0], unique[-1]
-        diff = mx - mn
-        f10 = 10 ** -np.floor(np.log10(diff))
-        self.possible_bins = bins = []
-        min_width = self.min_var_resolution(self.var)
-        max_bins = min(50, len(unique))
-        for f in (50, 25, 20, 10, 5, 2, 1,
-                  0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01):
-            width = f / f10
-            if width < min_width:
-                continue
-            mn_ = np.floor(mn / width) * width
-            mx_ = np.ceil(mx / width) * width
-            nbins = np.round((mx_ - mn_) / width)
-            if 1 < nbins <= max_bins and (not bins or bins[-1][1] != nbins):
-                bins.append((mn_, nbins, width))
-        if len(unique) <= 10:
-            if bins and bins[-1][1] == len(unique):
-                del bins[-1]
-            bins.append((mn, len(unique),
-                         np.hstack((unique, [2 * unique[-1] - unique[-2]]))))
-            if len(unique) < 5:
-                del bins[:-1]
-        if not bins:
-            bins = [(mx, 1, 1)]
-
-        max_bins = len(bins) - 1
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
             max_bins, self._user_var_bins.get(self.var, self.number_of_bins))
-
-    def get_bins(self):
-        mx, n, step = self.possible_bins[self.number_of_bins]
-        if isinstance(step, np.ndarray):
-            return step
-        return mx + step * np.arange(n + 1)
 
     @staticmethod
     def min_var_resolution(var):
@@ -884,9 +843,9 @@ class OWDistributions(OWWidget):
         return group_indices, values
 
     def _get_cont_baritem_indices(self, col, bar_idx):
-        bar = self.bar_items[bar_idx]
-        minx = bar.x0
-        maxx = bar.x1 + (bar_idx == len(self.bar_items) - 1)
+        bar_item = self.bar_items[bar_idx]
+        minx = bar_item.x0
+        maxx = bar_item.x1 + (bar_idx == len(self.bar_items) - 1)
         return minx, maxx, (col >= minx) * (col < maxx)
 
     def _is_last_bar(self, idx):
