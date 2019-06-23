@@ -99,8 +99,10 @@ class DistributionBarItem(pg.GraphicsObject):
         else:
             freqs = self.freqs
 
-        coord_padding = self.mapRectFromDevice(
-            QRectF(0, 0, self.padding, 0)).width()
+        mapper = self.mapRectFromDevice
+        coord_padding = mapper(QRectF(0, 0, self.padding, 0)).width()
+        if coord_padding > self.width / 4:
+            coord_padding = mapper(QRectF(0, 0, 1, 0)).width()
         sx = self.x + coord_padding
         padded_width = self.width - 2 * coord_padding
 
