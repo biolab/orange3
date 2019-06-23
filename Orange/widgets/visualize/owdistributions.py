@@ -5,8 +5,9 @@ from xml.sax.saxutils import escape
 import numpy as np
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
-from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem
-from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
+from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem, QWidget
+from AnyQt.QtGui import \
+    QColor, QPen, QBrush, QPainter, QPalette, QPolygonF, QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
 
@@ -190,6 +191,17 @@ class DistributionWidget(pg.PlotWidget):
                 self.last_item = item
 
 
+class ElidedLabelsAxis(pg.AxisItem):
+    def generateDrawSpecs(self, painter):
+        axis_spec, tick_specs, text_specs = super().generateDrawSpecs(painter)
+        bounds = self.mapRectFromParent(self.geometry())
+        max_width = 0.9 * bounds.width() / (len(text_specs) or 1)
+        elide = QFontMetrics(QWidget().font()).elidedText
+        text_specs = [(rect, flags, elide(text, Qt.ElideRight, max_width))
+                      for rect, flags, text in text_specs]
+        return axis_spec, tick_specs, text_specs
+
+
 class OWDistributions(OWWidget):
     name = "Distributions"
     description = "Display value distributions of a data feature in a graph."
@@ -289,17 +301,12 @@ class OWDistributions(OWWidget):
         self._setup_legend()
 
     def _setup_plots(self):
-        def disable_mouse(plot):
-            plot.setMouseEnabled(False, False)
-            plot.setMenuEnabled(False)
-
         def add_new_plot(zvalue):
-            plot = pg.ViewBox()
+            plot = pg.ViewBox(enableMouse=False, enableMenu=False)
             self.ploti.scene().addItem(plot)
             pg.AxisItem("right").linkToView(plot)
             plot.setXLink(self.ploti)
             plot.setZValue(zvalue)
-            disable_mouse(plot)
             return plot
 
         self.plotview = DistributionWidget(background=None)
@@ -307,12 +314,12 @@ class OWDistributions(OWWidget):
         self.plotview.mouse_released.connect(self._on_end_selecting)
         self.plotview.setRenderHint(QPainter.Antialiasing)
         self.mainArea.layout().addWidget(self.plotview)
-        self.ploti = pg.PlotItem()
+        self.ploti = pg.PlotItem(
+            enableMenu=False, enableMouse=False,
+            axisItems={"bottom": ElidedLabelsAxis("bottom")})
         self.plot = self.ploti.vb
         self.ploti.hideButtons()
-        self.ploti.hideAxis('right')
         self.plotview.setCentralItem(self.ploti)
-        disable_mouse(self.plot)
 
         self.plot_pdf = add_new_plot(10)
         self.plot_mark = add_new_plot(-10)
