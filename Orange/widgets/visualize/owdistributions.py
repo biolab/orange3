@@ -222,11 +222,12 @@ class OWDistributions(OWWidget):
     settingsHandler = settings.DomainContextHandler()
     var = settings.ContextSetting(None)
     cvar = settings.ContextSetting(None)
+    selection = settings.ContextSetting(set(), schema_only=True)
+    # number_of_bins must be a context setting because selection depends on it
+    number_of_bins = settings.ContextSetting(5, schema_only=True)
 
-    number_of_bins = settings.Setting(5)
     fitted_distribution = settings.Setting(0)
     show_probs = settings.Setting(True)
-
     stacked_columns = settings.Setting(True)
     cumulative_distr = settings.Setting(False)
 
@@ -252,7 +253,6 @@ class OWDistributions(OWWidget):
         self.data = None
         self.var = self.cvar = None
         self.valid_mask = self.valid_data = self.valid_group_data = None
-        self.selection = set()
         self.bar_items = []
         self.curve_descriptions = None
         self.possible_bins = []
@@ -686,17 +686,10 @@ class OWDistributions(OWWidget):
         if not bins:
             bins = [(mx, 1, 1)]
 
-        user_bins = self._user_var_bins.get(self.var)
-        self.controls.number_of_bins.setMaximum(len(bins) - 1)
-        if user_bins is None:
-            target = max(len(self.bar_items), 7)
-            for user_bins, (_, nbins, _2) in enumerate(bins):
-                if nbins > target:
-                    if user_bins > 0 and \
-                            target - bins[user_bins - 1][1] < nbins - target:
-                        user_bins -= 1
-                    break
-        self.number_of_bins = user_bins
+        max_bins = len(bins) - 1
+        self.controls.number_of_bins.setMaximum(max_bins)
+        self.number_of_bins = min(
+            max_bins, self._user_var_bins.get(self.var, self.number_of_bins))
 
     def get_bins(self):
         mx, n, step = self.possible_bins[self.number_of_bins]
@@ -778,8 +771,6 @@ class OWDistributions(OWWidget):
     def _on_end_selecting(self):
         self.apply()
 
-    # TODO: Don't clear selection when replotting; rename replot to
-    # replot_histogram
     def show_selection(self):
         blue = QColor(Qt.blue)
         pen = QPen(QBrush(blue), 3)
