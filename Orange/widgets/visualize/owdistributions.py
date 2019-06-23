@@ -5,7 +5,7 @@ from xml.sax.saxutils import escape
 import numpy as np
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
-from AnyQt.QtWidgets import QGraphicsItem, QGraphicsRectItem
+from AnyQt.QtWidgets import QGraphicsRectItem
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
@@ -157,7 +157,8 @@ class DistributionBarItem(pg.GraphicsObject):
 
 
 class DistributionWidget(pg.PlotWidget):
-    item_clicked = Signal(QGraphicsItem, Qt.KeyboardModifiers, bool)
+    item_clicked = Signal(DistributionBarItem, Qt.KeyboardModifiers, bool)
+    blank_clicked = Signal()
     mouse_released = Signal()
 
     def __init__(self, *args, **kwargs):
@@ -180,6 +181,8 @@ class DistributionWidget(pg.PlotWidget):
         self.last_item = self._get_bar_item(ev.pos())
         if self.last_item:
             self.item_clicked.emit(self.last_item, ev.modifiers(), False)
+        else:
+            self.blank_clicked.emit()
 
     def mouseReleaseEvent(self, ev):
         self.last_item = None
@@ -250,7 +253,6 @@ class OWDistributions(OWWidget):
     def __init__(self):
         super().__init__()
         self.data = None
-        self.var = self.cvar = None
         self.valid_data = self.valid_group_data = None
         self.bar_items = []
         self.curve_descriptions = None
@@ -258,6 +260,7 @@ class OWDistributions(OWWidget):
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
+        self.key_operation = None
         self._user_var_bins = {}
 
         gui.listView(
@@ -312,6 +315,7 @@ class OWDistributions(OWWidget):
 
         self.plotview = DistributionWidget(background=None)
         self.plotview.item_clicked.connect(self._on_item_clicked)
+        self.plotview.blank_clicked.connect(self._on_blank_clicked)
         self.plotview.mouse_released.connect(self._on_end_selecting)
         self.plotview.setRenderHint(QPainter.Antialiasing)
         self.mainArea.layout().addWidget(self.plotview)
@@ -368,7 +372,7 @@ class OWDistributions(OWWidget):
             self.var = varmodel[max(len(domain.class_vars), len(varmodel) - 1)]
         if domain is not None and domain.has_discrete_class:
             self.cvar = domain.class_var
-        self.selection.clear()
+        self.reset_select()
         self._user_var_bins.clear()
         self.openContext(domain)
         self.set_valid_data()
@@ -377,7 +381,7 @@ class OWDistributions(OWWidget):
         self.apply()
 
     def _on_var_changed(self):
-        self.selection.clear()
+        self.reset_select()
         self.set_valid_data()
         self.recompute_binnings()
         self.replot()
@@ -389,7 +393,7 @@ class OWDistributions(OWWidget):
         self.apply()
 
     def _on_bins_changed(self):
-        self.selection.clear()
+        self.reset_select()
         self.replot()
         # this is triggered when dragging, so don't call apply here;
         # apply is called on sliderReleased
@@ -724,16 +728,23 @@ class OWDistributions(OWWidget):
                     self.selection.remove(idx)
 
         def add_range(add):
+            if self.last_click_idx is None:
+                add = True
+                idx_range = {idx}
+            else:
+                from_idx, to_idx = sorted((self.last_click_idx, idx))
+                idx_range = set(range(from_idx, to_idx + 1))
             self.drag_operation = [self.DragRemove, self.DragAdd][add]
-            from_idx, to_idx = sorted((self.last_click_idx, idx))
-            idx_range = set(range(from_idx, to_idx + 1))
             if add:
                 self.selection |= idx_range
             else:
                 self.selection -= idx_range
 
-        if not isinstance(item, DistributionBarItem):
+        self.key_operation = None
+        if item is None:
+            self.reset_select()
             return
+
         idx = self.bar_items.index(item)
         if drag:
             # Dragging has to add a range, otherwise fast dragging skips bars
@@ -754,6 +765,16 @@ class OWDistributions(OWWidget):
                     add_or_remove(idx, add=True)
         self.last_click_idx = idx
 
+        self.show_selection()
+
+    def _on_blank_clicked(self):
+        self.reset_select()
+
+    def reset_select(self):
+        self.selection.clear()
+        self.last_click_idx = None
+        self.drag_operation = None
+        self.key_operation = None
         self.show_selection()
 
     def _on_end_selecting(self):
@@ -812,6 +833,68 @@ class OWDistributions(OWWidget):
         return [[g[1] for g in group]
                 for _, group in groupby(enumerate(sorted(self.selection)),
                                         key=lambda x: x[1] - x[0])]
+
+    def keyPressEvent(self, e):
+        def on_nothing_selected():
+            if e.key() == Qt.Key_Left:
+                self.last_click_idx = len(self.bar_items) - 1
+            else:
+                self.last_click_idx = 0
+            self.selection.add(self.last_click_idx)
+
+        def on_key_left():
+            if e.modifiers() & Qt.ShiftModifier:
+                if self.key_operation == Qt.Key_Right and first != last:
+                    self.selection.remove(last)
+                    self.last_click_idx = last - 1
+                elif first:
+                    self.key_operation = Qt.Key_Left
+                    self.selection.add(first - 1)
+                    self.last_click_idx = first - 1
+            else:
+                self.selection.clear()
+                self.last_click_idx = max(first - 1, 0)
+                self.selection.add(self.last_click_idx)
+
+        def on_key_right():
+            if e.modifiers() & Qt.ShiftModifier:
+                if self.key_operation == Qt.Key_Left and first != last:
+                    self.selection.remove(first)
+                    self.last_click_idx = first + 1
+                elif not self._is_last_bar(last):
+                    self.key_operation = Qt.Key_Right
+                    self.selection.add(last + 1)
+                    self.last_click_idx = last + 1
+            else:
+                self.selection.clear()
+                self.last_click_idx = min(last + 1, len(self.bar_items) - 1)
+                self.selection.add(self.last_click_idx)
+
+        if not self.is_valid or not self.bar_items \
+                or e.key() not in (Qt.Key_Left, Qt.Key_Right):
+            super().keyPressEvent(e)
+            return
+
+        prev_selection = self.selection.copy()
+        if not self.selection:
+            on_nothing_selected()
+        else:
+            first, last = min(self.selection), max(self.selection)
+            if e.key() == Qt.Key_Left:
+                on_key_left()
+            else:
+                on_key_right()
+
+        if self.selection != prev_selection:
+            self.drag_operation = self.DragAdd
+            self.show_selection()
+            self.apply()
+
+    def keyReleaseEvent(self, ev):
+        if ev.key() == Qt.Key_Shift:
+            self.key_operation = None
+        super().keyReleaseEvent(ev)
+
 
     # -----------------------------
     # Output
