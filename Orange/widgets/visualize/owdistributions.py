@@ -100,12 +100,12 @@ class DistributionBarItem(pg.GraphicsObject):
         else:
             freqs = self.freqs
 
-        mapper = self.mapRectFromDevice
-        coord_padding = mapper(QRectF(0, 0, self.padding, 0)).width()
-        if coord_padding > self.width / 4:
-            coord_padding = mapper(QRectF(0, 0, 1, 0)).width()
-        sx = self.x + coord_padding
-        padded_width = self.width - 2 * coord_padding
+        if not self.padding:
+            padding = self.mapRectFromDevice(QRectF(0, 0, 0.5, 0)).width()
+        else:
+            padding = min(20, self.width * self.padding)
+        sx = self.x + padding
+        padded_width = self.width - 2 * padding
 
         if self.stacked:
             painter.setPen(Qt.NoPen)
@@ -384,7 +384,6 @@ class OWDistributions(OWWidget):
         self.apply()
 
     def _on_cvar_changed(self):
-        self.selection.clear()
         self.set_valid_data()
         self.replot()
         self.apply()
@@ -502,7 +501,7 @@ class OWDistributions(OWWidget):
                 f"<b>{escape(var.values[i])}</b>: {int(freq)} " \
                 f"({100 * freq / len(self.valid_data):.2f} %) "
             self._add_bar(
-                i - 0.5, 1, 20, [freq], colors,
+                i - 0.5, 1, 0.1, [freq], colors,
                 stacked=False, expanded=False, tooltip=tooltip)
 
     def _disc_split_plot(self):
@@ -514,7 +513,7 @@ class OWDistributions(OWWidget):
         total = len(self.data)
         for i, freqs in enumerate(conts):
             self._add_bar(
-                i - 0.5, 1, 20, freqs, gcolors,
+                i - 0.5, 1, 0.1, freqs, gcolors,
                 stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
                     var.values[i], np.sum(freqs), total, gvalues, freqs))
@@ -537,7 +536,7 @@ class OWDistributions(OWWidget):
                 f"<b>{escape(self.str_int(x0, x1, not i, i == lasti))}</b>: " \
                 f"{freq} ({100 * freq / total:.2f} %)</p>"
             self._add_bar(
-                x0, x1 - x0, 0.5, [tot_freq if self.cumulative_distr else freq],
+                x0, x1 - x0, 0, [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip)
 
         if self.fitted_distribution:
@@ -573,7 +572,7 @@ class OWDistributions(OWWidget):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
             self._add_bar(
-                x0, x1 - x0, 0.5 if self.stacked_columns else 6, plotfreqs,
+                x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
                     self.str_int(x0, x1, not i, i == len(bins) - 1),
