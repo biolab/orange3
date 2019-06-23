@@ -19,7 +19,7 @@ from Orange.widgets.utils.annotated_data import \
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis
-from Orange.widgets.widget import Input, Output, OWWidget
+from Orange.widgets.widget import Input, Output, OWWidget, Msg
 
 from Orange.widgets.visualize.owscatterplotgraph import \
     LegendItem as SPGLegendItem
@@ -209,6 +209,15 @@ class OWDistributions(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
         histogram_data = Output("Histogram Data", Table)
 
+    class Error(OWWidget.Error):
+        no_defined_values_var = \
+            Msg("Variable '{}' does not have any defined values")
+        no_defined_values_pair = \
+            Msg("No data instances with '{}' and '{}' defined")
+
+    class Warning(OWWidget.Warning):
+        ignored_nans = Msg("Data instances with missing values are ignored")
+
     settingsHandler = settings.DomainContextHandler()
     var = settings.ContextSetting(None)
     cvar = settings.ContextSetting(None)
@@ -277,7 +286,7 @@ class OWDistributions(OWWidget):
             box, self, "cvar", label="Split by", orientation=Qt.Horizontal,
             model=DomainModel(placeholder="(None)",
                               valid_types=(DiscreteVariable), ),
-            callback=self.replot, contentsLength=18)
+            callback=self._on_cvar_changed, contentsLength=18)
         box2 = gui.indentedBox(box, sep=12)
         gui.checkBox(
             box2, self, "stacked_columns", "Stack columns",
@@ -362,13 +371,21 @@ class OWDistributions(OWWidget):
         self.selection.clear()
         self._user_var_bins.clear()
         self.openContext(domain)
+        self.set_valid_data()
         self.recompute_binnings()
         self.replot()
         self.apply()
 
     def _on_var_changed(self):
         self.selection.clear()
+        self.set_valid_data()
         self.recompute_binnings()
+        self.replot()
+        self.apply()
+
+    def _on_cvar_changed(self):
+        self.selection.clear()
+        self.set_valid_data()
         self.replot()
         self.apply()
 
@@ -382,17 +399,47 @@ class OWDistributions(OWWidget):
         self._user_var_bins[self.var] = self.number_of_bins
         self.apply()
 
+    @property
+    def is_valid(self):
+        return self.valid_data is not None
+
+    def set_valid_data(self):
+        no_def_var = self.Error.no_defined_values_var
+        no_def_pair = self.Error.no_defined_values_pair
+        no_def_var.clear()
+        no_def_pair.clear()
+        self.Warning.ignored_nans.clear()
+
+        self.valid_data = self.valid_group_data = None
+        if self.var is None:
+            return
+
+        column = self.data.get_column_view(self.var)[0]
+        valid_mask = np.isfinite(column)
+        if not np.any(valid_mask):
+            self.Error.no_defined_values_var(self.var.name)
+            return
+        if self.cvar:
+            ccolumn = self.data.get_column_view(self.cvar)[0]
+            valid_mask *= np.isfinite(ccolumn)
+            if not np.any(valid_mask):
+                self.Error.no_defined_values_pair(self.var.name, self.cvar.name)
+                return
+            self.valid_group_data = ccolumn[valid_mask]
+        if not np.all(valid_mask):
+            self.Warning.ignored_nans()
+        self.valid_data = column[valid_mask]
+
     # -----------------------------
     # Plotting
 
     def replot(self):
         self._clear_plot()
-        self._set_axis_names()
-        self._update_controls_state()
-        self._set_valid_data()
-        self._call_plotting()
-        self._display_legend()
-
+        if self.is_valid:
+            self._set_axis_names()
+            self._update_controls_state()
+            self._call_plotting()
+            self._display_legend()
         self.show_selection()
 
     def _clear_plot(self):
@@ -404,11 +451,12 @@ class OWDistributions(OWWidget):
         self._legend.hide()
 
     def _set_axis_names(self):
+        assert self.is_valid  # called only from replot, so assumes data is OK
         bottomaxis = self.ploti.getAxis("bottom")
         bottomaxis.setLabel(self.var and self.var.name)
 
         leftaxis = self.ploti.getAxis("left")
-        if self.show_probs and self.var and self.cvar:
+        if self.show_probs and self.cvar:
             leftaxis.setLabel(
                 f"Probability of '{self.cvar.name}' at given '{self.var.name}'")
         else:
@@ -416,33 +464,14 @@ class OWDistributions(OWWidget):
         leftaxis.resizeEvent()
 
     def _update_controls_state(self):
-        self.continuous_box.setHidden(
-            bool(self.var and self.var.is_discrete))
-        self.controls.show_probs.setDisabled(
-            self.var is None or self.cvar is None)
-        self.controls.stacked_columns.setDisabled(
-            self.var is None or self.cvar is None)
-
-    def _set_valid_data(self):
-        if self.var is None:
-            self.valid_data = self.valid_group_data = None
-            return
-
-        column = self.data.get_column_view(self.var)[0]
-        valid_mask = ~np.isnan(column)
-        if self.cvar:
-            ccolumn = self.data.get_column_view(self.cvar)[0]
-            valid_mask *= ~np.isnan(ccolumn)
-            self.valid_group_data = ccolumn[valid_mask]
-        else:
-            self.valid_group_data = None
-        self.valid_data = column[valid_mask]
+        assert self.is_valid  # called only from replot, so assumes data is OK
+        self.continuous_box.setHidden(self.var.is_discrete)
+        self.controls.show_probs.setDisabled(self.cvar is None)
+        self.controls.stacked_columns.setDisabled(self.cvar is None)
 
     def _call_plotting(self):
+        assert self.is_valid  # called only from replot, so assumes data is OK
         self.curve_descriptions = None
-        if self.var is None:
-            return
-
         if self.var.is_discrete:
             if self.cvar:
                 self._disc_split_plot()
@@ -471,7 +500,7 @@ class OWDistributions(OWWidget):
             tooltip = \
                 "<p style='white-space:pre;'>" \
                 f"<b>{escape(var.values[i])}</b>: {int(freq)} " \
-                f"({100 * freq / len(self.data):.2f} %) "
+                f"({100 * freq / len(self.valid_data):.2f} %) "
             self._add_bar(
                 i - 0.5, 1, 20, [freq], colors,
                 stacked=False, expanded=False, tooltip=tooltip)
@@ -623,6 +652,7 @@ class OWDistributions(OWWidget):
                "</table>"
 
     def _display_legend(self):
+        assert self.is_valid  # called only from replot, so assumes data is OK
         if self.cvar is None:
             if self.curve_descriptions:
                 self._legend.addItem(
@@ -642,15 +672,16 @@ class OWDistributions(OWWidget):
     # Bins
 
     def recompute_binnings(self):
-        if self.var is None:
-            self.binnings = []
-            max_bins = 0
-        else:
+        self.binnings = []
+        max_bins = 0
+        if self.is_valid and self.var.is_continuous:
+            # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column_view(self.var)[0]
-            self.binnings = decimal_binnings(
-                column, min_width=self.min_var_resolution(self.var),
-                add_unique=10, min_unique=5)
-            max_bins = len(self.binnings) - 1
+            if np.any(np.isfinite(column)):
+                self.binnings = decimal_binnings(
+                    column, min_width=self.min_var_resolution(self.var),
+                    add_unique=10, min_unique=5)
+                max_bins = len(self.binnings) - 1
 
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
@@ -674,8 +705,7 @@ class OWDistributions(OWWidget):
             return f"{var.name} < {sx1}"
         elif last:
             return f"{var.name} ≥ {sx0}"
-        elif sx0 == sx1 \
-                or x1 - x0 <= self.min_var_resolution(self.var):
+        elif sx0 == sx1 or x1 - x0 <= self.min_var_resolution(var):
             return f"{var.name} = {sx0}"
         else:
             return f"{sx0} ≤ {var.name} < {sx1}"
@@ -731,12 +761,15 @@ class OWDistributions(OWWidget):
         self.apply()
 
     def show_selection(self):
+        self.plot_mark.clear()
+        if not self.is_valid:  # though if it's not, selection is empty anyway
+            return
+
         blue = QColor(Qt.blue)
         pen = QPen(QBrush(blue), 3)
         pen.setCosmetic(True)
         brush = QBrush(blue.lighter(190))
 
-        self.plot_mark.clear()
         for group in self.grouped_selection():
             group = list(group)
             left_idx, right_idx = group[0], group[-1]
@@ -750,7 +783,7 @@ class OWDistributions(OWWidget):
                 valname = self.str_int(
                     x0, x1, not left_idx, right_idx == len(self.bar_items) - 1)
                 inside = np.sum(np.sum(self.bar_items[i].freqs) for i in group)
-                total = len(self.valid_data) or 1
+                total = len(self.valid_data)
                 item.setToolTip(
                     "<p style='white-space:pre;'>"
                     f"<b>{escape(valname)}</b>: "
@@ -786,7 +819,7 @@ class OWDistributions(OWWidget):
 
     def apply(self):
         data = self.data
-        if data is None:
+        if not self.is_valid:
             selected_data = annotated_data = histogram_data = None
         else:
             if self.var.is_discrete:
@@ -859,7 +892,7 @@ class OWDistributions(OWWidget):
 
     def send_report(self):
         self.plotview.scene().setSceneRect(self.plotview.sceneRect())
-        if not self.var:
+        if not self.is_valid:
             return
         self.report_plot()
         if self.cumulative_distr:
