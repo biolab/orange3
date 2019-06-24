@@ -391,7 +391,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
             multiple_folds:
                 "each training data sample produces a different model",
             no_models:
-                "test results do not contain stored models - try testing on"
+                "test results do not contain stored models - try testing on "
                 "separate data or on training data",
             multiple_selected:
                 "select a single model - the widget can output only one",

@@ -400,6 +400,9 @@ class OWCalibrationPlot(widget.OWWidget):
         self._update_info()
 
     def _update_info(self):
+        def elided(s):
+            return s[:17] + "..." if len(s) > 20 else s
+
         text = f"""<table>
                         <tr>
                             <th align='right'>Threshold: p=</th>
@@ -416,7 +419,7 @@ class OWCalibrationPlot(widget.OWWidget):
             for name, (probs, curves) in self.scores:
                 ind = min(np.searchsorted(probs, self.threshold),
                           len(probs) - 1)
-                text += f"<tr><th align='right'>{name}:</th>"
+                text += f"<tr><th align='right'>{elided(name)}:</th>"
                 text += "<td>/</td>".join(f'<td>{curve[ind]:.3f}</td>'
                                           for curve in curves)
                 text += "</tr>"
@@ -436,8 +439,8 @@ class OWCalibrationPlot(widget.OWWidget):
                     (len(results.folds) > 1,
                      "each training data sample produces a different model"),
                     (results.models is None,
-                     "test results do not contain stored models - try testing on"
-                     "separate data or on training data"),
+                     "test results do not contain stored models - try testing "
+                     "on separate data or on training data"),
                     (len(self.selected_classifiers) != 1,
                      "select a single model - the widget can output only one"),
                     (self.score != 0 and len(results.domain.class_var.values) != 2,
