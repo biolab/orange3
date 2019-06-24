@@ -63,8 +63,6 @@ class LegendItem(SPGLegendItem):
 
 
 class DistributionBarItem(pg.GraphicsObject):
-    clicked = Signal(pg.GraphicsObject)
-
     def __init__(self, x, width, padding, freqs, colors, stacked, expanded,
                  tooltip):
         super().__init__()
@@ -369,7 +367,7 @@ class OWDistributions(OWWidget):
         varmodel.set_domain(domain)
         cvarmodel.set_domain(domain)
         if varmodel:
-            self.var = varmodel[max(len(domain.class_vars), len(varmodel) - 1)]
+            self.var = varmodel[min(len(domain.class_vars), len(varmodel) - 1)]
         if domain is not None and domain.has_discrete_class:
             self.cvar = domain.class_var
         self.reset_select()
@@ -407,23 +405,23 @@ class OWDistributions(OWWidget):
         return self.valid_data is not None
 
     def set_valid_data(self):
-        no_def_var = self.Error.no_defined_values_var
-        no_def_pair = self.Error.no_defined_values_pair
-        no_def_var.clear()
-        no_def_pair.clear()
+        err_def_var = self.Error.no_defined_values_var
+        err_def_pair = self.Error.no_defined_values_pair
+        err_def_var.clear()
+        err_def_pair.clear()
         self.Warning.ignored_nans.clear()
 
         self.valid_data = self.valid_group_data = None
         if self.var is None:
             return
 
-        column = self.data.get_column_view(self.var)[0]
+        column = self.data.get_column_view(self.var)[0].astype(float)
         valid_mask = np.isfinite(column)
         if not np.any(valid_mask):
             self.Error.no_defined_values_var(self.var.name)
             return
         if self.cvar:
-            ccolumn = self.data.get_column_view(self.cvar)[0]
+            ccolumn = self.data.get_column_view(self.cvar)[0].astype(float)
             valid_mask *= np.isfinite(ccolumn)
             if not np.any(valid_mask):
                 self.Error.no_defined_values_pair(self.var.name, self.cvar.name)
@@ -679,7 +677,7 @@ class OWDistributions(OWWidget):
         max_bins = 0
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
-            column = self.data.get_column_view(self.var)[0]
+            column = self.data.get_column_view(self.var)[0].astype(float)
             if np.any(np.isfinite(column)):
                 self.binnings = decimal_binnings(
                     column, min_width=self.min_var_resolution(self.var),
@@ -802,7 +800,7 @@ class OWDistributions(OWWidget):
             if self.var.is_continuous:
                 valname = self.str_int(
                     x0, x1, not left_idx, right_idx == len(self.bar_items) - 1)
-                inside = np.sum(np.sum(self.bar_items[i].freqs) for i in group)
+                inside = sum(np.sum(self.bar_items[i].freqs) for i in group)
                 total = len(self.valid_data)
                 item.setToolTip(
                     "<p style='white-space:pre;'>"
@@ -901,21 +899,21 @@ class OWDistributions(OWWidget):
 
     def apply(self):
         data = self.data
-        if not self.is_valid:
-            selected_data = annotated_data = histogram_data = None
-        else:
+        selected_data = annotated_data = histogram_data = None
+        if self.is_valid:
             if self.var.is_discrete:
                 group_indices, values = self._get_output_indices_disc()
-                histogram_data = None
             else:
                 group_indices, values = self._get_output_indices_cont()
                 hist_indices, hist_values = self._get_histogram_indices()
                 histogram_data = create_groups_table(
                     data, hist_indices, values=hist_values)
-            selected_data = create_groups_table(
-                data, group_indices, include_unselected=False, values=values)
-            annotated_data = create_annotated_table(
-                data, np.nonzero(group_indices)[0])
+            selected = np.nonzero(group_indices)[0]
+            if selected.size:
+                selected_data = create_groups_table(
+                    data, group_indices,
+                    include_unselected=False, values=values)
+                annotated_data = create_annotated_table(data, selected)
 
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(annotated_data)
@@ -923,7 +921,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_disc(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0]
+        col = self.data.get_column_view(self.var)[0].astype(float)
         for group_idx, val_idx in enumerate(self.selection, start=1):
             group_indices[col == val_idx] = group_idx
         values = [self.var.values[i] for i in self.selection]
@@ -931,7 +929,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_cont(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0]
+        col = self.data.get_column_view(self.var)[0].astype(float)
         values = []
         for group_idx, group in enumerate(self.grouped_selection(), start=1):
             x0 = x1 = None
@@ -948,7 +946,7 @@ class OWDistributions(OWWidget):
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column_view(self.var)[0]
+        col = self.data.get_column_view(self.var)[0].astype(float)
         values = []
         for bar_idx in range(len(self.bar_items)):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
@@ -961,7 +959,8 @@ class OWDistributions(OWWidget):
         bar_item = self.bar_items[bar_idx]
         minx = bar_item.x0
         maxx = bar_item.x1 + (bar_idx == len(self.bar_items) - 1)
-        return minx, maxx, (col >= minx) * (col < maxx)
+        with np.errstate(invalid="ignore"):
+            return minx, maxx, (col >= minx) * (col < maxx)
 
     def _is_last_bar(self, idx):
         return idx == len(self.bar_items) - 1
