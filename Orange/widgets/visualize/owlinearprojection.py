@@ -35,6 +35,9 @@ from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
 from Orange.widgets.widget import Msg
 
 
+MAX_LABEL_LEN = 20
+
+
 class LinearProjectionVizRank(VizRankDialog, OWComponent):
     captionTitle = "Score Plots"
     n_attrs = Setting(3)
@@ -215,7 +218,11 @@ class OWLinProjGraph(OWGraphWithAnchors):
         if self.anchor_items is None:
             self.anchor_items = []
             for point, label in zip(points, labels):
-                anchor = AnchorItem(line=QLineF(0, 0, *point), text=label)
+                anchor = AnchorItem(line=QLineF(0, 0, *point))
+                anchor._label.setToolTip(f"<b>{label}</b>")
+                label = label[:MAX_LABEL_LEN - 3] + "..." if len(label) > MAX_LABEL_LEN else label
+                anchor.setText(label)
+
                 visible = self.always_show_axes or np.linalg.norm(point) > r
                 anchor.setVisible(visible)
                 anchor.setPen(pg.mkPen((100, 100, 100)))
