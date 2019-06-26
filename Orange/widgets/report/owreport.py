@@ -1,5 +1,8 @@
 from orangewidget.report.owreport import OWReport, HAVE_REPORT
 
+# back-compatibility for deserialization
+from orangewidget.report.owreport import ReportItem  # pylint: disable=unused-import
+
 __all__ = [
     "OWReport", "HAVE_REPORT"
 ]
