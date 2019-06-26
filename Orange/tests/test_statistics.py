@@ -517,6 +517,13 @@ class TestBincount(unittest.TestCase):
 
         np.testing.assert_equal(bincount(x)[1], expected)
 
+    # object arrays cannot be converted to sparse, so test only for dense
+    def test_count_nans_objectarray(self):
+        x = np.array([0, 0, 1, 2, np.nan, 2], dtype=object)
+        expected = 1
+
+        np.testing.assert_equal(bincount(x)[1], expected)
+
     @dense_sparse
     def test_adds_empty_bins(self, array):
         x = array([0, 1, 3, 5])
@@ -645,14 +652,18 @@ class TestUnique(unittest.TestCase):
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
 
 
-class TestNanModeAppVeyor(unittest.TestCase):
-    def test_appveyour_still_not_onscipy_1_2_0(self):
-        import scipy
-        from distutils.version import StrictVersion
-        import os
+class TestNanModeFixedInScipy(unittest.TestCase):
 
-        if os.getenv("APPVEYOR") and \
-                StrictVersion(scipy.__version__) >= StrictVersion("1.2.0"):
-            self.fail("Appveyor now uses Scipy 1.2.0; revert changes in "
-                      "the last three commits (bde2cbe, 7163448, ab0f31d) "
-                      "of gh-3480. Then, remove this test.")
+    @unittest.expectedFailure
+    def test_scipy_nanmode_still_wrong(self):
+        import scipy.stats
+        X = np.array([[np.nan, np.nan, 1, 1],
+                      [2, np.nan, 1, 1]])
+        mode, count = scipy.stats.mode(X, 0)
+        np.testing.assert_array_equal(mode, [[2, np.nan, 1, 1]])
+        np.testing.assert_array_equal(count, [[1, np.nan, 2, 2]])
+        mode, count = scipy.stats.mode(X, 1)
+        np.testing.assert_array_equal(mode, [[1], [1]])
+        np.testing.assert_array_equal(count, [[2], [2]])
+        # When Scipy's scipy.stats.mode works correcly, remove Orange.statistics.util.nanmode
+        # and this test. Also update requirements.

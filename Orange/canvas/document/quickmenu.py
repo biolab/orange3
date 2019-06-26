@@ -340,6 +340,10 @@ class SortFilterProxyModel(QSortFilterProxyModel):
         flat_model = self.sourceModel()
         index = flat_model.index(row, self.filterKeyColumn(), parent)
         description = flat_model.data(index, role=QtWidgetRegistry.WIDGET_DESC_ROLE)
+        if description is None:
+            log.error("Could not retrieve a widget's description from model")
+            return False
+
         name = description.name
         keywords = description.keywords
 

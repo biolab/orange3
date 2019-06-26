@@ -148,6 +148,11 @@ class OWCreateClass(widget.OWWidget):
     TRANSFORMERS = {StringVariable: ValueFromStringSubstring,
                     DiscreteVariable: ValueFromDiscreteSubstring}
 
+    # Cached variables are used so that two instances of the widget with the
+    # same settings will create the same variable. The usual `make` wouldn't
+    # work here because variables with `compute_value` are not reused.
+    cached_variables = {}
+
     class Warning(widget.OWWidget.Warning):
         no_nonnumeric_vars = Msg("Data contains only numeric variables.")
 
@@ -465,25 +470,36 @@ class OWCreateClass(widget.OWWidget):
         if not self.class_name or self.class_name in domain:
             self.Outputs.data.send(None)
             return
+        new_class = self._create_variable()
+        new_domain = Domain(
+            domain.attributes, new_class, domain.metas + domain.class_vars)
+        new_data = self.data.transform(new_domain)
+        self.Outputs.data.send(new_data)
+
+    def _create_variable(self):
         rules = self.active_rules
         # Transposition + stripping
         valid_rules = [label or pattern or n_matches
                        for (label, pattern), n_matches in
                        zip(rules, self.match_counts)]
-        patterns = [pattern
-                    for (_, pattern), valid in zip(rules, valid_rules)
-                    if valid]
-        names = [name for name, valid in zip(self.class_labels(), valid_rules)
-                 if valid]
+        patterns = tuple(
+            pattern for (_, pattern), valid in zip(rules, valid_rules) if valid)
+        names = tuple(
+            name for name, valid in zip(self.class_labels(), valid_rules)
+            if valid)
         transformer = self.TRANSFORMERS[type(self.attribute)]
+
+        var_key = (self.attribute, self.class_name, names,
+                   patterns, self.case_sensitive, self.match_beginning)
+        if var_key in self.cached_variables:
+            return self.cached_variables[var_key]
+
         compute_value = transformer(
             self.attribute, patterns, self.case_sensitive, self.match_beginning)
-        new_class = DiscreteVariable(
+        new_var = DiscreteVariable(
             self.class_name, names, compute_value=compute_value)
-        new_domain = Domain(
-            domain.attributes, new_class, domain.metas + domain.class_vars)
-        new_data = self.data.transform(new_domain)
-        self.Outputs.data.send(new_data)
+        self.cached_variables[var_key] = new_var
+        return new_var
 
     def send_report(self):
         # Pylint gives false positives: these functions are always called from

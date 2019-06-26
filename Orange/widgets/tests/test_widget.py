@@ -5,10 +5,10 @@ import weakref
 
 from unittest.mock import patch, MagicMock
 
-from AnyQt.QtCore import QRect, QByteArray, QObject, pyqtSignal
+from AnyQt.QtCore import Qt, QPoint, QRect, QByteArray, QObject, pyqtSignal
 from AnyQt.QtGui import QShowEvent
 from AnyQt.QtWidgets import QAction
-from AnyQt.QtTest import QSignalSpy
+from AnyQt.QtTest import QSignalSpy, QTest
 
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, SettingProvider
@@ -92,6 +92,7 @@ class WidgetTestCase(WidgetTest):
 
         w = TestWidget2()
         w.showEvent(QShowEvent())
+        QTest.mousePress(w, Qt.LeftButton, Qt.NoModifier, QPoint(1, 1))
 
     def test_store_restore_layout_geom(self):
         class Widget(OWWidget):
@@ -206,6 +207,12 @@ class WidgetTestCase(WidgetTest):
                 pass
 
             warn.assert_not_called()
+
+    def test_reset_settings(self):
+        w = MyWidget()
+        w.field = 43
+        w._reset_settings()
+        self.assertEqual(42, w.field)
 
 
 class WidgetMsgTestCase(WidgetTest):

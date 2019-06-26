@@ -138,6 +138,14 @@ class OWComponent:
         if widget is not None and widget.settingsHandler:
             widget.settingsHandler.initialize(self)
 
+    def _reset_settings(self):
+        """
+        Copy default settings to instance's settings. This method can be
+        called from OWWidget's reset_settings, but will mostly have to be
+        followed by calling a method that updates the widget.
+        """
+        self.settingsHandler.reset_to_original(self)
+
     def connect_control(self, name, func):
         """
         Add `func` to the list of functions called when the value of the
@@ -3084,6 +3092,10 @@ class VerticalItemDelegate(QStyledItemDelegate):
     # Extra text top/bottom margin.
     Margin = 6
 
+    def __init__(self, extend=False):
+        super().__init__()
+        self._extend = extend  # extend text over cell borders
+
     def sizeHint(self, option, index):
         sh = super().sizeHint(option, index)
         return QtCore.QSize(sh.height() + self.Margin * 2, sh.width())
@@ -3121,6 +3133,8 @@ class VerticalItemDelegate(QStyledItemDelegate):
                 offset = -offset
 
             textrect.translate(0, offset)
+            if self._extend and brect.width() > itemrect.width():
+                textrect.setWidth(brect.width())
 
         painter.translate(option.rect.x(), option.rect.bottom())
         painter.rotate(-90)

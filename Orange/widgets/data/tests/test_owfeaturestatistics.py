@@ -439,7 +439,6 @@ class TestFeatureStatisticsUI(WidgetTest):
         self.widget = self.create_widget(
             OWFeatureStatistics, stored_settings={'auto_commit': False}
         )
-        self.widget.resetSettings()
         self.data1 = Table('iris')
         self.data2 = Table('zoo')
         self.select_rows = partial(select_rows, widget=self.widget)

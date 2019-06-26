@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import silhouette_score, adjusted_mutual_info_score, silhouette_samples
 
 from Orange.data import Table
-from Orange.evaluation.testing import Results
+from Orange.evaluation.testing import Results, Validation
 from Orange.evaluation.scoring import Score
 
 
@@ -12,11 +12,8 @@ __all__ = ['ClusteringEvaluation']
 
 
 class ClusteringResults(Results):
-    def __init__(self, store_data=True, **kwargs):
-        super().__init__(store_data=True, **kwargs)
-
     def get_fold(self, fold):
-        results = ClusteringResults()
+        results = Results()
         results.data = self.data
 
         if self.folds is None:
@@ -35,12 +32,13 @@ class ClusteringResults(Results):
 class ClusteringScore(Score):
     considers_actual = False
 
+    # pylint: disable=arguments-differ
     def from_predicted(self, results, score_function):
         # Clustering scores from labels
         # This warning filter can be removed in scikit 0.22
         with warnings.catch_warnings():
             warnings.filterwarnings(
-                "ignore", "The behavior of AMI will change in version 0\.22.*")
+                "ignore", "The behavior of AMI will change in version 0\\.22.*")
             if self.considers_actual:
                 return np.fromiter(
                     (score_function(results.actual.flatten(),
@@ -70,48 +68,38 @@ class AdjustedMutualInfoScore(ClusteringScore):
         return self.from_predicted(results, adjusted_mutual_info_score)
 
 
-class ClusteringEvaluation(ClusteringResults):
+# Class overrides fit and doesn't need to define the abstract get_indices
+# pylint: disable=abstract-method
+class ClusteringEvaluation(Validation):
     """
     Clustering evaluation.
-
-    If the constructor is given the data and a list of learning algorithms, it
-    runs clustering and returns an instance of `Results` containing the
-    predicted clustering labels.
 
     .. attribute:: k
         The number of runs.
 
     """
-    def __init__(self, data, learners, k=1,
-                 store_models=False):
-        super().__init__(data=data, nmethods=len(learners), store_data=True,
-                         store_models=store_models, predicted=None)
-
+    def __init__(self, k=1, store_data=False, store_models=False):
+        super().__init__(store_data=store_data, store_models=store_models)
         self.k = k
-        Y = data.Y.copy().flatten()
 
-        self.predicted = np.empty((len(learners), self.k, len(data)))
-        self.folds = range(k)
-        self.row_indices = np.arange(len(data))
-        self.actual = data.Y.flatten() if hasattr(data, "Y") else None
-
+    def __call__(self, data, learners, preprocessor=None, *, callback=None):
+        res = ClusteringResults()
+        res.data = data
+        res.predicted = np.empty((len(learners), self.k, len(data)))
+        res.folds = range(self.k)
+        res.row_indices = np.arange(len(data))
+        res.actual = data.Y.flatten() if hasattr(data, "Y") else None
         if self.store_models:
-            self.models = []
+            res.models = np.tile(None, (self.k, len(learners)))
 
         for k in range(self.k):
-
-            if self.store_models:
-                fold_models = []
-                self.models.append(fold_models)
-
             for i, learner in enumerate(learners):
-                model = learner(data)
+                model = learner.get_model(data)
                 if self.store_models:
-                    fold_models.append(model)
+                    res.models[k, i] = model
+                res.predicted[i, k, :] = model.labels
 
-                labels = model(data)
-                self.predicted[i, k, :] = labels.X.flatten()
-
+        return res
 
 
 def graph_silhouette(X, y, xlim=None, colors=None, figsize=None, filename=None):

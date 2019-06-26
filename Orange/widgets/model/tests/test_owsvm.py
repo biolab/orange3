@@ -32,7 +32,7 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
                 gamma_spin.setValue(value)
 
         self.parameters = [
-            ParameterMapping("C", self.widget.C_spin),
+            ParameterMapping("C", self.widget.c_spin),
             ParameterMapping("gamma", self.widget._kernel_params[0],
                              values=values, setter=setter, getter=getter),
             ParameterMapping("coef0", self.widget._kernel_params[1]),

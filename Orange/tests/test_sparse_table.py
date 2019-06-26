@@ -67,7 +67,7 @@ class InterfaceTest(tabletests.InterfaceTest):
         assert iris.Y.shape == (150,)
         iris.Y = csr_matrix(iris.Y)
         # We expect the Y shape to match the X shape, which is (150, 4) in iris
-        self.assertEqual(iris.Y.shape, (150, 1))
+        self.assertEqual(iris.Y.shape, (150,))
 
     def test_Y_setter_2d(self):
         iris = Table('iris')

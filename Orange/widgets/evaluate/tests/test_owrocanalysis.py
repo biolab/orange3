@@ -1,6 +1,7 @@
 # pylint: disable=protected-access
 
 import unittest
+from unittest.mock import patch
 import copy
 import numpy as np
 
@@ -30,7 +31,7 @@ class TestROC(unittest.TestCase):
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 10)
                 self.assertTrue(all(c.is_valid for c in rocdata.folds))
@@ -39,12 +40,13 @@ class TestROC(unittest.TestCase):
 
         # fixed random seed because otherwise it could happen that data sample
         # contained only instances of two classes (and the test then fails)
+        # Pylint complains about RandomState; pylint: disable=no-member
         data = data[np.random.RandomState(0).choice(len(data), size=20)]
         res = Orange.evaluation.LeaveOneOut(data, learners)
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 20)
                 # all individual fold curves and averaged curve data
@@ -59,7 +61,7 @@ class TestROC(unittest.TestCase):
 
         for i, _ in enumerate(learners):
             for c in range(len(data.domain.class_var.values)):
-                rocdata = owrocanalysis.ROCData_from_results(res, i, target=c)
+                rocdata = owrocanalysis.roc_data_from_results(res, i, target=c)
                 self.assertTrue(rocdata.merged.is_valid)
                 self.assertEqual(len(rocdata.folds), 20)
                 # all individual fold curves and averaged curve data
@@ -182,38 +184,37 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         view = self.widget.plotview
         item = curve_merge.curve_item  # type: pg.PlotCurveItem
 
-        # no tooltips to be shown
-        pos = item.mapToScene(0.0, 1.0)
-        pos = view.mapFromScene(pos)
-        mouseMove(view.viewport(), pos)
-        self.assertIs(self.widget._tooltip_cache, None)
+        with patch.object(QToolTip, "showText") as show_text:
+            # no tooltips to be shown
+            pos = item.mapToScene(0.0, 1.0)
+            pos = view.mapFromScene(pos)
+            mouseMove(view.viewport(), pos)
+            show_text.assert_not_called()
 
-        # test single point
-        pos = item.mapToScene(0.22504, 0.45400)
-        pos = view.mapFromScene(pos)
-        mouseMove(view.viewport(), pos)
-        shown_thresh = self.widget._tooltip_cache[1]
-        self.assertTrue(QToolTip.isVisible())
-        np.testing.assert_almost_equal(shown_thresh, [0.40000], decimal=5)
+            # test single point
+            pos = item.mapToScene(0.22504, 0.45400)
+            pos = view.mapFromScene(pos)
+            mouseMove(view.viewport(), pos)
+            (_, text), _ = show_text.call_args
+            self.assertIn("(#1) 0.400", text)
 
-        pos = item.mapToScene(0.0, 0.0)
-        pos = view.mapFromScene(pos)
-        # test overlapping points
-        mouseMove(view.viewport(), pos)
-        shown_thresh = self.widget._tooltip_cache[1]
-        self.assertTrue(QToolTip.isVisible())
-        np.testing.assert_almost_equal(shown_thresh, [1.8, 1.89336], decimal=5)
+            # test overlapping points
+            pos = item.mapToScene(0.0, 0.0)
+            pos = view.mapFromScene(pos)
+            mouseMove(view.viewport(), pos)
+            (_, text), _ = show_text.call_args
+            self.assertIn("(#1) 1.800\n(#2) 1.893", text)
 
-        # test that cache is invalidated when changing averaging mode
-        self.widget.roc_averaging = OWROCAnalysis.Threshold
-        self.widget._replot()
-        mouseMove(view.viewport(), pos)
-        shown_thresh = self.widget._tooltip_cache[1]
-        self.assertTrue(QToolTip.isVisible())
-        np.testing.assert_almost_equal(shown_thresh, [1, 1])
+            # test that cache is invalidated when changing averaging mode
+            self.widget.roc_averaging = OWROCAnalysis.Threshold
+            self.widget._replot()
+            mouseMove(view.viewport(), pos)
+            (_, text), _ = show_text.call_args
+            self.assertIn("(#1) 1.000\n(#2) 1.000", text)
 
-        # test nan thresholds
-        self.widget.roc_averaging = OWROCAnalysis.Vertical
-        self.widget._replot()
-        mouseMove(view.viewport(), pos)
-        self.assertIs(self.widget._tooltip_cache, None)
+            # test nan thresholds
+            self.widget.roc_averaging = OWROCAnalysis.Vertical
+            self.widget._replot()
+            mouseMove(view.viewport(), pos)
+            (_, text), _ = show_text.call_args
+            self.assertEqual(text, "")

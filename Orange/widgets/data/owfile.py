@@ -7,7 +7,7 @@ from typing import List
 import numpy as np
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
-    QLineEdit, QSizePolicy as Policy
+    QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize
 
 from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
@@ -203,6 +203,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         url_edit.setTextMargins(l + 5, t, r, b)
         layout.addWidget(url_combo, 3, 1, 3, 3)
         url_combo.activated.connect(self._url_set)
+        # whit completer we set that combo box is case sensitive when
+        # matching the history
+        completer = QCompleter()
+        completer.setCaseSensitivity(Qt.CaseSensitive)
+        url_combo.setCompleter(completer)
 
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, 'No data loaded.')

@@ -82,7 +82,7 @@ def sparse_implicit_zero_weights(x, weights):
 def bincount(x, weights=None, max_val=None, minlength=0):
     """Return counts of values in array X.
 
-    Works kind of like np.bincount(), except that it also supports floating
+    Works kind of like np.bincount(), except that it also supports
     arrays with nans.
 
     Parameters
@@ -132,8 +132,8 @@ def bincount(x, weights=None, max_val=None, minlength=0):
 
         x = x.data
 
-    x = np.asanyarray(x)
-    if x.dtype.kind == 'f' and bn.anynan(x):
+    x = np.asanyarray(x, dtype=float)
+    if bn.anynan(x):
         nonnan = ~np.isnan(x)
         x = x[nonnan]
         if weights is not None:
@@ -479,7 +479,11 @@ def nanmedian(x, axis=None):
 
 
 def nanmode(x, axis=0):
-    """ A temporary replacement for a buggy scipy.stats.stats.mode from scipy < 1.2.0"""
+    """ A temporary replacement for a scipy.stats.mode.
+
+    This function returns mode NaN if all values are NaN (scipy<1.2.0 wrongly
+    returns zero). Also, this function returns count NaN if all values are NaN
+    (scipy=1.3.0 returns some number)."""
     nans = np.isnan(np.array(x)).sum(axis=axis, keepdims=True) == x.shape[axis]
     res = scipy.stats.stats.mode(x, axis)
     return scipy.stats.stats.ModeResult(np.where(nans, np.nan, res.mode),

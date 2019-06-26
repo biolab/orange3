@@ -56,7 +56,7 @@ class TestPrecision(unittest.TestCase):
 
     def test_precision_iris(self):
         learner = LogisticRegressionLearner(preprocessors=[])
-        res = TestOnTrainingData(self.iris, [learner])
+        res = TestOnTrainingData()(self.iris, [learner])
         self.assertAlmostEqual(self.score(res, average='weighted')[0],
                                0.96189, 5)
         self.assertAlmostEqual(self.score(res, target=1)[0], 0.97826, 5)
@@ -115,7 +115,7 @@ class TestRecall(unittest.TestCase):
 
     def test_recall_iris(self):
         learner = LogisticRegressionLearner(preprocessors=[])
-        res = TestOnTrainingData(self.iris, [learner])
+        res = TestOnTrainingData()(self.iris, [learner])
         self.assertAlmostEqual(self.score(res, average='weighted')[0], 0.96, 5)
         self.assertAlmostEqual(self.score(res, target=1)[0], 0.9, 5)
         self.assertAlmostEqual(self.score(res, target=1, average=None)[0],
@@ -173,7 +173,7 @@ class TestF1(unittest.TestCase):
 
     def test_recall_iris(self):
         learner = LogisticRegressionLearner(preprocessors=[])
-        res = TestOnTrainingData(self.iris, [learner])
+        res = TestOnTrainingData()(self.iris, [learner])
         self.assertAlmostEqual(self.score(res, average='weighted')[0],
                                0.959935, 5)
         self.assertAlmostEqual(self.score(res, target=1)[0], 0.9375, 5)
@@ -257,11 +257,11 @@ class TestCA(unittest.TestCase):
         t = Discretize(
             method=discretize.EqualWidth(n=3))(t)
         nb = NaiveBayesLearner()
-        res = TestOnTrainingData(t, [nb])
+        res = TestOnTrainingData()(t, [nb])
         np.testing.assert_almost_equal(CA(res), [1])
 
         t.Y[-20:] = 1 - t.Y[-20:]
-        res = TestOnTrainingData(t, [nb])
+        res = TestOnTrainingData()(t, [nb])
         self.assertGreaterEqual(CA(res)[0], 0.75)
         self.assertLess(CA(res)[0], 1)
 
@@ -273,19 +273,19 @@ class TestAUC(unittest.TestCase):
 
     def test_tree(self):
         tree = SklTreeLearner()
-        res = CrossValidation(self.iris, [tree], k=2)
+        res = CrossValidation(k=2)(self.iris, [tree])
         self.assertGreater(AUC(res)[0], 0.8)
         self.assertLess(AUC(res)[0], 1.)
 
     def test_constant_prob(self):
         maj = MajorityLearner()
-        res = TestOnTrainingData(self.iris, [maj])
+        res = TestOnTrainingData()(self.iris, [maj])
         self.assertEqual(AUC(res)[0], 0.5)
 
     def test_multiclass_auc_multi_learners(self):
         learners = [LogisticRegressionLearner(),
                     MajorityLearner()]
-        res = CrossValidation(self.iris, learners, k=10)
+        res = CrossValidation(k=10)(self.iris, learners)
         self.assertGreater(AUC(res)[0], 0.6)
         self.assertLess(AUC(res)[1], 0.6)
         self.assertGreater(AUC(res)[1], 0.4)
@@ -295,11 +295,11 @@ class TestAUC(unittest.TestCase):
         lenses = Table(test_filename('datasets/lenses.tab'))[:100]
         majority = MajorityLearner()
 
-        results = TestOnTrainingData(lenses, [majority])
+        results = TestOnTrainingData()(lenses, [majority])
         auc = AUC(results)
         self.assertEqual(auc.ndim, 1)
 
-        results = TestOnTrainingData(titanic, [majority])
+        results = TestOnTrainingData()(titanic, [majority])
         auc = AUC(results)
         self.assertEqual(auc.ndim, 1)
 
@@ -343,7 +343,7 @@ class TestLogLoss(unittest.TestCase):
     def test_log_loss(self):
         data = Table('iris')
         majority = MajorityLearner()
-        results = TestOnTrainingData(data, [majority])
+        results = TestOnTrainingData()(data, [majority])
         ll = LogLoss(results)
         self.assertAlmostEqual(ll[0], - np.log(1 / 3))
 
@@ -355,7 +355,7 @@ class TestLogLoss(unittest.TestCase):
     def test_log_loss_calc(self):
         data = Table('titanic')
         learner = LogisticRegressionLearner()
-        results = TestOnTrainingData(data, [learner])
+        results = TestOnTrainingData()(data, [learner])
 
         actual = np.copy(results.actual)
         actual = actual.reshape(actual.shape[0], 1)

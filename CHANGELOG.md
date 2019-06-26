@@ -6,6 +6,39 @@ Change Log
 * ...
 
 
+[3.22.0] - 2019-06-26
+--------------------
+##### Enhancements
+* Unified clustering API ([#3814](../../pull/3814))
+* t-SNE: Load openTSNE lazily" ([#3894](../../pull/3894))
+* Replace popups with non-intrusive notifications ([#3855](../../pull/3855))
+* CSV File Import widget ([#3876](../../pull/3876))
+* t-SNE: Load openTSNE lazily ([#3883](../../pull/3883))
+* Faster drawing in scatterplot ([#3871](../../pull/3871))
+* Mosaic: Wrap legend ([#3866](../../pull/3866))
+* Add conditions for all variables, or all numeric or textual variables ([#3836](../../pull/3836))
+* Shared namespaces for PythonScript widgets ([#3840](../../pull/3840))
+* Pivot: New widget ([#3823](../../pull/3823))
+* Reset settings button ([#3795](../../pull/3795))
+* WebviewWidget: expose JavaScript timeout limit ([#3811](../../pull/3811))
+
+##### Bugfixes
+* OWLinearProjection: limit axis ([#3885](../../pull/3885))
+* Development readme ([#3889](../../pull/3889))
+* OWRadviz: limit number of vars in RadvizVizRank ([#3886](../../pull/3886))
+* OWCreateClass: Reuse variables created with same settings ([#3868](../../pull/3868))
+* DistMatrix should return numpy datatypes ([#3865](../../pull/3865))
+* OWRadviz: legible axis labels ([#3809](../../pull/3809))
+* util: Fix bincount for object arrays ([#3831](../../pull/3831))
+* condainstall: Fix env for running conda ([#3843](../../pull/3843))
+* DBSCAN: Fix predicted labels ([#3833](../../pull/3833))
+* Rare quickmenu crash fix ([#3832](../../pull/3832))
+* OWWidget: Fix an error on mouse press when widget has no basic layout ([#3821](../../pull/3821))
+* VerticalItemDelegate: Do not cut long vertical labels ([#3803](../../pull/3803))
+* Minor improvements to pythagorean trees ([#3777](../../pull/3777))
+* owmds: Fix test for error display/activate ([#3813](../../pull/3813))
+
+
 [3.21.0] - 2019-05-20
 ---------------------
 ##### Enhancements
@@ -1095,7 +1128,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.21.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.22.0...HEAD
+[3.22.0]: https://github.com/biolab/orange3/compare/3.21.0...3.22.0
 [3.21.0]: https://github.com/biolab/orange3/compare/3.20.1...3.21.0
 [3.20.1]: https://github.com/biolab/orange3/compare/3.20.0...3.20.1
 [3.20.0]: https://github.com/biolab/orange3/compare/3.19.0...3.20.0

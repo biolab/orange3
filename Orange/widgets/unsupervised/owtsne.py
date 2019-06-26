@@ -267,8 +267,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     graph = SettingProvider(OWtSNEGraph)
     embedding_variables_names = ("t-SNE-x", "t-SNE-y")
 
-    left_side_scrolling = True
-
     # Use `invalidated` descriptor so we don't break the usage of
     # `_invalidated` in `OWDataProjectionWidget`, but still allow finer control
     # over which parts of the embedding to invalidate

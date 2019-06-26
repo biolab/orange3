@@ -5,6 +5,7 @@ from Orange.data import Table, Domain, DiscreteVariable
 from Orange.data.table import dataset_dirs
 from Orange.tests import test_dirname
 from Orange.widgets.tests.base import WidgetTest, datasets
+from Orange.widgets.tests.utils import table_dense_sparse
 from Orange.widgets.visualize.owdistributions import OWDistributions
 
 
@@ -85,3 +86,15 @@ class TestOWDistributions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         cb.setChecked(True)
         cb.click()
+
+    @table_dense_sparse
+    def test_binning_numeric_variables(self, prepare_table):
+        """The widget should not crash when checking `Bin numeric variables`"""
+        data = prepare_table(self.iris)
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.widget.controls.disc_cont.setChecked(True)
+        self.wait_until_stop_blocking()
+
+        self.widget.controls.disc_cont.setChecked(False)
+        self.wait_until_stop_blocking()

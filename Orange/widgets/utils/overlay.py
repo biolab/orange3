@@ -236,7 +236,7 @@ class MessageWidget(QWidget):
         self.__icon = QIcon()
         self.__wordWrap = wordWrap
         self.__standardButtons = MessageWidget.NoButton
-        self.__buttons = []
+        self._buttons = []
 
         layout = QHBoxLayout()
         layout.setContentsMargins(8, 0, 8, 0)
@@ -356,7 +356,7 @@ class MessageWidget(QWidget):
     def standardButtons(self):
         return functools.reduce(
             operator.ior,
-            (slot.stdbutton for slot in self.__buttons
+            (slot.stdbutton for slot in self._buttons
              if slot.stdbutton is not None),
             MessageWidget.NoButton)
 
@@ -404,9 +404,9 @@ class MessageWidget(QWidget):
 
         if sys.platform == "darwin":
             button.setAttribute(Qt.WA_MacSmallSize)
-        self.__buttons.append(MessageWidget._Button(button, role, stdbutton))
-        button.clicked.connect(self.__button_clicked)
-        self.__relayout()
+        self._buttons.append(MessageWidget._Button(button, role, stdbutton))
+        button.clicked.connect(self._button_clicked)
+        self._relayout()
 
         return button
 
@@ -416,10 +416,10 @@ class MessageWidget(QWidget):
 
         :type button: QAbstractButton
         """
-        slot = [s for s in self.__buttons if s.button is button]
+        slot = [s for s in self._buttons if s.button is button]
         if slot:
             slot = slot[0]
-            self.__buttons.remove(slot)
+            self._buttons.remove(slot)
             self.layout().removeWidget(slot.button)
             slot.button.setParent(None)
 
@@ -429,7 +429,7 @@ class MessageWidget(QWidget):
 
         :type button: QAbstractButton
         """
-        for slot in self.__buttons:
+        for slot in self._buttons:
             if slot.button is button:
                 return slot.role
         else:
@@ -441,13 +441,13 @@ class MessageWidget(QWidget):
 
         :type standardButton: StandardButton
         """
-        for slot in self.__buttons:
+        for slot in self._buttons:
             if slot.stdbutton == standardButton:
                 return slot.button
         else:
             return None
 
-    def __button_clicked(self):
+    def _button_clicked(self):
         button = self.sender()
         role = self.buttonRole(button)
         self.clicked.emit(button)
@@ -461,15 +461,15 @@ class MessageWidget(QWidget):
         elif role == MessageWidget.HelpRole:
             self.helpRequested.emit()
 
-    def __relayout(self):
-        for slot in self.__buttons:
+    def _relayout(self):
+        for slot in self._buttons:
             self.layout().removeWidget(slot.button)
         order = {
             MessageOverlayWidget.HelpRole: 0,
             MessageOverlayWidget.AcceptRole: 2,
             MessageOverlayWidget.RejectRole: 3,
         }
-        orderd = sorted(self.__buttons,
+        orderd = sorted(self._buttons,
                         key=lambda slot: order.get(slot.role, -1))
 
         prev = self.__textlabel

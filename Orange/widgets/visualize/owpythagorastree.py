@@ -57,6 +57,8 @@ class OWPythagorasTree(OWWidget):
     graph_name = 'scene'
 
     # Settings
+    settingsHandler = settings.DomainContextHandler()
+
     depth_limit = settings.ContextSetting(10)
     target_class_index = settings.ContextSetting(0)
     size_calc_idx = settings.Setting(0)
@@ -73,8 +75,7 @@ class OWPythagorasTree(OWWidget):
         super().__init__()
         # Instance variables
         self.model = None
-        self.instances = None
-        self.clf_dataset = None
+        self.data = None
         # The tree adapter instance which is passed from the outside
         self.tree_adapter = None
         self.legend = None
@@ -147,18 +148,12 @@ class OWPythagorasTree(OWWidget):
     @Inputs.tree
     def set_tree(self, model=None):
         """When a different tree is given."""
+        self.closeContext()
         self.clear()
         self.model = model
 
         if model is not None:
-            self.instances = model.instances
-            # this bit is important for the regression classifier
-            if self.instances is not None and \
-                    self.instances.domain != model.domain:
-                self.clf_dataset = self.instances.transform(self.model.domain)
-            else:
-                self.clf_dataset = self.instances
-
+            self.data = model.instances
             self.tree_adapter = self._get_tree_adapter(self.model)
             self.ptree.clear()
 
@@ -177,30 +172,30 @@ class OWPythagorasTree(OWWidget):
 
             self._update_main_area()
 
-            # The target class can also be passed from the meta properties
-            # This must be set after `_update_target_class_combo`
-            if hasattr(model, 'meta_target_class_index'):
-                self.target_class_index = model.meta_target_class_index
-                self.update_colors()
+        self.openContext(self.model)
 
-            # Get meta variables describing what the settings should look like
-            # if the tree is passed from the Pythagorean forest widget.
-            if hasattr(model, 'meta_size_calc_idx'):
-                self.size_calc_idx = model.meta_size_calc_idx
-                self.update_size_calc()
+        self.update_depth()
 
-            # TODO There is still something wrong with this
-            # if hasattr(model, 'meta_depth_limit'):
-            #     self.depth_limit = model.meta_depth_limit
-            #     self.update_depth()
+        # The forest widget sets the following attributes on the tree,
+        # describing the settings on the forest widget. To keep the tree
+        # looking the same as on the forest widget, we prefer these settings to
+        # context settings, if set.
+        if hasattr(model, "meta_target_class_index"):
+            self.target_class_index = model.meta_target_class_index
+            self.update_colors()
+        if hasattr(model, "meta_size_calc_idx"):
+            self.size_calc_idx = model.meta_size_calc_idx
+            self.update_size_calc()
+        if hasattr(model, "meta_depth_limit"):
+            self.depth_limit = model.meta_depth_limit
+            self.update_depth()
 
-        self.Outputs.annotated_data.send(create_annotated_table(self.instances, None))
+        self.Outputs.annotated_data.send(create_annotated_table(self.data, None))
 
     def clear(self):
         """Clear all relevant data from the widget."""
         self.model = None
-        self.instances = None
-        self.clf_dataset = None
+        self.data = None
         self.tree_adapter = None
 
         if self.legend is not None:
@@ -228,6 +223,8 @@ class OWPythagorasTree(OWWidget):
         self.invalidate_tree()
 
     def redraw(self):
+        if self.data is None:
+            return
         self.tree_adapter.shuffle_children()
         self.invalidate_tree()
 
@@ -307,16 +304,21 @@ class OWPythagorasTree(OWWidget):
 
     def commit(self):
         """Commit the selected data to output."""
-        if self.instances is None:
+        if self.data is None:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
-        nodes = [i.tree_node.label for i in self.scene.selectedItems()
-                 if isinstance(i, SquareGraphicsItem)]
+
+        nodes = [
+            i.tree_node.label for i in self.scene.selectedItems()
+            if isinstance(i, SquareGraphicsItem)
+        ]
         data = self.tree_adapter.get_instances_in_nodes(nodes)
         self.Outputs.selected_data.send(data)
         selected_indices = self.tree_adapter.get_indices(nodes)
-        self.Outputs.annotated_data.send(create_annotated_table(self.instances, selected_indices))
+        self.Outputs.annotated_data.send(
+            create_annotated_table(self.data, selected_indices)
+        )
 
     def send_report(self):
         """Send report."""
@@ -327,9 +329,9 @@ class OWPythagorasTree(OWWidget):
         label = [x for x in self.target_class_combo.parent().children()
                  if isinstance(x, QLabel)][0]
 
-        if self.instances.domain.has_discrete_class:
+        if self.data.domain.has_discrete_class:
             label_text = 'Target class'
-            values = [c.title() for c in self.instances.domain.class_vars[0].values]
+            values = [c.title() for c in self.data.domain.class_vars[0].values]
             values.insert(0, 'None')
         else:
             label_text = 'Node color'
@@ -342,7 +344,7 @@ class OWPythagorasTree(OWWidget):
         if self.legend is not None:
             self.scene.removeItem(self.legend)
 
-        if self.instances.domain.has_discrete_class:
+        if self.data.domain.has_discrete_class:
             self._classification_update_legend_colors()
         else:
             self._regression_update_legend_colors()
@@ -375,14 +377,14 @@ class OWPythagorasTree(OWWidget):
 
         # The colors are the class mean
         if self.target_class_index == 1:
-            values = (np.min(self.clf_dataset.Y), np.max(self.clf_dataset.Y))
+            values = (np.min(self.data.Y), np.max(self.data.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)
             items = list(zip(values, colors))
         # Colors are the stddev
         elif self.target_class_index == 2:
-            values = (0, np.std(self.clf_dataset.Y))
+            values = (0, np.std(self.data.Y))
             colors = _get_colors_domain(self.model.domain)
             while len(values) != len(colors):
                 values.insert(1, -1)

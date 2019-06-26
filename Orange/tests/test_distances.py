@@ -186,6 +186,17 @@ class TestDistMatrix(TestCase):
                              ["danny", "eve", "frank"])
             self.assertEqual(m.axis, 0)
 
+    def test_numpy_type(self):
+        """GH-3658"""
+        data1 = np.array([1, 2], dtype=np.int64)
+        data2 = np.array([2, 3], dtype=np.int64)
+        dm1, dm2 = DistMatrix(data1), DistMatrix(data2)
+
+        self.assertIsInstance(dm1.max(), np.int64)
+        self.assertNotIsInstance(dm1.max(), int)
+        with self.assertRaises(AssertionError):
+            np.testing.assert_array_equal(dm1, dm2)
+
 
 # noinspection PyTypeChecker
 class TestEuclidean(TestCase):
