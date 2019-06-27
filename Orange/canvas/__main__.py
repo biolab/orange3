@@ -290,7 +290,7 @@ def check_for_updates():
                                           rejectLabel="Skip this Version")
 
             def handle_click(b):
-                if question.buttonRole(b) != question.DismissRole:
+                if question.buttonRole(b) == question.RejectRole:
                     settings.setValue('startup/latest-skipped-version', latest)
                 if question.buttonRole(b) == question.AcceptRole:
                     QDesktopServices.openUrl(QUrl("https://orange.biolab.si/download/"))
