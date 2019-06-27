@@ -14,6 +14,7 @@ import math
 
 import numpy as np
 import sklearn.metrics as skl_metrics
+from sklearn.metrics import confusion_matrix
 
 from Orange.data import DiscreteVariable, ContinuousVariable
 from Orange.misc.wrapper_meta import WrapperMeta
@@ -281,7 +282,56 @@ class LogLoss(ClassificationScore):
             dtype=np.float64, count=len(results.probabilities))
 
 
+class Specificity(ClassificationScore):
+    is_binary = True
+
+    def calculate_weights(self, results):
+        classes, counts = np.unique(results.actual, return_counts=True)
+        n = np.array(results.actual).shape[0]
+        return counts / n, classes
+
+    @staticmethod
+    def specificity(y_true, y_pred):
+        tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+        return tn / (tn + fp)
+
+    def single_class_specificity(self, results, target):
+        y_true = (np.array(results.actual) == target).astype(int)
+        return np.fromiter(
+            (self.specificity(y_true,
+                              np.array(predicted == target, dtype=int))
+             for predicted in results.predicted),
+            dtype=np.float64, count=len(results.predicted))
+
+    def multi_class_specificity(self, results):
+        weights, classes = self.calculate_weights(results)
+        scores = np.array([self.single_class_specificity(results, class_)
+                              for class_ in classes])
+        return np.sum(scores.T * weights, axis=1)
+
+    def compute_score(self, results, target=None, average="binary"):
+        domain = results.domain
+        n_classes = len(domain.class_var.values)
+
+        if target is None:
+            if average == "weighted":
+                return self.multi_class_specificity(results)
+            elif average == "binary":  # average is binary
+                if n_classes != 2:
+                    raise ValueError(
+                        "Binary averaging needs two classes in data: "
+                        "specify target class or use "
+                        "weighted averaging.")
+                return self.single_class_specificity(results, 1)
+            else:
+                raise ValueError(
+                    "Wrong parameters: For averaging select one of the "
+                    "following values: ('weighted', 'binary')")
+        elif target is not None:
+            return self.single_class_specificity(results, target)
+
 # Regression scores
+
 
 class MSE(RegressionScore):
     __wraps__ = skl_metrics.mean_squared_error
