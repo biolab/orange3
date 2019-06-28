@@ -125,7 +125,7 @@ class State(enum.Enum):
 
 
 class OWTestLearners(OWWidget):
-    name = "Test & Score"
+    name = "Test and Score"
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
