@@ -10,7 +10,6 @@ from AnyQt.QtWidgets import \
     QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize
 
-from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
 from Orange.widgets import widget, gui
@@ -513,8 +512,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         urls = event.mimeData().urls()
         if urls:
             try:
-                FileFormat.get_reader(OSX_NSURL_toLocalFile(urls[0]) or
-                                      urls[0].toLocalFile())
+                FileFormat.get_reader(urls[0].toLocalFile())
                 event.acceptProposedAction()
             except IOError:
                 pass
@@ -523,8 +521,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         """Handle file drops"""
         urls = event.mimeData().urls()
         if urls:
-            self.add_path(OSX_NSURL_toLocalFile(urls[0]) or
-                          urls[0].toLocalFile())  # add first file
+            self.add_path(urls[0].toLocalFile())  # add first file
             self.source = self.LOCAL_FILE
             self.load_data()
 

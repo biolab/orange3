@@ -19,7 +19,6 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import Qt, QRegExp, QByteArray, QItemSelectionModel
 
-from Orange.canvas.gui.utils import OSX_NSURL_toLocalFile
 from Orange.data import Table
 from Orange.base import Learner, Model
 from Orange.util import interleave
@@ -37,10 +36,6 @@ def text_format(foreground=Qt.black, weight=QFont.Normal):
     fmt.setForeground(QBrush(foreground))
     fmt.setFontWeight(weight)
     return fmt
-
-
-def to_local_file(url):
-    return OSX_NSURL_toLocalFile(url) or url.toLocalFile()
 
 
 def read_file_content(filename, limit=None):
@@ -166,7 +161,7 @@ class PythonScriptEditor(QPlainTextEdit):
             super().insertFromMimeData(source)
 
     def pasteFile(self, url):
-        new = read_file_content(to_local_file(url))
+        new = read_file_content(url.toLocalFile())
         if new:
             # inserting text like this allows undo
             cursor = QTextCursor(self.document())
@@ -758,7 +753,7 @@ class OWPythonScript(OWWidget):
         urls = event.mimeData().urls()
         if urls:
             # try reading the file as text
-            c = read_file_content(to_local_file(urls[0]), limit=1000)
+            c = read_file_content(urls[0].toLocalFile(), limit=1000)
             if c is not None:
                 event.acceptProposedAction()
 

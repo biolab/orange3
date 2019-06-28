@@ -15,8 +15,7 @@ from AnyQt.QtGui import QDragEnterEvent, QDropEvent
 from AnyQt.QtWidgets import QComboBox
 
 import Orange
-from Orange.canvas.application.canvasmain import CanvasMainWindow
-from Orange.canvas.scheme import Scheme
+
 from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable, ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
@@ -513,22 +512,3 @@ a
             self.assertEqual(w.recent_paths[0].relpath, base_name)
         finally:
             remove(file_name)
-
-    def test_relocate_recent_files_called(self):
-        """
-        This unittest check whether set_runtime_env which call
-        _relocate_recent_files_called scheme called before saving
-        """
-        window = CanvasMainWindow()
-        scheme = Scheme(title="A Scheme", description="A String\n")
-        # pylint: disable=attribute-defined-outside-init
-        self.runtime_called = False
-
-        def set_runtime_env(*_):
-            self.runtime_called = True
-
-        scheme.set_runtime_env = set_runtime_env
-        scheme.save_to = lambda *args, **kwargs: \
-            self.assertTrue(self.runtime_called)
-
-        window.save_scheme_to(scheme, "test.tmp")

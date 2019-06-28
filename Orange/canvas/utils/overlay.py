@@ -9,7 +9,7 @@ from AnyQt.QtGui import QIcon, QPixmap, QPainter
 from AnyQt.QtWidgets import QAbstractButton, QHBoxLayout, QPushButton, QStyle, QWidget, \
     QVBoxLayout, QLabel, QSizePolicy, QStyleOption
 
-from Orange.canvas.gui.stackedwidget import StackLayout
+from orangecanvas.gui.stackedwidget import StackLayout
 from Orange.widgets.utils.buttons import SimpleButton
 from Orange.widgets.utils.overlay import OverlayWidget
 
