@@ -77,11 +77,11 @@ class OWNeighbors(OWWidget):
             callback=self.recompute)
         gui.spin(
             box, self, "n_neighbors", label="Number of neighbors:",
-            step=1, spinType=int, minv=0, maxv=100, callback=self.apply)
+            step=1, spinType=int, minv=0, maxv=100, callback=self.commit)
         gui.checkBox(
             box, self, "exclude_reference",
             label="Exclude rows (equal to) references",
-            callback=self.apply)
+            callback=self.commit)
 
         self.apply_button = gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
@@ -136,6 +136,9 @@ class OWNeighbors(OWWidget):
         pp_all_data = Impute()(RemoveNaNColumns()(all_data))
         pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
         self.distances = metric(pp_data, pp_reference).min(axis=1)
+
+    def commit(self):
+        self.apply()
 
     def apply(self):
         indices = self._compute_indices()
