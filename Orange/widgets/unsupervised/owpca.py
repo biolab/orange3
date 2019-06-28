@@ -31,7 +31,7 @@ class OWPCA(widget.OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        transformed_data = Output("Transformed data", Table)
+        transformed_data = Output("Transformed Data", Table, replaces=["Transformed data"])
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 

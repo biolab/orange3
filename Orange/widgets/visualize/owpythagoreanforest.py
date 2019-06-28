@@ -165,7 +165,7 @@ class OWPythagoreanForest(OWWidget):
     priority = 1001
 
     class Inputs:
-        random_forest = Input("Random forest", RandomForestModel)
+        random_forest = Input("Random Forest", RandomForestModel, replaces=["Random forest"])
 
     class Outputs:
         tree = Output("Tree", TreeModel)
