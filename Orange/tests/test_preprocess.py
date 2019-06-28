@@ -14,7 +14,7 @@ from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
     SelectRandomFeatures, EqualFreq, RemoveNaNColumns, DropInstances, \
     EqualWidth, SelectBestFeatures, RemoveNaNRows, Preprocess, Scale, \
     Randomize, Continuize, Discretize, Impute, SklImpute, Normalize, \
-    ProjectCUR, ProjectPCA, RemoveConstant
+    ProjectCUR, ProjectPCA, RemoveConstant, SmartNormalize
 from Orange.util import OrangeDeprecationWarning
 
 
@@ -166,3 +166,26 @@ class TestEnumPickling(unittest.TestCase):
         c1 = pickle.loads(s)
         self.assertIs(c1.center, c.center)
         self.assertIs(c1.scale, c.scale)
+
+
+class TestSmartNormalize(unittest.TestCase):
+    """
+    Checks if output for sparse data is the same as for Scale
+    preprocessor. For dense data the output should match that
+     of Normalize preprocessor.
+    """
+
+    def setUp(self):
+        self.data = Table("iris")
+
+    def test_dense_pps(self):
+        true_out = Normalize()(self.data)
+        out = SmartNormalize()(self.data)
+        np.testing.assert_array_equal(out, true_out)
+
+    def test_sparse_pps(self):
+        self.data.X = csr_matrix(self.data.X)
+        out = SmartNormalize()(self.data)
+        true_out = Scale(center=Scale.NoCentering)(self.data)
+        np.testing.assert_array_equal(out, true_out)
+        self.data = self.data.X.toarray()
