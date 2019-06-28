@@ -100,7 +100,7 @@ class OWCalibratedLearner(OWBaseLearner):
 
     def get_learner_parameters(self):
         return (("Calibrate probabilities",
-                 self.CalibrationOptions[self.calibrate]),
+                 self.CalibrationOptions[self.calibration]),
                 ("Threshold optimization",
                  self.ThresholdOptions[self.threshold]))
 
