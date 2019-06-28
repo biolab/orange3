@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from Orange.data import Table
 from Orange.widgets.data.owtranspose import OWTranspose
 from Orange.widgets.tests.base import WidgetTest
 from Orange.tests import test_filename
+
 
 class TestOWTranspose(WidgetTest):
     def setUp(self):
@@ -91,7 +93,7 @@ class TestOWTranspose(WidgetTest):
 
     def test_gui_behaviour(self):
         widget = self.widget
-        widget.apply = unittest.mock.Mock()
+        widget.unconditional_apply = unittest.mock.Mock()
 
         # widget.apply must be called
         widget.auto_apply = False
@@ -99,14 +101,28 @@ class TestOWTranspose(WidgetTest):
         # No data: type is generic, meta radio disabled
         self.assertEqual(widget.feature_type, widget.GENERIC)
         self.assertFalse(widget.meta_button.isEnabled())
-        self.assertFalse(widget.apply.called)
+        self.assertFalse(widget.unconditional_apply.called)
 
         # Data with metas: default type is meta, radio enabled
         self.send_signal(widget.Inputs.data, self.zoo)
         self.assertTrue(widget.meta_button.isEnabled())
         self.assertEqual(widget.feature_type, widget.FROM_VAR)
         self.assertIs(widget.feature_names_column, widget.feature_model[0])
-        self.assertTrue(widget.apply.called)
+        self.assertTrue(widget.unconditional_apply.called)
+
+        # Editing the line edit changes the radio button to generic
+        widget.unconditional_apply.reset_mock()
+        widget.controls.feature_name.editingFinished.emit()
+        self.assertEqual(widget.feature_type, widget.GENERIC)
+        self.assertFalse(widget.unconditional_apply.called)
+
+        # Changing combo changes the radio button to meta
+        widget.unconditional_apply.reset_mock()
+        widget.feature_combo.activated.emit(0)
+        self.assertEqual(widget.feature_type, widget.FROM_VAR)
+        self.assertFalse(widget.unconditional_apply.called)
+
+        widget.apply = unittest.mock.Mock()
 
         # Editing the line edit changes the radio button to generic
         widget.apply.reset_mock()
@@ -147,6 +163,13 @@ class TestOWTranspose(WidgetTest):
                               "0.2 (5)", "0.4 (1)", "0.3 (1)", "0.2 (6)",
                               "0.2 (7)", "0.1 (1)"])
         self.assertTrue(self.widget.Warning.duplicate_names.is_shown())
+
+    def test_unconditional_commit_on_new_signal(self):
+        with patch.object(self.widget, 'unconditional_apply') as apply:
+            self.widget.auto_apply = False
+            apply.reset_mock()
+            self.send_signal(self.widget.Inputs.data, self.zoo)
+            apply.assert_called()
 
 
 if __name__ == "__main__":

@@ -106,7 +106,8 @@ class OWNeighbors(OWWidget):
         self._set_label_text("reference")
 
     def handleNewSignals(self):
-        self.recompute()
+        self.compute_distances()
+        self.unconditional_apply()
 
     def recompute(self):
         self.compute_distances()

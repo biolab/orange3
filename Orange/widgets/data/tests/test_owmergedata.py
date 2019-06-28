@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from itertools import chain
+from unittest.mock import patch
 
 import numpy as np
 import scipy.sparse as sp
@@ -460,16 +461,26 @@ class TestOWMergeData(WidgetTest):
         output_sparse.X = output_sparse.X.toarray()
         self.assertTablesEqual(output_dense, output_sparse)
 
-    def test_disable_auto_apply(self):
-        """Check if disable auto apply works as expected"""
-        self.widget.auto_apply = False
-        self.send_signal(self.widget.Inputs.data, self.dataA)
-        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
-        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+    def test_auto_apply(self):
+        """Check auto apply"""
+        self.send_signal(self.widget.Inputs.data,
+                         self.dataA[:3, [0, "cls", -1]])
+        self.send_signal(self.widget.Inputs.extra_data,
+                         self.dataA[1:, [1, "cls", -2]])
+        self.widget.attr_merge_data = "Source position (index)"
+        self.widget.attr_merge_extra = "Source position (index)"
+        with patch.object(self.widget.Outputs.data, 'send') as send:
+            self.widget.auto_apply = False
+            self.widget.controls.merging.buttons[1].click()
+            send.assert_not_called()
+            self.widget.controls.merging.buttons[0].click()
+            self.widget.auto_apply = True
+            self.widget.controls.merging.buttons[1].click()
+            send.assert_called()
 
-    def test_enable_auto_apply(self):
-        """Check if enable auto apply works as expected"""
-        self.widget.auto_apply = True
+    def test_commit_on_new_data(self):
+        """Check that disabling auto apply doesn't block on new data"""
+        self.widget.auto_apply = False
         self.send_signal(self.widget.Inputs.data, self.dataA)
         self.send_signal(self.widget.Inputs.extra_data, self.dataB)
         self.assertIsNotNone(self.get_output(self.widget.Outputs.data))

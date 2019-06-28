@@ -189,7 +189,6 @@ class ContColorTableModel(ColorTableModel):
         self.dataChanged.emit(self.index(0, 1), self.index(self.n_rows(), 1))
 
 
-
 class ColorTable(QTableView):
     """The base table view for discrete and continuous attributes."""
 
@@ -369,7 +368,7 @@ class OWColor(widget.OWWidget):
             self.cont_model.set_data(self.cont_colors)
             self.disc_view.resizeColumnsToContents()
             self.cont_view.resizeColumnsToContents()
-        self.commit()
+        self.unconditional_commit()
 
     def storeSpecificSettings(self):
         # Store the colors that were changed -- but not others

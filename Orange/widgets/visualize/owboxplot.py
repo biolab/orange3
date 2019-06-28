@@ -161,7 +161,6 @@ class OWBoxPlot(widget.OWWidget):
     stretched = Setting(True)
     show_labels = Setting(True)
     sort_freqs = Setting(False)
-    auto_commit = Setting(True)
 
     _sorting_criteria_attrs = {
         CompareNone: "", CompareMedians: "median", CompareMeans: "mean"
@@ -259,9 +258,6 @@ class OWBoxPlot(widget.OWWidget):
             box, self, 'sort_freqs', "Sort by subgroup frequencies",
             callback=self.display_changed)
         gui.rubber(box)
-
-        gui.auto_commit(self.controlArea, self, "auto_commit",
-                        "Send Selection", "Send Automatically")
 
         gui.vBox(self.mainArea, addSpace=True)
         self.box_scene = QGraphicsScene()
