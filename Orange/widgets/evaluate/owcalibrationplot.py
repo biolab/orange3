@@ -399,15 +399,29 @@ class OWCalibrationPlot(widget.OWWidget):
         self.line.setPos(self.threshold)
         self._update_info()
 
-    def _update_info(self):
-        def elided(s):
-            return s[:17] + "..." if len(s) > 20 else s
+    def get_info_text(self, short):
+        if short:
+            def elided(s):
+                return s[:17] + "..." if len(s) > 20 else s
 
-        text = f"""<table>
-                        <tr>
-                            <th align='right'>Threshold: p=</th>
-                            <td colspan='4'>{self.threshold:.2f}<br/></td>
-                        </tr>"""
+            text = f"""<table>
+                            <tr>
+                                <th align='right'>Threshold: p=</th>
+                                <td colspan='4'>{self.threshold:.2f}<br/></td>
+                            </tr>"""
+
+        else:
+            def elided(s):
+                return s
+
+            text = f"""<table>
+                            <tr>
+                                <th align='right'>Threshold:</th>
+                                <td colspan='4'>p = {self.threshold:.2f}<br/>
+                                </td>
+                                <tr/>
+                            </tr>"""
+
         if self.scores is not None:
             short_names = Metrics[self.score].short_names
             if short_names:
@@ -424,7 +438,10 @@ class OWCalibrationPlot(widget.OWWidget):
                                           for curve in curves)
                 text += "</tr>"
             text += "<table>"
-            self.info_label.setText(text)
+            return text
+
+    def _update_info(self):
+        self.info_label.setText(self.get_info_text(short=True))
 
     def threshold_change_done(self):
         self.apply()
@@ -472,7 +489,9 @@ class OWCalibrationPlot(widget.OWWidget):
         self.report_items((
             ("Target class", self.target_cb.currentText()),
             ("Output model calibration",
-             self.score == 0 and self.controls.score.currentText()),
+             self.score == 0
+             and ("Sigmoid calibration",
+                  "Isotonic calibration")[self.output_calibration])
         ))
         caption = report.list_legend(self.classifiers_list_box,
                                      self.selected_classifiers)
@@ -481,7 +500,7 @@ class OWCalibrationPlot(widget.OWWidget):
         self.report_caption(self.controls.score.currentText())
 
         if self.score != 0:
-            self.report_raw(self.info_label.text())
+            self.report_raw(self.get_info_text(short=False))
 
 
 def gaussian_smoother(x, y, sigma=1.0):
