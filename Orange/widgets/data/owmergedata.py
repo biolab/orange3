@@ -10,15 +10,15 @@ import numpy as np
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
 from Orange.data.util import hstack
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import Input, Output
+from Orange.widgets.widget import Input, Output, Msg
 
-
-INSTANCEID = "Source position (index)"
-INDEX = "Position (index)"
+INSTANCEID = "Instance id"
+INDEX = "Row index"
 
 
 class ConditionBox(QWidget):
@@ -36,15 +36,30 @@ class ConditionBox(QWidget):
         self.pre_label, self.in_label = pre_label, in_label
         self.rows = []
         self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
         self.setMouseTracking(True)
 
     def add_row(self, value_left=None, value_right=None):
+        def sync_combos():
+            combo = self.sender()
+            index = combo.currentIndex()
+            model = combo.model()
+            if 0 <= index < len(combo.model()) \
+                    and isinstance(model[index], str):
+                other = ({row_items.left_combo, row_items.right_combo}
+                         - {combo}).pop()
+                other.setCurrentText(model[index])
+            self.emit_list()
+
         def get_combo(model, value):
             combo = QComboBox(self)
             combo.setModel(model)
             if value is not None:
                 combo.setCurrentIndex(model.indexOf(value))
+            # We use signal activated because it is triggered only on user
+            # interaction, not programmatically.
+            combo.activated.connect(sync_combos)
             return combo
 
         def get_button(label, callback):
@@ -114,7 +129,7 @@ class ConditionBox(QWidget):
 
     def set_state(self, values):
         while len(self.rows) > len(values):
-            self.remove_row()
+            self.remove_row(self.rows[0])
         while len(self.rows) < len(values):
             self.add_row()
         for (val_left, val_right), row in zip(values, self.rows):
@@ -143,22 +158,31 @@ class OWMergeData(widget.OWWidget):
 
     LeftJoin, InnerJoin, OuterJoin = range(3)
 
-    # TODO: Context migration
-    attr_pairs = settings.Setting('', schema_only=True)
-    merging = settings.Setting(LeftJoin)
-    auto_apply = settings.Setting(True)
+    attr_pairs = Setting('', schema_only=True)
+    merging = Setting(LeftJoin)
+    auto_apply = Setting(True)
+    settings_version = 1
 
     want_main_area = False
     resizing_enabled = False
 
     class Warning(widget.OWWidget.Warning):
-        duplicate_names = widget.Msg("Duplicate variable names in output.")
-        non_unique_variables = widget.Msg(
-            "Columns with non-unique values can't be used for matching.\n"
-            "The second variable must uniquely define the row in the second "
-            "table. Variables with non-unique values ({}) "
-            "are thus unsuitable as keys for merging."
-        )
+        duplicate_names = Msg("Duplicate variable names in output.")
+
+    class Error(widget.OWWidget.Error):
+        matching_numeric_with_nonnum = Msg(
+            "Numeric and non-numeric columns ('{}' and '{}') can't be matched.")
+        matching_index_with_sth = Msg("Row index cannot by matched with '{}'.")
+        matching_id_with_sth = Msg("Instance if cannot by matched with '{}'.")
+        nonunique_left = Msg(
+            "Some combinations of values on the left appear in multiple rows.\n"
+            "For this type of merging, every possible combination of values "
+            "on the left should appear at most once.")
+        nonunique_right = Msg(
+            "Some combinations of values on the right appear in multiple rows."
+            "\n"
+            "Every possible combination of values on the right should appear "
+            "at most once.")
 
     def __init__(self):
         super().__init__()
@@ -166,10 +190,11 @@ class OWMergeData(widget.OWWidget):
         self.data = None
         self.extra_data = None
 
-        self.model = itemmodels.VariableListModel()
-        self.model_unique_with_id = itemmodels.VariableListModel()
-        self.extra_model_unique = itemmodels.VariableListModel()
-        self.extra_model_unique_with_id = itemmodels.VariableListModel()
+        content = [
+            INDEX, INSTANCEID,
+            DomainModel.ATTRIBUTES, DomainModel.CLASSES, DomainModel.METAS]
+        self.model = DomainModel(content)
+        self.extra_model = DomainModel(content)
 
         box = gui.hBox(self.controlArea, box=None)
         self.infoBoxData = gui.label(
@@ -177,95 +202,30 @@ class OWMergeData(widget.OWWidget):
         self.infoBoxExtraData = gui.label(
             box, self, self.dataInfoText(None), box="Extra Data")
 
-        grp = gui.radioButtonsInBox(
+        grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
+            btnLabels=("Append columns from Extra data",
+                       "Find matching pairs of rows",
+                       "Concatenate tables"),
             callback=self.change_merging)
-        self.attr_boxes = []
+        grp.layout().setSpacing(8)
 
+        self.attr_boxes = box = ConditionBox(
+            self, self.model, self.extra_model, "where", "matches")
+        box.add_row()
         radio_width = \
             QApplication.style().pixelMetric(QStyle.PM_ExclusiveIndicatorWidth)
-
-        def add_option(label, pre_label, in_label, model, extra_model):
-            gui.appendRadioButton(grp, label)
-            vbox = gui.vBox(grp)
-            box = ConditionBox(vbox, model, extra_model, pre_label, in_label)
-            box.add_row()
-            vbox.layout().addWidget(box)
-            self.attr_boxes.append(box)
-            box.vars_changed.connect(self._invalidate)
-
-        add_option("Append columns from Extra Data", "by matching", "with",
-                   self.model, self.extra_model_unique)
-        add_option("Find matching rows", "where", "equals",
-                   self.model_unique_with_id, self.extra_model_unique_with_id)
-        add_option("Concatenate tables, merge rows", "where", "equals",
-                   self.model_unique_with_id, self.extra_model_unique_with_id)
-        self.set_merging()
+        gui.indentedBox(grp, radio_width).layout().addWidget(box)
+        box.vars_changed.connect(lambda: self.commit)
         gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
                         box=False)
-
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def store_combo_state(self):
-        self.attr_pairs = self.boxes[self.merging].current_state()
-
-    def set_merging(self):
-        # pylint: disable=invalid-sequence-index
-        # all boxes should be hidden before one is shown, otherwise widget's
-        # layout changes height
-        for box in self.attr_boxes:
-            box.hide()
-        self.attr_boxes[self.merging].show()
+        self.attr_pairs = self.attr_boxes.current_state()
 
     def change_merging(self):
-        self.set_merging()
         self.commit()
-
-    def _set_unique_model(self, data, model):
-        self.Warning.non_unique_variables.clear()
-        if data is None:
-            model[:] = []
-            return
-        m = [INDEX]
-        non_unique = []
-        for attr in chain(data.domain.variables, data.domain.metas):
-            col = data.get_column_view(attr)[0]
-            if attr.is_primitive():
-                col = col.astype(float)
-                col = col[~np.isnan(col)]
-            else:
-                col = col[~(col == "")]
-            if len(np.unique(col)) == len(col):
-                m.append(attr)
-            else:
-                non_unique.append(attr.name)
-        if non_unique:
-            self.Warning.non_unique_variables(", ".join(non_unique))
-        model[:] = m
-
-    @staticmethod
-    def _set_model(data, model):
-        if data is None:
-            model[:] = []
-            return
-        model[:] = list(chain([INDEX], data.domain.variables, data.domain.metas))
-
-    def _add_instanceid_to_models(self):
-        needs_id = self.data is not None and self.extra_data is not None and \
-            len(np.intersect1d(self.data.ids, self.extra_data.ids))
-        for model in (self.model_unique_with_id,
-                      self.extra_model_unique_with_id):
-            has_id = INSTANCEID in model
-            if needs_id and not has_id:
-                model.insert(0, INSTANCEID)
-            elif not needs_id and has_id:
-                model.remove(INSTANCEID)
-
-    def _restore_combo_current_items(self, side, prev_settings):
-        for box, box_vars in zip(self.attr_boxes, prev_settings):
-            for row, vars in zip(box.rows, box_vars):
-                self._try_set_combo(
-                    [row.left_combo, row.right_combo][side], vars[side])
 
     @staticmethod
     def _try_set_combo(combo, var):
@@ -274,20 +234,12 @@ class OWMergeData(widget.OWWidget):
         else:
             combo.setCurrentIndex(0)
 
-    def _clean_repeated_combos(self):
-        # This remove rows with combos with default values after domain change
-        for box in self.attr_boxes:
-            state = box.current_state()
-            for i in range(len(box.rows) - 1, 0, -1):
-                if state[i] in state[:i]:
-                    box.remove_row(box.rows[i])
-
     def _find_best_match(self):
         def get_unique_str_metas_names(model_):
             return [m for m in model_ if isinstance(m, StringVariable)]
 
         def best_match(model, extra_model):
-            attr, extra_attr, n_max_intersect = INDEX, INDEX, 0
+            attr, extra_attr, n_max_intersect = None, None, 0
             str_metas = get_unique_str_metas_names(model)
             extra_str_metas = get_unique_str_metas_names(extra_model)
             for m_a, m_b in product(str_metas, extra_str_metas):
@@ -298,22 +250,20 @@ class OWMergeData(widget.OWWidget):
             return attr, extra_attr
 
         if self.data and self.extra_data:
-            for box in self.attr_boxes:
-                state = box.current_state()
-                if len(state) == 1 \
-                        and not any(isinstance(v, Variable) for v in state[0]):
-                    l_var, r_var = best_match(box.model_left, box.model_right)
-                    self._try_set_combo(box.rows[0].left_combo, l_var)
-                    self._try_set_combo(box.rows[0].right_combo, r_var)
+            box = self.attr_boxes
+            state = box.current_state()
+            if len(state) == 1 \
+                    and not any(isinstance(v, Variable) for v in state[0]):
+                l_var, r_var = best_match(box.model_left, box.model_right)
+                self._try_set_combo(box.rows[0].left_combo, l_var)
+                self._try_set_combo(box.rows[0].right_combo, r_var)
 
     @Inputs.data
     @check_sql_input
     def setData(self, data):
         self.data = data
-        prev_settings = [box.current_state() for box in self.attr_boxes]
-        self._set_model(data, self.model)
-        self._set_unique_model(data, self.model_unique_with_id)
-        self._add_instanceid_to_models()
+        prev_settings = self.attr_boxes.current_state()
+        self.model.set_domain(data and data.domain)
         self._restore_combo_current_items(0, prev_settings)
         self.infoBoxData.setText(self.dataInfoText(data))
 
@@ -321,12 +271,15 @@ class OWMergeData(widget.OWWidget):
     @check_sql_input
     def setExtraData(self, data):
         self.extra_data = data
-        prev_settings = [box.current_state() for box in self.attr_boxes]
-        self._set_unique_model(data, self.extra_model_unique)
-        self._set_unique_model(data, self.extra_model_unique_with_id)
-        self._add_instanceid_to_models()
+        prev_settings = self.attr_boxes.current_state()
+        self.extra_model.set_domain(data and data.domain)
         self._restore_combo_current_items(1, prev_settings)
         self.infoBoxExtraData.setText(self.dataInfoText(data))
+
+    def _restore_combo_current_items(self, side, prev_settings):
+        for row, pair in zip(self.attr_boxes.rows, prev_settings):
+            self._try_set_combo(
+                [row.left_combo, row.right_combo][side], pair[side])
 
     def handleNewSignals(self):
         if self.attr_pairs:
@@ -335,8 +288,14 @@ class OWMergeData(widget.OWWidget):
             # More complicated alternative: make it a context setting
             self.attr_pairs = []
         self._find_best_match()
-        self._clean_repeated_combos()
-        self._invalidate()
+        box = self.attr_boxes
+
+        state = box.current_state()
+        for i in range(len(box.rows) - 1, 0, -1):
+            if state[i] in state[:i]:
+                box.remove_row(box.rows[i])
+
+        self.unconditional_commit()
 
     @staticmethod
     def dataInfoText(data):
@@ -349,6 +308,7 @@ class OWMergeData(widget.OWWidget):
                 f"{len(data.domain) + len(data.domain.metas)} variables"
 
     def commit(self):
+        self.Error.clear()
         self.Warning.duplicate_names.clear()
         if not self.data or not self.extra_data:
             merged_data = None
@@ -377,18 +337,58 @@ class OWMergeData(widget.OWWidget):
 
     def merge(self):
         # pylint: disable=invalid-sequence-index
-        pairs = self.attr_boxes[self.merging].current_state()
-        vars, extra_vars = zip(*pairs)
-        as_string = [not all(isinstance(v, ContinuousVariable) for v in pair)
-                     for pair in pairs]
-        merge_method = [
-            self._augment_indices, self._merge_indices, self._combine_indices][
-            self.merging]
+        pairs = self.attr_boxes.current_state()
+        if not self._check_pair_types(pairs):
+            return None
+        left_vars, right_vars = zip(*pairs)
+        left_mask = np.full(len(self.data), True)
+        left = np.vstack(tuple(self._values(self.data, var, left_mask)
+                               for var in left_vars)).T
+        right_mask = np.full(len(self.extra_data), True)
+        right = np.vstack(tuple(self._values(self.extra_data, var, right_mask)
+                                for var in right_vars)).T
+        if not self._check_uniqueness(left, left_mask, right, right_mask):
+            return None
+        method = self._merge_methods[self.merging]
+        lefti, righti = method(self, left, left_mask, right, right_mask)
+        reduced_extra_data = self._compute_reduced_extra_data(right_vars)
+        return self._join_table_by_indices(reduced_extra_data, lefti, righti)
 
-        extra_map = self._get_keymap(self.extra_data, extra_vars, as_string)
-        match_indices = merge_method(vars, extra_map, as_string)
-        reduced_extra_data = self._compute_reduced_extra_data(extra_vars)
-        return self._join_table_by_indices(reduced_extra_data, match_indices)
+    def _check_pair_types(self, pairs):
+        def get_name(obj):
+            return obj.name if isinstance(obj, Variable) else obj
+
+        for left, right in pairs:
+            if isinstance(left, ContinuousVariable) \
+                    != isinstance(right, ContinuousVariable):
+                self.Error.matching_numeric_with_nonnum(left, right)
+                return False
+            if INDEX in (left, right) and left != right:
+                self.Error.matching_index_with_sth(
+                    get_name({left, right} - {INDEX}).pop())
+                return False
+            if INSTANCEID in (left, right) and left != right:
+                self.Error.matching_id_with_sth(
+                    get_name({left, right} - {INSTANCEID}).pop())
+                return False
+            if (isinstance(left, str) or isinstance(right, str)) \
+                and left != right:
+                self.Error.matching_position_with_sth_else()
+                return False
+        return True
+
+    def _check_uniqueness(self, left, left_mask, right, right_mask):
+        ok = True
+        masked_right = right[right_mask]
+        if len(set(map(tuple, masked_right))) != len(masked_right):
+            self.Error.nonunique_right()
+            ok = False
+        if self.merging != self.LeftJoin:
+            masked_left = left[left_mask]
+            if len(set(map(tuple, masked_left))) != len(masked_left):
+                self.Error.nonunique_left()
+                ok = False
+        return ok
 
     def _compute_reduced_extra_data(self, extra_vars):
         """Prepare a table with extra columns that will appear in the merged
@@ -404,84 +404,89 @@ class OWMergeData(widget.OWWidget):
                                    if var not in all_vars]]
 
     @staticmethod
-    def _values(data, var, as_string):
+    def _values(data, var, mask):
         """Return an iterotor over keys for rows of the table."""
-        if var == INSTANCEID:
-            return (inst.id for inst in data)
         if var == INDEX:
-            return range(len(data))
+            return np.arange(len(data))
+        if var == INSTANCEID:
+            return np.fromiter(
+                (inst.id for inst in data), count=len(data), dtype=np.int)
         col = data.get_column_view(var)[0]
-        if not as_string:
-            return col
         if var.is_primitive():
-            return (var.str_val(val) if not np.isnan(val) else np.nan
-                    for val in col)
+            col = col.astype(float, copy=False)
+            nans = np.isnan(col)
+            mask *= ~nans
+            if var.is_discrete:
+                col = col.astype(int)
+                col[nans] = len(var.values)
+                col = np.array(var.values + [np.nan])[col]
         else:
-            return (str(val) if val else np.nan for val in col)
+            col = col.copy()
+            defined = col.astype(bool)
+            mask *= defined
+            col[~mask] = np.nan
+        return col
 
-    @classmethod
-    def _get_keymap(cls, data, vars, as_strings):
-        """Return a generator of pairs (key, index) by enumerating and
-        switching the values for rows (method `_values`).
-        """
-        vals_combinations = zip(*(cls._values(data, var, as_string)
-                                  for var, as_string in zip(vars, as_strings)))
-        return ((val, i) for i, val in enumerate(vals_combinations))
-
-    @classmethod
-    def _get_values(cls, data, vars, as_strings):
-        return zip(*(cls._values(data, var, as_string)
-                     for var, as_string in zip(vars, as_strings)))
-
-    def _augment_indices(self, vars, extra_map, as_strings):
+    def _left_join_indices(self, left, left_mask, right, right_mask):
         """Compute a two-row array of indices:
         - the first row contains indices for the primary table,
         - the second row contains the matching rows in the extra table or -1"""
         data = self.data
-        # Don't match nans. This is needed since numpy supports using nan as
-        # keys. If numpy fixes this, the below conditions will always be false,
-        # so we're OK again.
-        extra_map = {val: i for val, i in extra_map if all(x == x for x in val)}
-        keys = (extra_map.get(val, -1)
-                for val in self._get_values(data, vars, as_strings))
-        return np.vstack((np.arange(len(data), dtype=np.int64),
-                          np.fromiter(keys, dtype=np.int64, count=len(data))))
+        # Don't match nans. This is needed since numpy may change nan to string
+        # nan, so nan's will match each other
+        indices = np.arange(len(right))
+        indices[~right_mask] = -1
+        if right.shape[1] == 1:
+            # The more common case can be handled faster
+            right_map = dict(zip(right.flatten(), indices))
+            righti = (right_map.get(val, -1) for val in left.flatten())
+        else:
+            right_map = dict(zip(map(tuple, right), indices))
+            righti = (right_map.get(tuple(val), -1) for val in left)
+        righti = np.fromiter(righti, dtype=np.int64, count=len(data))
+        lefti = np.arange(len(data), dtype=np.int64)
+        righti[lefti[~left_mask]] = -1
+        return lefti, righti
 
-    def _merge_indices(self, vars, extra_map, as_strings):
+    def _inner_join_indices(self, left, left_mask, right, right_mask):
         """Use _augment_indices to compute the array of indices,
         then remove those with no match in the second table"""
-        augmented = self._augment_indices(vars, extra_map, as_strings)
-        return augmented[:, augmented[1] != -1]
+        lefti, righti = \
+            self._left_join_indices(left, left_mask, right, right_mask)
+        mask = righti != [-1]
+        return lefti[mask], righti[mask]
 
-    def _combine_indices(self, vars, extra_map, as_strings):
+    def _outer_join_indices(self, left, left_mask, right, right_mask):
         """Use _augment_indices to compute the array of indices,
         then add rows in the second table without a match in the first"""
-        extra_map = list(extra_map)  # we need it twice; tee would make a copy
-        # dict instead of set because we have pairs; we'll need only keys
-        key_map = {val
-                   for val, _ in self._get_keymap(self.data, vars, as_strings)
-                   if all(x == x for x in val)}
-        keys = np.fromiter((j for key, j in extra_map if key not in key_map),
-                           dtype=np.int64)
-        right_indices = np.vstack((np.full(len(keys), -1, np.int64), keys))
-        return np.hstack(
-            (self._augment_indices(vars, extra_map, as_strings),
-             right_indices))
+        lefti, righti = \
+            self._left_join_indices(left, left_mask, right, right_mask)
+        unused = np.full(len(right), True)
+        unused[righti] = False
+        if len(right) - 1 not in righti:
+            # righti can include -1, which sets the last element as used
+            unused[-1] = True
+        right_over = np.arange(len(right), dtype=np.int64)[unused]
+        left_over = np.full(len(right_over), -1, np.int64)
+        return np.hstack((lefti, left_over)), np.hstack((righti, right_over))
 
-    def _join_table_by_indices(self, reduced_extra, indices):
+    _merge_methods = [
+        _left_join_indices, _inner_join_indices, _outer_join_indices]
+
+    def _join_table_by_indices(self, reduced_extra, lefti, righti):
         """Join (horizontally) self.data and reduced_extra, taking the pairs
         of rows given in indices"""
-        if not indices.size:
+        if not lefti.size:
             return None
         domain = Orange.data.Domain(
             *(getattr(self.data.domain, x) + getattr(reduced_extra.domain, x)
               for x in ("attributes", "class_vars", "metas")))
-        X = self._join_array_by_indices(self.data.X, reduced_extra.X, indices)
+        X = self._join_array_by_indices(self.data.X, reduced_extra.X, lefti, righti)
         Y = self._join_array_by_indices(
-            np.c_[self.data.Y], np.c_[reduced_extra.Y], indices)
+            np.c_[self.data.Y], np.c_[reduced_extra.Y], lefti, righti)
         string_cols = [i for i, var in enumerate(domain.metas) if var.is_string]
         metas = self._join_array_by_indices(
-            self.data.metas, reduced_extra.metas, indices, string_cols)
+            self.data.metas, reduced_extra.metas, lefti, righti, string_cols)
         table = Orange.data.Table.from_numpy(domain, X, Y, metas)
         table.name = getattr(self.data, 'name', '')
         table.attributes = getattr(self.data, 'attributes', {})
@@ -489,7 +494,7 @@ class OWMergeData(widget.OWWidget):
         return table
 
     @staticmethod
-    def _join_array_by_indices(left, right, indices, string_cols=None):
+    def _join_array_by_indices(left, right, lefti, righti, string_cols=None):
         """Join (horizontally) two arrays, taking pairs of rows given in indices
         """
         def prepare(arr, inds, str_cols):
@@ -509,10 +514,20 @@ class OWMergeData(widget.OWWidget):
         left_width = left.shape[1]
         str_left = [i for i in string_cols or () if i < left_width]
         str_right = [i - left_width for i in string_cols or () if i >= left_width]
-        res = hstack((prepare(left, indices[0], str_left),
-                      prepare(right, indices[1], str_right)))
+        res = hstack((prepare(left, lefti, str_left),
+                      prepare(right, righti, str_right)))
         return res
 
+    @staticmethod
+    def migrate_settings(settings, version=None):
+        if not version:
+            operations = ("augment", "merge", "combine")
+            oper = [settings["merging"]]
+            settings["attr_pairs"] = [(settings[f"attr_{oper}_data"],
+                                       settings[f"attr_{oper}_extra"])]
+            for oper in operations:
+                del settings[f"attr_{oper}_data"]
+                del settings[f"attr_{oper}_extra"]
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(
