@@ -1,7 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from itertools import chain
-from unittest.mock import patch
 
 import numpy as np
 import scipy.sparse as sp

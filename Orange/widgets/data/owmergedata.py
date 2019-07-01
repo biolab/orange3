@@ -157,6 +157,9 @@ class OWMergeData(widget.OWWidget):
                       replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])
 
     LeftJoin, InnerJoin, OuterJoin = range(3)
+    OptionNames = ("Append columns from Extra data",
+                   "Find matching pairs of rows",
+                   "Concatenate tables")
 
     attr_pairs = Setting('', schema_only=True)
     merging = Setting(LeftJoin)
@@ -171,9 +174,9 @@ class OWMergeData(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
-            "Numeric and non-numeric columns ('{}' and '{}') can't be matched.")
-        matching_index_with_sth = Msg("Row index cannot by matched with '{}'.")
-        matching_id_with_sth = Msg("Instance if cannot by matched with '{}'.")
+            "Numeric and non-numeric columns ({} and {}) can't be matched.")
+        matching_index_with_sth = Msg("Row index cannot by matched with {}.")
+        matching_id_with_sth = Msg("Instance cannot by matched with {}.")
         nonunique_left = Msg(
             "Some combinations of values on the left appear in multiple rows.\n"
             "For this type of merging, every possible combination of values "
@@ -204,10 +207,7 @@ class OWMergeData(widget.OWWidget):
 
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
-            btnLabels=("Append columns from Extra data",
-                       "Find matching pairs of rows",
-                       "Concatenate tables"),
-            callback=self.change_merging)
+            btnLabels=self.OptionNames, callback=self.change_merging)
         grp.layout().setSpacing(8)
 
         self.attr_boxes = box = ConditionBox(
@@ -216,9 +216,9 @@ class OWMergeData(widget.OWWidget):
         radio_width = \
             QApplication.style().pixelMetric(QStyle.PM_ExclusiveIndicatorWidth)
         gui.indentedBox(grp, radio_width).layout().addWidget(box)
-        box.vars_changed.connect(lambda: self.commit)
         gui.auto_commit(self.controlArea, self, "auto_apply", "&Apply",
                         box=False)
+        box.vars_changed.connect(self.commit)  # connect after auto_commit!
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
     def store_combo_state(self):
@@ -324,16 +324,12 @@ class OWMergeData(widget.OWWidget):
 
     def send_report(self):
         # pylint: disable=invalid-sequence-index
-        attr = (self.attr_augment_data, self.attr_merge_data,
-                self.attr_combine_data)
-        extra_attr = (self.attr_augment_extra, self.attr_merge_extra,
-                      self.attr_combine_extra)
-        merging_types = ("Append columns from Extra Data", "Find matching rows",
-                         "Concatenate tables, merge rows")
         self.report_items((
-            ("Merging", merging_types[self.merging]),
-            ("Data attribute", attr[self.merging]),
-            ("Extra data attribute", extra_attr[self.merging])))
+            ("Merging", self.OptionNames[self.merging]),
+            ("Match",
+             ", ".join(
+                 f"{self._get_col_name(left)} with {self._get_col_name(right)}"
+                 for left, right in self.attr_boxes.current_state()))))
 
     def merge(self):
         # pylint: disable=invalid-sequence-index
@@ -355,9 +351,6 @@ class OWMergeData(widget.OWWidget):
         return self._join_table_by_indices(reduced_extra_data, lefti, righti)
 
     def _check_pair_types(self, pairs):
-        def get_name(obj):
-            return obj.name if isinstance(obj, Variable) else obj
-
         for left, right in pairs:
             if isinstance(left, ContinuousVariable) \
                     != isinstance(right, ContinuousVariable):
@@ -365,17 +358,21 @@ class OWMergeData(widget.OWWidget):
                 return False
             if INDEX in (left, right) and left != right:
                 self.Error.matching_index_with_sth(
-                    get_name({left, right} - {INDEX}).pop())
+                    self._get_col_name(({left, right} - {INDEX}).pop()))
                 return False
             if INSTANCEID in (left, right) and left != right:
                 self.Error.matching_id_with_sth(
-                    get_name({left, right} - {INSTANCEID}).pop())
+                    self._get_col_name(({left, right} - {INSTANCEID}).pop()))
                 return False
             if (isinstance(left, str) or isinstance(right, str)) \
                 and left != right:
                 self.Error.matching_position_with_sth_else()
                 return False
         return True
+
+    @staticmethod
+    def _get_col_name(obj):
+        return f"'{obj.name}'" if isinstance(obj, Variable) else obj.lower()
 
     def _check_uniqueness(self, left, left_mask, right, right_mask):
         ok = True
