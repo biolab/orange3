@@ -12,6 +12,7 @@ import bottleneck as bn
 import numpy as np
 from scipy import sparse as sp
 
+from Orange.util import OrangeDeprecationWarning
 import Orange.data  # import for io.py
 from Orange.data import (
     _contingency, _valuecount,
@@ -47,7 +48,7 @@ _conversion_cache_lock = RLock()
 
 def pending_deprecation_resize(name):
     warnings.warn(f"Method Table.{name} will be removed in Orange 3.24",
-                  PendingDeprecationWarning)
+                  OrangeDeprecationWarning)
 
 
 class DomainTransformationError(Exception):
@@ -865,7 +866,11 @@ class Table(MutableSequence, Storage):
         return s
 
     def clear(self):
-        """Remove all rows from the table."""
+        """
+        Remove all rows from the table.
+
+        This method is deprecated and will be removed in Orange 3.24.
+        """
         pending_deprecation_resize("clear()")
         if not self._check_all_dense():
             raise ValueError("Tables with sparse data cannot be cleared")
@@ -874,6 +879,8 @@ class Table(MutableSequence, Storage):
     def append(self, instance):
         """
         Append a data instance to the table.
+
+        This method is deprecated and will be removed in Orange 3.24.
 
         :param instance: a data instance
         :type instance: Orange.data.Instance or a sequence of values
@@ -884,6 +891,8 @@ class Table(MutableSequence, Storage):
     def insert(self, row, instance):
         """
         Insert a data instance into the table.
+
+        This method is deprecated and will be removed in Orange 3.24.
 
         :param row: row index
         :type row: int
@@ -923,6 +932,8 @@ class Table(MutableSequence, Storage):
         latter case, each instances can be given as
         :obj:`~Orange.data.Instance` or a sequence of values (e.g. list,
         tuple, numpy.array).
+
+        This method is deprecated and will be removed in Orange 3.24.
 
         :param instances: additional instances
         :type instances: Orange.data.Table or a sequence of instances

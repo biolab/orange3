@@ -680,20 +680,6 @@ class TableTestCase(unittest.TestCase):
         self.assertRaises(ValueError,
                           lambda: data.Table.concatenate((t1, t2), axis=5))
 
-        t3 = data.Table.concatenate((t1, t2))
-        self.assertEqual(t3.domain.attributes,
-                         t1.domain.attributes + t2.domain.attributes)
-        self.assertEqual(len(t3.domain.metas), 1)
-        self.assertEqual(t3.X.shape, (2, 2))
-        self.assertRaises(ValueError, lambda: data.Table.concatenate((t3, t1)))
-        self.assertRaises(ValueError, lambda: data.Table.concatenate((t3, t1), axis=0))
-
-        t4 = data.Table.concatenate((t3, t3), axis=0)
-        np.testing.assert_equal(t4.X, [[1, 3],
-                                       [2, 4],
-                                       [1, 3],
-                                       [2, 4]])
-
     def test_sparse_concatenate_rows(self):
         iris = Table("iris")
         iris.X = sp.csc_matrix(iris.X)
