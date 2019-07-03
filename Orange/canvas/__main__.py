@@ -33,6 +33,7 @@ from orangecanvas.registry import WidgetRegistry, set_global_registry
 from orangecanvas.registry import cache
 from orangecanvas.application.application import CanvasApplication
 from orangecanvas.application.outputview import TextStream, ExceptHook
+from orangecanvas.document.usagestatistics import UsageStatistics
 from orangecanvas.gui.splashscreen import SplashScreen
 from orangecanvas import config as canvasconfig
 from orangecanvas.main import (
@@ -46,9 +47,14 @@ from Orange.canvas import config
 from Orange.canvas.utils.overlay import NotificationWidget, NotificationOverlay
 from Orange.canvas.mainwindow import MainWindow
 from Orange.widgets import gui
+from Orange.version import version as current, release as is_release
 
 
 log = logging.getLogger(__name__)
+
+statistics_server_url = os.getenv(
+    'ORANGE_STATISTICS_API_URL', "https://orange.biolab.si/usage-statistics"
+)
 
 
 def make_sql_logger(level=logging.INFO):
@@ -111,6 +117,7 @@ def setup_notifications():
             if permDialog.buttonRole(button) != permDialog.DismissRole:
                 settings.setValue("error-reporting/permission-requested", True)
             if permDialog.buttonRole(button) == permDialog.AcceptRole:
+                UsageStatistics.set_enabled(True)
                 settings.setValue("error-reporting/send-statistics", True)
 
         permDialog.clicked.connect(handle_permission_response)
@@ -126,8 +133,6 @@ def check_for_updates():
 
     if check_updates and time.time() - last_check_time > ONE_DAY:
         settings.setValue('startup/last-update-check-time', int(time.time()))
-
-        from Orange.version import version as current
 
         class GetLatestVersion(QThread):
             resultReady = pyqtSignal(str)
@@ -189,6 +194,54 @@ def check_for_updates():
         thread.start()
         return thread
     return None
+
+
+def send_usage_statistics():
+    def send_statistics(url):
+        """Send the statistics to the remote at `url`"""
+        import json
+        import requests
+        settings = QSettings()
+        if not settings.value("error-reporting/send-statistics", False,
+                              type=bool):
+            log.info("Not sending usage statistics (preferences setting).")
+            return
+        if not UsageStatistics.is_enabled():
+            log.info("Not sending usage statistics (disabled).")
+            return
+
+        usage = UsageStatistics()
+        data = usage.load()
+        data = [
+            dict({"Orange Version": d.get("Application Version", "")}, **d)
+            for d in data
+        ]
+        try:
+            r = requests.post(url, files={'file': json.dumps(data)})
+            if r.status_code != 200:
+                log.warning("Error communicating with server while attempting to send "
+                            "usage statistics.")
+                return
+            # success - wipe statistics file
+            log.info("Usage statistics sent.")
+            with open(usage.filename(), 'w', encoding="utf-8") as f:
+                json.dump([], f)
+        except (ConnectionError, requests.exceptions.RequestException):
+            log.warning("Connection error while attempting to send usage statistics.")
+        except Exception:  # pylint: disable=broad-except
+            log.warning("Failed to send usage statistics.", exc_info=True)
+
+    class SendUsageStatistics(QThread):
+        def run(self):
+            try:
+                send_statistics(statistics_server_url)
+            except Exception:  # pylint: disable=broad-except
+                # exceptions in threads would crash Orange
+                log.warning("Failed to send usage statistics.")
+
+    thread = SendUsageStatistics()
+    thread.start()
+    return thread
 
 
 def main(argv=None):
@@ -341,8 +394,12 @@ def main(argv=None):
     app.fileOpenRequest.connect(onrequest)
 
     settings = QSettings()
-
     settings.setValue('startup/launch-count', settings.value('startup/launch-count', 0, int) + 1)
+
+    if settings.value("error-reporting/send-statistics", False, type=bool) \
+            and is_release:
+        UsageStatistics.set_enabled(True)
+        log.info("Enabling usage statistics tracking")
 
     stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
@@ -471,6 +528,7 @@ def main(argv=None):
 
     # local references prevent destruction
     update_check = check_for_updates()
+    send_stat = send_usage_statistics()
 
     # Tee stdout and stderr into Output dock
     log_view = canvas_window.output_view()
@@ -504,6 +562,7 @@ def main(argv=None):
 
     del canvas_window
     del update_check
+    del send_stat
 
     app.processEvents()
     app.flush()
