@@ -142,7 +142,7 @@ class Config(config.Config):
         "Quick Start": "https://orange.biolab.si/getting-started/",
         #: The 'full' documentation, should be something like current /docs/
         #: but specific for 'Visual Programing' only
-        "Documentation": "https://orange.biolab.si/toolbox/",
+        "Documentation": "https://orange.biolab.si/widget-catalog/",
         #: YouTube tutorials
         "Screencasts":
             "https://www.youtube.com/watch"
