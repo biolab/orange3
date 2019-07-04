@@ -1,15 +1,15 @@
 import sys
 
 import numpy as np
-import pyqtgraph as pg
 from scipy import spatial
-from AnyQt.QtWidgets import QLayout, QApplication
+from AnyQt.QtWidgets import QApplication
 from AnyQt.QtCore import Qt
 from AnyQt.QtGui import QColor
+from sklearn.metrics import pairwise_distances
 
-from Orange.preprocess import Normalize, Continuize
+from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets import widget, gui
-from Orange.widgets.gui import SliderGraph
+from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.settings import Setting
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.clustering import DBSCAN
@@ -18,8 +18,8 @@ from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import Msg
 
 
-DEFAULT_CUTPOINT = 0.1
-PREPROCESSORS = [Continuize(), Normalize()]
+DEFAULT_CUT_POINT = 0.1
+PREPROCESSORS = [Continuize(), Normalize(), SklImpute()]
 EPS_BOTTOM_LIMIT = 0.01
 
 
@@ -29,12 +29,13 @@ def get_kth_distances(data, metric, k=5):
     proposed in the paper.
     Parameters
     ----------
-    coordinates : Orange.data.Table
+    data : Orange.data.Table
         Visualisation coordinates - embeddings
+    metric : callable or str
+        The metric to compute the distance.
     k : int
         Number kth observed neighbour
-    skip : float
-        Percentage of skipped neighborus.
+
     Returns
     -------
     np.ndarray
@@ -44,7 +45,7 @@ def get_kth_distances(data, metric, k=5):
     if x.shape[0] > 1000:  # subsample
         x = x[np.random.randint(x.shape[0], size=1000), :]
 
-    dist = spatial.distance.squareform(spatial.distance.pdist(x, metric=metric))
+    dist = pairwise_distances(x, metric=metric)
     k = min(k+1, len(data) - 1)  # k+1 since first one is item itself
     kth_point = np.argpartition(dist, k, axis=1)[:, k]
     kth_dist = np.sort(dist[np.arange(0, len(kth_point)), kth_point])[::-1]
@@ -74,7 +75,7 @@ class OWDBSCAN(widget.OWWidget):
         ("Cosine", "cosine")
     ]
 
-    min_samples = Setting(5)
+    min_samples = Setting(4)
     eps = Setting(0.5)
     metric_idx = Setting(0)
     auto_commit = Setting(True)
@@ -90,9 +91,10 @@ class OWDBSCAN(widget.OWWidget):
         self.model = None
 
         box = gui.widgetBox(self.controlArea, "Parameters")
-        gui.spin(box, self, "min_samples", 1, 100, 1, callback=self._invalidate,
+        gui.spin(box, self, "min_samples", 1, 100, 1,
+                 callback=self._min_samples_changed,
                  label="Core point neighbors")
-        gui.doubleSpin(box, self, "eps", EPS_BOTTOM_LIMIT, 10, 0.01,
+        gui.doubleSpin(box, self, "eps", EPS_BOTTOM_LIMIT, 1000, 0.01,
                        callback=self._eps_changed,
                        label="Neighborhood distance")
 
@@ -105,8 +107,7 @@ class OWDBSCAN(widget.OWWidget):
                         orientation=Qt.Horizontal)
         gui.rubber(self.controlArea)
 
-        self.controlArea.setMinimumWidth(self.controlArea.sizeHint().width())
-        self.layout().setSizeConstraint(QLayout.SetFixedSize)
+        self.controlArea.layout().addStretch()
 
         self.plot = SliderGraph(
             x_axis_label="Data items sorted by score",
@@ -115,10 +116,6 @@ class OWDBSCAN(widget.OWWidget):
         )
 
         self.mainArea.layout().addWidget(self.plot)
-
-    def adjustSize(self):
-        self.ensurePolished()
-        self.resize(self.controlArea.sizeHint())
 
     def check_data_size(self, data):
         if data is None:
@@ -141,9 +138,10 @@ class OWDBSCAN(widget.OWWidget):
         ).get_model(self.data_normalized)
         self.send_data()
 
-    def _compute_and_plot(self):
+    def _compute_and_plot(self, cut_point=None):
         self._compute_kdistances()
-        self._compute_cutpoint()
+        if cut_point is None:
+            self._compute_cut_point()
         self._plot_graph()
 
     def _plot_graph(self):
@@ -156,16 +154,39 @@ class OWDBSCAN(widget.OWWidget):
 
     def _compute_kdistances(self):
         self.k_distances = get_kth_distances(
-            self.data_normalized, metric=self.METRICS[self.metric_idx][1])
+            self.data_normalized, metric=self.METRICS[self.metric_idx][1],
+            k=self.min_samples
+        )
 
-    def _compute_cutpoint(self):
-        self.cut_point = int(DEFAULT_CUTPOINT * len(self.k_distances))
+    def _compute_cut_point(self):
+        self.cut_point = int(DEFAULT_CUT_POINT * len(self.k_distances))
         self.eps = self.k_distances[self.cut_point]
 
         if self.eps < EPS_BOTTOM_LIMIT:
             self.eps = np.min(
                 self.k_distances[self.k_distances >= EPS_BOTTOM_LIMIT])
             self.cut_point = self._find_nearest_dist(self.eps)
+
+    @Inputs.data
+    def set_data(self, data):
+        self.Error.clear()
+        if not self.check_data_size(data):
+            data = None
+        self.data = self.data_normalized = data
+        if self.data is None:
+            self.Outputs.annotated_data.send(None)
+            self.plot.clear_plot()
+            return
+
+        if self.data is None:
+            return
+
+        # preprocess data
+        for pp in PREPROCESSORS:
+            self.data_normalized = pp(self.data_normalized)
+
+        self._compute_and_plot()
+        self.unconditional_commit()
 
     def send_data(self):
         model = self.model
@@ -197,25 +218,6 @@ class OWDBSCAN(widget.OWWidget):
 
         self.Outputs.annotated_data.send(new_table)
 
-    @Inputs.data
-    def set_data(self, data):
-        self.Error.clear()
-        if not self.check_data_size(data):
-            data = None
-        self.data = self.data_normalized = data
-        if self.data is None:
-            self.Outputs.annotated_data.send(None)
-
-        if self.data is None:
-            return
-
-        # preprocess data
-        for pp in PREPROCESSORS:
-            self.data_normalized = pp(self.data_normalized)
-
-        self._compute_and_plot()
-        self.unconditional_commit()
-
     def _invalidate(self):
         self.commit()
 
@@ -226,8 +228,10 @@ class OWDBSCAN(widget.OWWidget):
 
     def _eps_changed(self):
         # find the closest value to eps
+        if self.data is None:
+            return
         self.cut_point = self._find_nearest_dist(self.eps)
-        self.plot.set_cutpoint(self.cut_point)
+        self.plot.set_cut_point(self.cut_point)
         self._invalidate()
 
     def _metirc_changed(self):
@@ -241,6 +245,12 @@ class OWDBSCAN(widget.OWWidget):
         self.eps = self.k_distances[value]
 
         self.commit()
+
+    def _min_samples_changed(self):
+        if self.data is None:
+            return
+        self._compute_and_plot(cut_point=self.cut_point)
+        self._invalidate()
 
 
 if __name__ == "__main__":
