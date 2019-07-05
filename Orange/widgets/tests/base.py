@@ -37,11 +37,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.widget import OWWidget
 
 
-class WidgetTest(WidgetTestBase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        Variable._clear_all_caches()
+WidgetTest = WidgetTestBase
 
 
 class TestWidgetTest(WidgetTest):
@@ -468,7 +464,6 @@ class WidgetOutputsTestMixin:
     """
 
     def init(self):
-        Variable._clear_all_caches()
         self.data = Table("iris")
         self.same_input_output_domain = True
 
@@ -526,7 +521,6 @@ class ProjectionWidgetTestMixin:
     """Class for projection widget testing"""
 
     def init(self):
-        Variable._clear_all_caches()
         self.data = Table("iris")
 
     def _select_data(self):

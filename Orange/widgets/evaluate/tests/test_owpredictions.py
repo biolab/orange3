@@ -131,8 +131,6 @@ class TestOWPredictions(WidgetTest):
         different target values instead of two.
         GH-2129
         """
-        Variable._clear_all_caches()
-
         filestr1 = """\
         age\tsex\tsurvived
         d\td\td
@@ -163,8 +161,6 @@ class TestOWPredictions(WidgetTest):
 
         with excepthook_catch():
             self.send_signal(self.widget.Inputs.data, bad_table)
-
-        Variable._clear_all_caches()  # so that test excepting standard titanic work
 
     def test_continuous_class(self):
         data = Table("housing")

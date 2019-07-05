@@ -40,9 +40,6 @@ def is_on_path(name):
 
 # noinspection PyPep8Naming,PyUnresolvedReferences
 class VariableTest:
-    def setUp(self):
-        self.varcls._clear_all_caches()
-
     def test_dont_pickle_anonymous_variables(self):
         self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
 
@@ -273,7 +270,6 @@ class TestDiscreteVariable(VariableTest):
         self.assertSequenceEqual(d2.values, d2_values)
         self.assertSequenceEqual(d1c.values, d1.values)
         s = pickle.dumps(d2)
-        DiscreteVariable._clear_all_caches()  # [comment redacted]
         d1 = DiscreteVariable("A", values=["one", "two"])
         d2 = pickle.loads(s)
         self.assertSequenceEqual(d2.values, ["two", "one", "three"])
@@ -282,7 +278,6 @@ class TestDiscreteVariable(VariableTest):
 @variabletest(ContinuousVariable)
 class TestContinuousVariable(VariableTest):
     def test_make(self):
-        ContinuousVariable._clear_cache()
         age1 = ContinuousVariable.make("age")
         age2 = ContinuousVariable.make("age")
         age3 = ContinuousVariable("age")
@@ -464,9 +459,6 @@ PickleStringVariable = create_pickling_tests(
 
 
 class VariableTestMakeProxy(unittest.TestCase):
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def test_make_proxy_disc(self):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
         abc1 = abc.make_proxy()

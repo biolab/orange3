@@ -11,7 +11,6 @@ class PickleTest(TestCase):
                             compare_members=("attributes", "class_vars",
                                              "class_var", "variables",
                                              "metas", "anonymous"))
-        Variable._clear_all_caches()
 
     old_comparators = {}
 

@@ -18,9 +18,6 @@ class TestFSS(unittest.TestCase):
         cls.iris = Table('iris')
         cls.imports = Table(test_filename('datasets/imports-85.tab'))
 
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def test_select_1(self):
         gini = Gini()
         s = SelectBestFeatures(method=gini, k=1)

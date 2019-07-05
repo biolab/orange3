@@ -127,8 +127,6 @@ class FeatureConstructorTest(unittest.TestCase):
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
-        # pylint: disable=protected-access
-        ContinuousVariable._clear_all_caches()
 
 
 class TestTools(unittest.TestCase):

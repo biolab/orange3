@@ -22,7 +22,6 @@ def read_tab_file(filename):
 class TestTabReader(unittest.TestCase):
 
     def setUp(self):
-        DiscreteVariable._clear_cache()
         self.data = Table([[1, 2, 3]])
 
     def test_read_easy(self):

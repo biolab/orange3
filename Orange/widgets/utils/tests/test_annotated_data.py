@@ -12,7 +12,6 @@ from Orange.widgets.utils.annotated_data import (
 
 class TestAnnotatedData(unittest.TestCase):
     def setUp(self):
-        Variable._clear_all_caches()  # pylint: disable=protected-access
         random.seed(42)
         self.zoo = Table("zoo")
 

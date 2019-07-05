@@ -276,9 +276,6 @@ class ClassfierListInputTest(unittest.TestCase):
 
 
 class UnknownValuesInPrediction(unittest.TestCase):
-    def setUp(self):
-        Variable._clear_all_caches()
-
     def test_unknown(self):
         table = Table("iris")
         tree = LogisticRegressionLearner()(table)
@@ -304,7 +301,6 @@ class UnknownValuesInPrediction(unittest.TestCase):
 class LearnerAccessibility(unittest.TestCase):
 
     def setUp(self):
-        Variable._clear_all_caches()
         # Convergence warnings are irrelevant for these tests
         warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
 
@@ -333,7 +329,6 @@ class LearnerAccessibility(unittest.TestCase):
                           " namespace" % learner.__name__)
 
     def test_all_models_work_after_unpickling(self):
-        Variable._clear_all_caches()
         datasets = [Table('iris'), Table('titanic')]
         for learner in list(self.all_learners()):
             try:

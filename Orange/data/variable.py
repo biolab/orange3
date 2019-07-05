@@ -350,11 +350,13 @@ class Variable(Reprable, metaclass=VariableMeta):
 
     @classmethod
     def _clear_cache(cls):
-        pass
+        warnings.warn(
+            "_clear_cache is no longer needed and thus deprecated")
 
     @staticmethod
     def _clear_all_caches():
-        pass
+        warnings.warn(
+            "_clear_all_caches is no longer needed and thus deprecated")
 
     @classmethod
     def is_primitive(cls, var=None):
