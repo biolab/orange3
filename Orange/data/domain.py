@@ -63,18 +63,22 @@ class DomainConversion:
         """
         Compute the conversion indices from the given `source` to `destination`
         """
+        def match(var):
+            if var in source:
+                sourcevar = source[var]
+                sourceindex = source.index(sourcevar)
+                if var.is_discrete and var is not sourcevar:
+                    mapping = var.get_mapper_from(sourcevar)
+                    return lambda table: mapping(table.get_column_view(sourceindex)[0])
+                return source.index(var)
+            return var.compute_value  # , which may also be None
+
         self.source = source
 
-        self.attributes = [
-            source.index(var) if var in source
-            else var.compute_value for var in destination.attributes]
-        self.class_vars = [
-            source.index(var) if var in source
-            else var.compute_value for var in destination.class_vars]
+        self.attributes = [match(var) for var in destination.attributes]
+        self.class_vars = [match(var) for var in destination.class_vars]
         self.variables = self.attributes + self.class_vars
-        self.metas = [
-            source.index(var) if var in source
-            else var.compute_value for var in destination.metas]
+        self.metas = [match(var) for var in destination.metas]
 
         def should_be_sparse(feats):
             """

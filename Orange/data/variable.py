@@ -1,5 +1,6 @@
 import collections
 import re
+import warnings
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -7,9 +8,11 @@ from math import isnan, floor
 from pickle import PickleError
 
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import _variable
-from Orange.util import Registry, color_to_hex, hex_to_color, Reprable
+from Orange.util import Registry, color_to_hex, hex_to_color, Reprable, \
+    OrangeDeprecationWarning
 
 __all__ = ["Unknown", "MISSING_VALUES", "make_variable", "is_discrete_values",
            "Value", "Variable", "ContinuousVariable", "DiscreteVariable",
@@ -28,25 +31,9 @@ MAX_NUM_OF_DECIMALS = 5
 def make_variable(cls, compute_value, *args):
     if compute_value is not None:
         return cls(*args, compute_value=compute_value)
-    if issubclass(cls, DiscreteVariable):
-        values = args[1]
-
-        # backward compatibility - `base_value` argument was removed in the
-        # `make` function - with this fix it is removed if exist
-        # ars should have len = 3, if more remove last element
-        args = args[:3]
-
-        var = cls.make(*args)
-        # The `var.values` are in general a superset of `values` with different
-        # order. Only use it if it is a structural subtype of the requested
-        # descriptor so any indices/codes retain their proper interpretation on
-        # deserialization.
-        if var.values[:len(values)] == values:
-            return var
-        else:
-            return cls(*args)
     else:
-        return cls.make(*args)
+        # For compatibility with old pickles
+        return cls(*args)
 
 
 def is_discrete_values(values):
@@ -255,11 +242,7 @@ class Value(float):
 
 
 class VariableMeta(Registry):
-    def __new__(cls, name, bases, attrs):
-        obj = super().__new__(cls, name, bases, attrs)
-        if not hasattr(obj, '_all_vars') or obj._all_vars is Variable._all_vars:
-            obj._all_vars = {}
-        return obj
+    pass
 
 
 class _predicatedescriptor(property):
@@ -320,12 +303,6 @@ class Variable(Reprable, metaclass=VariableMeta):
     .. attribute:: attributes
 
         A dictionary with user-defined attributes of the variable
-
-    .. attribute:: master
-
-        The variable that this variable is a copy of. If a copy is made from a
-        copy, the copy has a reference to the original master. If the variable
-        is not a copy, it is its own master.
     """
     Unknown = ValueUnknown
 
@@ -333,18 +310,14 @@ class Variable(Reprable, metaclass=VariableMeta):
         """
         Construct a variable descriptor.
         """
+        if not name:
+            warnings.warn("Variable must have a name", OrangeDeprecationWarning)
         self.name = name
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
-        self.master = self
-        if name and compute_value is None:
-            if isinstance(self._all_vars, collections.defaultdict):
-                self._all_vars[name].append(self)
-            else:
-                self._all_vars[name] = self
         self._colors = None
 
     def make_proxy(self):
@@ -354,47 +327,34 @@ class Variable(Reprable, metaclass=VariableMeta):
         :return: copy of self
         :rtype: Variable
         """
-        var = self.__class__()
+        var = self.__class__(self.name)
         var.__dict__.update(self.__dict__)
         var.attributes = dict(self.attributes)
-        var.master = self.master
         return var
 
     def __eq__(self, other):
-        """Two variables are equivalent if the originate from the same master"""
-        return hasattr(other, "master") and self.master is other.master
+        return type(self) is type(other) \
+               and self.name == other.name \
+               and self._compute_value is other._compute_value
 
     def __hash__(self):
-        if self.master is not self:
-            return hash(self.master)
-        else:
-            return super().__hash__()
+        return hash((self.name, type(self), self._compute_value))
 
     @classmethod
-    def make(cls, name):
+    def make(cls, name, *args, **kwargs):
         """
         Return an existing continuous variable with the given name, or
         construct and return a new one.
         """
-        if not name:
-            raise ValueError("Variables without names cannot be stored or made")
-        var = cls._all_vars.get(name) or cls(name)
-        return var.make_proxy()
+        return cls(name, *args, **kwargs)
 
     @classmethod
     def _clear_cache(cls):
-        """
-        Clear the list of variables for reuse by :obj:`make`.
-        """
-        cls._all_vars.clear()
+        pass
 
     @staticmethod
     def _clear_all_caches():
-        """
-        Clears list of stored variables for all subclasses
-        """
-        for cls in Variable.registry.values():
-            cls._clear_cache()
+        pass
 
     @classmethod
     def is_primitive(cls, var=None):
@@ -485,7 +445,6 @@ class Variable(Reprable, metaclass=VariableMeta):
         # it to the correct variable. If we did not remove it, the (pickled)
         # value would replace the one set by make.
         __dict__ = dict(self.__dict__)
-        __dict__.pop("master", None)
         return make_variable, (self.__class__, self._compute_value, self.name), __dict__
 
     def copy(self, compute_value):
@@ -622,7 +581,6 @@ class DiscreteVariable(Variable):
 
     TYPE_HEADERS = ('discrete', 'd', 'categorical')
 
-    _all_vars = collections.defaultdict(list)
     presorted_values = []
 
     def __init__(self, name="", values=(), ordered=False, compute_value=None,
@@ -633,6 +591,28 @@ class DiscreteVariable(Variable):
             raise TypeError("values of DiscreteVariables must be strings")
         super().__init__(name, compute_value, sparse=sparse)
         self.ordered = ordered
+
+    def get_mapping_from(self, other):
+        return np.array(
+            [self.values.index(value) if value in self.values else np.nan
+             for value in other.values], dtype=float)
+
+    def get_mapper_from(self, other):
+        mapping = self.get_mapping_from(other)
+
+        def mapper(value):
+            if isinstance(value, (int, float)):
+                return mapping[int(value)]
+            if isinstance(value, str):
+                return mapping[other.values.index(value)]
+            if isinstance(value, np.ndarray):
+                return mapping[value.astype(int, copy=False)]
+            if sp.issparse(value):
+                value = value.copy()
+                value.data = mapping[value.data.astype(int, copy=False)]
+            raise ValueError(f"invalid type for values: {type(value).__name__}")
+
+        return mapper
 
     @property
     def colors(self):
@@ -728,95 +708,10 @@ class DiscreteVariable(Variable):
         if not self.name:
             raise PickleError("Variables without names cannot be pickled")
         __dict__ = dict(self.__dict__)
-        __dict__.pop("master")
         __dict__.pop("values")
         return make_variable, (self.__class__, self._compute_value, self.name,
                                self.values, self.ordered), \
             __dict__
-
-    @classmethod
-    def make(cls, name, values=(), ordered=False):
-        """
-        Return a variable with the given name and other properties. The method
-        first looks for a compatible existing variable: the existing
-        variable must have the same name and both variables must have either
-        ordered or unordered values. If values are ordered, the order must be
-        compatible: all common values must have the same order. If values are
-        unordered, the existing variable must have at least one common value
-        with the new one, except when any of the two lists of values is empty.
-
-        If a compatible variable is find, it is returned, with missing values
-        appended to the end of the list. If there is no explicit order, the
-        values are ordered using :obj:`ordered_values`. Otherwise, it
-        constructs and returns a new variable descriptor.
-
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :returns: an existing compatible variable or `None`
-        """
-        if not name:
-            raise ValueError("Variables without names cannot be stored or made")
-        var = cls._find_compatible(name, values, ordered)
-        if var:
-            return var.make_proxy()
-        if not ordered:
-            values = cls.ordered_values(values)
-        return cls(name, values, ordered)
-
-    @classmethod
-    def _find_compatible(cls, name, values=(), ordered=False):
-        """
-        Return a compatible existing value, or `None` if there is None.
-        See :obj:`make` for details; this function differs by returning `None`
-        instead of constructing a new descriptor. (Method :obj:`make` calls
-        this function.)
-
-        :param name: the name of the variable
-        :type name: str
-        :param values: symbolic values for the variable
-        :type values: list
-        :param ordered: tells whether the order of values is fixed
-        :type ordered: bool
-        :returns: an existing compatible variable or `None`
-        """
-        existing = cls._all_vars.get(name)
-        if existing is None:
-            return None
-        if not ordered:
-            values = cls.ordered_values(values)
-        for var in existing:
-            if var.ordered != ordered:
-                continue
-            if not values:
-                break  # we have the variable - any existing values are OK
-            if not set(var.values) & set(values):
-                continue  # empty intersection of values; not compatible
-            if ordered:
-                i = 0
-                for val in var.values:
-                    if values[i] == val:
-                        i += 1
-                        if i == len(values):
-                            break  # we have all the values
-                else:  # we have some remaining values: check them, add them
-                    if set(values[i:]) & set(var.values):
-                        continue  # next var in existing
-                    for val in values[i:]:
-                        var.add_value(val)
-                break  # we have the variable
-            else:  # not ordered
-                vv = set(var.values)
-                for val in values:
-                    if val not in vv:
-                        var.add_value(val)
-                break  # we have the variable
-        else:
-            return None
-        return var
 
     @staticmethod
     def ordered_values(values):

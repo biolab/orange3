@@ -214,6 +214,27 @@ class Model(Reprable):
         def fix_dim(x):
             return x[0] if one_d else x
 
+        def backmap_value(value):
+            return value if backmapper is None else backmapper(value)
+
+        def backmap_probs(probs):
+            if backmapper is None:
+                return probs
+            new_probs = np.zeros((len(probs), len(dataclass.values)),
+                                 dtype=probs.dtype)
+            missing = set(range(len(dataclass.values)))
+            for col in range(probs.shape[1]):
+                target = backmapper(col)
+                if not np.isnan(target):
+                    new_probs[:, int(target)] = probs[:, col]
+                    missing.remove(int(target))
+            if missing:
+                rest = (1 - np.sum(new_probs, axis=1)) / len(missing)
+                for col in missing:
+                    new_probs[:, col] = rest
+
+            return new_probs
+
         if not 0 <= ret <= 2:
             raise ValueError("invalid value of argument 'ret'")
         if ret > 0 and any(v.is_continuous for v in self.domain.class_vars):
@@ -221,12 +242,29 @@ class Model(Reprable):
 
         # Call the predictor
         one_d = False
+        backmapper = None
         if isinstance(data, np.ndarray):
             one_d = data.ndim == 1
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr.csr_matrix):
             prediction = self.predict(data)
         elif isinstance(data, (Table, Instance)):
+            if data.domain.class_var is not None:
+                dataclass = data.domain.class_var
+                modelclass = self.domain.class_var
+                if dataclass != modelclass:
+                    if dataclass.name != modelclass.name:
+                        raise DomainTransformationError(
+                            f"Model for '{modelclass.name}' "
+                            f"cannot predict '{dataclass.name}'")
+                    else:
+                        raise DomainTransformationError(
+                            f"Variables '{modelclass.name}' in the model is "
+                            "incompatible with the variable of the same name "
+                            "in the data.")
+                if dataclass.is_discrete and dataclass is not modelclass:
+                    backmapper = dataclass.get_mapper_from(modelclass)
+
             if isinstance(data, Instance):
                 data = Table(data.domain, [data])
                 one_d = True
@@ -276,19 +314,19 @@ class Model(Reprable):
             else:
                 probs = one_hot(value)
             if ret == Model.ValueProbs:
-                return fix_dim(value), fix_dim(probs)
+                return fix_dim(backmap_value(value)), fix_dim(backmap_probs(probs))
             else:
-                return fix_dim(probs)
+                return fix_dim(backmap_probs(probs))
 
         # Return what we need to
         if ret == Model.Probs:
-            return fix_dim(probs)
+            return fix_dim(backmap_probs(probs))
         if isinstance(data, Instance) and not multitarget:
-            value = Value(self.domain.class_var, value[0])
+            value = backmap_value(Value(self.domain.class_var, value[0]))
         if ret == Model.Value:
-            return fix_dim(value)
+            return fix_dim(backmap_value(value))
         else:  # ret == Model.ValueProbs
-            return fix_dim(value), fix_dim(probs)
+            return fix_dim(backmap_value(value)), fix_dim(backmap_probs(probs))
 
     def __getstate__(self):
         """Skip (possibly large) data when pickling models"""
