@@ -10,8 +10,8 @@ from Orange.util import OrangeDeprecationWarning
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils import vartype
 
-Continuous = 100 + vartype(ContinuousVariable())
-Discrete = 100 + vartype(DiscreteVariable())
+Continuous = 100 + vartype(ContinuousVariable("x"))
+Discrete = 100 + vartype(DiscreteVariable("x"))
 
 
 class TestDomainContextHandler(TestCase):

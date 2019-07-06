@@ -299,10 +299,10 @@ class StringFeatureEditor(FeatureEditor):
 
 
 _VarMap = {
-    DiscreteDescriptor: vartype(Orange.data.DiscreteVariable()),
-    ContinuousDescriptor: vartype(Orange.data.ContinuousVariable()),
-    DateTimeDescriptor: vartype(Orange.data.TimeVariable()),
-    StringDescriptor: vartype(Orange.data.StringVariable())
+    DiscreteDescriptor: vartype(Orange.data.DiscreteVariable("d")),
+    ContinuousDescriptor: vartype(Orange.data.ContinuousVariable("c")),
+    DateTimeDescriptor: vartype(Orange.data.TimeVariable("t")),
+    StringDescriptor: vartype(Orange.data.StringVariable("s"))
 }
 
 

@@ -46,7 +46,7 @@ class TestHelpers(unittest.TestCase):
             map_by_substring(self.arr, [], False, False))))
 
     def test_value_from_string_substring(self):
-        trans = ValueFromStringSubstring(StringVariable(), self.patterns)
+        trans = ValueFromStringSubstring(StringVariable("x"), self.patterns)
         arr2 = np.hstack((self.arr.astype(object), [None]))
 
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
@@ -66,7 +66,7 @@ class TestHelpers(unittest.TestCase):
                                 [0, 1, 2, 0, 3, np.nan])
 
     def test_value_string_substring_flags(self):
-        trans = ValueFromStringSubstring(StringVariable(), self.patterns)
+        trans = ValueFromStringSubstring(StringVariable("x"), self.patterns)
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.case_sensitive = True
             trans.transform(self.arr)
@@ -83,12 +83,12 @@ class TestHelpers(unittest.TestCase):
 
     def test_value_from_discrete_substring(self):
         trans = ValueFromDiscreteSubstring(
-            DiscreteVariable(values=self.arr), self.patterns)
+            DiscreteVariable("x", values=self.arr), self.patterns)
         np.testing.assert_equal(trans.lookup_table, [0, 1, 2, 0, 3])
 
     def test_value_from_discrete_substring_flags(self):
         trans = ValueFromDiscreteSubstring(
-            DiscreteVariable(values=self.arr), self.patterns)
+            DiscreteVariable("x", values=self.arr), self.patterns)
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.case_sensitive = True
             a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
@@ -106,7 +106,7 @@ class TestHelpers(unittest.TestCase):
             self.assertTrue(match_beginning)
 
             arr2 = self.arr[::-1]
-            trans.variable = DiscreteVariable(values=arr2)
+            trans.variable = DiscreteVariable("x", values=arr2)
             a, patterns, case_sensitive, match_beginning = mbs.call_args[0]
             np.testing.assert_equal(a, arr2)
             self.assertEqual(patterns, self.patterns)

@@ -126,13 +126,13 @@ def createAttributePixmap(char, background=Qt.black, color=Qt.white):
 class __AttributeIconDict(dict):
     def __getitem__(self, key):
         if not self:
-            for tpe, char, col in ((vartype(ContinuousVariable()),
+            for tpe, char, col in ((vartype(ContinuousVariable("c")),
                                     "N", (202, 0, 32)),
-                                   (vartype(DiscreteVariable()),
+                                   (vartype(DiscreteVariable("d")),
                                     "C", (26, 150, 65)),
-                                   (vartype(StringVariable()),
+                                   (vartype(StringVariable("s")),
                                     "S", (0, 0, 0)),
-                                   (vartype(TimeVariable()),
+                                   (vartype(TimeVariable("t")),
                                     "T", (68, 170, 255)),
                                    (-1, "?", (128, 128, 128))):
                 self[tpe] = createAttributePixmap(char, QtGui.QColor(*col))

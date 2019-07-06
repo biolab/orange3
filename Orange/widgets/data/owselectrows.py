@@ -45,7 +45,7 @@ class SelectRowsContextHandler(DomainContextHandler):
 
     def encode_setting(self, context, setting, value):
         if setting.name == 'conditions':
-            CONTINUOUS = vartype(ContinuousVariable())
+            CONTINUOUS = vartype(ContinuousVariable("x"))
             for i, (attr, op, values) in enumerate(value):
                 if context.attributes.get(attr) == CONTINUOUS:
                     if values and isinstance(values[0], str):

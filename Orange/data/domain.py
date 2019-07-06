@@ -328,7 +328,7 @@ class Domain:
     def __getstate__(self):
         state = self.__dict__.copy()
         state.pop("_known_domains", None)
-        state.pop("_last_conversion")
+        state["_last_conversion"] = None
         return state
 
     def __setstate__(self, state):

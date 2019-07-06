@@ -85,7 +85,7 @@ class TestOWTestLearners(WidgetTest):
         self.widget.resampling = OWTestLearners.TestOnTest
         # test data with the same class (otherwise the widget shows a different error)
         # and a non-nan X
-        iris_test = iris.transform(Domain([ContinuousVariable()],
+        iris_test = iris.transform(Domain([ContinuousVariable("x")],
                                           class_vars=iris.domain.class_vars))
         iris_test.X[:, 0] = 1
         self.send_signal(self.widget.Inputs.test_data, iris_test)
