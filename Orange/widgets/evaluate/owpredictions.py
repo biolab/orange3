@@ -65,7 +65,7 @@ class OWPredictions(OWWidget):
         predictors_target_mismatch = \
             Msg("Predictors do not have the same target.")
         data_target_mismatch = \
-            Msg("Data does not have the same target as predictors.")
+            Msg("One or more predictors do not have the same target as data.")
 
     settingsHandler = settings.ClassValuesContextHandler()
     score_table = settings.SettingProvider(ScoreTable)
@@ -230,20 +230,22 @@ class OWPredictions(OWWidget):
                 PredictorSlot(predictor, predictor.name, None)
 
     def _set_class_var(self):
+        self.class_var = self.data and self.data.domain.class_var
         pred_classes = set(pred.predictor.domain.class_var
                            for pred in self.predictors.values())
         self.Error.predictors_target_mismatch.clear()
         self.Error.data_target_mismatch.clear()
-        self.class_var = None
         if len(pred_classes) > 1:
-            self.Error.predictors_target_mismatch()
-        if len(pred_classes) == 1:
-            self.class_var = pred_classes.pop()
-            if self.data is not None and \
-                    self.data.domain.class_var is not None and \
-                    self.class_var != self.data.domain.class_var:
+            if self.class_var is None:
+                self.Error.predictors_target_mismatch()
+            else:
                 self.Error.data_target_mismatch()
-                self.class_var = None
+        if len(pred_classes) == 1:
+            pred_class = pred_classes.pop()
+            if self.class_var is None:
+                self.class_var = pred_class
+            elif self.class_var != pred_class:
+                self.Error.data_target_mismatch()
 
         discrete_class = self.class_var is not None \
                          and self.class_var.is_discrete
@@ -268,7 +270,7 @@ class OWPredictions(OWWidget):
         self.commit()
 
     def _call_predictors(self):
-        if not self.data:
+        if not self.data or not self.class_var:
             return
         for inputid, slot in self.predictors.items():
             if slot.results is not None \
@@ -382,14 +384,7 @@ class OWPredictions(OWWidget):
                     continue
                 values = p.results.predicted[0]
                 if self.class_var.is_discrete:
-                    # if values were added to class_var between building the
-                    # model and predicting, add zeros for new class values,
-                    # which are always at the end
                     prob = p.results.probabilities[0]
-                    prob = numpy.c_[
-                        prob,
-                        numpy.zeros((prob.shape[0],
-                                     len(class_var.values) - prob.shape[1]))]
                     values = [Value(class_var, v) for v in values]
                 else:
                     prob = numpy.zeros((len(values), 0))
@@ -610,15 +605,13 @@ class OWPredictions(OWWidget):
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
 
-    @classmethod
-    def predict(cls, predictor, data):
-        class_var = predictor.domain.class_var
-        if class_var:
-            if class_var.is_discrete:
-                return cls.predict_discrete(predictor, data)
-            else:
-                return cls.predict_continuous(predictor, data)
-        return None
+    def predict(self, predictor, data):
+        if self.class_var != predictor.domain.class_var:
+            return self.predict_nans(data)
+        if self.class_var.is_discrete:
+            return self.predict_discrete(predictor, data)
+        else:
+            return self.predict_continuous(predictor, data)
 
     @staticmethod
     def predict_discrete(predictor, data):
@@ -628,6 +621,17 @@ class OWPredictions(OWWidget):
     def predict_continuous(predictor, data):
         values = predictor(data, Model.Value)
         return values, numpy.zeros((len(data), 0))
+
+    @staticmethod
+    def predict_nans(data):
+        class_var = data.domain.class_var
+        values = numpy.full(len(data), numpy.nan)
+        if class_var.is_discrete:
+            nclasses = len(class_var.values)
+            probs = numpy.full((len(data), nclasses), 1 / nclasses)
+        else:
+            probs = numpy.zeros((len(data), 0))
+        return values, probs
 
 
 class PredictionsItemDelegate(QStyledItemDelegate):
