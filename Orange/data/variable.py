@@ -1,6 +1,7 @@
 import collections
 import re
 import warnings
+from collections import Iterable
 
 from datetime import datetime, timedelta, timezone
 from numbers import Number, Real, Integral
@@ -311,14 +312,19 @@ class Variable(Reprable, metaclass=VariableMeta):
         Construct a variable descriptor.
         """
         if not name:
-            warnings.warn("Variable must have a name", OrangeDeprecationWarning)
-        self.name = name
+            warnings.warn("Variable must have a name", OrangeDeprecationWarning,
+                          stacklevel=3)
+        self._name = name
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
         self.source_variable = None
         self.sparse = sparse
         self.attributes = {}
         self._colors = None
+
+    @property
+    def name(self):
+        return self._name
 
     def make_proxy(self):
         """
@@ -443,11 +449,7 @@ class Variable(Reprable, metaclass=VariableMeta):
             raise PickleError("Variables without names cannot be pickled")
 
         # Use make to unpickle variables.
-        # "master" attribute is removed from the dict since make will point
-        # it to the correct variable. If we did not remove it, the (pickled)
-        # value would replace the one set by make.
-        __dict__ = dict(self.__dict__)
-        return make_variable, (self.__class__, self._compute_value, self.name), __dict__
+        return make_variable, (self.__class__, self._compute_value, self.name), self.__dict__
 
     def copy(self, compute_value):
         var = type(self)(self.name, compute_value=compute_value, sparse=self.sparse)
@@ -604,15 +606,38 @@ class DiscreteVariable(Variable):
 
         def mapper(value):
             if isinstance(value, (int, float)):
-                return mapping[int(value)]
+                if not mapping.size:
+                    return np.nan
+                return mapping[int(value)] if value == value else value
             if isinstance(value, str):
                 return mapping[other.values.index(value)]
             if isinstance(value, np.ndarray):
-                return mapping[value.astype(int, copy=False)]
+                if not mapping.size:
+                    return np.full(value.shape, np.nan)
+                if value.dtype == object:
+                    value = value.astype(float)  # this happens with metas
+                try:
+                    nans = np.isnan(value)
+                except TypeError:  # suppose it's already an integer type
+                    return mapping[value]
+                value = value.astype(int)
+                value[nans] = 0
+                value = mapping[value]
+                value[nans] = np.nan
+                return value
             if sp.issparse(value):
                 value = value.copy()
-                value.data = mapping[value.data.astype(int, copy=False)]
-            raise ValueError(f"invalid type for values: {type(value).__name__}")
+                if not mapping.size:
+                    value.data[:] = np.nan
+                else:
+                    value.data = mapping[value.data.astype(int, copy=False)]
+            if isinstance(value, Iterable):
+                if not mapping.size:
+                    return type(value)(np.nan for nan in value)
+                return type(value)(mapping[int(val)] if val == val else val
+                                   for val in value)
+            raise ValueError(
+                f"invalid type for value(s): {type(value).__name__}")
 
         return mapper
 

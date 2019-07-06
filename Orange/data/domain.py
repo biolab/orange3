@@ -258,6 +258,13 @@ class Domain:
         """True if the domain has no variables of any kind"""
         return not self.variables and not self.metas
 
+    def _get_equivalent(self, var):
+        if isinstance(var, Variable):
+            for myvar in chain(self.variables, self.metas):
+                if myvar == var:
+                    return myvar
+        return None
+
     def __getitem__(self, idx):
         """
         Return a variable descriptor from the given argument, which can be
@@ -272,18 +279,23 @@ class Domain:
         if isinstance(idx, slice):
             return self._variables[idx]
 
-        idx = self._indices[idx]
-        if idx >= 0:
-            return self.variables[idx]
+        index = self._indices.get(idx)
+        if index is None:
+            var = self._get_equivalent(idx)
+            if var is not None:
+                return var
+            raise KeyError(idx)
+        if index >= 0:
+            return self.variables[index]
         else:
-            return self.metas[-1-idx]
+            return self.metas[-1 - index]
 
     def __contains__(self, item):
         """
         Return `True` if the item (`str`, `int`, :class:`Variable`) is
         in the domain.
         """
-        return item in self._indices
+        return item in self._indices or self._get_equivalent(item) is not None
 
     @deprecated("Domain.variables")
     def __iter__(self):
@@ -316,6 +328,7 @@ class Domain:
     def __getstate__(self):
         state = self.__dict__.copy()
         state.pop("_known_domains", None)
+        state.pop("_last_conversion")
         return state
 
     def __setstate__(self, state):
@@ -328,10 +341,14 @@ class Domain:
         with an instance of :class:`Variable`, `int` or `str`.
         """
 
-        try:
-            return self._indices[var]
-        except KeyError:
-            raise ValueError("'%s' is not in domain" % var)
+        idx = self._indices.get(var)
+        if idx is not None:
+            return idx
+        equiv = self._get_equivalent(var)
+        if equiv is not None:
+            return self._indices[equiv]
+
+        raise ValueError("'%s' is not in domain" % var)
 
     def has_discrete_attributes(self, include_class=False, include_metas=False):
         """
