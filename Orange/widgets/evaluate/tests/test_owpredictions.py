@@ -8,7 +8,7 @@ from Orange.data.io import TabReader
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.evaluate.owpredictions import OWPredictions
 
-from Orange.data import Table, Domain, Variable
+from Orange.data import Table, Domain
 from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch
@@ -59,33 +59,28 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
-        self.assertTrue(error.predictors_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
+        self.assertFalse(error.predictors_target_mismatch.is_shown())
+        self.assertTrue(error.data_target_mismatch.is_shown())
 
         self.send_signal(self.widget.Inputs.predictors, None, 1)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertTrue(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
         self.send_signal(self.widget.Inputs.predictors, None, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
         self.assertTrue(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
 
         self.send_signal(self.widget.Inputs.predictors, majority_iris, 2)
         self.assertFalse(error.predictors_target_mismatch.is_shown())
@@ -93,11 +88,11 @@ class TestOWPredictions(WidgetTest):
         output = self.get_output(self.widget.Outputs.predictions)
         self.assertEqual(len(output.domain.metas), 4)
 
+        self.send_signal(self.widget.Inputs.data, None)
         self.send_signal(self.widget.Inputs.predictors, majority_iris, 1)
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 3)
-        self.assertTrue(error.predictors_target_mismatch.is_shown())
         self.assertFalse(error.data_target_mismatch.is_shown())
-        self.assertIsNone(self.get_output(self.widget.Outputs.predictions))
+        self.assertTrue(error.predictors_target_mismatch.is_shown())
 
     def test_no_class_on_test(self):
         """Allow test data with no class"""
@@ -177,3 +172,8 @@ class TestOWPredictions(WidgetTest):
 
         model2 = ConstantLearner()(titanic)
         self.send_signal(self.widget.Inputs.predictors, model2, 2)
+
+
+if __name__ == "__main__":
+    import unittest
+    unittest.main()

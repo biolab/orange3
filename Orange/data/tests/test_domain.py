@@ -8,10 +8,10 @@ class DomainTest(unittest.TestCase):
     def test_bool_raises_warning(self):
         self.assertWarns(OrangeDeprecationWarning, bool, Domain([]))
         self.assertWarns(OrangeDeprecationWarning, bool,
-                         Domain([ContinuousVariable()]))
+                         Domain([ContinuousVariable("y")]))
 
     def test_empty(self):
-        var = ContinuousVariable()
+        var = ContinuousVariable("y")
         self.assertTrue(Domain([]).empty())
 
         self.assertFalse(Domain([var]).empty())

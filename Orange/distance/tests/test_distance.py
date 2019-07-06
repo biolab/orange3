@@ -45,14 +45,14 @@ class CommonFittedTests(CommonTests):
     """Tests applicable to all distances with fitting"""
     def test_mismatching_attributes(self):
         """distances can't be computed if fit from other attributes"""
-        def new_table():
-            return Table.from_list(Domain([ContinuousVariable("a")]), [[1]])
+        def new_table(name):
+            return Table.from_list(Domain([ContinuousVariable(name)]), [[1]])
 
-        table1 = new_table()
+        table1 = new_table("a")
         model = self.Distance().fit(table1)
-        self.assertRaises(ValueError, model, new_table())
-        self.assertRaises(ValueError, model, table1, new_table())
-        self.assertRaises(ValueError, model, new_table(), table1)
+        self.assertRaises(ValueError, model, new_table("b"))
+        self.assertRaises(ValueError, model, table1, new_table("c"))
+        self.assertRaises(ValueError, model, new_table("d"), table1)
 
 
 class CommonNormalizedTests(CommonFittedTests):

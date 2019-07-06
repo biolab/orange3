@@ -21,7 +21,7 @@ class TestOWMergeData(WidgetTest):
         super().setUpClass()
         domainA = Domain([DiscreteVariable("dA1", ("a", "b", "c", "d")),
                           DiscreteVariable("dA2", ("aa", "bb"))],
-                         DiscreteVariable("cls", ("aaa", "bbb", "ccc")),
+                         DiscreteVariable("clsA", ("aaa", "bbb", "ccc")),
                          [DiscreteVariable("mA1", ("cc", "dd")),
                           StringVariable("mA2")])
         XA = np.array([[0, 0], [1, 1], [2, 0], [3, 1]])
@@ -31,7 +31,7 @@ class TestOWMergeData(WidgetTest):
 
         domainB = Domain([DiscreteVariable("dB1", values=("a", "b", "c")),
                           DiscreteVariable("dB2", values=("aa", "bb"))],
-                         DiscreteVariable("cls", values=("bbb", "ccc")),
+                         DiscreteVariable("clsB", values=("bbb", "ccc")),
                          [DiscreteVariable("mB1", ("m4", "m5"))])
         XB = np.array([[0, 0], [1, 1], [2, np.nan]])
         yB = np.array([np.nan, 1, 0])

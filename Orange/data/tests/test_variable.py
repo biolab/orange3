@@ -16,6 +16,7 @@ from Orange.data import Variable, ContinuousVariable, DiscreteVariable, \
     StringVariable, TimeVariable, Unknown, Value
 from Orange.data.io import CSVReader
 from Orange.tests.base import create_pickling_tests
+from Orange.util import OrangeDeprecationWarning
 
 
 def is_on_path(name):
@@ -41,17 +42,14 @@ def is_on_path(name):
 # noinspection PyPep8Naming,PyUnresolvedReferences
 class VariableTest:
     def test_dont_pickle_anonymous_variables(self):
-        self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
-
-    def test_dont_store_anonymous_variables(self):
-        self.varcls()
-        self.assertEqual(len(self.varcls._all_vars), 0)
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertRaises(pickle.PickleError, pickle.dumps, self.varcls())
 
     def test_dont_make_anonymous_variables(self):
-        self.assertRaises(ValueError, self.varcls.make, "")
+        self.assertWarns(OrangeDeprecationWarning, self.varcls.make, "")
 
     def test_copy_copies_attributes(self):
-        var = self.varcls()
+        var = self.varcls("x")
         var.attributes["a"] = "b"
         var2 = var.copy(compute_value=None)
         self.assertIn("a", var2.attributes)
@@ -86,45 +84,45 @@ class TestVariable(unittest.TestCase):
         self.assertRaises(RuntimeError, self.var.repr_val, None)
 
     def test_properties(self):
-        a = ContinuousVariable()
+        a = ContinuousVariable("y")
         self.assertTrue(a.is_continuous)
         self.assertFalse(a.is_discrete)
         self.assertFalse(a.is_string)
         self.assertTrue(a.is_primitive())
 
-        a = DiscreteVariable()
+        a = DiscreteVariable("d")
         self.assertFalse(a.is_continuous)
         self.assertTrue(a.is_discrete)
         self.assertFalse(a.is_string)
         self.assertTrue(a.is_primitive())
 
-        a = StringVariable()
+        a = StringVariable("s")
         self.assertFalse(a.is_continuous)
         self.assertFalse(a.is_discrete)
         self.assertTrue(a.is_string)
         self.assertFalse(a.is_primitive())
 
     def test_properties_as_predicates(self):
-        a = ContinuousVariable()
+        a = ContinuousVariable("y")
         self.assertTrue(Variable.is_continuous(a))
         self.assertFalse(Variable.is_discrete(a))
         self.assertFalse(Variable.is_string(a))
         self.assertTrue(Variable.is_primitive(a))
 
-        a = StringVariable()
+        a = StringVariable("s")
         self.assertFalse(Variable.is_continuous(a))
         self.assertFalse(Variable.is_discrete(a))
         self.assertTrue(Variable.is_string(a))
         self.assertFalse(Variable.is_primitive(a))
 
     def test_strange_eq(self):
-        a = ContinuousVariable()
-        b = ContinuousVariable()
+        a = ContinuousVariable("a")
+        b = ContinuousVariable("a")
         self.assertEqual(a, a)
-        self.assertNotEqual(a, b)
+        self.assertEqual(a, b)
+        self.assertIsNot(a, b)
         self.assertNotEqual(a, "somestring")
-        # It the next assert ever fails (randomly) blame @janezd
-        self.assertNotEqual(hash(a), hash(b))
+        self.assertEqual(hash(a), hash(b))
 
 
 def variabletest(varcls):
@@ -147,53 +145,6 @@ class TestDiscreteVariable(VariableTest):
         # TODO: with self.assertRaises(ValueError): var.to_val(2)
         with self.assertRaises(ValueError):
             var.to_val("G")
-
-    def test_find_compatible_unordered(self):
-        gend = DiscreteVariable("gend", values=["F", "M"])
-
-        find_comp = DiscreteVariable._find_compatible
-        self.assertIs(find_comp("gend"), gend)
-        self.assertIs(find_comp("gend", values=["F"]), gend)
-        self.assertIs(find_comp("gend", values=["F", "M"]), gend)
-        self.assertIs(find_comp("gend", values=["M", "F"]), gend)
-
-        # Incompatible since it is ordered
-        self.assertIsNone(find_comp("gend", values=["M", "F"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["F", "M"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["F"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["M"], ordered=True))
-        self.assertIsNone(find_comp("gend", values=["N"], ordered=True))
-
-        # Incompatible due to empty intersection
-        self.assertIsNone(find_comp("gend", values=["N"]))
-
-        # Compatible, adds values
-        self.assertIs(find_comp("gend", values=["F", "N", "R"]), gend)
-        self.assertEqual(gend.values, ["F", "M", "N", "R"])
-
-    def test_find_compatible_ordered(self):
-        abc = DiscreteVariable("abc", values="abc", ordered=True)
-
-        find_comp = DiscreteVariable._find_compatible
-
-        self.assertIsNone(find_comp("abc"))
-        self.assertIsNone(find_comp("abc", list("abc")))
-        self.assertIs(find_comp("abc", ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b", "c"], ordered=True), abc)
-        self.assertIs(find_comp("abc", ["a", "b", "c", "d"], ordered=True), abc)
-
-        abd = DiscreteVariable.make(
-            "abc", values=["a", "d", "b"], ordered=True)
-        self.assertIsNot(abc, abd)
-
-        abc_un = DiscreteVariable.make("abc", values=["a", "b", "c"])
-        self.assertIsNot(abc_un, abc)
-
-        self.assertIs(
-            find_comp("abc", values=["a", "d", "b"], ordered=True), abd)
-        self.assertIs(find_comp("abc", values=["a", "b", "c"]), abc_un)
 
     def test_make(self):
         var = DiscreteVariable.make("a", values=["F", "M"])
@@ -272,7 +223,8 @@ class TestDiscreteVariable(VariableTest):
         s = pickle.dumps(d2)
         d1 = DiscreteVariable("A", values=["one", "two"])
         d2 = pickle.loads(s)
-        self.assertSequenceEqual(d2.values, ["two", "one", "three"])
+        self.assertSequenceEqual(d2.values, ["one", "two", "three"])
+        self.assertSequenceEqual(d1.values, ["one", "two"])
 
 
 @variabletest(ContinuousVariable)
@@ -280,9 +232,8 @@ class TestContinuousVariable(VariableTest):
     def test_make(self):
         age1 = ContinuousVariable.make("age")
         age2 = ContinuousVariable.make("age")
-        age3 = ContinuousVariable("age")
         self.assertEqual(age1, age2)
-        self.assertNotEqual(age1, age3)
+        self.assertIsNot(age1, age2)
 
     def test_decimals(self):
         a = ContinuousVariable("a", 4)
@@ -463,9 +414,6 @@ class VariableTestMakeProxy(unittest.TestCase):
         abc = DiscreteVariable("abc", values="abc", ordered=True)
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
-        self.assertIs(abc.master, abc)
-        self.assertIs(abc1.master, abc)
-        self.assertIs(abc2.master, abc)
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
@@ -473,16 +421,13 @@ class VariableTestMakeProxy(unittest.TestCase):
         self.assertEqual(hash(abc1), hash(abc2))
 
         abcx = DiscreteVariable("abc", values="abc", ordered=True)
-        self.assertNotEqual(abc, abcx)
+        self.assertEqual(abc, abcx)
+        self.assertIsNot(abc, abcx)
 
         abc1p = pickle.loads(pickle.dumps(abc1))
-        self.assertIs(abc1p.master, abc)
         self.assertEqual(abc1p, abc)
 
         abcp, abc1p, abc2p = pickle.loads(pickle.dumps((abc, abc1, abc2)))
-        self.assertIs(abcp.master, abcp.master)
-        self.assertIs(abc1p.master, abcp.master)
-        self.assertIs(abc2p.master, abcp.master)
         self.assertEqual(abcp, abc1p)
         self.assertEqual(abcp, abc2p)
         self.assertEqual(abc1p, abc2p)
@@ -491,9 +436,6 @@ class VariableTestMakeProxy(unittest.TestCase):
         abc = ContinuousVariable("abc")
         abc1 = abc.make_proxy()
         abc2 = abc1.make_proxy()
-        self.assertIs(abc.master, abc)
-        self.assertIs(abc1.master, abc)
-        self.assertIs(abc2.master, abc)
         self.assertEqual(abc, abc1)
         self.assertEqual(abc, abc2)
         self.assertEqual(abc1, abc2)
