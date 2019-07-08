@@ -224,26 +224,40 @@ class TestTools(unittest.TestCase):
 
 class FeatureFuncTest(unittest.TestCase):
     def test_reconstruct(self):
-        f = FeatureFunc("a * x + c", [("x", "x")], {"a": 2, "c": 10})
-        self.assertEqual(f({"x": 2}), 14)
+        iris = Table("iris")
+        inst1 = iris[0]
+        val1 = 2 * inst1["sepal width"] + 10
+        inst2 = iris[100]
+        val2 = 2 * inst2["sepal width"] + 10
+
+        f = FeatureFunc("a * sepal_width + c",
+                        [("sepal_width", iris.domain["sepal width"])],
+                        {"a": 2, "c": 10})
+        self.assertAlmostEqual(f(inst1), val1)
         f1 = pickle.loads(pickle.dumps(f))
-        self.assertEqual(f1({"x": 2}), 14)
+        self.assertAlmostEqual(f1(inst1), val1)
         fc = copy.copy(f)
-        self.assertEqual(fc({"x": 3}), 16)
+        self.assertEqual(fc(inst2), val2)
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
                          "FeatureFunc('a + 1', [('a', 2)], {})")
 
     def test_call(self):
-        f = FeatureFunc("a + 1", [("a", "a")])
-        self.assertEqual(f({"a": 2}), 3)
-
         iris = Table("iris")
         f = FeatureFunc("sepal_width + 10",
                         [("sepal_width", iris.domain["sepal width"])])
         r = f(iris)
         np.testing.assert_array_equal(r, iris.X[:, 1] + 10)
+        self.assertEqual(f(iris[0]), iris[0]["sepal width"] + 10)
+
+    def test_string_casting(self):
+        zoo = Table("zoo")
+        f = FeatureFunc("name[0]",
+                        [("name", zoo.domain["name"])])
+        r = f(zoo)
+        self.assertEqual(r, [x[0] for x in zoo.metas[:, 0]])
+        self.assertEqual(f(zoo[0]), str(zoo[0, "name"])[0])
 
 
 class OWFeatureConstructorTests(WidgetTest):

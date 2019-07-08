@@ -25,8 +25,7 @@ import numpy as np
 from AnyQt.QtWidgets import (
     QSizePolicy, QAbstractItemView, QComboBox, QFormLayout, QLineEdit,
     QHBoxLayout, QVBoxLayout, QStackedWidget, QStyledItemDelegate,
-    QPushButton, QMenu, QListView, QFrame
-)
+    QPushButton, QMenu, QListView, QFrame, QLabel)
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
@@ -115,8 +114,11 @@ class FeatureEditor(QFrame):
                                    QSizePolicy.Fixed)
         )
         self.expressionedit = QLineEdit(
-            placeholderText="Expression..."
-        )
+            placeholderText="Expression...",
+            toolTip="Result must be a number for numeric variables, "
+                    "and strings for text variables.\n"
+                    "For categorical, return integer indices if values are "
+                    "specified, and strings if they are not.")
 
         self.attrs_model = itemmodels.VariableListModel(
             ["Select Feature"], parent=self)
@@ -235,11 +237,16 @@ class DiscreteFeatureEditor(FeatureEditor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.valuesedit = QLineEdit()
+        tooltip = \
+            "If values are given, expression must return integer indices.\n" \
+            "Otherwise, expression must return strings."
+        self.valuesedit = QLineEdit(placeholderText="A, B ...", toolTip=tooltip)
         self.valuesedit.textChanged.connect(self._invalidate)
 
         layout = self.layout()
-        layout.addRow(self.tr("Values"), self.valuesedit)
+        label = QLabel(self.tr("Values (optional)"))
+        label.setToolTip(tooltip)
+        layout.addRow(label, self.valuesedit)
 
     def setEditorData(self, data, domain):
         self.valuesedit.setText(
@@ -606,7 +613,8 @@ class OWFeatureConstructor(OWWidget):
         desc = self._validate_descriptors(desc)
         try:
             new_variables = construct_variables(desc, self.data)
-        except Exception as err:
+        # user's expression can contain arbitrary errors
+        except Exception as err:  # pylint: disable=broad-except
             report_error(err)
             return
 
@@ -1004,7 +1012,9 @@ class FeatureFunc:
         if isinstance(instance, Orange.data.Table):
             return [self(inst) for inst in instance]
         else:
-            args = [instance[var] for _, var in self.args]
+            args = [str(instance[var])
+                    if instance.domain[var].is_string else instance[var]
+                    for _, var in self.args]
             return self.func(*args)
 
     def __reduce__(self):
