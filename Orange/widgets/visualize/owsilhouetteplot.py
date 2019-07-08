@@ -10,7 +10,7 @@ import numpy as np
 import sklearn.metrics
 
 from AnyQt.QtWidgets import (
-    QGraphicsScene, QGraphicsView, QGraphicsWidget, QGraphicsGridLayout,
+    QGraphicsScene, QGraphicsWidget, QGraphicsGridLayout,
     QGraphicsItemGroup, QGraphicsSimpleTextItem, QGraphicsRectItem,
     QSizePolicy, QStyleOptionGraphicsItem, QWidget, QWIDGETSIZE_MAX,
 )
@@ -24,6 +24,7 @@ import Orange.data
 import Orange.distance
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
 from Orange.widgets.utils import itemmodels
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -159,7 +160,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self.controlArea.layout().addWidget(self.buttonsArea)
 
         self.scene = QGraphicsScene()
-        self.view = QGraphicsView(self.scene)
+        self.view = StickyGraphicsView(self.scene)
         self.view.setRenderHint(QPainter.Antialiasing, True)
         self.view.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.mainArea.layout().addWidget(self.view)
@@ -374,7 +375,25 @@ class OWSilhouettePlot(widget.OWWidget):
                 self._silplot.setRowNames(None)
 
     def _update_scene_rect(self):
-        self.scene.setSceneRect(self._silplot.geometry())
+        geom = self._silplot.geometry()
+        self.scene.setSceneRect(geom)
+        self.view.setSceneRect(geom)
+
+        header = self._silplot.topScaleItem()
+        footer = self._silplot.bottomScaleItem()
+
+        def extend_horizontal(rect):
+            # type: (QRectF) -> QRectF
+            rect = QRectF(rect)
+            rect.setLeft(geom.left())
+            rect.setRight(geom.right())
+            return rect
+        if header is not None:
+            self.view.setHeaderSceneRect(
+                extend_horizontal(header.geometry().adjusted(0, 0, 0, 1)))
+        if footer is not None:
+            self.view.setFooterSceneRect(
+                extend_horizontal(footer.geometry().adjusted(0, -1, 0, 0)))
 
     def commit(self):
         """
@@ -466,6 +485,8 @@ class SilhouettePlot(QGraphicsWidget):
         self.__pen = QPen(Qt.NoPen)
         self.__layout = QGraphicsGridLayout()
         self.__hoveredItem = None
+        self.__topScale = None     # type: Optional[pg.AxisItem]
+        self.__bottomScale = None  # type: Optional[pg.AxisItem]
         self.setLayout(self.__layout)
         self.layout().setColumnSpacing(0, 1.)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -592,6 +613,8 @@ class SilhouettePlot(QGraphicsWidget):
             child.setParentItem(None)
             scene.removeItem(child)
         self.__groups = []
+        self.__topScale = None
+        self.__bottomScale = None
 
     def __setup(self):
         # Setup the subwidgets/groups/layout
@@ -613,6 +636,7 @@ class SilhouettePlot(QGraphicsWidget):
         ax = pg.AxisItem(parent=self, orientation="top", maxTickLength=7,
                          pen=axispen)
         ax.setRange(smin, smax)
+        self.__topScale = ax
         self.layout().addItem(ax, 0, 2)
 
         for i, group in enumerate(self.__groups):
@@ -649,7 +673,16 @@ class SilhouettePlot(QGraphicsWidget):
         ax = pg.AxisItem(parent=self, orientation="bottom", maxTickLength=7,
                          pen=axispen)
         ax.setRange(smin, smax)
+        self.__bottomScale = ax
         self.layout().addItem(ax, len(self.__groups) + 1, 2)
+
+    def topScaleItem(self):
+        # type: () -> Optional[QGraphicsWidget]
+        return self.__topScale
+
+    def bottomScaleItem(self):
+        # type: () -> Optional[QGraphicsWidget]
+        return self.__bottomScale
 
     def __updateTextSizeConstraint(self):
         # set/update fixed height constraint on the text annotation items so
