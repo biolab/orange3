@@ -412,8 +412,7 @@ class OWFeatureConstructor(OWWidget):
         disc = menu.addAction("Categorical")
         disc.triggered.connect(
             lambda: self.addFeature(
-                DiscreteDescriptor(generate_newname("D{}"), "",
-                                   ("A", "B"), False))
+                DiscreteDescriptor(generate_newname("D{}"), "", (), False))
         )
         string = menu.addAction("Text")
         string.triggered.connect(
@@ -593,6 +592,11 @@ class OWFeatureConstructor(OWWidget):
         return final
 
     def apply(self):
+        def report_error(err):
+            log = logging.getLogger(__name__)
+            log.error("", exc_info=True)
+            self.error("".join(format_exception_only(type(err), err)).rstrip())
+
         self.Error.clear()
 
         if self.data is None:
@@ -600,8 +604,11 @@ class OWFeatureConstructor(OWWidget):
 
         desc = list(self.featuremodel)
         desc = self._validate_descriptors(desc)
-        source_vars = self.data.domain.variables + self.data.domain.metas
-        new_variables = construct_variables(desc, source_vars)
+        try:
+            new_variables = construct_variables(desc, self.data)
+        except Exception as err:
+            report_error(err)
+            return
 
         attrs = [var for var in new_variables if var.is_primitive()]
         metas = [var for var in new_variables if not var.is_primitive()]
@@ -616,9 +623,7 @@ class OWFeatureConstructor(OWWidget):
         # user's expression can contain arbitrary errors
         # pylint: disable=broad-except
         except Exception as err:
-            log = logging.getLogger(__name__)
-            log.error("", exc_info=True)
-            self.error("".join(format_exception_only(type(err), err)).rstrip())
+            report_error(err)
             return
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
@@ -815,11 +820,12 @@ def validate_exp(exp):
         raise ValueError(exp)
 
 
-def construct_variables(descriptions, source_vars):
+def construct_variables(descriptions, data):
     # subs
     variables = []
+    source_vars = data.domain.variables + data.domain.metas
     for desc in descriptions:
-        _, func = bind_variable(desc, source_vars)
+        desc, func = bind_variable(desc, source_vars, data)
         var = make_variable(desc, func)
         variables.append(var)
     return variables
@@ -832,7 +838,7 @@ def sanitized_name(name):
     return sanitized
 
 
-def bind_variable(descriptor, env):
+def bind_variable(descriptor, env, data):
     """
     (descriptor, env) ->
         (descriptor, (instance -> value) | (table -> value list))
@@ -848,8 +854,16 @@ def bind_variable(descriptor, env):
 
     values = {}
     if isinstance(descriptor, DiscreteDescriptor):
-        values = [sanitized_name(v) for v in descriptor.values]
-        values = {name: i for i, name in enumerate(values)}
+        if not descriptor.values:
+            str_func = FeatureFunc(descriptor.expression, source_vars)
+            values = sorted({str(x) for x in str_func(data)})
+            values = {name: i for i, name in enumerate(values)}
+            descriptor = descriptor \
+                ._replace(values=values) \
+                ._replace(expression=f"{values}.get(str({descriptor.expression}), float('nan'))")
+        else:
+            values = [sanitized_name(v) for v in descriptor.values]
+            values = {name: i for i, name in enumerate(values)}
     return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
 
 
