@@ -34,13 +34,33 @@ class FeatureConstructorTest(unittest.TestCase):
                                 values=values, ordered=False)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(desc, data.domain.variables),
+                            construct_variables(desc, data),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
         self.assertEqual(data.domain[name].values, list(values))
         for i in range(3):
             self.assertEqual(data[i * 50, name], values[i])
+
+    def test_construct_variables_discrete_no_values(self):
+        data = Table("iris")
+        name = 'Discrete Variable'
+        expression = "str(iris)[-1]"  # last letter - a or e
+        values = ()
+        desc = PyListModel(
+            [DiscreteDescriptor(name=name, expression=expression,
+                                values=values, ordered=False)]
+        )
+        data = Table(Domain(list(data.domain.attributes) +
+                            construct_variables(desc, data),
+                            data.domain.class_vars,
+                            data.domain.metas), data)
+        newvar = data.domain[name]
+        self.assertTrue(isinstance(newvar, DiscreteVariable))
+        self.assertEqual(set(data.domain[name].values), set("ar"))
+        for i in range(3):
+            inst = data[i * 50]
+            self.assertEqual(str(inst[name]), str(inst["iris"])[-1])
 
     def test_construct_variables_continuous(self):
         data = Table("iris")
@@ -51,7 +71,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   number_of_decimals=2)]
         )
         data = Table(Domain(list(data.domain.attributes) +
-                            construct_variables(featuremodel, data.domain.variables),
+                            construct_variables(featuremodel, data),
                             data.domain.class_vars,
                             data.domain.metas), data)
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
@@ -69,7 +89,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table(Domain(data.domain.attributes,
                             data.domain.class_vars,
                             list(data.domain.metas) +
-                            construct_variables(desc, data.domain.variables)),
+                            construct_variables(desc, data)),
                      data)
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
@@ -86,7 +106,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   expression="_0_1 + _1",
                                   number_of_decimals=3)]
         )
-        nv = construct_variables(desc, data.domain.variables)
+        nv = construct_variables(desc, data)
         ndata = Table(Domain(nv, None), data)
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
@@ -257,7 +277,7 @@ class OWFeatureConstructorTests(WidgetTest):
         self.widget.setData(data)
         discreteFeatureEditor = DiscreteFeatureEditor()
 
-        discreteFeatureEditor.valuesedit.setText("")
+        discreteFeatureEditor.valuesedit.setText("A")
         discreteFeatureEditor.nameedit.setText("D1")
         discreteFeatureEditor.expressionedit.setText("iris")
         self.widget.addFeature(
