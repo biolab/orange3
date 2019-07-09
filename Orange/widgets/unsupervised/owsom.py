@@ -3,10 +3,11 @@ from collections import defaultdict
 import numpy as np
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
-from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter
+from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, QPainterPath
 from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
-    QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy
+    QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
+    QGraphicsPathItem, QGraphicsLineItem
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import gui
@@ -132,9 +133,10 @@ class OWSOM(OWWidget):
         data = Output("Data", Table)
 
     settingsHandler = DomainContextHandler()
-    manual_dimension = Setting(True)
+    manual_dimension = Setting(False)
     size_x = Setting(10)
     size_y = Setting(10)
+    shape = Setting(1)
     animate = Setting(True)
 
     attr_color = ContextSetting(None)
@@ -143,6 +145,9 @@ class OWSOM(OWWidget):
     selection = Setting(set(), schema_only=True)
 
     graph_name = "plot"
+
+    _grid_pen = QPen(QBrush(QColor(224, 224, 224)), 2)
+    _grid_pen.setCosmetic(True)
 
     class Warning(OWWidget.Warning):
         ignoring_disc_variables = Msg("SOM ignores discrete variables.")
@@ -163,24 +168,22 @@ class OWSOM(OWWidget):
         self.cells = self.member_data = None
         self.selection = set()
 
-        box = gui.vBox(self.controlArea, "Dimensions")
+        box = gui.vBox(self.controlArea, "Grid")
+        gui.comboBox(
+            box, self, "shape", items=("Square grid", "Hexagonal grid"),
+            callback=self.on_dimension_change)
+        box2 = gui.indentedBox(box, 10)
         gui.checkBox(
-            box, self, "manual_dimension", "Set dimensions manually",
+            box2, self, "manual_dimension", "Set dimensions manually",
             callback=self.on_manual_dimension_change)
-        self.manual_box = hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
+        self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
-            widget=hbox, master=self, minv=5, maxv=100, step=5,
+            widget=box3, master=self, minv=5, maxv=100, step=5,
             alignment=Qt.AlignRight, callback=self.on_dimension_change)
         gui.spin(value="size_x", **spinargs)
-        gui.widgetLabel(hbox, "×")
+        gui.widgetLabel(box3, "×")
         gui.spin(value="size_y", **spinargs)
-        gui.rubber(hbox)
-
-        hbox = gui.hBox(box)
-        self.restart_button = gui.button(
-            hbox, self, "Restart", callback=self.restart_som,
-            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
-        gui.checkBox(hbox, self, "animate", "Animate")
+        gui.rubber(box3)
 
         box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
@@ -196,6 +199,13 @@ class OWSOM(OWWidget):
             callback=self.on_attr_size_change)
 
         gui.rubber(self.controlArea)
+
+        hbox = gui.hBox(self.controlArea, box=True)
+        self.restart_button = gui.button(
+            hbox, self, "Restart", callback=self.restart_som,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        gui.checkBox(hbox, self, "animate", "Animate")
+
 
         self.scene = QGraphicsScene(self)
 
@@ -218,6 +228,8 @@ class OWSOM(OWWidget):
 
         self.elements = None
         self.selection_item = None
+        self.grid = None
+        self.redraw_grid()
 
     @Inputs.data
     def set_data(self, data):
@@ -300,9 +312,11 @@ class OWSOM(OWWidget):
 
     def on_manual_dimension_change(self):
         self.recompute_dimensions()
+        self.redraw_grid()
         self.replot()
 
     def on_dimension_change(self):
+        self.redraw_grid()
         self.replot()
 
     def on_attr_color_change(self):
@@ -371,7 +385,7 @@ class OWSOM(OWWidget):
         if not self.size_by_instances:
             sizes[sizes != 0] = 0.8
         else:
-            sizes *= 0.95 / np.max(sizes)
+            sizes *= 0.8 / np.max(sizes)
         self.sizes = sizes
 
         self.elements = QGraphicsItemGroup()
@@ -387,28 +401,36 @@ class OWSOM(OWWidget):
                 self._redraw_colored_circles(color_column, colors)
         self._resize()
 
+    def _grid_factors(self):
+        if self.shape == 0:
+            return 0, 1
+        else:
+            return 0.5, np.sqrt(3 / 4)
+
     def _redraw_same_color(self):
+        fx, fy = self._grid_factors()
         pen = QPen(QBrush(Qt.black), 4)
         pen.setCosmetic(True)
         brush = QBrush(QColor(192, 192, 192))
-        for x in range(self.size_x):
-            for y in range(self.size_y):
+        for y in range(self.size_y):
+            for x in range(self.size_x - self.shape * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
                 ellipse = QGraphicsEllipseItem()
-                ellipse.setRect(x - r / 2, y - r  / 2, r, r)
+                ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
                 ellipse.setPen(pen)
                 ellipse.setBrush(brush)
                 self.elements.addToGroup(ellipse)
 
     def _redraw_pie_charts(self, color_column, colors):
+        fx, fy = self._grid_factors()
         color_column = color_column.copy()
         color_column[np.isnan(color_column)] = len(colors)
         color_column = color_column.astype(int)
         colors.append(Qt.gray)
-        for x in range(self.size_x):
-            for y in range(self.size_y):
+        for y in range(self.size_y):
+            for x in range(self.size_x - self.shape * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
@@ -418,11 +440,12 @@ class OWSOM(OWWidget):
                 color_dist = color_dist.astype(float) / len(members)
                 pie = PieChart(color_dist, r / 2, colors)
                 self.elements.addToGroup(pie)
-                pie.setPos(x, y)
+                pie.setPos(x + (y % 2) * fx, y * fy)
 
     def _redraw_colored_circles(self, color_column, colors):
-        for x in range(self.size_x):
-            for y in range(self.size_y):
+        fx, fy = self._grid_factors()
+        for y in range(self.size_y):
+            for x in range(self.size_x - self.shape * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
@@ -438,11 +461,40 @@ class OWSOM(OWWidget):
                 brush = QBrush(color.lighter(200 - 100 * np.max(bc) / len(members)))
                 pen.setCosmetic(True)
                 ellipse = QGraphicsEllipseItem()
-                ellipse.setRect(x - r / 2, y - r  / 2, r, r)
+                ellipse.setRect(x + (y % 2) * fx - r / 2, y * fy - r / 2, r, r)
                 ellipse.setPen(pen)
                 ellipse.setBrush(brush)
                 self.elements.addToGroup(ellipse)
         self._resize()
+
+    def redraw_grid(self):
+        if self.grid is not None:
+            self.scene.removeItem(self.grid)
+        self.grid = QGraphicsItemGroup()
+        if self.shape == 0:
+            self._draw_square_grid()
+        else:
+            self._draw_hexagonal_grid()
+        self.scene.addItem(self.grid)
+
+    def _draw_square_grid(self):
+        for x in range(self.size_x + 1):
+            line = QGraphicsLineItem(x - 0.5, -0.5, x - 0.5, self.size_y - 0.5)
+            line.setPen(self._grid_pen)
+            self.grid.addToGroup(line)
+        for y in range(self.size_y + 1):
+            line = QGraphicsLineItem(-0.5, y - 0.5, self.size_x - 0.5, y - 0.5)
+            line.setPen(self._grid_pen)
+            self.grid.addToGroup(line)
+
+    def _draw_hexagonal_grid(self):
+        fy = np.sqrt(3) / 2
+        for y in range(self.size_y):
+            for x in range(self.size_x - y % 2):
+                hex = QGraphicsPathItem(_hexagon_path)
+                hex.setPen(self._grid_pen)
+                self.grid.addToGroup(hex)
+                hex.setPos(x + (y % 2) / 2, y * fy)
 
     def get_member_indices(self, x, y):
         i, j = self.cells[x, y]
@@ -450,7 +502,7 @@ class OWSOM(OWWidget):
 
     def _recompute_som(self):
         self.restart_button.setDisabled(True)
-        som = SOM(self.size_x, self.size_y)
+        som = SOM(self.size_x, self.size_y, hexagonal=self.shape == 1)
         callback = lambda i: self._animation_step(som) if self.animate else None
         som.fit(self.cont_x, 200, callback=callback)
         if not self.animate:
@@ -501,6 +553,22 @@ class OWSOM(OWWidget):
             output = None
             self.info.set_output_summary(self.info.NoOutput)
         self.Outputs.data.send(output)
+
+
+def _draw_hexagon():
+    path = QPainterPath()
+    s = 0.5 / (np.sqrt(3) / 2)
+    path.moveTo(-0.5, -s / 2)
+    path.lineTo(-0.5, s / 2)
+    path.lineTo(0, s)
+    path.lineTo(0.5, s / 2)
+    path.lineTo(0.5, -s / 2)
+    path.lineTo(0, -s)
+    path.lineTo(-0.5, -s / 2)
+    return path
+
+
+_hexagon_path = _draw_hexagon()
 
 
 if __name__ == "__main__":  # pragma: no cover
