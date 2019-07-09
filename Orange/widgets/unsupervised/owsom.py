@@ -6,20 +6,16 @@ from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter
 from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
-    QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup
-
-from minisom import MiniSom
-
-from Orange.widgets import gui
+    QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy
 
 from Orange.data import Table, Domain, DiscreteVariable
-from Orange.widgets.widget import OWWidget, Msg
+from Orange.widgets import gui
+from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-
-from Orange.widgets.widget import Input, Output
+from Orange.projection.som import SOM
 
 
 class SomView(QGraphicsView):
@@ -139,6 +135,7 @@ class OWSOM(OWWidget):
     manual_dimension = Setting(True)
     size_x = Setting(10)
     size_y = Setting(10)
+    animate = Setting(True)
 
     attr_color = ContextSetting(None)
     size_by_instances = Setting(True)
@@ -170,7 +167,7 @@ class OWSOM(OWWidget):
         gui.checkBox(
             box, self, "manual_dimension", "Set dimensions manually",
             callback=self.on_manual_dimension_change)
-        hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
+        self.manual_box = hbox = gui.indentedBox(box, orientation=Qt.Horizontal)
         spinargs = dict(
             widget=hbox, master=self, minv=5, maxv=100, step=5,
             alignment=Qt.AlignRight, callback=self.on_dimension_change)
@@ -179,18 +176,24 @@ class OWSOM(OWWidget):
         gui.spin(value="size_y", **spinargs)
         gui.rubber(hbox)
 
-        box = gui.vBox(self.controlArea, "Plot")
+        hbox = gui.hBox(box)
+        self.restart_button = gui.button(
+            hbox, self, "Restart", callback=self.restart_som,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        gui.checkBox(hbox, self, "animate", "Animate")
+
+        box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
-            box, self, "attr_color", label="Color: ", orientation=Qt.Horizontal,
+            box, self, "attr_color", maximumContentsLength=15,
             callback=self.on_attr_color_change,
             model=DomainModel(placeholder="(Same color)",
                               valid_types=DiscreteVariable))
         gui.checkBox(
-            box, self, "size_by_instances", label="Size by number of instances",
-            callback=self.on_attr_size_change)
-        gui.checkBox(
             box, self, "pie_charts", label="Show pie charts",
             callback=self.on_pie_chart_change)
+        gui.checkBox(
+            box, self, "size_by_instances", label="Size by number of instances",
+            callback=self.on_attr_size_change)
 
         gui.rubber(self.controlArea)
 
@@ -240,6 +243,8 @@ class OWSOM(OWWidget):
                 else:
                     self.data = data[mask]
                     self.cont_x = x[mask]
+                    self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
+                    self.cont_x /= np.sum(self.cont_x, axis=0)[None, :]
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
@@ -285,8 +290,7 @@ class OWSOM(OWWidget):
         self.selection.clear()
 
     def recompute_dimensions(self):
-        self.controls.size_x.setEnabled(self.manual_dimension)
-        self.controls.size_y.setEnabled(self.manual_dimension)
+        self.manual_box.setEnabled(self.manual_dimension)
         if not self.manual_dimension and self.cont_x is not None:
             self.size_x = self.size_y = \
                 max(5, int(np.ceil(np.sqrt(5 * np.sqrt(len(self.cont_x))))))
@@ -341,6 +345,11 @@ class OWSOM(OWWidget):
     def replot(self):
         self.clear_selection()
         self._set_valid_data()
+        self._recompute_som()
+        self._redraw()
+
+    def restart_som(self):
+        self.clear_selection()
         self._recompute_som()
         self._redraw()
 
@@ -426,7 +435,7 @@ class OWSOM(OWWidget):
                 bc = np.bincount(color_dist, minlength=len(self.attr_color.values))
                 color = colors[np.argmax(bc)]
                 pen = QPen(QBrush(color), 4)
-                brush = QBrush(color.lighter(100 + 100 * np.max(bc) / len(members)))
+                brush = QBrush(color.lighter(200 - 100 * np.max(bc) / len(members)))
                 pen.setCosmetic(True)
                 ellipse = QGraphicsEllipseItem()
                 ellipse.setRect(x - r / 2, y - r  / 2, r, r)
@@ -440,9 +449,21 @@ class OWSOM(OWWidget):
         return self.member_data[i:j]
 
     def _recompute_som(self):
-        som = MiniSom(self.size_x, self.size_y, self.cont_x.shape[1])
-        som.pca_weights_init(self.cont_x)
-        som.train_batch(self.cont_x, 1000)
+        self.restart_button.setDisabled(True)
+        som = SOM(self.size_x, self.size_y)
+        callback = lambda i: self._animation_step(som) if self.animate else None
+        som.fit(self.cont_x, 200, callback=callback)
+        if not self.animate:
+            self._assign_instances(som)
+        self.restart_button.setDisabled(False)
+
+    def _animation_step(self, som):
+        from AnyQt.QtWidgets import qApp
+        self._assign_instances(som)
+        self._redraw()
+        qApp.processEvents()
+
+    def _assign_instances(self, som):
         self.assignments = [som.winner(inst) for inst in self.cont_x]
         members = defaultdict(list)
         for i, cell in enumerate(self.assignments):
