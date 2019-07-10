@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal, QObject, \
     QThread
@@ -147,7 +148,7 @@ class OWSOM(OWWidget):
     name = "Self-organizing Map"
     description = "Computation of self-organizing map."
     icon = "icons/SOM.svg"
-    keywords = []
+    keywords = ["SOM"]
 
     class Inputs:
         data = Input("Data", Table)
@@ -297,7 +298,11 @@ class OWSOM(OWWidget):
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
-            self.attr_color = data.domain.class_var
+            class_var = data.domain.class_var
+            if class_var is not None and class_var.is_discrete:
+                self.attr_color = class_var
+            else:
+                self.attr_color = None
             self.openContext(data)
             if self.__pending_selection is not None:
                 self.on_selection_change(self.__pending_selection)
@@ -343,11 +348,11 @@ class OWSOM(OWWidget):
         else:
             self.size_x = int(5 * np.round(self.size_x / 5))
             self.size_y = int(5 * np.round(self.size_y / 5))
+        self._resize()
+        self.redraw_grid()
 
     def on_manual_dimension_change(self):
         self.recompute_dimensions()
-        self._resize()
-        self.redraw_grid()
         self.replot()
 
     def on_geometry_change(self):
@@ -422,7 +427,8 @@ class OWSOM(OWWidget):
         if self.attr_color is None:
             self._redraw_same_color()
         else:
-            color_column = self.data.get_column_view(self.attr_color)[0]
+            color_column = \
+                self.data.get_column_view(self.attr_color)[0].astype(float)
             colors = [QColor(*color) for color in self.attr_color.colors]
             if self.pie_charts:
                 self._redraw_pie_charts(color_column, colors)
