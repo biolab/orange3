@@ -150,9 +150,6 @@ class OWSOM(OWWidget):
     icon = "icons/SOM.svg"
     keywords = []
 
-    processingStateChanged = Signal(int)
-    progressBarValueChanged = Signal(float)
-
     class Inputs:
         data = Input("Data", Table)
 
@@ -165,6 +162,7 @@ class OWSOM(OWWidget):
     size_y = Setting(10)
     shape = Setting(1)
     animate = Setting(True)
+    initialization = Setting(0)
 
     attr_color = ContextSetting(None)
     size_by_instances = Setting(True)
@@ -198,6 +196,17 @@ class OWSOM(OWWidget):
         self.cells = self.member_data = None
         self.selection = set()
 
+        box = gui.vBox(self.controlArea, box=True)
+        hbox = gui.hBox(box)
+        self.restart_button = gui.button(
+            hbox, self, "Restart", callback=self.restart_som_pressed,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
+        gui.checkBox(hbox, self, "animate", "Animate")
+        gui.radioButtons(
+            box, self, "initialization",
+            ("Initialize with PCA", "Random initialization",
+             "Replicable random"))
+
         self.grid_box = box = gui.vBox(self.controlArea, "Grid")
         gui.comboBox(
             box, self, "shape", items=("Square grid", "Hexagonal grid"),
@@ -229,13 +238,6 @@ class OWSOM(OWWidget):
             callback=self.on_attr_size_change)
 
         gui.rubber(self.controlArea)
-
-        hbox = gui.hBox(self.controlArea, box=True)
-        self.restart_button = gui.button(
-            hbox, self, "Restart", callback=self.restart_som_pressed,
-            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
-        gui.checkBox(hbox, self, "animate", "Animate")
-
 
         self.scene = QGraphicsScene(self)
 
@@ -537,8 +539,11 @@ class OWSOM(OWWidget):
 
             def __init__(self, data, widget):
                 super().__init__()
-                self.som = SOM(widget.size_x, widget.size_y,
-                               hexagonal=widget.shape == 1)
+                self.som = SOM(
+                    widget.size_x, widget.size_y,
+                    hexagonal=widget.shape == 1,
+                    pca_init=widget.initialization == 0,
+                    random_seed=0 if widget.initialization == 2 else None)
                 self.data = data
                 self.widget = widget
 
