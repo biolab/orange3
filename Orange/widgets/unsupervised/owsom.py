@@ -3,7 +3,8 @@ from collections import defaultdict
 import numpy as np
 import scipy.sparse as sp
 
-from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal, QObject, \
+    QThread
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, QPainterPath
 from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
@@ -140,11 +141,17 @@ class PieChart(QGraphicsItem):
         painter.restore()
 
 
+N_ITERATIONS = 200
+
+
 class OWSOM(OWWidget):
     name = "Self-organizing Map"
     description = "Computation of self-organizing map."
     icon = "icons/SOM.svg"
     keywords = []
+
+    processingStateChanged = Signal(int)
+    progressBarValueChanged = Signal(float)
 
     class Inputs:
         data = Input("Data", Table)
@@ -180,6 +187,9 @@ class OWSOM(OWWidget):
     def __init__(self):
         super().__init__()
         self.__pending_selection = self.selection
+        self._optimizer = None
+        self._optimizer_thread = None
+        self._stop_optimization = False
 
         self.data = self.cont_x = None
         self.valid_indices = None
@@ -188,7 +198,7 @@ class OWSOM(OWWidget):
         self.cells = self.member_data = None
         self.selection = set()
 
-        box = gui.vBox(self.controlArea, "Grid")
+        self.grid_box = box = gui.vBox(self.controlArea, "Grid")
         gui.comboBox(
             box, self, "shape", items=("Square grid", "Hexagonal grid"),
             callback=self.on_dimension_change)
@@ -222,7 +232,7 @@ class OWSOM(OWWidget):
 
         hbox = gui.hBox(self.controlArea, box=True)
         self.restart_button = gui.button(
-            hbox, self, "Restart", callback=self.restart_som,
+            hbox, self, "Restart", callback=self.restart_som_pressed,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
         gui.checkBox(hbox, self, "animate", "Animate")
 
@@ -240,6 +250,8 @@ class OWSOM(OWWidget):
         selection_rect.hide()
 
         self.view = SomView(self.scene, selection_rect)
+        self.view.setMinimumWidth(400)
+        self.view.setMinimumHeight(400)
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setRenderHint(QPainter.Antialiasing)
@@ -253,6 +265,8 @@ class OWSOM(OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        self.stop_optimization_and_wait()
+
         self.closeContext()
         self.clear()
         self.Error.clear()
@@ -334,10 +348,12 @@ class OWSOM(OWWidget):
 
     def on_manual_dimension_change(self):
         self.recompute_dimensions()
+        self._resize()
         self.redraw_grid()
         self.replot()
 
     def on_dimension_change(self):
+        self._resize()
         self.redraw_grid()
         self.replot()
 
@@ -382,12 +398,13 @@ class OWSOM(OWWidget):
         self.clear_selection()
         self._set_valid_data()
         self._recompute_som()
-        self._redraw()
 
-    def restart_som(self):
-        self.clear_selection()
-        self._recompute_som()
-        self._redraw()
+    def restart_som_pressed(self):
+        if self._optimizer_thread is not None:
+            self._stop_optimization = True
+        else:
+            self.clear_selection()
+            self._recompute_som()
 
     def _set_valid_data(self):
         if self.attr_color is not None:
@@ -402,6 +419,8 @@ class OWSOM(OWWidget):
             self.scene.removeItem(self.elements)
         self.view.set_dimensions(self.size_x, self.size_y, self.shape)
 
+        if self.cells is None:
+            return
         sizes = self.cells[:, :, 1] - self.cells[:, :, 0]
         sizes = sizes.astype(float)
         if not self.size_by_instances:
@@ -421,7 +440,6 @@ class OWSOM(OWWidget):
                 self._redraw_pie_charts(color_column, colors)
             else:
                 self._redraw_colored_circles(color_column, colors)
-        self._resize()
 
     def _grid_factors(self):
         if self.shape == 0:
@@ -487,7 +505,6 @@ class OWSOM(OWWidget):
                 ellipse.setPen(pen)
                 ellipse.setBrush(brush)
                 self.elements.addToGroup(ellipse)
-        self._resize()
 
     def redraw_grid(self):
         fy = np.sqrt(3) / 2
@@ -512,19 +529,74 @@ class OWSOM(OWWidget):
         return self.member_data[i:j]
 
     def _recompute_som(self):
-        self.restart_button.setDisabled(True)
-        som = SOM(self.size_x, self.size_y, hexagonal=self.shape == 1)
-        callback = lambda i: self._animation_step(som) if self.animate else None
-        som.fit(self.cont_x, 200, callback=callback)
-        if not self.animate:
-            self._assign_instances(som)
-        self.restart_button.setDisabled(False)
 
-    def _animation_step(self, som):
-        from AnyQt.QtWidgets import qApp
-        self._assign_instances(som)
-        self._redraw()
-        qApp.processEvents()
+        class Optimizer(QObject):
+            update = Signal(float, SOM)
+            done = Signal(SOM)
+            stopped = Signal()
+
+            def __init__(self, data, widget):
+                super().__init__()
+                self.som = SOM(widget.size_x, widget.size_y,
+                               hexagonal=widget.shape == 1)
+                self.data = data
+                self.widget = widget
+
+            def callback(self, progress):
+                self.update.emit(progress, self.som)
+                return not self.widget._stop_optimization
+
+            def run(self):
+                self.som.fit(self.data, N_ITERATIONS, callback=self.callback)
+                self.done.emit(self.som)
+                self.stopped.emit()
+
+        def update(progress, som):
+            from AnyQt.QtWidgets import qApp
+            progressbar.advance()
+            qApp.processEvents()  # This is apparently needed to advance the bar
+            if self.animate:
+                self._assign_instances(som)
+                self._redraw()
+
+        def done(som):
+            self.set_buttons(running=False)
+            progressbar.finish()
+            self._assign_instances(som)
+            self._redraw()
+
+        def thread_finished():
+            self._optimizer = None
+            self._optimizer_thread = None
+
+        progressbar = gui.ProgressBar(self, N_ITERATIONS)
+        self.set_buttons(running=True)
+
+        self._optimizer = Optimizer(self.cont_x, self)
+        self._optimizer_thread = QThread()
+        self._optimizer.update.connect(update)
+        self._optimizer.done.connect(done)
+        self._optimizer.stopped.connect(self._optimizer_thread.quit)
+        self._optimizer.moveToThread(self._optimizer_thread)
+        self._optimizer_thread.started.connect(self._optimizer.run)
+        self._optimizer_thread.finished.connect(thread_finished)
+        self._stop_optimization = False
+        self._optimizer_thread.start()
+
+    def stop_optimization_and_wait(self):
+        if self._optimizer_thread is not None:
+            self._stop_optimization = True
+            self._optimizer_thread.quit()
+            self._optimizer_thread.wait()
+            self._optimizer_thread = None
+
+    def onDeleteWidget(self):
+        self.stop_optimization_and_wait()
+        super().onDeleteWidget()
+
+    def set_buttons(self, running):
+        self.restart_button.setText("Stop" if running else "Restart")
+        self.grid_box.setDisabled(running)
 
     def _assign_instances(self, som):
         # this form of 'for' has to be used because cont_x may be sparse
@@ -586,3 +658,5 @@ _hexagon_path = _draw_hexagon()
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWSOM).run(Table("heart_disease"))
+    # If run on sparse data, the widget core dumps if the user tries resizing it?!
+    # WidgetPreview(OWSOM).run(Table("/Users/janez/Downloads/deerwester.pkl"))

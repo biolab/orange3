@@ -34,8 +34,8 @@ class SOM:
         self.init_weights(x)
         for iteration in range(n_iterations):
             update(1 + iteration / (n_iterations / 2))
-            if callback is not None:
-                callback(iteration / n_iterations)
+            if callback is not None and not callback(iteration / n_iterations):
+                break
 
     def winner(self, row):
         winner = np.empty(2, dtype=np.int16)
