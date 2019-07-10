@@ -604,12 +604,10 @@ class OWSOM(OWWidget):
         self.grid_box.setDisabled(running)
 
     def _assign_instances(self, som):
-        # this form of 'for' has to be used because cont_x may be sparse
-        self.assignments = [som.winner(self.cont_x[i])
-                            for i in range(self.cont_x.shape[0])]
+        self.assignments = som.winners(self.cont_x)
         members = defaultdict(list)
-        for i, cell in enumerate(self.assignments):
-            members[cell].append(i)
+        for i, (x, y) in enumerate(self.assignments):
+            members[(x, y)].append(i)
         members.pop(None, None)
         self.cells = np.empty((self.size_x, self.size_y, 2), dtype=int)
         self.member_data = np.empty(self.cont_x.shape[0], dtype=int)

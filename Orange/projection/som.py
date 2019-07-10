@@ -58,13 +58,9 @@ class SOM:
             if callback is not None and not callback(iteration / n_iterations):
                 break
 
-    def winner(self, row):
-        winner = np.empty(2, dtype=np.int16)
-        if sp.issparse(row):
-            assert row.shape[0] == 1
-            _som.get_winner_sparse(self.weights, self.ssum_weights,
-                                   row.indices, row.data,
-                                   winner, int(self.hexagonal))
+    def winners(self, x):
+        if sp.issparse(x):
+            return _som.get_winners_sparse(
+                self.weights, self.ssum_weights, x, int(self.hexagonal))
         else:
-            _som.get_winner(self.weights, row, winner, int(self.hexagonal))
-        return tuple(winner)
+            return _som.get_winners(self.weights, x, int(self.hexagonal))
