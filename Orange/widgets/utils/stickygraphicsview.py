@@ -1,11 +1,11 @@
 import sys
 import math
 
-from PyQt5.QtCore import Qt, QRectF, QEvent, QCoreApplication, QObject
-from PyQt5.QtGui import QBrush
+from PyQt5.QtCore import Qt, QRectF, QEvent, QCoreApplication, QObject, QPointF
+from PyQt5.QtGui import QBrush, QPalette
 from PyQt5.QtWidgets import (
     QGraphicsView, QGraphicsScene, QWidget, QVBoxLayout, QSizePolicy,
-    QScrollBar,
+    QScrollBar, QGraphicsDropShadowEffect
 )
 
 from orangewidget.utils.overlay import OverlayWidget
@@ -16,6 +16,28 @@ __all__ = [
 
 
 class _OverlayWidget(OverlayWidget):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        palette = self.palette()
+        ds = QGraphicsDropShadowEffect(
+            parent=self,
+            objectName="sticky-view-shadow",
+            color=palette.color(QPalette.Foreground),
+            blurRadius=15,
+            offset=QPointF(0, 0),
+            enabled=True
+        )
+        self.setGraphicsEffect(ds)
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.PaletteChange:
+            effect = self.findChild(
+                QGraphicsDropShadowEffect, "sticky-view-shadow")
+            if effect is not None:
+                palette = self.palette()
+                effect.setColor(palette.color(QPalette.Foreground))
+
     def eventFilter(self, recv: QObject, event: QEvent) -> bool:
         if event.type() in (QEvent.Show, QEvent.Hide) and recv is self.widget():
             return False
