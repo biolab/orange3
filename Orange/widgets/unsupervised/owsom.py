@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import numpy as np
-import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal, QObject, \
     QThread
@@ -160,7 +159,7 @@ class OWSOM(OWWidget):
     manual_dimension = Setting(False)
     size_x = Setting(10)
     size_y = Setting(10)
-    shape = Setting(1)
+    hexagonal = Setting(1)
     initialization = Setting(0)
 
     attr_color = ContextSetting(None)
@@ -189,7 +188,6 @@ class OWSOM(OWWidget):
         self._stop_optimization = False
 
         self.data = self.cont_x = None
-        self.valid_indices = None
         self.assignments = None
         self.sizes = None
         self.cells = self.member_data = None
@@ -205,10 +203,10 @@ class OWSOM(OWWidget):
             ("Initialize with PCA", "Random initialization",
              "Replicable random"))
 
-        self.grid_box = box = gui.vBox(self.controlArea, "Grid")
+        self.grid_box = box = gui.vBox(self.controlArea, "Geometry")
         gui.comboBox(
-            box, self, "shape", items=("Square grid", "Hexagonal grid"),
-            callback=self.on_dimension_change)
+            box, self, "hexagonal", items=("Square grid", "Hexagonal grid"),
+            callback=self.on_geometry_change)
         box2 = gui.indentedBox(box, 10)
         gui.checkBox(
             box2, self, "manual_dimension", "Set dimensions manually",
@@ -216,10 +214,11 @@ class OWSOM(OWWidget):
         self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
             widget=box3, master=self, minv=5, maxv=100, step=5,
-            alignment=Qt.AlignRight, callback=self.on_dimension_change)
+            alignment=Qt.AlignRight, callback=self.on_geometry_change)
         gui.spin(value="size_x", **spinargs)
         gui.widgetLabel(box3, "×")
         gui.spin(value="size_y", **spinargs)
+        self.manual_box.setDisabled(not self.manual_dimension)
         gui.rubber(box3)
 
         box = gui.vBox(self.controlArea, "Color")
@@ -321,7 +320,6 @@ class OWSOM(OWWidget):
 
     def clear(self):
         self.data = self.cont_x = None
-        self.valid_indices = None
         self.sizes = None
         self.cells = self.member_data = None
         self.assignments = None
@@ -352,7 +350,7 @@ class OWSOM(OWWidget):
         self.redraw_grid()
         self.replot()
 
-    def on_dimension_change(self):
+    def on_geometry_change(self):
         self._resize()
         self.redraw_grid()
         self.replot()
@@ -380,14 +378,12 @@ class OWSOM(OWWidget):
         self.update_output()
 
     def redraw_selection(self):
-        if self.grid is None:
-            return
         brushes = [QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))]
         sel_pen = QPen(QBrush(QColor(128, 128, 128)), 2)
         sel_pen.setCosmetic(True)
         pens = [self._grid_pen, sel_pen]
         for y in range(self.size_y):
-            for x in range(self.size_x - (y % 2) * self.shape):
+            for x in range(self.size_x - (y % 2) * self.hexagonal):
                 cell = self.grid_cells[y, x]
                 selected = (x, y) in self.selection
                 cell.setBrush(brushes[selected])
@@ -396,7 +392,6 @@ class OWSOM(OWWidget):
 
     def replot(self):
         self.clear_selection()
-        self._set_valid_data()
         self._recompute_som()
 
     def restart_som_pressed(self):
@@ -406,18 +401,11 @@ class OWSOM(OWWidget):
             self.clear_selection()
             self._recompute_som()
 
-    def _set_valid_data(self):
-        if self.attr_color is not None:
-            mask = np.isfinite(self.data.get_column_view(self.attr_color)[0])
-            self.valid_indices = np.nonzero(mask)[0]
-        else:
-            self.valid_indices = np.arange(len(self.data))
-
     def _redraw(self):
         self.Warning.missing_colors.clear()
         if self.elements:
             self.scene.removeItem(self.elements)
-        self.view.set_dimensions(self.size_x, self.size_y, self.shape)
+        self.view.set_dimensions(self.size_x, self.size_y, self.hexagonal)
 
         if self.cells is None:
             return
@@ -442,10 +430,7 @@ class OWSOM(OWWidget):
                 self._redraw_colored_circles(color_column, colors)
 
     def _grid_factors(self):
-        if self.shape == 0:
-            return 0, 1
-        else:
-            return 0.5, np.sqrt(3 / 4)
+        return (0.5, np.sqrt(3 / 4)) if self.hexagonal else (0, 1)
 
     def _redraw_same_color(self):
         fx, fy = self._grid_factors()
@@ -453,7 +438,7 @@ class OWSOM(OWWidget):
         pen.setCosmetic(True)
         brush = QBrush(QColor(192, 192, 192))
         for y in range(self.size_y):
-            for x in range(self.size_x - self.shape * (y % 2)):
+            for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
@@ -470,7 +455,7 @@ class OWSOM(OWWidget):
         color_column = color_column.astype(int)
         colors.append(Qt.gray)
         for y in range(self.size_y):
-            for x in range(self.size_x - self.shape * (y % 2)):
+            for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
@@ -485,7 +470,7 @@ class OWSOM(OWWidget):
     def _redraw_colored_circles(self, color_column, colors):
         fx, fy = self._grid_factors()
         for y in range(self.size_y):
-            for x in range(self.size_x - self.shape * (y % 2)):
+            for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
@@ -513,12 +498,12 @@ class OWSOM(OWWidget):
         self.grid = QGraphicsItemGroup()
         self.grid_cells = np.full((self.size_y, self.size_x), None)
         for y in range(self.size_y):
-            for x in range(self.size_x - (y % 2) * self.shape):
-                if self.shape == 0:
-                    cell = QGraphicsRectItem(x - 0.5, y - 0.5, 1, 1)
-                else:
+            for x in range(self.size_x - (y % 2) * self.hexagonal):
+                if self.hexagonal:
                     cell = QGraphicsPathItem(_hexagon_path)
                     cell.setPos(x + (y % 2) / 2, y * fy)
+                else:
+                    cell = QGraphicsRectItem(x - 0.5, y - 0.5, 1, 1)
                 self.grid_cells[y, x] = cell
                 cell.setPen(self._grid_pen)
                 self.grid.addToGroup(cell)
@@ -529,6 +514,8 @@ class OWSOM(OWWidget):
         return self.member_data[i:j]
 
     def _recompute_som(self):
+        if self.cont_x is None:
+            return
 
         class Optimizer(QObject):
             update = Signal(float, SOM)
@@ -539,7 +526,7 @@ class OWSOM(OWWidget):
                 super().__init__()
                 self.som = SOM(
                     widget.size_x, widget.size_y,
-                    hexagonal=widget.shape == 1,
+                    hexagonal=widget.hexagonal,
                     pca_init=widget.initialization == 0,
                     random_seed=0 if widget.initialization == 2 else None)
                 self.data = data
@@ -622,8 +609,15 @@ class OWSOM(OWWidget):
 
     def _resize(self):
         vw, vh = self.view.width(), self.view.height()
-        scale = min(vw / (self.size_x + 1), vh / (self.size_y + 1))
-        self.scene.setSceneRect(-0.5, -0.5, self.size_x - 0.5, self.size_y - 0.5)
+        if self.hexagonal:
+            scale = min(vw / (self.size_x + 1),
+                        vh / ((self.size_y + 1) * (np.sqrt(3) / 2)))
+            self.scene.setSceneRect(
+                0, -1, self.size_x -1, self.size_y - 0.5)
+        else:
+            scale = min(vw / (self.size_x + 1), vh / (self.size_y + 1))
+            self.scene.setSceneRect(
+                -0.25, -0.25, self.size_x - 0.5, self.size_y - 0.5)
         self.view.setTransform(QTransform.fromScale(scale, scale))
 
     def update_output(self):
@@ -632,7 +626,7 @@ class OWSOM(OWWidget):
             for (x, y) in self.selection:
                 indices.extend(self.get_member_indices(x, y))
         if indices:
-            output = self.data[self.valid_indices[indices]]
+            output = self.data[indices]
             self.info.set_output_summary(str(len(indices)))
         else:
             output = None
