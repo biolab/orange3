@@ -7,7 +7,7 @@ from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, QPainterPath
 from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
-    QGraphicsPathItem, QGraphicsLineItem
+    QGraphicsPathItem
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import gui
@@ -29,15 +29,20 @@ class SomView(QGraphicsView):
         self.__selectionRect = selection_rect
         self.__button_down_pos = None
         self.size_x = self.size_y = 1
+        self.hexagonal = True
 
-    def set_dimensions(self, size_x, size_y):
+    def set_dimensions(self, size_x, size_y, hexagonal):
         self.size_x = size_x
         self.size_y = size_y
+        self.hexagonal = hexagonal
 
     def _selection_corners(self, event):
         def item_coordinates(x, y):
-            return (int(np.clip(np.round(x), 0, self.size_x - 1)),
-                    int(np.clip(np.round(y), 0, self.size_y - 1)))
+            if self.hexagonal:
+                return x, y
+            else:
+                return (int(np.clip(np.round(x), 0, self.size_x - 1)),
+                        int(np.clip(np.round(y), 0, self.size_y - 1)))
 
         x0, y0 = self.__button_down_pos.x(), self.__button_down_pos.y()
         pos = self.mapToScene(event.pos())
@@ -60,8 +65,9 @@ class SomView(QGraphicsView):
             return
 
         (x0, y0), (x1, y1), _ = self._selection_corners(event)
-        rect = QRectF(QPointF(x0 - 0.5, y0 - 0.5),
-                      QPointF(x1 + 0.5, y1 + 0.5)).normalized()
+        d = 0 if self.hexagonal else 0.5
+        rect = QRectF(QPointF(x0 - d, y0 - d),
+                      QPointF(x1 + d, y1 + d)).normalized()
         self.__selectionRect.setRect(rect)
         self.__selectionRect.show()
         event.accept()
@@ -72,8 +78,21 @@ class SomView(QGraphicsView):
 
         self.__selectionRect.hide()
         (x0, y0), (x1, y1), outside = self._selection_corners(event)
-        selection = set() if outside \
-            else {(x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)}
+        if outside:
+            selection = set()
+        elif self.hexagonal:
+            fy = np.sqrt(3) / 2
+            y0 = max(0, int(y0 / fy + 0.5))
+            y1 = min(self.size_y, int(np.ceil(y1 / fy + 0.5)))
+            selection = set()
+            for y in range(y0, y1):
+                x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
+                x1_ = min(self.size_x - y % 2,
+                          int(np.ceil(x1 + 0.5 - (y % 2) / 2)))
+                selection |= {(x, y) for x in range(x0_, x1_)}
+        else:
+            selection = {(x, y) for x in range(x0, x1 + 1)
+                         for y in range(y0, y1 + 1)}
 
         if event.modifiers() & Qt.ControlModifier:
             action = self.SelectionToggle
@@ -227,8 +246,8 @@ class OWSOM(OWWidget):
         self.mainArea.layout().addWidget(self.view)
 
         self.elements = None
-        self.selection_item = None
         self.grid = None
+        self.grid_cells = None
         self.redraw_grid()
 
     @Inputs.data
@@ -296,10 +315,8 @@ class OWSOM(OWWidget):
         self.Error.clear()
 
     def clear_selection(self):
-        if self.selection_item is not None:
-            self.scene.removeItem(self.selection_item)
-            self.selection_item = None
         self.selection.clear()
+        self.redraw_selection()
 
     def recompute_dimensions(self):
         self.manual_box.setEnabled(self.manual_dimension)
@@ -325,7 +342,6 @@ class OWSOM(OWWidget):
 
     def on_attr_size_change(self):
         self._redraw()
-        self.redraw_selection()
 
     def on_pie_chart_change(self):
         self._redraw()
@@ -343,18 +359,19 @@ class OWSOM(OWWidget):
         self.update_output()
 
     def redraw_selection(self):
-        if self.selection_item:
-            self.scene.removeItem(self.selection_item)
-        self.selection_item = QGraphicsItemGroup()
-        self.selection_item.setZValue(-50)
-        pen = QPen(QBrush(Qt.blue), 15)
-        pen.setCosmetic(True)
-        for x, y in self.selection:
-            r = self.sizes[x, y]
-            circle = QGraphicsEllipseItem(x - r / 2, y - r / 2, r, r)
-            circle.setPen(pen)
-            self.selection_item.addToGroup(circle)
-        self.scene.addItem(self.selection_item)
+        if self.grid is None:
+            return
+        brushes = [QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))]
+        sel_pen = QPen(QBrush(QColor(128, 128, 128)), 2)
+        sel_pen.setCosmetic(True)
+        pens = [self._grid_pen, sel_pen]
+        for y in range(self.size_y):
+            for x in range(self.size_x - (y % 2) * self.shape):
+                cell = self.grid_cells[y, x]
+                selected = (x, y) in self.selection
+                cell.setBrush(brushes[selected])
+                cell.setPen(pens[selected])
+                cell.setZValue(selected)
 
     def replot(self):
         self.clear_selection()
@@ -378,7 +395,7 @@ class OWSOM(OWWidget):
         self.Warning.missing_colors.clear()
         if self.elements:
             self.scene.removeItem(self.elements)
-        self.view.set_dimensions(self.size_x, self.size_y)
+        self.view.set_dimensions(self.size_x, self.size_y, self.shape)
 
         sizes = self.cells[:, :, 1] - self.cells[:, :, 0]
         sizes = sizes.astype(float)
@@ -468,33 +485,22 @@ class OWSOM(OWWidget):
         self._resize()
 
     def redraw_grid(self):
+        fy = np.sqrt(3) / 2
         if self.grid is not None:
             self.scene.removeItem(self.grid)
         self.grid = QGraphicsItemGroup()
-        if self.shape == 0:
-            self._draw_square_grid()
-        else:
-            self._draw_hexagonal_grid()
-        self.scene.addItem(self.grid)
-
-    def _draw_square_grid(self):
-        for x in range(self.size_x + 1):
-            line = QGraphicsLineItem(x - 0.5, -0.5, x - 0.5, self.size_y - 0.5)
-            line.setPen(self._grid_pen)
-            self.grid.addToGroup(line)
-        for y in range(self.size_y + 1):
-            line = QGraphicsLineItem(-0.5, y - 0.5, self.size_x - 0.5, y - 0.5)
-            line.setPen(self._grid_pen)
-            self.grid.addToGroup(line)
-
-    def _draw_hexagonal_grid(self):
-        fy = np.sqrt(3) / 2
+        self.grid_cells = np.full((self.size_y, self.size_x), None)
         for y in range(self.size_y):
-            for x in range(self.size_x - y % 2):
-                hex = QGraphicsPathItem(_hexagon_path)
-                hex.setPen(self._grid_pen)
-                self.grid.addToGroup(hex)
-                hex.setPos(x + (y % 2) / 2, y * fy)
+            for x in range(self.size_x - (y % 2) * self.shape):
+                if self.shape == 0:
+                    cell = QGraphicsRectItem(x - 0.5, y - 0.5, 1, 1)
+                else:
+                    cell = QGraphicsPathItem(_hexagon_path)
+                    cell.setPos(x + (y % 2) / 2, y * fy)
+                self.grid_cells[y, x] = cell
+                cell.setPen(self._grid_pen)
+                self.grid.addToGroup(cell)
+        self.scene.addItem(self.grid)
 
     def get_member_indices(self, x, y):
         i, j = self.cells[x, y]
