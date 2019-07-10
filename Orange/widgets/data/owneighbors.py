@@ -77,11 +77,14 @@ class OWNeighbors(OWWidget):
             callback=self.recompute)
         gui.spin(
             box, self, "n_neighbors", label="Number of neighbors:",
-            step=1, spinType=int, minv=0, maxv=100, callback=self.apply)
+            step=1, spinType=int, minv=0, maxv=100,
+            # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
+            callback=lambda: self.apply())
         gui.checkBox(
             box, self, "exclude_reference",
             label="Exclude rows (equal to) references",
-            callback=self.apply)
+            # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
+            callback=lambda: self.apply())
 
         self.apply_button = gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
