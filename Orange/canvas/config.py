@@ -30,7 +30,7 @@ class Config(config.Config):
     Orange application configuration
     """
     OrganizationDomain = "biolab.si"
-    ApplicationName = "Orange Canvas"
+    ApplicationName = "Orange"
     ApplicationVersion = Orange.__version__
 
     @staticmethod
@@ -203,12 +203,11 @@ def log_dir():
     return logdir
 
 
-def widget_settings_dir():
+def widget_settings_dir(versioned=True):
     """
     Return the widget settings directory.
     """
-    from Orange.misc import environ
-    return environ.widget_settings_dir()
+    return config.widget_settings_dir(versioned)
 
 
 def widgets_entry_points():

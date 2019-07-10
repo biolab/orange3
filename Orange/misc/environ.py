@@ -9,16 +9,10 @@ $DATA_HOME/Orange/$VERSION/
 
 where DATA_HOME is a platform dependent application directory
 (:ref:`data_dir_base`) and VERSION is Orange.__version__ string.
-
-``canvas`` subdirectory is reserved for settings/preferences stored
-by Orange Canvas
-``widget`` subdirectory is reserved for settings/preferences stored
-by OWWidget
-
 """
-
 import os
 import sys
+import warnings
 
 import Orange
 
@@ -65,7 +59,13 @@ def widget_settings_dir(versioned=True):
 
     This a subdirectory of ``data_dir(versioned)`` named "widgets"
     """
-    return os.path.join(data_dir(versioned=versioned), "widgets")
+    warnings.warn(
+        f"'{__name__}.widget_settings_dir' is deprecated. "
+        "Use 'Orange.widgets.settings.widget_settings_dir'",
+        DeprecationWarning, stacklevel=2
+    )
+    from Orange.canvas import config
+    return config.widget_settings_dir(versioned)
 
 
 def cache_dir(*args):
