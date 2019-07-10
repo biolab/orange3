@@ -161,7 +161,6 @@ class OWSOM(OWWidget):
     size_x = Setting(10)
     size_y = Setting(10)
     shape = Setting(1)
-    animate = Setting(True)
     initialization = Setting(0)
 
     attr_color = ContextSetting(None)
@@ -201,7 +200,6 @@ class OWSOM(OWWidget):
         self.restart_button = gui.button(
             hbox, self, "Restart", callback=self.restart_som_pressed,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
-        gui.checkBox(hbox, self, "animate", "Animate")
         gui.radioButtons(
             box, self, "initialization",
             ("Initialize with PCA", "Random initialization",
@@ -560,9 +558,8 @@ class OWSOM(OWWidget):
             from AnyQt.QtWidgets import qApp
             progressbar.advance()
             qApp.processEvents()  # This is apparently needed to advance the bar
-            if self.animate:
-                self._assign_instances(som)
-                self._redraw()
+            self._assign_instances(som)
+            self._redraw()
 
         def done(som):
             self.set_buttons(running=False)
