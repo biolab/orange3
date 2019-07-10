@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import numpy as np
+import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, QPainterPath
@@ -268,14 +269,18 @@ class OWSOM(OWWidget):
                 if len(cont_attrs) < len(attrs):
                     self.Warning.ignoring_disc_variables()
                 x = Table.from_table(Domain(cont_attrs), data).X
-                mask = np.all(np.isfinite(x), axis=1)
-                if not np.any(mask):
-                    self.Error.no_defined_rows()
+                if sp.issparse(x):
+                    self.data = data
+                    self.cont_x = x.tocsr()
                 else:
-                    self.data = data[mask]
-                    self.cont_x = x[mask]
-                    self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
-                    self.cont_x /= np.sum(self.cont_x, axis=0)[None, :]
+                    mask = np.all(np.isfinite(x), axis=1)
+                    if not np.any(mask):
+                        self.Error.no_defined_rows()
+                    else:
+                        self.data = data[mask]
+                        self.cont_x = x[mask]
+                        self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
+                        self.cont_x /= np.sum(self.cont_x, axis=0)[None, :]
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
@@ -294,7 +299,7 @@ class OWSOM(OWWidget):
             return
 
         details = f"{len(self.data)} instances"
-        ignored = len(self.cont_x) - len(self.data)
+        ignored = self.cont_x.shape[0] - len(self.data)
         if ignored:
             details += f" {ignored} ignored because of missing values"
         details += f"\n{self.cont_x.shape[1]} numeric variables"
@@ -322,7 +327,7 @@ class OWSOM(OWWidget):
         self.manual_box.setEnabled(self.manual_dimension)
         if not self.manual_dimension and self.cont_x is not None:
             self.size_x = self.size_y = \
-                max(5, int(np.ceil(np.sqrt(5 * np.sqrt(len(self.cont_x))))))
+                max(5, int(np.ceil(np.sqrt(5 * np.sqrt(self.cont_x.shape[0])))))
         else:
             self.size_x = int(5 * np.round(self.size_x / 5))
             self.size_y = int(5 * np.round(self.size_y / 5))
@@ -522,13 +527,15 @@ class OWSOM(OWWidget):
         qApp.processEvents()
 
     def _assign_instances(self, som):
-        self.assignments = [som.winner(inst) for inst in self.cont_x]
+        # this form of 'for' has to be used because cont_x may be sparse
+        self.assignments = [som.winner(self.cont_x[i])
+                            for i in range(self.cont_x.shape[0])]
         members = defaultdict(list)
         for i, cell in enumerate(self.assignments):
             members[cell].append(i)
         members.pop(None, None)
         self.cells = np.empty((self.size_x, self.size_y, 2), dtype=int)
-        self.member_data = np.empty(len(self.cont_x), dtype=int)
+        self.member_data = np.empty(self.cont_x.shape[0], dtype=int)
         index = 0
         for x in range(self.size_x):
             for y in range(self.size_y):
