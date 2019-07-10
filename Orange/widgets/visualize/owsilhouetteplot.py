@@ -389,11 +389,9 @@ class OWSilhouettePlot(widget.OWWidget):
             rect.setRight(geom.right())
             return rect
         if header is not None:
-            self.view.setHeaderSceneRect(
-                extend_horizontal(header.geometry().adjusted(0, 0, 0, 1)))
+            self.view.setHeaderSceneRect(extend_horizontal(header.geometry()))
         if footer is not None:
-            self.view.setFooterSceneRect(
-                extend_horizontal(footer.geometry().adjusted(0, -1, 0, 0)))
+            self.view.setFooterSceneRect(extend_horizontal(footer.geometry()))
 
     def commit(self):
         """
