@@ -10,6 +10,8 @@ from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
+    create_annotated_table
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import gui
@@ -154,7 +156,8 @@ class OWSOM(OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        data = Output("Data", Table)
+        selected_data = Output("Selected Data", Table, default=True)
+        annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settingsHandler = DomainContextHandler()
     manual_dimension = Setting(False)
@@ -304,9 +307,6 @@ class OWSOM(OWWidget):
             else:
                 self.attr_color = None
             self.openContext(data)
-            if self.__pending_selection is not None:
-                self.on_selection_change(self.__pending_selection)
-                self.__pending_selection = None
         self.recompute_dimensions()
         self.replot()
         self._set_input_summary()
@@ -559,6 +559,11 @@ class OWSOM(OWWidget):
             progressbar.finish()
             self._assign_instances(som)
             self._redraw()
+            # This is the first time we know what was selected (assuming that
+            # initialization is not set to random)
+            if self.__pending_selection is not None:
+                self.on_selection_change(self.__pending_selection)
+                self.__pending_selection = None
 
         def thread_finished():
             self._optimizer = None
@@ -632,12 +637,14 @@ class OWSOM(OWWidget):
             for (x, y) in self.selection:
                 indices.extend(self.get_member_indices(x, y))
         if indices:
-            output = self.data[indices]
+            self.Outputs.selected_data.send(self.data[indices])
+            self.Outputs.annotated_data.send(
+                create_annotated_table(self.data, indices))
             self.info.set_output_summary(str(len(indices)))
         else:
-            output = None
+            self.Outputs.selected_data.send(None)
+            self.Outputs.annotated_data.send(None)
             self.info.set_output_summary(self.info.NoOutput)
-        self.Outputs.data.send(output)
 
 
 def _draw_hexagon():
