@@ -557,8 +557,8 @@ class SilhouettePlot(QGraphicsWidget):
         self.__hoveredItem = None
         self.__topScale = None     # type: Optional[pg.AxisItem]
         self.__bottomScale = None  # type: Optional[pg.AxisItem]
+        self.__layout.setColumnSpacing(0, 1.)
         self.setLayout(self.__layout)
-        self.layout().setColumnSpacing(0, 1.)
         self.setFocusPolicy(Qt.StrongFocus)
 
     def setScores(self, scores, labels, values, colors, rownames=None):
@@ -613,7 +613,8 @@ class SilhouettePlot(QGraphicsWidget):
         if names is not None:
             names = np.asarray(names, dtype=object)
 
-        layout = self.layout()
+        layout = self.__layout
+        assert layout is self.layout()
 
         font = self.font()
         font.setPixelSize(self.__barHeight)
@@ -621,7 +622,7 @@ class SilhouettePlot(QGraphicsWidget):
         for i, grp in enumerate(self.__groups):
             grp.rownames = names[grp.indices] if names is not None else None
             item = layout.itemAt(i + 1, 3)
-
+            assert isinstance(item, TextListWidget)
             if grp.rownames is not None:
                 metrics = QFontMetrics(self.font())
                 rownames = [metrics.elidedText(rowname, Qt.ElideRight, ROW_NAMES_WIDTH)
@@ -643,7 +644,7 @@ class SilhouettePlot(QGraphicsWidget):
             for baritem, tooltip in zip(baritems, tooltips):
                 baritem.setToolTip(tooltip)
 
-        self.layout().activate()
+        layout.activate()
 
     def setRowNamesVisible(self, visible):
         if self.__rowNamesVisible != visible:
@@ -707,7 +708,9 @@ class SilhouettePlot(QGraphicsWidget):
                          pen=axispen)
         ax.setRange(smin, smax)
         self.__topScale = ax
-        self.layout().addItem(ax, 0, 2)
+        layout = self.__layout
+        assert layout is self.layout()
+        layout.addItem(ax, 0, 2)
 
         for i, group in enumerate(self.__groups):
             silhouettegroup = BarPlotItem(parent=self)
@@ -717,15 +720,15 @@ class SilhouettePlot(QGraphicsWidget):
             silhouettegroup.setPlotData(group.scores)
             silhouettegroup.setPreferredBarSize(self.__barHeight)
             silhouettegroup.setData(0, group.indices)
-            self.layout().addItem(silhouettegroup, i + 1, 2)
+            layout.addItem(silhouettegroup, i + 1, 2)
 
             if group.label:
-                self.layout().addItem(Line(orientation=Qt.Vertical), i + 1, 1)
+                layout.addItem(Line(orientation=Qt.Vertical), i + 1, 1)
                 label = QGraphicsSimpleTextItem(self)
                 label.setText("{} ({})".format(escape(group.label),
                                                len(group.scores)))
                 item = WrapperLayoutItem(label, Qt.Vertical, parent=self)
-                self.layout().addItem(item, i + 1, 0, Qt.AlignCenter)
+                layout.addItem(item, i + 1, 0, Qt.AlignCenter)
 
             textlist = TextListWidget(self, font=font)
             sp = textlist.sizePolicy()
@@ -738,13 +741,13 @@ class SilhouettePlot(QGraphicsWidget):
             else:
                 textlist.setVisible(False)
 
-            self.layout().addItem(textlist, i + 1, 3)
+            layout.addItem(textlist, i + 1, 3)
 
         ax = pg.AxisItem(parent=self, orientation="bottom", maxTickLength=7,
                          pen=axispen)
         ax.setRange(smin, smax)
         self.__bottomScale = ax
-        self.layout().addItem(ax, len(self.__groups) + 1, 2)
+        layout.addItem(ax, len(self.__groups) + 1, 2)
 
     def topScaleItem(self):
         # type: () -> Optional[QGraphicsWidget]
