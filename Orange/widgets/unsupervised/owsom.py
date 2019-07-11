@@ -5,13 +5,14 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal, QObject, \
     QThread
-from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, QPainterPath
+from AnyQt.QtGui import QTransform, QPen, QBrush, QColor, QPainter, \
+    QPainterPath, QKeyEvent
 from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
-from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 
+from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
     create_annotated_table
 
@@ -32,6 +33,7 @@ class SomView(QGraphicsView):
     SelectionClear, SelectionAdd, SelectionRemove, SelectionToggle = 1, 2, 4, 8
     SelectionSet = SelectionClear | SelectionAdd
     selection_changed = Signal(set, int)
+    selection_moved = Signal(QKeyEvent)
 
     def __init__(self, scene, selection_rect):
         super().__init__(scene)
@@ -114,6 +116,11 @@ class SomView(QGraphicsView):
         self.selection_changed.emit(selection, action)
         event.accept()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() in (Qt.Key_Up, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right):
+            self.selection_moved.emit(event)
+        else:
+            super().keyPressEvent(event)
 
 class PieChart(QGraphicsItem):
     def __init__(self, dist, r, colors):
@@ -263,6 +270,7 @@ class OWSOM(OWWidget):
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setRenderHint(QPainter.Antialiasing)
         self.view.selection_changed.connect(self.on_selection_change)
+        self.view.selection_moved.connect(self.on_selection_move)
         self.mainArea.layout().addWidget(self.view)
 
         self.elements = None
@@ -394,6 +402,32 @@ class OWSOM(OWWidget):
             self.selection ^= selection
         self.redraw_selection()
         self.update_output()
+
+    def on_selection_move(self, event: QKeyEvent):
+        if len(self.selection) > 1:
+            return
+
+        if not self.selection:
+            if event.key() in (Qt.Key_Right, Qt.Key_Down):
+                x = y = 0
+            else:
+                x = self.size_x - 1
+                y = self.size_y - 1
+        else:
+            x, y = next(iter(self.selection))
+            if event.key() == Qt.Key_Up and y > 0:
+                y -= 1
+            if event.key() == Qt.Key_Down and y < self.size_y - 1:
+                y += 1
+            if event.key() == Qt.Key_Left and x:
+                x -= 1
+            if event.key() == Qt.Key_Right and x < self.size_x - 1:
+                x += 1
+
+        x -= self.hexagonal and x == self.size_x - 1 and y % 2
+        if {(x, y)} != self.selection:
+            self.on_selection_change({(x, y)})
+
 
     def redraw_selection(self):
         brushes = [QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))]
