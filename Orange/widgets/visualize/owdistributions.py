@@ -227,8 +227,8 @@ class OWDistributions(OWWidget):
     number_of_bins = settings.ContextSetting(5, schema_only=True)
 
     fitted_distribution = settings.Setting(0)
-    show_probs = settings.Setting(True)
-    stacked_columns = settings.Setting(True)
+    show_probs = settings.Setting(False)
+    stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
 
     auto_apply = settings.Setting(True)
@@ -270,9 +270,12 @@ class OWDistributions(OWWidget):
         box = self.continuous_box = gui.vBox(self.controlArea, "Distribution")
         slider = gui.hSlider(
             box, self, "number_of_bins",
-            label="Number of bins", orientation=Qt.Horizontal,
+            label="Bin width", orientation=Qt.Horizontal,
             minValue=0, maxValue=max(1, len(self.binnings) - 1),
             createLabel=False, callback=self._on_bins_changed)
+        self.bin_width_label = gui.widgetLabel(slider.box)
+        self.bin_width_label.setFixedWidth(35)
+        self.bin_width_label.setAlignment(Qt.AlignRight)
         slider.sliderReleased.connect(self._on_bin_slider_released)
         gui.comboBox(
             box, self, "fitted_distribution", label="Fitted distribution",
@@ -294,7 +297,7 @@ class OWDistributions(OWWidget):
             callback=self.replot)
         gui.checkBox(
             box2, self, "show_probs", "Show probabilities",
-            callback=self.replot)
+            callback=self._on_show_probabilities_changed)
 
         gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
@@ -321,6 +324,7 @@ class OWDistributions(OWWidget):
             enableMenu=False, enableMouse=False,
             axisItems={"bottom": ElidedLabelsAxis("bottom")})
         self.plot = self.ploti.vb
+        self.plot.setMouseEnabled(False, False)
         self.ploti.hideButtons()
         self.plotview.setCentralItem(self.ploti)
 
@@ -392,6 +396,7 @@ class OWDistributions(OWWidget):
 
     def _on_bins_changed(self):
         self.reset_select()
+        self._set_bin_width_slider_label()
         self.replot()
         # this is triggered when dragging, so don't call apply here;
         # apply is called on sliderReleased
@@ -399,6 +404,25 @@ class OWDistributions(OWWidget):
     def _on_bin_slider_released(self):
         self._user_var_bins[self.var] = self.number_of_bins
         self.apply()
+
+    def _set_bin_width_slider_label(self):
+        text = ""
+        if self.number_of_bins < len(self.binnings):
+            bins = self.binnings[self.number_of_bins]
+            if len(bins) > 1:
+                text = self.var.repr_val(bins[1] - bins[0])
+        self.bin_width_label.setText(text)
+
+    def _on_show_probabilities_changed(self):
+        label = self.controls.fitted_distribution.label
+        if self.show_probs:
+            label.setText("Fitted probability")
+            label.setToolTip(
+                "Chosen distribution is used to compute Bayesian probabilities")
+        else:
+            label.setText("Fitted distribution")
+            label.setToolTip("")
+        self.replot()
 
     @property
     def is_valid(self):
@@ -570,6 +594,7 @@ class OWDistributions(OWWidget):
         prior_sizes = np.array(prior_sizes)
         tot_freqs = np.zeros(len(ys))
 
+        lasti = len(ys[0]) - 1
         for i, x0, x1, freqs in zip(count(), bins, bins[1:], zip(*ys)):
             tot_freqs += freqs
             plotfreqs = tot_freqs.copy() if self.cumulative_distr else freqs
@@ -577,7 +602,7 @@ class OWDistributions(OWWidget):
                 x0, x1 - x0, 0 if self.stacked_columns else 0.1, plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
                 tooltip=self._split_tooltip(
-                    self.str_int(x0, x1, not i, i == len(bins) - 1),
+                    self.str_int(x0, x1, not i, i == lasti),
                     np.sum(plotfreqs), total, gvalues, plotfreqs))
 
         if fitters:
@@ -655,10 +680,12 @@ class OWDistributions(OWWidget):
     def _display_legend(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
         if self.cvar is None:
-            if self.curve_descriptions:
-                self._legend.addItem(
-                    pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
-                    self.curve_descriptions[0])
+            if not self.curve_descriptions:
+                self._legend.hide()
+                return
+            self._legend.addItem(
+                pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
+                self.curve_descriptions[0])
         else:
             cvar_values = self.cvar.values
             colors = [QColor(*col) for col in self.cvar.colors]
@@ -687,6 +714,7 @@ class OWDistributions(OWWidget):
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
             max_bins, self._user_var_bins.get(self.var, self.number_of_bins))
+        self._set_bin_width_slider_label()
 
     @staticmethod
     def min_var_resolution(var):
