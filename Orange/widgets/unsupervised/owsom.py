@@ -10,11 +10,14 @@ from AnyQt.QtWidgets import \
     QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
+from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
+
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
     create_annotated_table
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import gui
+from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
@@ -22,6 +25,8 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.projection.som import SOM
 
+
+sqrt3_2 = np.sqrt(3) / 2
 
 class SomView(QGraphicsView):
     SelectionClear, SelectionAdd, SelectionRemove, SelectionToggle = 1, 2, 4, 8
@@ -85,9 +90,8 @@ class SomView(QGraphicsView):
         if outside:
             selection = set()
         elif self.hexagonal:
-            fy = np.sqrt(3) / 2
-            y0 = max(0, int(y0 / fy + 0.5))
-            y1 = min(self.size_y, int(np.ceil(y1 / fy + 0.5)))
+            y0 = max(0, int(y0 / sqrt3_2 + 0.5))
+            y1 = min(self.size_y, int(np.ceil(y1 / sqrt3_2 + 0.5)))
             selection = set()
             for y in range(y0, y1):
                 x0_ = max(0, int(x0 + 0.5 - (y % 2) / 2))
@@ -264,6 +268,7 @@ class OWSOM(OWWidget):
         self.elements = None
         self.grid = None
         self.grid_cells = None
+        self.legend = None
         self.redraw_grid()
 
     @Inputs.data
@@ -307,6 +312,7 @@ class OWSOM(OWWidget):
             else:
                 self.attr_color = None
             self.openContext(data)
+        self.create_legend()
         self.recompute_dimensions()
         self.replot()
         self._set_input_summary()
@@ -348,20 +354,27 @@ class OWSOM(OWWidget):
         else:
             self.size_x = int(5 * np.round(self.size_x / 5))
             self.size_y = int(5 * np.round(self.size_y / 5))
-        self._resize()
+        self.rescale()
         self.redraw_grid()
 
     def on_manual_dimension_change(self):
         self.recompute_dimensions()
+        self.set_legend_pos()
         self.replot()
 
     def on_geometry_change(self):
-        self._resize()
+        self.set_legend_pos()
+        self.rescale()
+        if self.elements: # Prevent having redrawn grid but with old elements
+            self.scene.removeItem(self.elements)
+            self.elements = None
         self.redraw_grid()
         self.replot()
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
+        self.create_legend()
+        self.rescale()
         self._redraw()
 
     def on_attr_size_change(self):
@@ -410,6 +423,7 @@ class OWSOM(OWWidget):
         self.Warning.missing_colors.clear()
         if self.elements:
             self.scene.removeItem(self.elements)
+            self.elements = None
         self.view.set_dimensions(self.size_x, self.size_y, self.hexagonal)
 
         if self.cells is None:
@@ -435,11 +449,12 @@ class OWSOM(OWWidget):
             else:
                 self._redraw_colored_circles(color_column, colors)
 
+    @property
     def _grid_factors(self):
-        return (0.5, np.sqrt(3 / 4)) if self.hexagonal else (0, 1)
+        return (0.5, sqrt3_2) if self.hexagonal else (0, 1)
 
     def _redraw_same_color(self):
-        fx, fy = self._grid_factors()
+        fx, fy = self._grid_factors
         pen = QPen(QBrush(Qt.black), 4)
         pen.setCosmetic(True)
         brush = QBrush(QColor(192, 192, 192))
@@ -455,7 +470,7 @@ class OWSOM(OWWidget):
                 self.elements.addToGroup(ellipse)
 
     def _redraw_pie_charts(self, color_column, colors):
-        fx, fy = self._grid_factors()
+        fx, fy = self._grid_factors
         color_column = color_column.copy()
         color_column[np.isnan(color_column)] = len(colors)
         color_column = color_column.astype(int)
@@ -474,7 +489,7 @@ class OWSOM(OWWidget):
                 pie.setPos(x + (y % 2) * fx, y * fy)
 
     def _redraw_colored_circles(self, color_column, colors):
-        fx, fy = self._grid_factors()
+        fx, fy = self._grid_factors
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
@@ -498,7 +513,6 @@ class OWSOM(OWWidget):
                 self.elements.addToGroup(ellipse)
 
     def redraw_grid(self):
-        fy = np.sqrt(3) / 2
         if self.grid is not None:
             self.scene.removeItem(self.grid)
         self.grid = QGraphicsItemGroup()
@@ -507,7 +521,7 @@ class OWSOM(OWWidget):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
                 if self.hexagonal:
                     cell = QGraphicsPathItem(_hexagon_path)
-                    cell.setPos(x + (y % 2) / 2, y * fy)
+                    cell.setPos(x + (y % 2) / 2, y * sqrt3_2)
                 else:
                     cell = QGraphicsRectItem(x - 0.5, y - 0.5, 1, 1)
                 self.grid_cells[y, x] = cell
@@ -616,20 +630,29 @@ class OWSOM(OWWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self._resize()
+        self.create_legend()  # re-wrap lines if necessary
+        self.rescale()
 
-    def _resize(self):
-        vw, vh = self.view.width(), self.view.height()
-        if self.hexagonal:
-            scale = min(vw / (self.size_x + 1),
-                        vh / ((self.size_y + 1) * (np.sqrt(3) / 2)))
-            self.scene.setSceneRect(
-                0, -1, self.size_x -1, self.size_y - 0.5)
+    def rescale(self):
+        if self.legend:
+            leg_height = self.legend.boundingRect().height()
+            leg_extra = 1.5
         else:
-            scale = min(vw / (self.size_x + 1), vh / (self.size_y + 1))
-            self.scene.setSceneRect(
-                -0.25, -0.25, self.size_x - 0.5, self.size_y - 0.5)
+            leg_height = 0
+            leg_extra = 1
+
+        vw, vh = self.view.width(), self.view.height() - leg_height
+        scale = min(vw / (self.size_x + 1),
+                    vh / ((self.size_y + leg_extra) * self._grid_factors[1]))
         self.view.setTransform(QTransform.fromScale(scale, scale))
+        if self.hexagonal:
+            self.view.setSceneRect(
+                0, -1, self.size_x - 1,
+                (self.size_y + leg_extra) * sqrt3_2 + leg_height / scale)
+        else:
+            self.view.setSceneRect(
+                -0.25, -0.25, self.size_x - 0.5,
+                self.size_y - 0.5 + leg_height / scale)
 
     def update_output(self):
         indices = []
@@ -645,6 +668,42 @@ class OWSOM(OWWidget):
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             self.info.set_output_summary(self.info.NoOutput)
+
+    def create_legend(self):
+        if self.legend is not None:
+            self.scene.removeItem(self.legend)
+            self.legend = None
+        if self.attr_color is None:
+            return None
+
+        names = self.attr_color.values
+        colors = [QColor(*color) for color in self.attr_color.colors]
+        items = []
+        size = 8
+        for name, color in zip(names, colors):
+            item = QGraphicsItemGroup()
+            item.addToGroup(
+                CanvasRectangle(None, -size / 2, -size / 2, size, size,
+                                Qt.gray, color))
+            item.addToGroup(CanvasText(None, name, size, 0, Qt.AlignVCenter))
+            items.append(item)
+
+        self.legend = wrap_legend_items(
+            items, hspacing=20, vspacing=16 + size,
+            max_width=self.view.width() - 25)
+        self.legend.setFlags(self.legend.ItemIgnoresTransformations)
+        self.legend.setTransform(
+            QTransform.fromTranslate(-self.legend.boundingRect().width() / 2,
+                                     0))
+        self.scene.addItem(self.legend)
+        self.set_legend_pos()
+
+    def set_legend_pos(self):
+        if self.legend is None:
+            return
+        self.legend.setPos(
+            self.size_x / 2,
+            (self.size_y + 0.2 + 0.3 * self.hexagonal) * self._grid_factors[1])
 
 
 def _draw_hexagon():
