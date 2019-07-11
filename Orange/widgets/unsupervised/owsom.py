@@ -12,22 +12,24 @@ from AnyQt.QtWidgets import \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
 
-from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
-from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_SIGNAL_NAME, \
-    create_annotated_table
+from Orange.data import Table, Domain
+from Orange.projection.som import SOM
 
-from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets import gui
-from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.projection.som import SOM
+from Orange.widgets.utils.annotated_data import \
+    create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
+from Orange.widgets.utils.colorpalette import ContinuousPaletteGenerator
+from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
+from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 
 
 sqrt3_2 = np.sqrt(3) / 2
+
 
 class SomView(QGraphicsView):
     SelectionClear, SelectionAdd, SelectionRemove, SelectionToggle = 1, 2, 4, 8
@@ -207,6 +209,7 @@ class OWSOM(OWWidget):
         self.sizes = None
         self.cells = self.member_data = None
         self.selection = set()
+        self.colors = self.bins = None
 
         box = gui.vBox(self.controlArea, box=True)
         hbox = gui.hBox(box)
@@ -241,7 +244,7 @@ class OWSOM(OWWidget):
             box, self, "attr_color", maximumContentsLength=15,
             callback=self.on_attr_color_change,
             model=DomainModel(placeholder="(Same color)",
-                              valid_types=DiscreteVariable))
+                              valid_types=DomainModel.PRIMITIVE))
         gui.checkBox(
             box, self, "pie_charts", label="Show pie charts",
             callback=self.on_pie_chart_change)
@@ -314,12 +317,9 @@ class OWSOM(OWWidget):
 
         if self.data is not None:
             self.controls.attr_color.model().set_domain(data.domain)
-            class_var = data.domain.class_var
-            if class_var is not None and class_var.is_discrete:
-                self.attr_color = class_var
-            else:
-                self.attr_color = None
+            self.attr_color = data.domain.class_var
             self.openContext(data)
+        self.set_color_bins()
         self.create_legend()
         self.recompute_dimensions()
         self.replot()
@@ -341,6 +341,7 @@ class OWSOM(OWWidget):
         self.data = self.cont_x = None
         self.sizes = None
         self.cells = self.member_data = None
+        self.colors = self.bins = None
         self.assignments = None
         if self.elements is not None:
             self.scene.removeItem(self.elements)
@@ -381,6 +382,7 @@ class OWSOM(OWWidget):
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
+        self.set_color_bins()
         self.create_legend()
         self.rescale()
         self._redraw()
@@ -474,14 +476,10 @@ class OWSOM(OWWidget):
         self.scene.addItem(self.elements)
         if self.attr_color is None:
             self._redraw_same_color()
+        elif self.pie_charts:
+            self._redraw_pie_charts()
         else:
-            color_column = \
-                self.data.get_column_view(self.attr_color)[0].astype(float)
-            colors = [QColor(*color) for color in self.attr_color.colors]
-            if self.pie_charts:
-                self._redraw_pie_charts(color_column, colors)
-            else:
-                self._redraw_colored_circles(color_column, colors)
+            self._redraw_colored_circles()
 
     @property
     def _grid_factors(self):
@@ -503,27 +501,41 @@ class OWSOM(OWWidget):
                 ellipse.setBrush(brush)
                 self.elements.addToGroup(ellipse)
 
-    def _redraw_pie_charts(self, color_column, colors):
+    def _get_color_column(self):
+        color_column = \
+            self.data.get_column_view(self.attr_color)[0].astype(float,
+                                                                 copy=False)
+        if self.attr_color.is_discrete:
+            with np.errstate(invalid="ignore"):
+                int_col = color_column.astype(int)
+            int_col[np.isnan(color_column)] = len(self.colors)
+        else:
+            int_col = np.zeros(len(color_column), dtype=int)
+            int_col[np.isnan(color_column)] = len(self.colors)
+            for i, thresh in enumerate(self.bins, start=1):
+                int_col[color_column >= thresh] = i
+        return int_col
+
+    def _redraw_pie_charts(self):
         fx, fy = self._grid_factors
-        color_column = color_column.copy()
-        color_column[np.isnan(color_column)] = len(colors)
-        color_column = color_column.astype(int)
-        colors.append(Qt.gray)
+        color_column = self._get_color_column()
+        colors = self.colors + [Qt.gray]
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
                 if not r:
                     continue
                 members = self.get_member_indices(x, y)
-                color_dist = np.bincount(
-                    color_column[members], minlength=len(self.attr_color.values))
+                color_dist = np.bincount(color_column[members],
+                                         minlength=len(colors))
                 color_dist = color_dist.astype(float) / len(members)
                 pie = PieChart(color_dist, r / 2, colors)
                 self.elements.addToGroup(pie)
                 pie.setPos(x + (y % 2) * fx, y * fy)
 
-    def _redraw_colored_circles(self, color_column, colors):
+    def _redraw_colored_circles(self):
         fx, fy = self._grid_factors
+        color_column = self._get_color_column()
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
                 r = self.sizes[x, y]
@@ -531,12 +543,11 @@ class OWSOM(OWWidget):
                     continue
                 members = self.get_member_indices(x, y)
                 color_dist = color_column[members]
-                color_dist = color_dist[np.isfinite(color_dist)]
+                color_dist = color_dist[color_dist < len(self.colors)]
                 if len(color_dist) != len(members):
                     self.Warning.missing_colors(self.attr_color.name)
-                color_dist = color_dist.astype(int)
-                bc = np.bincount(color_dist, minlength=len(self.attr_color.values))
-                color = colors[np.argmax(bc)]
+                bc = np.bincount(color_dist, minlength=len(self.colors))
+                color = self.colors[np.argmax(bc)]
                 pen = QPen(QBrush(color), 4)
                 brush = QBrush(color.lighter(200 - 100 * np.max(bc) / len(members)))
                 pen.setCosmetic(True)
@@ -703,6 +714,20 @@ class OWSOM(OWWidget):
             self.Outputs.annotated_data.send(None)
             self.info.set_output_summary(self.info.NoOutput)
 
+    def set_color_bins(self):
+        if self.attr_color is None:
+            self.bins = self.colors = None
+        elif self.attr_color.is_discrete:
+            self.bins = None
+            self.colors = [QColor(*color) for color in self.attr_color.colors]
+        else:
+            col = self.data.get_column_view(self.attr_color)[0].astype(float)
+            # TODO: Use intelligent binning from #3896, when it's merged
+            self.bins = np.linspace(np.min(col), np.max(col), 6)[1:-1]
+            palette = ContinuousPaletteGenerator(*self.attr_color.colors)
+            nbins = len(self.bins) + 1
+            self.colors = [palette[i / (nbins - 1)] for i in range(nbins)]
+
     def create_legend(self):
         if self.legend is not None:
             self.scene.removeItem(self.legend)
@@ -710,11 +735,19 @@ class OWSOM(OWWidget):
         if self.attr_color is None:
             return None
 
-        names = self.attr_color.values
-        colors = [QColor(*color) for color in self.attr_color.colors]
+        if self.attr_color.is_discrete:
+            names = self.attr_color.values
+        else:
+            sval = self.attr_color.repr_val
+            names = \
+                [f"< {sval(self.bins[0])}"] \
+                + [f"{sval(x)} - {sval(y)}"
+                   for x, y in zip(self.bins, self.bins[1:])] \
+                + [f"> {sval(self.bins[-1])}"]
+
         items = []
         size = 8
-        for name, color in zip(names, colors):
+        for name, color in zip(names, self.colors):
             item = QGraphicsItemGroup()
             item.addToGroup(
                 CanvasRectangle(None, -size / 2, -size / 2, size, size,
