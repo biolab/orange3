@@ -184,7 +184,7 @@ class OWSOM(OWWidget):
     pie_charts = Setting(False)
     selection = Setting(set(), schema_only=True)
 
-    graph_name = "plot"
+    graph_name = "view"
 
     _grid_pen = QPen(QBrush(QColor(224, 224, 224)), 2)
     _grid_pen.setCosmetic(True)
@@ -772,6 +772,11 @@ class OWSOM(OWWidget):
             self.size_x / 2,
             (self.size_y + 0.2 + 0.3 * self.hexagonal) * self._grid_factors[1])
 
+    def send_report(self):
+        self.report_plot()
+        if self.attr_color:
+            self.report_caption(
+                f"Self-organizing map colored by '{self.attr_color.name}'")
 
 def _draw_hexagon():
     path = QPainterPath()
