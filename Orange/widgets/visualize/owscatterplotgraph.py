@@ -371,7 +371,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
 
     resolution = 256
 
-    CurveSymbols = np.array("o x t + d s t2 t3 p h star ?".split())
+    CurveSymbols = np.array("o x t + d star ?".split())
     MinShapeSize = 6
     DarkerValue = 120
     UnknownColor = (168, 50, 168)
