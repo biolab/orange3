@@ -124,6 +124,7 @@ class SomView(QGraphicsView):
         else:
             super().keyPressEvent(event)
 
+
 class PieChart(QGraphicsItem):
     def __init__(self, dist, r, colors):
         super().__init__()
@@ -202,10 +203,9 @@ class OWSOM(OWWidget):
         self.__pending_selection = self.selection
         self._optimizer = None
         self._optimizer_thread = None
-        self._stop_optimization = False
+        self.stop_optimization = False
 
         self.data = self.cont_x = None
-        self.assignments = None
         self.sizes = None
         self.cells = self.member_data = None
         self.selection = set()
@@ -342,7 +342,6 @@ class OWSOM(OWWidget):
         self.sizes = None
         self.cells = self.member_data = None
         self.colors = self.bins = None
-        self.assignments = None
         if self.elements is not None:
             self.scene.removeItem(self.elements)
             self.elements = None
@@ -350,10 +349,6 @@ class OWSOM(OWWidget):
         self.controls.attr_color.model().set_domain(None)
         self.Warning.clear()
         self.Error.clear()
-
-    def clear_selection(self):
-        self.selection.clear()
-        self.redraw_selection()
 
     def recompute_dimensions(self):
         self.manual_box.setEnabled(self.manual_dimension)
@@ -374,7 +369,7 @@ class OWSOM(OWWidget):
     def on_geometry_change(self):
         self.set_legend_pos()
         self.rescale()
-        if self.elements: # Prevent having redrawn grid but with old elements
+        if self.elements:  # Prevent having redrawn grid but with old elements
             self.scene.removeItem(self.elements)
             self.elements = None
         self.redraw_grid()
@@ -392,6 +387,10 @@ class OWSOM(OWWidget):
 
     def on_pie_chart_change(self):
         self._redraw()
+
+    def clear_selection(self):
+        self.selection.clear()
+        self.redraw_selection()
 
     def on_selection_change(self, selection, action=SomView.SelectionSet):
         if action & SomView.SelectionClear:
@@ -430,7 +429,6 @@ class OWSOM(OWWidget):
         if {(x, y)} != self.selection:
             self.on_selection_change({(x, y)})
 
-
     def redraw_selection(self):
         brushes = [QBrush(Qt.NoBrush), QBrush(QColor(240, 240, 255))]
         sel_pen = QPen(QBrush(QColor(128, 128, 128)), 2)
@@ -450,7 +448,7 @@ class OWSOM(OWWidget):
 
     def restart_som_pressed(self):
         if self._optimizer_thread is not None:
-            self._stop_optimization = True
+            self.stop_optimization = True
         else:
             self.clear_selection()
             self._recompute_som()
@@ -599,14 +597,14 @@ class OWSOM(OWWidget):
 
             def callback(self, progress):
                 self.update.emit(progress, self.som)
-                return not self.widget._stop_optimization
+                return not self.widget.stop_optimization
 
             def run(self):
                 self.som.fit(self.data, N_ITERATIONS, callback=self.callback)
                 self.done.emit(self.som)
                 self.stopped.emit()
 
-        def update(progress, som):
+        def update(_progress, som):
             from AnyQt.QtWidgets import qApp
             progressbar.advance()
             qApp.processEvents()  # This is apparently needed to advance the bar
@@ -639,12 +637,12 @@ class OWSOM(OWWidget):
         self._optimizer.moveToThread(self._optimizer_thread)
         self._optimizer_thread.started.connect(self._optimizer.run)
         self._optimizer_thread.finished.connect(thread_finished)
-        self._stop_optimization = False
+        self.stop_optimization = False
         self._optimizer_thread.start()
 
     def stop_optimization_and_wait(self):
         if self._optimizer_thread is not None:
-            self._stop_optimization = True
+            self.stop_optimization = True
             self._optimizer_thread.quit()
             self._optimizer_thread.wait()
             self._optimizer_thread = None
@@ -658,9 +656,9 @@ class OWSOM(OWWidget):
         self.grid_box.setDisabled(running)
 
     def _assign_instances(self, som):
-        self.assignments = som.winners(self.cont_x)
+        assignments = som.winners(self.cont_x)
         members = defaultdict(list)
-        for i, (x, y) in enumerate(self.assignments):
+        for i, (x, y) in enumerate(assignments):
             members[(x, y)].append(i)
         members.pop(None, None)
         self.cells = np.empty((self.size_x, self.size_y, 2), dtype=int)
@@ -733,7 +731,7 @@ class OWSOM(OWWidget):
             self.scene.removeItem(self.legend)
             self.legend = None
         if self.attr_color is None:
-            return None
+            return
 
         if self.attr_color.is_discrete:
             names = self.attr_color.values
@@ -777,6 +775,7 @@ class OWSOM(OWWidget):
         if self.attr_color:
             self.report_caption(
                 f"Self-organizing map colored by '{self.attr_color.name}'")
+
 
 def _draw_hexagon():
     path = QPainterPath()
