@@ -490,7 +490,7 @@ class OWDistributions(OWWidget):
 
     def _update_controls_state(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
-        self.continuous_box.setHidden(self.var.is_discrete)
+        self.continuous_box.setDisabled(self.var.is_discrete)
         self.controls.show_probs.setDisabled(self.cvar is None)
         self.controls.stacked_columns.setDisabled(self.cvar is None)
 

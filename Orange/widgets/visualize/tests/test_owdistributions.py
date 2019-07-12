@@ -375,25 +375,25 @@ class TestOWDistributions(WidgetTest):
 
         self._set_var(cont)
         self._set_cvar(disc)
-        self.assertFalse(cont_box.isHidden())
+        self.assertTrue(cont_box.isEnabled())
         self.assertTrue(show_probs.isEnabled())
         self.assertTrue(stacked.isEnabled())
 
         self._set_var(cont)
         self._set_cvar(None)
-        self.assertFalse(cont_box.isHidden())
+        self.assertTrue(cont_box.isEnabled())
         self.assertFalse(show_probs.isEnabled())
         self.assertFalse(stacked.isEnabled())
 
         self._set_var(disc)
         self._set_cvar(None)
-        self.assertTrue(cont_box.isHidden())
+        self.assertFalse(cont_box.isEnabled())
         self.assertFalse(show_probs.isEnabled())
         self.assertFalse(stacked.isEnabled())
 
         self._set_var(disc)
         self._set_cvar(disc)
-        self.assertTrue(cont_box.isHidden())
+        self.assertFalse(cont_box.isEnabled())
         self.assertTrue(show_probs.isEnabled())
         self.assertTrue(stacked.isEnabled())
 
