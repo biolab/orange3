@@ -122,10 +122,11 @@ Unsupervised
    widgets/unsupervised/hierarchicalclustering
    widgets/unsupervised/kmeans
    widgets/unsupervised/louvainclustering
+   widgets/unsupervised/DBSCAN
    widgets/unsupervised/mds
    widgets/unsupervised/tsne
    widgets/unsupervised/manifoldlearning
-   
+
 
 Evaluation
 ----------
