@@ -171,6 +171,8 @@ class DistributionWidget(pg.PlotWidget):
 
     def mousePressEvent(self, ev):
         super().mousePressEvent(ev)
+        if ev.isAccepted():
+            return
         if ev.button() != Qt.LeftButton:
             ev.ignore()
             return
