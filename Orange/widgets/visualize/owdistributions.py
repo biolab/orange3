@@ -648,7 +648,9 @@ class OWDistributions(OWWidget):
         for y, prior_prob, color in zip(ys, prior_probs, colors):
             if show_probs:
                 y_p = y * prior_prob
-                y = y_p / (y_p + (tots - y) * (1 - prior_prob))
+                tot = (y_p + (tots - y) * (1 - prior_prob))
+                tot[tot == 0] = 1
+                y = y_p / tot
             plot.addItem(pg.PlotCurveItem(
                 x=x, y=y,
                 pen=pg.mkPen(width=5, color=color),
