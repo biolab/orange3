@@ -887,18 +887,35 @@ def bind_variable(descriptor, env, data):
                    if name in variables]
 
     values = {}
+    cast = None
+    nan = float("nan")
+
     if isinstance(descriptor, DiscreteDescriptor):
         if not descriptor.values:
             str_func = FeatureFunc(descriptor.expression, source_vars)
             values = sorted({str(x) for x in str_func(data)})
             values = {name: i for i, name in enumerate(values)}
-            descriptor = descriptor \
-                ._replace(values=values) \
-                ._replace(expression=f"{values}.get(str({descriptor.expression}), float('nan'))")
+            descriptor = descriptor._replace(values=values)
+
+            def cast(x):  # pylint: disable=function-redefined
+                return values.get(x, nan)
+
         else:
             values = [sanitized_name(v) for v in descriptor.values]
             values = {name: i for i, name in enumerate(values)}
-    return descriptor, FeatureFunc(descriptor.expression, source_vars, values)
+
+    if isinstance(descriptor, DateTimeDescriptor):
+        parse = Orange.data.TimeVariable("_").parse
+
+        def cast(e):  # pylint: disable=function-redefined
+            if isinstance(e, (int, float)):
+                return e
+            if e == "" or e is None:
+                return np.nan
+            return parse(e)
+
+    func = FeatureFunc(descriptor.expression, source_vars, values, cast)
+    return descriptor, func
 
 
 def make_lambda(expression, args, env=None):
@@ -1026,13 +1043,17 @@ class FeatureFunc:
     extra_env : Optional[Dict[str, Any]]
         Extra environment specifying constant values to be made available
         in expression. It must not shadow names in `args`
+    cast: Optional[Callable]
+        A function for casting the expressions result to the appropriate
+        type (e.g. string representation of date/time variables to floats)
     """
-    def __init__(self, expression, args, extra_env=None):
+    def __init__(self, expression, args, extra_env=None, cast=None):
         self.expression = expression
         self.args = args
         self.extra_env = dict(extra_env or {})
         self.func = make_lambda(ast.parse(expression, mode="eval"),
                                 [name for name, _ in args], self.extra_env)
+        self.cast = cast
 
     def __call__(self, instance, *_):
         if isinstance(instance, Orange.data.Table):
@@ -1041,10 +1062,14 @@ class FeatureFunc:
             args = [str(instance[var])
                     if instance.domain[var].is_string else instance[var]
                     for _, var in self.args]
-            return self.func(*args)
+            y = self.func(*args)
+            if self.cast:
+                y = self.cast(y)
+            return y
 
     def __reduce__(self):
-        return type(self), (self.expression, self.args, self.extra_env)
+        return type(self), (self.expression, self.args,
+                            self.extra_env, self.cast)
 
     def __repr__(self):
         return "{0.__name__}{1!r}".format(*self.__reduce__())

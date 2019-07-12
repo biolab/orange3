@@ -8,14 +8,15 @@ import copy
 import numpy as np
 
 from Orange.data import (Table, Domain, StringVariable,
-                         ContinuousVariable, DiscreteVariable)
+                         ContinuousVariable, DiscreteVariable, TimeVariable)
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
-    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler)
+    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
+    DateTimeDescriptor)
 
 from Orange.widgets.data.owfeatureconstructor import (
     freevars, validate_exp, FeatureFunc
@@ -78,6 +79,22 @@ class FeatureConstructorTest(unittest.TestCase):
         for i in range(3):
             self.assertEqual(data[i * 50, name],
                              pow(data[i * 50, 0] + data[i * 50, 1], 2))
+
+    def test_construct_variables_datetime(self):
+        data = Table("housing")
+        name = 'Date'
+        expression = '"2019-07-{:02}".format(int(MEDV/3))'
+        featuremodel = PyListModel(
+            [DateTimeDescriptor(name=name, expression=expression)]
+        )
+        data = Table(Domain(list(data.domain.attributes) +
+                            construct_variables(featuremodel, data),
+                            data.domain.class_vars,
+                            data.domain.metas), data)
+        self.assertTrue(isinstance(data.domain[name], TimeVariable))
+        for row in data:
+            self.assertEqual("2019-07-{:02}".format(int(row["MEDV"] / 3)),
+                             str(row["Date"])[:10])
 
     def test_construct_variables_string(self):
         data = Table("iris")
@@ -241,7 +258,7 @@ class FeatureFuncTest(unittest.TestCase):
 
     def test_repr(self):
         self.assertEqual(repr(FeatureFunc("a + 1", [("a", 2)])),
-                         "FeatureFunc('a + 1', [('a', 2)], {})")
+                         "FeatureFunc('a + 1', [('a', 2)], {}, None)")
 
     def test_call(self):
         iris = Table("iris")
