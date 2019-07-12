@@ -233,7 +233,7 @@ class TestCrossValidation(TestSampling):
             self.assertTrue((result.predicted == res.predicted[i]).all())
             self.assertTrue((result.probabilities == res.probabilities[i]).all())
             self.assertEqual(len(result.models), 5)
-            for model in result.models:
+            for model in result.models[0]:
                 self.assertIsInstance(model, learners[i].__returns__)
             self.assertSequenceEqual(result.learners, [res.learners[i]])
 
@@ -756,7 +756,7 @@ class TestResults(unittest.TestCase):
         self.row_indices = np.arange(100)
         self.folds = (range(50), range(10, 60)), (range(50, 100), range(50))
         self.learners = [MajorityLearner(), MajorityLearner()]
-        self.models = [Mock(), Mock()]
+        self.models = np.array([[Mock(), Mock()]])
         self.predicted = np.zeros((2, 100))
         self.probabilities = np.zeros((2, 100, 3))
         self.failed = [False, True]

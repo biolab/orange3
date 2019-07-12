@@ -196,3 +196,21 @@ CN2 Rule Induction
 
 .. autoclass:: CN2SDUnorderedLearner
    :members:
+
+
+Calibration and threshold optimization
+--------------------------------------
+
+.. automodule:: Orange.classification.calibration
+
+.. autoclass:: ThresholdClassifier
+   :members:
+
+.. autoclass:: ThresholdLearner
+   :members:
+
+.. autoclass:: CalibratedClassifier
+   :members:
+
+.. autoclass:: CalibratedLearner
+   :members:

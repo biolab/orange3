@@ -329,6 +329,9 @@ class OrangeListBox(QtWidgets.QListWidget):
     def sizeHint(self):
         return self.size_hint
 
+    def minimumSizeHint(self):
+        return self.size_hint
+
     def dragEnterEvent(self, event):
         super().dragEnterEvent(event)
         if self.valid_data_callback:

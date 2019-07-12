@@ -315,7 +315,7 @@ class OWTestLearners(OWWidget):
             # Removed
             self._invalidate([key])
             del self.learners[key]
-        else:
+        elif learner is not None:
             self.learners[key] = InputLearner(learner, None, None)
             self._invalidate([key])
 
@@ -735,7 +735,8 @@ class OWTestLearners(OWWidget):
 
         if self.resampling == OWTestLearners.TestOnTest:
             test_f = partial(
-                Orange.evaluation.TestOnTestData(store_data=True),
+                Orange.evaluation.TestOnTestData(
+                    store_data=True, store_models=True),
                 self.data, self.test_data, learners_c, self.preprocessor
             )
         else:
@@ -756,7 +757,8 @@ class OWTestLearners(OWWidget):
                     stratified=self.shuffle_stratified,
                     random_state=rstate)
             elif self.resampling == OWTestLearners.TestOnTrain:
-                sampler = Orange.evaluation.TestOnTrainingData()
+                sampler = Orange.evaluation.TestOnTrainingData(
+                    store_models=True)
             else:
                 assert False, "self.resampling %s" % self.resampling
 
@@ -916,7 +918,7 @@ def results_add_by_model(x, y):
         res.probabilities = np.vstack((x.probabilities, y.probabilities))
 
     if x.models is not None:
-        res.models = [xm + ym for xm, ym in zip(x.models, y.models)]
+        res.models = np.hstack((x.models, y.models))
     return res
 
 
