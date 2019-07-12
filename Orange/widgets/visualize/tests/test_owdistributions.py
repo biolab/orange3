@@ -246,7 +246,7 @@ class TestOWDistributions(WidgetTest):
         widget = self.widget
         self.send_signal(widget.Inputs.data, self.iris)
 
-        widget.number_of_bins = 0
+        self._set_slider(0)
         widget.selection.add(1)
         n_bars = len(widget.bar_items)
         widget.apply = Mock()
@@ -449,7 +449,7 @@ class TestOWDistributions(WidgetTest):
         """Widget groups consecutive selected bars"""
         widget = self.widget
         self.send_signal(widget.Inputs.data, self.iris)
-        self._set_slider(len(widget.binnings) - 1)
+        self._set_slider(0)
         widget.selection = {1, 2, 3, 5, 6, 9}
         widget.plot_mark.addItem = Mock()
         widget.show_selection()

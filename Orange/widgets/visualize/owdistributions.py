@@ -710,7 +710,7 @@ class OWDistributions(OWWidget):
             if np.any(np.isfinite(column)):
                 self.binnings = decimal_binnings(
                     column, min_width=self.min_var_resolution(self.var),
-                    add_unique=10, min_unique=5)
+                    add_unique=10, min_unique=5)[::-1]
                 max_bins = len(self.binnings) - 1
 
         self.controls.number_of_bins.setMaximum(max_bins)
