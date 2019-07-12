@@ -11,7 +11,7 @@ from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
-from Orange.preprocess.discretize import decimal_binnings
+from Orange.preprocess.discretize import decimal_binnings, get_bins
 from Orange.statistics import distribution, contingency
 from Orange.widgets import gui, settings
 from Orange.widgets.utils.annotated_data import \
@@ -257,6 +257,7 @@ class OWDistributions(OWWidget):
         self.bar_items = []
         self.curve_descriptions = None
         self.binnings = []
+        self.bin_widths = []
 
         self.last_click_idx = None
         self.drag_operation = self.DragNone
@@ -410,9 +411,9 @@ class OWDistributions(OWWidget):
     def _set_bin_width_slider_label(self):
         text = ""
         if self.number_of_bins < len(self.binnings):
-            bins = self.binnings[self.number_of_bins]
-            if len(bins) > 1:
-                text = self.var.repr_val(bins[1] - bins[0])
+            width = self.bin_widths[self.number_of_bins]
+            if isinstance(width, (int, float)):
+                text = f"{width:g}"
         self.bin_width_label.setText(text)
 
     def _on_show_probabilities_changed(self):
@@ -705,14 +706,17 @@ class OWDistributions(OWWidget):
 
     def recompute_binnings(self):
         self.binnings = []
+        self.bin_widths = []
         max_bins = 0
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column_view(self.var)[0].astype(float)
             if np.any(np.isfinite(column)):
-                self.binnings = decimal_binnings(
+                binnings = decimal_binnings(
                     column, min_width=self.min_var_resolution(self.var),
-                    add_unique=10, min_unique=5)[::-1]
+                    add_unique=10, min_unique=5, return_defs=True)[::-1]
+                self.binnings = [get_bins(bin) for bin in binnings]
+                self.bin_widths = [bin.width for bin in binnings]
                 max_bins = len(self.binnings) - 1
 
         self.controls.number_of_bins.setMaximum(max_bins)
