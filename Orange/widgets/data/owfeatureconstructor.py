@@ -44,6 +44,9 @@ FeatureDescriptor = \
 ContinuousDescriptor = \
     namedtuple("ContinuousDescriptor",
                ["name", "expression", "number_of_decimals"])
+DateTimeDescriptor = \
+    namedtuple("DateTimeDescriptor",
+               ["name", "expression"])
 DiscreteDescriptor = \
     namedtuple("DiscreteDescriptor",
                ["name", "expression", "values", "ordered"])
@@ -57,6 +60,10 @@ def make_variable(descriptor, compute_value):
             descriptor.name,
             descriptor.number_of_decimals,
             compute_value)
+    if isinstance(descriptor, DateTimeDescriptor):
+        return Orange.data.TimeVariable(
+            descriptor.name,
+            compute_value=compute_value, have_date=True, have_time=True)
     elif isinstance(descriptor, DiscreteDescriptor):
         return Orange.data.DiscreteVariable(
             descriptor.name,
@@ -233,6 +240,15 @@ class ContinuousFeatureEditor(FeatureEditor):
         )
 
 
+class DateTimeFeatureEditor(FeatureEditor):
+
+    def editorData(self):
+        return DateTimeDescriptor(
+            name=self.nameedit.text(),
+            expression=self.expressionedit.text()
+        )
+
+
 class DiscreteFeatureEditor(FeatureEditor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -277,6 +293,7 @@ class StringFeatureEditor(FeatureEditor):
 _VarMap = {
     DiscreteDescriptor: vartype(Orange.data.DiscreteVariable()),
     ContinuousDescriptor: vartype(Orange.data.ContinuousVariable()),
+    DateTimeDescriptor: vartype(Orange.data.TimeVariable()),
     StringDescriptor: vartype(Orange.data.StringVariable())
 }
 
@@ -354,6 +371,7 @@ class OWFeatureConstructor(OWWidget):
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
+        (DateTimeDescriptor, DateTimeFeatureEditor),
         (DiscreteDescriptor, DiscreteFeatureEditor),
         (StringDescriptor, StringFeatureEditor)
     ]
@@ -426,6 +444,12 @@ class OWFeatureConstructor(OWWidget):
             lambda: self.addFeature(
                 StringDescriptor(generate_newname("S{}"), ""))
         )
+        datetime = menu.addAction("Date/Time")
+        datetime.triggered.connect(
+            lambda: self.addFeature(
+                DateTimeDescriptor(generate_newname("T{}"), ""))
+        )
+
         menu.addSeparator()
         self.duplicateaction = menu.addAction("Duplicate Selected Variable")
         self.duplicateaction.triggered.connect(self.duplicateFeature)
@@ -650,6 +674,8 @@ class OWFeatureConstructor(OWWidget):
                     "; ordered" * feature.ordered)
             elif isinstance(feature, ContinuousDescriptor):
                 items[feature.name] = "{} (numeric)".format(feature.expression)
+            elif isinstance(feature, DateTimeDescriptor):
+                items[feature.name] = "{} (date/time)".format(feature.expression)
             else:
                 items[feature.name] = "{} (text)".format(feature.expression)
         self.report_items(
