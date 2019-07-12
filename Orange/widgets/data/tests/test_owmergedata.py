@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 from itertools import chain
+import unittest
 
 import numpy as np
 import scipy.sparse as sp
@@ -50,7 +51,7 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.send_signal(self.widget.Inputs.extra_data, None)
 
-    def test_combobox_items_inner(self):
+    def test_combobox_items(self):
         """Check if combo box content is properly set"""
         domainA, domainB = self.dataA.domain, self.dataB.domain
         row = self.widget.attr_boxes.rows[0]
@@ -76,6 +77,176 @@ class TestOWMergeData(WidgetTest):
             chain([INDEX, INSTANCEID], domainB.variables, domainB.metas))
         self.assertListEqual(data_combo.model()[:], data_items)
         self.assertListEqual(extra_combo.model()[:], extra_items)
+
+    def test_combo_box_sync(self):
+        row = self.widget.attr_boxes.rows[0]
+        data_combo, extra_combo = row.left_combo, row.right_combo
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+
+        extra_combo.setCurrentIndex(3)
+        data_combo.setCurrentIndex(0)
+        data_combo.activated.emit(0)
+        self.assertEqual(data_combo.currentIndex(), 0)
+        self.assertEqual(extra_combo.currentIndex(), 0)
+
+        data_combo.setCurrentIndex(1)
+        data_combo.activated.emit(1)
+        self.assertEqual(data_combo.currentIndex(), 1)
+        self.assertEqual(extra_combo.currentIndex(), 1)
+
+        data_combo.setCurrentIndex(2)
+        data_combo.activated.emit(2)
+        self.assertEqual(data_combo.currentIndex(), 2)
+        self.assertEqual(extra_combo.currentIndex(), 1)
+
+        extra_combo.setCurrentIndex(0)
+        extra_combo.activated.emit(0)
+        self.assertEqual(data_combo.currentIndex(), 0)
+        self.assertEqual(extra_combo.currentIndex(), 0)
+
+        extra_combo.setCurrentIndex(1)
+        extra_combo.activated.emit(1)
+        self.assertEqual(data_combo.currentIndex(), 1)
+        self.assertEqual(extra_combo.currentIndex(), 1)
+
+    def test_add_row_button(self):
+        boxes = self.widget.attr_boxes
+        boxes.set_state([(INSTANCEID, INSTANCEID), (INSTANCEID, INSTANCEID)])
+        boxes.rows[-1].add_button.clicked.emit()
+        self.assertEqual(len(boxes.rows), 3)
+        self.assertEqual(boxes.layout().count(), 3)
+
+    def test_remove_row(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+        for i, row in enumerate(boxes.rows):
+            self.assertTrue(row.remove_button.isEnabled())
+            self.assertEqual(row.remove_button.text(), "×")
+            self.assertEqual(row.add_button.isEnabled(), i == 2)
+            self.assertEqual(row.add_button.text(), ["", "+"][i == 2])
+
+        boxes.rows[1].remove_button.clicked.emit()
+        self.assertEqual(boxes.current_state(), [(INDEX, INDEX), (var0, var1)])
+        for i, row in enumerate(boxes.rows):
+            self.assertTrue(row.remove_button.isEnabled())
+            self.assertEqual(row.remove_button.text(), "×")
+            self.assertEqual(row.add_button.isEnabled(), i == 1)
+            self.assertEqual(row.add_button.text(), ["", "+"][i])
+
+        boxes.rows[1].remove_button.clicked.emit()
+        self.assertEqual(boxes.current_state(), [(INDEX, INDEX)])
+        row = boxes.rows[0]
+        self.assertFalse(row.remove_button.isEnabled())
+        self.assertEqual(row.remove_button.text(), "")
+        self.assertTrue(row.add_button.isEnabled())
+        self.assertEqual(row.add_button.text(), "+")
+
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+        boxes.rows[2].remove_button.clicked.emit()
+        self.assertEqual(
+            boxes.current_state(), [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
+        for i, row in enumerate(boxes.rows):
+            self.assertTrue(row.remove_button.isEnabled())
+            self.assertEqual(row.remove_button.text(), "×")
+            self.assertEqual(row.add_button.isEnabled(), i == 1)
+            self.assertEqual(row.add_button.text(), ["", "+"][i == 1])
+
+    def test_retrieve_settings(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+        settings = widget.settingsHandler.pack_data(widget)
+
+        widget2 = self.create_widget(OWMergeData, stored_settings=settings)
+        widget2.attr_boxes.set_state([(INDEX, INDEX)])
+        self.send_signals(
+            [(widget2.Inputs.data, self.dataA),
+             (widget2.Inputs.extra_data, self.dataA)],
+            widget=widget2)
+        self.assertEqual(
+            widget2.attr_boxes.current_state(),
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+    @unittest.skip("widget doesn't work this way, but could in the future")
+    def test_switch_domain(self):  # pragma: no cover
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+        self.send_signal(self.widget.Inputs.data, self.dataB)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        self.assertEqual(
+            boxes.current_state(),
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+        boxes.set_state([(var0, var1), (var1, var0)])
+
+        self.send_signal(self.widget.Inputs.data, self.dataB)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        self.assertEqual(boxes.current_state(), [(INDEX, INDEX)])
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+        boxes.set_state([(var1, var1), (var0, var0)])
+
+        domain2 = Domain(self.dataA.domain.attributes[:1],
+                         self.dataA.domain.class_var)
+        data2 = self.dataA.transform(domain2)
+        self.send_signal(self.widget.Inputs.data, data2)
+        self.send_signal(self.widget.Inputs.extra_data, data2)
+        self.assertEqual(boxes.current_state(), [(var0, var0)])
+
+    def test_domain_switch_cleanup(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+
+        self.send_signal(self.widget.Inputs.data, self.dataB)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataB)
+        self.assertEqual(
+            boxes.current_state(),
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID)])
+
+    def test_report(self):
+        widget = self.widget
+        boxes = widget.attr_boxes
+        var0, var1 = self.dataA.domain.attributes[:2]
+
+        self.send_signal(self.widget.Inputs.data, self.dataA)
+        self.send_signal(self.widget.Inputs.extra_data, self.dataA)
+        boxes.set_state(
+            [(INDEX, INDEX), (INSTANCEID, INSTANCEID), (var0, var1)])
+        widget.send_report()
+        # Don't crash, that's it
 
     def test_output_merge_by_ids_inner(self):
         """Check output for merging option 'Find matching rows' by
@@ -374,11 +545,6 @@ class TestOWMergeData(WidgetTest):
                              f"wrong attributes chosen for merge_type={i}")
 
     def test_sparse(self):
-        """
-        Merge should work with sparse.
-        GH-2295
-        GH-2155
-        """
         data = Table("iris")[::25]
         data_ed_dense = Table("titanic")[::300]
         data_ed_sparse = Table("titanic")[::300].to_sparse()

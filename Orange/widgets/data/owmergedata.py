@@ -40,7 +40,7 @@ class ConditionBox(QWidget):
         self.layout().setSpacing(0)
         self.setMouseTracking(True)
 
-    def add_row(self, value_left=None, value_right=None):
+    def add_row(self):
         def sync_combos():
             combo = self.sender()
             index = combo.currentIndex()
@@ -52,11 +52,9 @@ class ConditionBox(QWidget):
                 other.setCurrentText(model[index])
             self.emit_list()
 
-        def get_combo(model, value):
+        def get_combo(model):
             combo = QComboBox(self)
             combo.setModel(model)
-            if value is not None:
-                combo.setCurrentIndex(model.indexOf(value))
             # We use signal activated because it is triggered only on user
             # interaction, not programmatically.
             combo.activated.connect(sync_combos)
@@ -72,9 +70,9 @@ class ConditionBox(QWidget):
         row = self.layout().count()
         row_items = self.RowItems(
             QLabel("and" if row else self.pre_label),
-            get_combo(self.model_left, value_left),
+            get_combo(self.model_left),
             QLabel(self.in_label),
-            get_combo(self.model_right, value_right),
+            get_combo(self.model_right),
             get_button("×", self.on_remove_row),
             get_button("+", self.on_add_row)
         )
@@ -109,19 +107,20 @@ class ConditionBox(QWidget):
         self.emit_list()
 
     def _reset_buttons(self):
+        def endis(button, enable, text):
+            button.setEnabled(enable)
+            button.setText(text if enable else "")
+
         self.rows[0].pre_label.setText(self.pre_label)
-        self.rows[0].remove_button.setText("× "[len(self.rows) == 1])
-        self.rows[-1].add_button.setText("+")
-        if len(self.rows) > 1:
-            self.rows[-2].add_button.setText(" ")
+        single_row = len(self.rows) == 1
+        endis(self.rows[0].remove_button, not single_row, "×")
+        endis(self.rows[-1].add_button, True, "+")
+        if not single_row:
+            endis(self.rows[-2].add_button, False, "")
 
     def current_state(self):
         def get_var(model, combo):
-            index = combo.currentIndex()
-            if 0 <= index < len(model):
-                return model[index]
-            else:
-                return None
+            return model[combo.currentIndex()]
 
         return [(get_var(self.model_left, row.left_combo),
                  get_var(self.model_right, row.right_combo))
@@ -282,8 +281,9 @@ class OWMergeData(widget.OWWidget):
                 [row.left_combo, row.right_combo][side], pair[side])
 
     def handleNewSignals(self):
-        if self.attr_pairs:
-            self.boxes[self.merging].set_current_state(self.attr_pairs)
+        if self.attr_pairs and self.data:
+            # TODO: This doesn't work, but should after #3925 (remove make)
+            self.attr_boxes.set_state(self.attr_pairs)
             # This is schema-only setting, so it should be single-shot
             # More complicated alternative: make it a context setting
             self.attr_pairs = []
@@ -363,10 +363,6 @@ class OWMergeData(widget.OWWidget):
             if INSTANCEID in (left, right) and left != right:
                 self.Error.matching_id_with_sth(
                     self._get_col_name(({left, right} - {INSTANCEID}).pop()))
-                return False
-            if (isinstance(left, str) or isinstance(right, str)) \
-                and left != right:
-                self.Error.matching_position_with_sth_else()
                 return False
         return True
 
@@ -525,6 +521,7 @@ class OWMergeData(widget.OWWidget):
             for oper in operations:
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]
+
 
 if __name__ == "__main__":  # pragma: no cover
     WidgetPreview(OWMergeData).run(
