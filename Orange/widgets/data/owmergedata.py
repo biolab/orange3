@@ -1,11 +1,11 @@
 from collections import namedtuple
 from itertools import chain, product
 
+import numpy as np
+
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtWidgets import QApplication, QStyle, QWidget, \
     QLabel, QComboBox, QPushButton, QVBoxLayout, QHBoxLayout
-
-import numpy as np
 
 import Orange
 from Orange.data import StringVariable, ContinuousVariable, Variable
@@ -160,7 +160,7 @@ class OWMergeData(widget.OWWidget):
                    "Find matching pairs of rows",
                    "Concatenate tables")
 
-    attr_pairs = Setting('', schema_only=True)
+    attr_pairs = Setting(None, schema_only=True)
     merging = Setting(LeftJoin)
     auto_apply = Setting(True)
     settings_version = 1
@@ -220,9 +220,6 @@ class OWMergeData(widget.OWWidget):
         box.vars_changed.connect(self.commit)  # connect after auto_commit!
         self.settingsAboutToBePacked.connect(self.store_combo_state)
 
-    def store_combo_state(self):
-        self.attr_pairs = self.attr_boxes.current_state()
-
     def change_merging(self):
         self.commit()
 
@@ -280,13 +277,33 @@ class OWMergeData(widget.OWWidget):
             self._try_set_combo(
                 [row.left_combo, row.right_combo][side], pair[side])
 
+    def store_combo_state(self):
+        self.attr_pairs = (
+            self.data is not None,
+            self.extra_data is not None,
+            [[[INDEX, INSTANCEID].index(x) if isinstance(x, str) else x.name
+              for x in row]
+             for row in self.attr_boxes.current_state()])
+
     def handleNewSignals(self):
-        if self.attr_pairs and self.data:
-            # TODO: This doesn't work, but should after #3925 (remove make)
-            self.attr_boxes.set_state(self.attr_pairs)
+        if self.attr_pairs \
+                and self.attr_pairs[:2] == (self.data is not None,
+                                            self.extra_data is not None):
+            def unpack(x, data):
+                if isinstance(x, int):
+                    return [INDEX, INSTANCEID][x]
+                if data is not None and x in data.domain:
+                    return data.domain[x]
+                else:
+                    return INDEX
+
+            state = [
+                [unpack(row[0], self.data), unpack(row[1], self.extra_data)]
+                for row in self.attr_pairs[2]]
+            self.attr_boxes.set_state(state)
             # This is schema-only setting, so it should be single-shot
             # More complicated alternative: make it a context setting
-            self.attr_pairs = []
+            self.attr_pairs = None
         self._find_best_match()
         box = self.attr_boxes
 
@@ -516,8 +533,10 @@ class OWMergeData(widget.OWWidget):
         if not version:
             operations = ("augment", "merge", "combine")
             oper = [settings["merging"]]
-            settings["attr_pairs"] = [(settings[f"attr_{oper}_data"],
-                                       settings[f"attr_{oper}_extra"])]
+            settings["attr_pairs"] = (
+                True, True,
+                [(settings[f"attr_{oper}_data"],
+                  settings[f"attr_{oper}_extra"])])
             for oper in operations:
                 del settings[f"attr_{oper}_data"]
                 del settings[f"attr_{oper}_extra"]
