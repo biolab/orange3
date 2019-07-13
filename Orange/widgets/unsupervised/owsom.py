@@ -132,14 +132,9 @@ class PieChart(QGraphicsItem):
         self.dist = dist
         self.r = r
         self.colors = colors
-        self.selected = False
-
-    def set_selected(self, selected):
-        self.selected = selected
 
     def boundingRect(self):
-        return QRectF(- self.r, - self.r,
-                      2 * self.r, 2 * self.r)
+        return QRectF(- self.r, - self.r, 2 * self.r, 2 * self.r)
 
     def paint(self, painter, _option, _index):
         painter.save()
@@ -197,7 +192,8 @@ class OWSOM(OWWidget):
             Msg("Some data instances have undefined value of '{}'.")
 
     class Error(OWWidget.Error):
-        empty_data = Msg("Empty dataset")
+        no_numeric_variables = Msg("Data contains no numeric columns.")
+        no_defined_rows = Msg("All rows contain at least one undefined value.")
 
     def __init__(self):
         super().__init__()
@@ -207,7 +203,6 @@ class OWSOM(OWWidget):
         self.stop_optimization = False
 
         self.data = self.cont_x = None
-        self.sizes = None
         self.cells = self.member_data = None
         self.selection = set()
         self.colors = self.thresholds = None
@@ -292,8 +287,6 @@ class OWSOM(OWWidget):
         self.Error.clear()
         self.Warning.clear()
 
-        self.data = self.cont_x = None
-
         if data is not None:
             attrs = data.domain.attributes
             cont_attrs = [var for var in attrs if var.is_continuous]
@@ -311,8 +304,12 @@ class OWSOM(OWWidget):
                     if not np.any(mask):
                         self.Error.no_defined_rows()
                     else:
-                        self.data = data[mask]
-                        self.cont_x = x[mask]
+                        if np.all(mask):
+                            self.data = data
+                            self.cont_x = x
+                        else:
+                            self.data = data[mask]
+                            self.cont_x = x[mask]
                         self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
                         self.cont_x /= np.sum(self.cont_x, axis=0)[None, :]
 
@@ -320,28 +317,35 @@ class OWSOM(OWWidget):
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
             self.openContext(data)
+
         self.set_color_bins()
         self.create_legend()
         self.recompute_dimensions()
         self.replot()
-        self._set_input_summary()
+        self._set_input_summary(data and len(data))
+        self.update_output()
 
-    def _set_input_summary(self):
+    def _set_input_summary(self, n_tot):
         if self.data is None:
             self.info.set_input_summary(self.info.NoInput)
             return
 
-        details = f"{len(self.data)} instances"
-        ignored = self.cont_x.shape[0] - len(self.data)
-        if ignored:
-            details += f" {ignored} ignored because of missing values"
-        details += f"\n{self.cont_x.shape[1]} numeric variables"
-        self.info.set_input_summary(str(len(self.data)), details)
+        n = len(self.data)
+        inst = str(n)
+        nvars = f"{self.cont_x.shape[1]} numeric variables"
+        if n < n_tot:
+            inst += f" ({n_tot})"
+            details = f"{n_tot - n} out of {n_tot} instances ignored " \
+                      f"because of missing values;\n{nvars}"
+        else:
+            details = f"{n} instances; {nvars}"
+
+        self.info.set_input_summary(inst, details)
 
     def clear(self):
         self.data = self.cont_x = None
-        self.sizes = None
         self.cells = self.member_data = None
+        self.attr_color = None
         self.colors = self.thresholds = None
         if self.elements is not None:
             self.scene.removeItem(self.elements)
@@ -469,29 +473,28 @@ class OWSOM(OWWidget):
             sizes[sizes != 0] = 0.8
         else:
             sizes *= 0.8 / np.max(sizes)
-        self.sizes = sizes
 
         self.elements = QGraphicsItemGroup()
         self.scene.addItem(self.elements)
         if self.attr_color is None:
-            self._redraw_same_color()
+            self._draw_same_color(sizes)
         elif self.pie_charts:
-            self._redraw_pie_charts()
+            self._draw_pie_charts(sizes)
         else:
-            self._redraw_colored_circles()
+            self._draw_colored_circles(sizes)
 
     @property
     def _grid_factors(self):
         return (0.5, sqrt3_2) if self.hexagonal else (0, 1)
 
-    def _redraw_same_color(self):
+    def _draw_same_color(self, sizes):
         fx, fy = self._grid_factors
         pen = QPen(QBrush(Qt.black), 4)
         pen.setCosmetic(True)
         brush = QBrush(QColor(192, 192, 192))
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
-                r = self.sizes[x, y]
+                r = sizes[x, y]
                 if not r:
                     continue
                 ellipse = QGraphicsEllipseItem()
@@ -510,18 +513,21 @@ class OWSOM(OWWidget):
             int_col[np.isnan(color_column)] = len(self.colors)
         else:
             int_col = np.zeros(len(color_column), dtype=int)
-            int_col[np.isnan(color_column)] = len(self.colors)
+            # The following line is not necessary because rows with missing
+            # numeric data are excluded. Uncomment it if you change SOM to
+            # tolerate missing values.
+            # int_col[np.isnan(color_column)] = len(self.colors)
             for i, thresh in enumerate(self.thresholds, start=1):
                 int_col[color_column >= thresh] = i
         return int_col
 
-    def _redraw_pie_charts(self):
+    def _draw_pie_charts(self, sizes):
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
         colors = self.colors + [Qt.gray]
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
-                r = self.sizes[x, y]
+                r = sizes[x, y]
                 if not r:
                     continue
                 members = self.get_member_indices(x, y)
@@ -532,12 +538,12 @@ class OWSOM(OWWidget):
                 self.elements.addToGroup(pie)
                 pie.setPos(x + (y % 2) * fx, y * fy)
 
-    def _redraw_colored_circles(self):
+    def _draw_colored_circles(self, sizes):
         fx, fy = self._grid_factors
         color_column = self._get_color_column()
         for y in range(self.size_y):
             for x in range(self.size_x - self.hexagonal * (y % 2)):
-                r = self.sizes[x, y]
+                r = sizes[x, y]
                 if not r:
                     continue
                 members = self.get_member_indices(x, y)
@@ -650,6 +656,7 @@ class OWSOM(OWWidget):
 
     def onDeleteWidget(self):
         self.stop_optimization_and_wait()
+        self.clear()
         super().onDeleteWidget()
 
     def set_buttons(self, running):
@@ -657,6 +664,8 @@ class OWSOM(OWWidget):
         self.grid_box.setDisabled(running)
 
     def _assign_instances(self, som):
+        if self.cont_x is None:
+            return  # the widget is shutting down while signals still processed
         assignments = som.winners(self.cont_x)
         members = defaultdict(list)
         for i, (x, y) in enumerate(assignments):
@@ -705,13 +714,13 @@ class OWSOM(OWWidget):
                 indices.extend(self.get_member_indices(x, y))
         if indices:
             self.Outputs.selected_data.send(self.data[indices])
-            self.Outputs.annotated_data.send(
-                create_annotated_table(self.data, indices))
             self.info.set_output_summary(str(len(indices)))
         else:
             self.Outputs.selected_data.send(None)
-            self.Outputs.annotated_data.send(None)
             self.info.set_output_summary(self.info.NoOutput)
+
+        self.Outputs.annotated_data.send(
+            create_annotated_table(self.data, indices or None))
 
     def set_color_bins(self):
         if self.attr_color is None:
