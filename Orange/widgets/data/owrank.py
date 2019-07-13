@@ -278,7 +278,7 @@ class OWRank(OWWidget):
         b3 = button(self.tr("Manual"), OWRank.SelectManual)
         b4 = button(self.tr("Best ranked:"), OWRank.SelectNBest)
 
-        s = gui.spin(selMethBox, self, "nSelected", 1, 100,
+        s = gui.spin(selMethBox, self, "nSelected", 1, 999,
                      callback=lambda: self.setSelectionMethod(OWRank.SelectNBest))
 
         grid.addWidget(b1, 0, 0)
