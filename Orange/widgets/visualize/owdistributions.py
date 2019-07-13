@@ -197,6 +197,21 @@ class DistributionWidget(pg.PlotWidget):
                 self.last_item = item
 
 
+class AshCurve:
+    @staticmethod
+    def fit(a):
+        return (a, )
+
+    @staticmethod
+    def pdf(x, a, sigma=1, weights=None):
+        hist, _ = np.histogram(a, x, weights=weights)
+        kernel_x = np.arange(len(x)) - len(hist) / 2
+        kernel = 1 / (np.sqrt(2 * np.pi)) * np.exp(-(kernel_x * sigma) ** 2 / 2)
+        ash = np.convolve(hist, kernel, mode="same")
+        ash /= ash.sum()
+        return ash
+
+
 class OWDistributions(OWWidget):
     name = "Distributions"
     description = "Display value distributions of a data feature in a graph."
@@ -232,6 +247,7 @@ class OWDistributions(OWWidget):
     show_probs = settings.Setting(False)
     stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
+    kde_smoothing = settings.Setting(10)
 
     auto_apply = settings.Setting(True)
 
@@ -246,6 +262,7 @@ class OWDistributions(OWWidget):
         ("Rayleigh", rayleigh, ("loc", "scale"), ("-loc", "σ²")),
         ("Pareto", pareto, ("b", "loc", "scale"), ("α", "-loc", "-scale")),
         ("Exponential", expon, ("loc", "scale"), ("-loc", "λ")),
+        ("Kernel density", AshCurve, ("a",), ("",))
     )
 
     DragNone, DragAdd, DragRemove = range(3)
@@ -283,7 +300,12 @@ class OWDistributions(OWWidget):
         gui.comboBox(
             box, self, "fitted_distribution", label="Fitted distribution",
             orientation=Qt.Horizontal, items=(name[0] for name in self.Fitters),
-            callback=self.replot)
+            callback=self._on_fitted_dist_changed)
+        self.smoothing_box = gui.indentedBox(box, 40)
+        gui.hSlider(
+            self.smoothing_box, self, "kde_smoothing",
+            label="Smoothing", orientation=Qt.Horizontal,
+            minValue=2, maxValue=20, callback=self.replot)
         gui.checkBox(
             box, self, "cumulative_distr", "Show cumulative distribution",
             callback=self.replot)
@@ -294,17 +316,17 @@ class OWDistributions(OWWidget):
             model=DomainModel(placeholder="(None)",
                               valid_types=(DiscreteVariable), ),
             callback=self._on_cvar_changed, contentsLength=18)
-        box2 = gui.indentedBox(box, sep=12)
         gui.checkBox(
-            box2, self, "stacked_columns", "Stack columns",
+            box, self, "stacked_columns", "Stack columns",
             callback=self.replot)
         gui.checkBox(
-            box2, self, "show_probs", "Show probabilities",
+            box, self, "show_probs", "Show probabilities",
             callback=self._on_show_probabilities_changed)
 
         gui.auto_commit(
             self.controlArea, self, "auto_apply", "&Apply", commit=self.apply)
 
+        self._set_smoothing_visibility()
         self._setup_plots()
         self._setup_legend()
 
@@ -407,6 +429,14 @@ class OWDistributions(OWWidget):
     def _on_bin_slider_released(self):
         self._user_var_bins[self.var] = self.number_of_bins
         self.apply()
+
+    def _on_fitted_dist_changed(self):
+        self._set_smoothing_visibility()
+        self.replot()
+
+    def _set_smoothing_visibility(self):
+        self.smoothing_box.setVisible(
+            self.Fitters[self.fitted_distribution][1] is AshCurve)
 
     def _set_bin_width_slider_label(self):
         text = ""
@@ -620,25 +650,32 @@ class OWDistributions(OWWidget):
         def str_params():
             s = join_pars(
                 (sname, val) for sname, val in zip(str_names, fitted)
-                if sname[0] != "-")
+                if sname and sname[0] != "-")
             par = join_pars(
                 (sname[1:], val) for sname, val in zip(str_names, fitted)
-                if sname[0] == "-")
+                if sname and sname[0] == "-")
             if par:
                 s += f" ({par})"
             return s
 
+        if not y.size:
+            return None, None
         _, dist, names, str_names = self.Fitters[self.fitted_distribution]
         fitted = dist.fit(y)
         params = {name: val for name, val in zip(names, fitted)}
         return partial(dist.pdf, **params), str_params()
 
-    def _plot_approximations(self, x0, x1, fitters, colors, prior_probs=0):
+    def _plot_approximations(self, x0, x1, fitters, colors, prior_probs):
         x = np.linspace(x0, x1, 100)
-        ys = np.empty((len(fitters), 100))
+        ys = np.zeros((len(fitters), 100))
         self.curve_descriptions = [s for _, s in fitters]
-        for y, (fitter, _), color in zip(ys, fitters, colors):
-            y[:] = fitter(x)
+        for y, (fitter, _) in zip(ys, fitters):
+            if fitter is None:
+                continue
+            if self.Fitters[self.fitted_distribution][1] is AshCurve:
+                y[:] = fitter(x, sigma=(22 - self.kde_smoothing) / 40)
+            else:
+                y[:] = fitter(x)
             if self.cumulative_distr:
                 y[:] = np.cumsum(y)
         tots = np.sum(ys, axis=0)
@@ -647,6 +684,8 @@ class OWDistributions(OWWidget):
         plot = self.ploti if show_probs else self.plot_pdf
 
         for y, prior_prob, color in zip(ys, prior_probs, colors):
+            if not prior_prob:
+                continue
             if show_probs:
                 y_p = y * prior_prob
                 tot = (y_p + (tots - y) * (1 - prior_prob))
@@ -685,7 +724,7 @@ class OWDistributions(OWWidget):
     def _display_legend(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
         if self.cvar is None:
-            if not self.curve_descriptions:
+            if not self.curve_descriptions or not self.curve_descriptions[0]:
                 self._legend.hide()
                 return
             self._legend.addItem(
