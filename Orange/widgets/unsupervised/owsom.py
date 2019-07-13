@@ -13,6 +13,7 @@ from AnyQt.QtWidgets import \
     QGraphicsPathItem
 
 from Orange.data import Table, Domain
+from Orange.preprocess import decimal_binnings
 from Orange.projection.som import SOM
 
 from Orange.widgets import gui
@@ -209,7 +210,7 @@ class OWSOM(OWWidget):
         self.sizes = None
         self.cells = self.member_data = None
         self.selection = set()
-        self.colors = self.bins = None
+        self.colors = self.thresholds = None
 
         box = gui.vBox(self.controlArea, box=True)
         hbox = gui.hBox(box)
@@ -341,7 +342,7 @@ class OWSOM(OWWidget):
         self.data = self.cont_x = None
         self.sizes = None
         self.cells = self.member_data = None
-        self.colors = self.bins = None
+        self.colors = self.thresholds = None
         if self.elements is not None:
             self.scene.removeItem(self.elements)
             self.elements = None
@@ -510,7 +511,7 @@ class OWSOM(OWWidget):
         else:
             int_col = np.zeros(len(color_column), dtype=int)
             int_col[np.isnan(color_column)] = len(self.colors)
-            for i, thresh in enumerate(self.bins, start=1):
+            for i, thresh in enumerate(self.thresholds, start=1):
                 int_col[color_column >= thresh] = i
         return int_col
 
@@ -714,16 +715,15 @@ class OWSOM(OWWidget):
 
     def set_color_bins(self):
         if self.attr_color is None:
-            self.bins = self.colors = None
+            self.thresholds = self.colors = None
         elif self.attr_color.is_discrete:
-            self.bins = None
+            self.thresholds = None
             self.colors = [QColor(*color) for color in self.attr_color.colors]
         else:
             col = self.data.get_column_view(self.attr_color)[0].astype(float)
-            # TODO: Use intelligent binning from #3896, when it's merged
-            self.bins = np.linspace(np.min(col), np.max(col), 6)[1:-1]
+            self.thresholds = decimal_binnings(col, min_bins=4)[0][1:-1]
             palette = ContinuousPaletteGenerator(*self.attr_color.colors)
-            nbins = len(self.bins) + 1
+            nbins = len(self.thresholds) + 1
             self.colors = [palette[i / (nbins - 1)] for i in range(nbins)]
 
     def create_legend(self):
@@ -738,10 +738,10 @@ class OWSOM(OWWidget):
         else:
             sval = self.attr_color.repr_val
             names = \
-                [f"< {sval(self.bins[0])}"] \
+                [f"< {sval(self.thresholds[0])}"] \
                 + [f"{sval(x)} - {sval(y)}"
-                   for x, y in zip(self.bins, self.bins[1:])] \
-                + [f"> {sval(self.bins[-1])}"]
+                   for x, y in zip(self.thresholds, self.thresholds[1:])] \
+                + [f"≥ {sval(self.thresholds[-1])}"]
 
         items = []
         size = 8
