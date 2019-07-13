@@ -1,4 +1,5 @@
 import re
+from collections import namedtuple
 
 import numpy as np
 import scipy.sparse as sp
@@ -12,7 +13,8 @@ from Orange.util import Reprable
 from .transformation import Transformation
 from . import _discretize
 
-__all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer"]
+__all__ = ["EqualFreq", "EqualWidth", "EntropyMDL", "DomainDiscretizer",
+           "decimal_binnings", "get_bins"]
 
 
 class Discretizer(Transformation):
@@ -170,6 +172,146 @@ class EqualWidth(Discretization):
             return []
         dif = (max - min) / self.n
         return [min + (i + 1) * dif for i in range(self.n - 1)]
+
+
+BinDefinition = namedtuple("BinDefinition", ("start", "nbins", "width"))
+
+
+def decimal_binnings(
+        data, *, min_width=0, min_bins=2, max_bins=50,
+        min_unique=5, add_unique=None,
+        factors=(20, 10, 5, 2, 1, 0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01),
+        return_defs=False):
+    """
+    Find a set of nice splits of data into bins
+
+    The function first computes the scaling factor that is, the power of 10
+    that brings the interval of values within [0, 1]. For instances, if the
+    numbers come from interaval 10004001 and 10007005, the width of the
+    interval is 3004, so the scaling factor is 1000.
+
+    The function next considers bin widths that are products of scaling and
+    different factors from 20 to 0.01 that make sense in decimal scale
+    (see default value for argument `factors`). For each width, it rounds the
+    minimal value down to this width and the maximal value up, and it computes
+    the number of bins of that width that fit between these two values.
+    If the number of bins is between `min_bins` and `max_bins`, and the width
+    is at least `min_width`, this is a valid interval.
+
+    If the data has no more than `min_unique` unique values, the function will
+    add a set of bins that put each value into its own bin.
+
+    If the data has no more than `add_unique` values, that last bins will put
+    each value into its own bin.
+
+    Args:
+        data (np.ndarray):
+            vector of data points; values may repeat, and nans and infs are
+            filtered out.
+        min_width (float): minimal bin width
+        min_bins (int): minimal number of bins
+        max_bins (int):
+            maximal number of bins; the number of bins will never exceed the
+            number of unique values
+        min_unique (int):
+            if the number of unique values are less or equal to `min_unique`,
+            the function returns a single binning that matches that values in
+            the data
+        add_unique (int):
+            similar to `min_unique` except that such bins are added to the list
+        factors (list of float):
+            The factors with which the scaling is multiplied. Default is
+            `(20, 10, 5, 2, 1, 0.5, 0.25, 0.2, 0.1, 0.05, 0.025, 0.02, 0.01)`,
+            so if scaling is 1000, considered bin widths are 20000, 10000,
+            5000, 2000, 1000, 500, 250, 200, 100, 50, 25, 20 and 10.
+        return_defs (bool): If set to `True`, the function returns a list of
+            instances of `BinDefinition`, otherwise a list of bin boundaries.
+
+    Returns:
+        bin_boundaries (list of np.ndarray): a list of bin boundaries,
+            including the top boundary of the last interval, hence the list
+            size equals the number bins + 1. These array match the `bin`
+            argument of `numpy.histogram`.
+
+            This is returned if `return_defs` is left `True`.
+
+        bin_definition (list of BinDefinition):
+            `BinDefinition` is a named tuple containing the beginning of the
+            first bin (`start`), number of bins (`nbins`) and their widths
+            (`width`). The last value can also be a `nd.array` with `nbins + 1`
+            elements, which describes bins of unequal width and is used for
+            binnings that match the unique values in the data (see `min_unique`
+            and `add_unique`).
+
+            This is returned if `return_defs` is `False`.
+    """
+    def unique_bins():
+        if len(unique) >= 2:
+            # make the last bin the same width as the one before
+            last_boundary = 2 * unique[-1] - unique[-2]
+        else:
+            last_boundary = unique[0] + 1
+        return BinDefinition(
+            unique[0], len(unique), np.hstack((unique, [last_boundary])))
+
+    unique = np.unique(data)
+    unique = unique[np.isfinite(unique)]
+    if not unique.size:
+        raise ValueError("no valid (non-nan) data")
+    mn, mx = unique[0], unique[-1]
+    if mn == mx or len(unique) <= min_unique:
+        bins = unique_bins()
+        if not return_defs:
+            bins = get_bins(bins)
+        return [bins]
+
+    diff = mx - mn
+    f10 = 10 ** -np.floor(np.log10(diff))
+    bins = []
+    max_bins = min(max_bins, len(unique))
+    for f in factors:
+        width = f / f10
+        if width < min_width:
+            continue
+        mn_ = np.floor(mn / width) * width
+        mx_ = np.ceil(mx / width) * width
+        nbins = np.round((mx_ - mn_) / width)
+        if min_bins <= nbins <= max_bins \
+                and (not bins or bins[-1].nbins != nbins):
+            bins.append(BinDefinition(mn_, nbins, width))
+
+    if add_unique is not None and len(unique) <= add_unique:
+        if bins and bins[-1].nbins == len(unique):
+            del bins[-1]
+        bins.append(unique_bins())
+        if len(unique) < min_unique:
+            del bins[:-1]
+
+    if not return_defs:
+        bins = [get_bins(bin) for bin in bins]
+
+    return bins
+
+
+def get_bins(bin_def: BinDefinition):
+    """
+    Return a `np.ndarray` corresponding to interval
+    Args:
+        bin_def (BinDefinition):
+            definition of bins. a named tuple containing the beginning of the
+            first bin (`start`), number of bins (`nbins`) and their widths
+            (`width`). The last value can also be a `nd.array` with `nbins + 1`
+            elements, in which case the function returns this as a result.
+
+    Returns:
+        bin boundaries (np.ndarray):
+        bin boundaries including the top boundary of the last interval, hence
+        the list size equals `bin_def.nbins + 1`. This array matches the
+        `bin` argument of `numpy.histogram`.
+    """
+    if isinstance(bin_def.width, np.ndarray):
+        return bin_def.width
+    return bin_def.start + bin_def.width * np.arange(bin_def.nbins + 1)
 
 
 # noinspection PyPep8Naming
