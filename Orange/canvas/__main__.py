@@ -212,10 +212,8 @@ def send_usage_statistics():
 
         usage = UsageStatistics()
         data = usage.load()
-        data = [
-            dict({"Orange Version": d.get("Application Version", "")}, **d)
-            for d in data
-        ]
+        for d in data:
+            d["Orange Version"] = d.pop("Application Version", "")
         try:
             r = requests.post(url, files={'file': json.dumps(data)})
             if r.status_code != 200:
@@ -399,7 +397,6 @@ def main(argv=None):
     if settings.value("error-reporting/send-statistics", False, type=bool) \
             and is_release:
         UsageStatistics.set_enabled(True)
-        log.info("Enabling usage statistics tracking")
 
     stylesheet = options.stylesheet or defaultstylesheet
     stylesheet_string = None
