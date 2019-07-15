@@ -17,7 +17,7 @@ import requests
 from AnyQt.QtGui import QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon
 from AnyQt.QtCore import Qt, QPoint, QRect
 
-from orangewidget.workflow import widgetsscheme, discovery, config
+from orangewidget.workflow import config
 
 import Orange
 
@@ -133,9 +133,6 @@ class Config(config.Config):
             (default_ep,),
             pkg_resources.iter_entry_points("orange.widgets.tutorials")
         )
-
-    widget_discovery = discovery.WidgetDiscovery
-    workflow_constructor = widgetsscheme.WidgetsScheme
 
     APPLICATION_URLS = {
         #: Submit a bug report action in the Help menu
