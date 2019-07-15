@@ -2,6 +2,8 @@
 Orange Canvas Configuration
 
 """
+import warnings
+
 import os
 import sys
 import itertools
@@ -203,11 +205,18 @@ def log_dir():
     return logdir
 
 
-def widget_settings_dir(versioned=True):
+def widget_settings_dir():
     """
     Return the widget settings directory.
+
+    .. deprecated:: 3.23
     """
-    return config.widget_settings_dir(versioned)
+    warnings.warn(
+        f"'{__name__}.widget_settings_dir' is deprecated.",
+        DeprecationWarning, stacklevel=2
+    )
+    import orangewidget.settings
+    return orangewidget.settings.widget_settings_dir()
 
 
 def widgets_entry_points():

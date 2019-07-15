@@ -57,15 +57,14 @@ def widget_settings_dir(versioned=True):
     """
     Return the platform dependent directory where widgets save their settings.
 
-    This a subdirectory of ``data_dir(versioned)`` named "widgets"
+    .. deprecated:: 3.23
     """
     warnings.warn(
-        f"'{__name__}.widget_settings_dir' is deprecated. "
-        "Use 'Orange.widgets.settings.widget_settings_dir'",
+        f"'{__name__}.widget_settings_dir' is deprecated.",
         DeprecationWarning, stacklevel=2
     )
-    from Orange.canvas import config
-    return config.widget_settings_dir(versioned)
+    import orangewidget.settings
+    return orangewidget.settings.widget_settings_dir(versioned)
 
 
 def cache_dir(*args):
