@@ -3,6 +3,7 @@ from AnyQt.QtWidgets import (
     QFormLayout, QCheckBox, QLineEdit, QWidget, QVBoxLayout,
 )
 from orangecanvas.application.settings import UserSettingsDialog
+from orangecanvas.document.usagestatistics import UsageStatistics
 from orangewidget.workflow.mainwindow import OWCanvasMainWindow
 
 from Orange.canvas.utils.overlay import NotificationOverlay
@@ -39,6 +40,7 @@ class OUserSettingsDialog(UserSettingsDialog):
                 "Share anonymous usage statistics to improve Orange")
         )
         self.bind(cb1, "checked", "error-reporting/send-statistics")
+        cb1.clicked.connect(UsageStatistics.set_enabled)
         layout.addWidget(cb1)
         box.setLayout(layout)
         form.addRow(self.tr("Share Anonymous Statistics"), box)
